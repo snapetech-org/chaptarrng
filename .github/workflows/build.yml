@@ -2,7 +2,7 @@ name: Build ChaptarrNG
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "**" ]
   pull_request:
     branches: [ main ]
   workflow_call:
@@ -63,8 +63,9 @@ jobs:
           --head "$HEAD_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:
-    # Only validated main-branch code can use the local runner; PRs and other matrix legs stay hosted.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && fromJSON('["self-hosted","Linux","X64","host"]') || matrix.os }}
+    # Feature pushes run the local Linux lane; main and PR runs keep the full platform matrix.
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || matrix.os == 'ubuntu-latest'
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && ((github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) && fromJSON('["self-hosted","Linux","X64","host"]') || matrix.os }}
     strategy:
       fail-fast: false
       matrix:
