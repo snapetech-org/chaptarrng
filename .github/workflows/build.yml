@@ -2,7 +2,7 @@ name: Build ChaptarrNG
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '**' ]
   pull_request:
     branches: [ main ]
   workflow_call:
@@ -63,7 +63,8 @@ jobs:
           --head "$HEAD_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:
-    runs-on: ${{ matrix.os }}
+    # Trusted Linux pushes and manual runs can use the local runner; public PRs and other matrix legs stay hosted.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && fromJSON('["self-hosted","Linux","X64","host"]') || matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -77,6 +78,10 @@ jobs:
             platform: osx
 
     steps:
+    - name: Use runner temp for local temporary files
+      if: runner.environment == 'self-hosted'
+      run: echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         fetch-depth: 0
