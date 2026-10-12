@@ -224,14 +224,24 @@ jobs:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore -p:UseSharedCompilation=false
 
-    - name: Install Chromium for direct-download browser tests
+    - name: Configure Chromium cache for direct-download browser tests
       if: runner.os == 'Linux'
       env:
         PLAYWRIGHT_BROWSERS_PATH: ${{ steps.private-runner-temp.outputs.path || runner.temp }}/playwright-browsers
-      run: |
-        echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> "$GITHUB_ENV"
-        pwsh ./_tests/net10.0/playwright.ps1 install --with-deps chromium
-    
+      run: echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> "$GITHUB_ENV"
+
+    - name: Install Chromium on the self-hosted Linux runner
+      if: runner.os == 'Linux' && runner.environment == 'self-hosted'
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: ${{ steps.private-runner-temp.outputs.path || runner.temp }}/playwright-browsers
+      run: pwsh ./_tests/net10.0/playwright.ps1 install chromium
+
+    - name: Install Chromium and system dependencies on GitHub-hosted Linux
+      if: runner.os == 'Linux' && runner.environment != 'self-hosted'
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: ${{ steps.private-runner-temp.outputs.path || runner.temp }}/playwright-browsers
+      run: pwsh ./_tests/net10.0/playwright.ps1 install --with-deps chromium
+
     - name: Test
       id: validation
       env:
