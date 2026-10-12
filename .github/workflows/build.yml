@@ -64,19 +64,10 @@ jobs:
 
   build:
     # Feature pushes run the local Linux lane; main and PR runs keep the full platform matrix.
-    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || matrix.os == 'ubuntu-latest'
     runs-on: ${{ matrix.os == 'ubuntu-latest' && ((github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) && fromJSON('["self-hosted","Linux","X64","host"]') || matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            platform: linux
-          - os: windows-latest
-            platform: win
-          - os: macos-latest
-            platform: osx
+      matrix: ${{ fromJSON(github.event_name == 'push' && github.ref != 'refs/heads/main' && '{"include":[{"os":"ubuntu-latest","platform":"linux"}]}' || '{"include":[{"os":"ubuntu-latest","platform":"linux"},{"os":"windows-latest","platform":"win"},{"os":"macos-latest","platform":"osx"}]}') }}
 
     steps:
     - name: Configure private runner temporary storage
