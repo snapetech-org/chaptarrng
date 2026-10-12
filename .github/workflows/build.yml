@@ -63,8 +63,9 @@ jobs:
           --head "$HEAD_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:
-    # Feature pushes run the local Linux lane; main and PR runs keep the full platform matrix.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && ((github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) && fromJSON('["self-hosted","Linux","X64","host"]') || matrix.os }}
+    # Feature pushes run only Linux; main and PR runs keep the full hosted matrix.
+    # All required validation stays on GitHub-hosted runners.
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(github.event_name == 'push' && github.ref != 'refs/heads/main' && '{"include":[{"os":"ubuntu-latest","platform":"linux"}]}' || '{"include":[{"os":"ubuntu-latest","platform":"linux"},{"os":"windows-latest","platform":"win"},{"os":"macos-latest","platform":"osx"}]}') }}
