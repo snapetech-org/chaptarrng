@@ -10,6 +10,7 @@ import createHandleActions from './Creators/createHandleActions';
 import createServerSideCollectionHandlers from './Creators/createServerSideCollectionHandlers';
 import createClearReducer from './Creators/Reducers/createClearReducer';
 import createSetTableOptionReducer from './Creators/Reducers/createSetTableOptionReducer';
+import translate from 'Utilities/String/translate';
 
 //
 // Variables
@@ -31,71 +32,71 @@ export const defaultState = {
   columns: [
     {
       name: 'eventType',
-      columnLabel: 'Event Type',
+      columnLabel: () => translate('EventType'),
       isVisible: true,
       isModifiable: false
     },
     {
       name: 'authors.sortName',
-      label: 'Author',
+      label: () => translate('Author'),
       isSortable: true,
       isVisible: true
     },
     {
       name: 'books.title',
-      label: 'Book',
+      label: () => translate('Book'),
       isSortable: true,
       isVisible: true
     },
     {
       name: 'quality',
-      label: 'Quality',
+      label: () => translate('Quality'),
       isVisible: true
     },
     {
       name: 'customFormats',
-      label: 'Formats',
+      label: () => translate('Formats'),
       isSortable: false,
       isVisible: true
     },
     {
       name: 'date',
-      label: 'Date',
+      label: () => translate('Date'),
       isSortable: true,
       isVisible: true
     },
     {
       name: 'downloadClient',
-      label: 'Download Client',
+      label: () => translate('DownloadClient'),
       isVisible: false
     },
     {
       name: 'indexer',
-      label: 'Indexer',
+      label: () => translate('Indexer'),
       isVisible: false
     },
     {
       name: 'releaseGroup',
-      label: 'Release Group',
+      label: () => translate('ReleaseGroup'),
       isVisible: false
     },
     {
       name: 'sourceTitle',
-      label: 'Source Title',
+      label: () => translate('SourceTitle'),
       isVisible: false
     },
     {
       name: 'customFormatScore',
-      columnLabel: 'Custom Format Score',
+      columnLabel: () => translate('CustomFormatScore'),
       label: () => React.createElement(Icon, {
         name: icons.SCORE,
-        title: 'Custom format score'
+        title: () => translate('CustomFormatScore')
       }),
       isVisible: false
     },
     {
       name: 'details',
-      columnLabel: 'Details',
+      columnLabel: () => translate('Details'),
       isVisible: true,
       isModifiable: false
     }
@@ -106,12 +107,12 @@ export const defaultState = {
   filters: [
     {
       key: 'all',
-      label: 'All',
+      label: () => translate('All'),
       filters: []
     },
     {
       key: 'grabbed',
-      label: 'Grabbed',
+      label: () => translate('Grabbed'),
       filters: [
         {
           key: 'eventType',
@@ -122,7 +123,7 @@ export const defaultState = {
     },
     {
       key: 'bookFileImported',
-      label: 'Book Imported',
+      label: () => translate('BookImported'),
       filters: [
         {
           key: 'eventType',
@@ -133,7 +134,7 @@ export const defaultState = {
     },
     {
       key: 'bookFileConverted',
-      label: 'Book Converted',
+      label: () => translate('BookConverted'),
       filters: [
         {
           key: 'eventType',
@@ -144,7 +145,7 @@ export const defaultState = {
     },
     {
       key: 'failed',
-      label: 'Download Failed',
+      label: () => translate('DownloadFailed'),
       filters: [
         {
           key: 'eventType',
@@ -155,7 +156,7 @@ export const defaultState = {
     },
     {
       key: 'importFailed',
-      label: 'Import Failed',
+      label: () => translate('ImportFailed'),
       filters: [
         {
           key: 'eventType',
@@ -166,7 +167,7 @@ export const defaultState = {
     },
     {
       key: 'conversionFailed',
-      label: 'Conversion Failed',
+      label: () => translate('ConversionFailed'),
       filters: [
         {
           key: 'eventType',
@@ -177,7 +178,7 @@ export const defaultState = {
     },
     {
       key: 'deleted',
-      label: 'Deleted',
+      label: () => translate('Deleted'),
       filters: [
         {
           key: 'eventType',
@@ -188,7 +189,7 @@ export const defaultState = {
     },
     {
       key: 'renamed',
-      label: 'Renamed',
+      label: () => translate('Renamed'),
       filters: [
         {
           key: 'eventType',
@@ -199,7 +200,7 @@ export const defaultState = {
     },
     {
       key: 'retagged',
-      label: 'Retagged',
+      label: () => translate('Retagged'),
       filters: [
         {
           key: 'eventType',
@@ -210,7 +211,7 @@ export const defaultState = {
     },
     {
       key: 'ignored',
-      label: 'Ignored',
+      label: () => translate('Ignored'),
       filters: [
         {
           key: 'eventType',

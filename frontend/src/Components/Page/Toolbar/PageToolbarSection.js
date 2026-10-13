@@ -1,6 +1,7 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import translate from 'Utilities/String/translate';
 import Measure from 'Components/Measure';
 import Menu from 'Components/Menu/Menu';
 import MenuContent from 'Components/Menu/MenuContent';
@@ -151,7 +152,7 @@ class PageToolbarSection extends Component {
                     <ToolbarMenuButton
                       className={styles.overflowMenuButton}
                       iconName={icons.OVERFLOW}
-                      text="More"
+                      text={translate('More')}
                     />
 
                     <MenuContent>

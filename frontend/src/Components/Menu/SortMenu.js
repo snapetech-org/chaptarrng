@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import translate from 'Utilities/String/translate';
 import Menu from 'Components/Menu/Menu';
 import ToolbarMenuButton from 'Components/Menu/ToolbarMenuButton';
 import { icons } from 'Helpers/Props';
@@ -19,7 +20,7 @@ function SortMenu(props) {
     >
       <ToolbarMenuButton
         iconName={icons.SORT}
-        text="Sort"
+        text={translate('Sort')}
         isDisabled={isDisabled}
       />
       {children}

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import translate from 'Utilities/String/translate';
 import keyboardShortcuts, { shortcuts } from 'Components/keyboardShortcuts';
 import IconButton from 'Components/Link/IconButton';
 import Link from 'Components/Link/Link';
@@ -59,7 +60,7 @@ class PageHeader extends Component {
             <img
               className={styles.logo}
               src={`${window.Chaptarr.urlBase}/Content/Images/chaptarr-logo.svg`}
-              alt="Chaptarr Logo"
+              alt={translate('ChaptarrLogoAlt')}
             />
           </Link>
         </div>
@@ -79,7 +80,7 @@ class PageHeader extends Component {
           <IconButton
             className={styles.donate}
             name={icons.HEART}
-            aria-label="Donate"
+            aria-label={translate('Donate')}
             to="/system/status#donations"
             size={14}
           />

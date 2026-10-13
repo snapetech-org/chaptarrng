@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import translate from 'Utilities/String/translate';
 import { icons } from 'Helpers/Props';
 import FilterMenuContent from './FilterMenuContent';
 import Menu from './Menu';
@@ -57,7 +58,7 @@ class FilterMenu extends Component {
         >
           <ButtonComponent
             iconName={icons.FILTER}
-            text="Filter"
+            text={translate('Filter')}
             isDisabled={isDisabled}
             indicator={selectedFilterKey !== 'all'}
           />

@@ -13,6 +13,7 @@ import fonts from 'Styles/Variables/fonts';
 import dayjs from 'Utilities/Date/dayjsSetup';
 import stripHtml from 'Utilities/String/stripHtml';
 import translate from 'Utilities/String/translate';
+import formatDurationMinutes from 'Utilities/Date/formatDurationMinutes';
 import AddNewBookModal from './AddNewBookModal';
 import styles from './AddNewBookSearchResult.css';
 
@@ -261,7 +262,7 @@ class AddNewBookSearchResult extends Component {
                       className={styles.notAddableIcon}
                       name={icons.BAN}
                       size={28}
-                      title="Not addable: missing upstream provider book/work ID or author ID"
+                      title={translate('BookNotAddableMissingProviderIds')}
                     />
                 }
 
@@ -318,7 +319,7 @@ class AddNewBookSearchResult extends Component {
               {
                 durationMinutes > 0 &&
                   <Label size={sizes.LARGE}>
-                    {Math.floor(durationMinutes / 60)}h {Math.round(durationMinutes % 60)}m
+                    {formatDurationMinutes(durationMinutes)}
                   </Label>
               }
 
