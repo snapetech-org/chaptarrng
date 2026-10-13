@@ -18,7 +18,22 @@ namespace Chaptarr.Core.Test.Datastore
         public void SetUp() => _path = Path.Combine(Path.GetTempPath(), $"lineage-{Guid.NewGuid():N}.db");
 
         [TearDown]
-        public void TearDown() => File.Delete(_path);
+        public void TearDown()
+        {
+            foreach (var suffix in new[] { "-wal", "-shm", "-journal" })
+            {
+                var sidecarPath = _path + suffix;
+                if (File.Exists(sidecarPath))
+                {
+                    File.Delete(sidecarPath);
+                }
+            }
+
+            if (File.Exists(_path))
+            {
+                File.Delete(_path);
+            }
+        }
 
         [Test]
         public void should_not_create_a_database_during_preflight()
@@ -84,6 +99,35 @@ namespace Chaptarr.Core.Test.Datastore
         {
             Create("CREATE TABLE Authors (Id INTEGER PRIMARY KEY, AudiobookRootFolderPath TEXT, EbookRootFolderPath TEXT);");
             Assert.DoesNotThrow(() => DatabaseLineageGuard.Validate(ConnectionString, DatabaseType.SQLite));
+        }
+
+        [Test]
+        public void should_detect_a_standalone_wal_database_without_changing_its_content()
+        {
+            Create("CREATE TABLE Authors (Id INTEGER PRIMARY KEY, AudiobookRootFolderPath TEXT, EbookRootFolderPath TEXT);");
+
+            using (var connection = new SqliteConnection(ConnectionString))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "PRAGMA journal_mode=WAL;";
+                Assert.That(command.ExecuteScalar()?.ToString(), Is.EqualTo("wal"));
+                command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+                command.ExecuteNonQuery();
+            }
+
+            foreach (var suffix in new[] { "-wal", "-shm" })
+            {
+                var sidecarPath = _path + suffix;
+                if (File.Exists(sidecarPath))
+                {
+                    File.Delete(sidecarPath);
+                }
+            }
+
+            var before = File.ReadAllBytes(_path);
+            Assert.That(DatabaseLineageGuard.Detect(ConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+            Assert.That(File.ReadAllBytes(_path), Is.EqualTo(before));
         }
 
         [Test]

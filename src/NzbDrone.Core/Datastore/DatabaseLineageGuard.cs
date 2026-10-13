@@ -210,6 +210,34 @@ namespace NzbDrone.Core.Datastore
                     connection.Open();
                     return connection;
                 }
+                catch (SqliteException exception) when (exception.SqliteErrorCode == 14)
+                {
+                    connection.Dispose();
+
+                    // A standalone WAL database can lack its -wal/-shm sidecars after the
+                    // last writer closes. Some SQLite builds cannot open that file read-only
+                    // even when the directory is writable. Retry without Create semantics,
+                    // then make the metadata probe query-only before issuing any query.
+                    var queryOnlyBuilder = new SqliteConnectionStringBuilder(builder.ConnectionString)
+                    {
+                        Mode = SqliteOpenMode.ReadWrite,
+                        Pooling = false
+                    };
+                    var queryOnlyConnection = new SqliteConnection(queryOnlyBuilder.ToString());
+                    try
+                    {
+                        queryOnlyConnection.Open();
+                        using var queryOnly = queryOnlyConnection.CreateCommand();
+                        queryOnly.CommandText = "PRAGMA query_only=ON;";
+                        queryOnly.ExecuteNonQuery();
+                        return queryOnlyConnection;
+                    }
+                    catch
+                    {
+                        queryOnlyConnection.Dispose();
+                        throw;
+                    }
+                }
                 catch
                 {
                     connection.Dispose();
