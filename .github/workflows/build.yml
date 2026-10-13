@@ -2,7 +2,7 @@ name: Build ChaptarrNG
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_call:
@@ -63,16 +63,28 @@ jobs:
           --head "$HEAD_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:
-    # Feature pushes run the local Linux lane; main and PR runs keep the full hosted matrix.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && ((github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) && fromJSON('["self-hosted","Linux","X64","host","kspls0"]') || matrix.os }}
+    # Only validated main commits use the private Linux runner. PRs stay on GitHub-hosted runners.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) && fromJSON('["self-hosted","Linux","X64","host","kspls0"]') || matrix.os }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(github.event_name == 'push' && github.ref != 'refs/heads/main' && '{"include":[{"os":"ubuntu-latest","platform":"linux"}]}' || '{"include":[{"os":"ubuntu-latest","platform":"linux"},{"os":"windows-latest","platform":"win"},{"os":"macos-latest","platform":"osx"}]}') }}
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: win
+          - os: macos-latest
+            platform: osx
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         fetch-depth: 0
+
+    - name: Test self-hosted runner trust boundary
+      if: matrix.os == 'ubuntu-latest'
+      run: python3 scripts/test_workflow_runner_policy.py
 
     - name: Test private runner temporary storage setup
       if: runner.os == 'Linux'
