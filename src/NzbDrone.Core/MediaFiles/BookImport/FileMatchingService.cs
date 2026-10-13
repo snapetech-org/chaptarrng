@@ -7872,9 +7872,11 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     return null;
                 }
 
-                if (selectedCandidate?.HasDirectEditionTitleProof != true &&
-                    selectedCandidate?.HasBookTitleEvidenceProof != true &&
-                    selectedCandidate?.HasAttestedSubtitleBaseTitleProof != true &&
+                var genericSeriesTitleCandidate = IsGenericSeriesTitleCandidate(winner, booksById);
+                if (((selectedCandidate?.HasDirectEditionTitleProof != true &&
+                      selectedCandidate?.HasBookTitleEvidenceProof != true &&
+                      selectedCandidate?.HasAttestedSubtitleBaseTitleProof != true) ||
+                     genericSeriesTitleCandidate) &&
                     WinnerTitleHasSurplusVolumeToken(selectedCandidate, tokens, out var surplusVolumeToken))
                 {
                     RecordCandidateRejection(winner, "CANDIDATE_TITLE_SURPLUS_VOLUME_TOKEN",
@@ -10778,6 +10780,22 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     return false;
                 }
 
+                if (!IsGenericSeriesTitleCandidate(candidate, booksById))
+                {
+                    return false;
+                }
+
+                return titleEvidence.All(evidence =>
+                    seriesPositionEvidence.GetField(evidence?.FieldName)?.Disposition == SeriesPositionDisposition.Mismatch);
+            }
+
+            private bool IsGenericSeriesTitleCandidate(EditionFtsMatch candidate, IDictionary<int, Book> booksById)
+            {
+                if (candidate == null || string.IsNullOrWhiteSpace(candidate.EditionTitle))
+                {
+                    return false;
+                }
+
                 var book = TryGetBookCached(candidate.BookId, booksById);
                 if (book == null)
                 {
@@ -10792,14 +10810,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                 !HolyGrailLeftoverStructuralTokens.Contains(t))
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                if (titleTokens.Count == 0 ||
-                    !GetCandidateSeriesContexts(book).Any(context => titleTokens.SetEquals(context.NameTokens)))
-                {
-                    return false;
-                }
-
-                return titleEvidence.All(evidence =>
-                    seriesPositionEvidence.GetField(evidence?.FieldName)?.Disposition == SeriesPositionDisposition.Mismatch);
+                return titleTokens.Count > 0 &&
+                       GetCandidateSeriesContexts(book).Any(context => titleTokens.SetEquals(context.NameTokens));
             }
 
                 private static readonly Regex YearRegex = new Regex(@"\b(1[0-9]{3}|20[0-9]{2})\b", RegexOptions.Compiled);
