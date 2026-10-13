@@ -53,6 +53,8 @@ names, private/API keys, access/refresh-token names, client-secret names, and
 credential material with source-like extensions are excluded. Source modules
 under credential folders remain available unless their own names identify
 credential material. Stage new candidate files first.
+Suffixed dotenv credentials such as tokens.env.local are excluded, while
+example templates such as tokens.env.example remain available.
 It opens each workspace, run-data, dependency, cache, and marker source before
 the sandbox masks host paths, then binds those pinned sources by inherited file
 descriptor. Each persisted task log is capped at 16 MiB and ends with a marker
