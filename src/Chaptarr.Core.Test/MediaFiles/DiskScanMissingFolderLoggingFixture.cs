@@ -92,7 +92,6 @@ namespace Chaptarr.Core.Test.MediaFiles
             var authorService = DispatchProxy.Create<IAuthorService, AuthorServiceProxy>();
             var eventAggregator = DispatchProxy.Create<IEventAggregator, EventAggregatorProxy>();
             var commandQueue = DispatchProxy.Create<IManageCommandQueue, CommandQueueProxy>();
-
             return new DiskScanService(
                 configService: null,
                 diskProvider: diskProvider,
@@ -187,17 +186,5 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
-        public class MediaFileTableCleanupServiceProxy : DispatchProxy
-        {
-            protected override object Invoke(MethodInfo targetMethod, object[] args)
-            {
-                if (targetMethod?.Name == nameof(IMediaFileTableCleanupService.Clean))
-                {
-                    return null;
-                }
-
-                throw new NotImplementedException($"Test proxy does not implement IMediaFileTableCleanupService.{targetMethod?.Name}");
-            }
-        }
     }
 }
