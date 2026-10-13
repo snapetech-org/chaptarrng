@@ -64,7 +64,7 @@ These capabilities and proposed changes join the cumulative retirement blocker
 set. Unreviewed backlog requests are not treated as accepted product scope
 until maintainers adopt them.
 
-The fork's Indonesian and Traditional Chinese localization, maintainer guidance,
+The fork's Indonesian and Traditional Chinese language catalogs (with English fallback for untranslated keys), maintainer guidance,
 and YunoHost publisher retirement are already present in `main`. Upstream
 PR #114 currently carries media-type preservation for scoped book lookup and
 remains a release dependency. All active feature work counts before it is

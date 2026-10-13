@@ -5,4 +5,4 @@ area: localization
 action: none
 breaking: false
 ---
-The Core catalogs now contain entries for all 2,295 current English-source messages in Spanish, Simplified and Traditional Chinese, Hindi, German, Japanese, French, Brazilian Portuguese, Arabic, Korean, Vietnamese, and Indonesian. Sixty-five entries in each catalog use the English source text verbatim to preserve fallback behavior; they are key coverage, not translations. The catalogs combine existing translations, offline machine translation, and unchanged product or technical terms; fluent-speaker review remains open.
+All 2,295 English-source keys now have non-empty values in the twelve requested Core locale catalogs. Existing locale strings are preserved, and missing keys use exact English fallback text. This completes catalog key coverage; native-speaker translation and review, including Arabic right-to-left layout checks, remain open.
