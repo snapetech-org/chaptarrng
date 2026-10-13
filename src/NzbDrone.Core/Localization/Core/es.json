@@ -929,7 +929,7 @@
   "IllRestartLater": "Lo reiniciaré más tarde",
   "Images": "Imágenes",
   "ImageSharpBuildLicense": "Licencia de compilación de ImageSharp",
-  "ImageSharpBuildLicenseDescription": "ImageSharp redimensiona imágenes y requiere una licencia Six Labors cuando se construye desde la fuente. Las imágenes oficiales no necesitan clave de construcción en tiempo de ejecución; todo uso sigue sujeto a los términos de licencia de Six Labors.",
+  "ImageSharpBuildLicenseDescription": "ImageSharp redimensiona imágenes de portada y requiere una licencia de Six Labors al compilar desde el código fuente. Las imágenes oficiales no necesitan una clave de compilación en tiempo de ejecución; todo uso sigue sujeto a las condiciones de licencia de Six Labors.",
   "ImageSharpLicenseGuide": "Ver Guía de configuración de licencias",
   "Implementation": "Implementación",
   "Import": "Importación",

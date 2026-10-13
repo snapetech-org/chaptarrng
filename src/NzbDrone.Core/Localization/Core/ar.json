@@ -929,7 +929,7 @@
   "IllRestartLater": "سأعيد التشغيل لاحقًا",
   "Images": "الصور",
   "ImageSharpBuildLicense": "رخصة بناء ImageSharp",
-  "ImageSharpBuildLicenseDescription": "(إيمج شارب) يُعيد توزيع الصور ويتطلّب ترخيصاً من ستة مختبرات عند البناء من المصدر الصور الرسمية لا تحتاج إلى مفتاح بناء في وقت التشغيل، كل استخدام يظل خاضعاً لشروط ترخيص ستة مختبرات.",
+  "ImageSharpBuildLicenseDescription": "تُغيّر ImageSharp حجم صور الأغلفة، وتتطلب ترخيصًا من Six Labors عند البناء من الشفرة المصدرية. لا تحتاج الصور الرسمية إلى مفتاح بناء أثناء التشغيل، لكن جميع الاستخدامات تظل خاضعة لشروط ترخيص Six Labors.",
   "ImageSharpLicenseGuide": "عرض دليل إعداد الترخيص",
   "Implementation": "التنفيذ",
   "Import": "الواردات",

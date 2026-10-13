@@ -929,7 +929,7 @@
   "IllRestartLater": "後で再起動します",
   "Images": "イメージ",
   "ImageSharpBuildLicense": "ImageSharp ビルドライセンス",
-  "ImageSharpBuildLicenseDescription": "ImageSharpはカバーイメージをサイズ変更し、ソースからビルドするときに6人の労働免許証を要求します。 正式な画像は、ランタイムでビルドキーを必要としません。すべての使用は、シックス・ラボのライセンス条件の対象となります。",
+  "ImageSharpBuildLicenseDescription": "ImageSharp はカバー画像のサイズを変更するため、ソースコードからビルドする際は Six Labors のライセンスが必要です。公式イメージの実行時にビルドキーは不要ですが、すべての使用は Six Labors のライセンス条項に従います。",
   "ImageSharpLicenseGuide": "ライセンス設定ガイドを見る",
   "Implementation": "導入事例",
   "Import": "インポート",
