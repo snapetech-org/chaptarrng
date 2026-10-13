@@ -1,10 +1,12 @@
 // Copyright (C) ChaptarrNG contributors.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { createPlan, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, runTask, sha256GitText } from './engine.mjs';
+import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, runTask, sha256GitText } from './engine.mjs';
+import { validation } from './config.mjs';
 
 function withEnvironmentVariable(name, value, action) {
   const previous = process.env[name];
@@ -16,11 +18,48 @@ function withEnvironmentVariable(name, value, action) {
   }
 }
 
+function assertChromiumCacheWorkflowContract(source) {
+  const workflow = source.replace(/\r\n/g, '\n');
+  const cacheSetting = 'PLAYWRIGHT_BROWSERS_PATH: ${{ steps.private-runner-temp.outputs.path || runner.temp }}/playwright-browsers';
+  assert.doesNotMatch(workflow, /^(<<<<<<<|=======|>>>>>>>).*$/m);
+  const cacheSteps = [
+    'Configure Chromium cache for direct-download browser tests',
+    'Install Chromium on the self-hosted Linux runner',
+    'Install Chromium and system dependencies on GitHub-hosted Linux',
+    'Test',
+  ];
+  for (const name of cacheSteps) {
+    const marker = `    - name: ${name}\n`;
+    const start = workflow.indexOf(marker);
+    assert.notEqual(start, -1, `missing workflow step: ${name}`);
+    const next = workflow.indexOf('\n    - name:', start + marker.length);
+    const step = workflow.slice(start, next === -1 ? workflow.length : next);
+    assert.ok(step.split('\n').some((line) => line.trim() === cacheSetting), `${name} must use the private cache path`);
+  }
+  assert.match(workflow, /PLAYWRIGHT_BROWSERS_PATH=\$PLAYWRIGHT_BROWSERS_PATH.*\$GITHUB_ENV/);
+}
+
 test('test source patterns include nested project files but exclude sibling projects', () => {
   const pattern = globRegex('src/Chaptarr.Core.Test/**/*.cs');
   assert.equal(pattern.test('src/Chaptarr.Core.Test/Download/DirectDownloadFixture.cs'), true);
   assert.equal(pattern.test('src/Chaptarr.Core/Download/DirectDownloadFixture.cs'), false);
   assert.equal(pattern.test('src-other/Chaptarr.Core.Test/Fake.cs'), false);
+});
+
+test('working-tree inventory omits deleted tracked files and de-duplicates renamed paths', (t) => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-inventory-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(path.join(root, 'migration-115.cs'), 'existing migration');
+  writeFileSync(path.join(root, 'migration-116.cs'), 'new migration');
+
+  assert.deepEqual(
+    currentRepoFiles(
+      ['migration-108.cs', 'migration-115.cs'],
+      ['migration-116.cs', 'migration-115.cs'],
+      root,
+    ),
+    ['migration-115.cs', 'migration-116.cs'],
+  );
 });
 
 test('inventory assigns test, migration, and contract files to explicit owners', () => {
@@ -36,7 +75,29 @@ test('inventory assigns test, migration, and contract files to explicit owners',
 test('NUnit summary keeps native pass, failure, skip and inconclusive totals', () => {
   assert.deepEqual(parseNUnitSummary(
     '<test-run total="140" passed="128" failed="2" skipped="7" inconclusive="3" result="Failed"/>',
-  ), { total: 140, passed: 128, failed: 2, skipped: 7, inconclusive: 3, result: 'Failed' });
+  ), {
+    total: 140,
+    passed: 128,
+    failed: 2,
+    skipped: 7,
+    inconclusive: 3,
+    result: 'Failed',
+    failedTestNames: [],
+    failedTestNamesTruncated: false,
+  });
+});
+
+test('NUnit receipt records bounded failed test names without including failure messages', () => {
+  const testCases = Array.from({ length: 102 }, (_, index) =>
+    `<test-case id="${index}" name="Fixture.case_${index}" result="${index < 101 ? 'Failed' : 'Passed'}"/>`,
+  ).join('');
+  const summary = parseNUnitSummary(
+    `<test-run total="102" passed="1" failed="101" skipped="0" inconclusive="0" result="Failed">${testCases}</test-run>`,
+  );
+
+  assert.equal(summary.failedTestNames.length, 100);
+  assert.deepEqual(summary.failedTestNames.slice(0, 2), ['Fixture.case_0', 'Fixture.case_1']);
+  assert.equal(summary.failedTestNamesTruncated, true);
 });
 
 test('Node TAP summary accounts for pass, fail, skip, todo, and cancelled cases', () => {
@@ -111,7 +172,10 @@ test('task environments use an allowlist and run-owned user and temporary direct
   const env = isolatedChildEnvironment({
     id: 'fixture',
     kind: 'test',
-    env: { FIXTURE_SETTING: 'expected' },
+    env: {
+      FIXTURE_SETTING: 'expected',
+      PLAYWRIGHT_BROWSERS_PATH: '/operator/playwright',
+    },
   }, root, {
     PATH: '/toolchain/bin',
     DOTNET_ROOT: '/toolchain/dotnet',
@@ -133,6 +197,7 @@ test('task environments use an allowlist and run-owned user and temporary direct
   assert.equal(env.NODE_ENV, 'test');
   assert.equal(env.CI, 'true');
   assert.equal(env.FIXTURE_SETTING, 'expected');
+  assert.equal(env.PLAYWRIGHT_BROWSERS_PATH, '/operator/playwright');
   for (const key of ['NODE_OPTIONS', 'GITHUB_TOKEN', 'RANDOM_PRIVATE_VALUE']) assert.equal(env[key], undefined);
   if (process.platform !== 'win32') {
     assert.equal(statSync(env.HOME).mode & 0o777, 0o700);
@@ -140,14 +205,63 @@ test('task environments use an allowlist and run-owned user and temporary direct
   }
 });
 
+test('Linux browser tests get a short temporary path that targets the isolated task directory', async (t) => {
+  if (process.platform !== 'linux') return t.skip('Linux Chromium uses UNIX sockets with a short path limit.');
+
+  const target = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-browser-temp-'));
+  t.after(() => rmSync(target, { recursive: true, force: true }));
+  const alias = createShortTemporaryPathAlias(target);
+  t.after(alias.cleanup);
+
+  assert.equal(path.dirname(path.dirname(alias.directory)), '/dev/shm');
+  assert.ok(alias.directory.length <= 32, `Expected a short temp path, received ${alias.directory}`);
+  assert.equal(readlinkSync(alias.directory), target);
+  assert.equal(statSync(alias.directory).isDirectory(), true);
+
+  const server = net.createServer();
+  const socketPath = path.join(alias.directory, 'chromium.sock');
+  try {
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(socketPath, resolve);
+    });
+    assert.equal(statSync(socketPath).isSocket(), true);
+  } finally {
+    if (server.listening) await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('Linux browser temp aliases fall back when the primary path cannot be created', async (t) => {
+  if (process.platform !== 'linux') return t.skip('The fallback uses the Linux shared-memory filesystem.');
+
+  const target = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-browser-fallback-'));
+  t.after(() => rmSync(target, { recursive: true, force: true }));
+  const alias = createShortTemporaryPathAlias(target, path.join(target, 'missing-parent'));
+  t.after(alias.cleanup);
+
+  assert.match(alias.directory, /^\/dev\/shm\/cng-/);
+  assert.ok(alias.directory.length <= 32, `Expected a short temp path, received ${alias.directory}`);
+
+  const server = net.createServer();
+  const socketPath = path.join(alias.directory, 'chromium.sock');
+  try {
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(socketPath, resolve);
+    });
+    assert.equal(statSync(socketPath).isSocket(), true);
+  } finally {
+    if (server.listening) await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('only the NUnit browser task receives its explicit Playwright cache path', (t) => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-browser-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  const env = isolatedChildEnvironment({
-    id: 'dotnet-core-tests',
-    kind: 'test',
-    passEnv: ['PLAYWRIGHT_BROWSERS_PATH'],
-  }, root, {
+  const task = validation.tasks.find((candidate) => candidate.id === 'dotnet-core-tests');
+  assert.ok(task);
+  assert.deepEqual(task.passEnv, ['PLAYWRIGHT_BROWSERS_PATH']);
+  const env = isolatedChildEnvironment(task, root, {
     PATH: '/toolchain/bin',
     HOME: '/operator/home',
     PLAYWRIGHT_BROWSERS_PATH: '/runner/temp/playwright-browsers',
@@ -155,6 +269,7 @@ test('only the NUnit browser task receives its explicit Playwright cache path', 
     NODE_OPTIONS: '--require=/operator/injected.cjs',
   });
   assert.equal(env.PLAYWRIGHT_BROWSERS_PATH, '/runner/temp/playwright-browsers');
+  assert.equal(env.DIRECT_DOWNLOAD_REQUIRE_PLAYWRIGHT, process.platform === 'linux' ? 'true' : 'false');
   assert.equal(env.HOME, path.join(root, 'dotnet-core-tests-environment', 'home'));
   assert.equal(env.GITHUB_TOKEN, undefined);
   assert.equal(env.NODE_OPTIONS, undefined);
@@ -163,6 +278,13 @@ test('only the NUnit browser task receives its explicit Playwright cache path', 
     passEnv: ['PLAYWRIGHT_BROWSERS_PATH'],
   }, root, { PLAYWRIGHT_BROWSERS_PATH: '/runner/temp/playwright-browsers' }),
   /unapproved inherited environment variable/);
+});
+
+test('Chromium installation and tests share the private-runner cache path', () => {
+  const workflow = readFileSync(new URL('../../.github/workflows/build.yml', import.meta.url), 'utf8');
+  const normalized = workflow.replace(/\r\n/g, '\n');
+  assertChromiumCacheWorkflowContract(normalized);
+  assertChromiumCacheWorkflowContract(normalized.replace(/\n/g, '\r\n'));
 });
 
 test('test-only planning distinguishes local and hosted tasks regardless of ambient workflow environment', () => {

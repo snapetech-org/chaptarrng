@@ -166,15 +166,18 @@ namespace Chaptarr.Core.Test.MediaFiles
 
             public void AddFile(string path)
             {
+                path = NormalizePath(path);
                 ExistingFiles.Add(path);
                 for (var folder = Path.GetDirectoryName(path); !string.IsNullOrEmpty(folder); folder = Path.GetDirectoryName(folder))
                 {
-                    ExistingFolders.Add(folder);
+                    ExistingFolders.Add(NormalizePath(folder));
                 }
             }
 
             public void MoveFileTo(string source, string destination, string operation)
             {
+                source = NormalizePath(source);
+                destination = NormalizePath(destination);
                 Operations.Add($"{operation} {Path.GetFileName(source)}");
                 if (ExistingFiles.Remove(source))
                 {
@@ -186,27 +189,27 @@ namespace Chaptarr.Core.Test.MediaFiles
             {
                 if (targetMethod?.Name == nameof(IDiskProvider.FolderExists))
                 {
-                    return ExistingFolders.Contains((string)args[0]);
+                    return ExistingFolders.Contains(NormalizePath((string)args[0]));
                 }
 
                 if (targetMethod?.Name == nameof(IDiskProvider.FileExists))
                 {
-                    return ExistingFiles.Contains((string)args[0]);
+                    return ExistingFiles.Contains(NormalizePath((string)args[0]));
                 }
 
                 if (targetMethod?.Name == nameof(IDiskProvider.GetDirectories))
                 {
-                    var parent = (string)args[0];
+                    var parent = NormalizePath((string)args[0]);
                     return ExistingFolders.Where(f => Path.GetDirectoryName(f).PathEquals(parent)).ToList();
                 }
 
                 if (targetMethod?.Name == nameof(IDiskProvider.CreateFolder))
                 {
-                    var folder = (string)args[0];
+                    var folder = NormalizePath((string)args[0]);
                     Operations.Add($"CreateFolder {folder}");
                     for (; !string.IsNullOrEmpty(folder); folder = Path.GetDirectoryName(folder))
                     {
-                        ExistingFolders.Add(folder);
+                        ExistingFolders.Add(NormalizePath(folder));
                     }
 
                     return null;
@@ -214,20 +217,20 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 if (targetMethod?.Name == nameof(IDiskProvider.MoveFile))
                 {
-                    var destination = (string)args[1];
+                    var destination = NormalizePath((string)args[1]);
                     if (ExistingFiles.Contains(destination))
                     {
                         throw new FileAlreadyExistsException("File already exists", destination);
                     }
 
-                    MoveFileTo((string)args[0], destination, "MoveFile");
+                    MoveFileTo(NormalizePath((string)args[0]), destination, "MoveFile");
                     return null;
                 }
 
                 if (targetMethod?.Name == nameof(IDiskProvider.MoveFolder))
                 {
-                    var source = (string)args[0];
-                    var destination = (string)args[1];
+                    var source = NormalizePath((string)args[0]);
+                    var destination = NormalizePath((string)args[1]);
                     if (FailFolderMoves)
                     {
                         throw new IOException("Cross-device link");
@@ -247,13 +250,13 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 if (targetMethod?.Name == nameof(IDiskProvider.RemoveEmptySubfolders))
                 {
-                    RemovedEmptySubfolders.Add((string)args[0]);
+                    RemovedEmptySubfolders.Add(NormalizePath((string)args[0]));
                     return null;
                 }
 
                 if (targetMethod?.Name == nameof(IDiskProvider.GetFiles))
                 {
-                    var folder = (string)args[0];
+                    var folder = NormalizePath((string)args[0]);
                     var recursive = (bool)args[1];
                     return ExistingFiles
                         .Where(f => recursive ? folder.IsParentPath(f) : Path.GetDirectoryName(f).PathEquals(folder))
@@ -262,7 +265,7 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 if (targetMethod?.Name == nameof(IDiskProvider.DeleteFolder))
                 {
-                    var folder = (string)args[0];
+                    var folder = NormalizePath((string)args[0]);
                     DeletedFolders.Add(folder);
                     ExistingFolders.Remove(folder);
                     return null;
@@ -270,6 +273,19 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 throw new NotImplementedException($"Test proxy does not implement IDiskProvider.{targetMethod?.Name}");
             }
+        }
+
+        private static string NormalizePath(string path)
+        {
+            if (path == null)
+            {
+                return null;
+            }
+
+            var fullPath = Path.GetFullPath(path);
+            return Path.DirectorySeparatorChar == '\\'
+                ? fullPath.Replace('/', '\\')
+                : fullPath.Replace('\\', '/');
         }
 
         private static BookFile BookFile(int id, string path, Quality quality, string mediaType)
@@ -508,7 +524,7 @@ namespace Chaptarr.Core.Test.MediaFiles
         [Test]
         public void should_remove_only_empty_directories_bounded_by_the_actual_source_author_folder()
         {
-            var rootFolder = @"C:\books".AsOsAgnostic();
+            var rootFolder = Path.Combine(FixtureRoot, "books");
             var sourceAuthorFolder = Path.Combine(rootFolder, "George R. R. Martin");
             var sourceBookFolder = Path.Combine(sourceAuthorFolder, "Wild Cards");
             var canonicalAuthorFolder = Path.Combine(rootFolder, "George R.R. Martin");
@@ -532,20 +548,22 @@ namespace Chaptarr.Core.Test.MediaFiles
             var mover = new RecordingMoveBookFiles { PlanFactory = (_, _) => plan };
             var diskProvider = DispatchProxy.Create<IDiskProvider, DiskProviderProxy>();
             var diskProxy = (DiskProviderProxy)(object)diskProvider;
-            diskProxy.ExistingFolders.Add(sourceAuthorFolder);
-            diskProxy.ExistingFolders.Add(sourceBookFolder);
+            diskProxy.ExistingFolders.Add(NormalizePath(sourceAuthorFolder));
+            diskProxy.ExistingFolders.Add(NormalizePath(sourceBookFolder));
             var service = CreateService(author, mediaFileService, mover, new RecordingEventAggregator(), diskProvider);
 
             service.Execute(new RenameFilesCommand(author.Id, new List<int> { file.Id }, true));
 
-            Assert.That(diskProxy.RemovedEmptySubfolders, Is.EqualTo(new[] { sourceBookFolder, sourceAuthorFolder }));
-            Assert.That(diskProxy.DeletedFolders, Is.EqualTo(new[] { sourceBookFolder, sourceAuthorFolder }));
-            Assert.That(diskProxy.DeletedFolders, Does.Not.Contain(rootFolder));
+            var expectedRemovedFolders = new[] { sourceBookFolder, sourceAuthorFolder }.Select(NormalizePath);
+            Assert.That(diskProxy.RemovedEmptySubfolders, Is.EqualTo(expectedRemovedFolders));
+            Assert.That(diskProxy.DeletedFolders, Is.EqualTo(expectedRemovedFolders));
+            Assert.That(diskProxy.DeletedFolders, Does.Not.Contain(NormalizePath(rootFolder)));
         }
 
-        private const string HobbFolder = "/audiobooks/Robin Hobb";
-        private const string OldBookFolder = HobbFolder + "/L'Assassin Royal/L'apprenti assassin";
-        private const string NewBookFolder = HobbFolder + "/L'Assassin royal/01 - L'apprenti assassin";
+        private static readonly string FixtureRoot = Path.Combine(Path.GetTempPath(), "chaptarrng-rename-book-file-service");
+        private static readonly string HobbFolder = Path.Combine(FixtureRoot, "audiobooks", "Robin Hobb");
+        private static readonly string OldBookFolder = Path.Combine(HobbFolder, "L'Assassin Royal", "L'apprenti assassin");
+        private static readonly string NewBookFolder = Path.Combine(HobbFolder, "L'Assassin du Roi", "01 - L'apprenti assassin");
 
         private static (RenameBookFileService Service, DiskProviderProxy Disk, RecordingMoveBookFiles Mover, RecordingEventAggregator Events, StubMediaFileService Files)
             CreateAudiobookFolderScenario(List<BookFile> files, Func<BookFile, string> destinationFactory)
@@ -579,8 +597,8 @@ namespace Chaptarr.Core.Test.MediaFiles
         {
             return new List<BookFile>
             {
-                BookFile(1, OldBookFolder + "/01 Prologue.mp3", Quality.MP3, "audiobook"),
-                BookFile(2, OldBookFolder + "/02 Le nouveau.mp3", Quality.MP3, "audiobook")
+                BookFile(1, Path.Combine(OldBookFolder, "01 Prologue.mp3"), Quality.MP3, "audiobook"),
+                BookFile(2, Path.Combine(OldBookFolder, "02 Le nouveau.mp3"), Quality.MP3, "audiobook")
             };
         }
 
@@ -589,20 +607,32 @@ namespace Chaptarr.Core.Test.MediaFiles
         {
             var files = TwoTrackAudiobook();
             var scenario = CreateAudiobookFolderScenario(files, f => Path.Combine(NewBookFolder, Path.GetFileName(f.Path)));
-            scenario.Disk.AddFile(OldBookFolder + "/cover.jpg");
-            scenario.Disk.AddFile(OldBookFolder + "/metadata.json");
+            scenario.Disk.AddFile(Path.Combine(OldBookFolder, "cover.jpg"));
+            scenario.Disk.AddFile(Path.Combine(OldBookFolder, "metadata.json"));
 
             scenario.Service.Execute(new RenameFilesCommand(1, new List<int> { 1, 2 }));
 
-            Assert.That(scenario.Disk.Operations, Is.EqualTo(new[] { $"CreateFolder {HobbFolder}/L'Assassin royal", $"MoveFolder {OldBookFolder} -> {NewBookFolder}" }));
+            Assert.That(scenario.Disk.Operations, Is.EqualTo(new[]
+            {
+                $"CreateFolder {NormalizePath(Path.Combine(HobbFolder, "L'Assassin du Roi"))}",
+                $"MoveFolder {NormalizePath(OldBookFolder)} -> {NormalizePath(NewBookFolder)}"
+            }));
             Assert.That(scenario.Mover.MovedFileIds, Is.Empty);
-            Assert.That(files.Select(f => f.Path), Is.EqualTo(new[] { NewBookFolder + "/01 Prologue.mp3", NewBookFolder + "/02 Le nouveau.mp3" }));
-            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(NewBookFolder + "/cover.jpg"));
-            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(NewBookFolder + "/metadata.json"));
+            Assert.That(files.Select(f => NormalizePath(f.Path)), Is.EqualTo(new[]
+            {
+                NormalizePath(Path.Combine(NewBookFolder, "01 Prologue.mp3")),
+                NormalizePath(Path.Combine(NewBookFolder, "02 Le nouveau.mp3"))
+            }));
+            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(NormalizePath(Path.Combine(NewBookFolder, "cover.jpg"))));
+            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(NormalizePath(Path.Combine(NewBookFolder, "metadata.json"))));
             Assert.That(scenario.Files.Updated.Select(f => f.Id), Is.EqualTo(new[] { 1, 2 }));
 
             var renamed = scenario.Events.Events.OfType<AuthorRenamedEvent>().Single().RenamedFiles;
-            Assert.That(renamed.Select(r => r.PreviousPath), Is.EqualTo(new[] { OldBookFolder + "/01 Prologue.mp3", OldBookFolder + "/02 Le nouveau.mp3" }));
+            Assert.That(renamed.Select(r => r.PreviousPath), Is.EqualTo(new[]
+            {
+                Path.Combine(OldBookFolder, "01 Prologue.mp3"),
+                Path.Combine(OldBookFolder, "02 Le nouveau.mp3")
+            }));
             Assert.That(scenario.Events.Events.OfType<BookFileRenamedEvent>().Count(), Is.EqualTo(2));
         }
 
@@ -614,12 +644,12 @@ namespace Chaptarr.Core.Test.MediaFiles
 
             scenario.Service.Execute(new RenameFilesCommand(1, new List<int> { 1, 2 }));
 
-            Assert.That(scenario.Disk.Operations, Does.Contain($"MoveFolder {OldBookFolder} -> {NewBookFolder}"));
+            Assert.That(scenario.Disk.Operations, Does.Contain($"MoveFolder {NormalizePath(OldBookFolder)} -> {NormalizePath(NewBookFolder)}"));
             Assert.That(scenario.Mover.MovedFileIds, Is.EqualTo(new[] { 1 }));
-            Assert.That(files[0].Path, Is.EqualTo(NewBookFolder + "/01 - Prologue.mp3"));
-            Assert.That(files[1].Path, Is.EqualTo(NewBookFolder + "/02 Le nouveau.mp3"));
+            Assert.That(NormalizePath(files[0].Path), Is.EqualTo(NormalizePath(Path.Combine(NewBookFolder, "01 - Prologue.mp3"))));
+            Assert.That(NormalizePath(files[1].Path), Is.EqualTo(NormalizePath(Path.Combine(NewBookFolder, "02 Le nouveau.mp3"))));
             Assert.That(scenario.Events.Events.OfType<AuthorRenamedEvent>().Single().RenamedFiles.Single(r => r.BookFile.Id == 1).PreviousPath,
-                Is.EqualTo(OldBookFolder + "/01 Prologue.mp3"));
+                Is.EqualTo(Path.Combine(OldBookFolder, "01 Prologue.mp3")));
         }
 
         [Test]
@@ -627,9 +657,9 @@ namespace Chaptarr.Core.Test.MediaFiles
         {
             var files = TwoTrackAudiobook();
             var scenario = CreateAudiobookFolderScenario(files, f => Path.Combine(NewBookFolder, Path.GetFileName(f.Path)));
-            scenario.Disk.AddFile(OldBookFolder + "/cover.jpg");
-            scenario.Disk.AddFile(OldBookFolder + "/metadata.json");
-            scenario.Disk.AddFile(NewBookFolder + "/metadata.json");
+            scenario.Disk.AddFile(Path.Combine(OldBookFolder, "cover.jpg"));
+            scenario.Disk.AddFile(Path.Combine(OldBookFolder, "metadata.json"));
+            scenario.Disk.AddFile(Path.Combine(NewBookFolder, "metadata.json"));
 
             scenario.Service.Execute(new RenameFilesCommand(1, new List<int> { 1, 2 }));
 
@@ -639,8 +669,8 @@ namespace Chaptarr.Core.Test.MediaFiles
                 "MoveBookFile 01 Prologue.mp3",
                 "MoveBookFile 02 Le nouveau.mp3"
             }));
-            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(NewBookFolder + "/cover.jpg"));
-            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(OldBookFolder + "/metadata.json"), "an existing destination file is never overwritten");
+            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(NormalizePath(Path.Combine(NewBookFolder, "cover.jpg"))));
+            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(NormalizePath(Path.Combine(OldBookFolder, "metadata.json"))), "an existing destination file is never overwritten");
         }
 
         [Test]
@@ -648,12 +678,12 @@ namespace Chaptarr.Core.Test.MediaFiles
         {
             var files = TwoTrackAudiobook();
             var scenario = CreateAudiobookFolderScenario(files, f => Path.Combine(NewBookFolder, Path.GetFileName(f.Path)));
-            scenario.Disk.AddFile(OldBookFolder + "/cover.jpg");
+            scenario.Disk.AddFile(Path.Combine(OldBookFolder, "cover.jpg"));
 
             scenario.Service.Execute(new RenameFilesCommand(1, new List<int> { 1 }));
 
             Assert.That(scenario.Disk.Operations, Is.EqualTo(new[] { "MoveBookFile 01 Prologue.mp3" }));
-            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(OldBookFolder + "/cover.jpg"));
+            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(NormalizePath(Path.Combine(OldBookFolder, "cover.jpg"))));
         }
 
         [Test]
@@ -661,8 +691,8 @@ namespace Chaptarr.Core.Test.MediaFiles
         {
             var files = TwoTrackAudiobook();
             var scenario = CreateAudiobookFolderScenario(files, f => Path.Combine(NewBookFolder, Path.GetFileName(f.Path)));
-            scenario.Disk.AddFile(OldBookFolder + "/bonus.mp3");
-            scenario.Disk.AddFile(OldBookFolder + "/cover.jpg");
+            scenario.Disk.AddFile(Path.Combine(OldBookFolder, "bonus.mp3"));
+            scenario.Disk.AddFile(Path.Combine(OldBookFolder, "cover.jpg"));
 
             scenario.Service.Execute(new RenameFilesCommand(1, new List<int> { 1, 2 }));
 
@@ -675,12 +705,12 @@ namespace Chaptarr.Core.Test.MediaFiles
         {
             var files = TwoTrackAudiobook();
             var scenario = CreateAudiobookFolderScenario(files, f => Path.Combine(f.Id == 1 ? NewBookFolder : NewBookFolder + " (2)", Path.GetFileName(f.Path)));
-            scenario.Disk.AddFile(OldBookFolder + "/cover.jpg");
+            scenario.Disk.AddFile(Path.Combine(OldBookFolder, "cover.jpg"));
 
             scenario.Service.Execute(new RenameFilesCommand(1, new List<int> { 1, 2 }));
 
             Assert.That(scenario.Mover.MovedFileIds, Is.EqualTo(new[] { 1, 2 }));
-            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(OldBookFolder + "/cover.jpg"));
+            Assert.That(scenario.Disk.ExistingFiles, Does.Contain(NormalizePath(Path.Combine(OldBookFolder, "cover.jpg"))));
         }
 
         [Test]
@@ -693,7 +723,11 @@ namespace Chaptarr.Core.Test.MediaFiles
             scenario.Service.Execute(new RenameFilesCommand(1, new List<int> { 1, 2 }));
 
             Assert.That(scenario.Mover.MovedFileIds, Is.EqualTo(new[] { 1, 2 }));
-            Assert.That(files.Select(f => f.Path), Is.EqualTo(new[] { NewBookFolder + "/01 Prologue.mp3", NewBookFolder + "/02 Le nouveau.mp3" }));
+            Assert.That(files.Select(f => NormalizePath(f.Path)), Is.EqualTo(new[]
+            {
+                NormalizePath(Path.Combine(NewBookFolder, "01 Prologue.mp3")),
+                NormalizePath(Path.Combine(NewBookFolder, "02 Le nouveau.mp3"))
+            }));
         }
 
         [Test]

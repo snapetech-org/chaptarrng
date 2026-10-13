@@ -7,10 +7,13 @@ import {
   existsSync,
   fsyncSync,
   lstatSync,
+  mkdtempSync,
   mkdirSync,
   openSync,
   readFileSync,
   readlinkSync,
+  rmSync,
+  symlinkSync,
   unlinkSync,
   writeSync,
 } from 'node:fs';
@@ -59,7 +62,19 @@ function git(args) {
 function repoFiles() {
   const tracked = git(['ls-files', '-z']).split('\0').filter(Boolean);
   const untracked = git(['ls-files', '--others', '--exclude-standard', '-z']).split('\0').filter(Boolean);
-  return [...new Set([...tracked, ...untracked])].sort();
+  return currentRepoFiles(tracked, untracked);
+}
+
+export function currentRepoFiles(tracked, untracked, root = ROOT) {
+  return [...new Set([...tracked, ...untracked])].filter((file) => {
+    try {
+      lstatSync(path.join(root, file));
+      return true;
+    } catch (error) {
+      if (error.code === 'ENOENT') return false;
+      throw error;
+    }
+  }).sort();
 }
 
 function digestFile(relative, { text = false } = {}) {
@@ -290,6 +305,32 @@ export function isolatedChildEnvironment(task, runRoot, inherited = process.env)
   return env;
 }
 
+export function createShortTemporaryPathAlias(
+  targetDirectory,
+  aliasParent = process.platform === 'linux' ? '/dev/shm' : '/tmp',
+) {
+  const aliasParents = [...new Set([aliasParent, '/dev/shm', '/tmp'])];
+  let lastError;
+
+  for (const parent of aliasParents) {
+    let aliasRoot;
+    try {
+      aliasRoot = mkdtempSync(path.join(parent, 'cng-'));
+      const directory = path.join(aliasRoot, 't');
+      symlinkSync(targetDirectory, directory, 'dir');
+      return {
+        directory,
+        cleanup: () => rmSync(aliasRoot, { recursive: true, force: true }),
+      };
+    } catch (error) {
+      if (aliasRoot) rmSync(aliasRoot, { recursive: true, force: true });
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
 function terminate(child) {
   if (!child.pid) return;
   if (process.platform === 'win32') {
@@ -328,6 +369,13 @@ export function parseNUnitSummary(xml) {
   const root = xml.match(/<test-run\b[^>]*>/)?.[0];
   if (!root) throw new Error('NUnit XML is missing its test-run summary');
   const attrs = Object.fromEntries([...root.matchAll(/([A-Za-z][A-Za-z0-9_-]*)="([^"]*)"/g)].map((match) => [match[1], match[2]]));
+  const failedTestNames = [];
+  for (const match of xml.matchAll(/<test-case\b[^>]*>/g)) {
+    const tag = match[0];
+    const result = tag.match(/\bresult="([^"]+)"/)?.[1];
+    const name = tag.match(/\bname="([^"]+)"/)?.[1];
+    if (result === 'Failed' && name) failedTestNames.push(name);
+  }
   const summary = {
     total: Number(attrs.total ?? attrs.testcasecount),
     passed: Number(attrs.passed),
@@ -339,7 +387,11 @@ export function parseNUnitSummary(xml) {
   if (![summary.total, summary.passed, summary.failed, summary.skipped, summary.inconclusive].every(Number.isFinite) || summary.total < 1) {
     throw new Error('NUnit XML has missing, invalid, or zero case counts');
   }
-  return summary;
+  return {
+    ...summary,
+    failedTestNames: failedTestNames.slice(0, 100),
+    failedTestNamesTruncated: failedTestNames.length > 100,
+  };
 }
 
 function formatElapsed(milliseconds) {
@@ -417,13 +469,24 @@ export async function runTask(task, runRoot, testSpec = null) {
   const artifactsBefore = hashArtifacts(spec);
   const startedAt = new Date().toISOString();
   const started = Date.now();
+  const childEnvironment = isolatedChildEnvironment(spec, runRoot);
+  const needsShortTemporaryPath = process.platform === 'linux' &&
+    childEnvironment.DIRECT_DOWNLOAD_REQUIRE_PLAYWRIGHT === 'true';
+  let temporaryAlias = null;
   let timedOut = false;
   let child;
   let exit;
   try {
+    if (needsShortTemporaryPath) {
+      temporaryAlias = createShortTemporaryPathAlias(childEnvironment.TMPDIR);
+      childEnvironment.TMPDIR = temporaryAlias.directory;
+      childEnvironment.TMP = temporaryAlias.directory;
+      childEnvironment.TEMP = temporaryAlias.directory;
+    }
+
     child = spawn(spec.command[0], args, {
       cwd: ROOT,
-      env: isolatedChildEnvironment(spec, runRoot),
+      env: childEnvironment,
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: process.platform !== 'win32',
       windowsHide: true,
@@ -443,7 +506,11 @@ export async function runTask(task, runRoot, testSpec = null) {
     } catch (error) {
       logError ??= error.message;
     } finally {
-      closeSync(logFd);
+      try {
+        closeSync(logFd);
+      } finally {
+        temporaryAlias?.cleanup();
+      }
     }
   }
 
@@ -453,6 +520,8 @@ export async function runTask(task, runRoot, testSpec = null) {
   let failedCases = null;
   let skippedCases = null;
   let inconclusiveCases = null;
+  let failedTestNames = [];
+  let failedTestNamesTruncated = false;
   let summaryError = null;
   if (task.id === 'dotnet-core-tests') {
     try {
@@ -462,6 +531,8 @@ export async function runTask(task, runRoot, testSpec = null) {
       failedCases = summary.failed;
       skippedCases = summary.skipped;
       inconclusiveCases = summary.inconclusive;
+      failedTestNames = summary.failedTestNames;
+      failedTestNamesTruncated = summary.failedTestNamesTruncated;
       if (summary.result && summary.result !== 'Passed') summaryError = `NUnit reported ${summary.result}`;
     } catch (error) { summaryError = error.message; }
   } else if (spec.resultFormat === 'node-test') {
@@ -501,6 +572,8 @@ export async function runTask(task, runRoot, testSpec = null) {
     failedCases,
     skippedCases,
     inconclusiveCases,
+    failedTestNames,
+    failedTestNamesTruncated,
     inventory: task.inventory,
     artifactInputs: artifactsBefore,
   };
