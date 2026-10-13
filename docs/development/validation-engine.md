@@ -8,7 +8,7 @@ Windows, macOS, and PostgreSQL smoke receipts before the workflow is complete.
 
 ## Local use
 
-Use Node.js `26.10.0` and .NET SDK `10.0.401`, matching the CI toolchain. Build
+Use Node.js `26.10.0` and .NET SDK `10.0.402`, matching the CI toolchain. Build
 the existing CI outputs first:
 
 ImageSharp 4.1.3 requires the complete Six Labors license at build time. Store

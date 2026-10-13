@@ -31,7 +31,7 @@
 
 ## Validation and UI evidence
 
-- Use Node 26.10.0 and .NET SDK 10.0.401 as declared in docs/development/validation-engine.md.
+- Use Node 26.10.0 and .NET SDK 10.0.402 as declared in docs/development/validation-engine.md.
 - Follow the repository validation engine for plan, tests-only, and full runs. A plan discovers tasks but does not execute tests. Report the actual tasks, native counts, skips, exclusions, and any unavailable prerequisite.
 - Use the disposable PostgreSQL migration smoke only through the documented workflow fixtures. Do not point tests at live services or databases.
 - CONTRIBUTING.md requires screenshots for UI changes. Capture the changed interface running and include the evidence in the pull request; tests and type checks do not prove visual behavior.
