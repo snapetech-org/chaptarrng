@@ -140,6 +140,25 @@ test('NUnit receipt records only the numeric SQLite error code', () => {
   assert.equal(receipt.includes('SQLite Error'), false);
 });
 
+test('NUnit receipt maps known SQLite stack frames to a safe operation stage', () => {
+  const summary = parseNUnitSummary(
+    '<test-run total="1" passed="0" failed="1" skipped="0" inconclusive="0" result="Failed"><test-case name="Fixture.database" result="Failed"><failure><message><![CDATA[Microsoft.Data.Sqlite.SqliteException : SQLite Error 14: private database path]]></message><stack-trace><![CDATA[at NzbDrone.Core.Datastore.BookshelfDatabaseConverter.ValidateDatabase(String path) in C:\\private\\checkout\\BookshelfDatabaseConverter.cs:line 203]]></stack-trace></failure></test-case></test-run>',
+  );
+
+  assert.deepEqual(summary.failedTestExceptionTypes, [
+    {
+      testName: 'Fixture.database',
+      exceptionType: 'Microsoft.Data.Sqlite.SqliteException',
+      sqliteErrorCode: 14,
+      sqliteFailureStage: 'database-validation',
+    },
+  ]);
+  const receipt = JSON.stringify(summary);
+  assert.equal(receipt.includes('private database path'), false);
+  assert.equal(receipt.includes('C:\\\\private'), false);
+  assert.equal(receipt.includes('line 203'), false);
+});
+
 test('NUnit receipt extracts exception types without rewriting message markup', () => {
   const summary = parseNUnitSummary(
     '<test-run total="1" passed="0" failed="1" skipped="0" inconclusive="0" result="Failed"><test-case name="Fixture.markup" result="Failed"><failure><message><![CDATA[System.IO.IOException : <script>private detail</script>]]></message></failure></test-case></test-run>',

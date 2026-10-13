@@ -408,6 +408,21 @@ export function parseNUnitSummary(xml) {
         ? firstLine.match(/^Microsoft\.Data\.Sqlite\.SqliteException\s*:\s*SQLite Error\s+(\d+)\s*:/i)?.[1]
         : undefined;
       if (sqliteErrorCode) failureType.sqliteErrorCode = Number(sqliteErrorCode);
+      if (exceptionType === 'Microsoft.Data.Sqlite.SqliteException') {
+        const stackTrace = testCase.match(/<stack-trace\b[^>]*>([\s\S]*?)<\/stack-trace>/)?.[1] ?? '';
+        const stackContent = stackTrace.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)?.[1] ?? stackTrace;
+        const sqliteFailureStages = [
+          ['BookshelfDatabaseConverter.ValidateDatabase', 'database-validation'],
+          ['BookshelfDatabaseConverter.CheckpointDatabase', 'database-checkpoint'],
+          ['BookshelfDatabaseConverter.CreateConsistentSnapshot', 'database-snapshot'],
+          ['BookshelfDatabaseImporter.Import', 'database-import'],
+          ['MigrationController.MigrateNative', 'database-migration'],
+          ['DatabaseLineageGuard.Detect', 'database-lineage-check'],
+          ['BookshelfDatabaseConverter.OpenConnection', 'database-open'],
+        ];
+        const stage = sqliteFailureStages.find(([method]) => stackContent.includes(method))?.[1];
+        if (stage) failureType.sqliteFailureStage = stage;
+      }
       failedTestExceptionTypes.push(failureType);
     }
   }

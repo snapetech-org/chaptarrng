@@ -117,8 +117,10 @@ start of its failure message rather than in a separate XML field, so the parser
 keeps only that reviewed type token; it never exports failure messages, stack
 traces, or test stdout. For `Microsoft.Data.Sqlite.SqliteException`, it may also
 include the numeric SQLite error code so platform-specific database failures
-can be diagnosed without exporting the associated message. Assertion text and
-unrecognized exception types remain private in the task log.
+can be diagnosed without exporting the associated message. A failure in a
+known SQLite migration method can also add a fixed operation-stage label; the
+stack trace itself remains private. Assertion text and unrecognized exception
+types remain private in the task log.
 
 The source fingerprint binds the commit, tree, working diff, configured build
 inputs, and test-source inventory. Text inputs and inventory files use Git's
