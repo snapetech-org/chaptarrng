@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using FluentMigrator.Runner;
 using FluentMigrator.Runner.Generators;
@@ -30,6 +31,28 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
         }
 
         public void Migrate(string connectionString, MigrationContext migrationContext, DatabaseType databaseType)
+        {
+            if (migrationContext.MigrationType == MigrationType.Main &&
+                databaseType == DatabaseType.SQLite &&
+                DatabaseLineageGuard.Detect(connectionString, databaseType) == DatabaseLineage.BookshelfNG)
+            {
+                if (migrationContext.DesiredVersion.HasValue)
+                {
+                    throw new InvalidDataException("A BookshelfNG database can only be converted during a full Chaptarr startup migration. The source database was not changed.");
+                }
+
+                var backupPath = new BookshelfDatabaseConverter().Convert(
+                    connectionString,
+                    targetConnectionString => MigrateNative(targetConnectionString, migrationContext, databaseType),
+                    BookshelfDatabaseImporter.Import);
+                _logger.Info("BookshelfNG database conversion completed. Original database backup retained at {0}", backupPath);
+                return;
+            }
+
+            MigrateNative(connectionString, migrationContext, databaseType);
+        }
+
+        private void MigrateNative(string connectionString, MigrationContext migrationContext, DatabaseType databaseType)
         {
             if (migrationContext.MigrationType == MigrationType.Main)
             {
