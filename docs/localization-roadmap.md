@@ -1,46 +1,36 @@
 # UI localization roadmap
 
-## Existing support and verified gap
+## Catalog completion
 
-ChaptarrNG already has a `Core/*.json` catalog system, server-side fallback to English, and a System > UI Language setting. There are 45 checked-in core catalogs, including Spanish, German, Arabic, Hindi, Japanese, Korean, Vietnamese, Simplified Chinese, Traditional Chinese, and Indonesian. The runtime language list already maps Chinese to `zh_CN` and Brazilian Portuguese to `pt_BR`; this PR adds selectable mappings for the existing Traditional Chinese and Indonesian catalogs.
+ChaptarrNG keeps its `NzbDrone.Core/Localization/Core/*.json` catalogs, System > UI Language setting, and English fallback. This follow-up populates the Core catalogs for Spanish, Simplified Chinese, Hindi, German, Japanese, French, Brazilian Portuguese, Arabic, Korean, Traditional Chinese, Vietnamese, and Indonesian.
 
-The AudioBookShelf root-mapping UI adds 17 English messages that were missing from every checked locale. The first slice filled them for the selectable es, de, zh_CN, ja, fr, pt_BR, ar, ko, hi, and vi catalogs. This continuation exposes the existing Indonesian and Traditional Chinese catalogs and translates all 19 root-mapping messages for those two locales. It reuses the current localization service and does not add a second language preference.
+Each target catalog contains a non-empty value for all 2,295 English-source messages. This includes `AbsLibraryModeAudioOnly` and `AbsLibraryModeAudioAndEbooks` in all 12 locales; existing runtime language mappings are preserved.
 
-## Next implementation steps
+The locale order remains:
 
-1. Keep new Chaptarr-specific messages in the existing core catalog and add them to the highest-priority selectable locale files first.
-2. Add a coverage report for recently introduced UI keys and keep token placeholders identical to English.
-3. Decide separately whether to expose the existing Spanish-Mexico catalog variant in the UI; do not imply it is selectable until the language mapping supports it.
-4. Review forms, tables, navigation, and modals at narrow and desktop widths with the existing Arabic and Hebrew `lang` and `dir` behavior; full RTL layout remains separate.
-5. Keep book, author, edition, file, and integration names as supplied; use the UI locale only for interface copy and locale-aware date/number formatting.
+1. Spanish (`es`)
+2. Simplified Chinese (`zh-CN`)
+3. Hindi (`hi`)
+4. German (`de`)
+5. Japanese (`ja`)
+6. French (`fr`)
+7. Brazilian Portuguese (`pt-BR`)
+8. Arabic (`ar`)
+9. Korean (`ko`)
+10. Traditional Chinese (`zh-TW`)
+11. Vietnamese (`vi`)
+12. Indonesian (`id`)
 
-## First-pass locale order
+## Translation scope and review
 
-This is a practical rollout order, not a claim about these apps' actual user base. Product-level language analytics are not available. It combines global speaker estimates with online-content usage, and keeps the requested Arabic and Asian-language coverage in the first waves:
+The catalogs include application labels, help, accessibility text, dialogs, empty/error/success states, and visible workflow copy. Author and book metadata, filenames and paths, sample data, product names, commands, and protocol/API identifiers remain unchanged. English remains the fallback for future missing keys.
 
-1. Spanish (es; es-MX where the product already distinguishes it)
-2. Simplified Chinese (zh-Hans / zh-CN)
-3. Hindi (hi)
-4. German (de)
-5. Japanese (ja)
-6. French (fr)
-7. Brazilian Portuguese (pt-BR)
-8. Arabic (ar; requires right-to-left layout support)
-9. Korean (ko)
-10. Traditional Chinese (zh-Hant / zh-TW)
-11. Vietnamese (vi)
-12. Indonesian (id)
+Matching upstream values were reused where available. Machine translation and curated common terms filled the remaining entries; some source-language values remain where a model result was unsafe or the text is a product or technical term. Static checks found full source-key coverage and no placeholder, ICU argument/type, rich-text tag, URL, inline-code, HTTP/HTTPS/URL-token, or plural-marker mismatches. These checks verify catalog structure, not translation quality. A phrase-by-phrase native-speaker review has not been completed, so wording and remaining English values need fluent review.
 
-The World Bank's 2025 report estimates Mandarin Chinese, Hindi, and Spanish at 15%, 7.6%, and 6.9% of the global population respectively; its online-content data also places German, Chinese, and Japanese among the leading languages. [World Bank, Digital Progress and Trends Report 2025](https://documents1.worldbank.org/curated/en/099112525160536089/pdf/P505350-59c98ca8-0803-4f23-b470-17f3dab010ab.pdf). W3Techs tracks website content-language share rather than app users. [W3Techs content-language survey](https://w3techs.com/technologies/cross/content_language%20/ranking). Reorder this list if maintainers later receive reliable demand signals.
+## RTL and follow-up
 
-## Translation boundaries and acceptance
+The Arabic strings are present, but full RTL layout acceptance remains open. Review and convert physical left/right layout rules before enabling global RTL direction, then verify common forms, tables, navigation, and modals at narrow and desktop widths.
 
-Translate interface labels, help, empty states, validation, notifications, and errors. Keep media titles, user names, filenames and paths, commands, API identifiers, protocol values, and other user-supplied content unchanged. Use the selected UI language for date, time, number, and plural formatting. Every locale must fall back to English for a missing key; CI should check placeholder parity and report missing strings. Arabic ships only after the app sets `lang` and `dir`, uses logical layout properties, and verifies the core workflows in RTL at narrow and desktop widths.
-
-## Implemented in this PR
-
-System > UI Language now offers Indonesian and Traditional Chinese through the existing locale service, alongside the prior first-wave choices. Their AudioBookShelf root-mapping labels, guidance, loading states, and errors are translated, and untranslated messages continue to fall back to English. Arabic and Hebrew continue to use right-to-left document direction; full-page RTL layout review remains separate.
-
-## Added in this continuation
-
-The audio-only and audio-plus-eBooks library choices now use translated labels across all twelve selectable locales. The shared mapping form no longer falls back to English for those two choices; full application catalog completion and page-level RTL review remain separate work.
+1. Request fluent-speaker review for each target catalog, especially Arabic and Hindi.
+2. Keep new Chaptarr-specific messages in the existing Core catalog and check source-key and placeholder parity in CI.
+3. Preserve the current English fallback for any future missing message.
