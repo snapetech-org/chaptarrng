@@ -4482,20 +4482,23 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                 Assert.That(match, Is.Null);
                 }
 
-                [TestCase(false, false, false)]
-                [TestCase(true, false, true)]
-                [TestCase(true, true, true)]
+                [TestCase(null, false, false, 0)]
+                [TestCase("Harry Potter", false, true, 1)]
+                [TestCase("Harry Potter", true, false, 0)]
+                [TestCase("Harry Potter and the Order of the Phoenix", true, true, 2)]
                 public void should_only_block_generic_series_title_when_no_clean_title_field_remains(
-                    bool includeCleanTitleField,
+                    string cleanTitleField,
                     bool isCollectionTitle,
-                    bool expectedMatch)
+                    bool expectedMatch,
+                    int expectedEditionId)
                 {
                     var logger = LogManager.GetCurrentClassLogger();
                     var containment = new ContainmentValidator(new TagNormalizer(), logger);
 
                     var fts = new StubEditionFtsRepository(new List<EditionFtsMatch>
                     {
-                        // The exact title must select the specific book even when FTS puts a boxed set first.
+                        // A generic clean title can prove a normal series book, but must not turn a boxed set into a single book.
+                        // A specific clean title should still select the matching individual book over the boxed set.
                         new EditionFtsMatch
                         {
                             EditionId = 1,
@@ -4539,41 +4542,41 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                         editionFtsRepository: fts,
                         bookService: bookService,
                         editionService: null,
-                    editionRepository: null,
-                    mediaInfoExtractor: null,
-                    logger: logger);
+                        editionRepository: null,
+                        mediaInfoExtractor: null,
+                        logger: logger);
 
-	                    var tags = new Dictionary<string, List<string>>
-	                    {
-	                        // MAM-style multi-value field: [publisher, language, asin, series, position]
-	                        { "MP4:----", new List<string> { "Pottermore Publishing", "English", "B079N96LN3", "Harry Potter", "5" } },
-	                        { "ALBUMARTIST", new List<string> { "J.K. Rowling" } }
-	                    };
+                    var tags = new Dictionary<string, List<string>>
+                    {
+                        // MAM-style multi-value field: [publisher, language, asin, series, position]
+                        { "MP4:----", new List<string> { "Pottermore Publishing", "English", "B079N96LN3", "Harry Potter", "5" } },
+                        { "ALBUMARTIST", new List<string> { "J.K. Rowling" } }
+                    };
 
-	                    if (includeCleanTitleField)
-	                    {
-                        tags["TITLE"] = new List<string> { "Harry Potter and the Order of the Phoenix" };
-	                    }
+                    if (cleanTitleField != null)
+                    {
+                        tags["TITLE"] = new List<string> { cleanTitleField };
+                    }
 
-	                    var file = new DiscoveredFileWithMetadata
-	                    {
-	                        // Without TITLE, the only title-shaped field is the series/position field.
-	                        Path = "/audiobooks/J.K. Rowling/Harry Potter/5/01.m4b",
-	                        AllTags = tags
-	                    };
+                    var file = new DiscoveredFileWithMetadata
+                    {
+                        // Without TITLE, the only title-shaped field is the series/position field.
+                        Path = "/audiobooks/J.K. Rowling/Harry Potter/5/01.m4b",
+                        AllTags = tags
+                    };
 
-	                    var match = svc.HolyGrailMatchFile(file, BookMediaType.Audiobook, restrictToAuthorId: 25);
+                    var match = svc.HolyGrailMatchFile(file, BookMediaType.Audiobook, restrictToAuthorId: 25);
 
-	                    if (expectedMatch)
-	                    {
-	                        Assert.That(match, Is.Not.Null);
-                        Assert.That(match.EditionId, Is.EqualTo(2));
-	                    }
-	                    else
-	                    {
-	                        Assert.That(match, Is.Null);
-	                    }
-		                }
+                    if (expectedMatch)
+                    {
+                        Assert.That(match, Is.Not.Null);
+                        Assert.That(match.EditionId, Is.EqualTo(expectedEditionId));
+                    }
+                    else
+                    {
+                        Assert.That(match, Is.Null);
+                    }
+                }
 
 	                [Test]
 	                public void should_match_when_file_title_contains_subtitle_and_series_tokens()
