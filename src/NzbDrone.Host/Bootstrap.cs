@@ -257,6 +257,11 @@ namespace NzbDrone.Host
                 return ApplicationModes.Help;
             }
 
+            if (startupContext.MigrateBookshelf || startupContext.PreviewBookshelfMigration)
+            {
+                return ApplicationModes.MigrateBookshelf;
+            }
+
             if (OsInfo.IsWindows && startupContext.RegisterUrl)
             {
                 return ApplicationModes.RegisterUrl;

@@ -18,6 +18,15 @@ namespace NzbDrone.Core.Datastore
             Action<string> migrateNativeTarget,
             Func<SqliteConnection, SqliteConnection, SqliteTransaction, BookshelfDatabaseImportReport> importRows)
         {
+            return Convert(sourceConnectionString, migrateNativeTarget, importRows, previewOnly: false).BackupPath;
+        }
+
+        public BookshelfDatabaseConversionResult Convert(
+            string sourceConnectionString,
+            Action<string> migrateNativeTarget,
+            Func<SqliteConnection, SqliteConnection, SqliteTransaction, BookshelfDatabaseImportReport> importRows,
+            bool previewOnly)
+        {
             if (migrateNativeTarget == null)
             {
                 throw new ArgumentNullException(nameof(migrateNativeTarget));
@@ -55,6 +64,7 @@ namespace NzbDrone.Core.Datastore
             var lockPath = sourcePath + ".bookshelfng-conversion.lock";
             var promoted = false;
             var backupRetained = false;
+            BookshelfDatabaseImportReport importReport = null;
 
             using var conversionLock = AcquireConversionLock(lockPath);
 
@@ -77,13 +87,18 @@ namespace NzbDrone.Core.Datastore
                     using (var transaction = target.BeginTransaction())
                     {
                         var sourceTables = GetSourceTableCounts(source);
-                        var report = importRows(source, target, transaction);
-                        ValidateImportReport(sourceTables, report);
+                        importReport = importRows(source, target, transaction);
+                        ValidateImportReport(sourceTables, importReport);
                         transaction.Commit();
                     }
                 }
 
                 ValidateDatabase(stagePath, expectedLineage: DatabaseLineage.Chaptarr, checkForeignKeys: true);
+
+                if (previewOnly)
+                {
+                    return new BookshelfDatabaseConversionResult(null, importReport, previewOnly: true);
+                }
 
                 // Leave every file that moves or remains as a standalone database. A checkpoint
                 // alone does not change WAL mode; read-only consumers may still require -wal/-shm.
@@ -103,7 +118,7 @@ namespace NzbDrone.Core.Datastore
                 File.Move(stagePath, sourcePath, overwrite: true);
                 promoted = true;
 
-                return backupPath;
+                return new BookshelfDatabaseConversionResult(backupPath, importReport, previewOnly: false);
             }
             finally
             {
@@ -308,6 +323,23 @@ namespace NzbDrone.Core.Datastore
                 File.Delete(databasePath);
             }
         }
+    }
+
+    public sealed class BookshelfDatabaseConversionResult
+    {
+        public BookshelfDatabaseConversionResult(
+            string backupPath,
+            BookshelfDatabaseImportReport importReport,
+            bool previewOnly)
+        {
+            BackupPath = backupPath;
+            ImportReport = importReport;
+            PreviewOnly = previewOnly;
+        }
+
+        public string BackupPath { get; }
+        public BookshelfDatabaseImportReport ImportReport { get; }
+        public bool PreviewOnly { get; }
     }
 
     /// <summary>

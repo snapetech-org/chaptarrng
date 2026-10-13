@@ -1,7 +1,12 @@
+using System;
+using System.IO;
+using System.Linq;
 using NLog;
 using NzbDrone.Common;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Processes;
+using NzbDrone.Core.Datastore;
+using NzbDrone.Core.Datastore.Migration.Framework;
 using NzbDrone.Host.AccessControl;
 using IServiceProvider = NzbDrone.Common.IServiceProvider;
 
@@ -83,6 +88,39 @@ namespace NzbDrone.Host
                         _logger.Debug("Regiser URL selected");
                         _remoteAccessAdapter.MakeAccessible(false);
                         _appFolderFactory.SetPermissions();
+
+                        break;
+                    }
+
+                case ApplicationModes.MigrateBookshelf:
+                    {
+                        _appFolderFactory.Register();
+                        var connectionStringFactory = _serviceProvider.Resolve<IConnectionStringFactory>();
+                        var startupContext = _serviceProvider.Resolve<IStartupContext>();
+                        var migrationController = _serviceProvider.Resolve<IMigrationController>();
+                        var database = connectionStringFactory.MainDbConnection;
+                        if (database.DatabaseType != DatabaseType.SQLite ||
+                            DatabaseLineageGuard.Detect(database.ConnectionString, database.DatabaseType) != DatabaseLineage.BookshelfNG)
+                        {
+                            throw new InvalidDataException("No supported BookshelfNG SQLite database was found in this data directory. No database was changed.");
+                        }
+
+                        var previewOnly = startupContext.PreviewBookshelfMigration;
+                        var result = migrationController.MigrateBookshelf(
+                            database.ConnectionString,
+                            new MigrationContext(MigrationType.Main),
+                            database.DatabaseType,
+                            previewOnly);
+
+                        Console.WriteLine(previewOnly
+                            ? "BookshelfNG migration preview passed. The source database was not changed."
+                            : $"BookshelfNG migration completed. Backup retained at: {result.BackupPath}");
+                        Console.WriteLine("Source rows by table: source | preserved | transformed | rebuilt | reset");
+                        foreach (var table in result.ImportReport.Tables.OrderBy(item => item.Key, StringComparer.Ordinal))
+                        {
+                            var row = table.Value;
+                            Console.WriteLine($"{table.Key}: {row.SourceRows} | {row.PreservedRows} | {row.TransformedRows} | {row.RebuiltRows} | {row.ResetRows} — {row.TargetMapping}");
+                        }
 
                         break;
                     }

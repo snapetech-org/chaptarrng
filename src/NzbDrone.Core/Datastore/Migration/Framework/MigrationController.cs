@@ -16,6 +16,11 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
     public interface IMigrationController
     {
         void Migrate(string connectionString, MigrationContext migrationContext, DatabaseType databaseType);
+        BookshelfDatabaseConversionResult MigrateBookshelf(
+            string connectionString,
+            MigrationContext migrationContext,
+            DatabaseType databaseType,
+            bool previewOnly);
     }
 
     public class MigrationController : IMigrationController
@@ -41,15 +46,37 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                     throw new InvalidDataException("A BookshelfNG database can only be converted during a full Chaptarr startup migration. The source database was not changed.");
                 }
 
-                var backupPath = new BookshelfDatabaseConverter().Convert(
-                    connectionString,
-                    targetConnectionString => MigrateNative(targetConnectionString, migrationContext, databaseType),
-                    BookshelfDatabaseImporter.Import);
-                _logger.Info("BookshelfNG database conversion completed. Original database backup retained at {0}", backupPath);
+                var result = MigrateBookshelf(connectionString, migrationContext, databaseType, previewOnly: false);
+                _logger.Info("BookshelfNG database conversion completed. Original database backup retained at {0}", result.BackupPath);
                 return;
             }
 
             MigrateNative(connectionString, migrationContext, databaseType);
+        }
+
+        public BookshelfDatabaseConversionResult MigrateBookshelf(
+            string connectionString,
+            MigrationContext migrationContext,
+            DatabaseType databaseType,
+            bool previewOnly)
+        {
+            if (databaseType != DatabaseType.SQLite ||
+                DatabaseLineageGuard.Detect(connectionString, databaseType) != DatabaseLineage.BookshelfNG)
+            {
+                throw new InvalidDataException("BookshelfNG migration requires a supported BookshelfNG SQLite database. No database was changed.");
+            }
+
+            if (migrationContext?.DesiredVersion.HasValue == true)
+            {
+                throw new InvalidDataException("BookshelfNG conversion requires a full Chaptarr database migration. No database was changed.");
+            }
+
+            var context = migrationContext ?? new MigrationContext(MigrationType.Main);
+            return new BookshelfDatabaseConverter().Convert(
+                connectionString,
+                targetConnectionString => MigrateNative(targetConnectionString, context, DatabaseType.SQLite),
+                BookshelfDatabaseImporter.Import,
+                previewOnly);
         }
 
         private void MigrateNative(string connectionString, MigrationContext migrationContext, DatabaseType databaseType)

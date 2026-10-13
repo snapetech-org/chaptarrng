@@ -337,6 +337,7 @@ Note: the inherited assembly is named `Chaptarr.dll` on Linux/macOS and `Chaptar
 
 ## Documentation
 - [UI localization roadmap](docs/localization-roadmap.md): locale key coverage, English fallback status, and translation review work
+- [BookshelfNG migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md): preview and apply a supported SQLite database conversion
 
 - Default ChaptarrNG web UI: http://localhost:8789
 - Default username/password: Set on first launch

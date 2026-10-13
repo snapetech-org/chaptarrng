@@ -106,6 +106,31 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_preview_a_populated_v158_bookshelf_database_without_changing_the_source()
+        {
+            var originalDatabase = File.ReadAllBytes(_sourcePath);
+            var result = new MigrationController(
+                LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).MigrateBookshelf(
+                    _sourceConnectionString,
+                    new MigrationContext(MigrationType.Main),
+                    DatabaseType.SQLite,
+                    previewOnly: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.PreviewOnly, Is.True);
+                Assert.That(result.BackupPath, Is.Null);
+                Assert.That(result.ImportReport.Tables.Keys, Does.Contain("Authors"));
+                Assert.That(result.ImportReport.Tables.Keys, Does.Contain("Books"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(originalDatabase));
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(Directory.GetFiles(_directory, "*.chaptarr-stage-*.db"), Is.Empty);
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelf-snapshot-*.db"), Is.Empty);
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
         public void should_refuse_an_unsupported_bookshelf_identity_without_changing_the_source()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))

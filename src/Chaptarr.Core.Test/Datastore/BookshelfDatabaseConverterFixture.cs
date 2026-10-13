@@ -120,6 +120,38 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_preview_a_valid_conversion_without_changing_or_backing_up_the_source()
+        {
+            var originalDatabase = File.ReadAllBytes(_sourcePath);
+            var result = new BookshelfDatabaseConverter().Convert(
+                _sourceConnectionString,
+                CreateNativeTarget,
+                (source, target, transaction) =>
+                {
+                    var report = new BookshelfDatabaseImportReport();
+                    report.RecordTable("AuthorMetadata", 1, 0, 1, 0, 0, "merged into target Authors metadata");
+                    report.RecordTable("Authors", 1, 0, 1, 0, 0, "converted to a managed target Author");
+                    report.RecordTable("Books", 1, 0, 1, 0, 0, "mapped to target Books");
+                    report.RecordTable("Commands", 1, 0, 0, 0, 1, "stale queued commands are reset");
+                    return report;
+                },
+                previewOnly: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.PreviewOnly, Is.True);
+                Assert.That(result.BackupPath, Is.Null);
+                Assert.That(result.ImportReport.Tables.Count, Is.EqualTo(4));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(originalDatabase));
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(ReadBookId(_sourcePath), Is.EqualTo("fixture-book"));
+                Assert.That(Directory.GetFiles(_directory, "*.chaptarr-stage-*.db"), Is.Empty);
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelf-snapshot-*.db"), Is.Empty);
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
         public void should_not_promote_when_a_source_table_is_missing_from_the_import_report()
         {
             var converter = new BookshelfDatabaseConverter();
