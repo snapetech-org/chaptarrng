@@ -370,11 +370,41 @@ export function parseNUnitSummary(xml) {
   if (!root) throw new Error('NUnit XML is missing its test-run summary');
   const attrs = Object.fromEntries([...root.matchAll(/([A-Za-z][A-Za-z0-9_-]*)="([^"]*)"/g)].map((match) => [match[1], match[2]]));
   const failedTestNames = [];
-  for (const match of xml.matchAll(/<test-case\b[^>]*>/g)) {
-    const tag = match[0];
+  const failedTestExceptionTypes = [];
+  const allowlistedExceptionTypes = new Set([
+    'Microsoft.Data.Sqlite.SqliteException',
+    'NUnit.Framework.AssertionException',
+    'System.ArgumentException',
+    'System.ArgumentNullException',
+    'System.DirectoryNotFoundException',
+    'System.IO.IOException',
+    'System.InvalidDataException',
+    'System.InvalidOperationException',
+    'System.NotSupportedException',
+    'System.ObjectDisposedException',
+    'System.UnauthorizedAccessException',
+  ]);
+  for (const match of xml.matchAll(/<test-case\b[^>]*\/>|<test-case\b[^>]*>[\s\S]*?<\/test-case>/g)) {
+    const testCase = match[0];
+    const tag = testCase.match(/^<test-case\b[^>]*>/)?.[0];
+    if (!tag) continue;
     const result = tag.match(/\bresult="([^"]+)"/)?.[1];
     const name = tag.match(/\bname="([^"]+)"/)?.[1];
-    if (result === 'Failed' && name) failedTestNames.push(name);
+    if (result !== 'Failed' || !name) continue;
+
+    failedTestNames.push(name);
+    const message = testCase.match(/<failure\b[^>]*>[\s\S]*?<message\b[^>]*>([\s\S]*?)<\/message>[\s\S]*?<\/failure>/)?.[1];
+    if (!message) continue;
+
+    // NUnit puts exception types in the first message token rather than a
+    // dedicated XML field. Keep only a fixed, reviewed set of type names; never
+    // copy the message, stack trace, paths, or other test data into receipts.
+    const messageContent = message.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)?.[1] ?? message.replace(/<[^>]*>/g, '');
+    const firstLine = messageContent.split(/\r?\n/, 1)[0].trim();
+    const exceptionType = firstLine.match(/^([A-Za-z][A-Za-z0-9_.+`]+)\s*:/)?.[1];
+    if (exceptionType && allowlistedExceptionTypes.has(exceptionType)) {
+      failedTestExceptionTypes.push({ testName: name, exceptionType });
+    }
   }
   const summary = {
     total: Number(attrs.total ?? attrs.testcasecount),
@@ -391,6 +421,8 @@ export function parseNUnitSummary(xml) {
     ...summary,
     failedTestNames: failedTestNames.slice(0, 100),
     failedTestNamesTruncated: failedTestNames.length > 100,
+    failedTestExceptionTypes: failedTestExceptionTypes.slice(0, 100),
+    failedTestExceptionTypesTruncated: failedTestExceptionTypes.length > 100,
   };
 }
 
@@ -522,6 +554,8 @@ export async function runTask(task, runRoot, testSpec = null) {
   let inconclusiveCases = null;
   let failedTestNames = [];
   let failedTestNamesTruncated = false;
+  let failedTestExceptionTypes = [];
+  let failedTestExceptionTypesTruncated = false;
   let summaryError = null;
   if (task.id === 'dotnet-core-tests') {
     try {
@@ -533,6 +567,8 @@ export async function runTask(task, runRoot, testSpec = null) {
       inconclusiveCases = summary.inconclusive;
       failedTestNames = summary.failedTestNames;
       failedTestNamesTruncated = summary.failedTestNamesTruncated;
+      failedTestExceptionTypes = summary.failedTestExceptionTypes;
+      failedTestExceptionTypesTruncated = summary.failedTestExceptionTypesTruncated;
       if (summary.result && summary.result !== 'Passed') summaryError = `NUnit reported ${summary.result}`;
     } catch (error) { summaryError = error.message; }
   } else if (spec.resultFormat === 'node-test') {
@@ -574,6 +610,8 @@ export async function runTask(task, runRoot, testSpec = null) {
     inconclusiveCases,
     failedTestNames,
     failedTestNamesTruncated,
+    failedTestExceptionTypes,
+    failedTestExceptionTypesTruncated,
     inventory: task.inventory,
     artifactInputs: artifactsBefore,
   };

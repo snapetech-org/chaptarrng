@@ -84,12 +84,16 @@ test('NUnit summary keeps native pass, failure, skip and inconclusive totals', (
     result: 'Failed',
     failedTestNames: [],
     failedTestNamesTruncated: false,
+    failedTestExceptionTypes: [],
+    failedTestExceptionTypesTruncated: false,
   });
 });
 
-test('NUnit receipt records bounded failed test names without including failure messages', () => {
+test('NUnit receipt records bounded failure names and allowlisted exception types without messages', () => {
   const testCases = Array.from({ length: 102 }, (_, index) =>
-    `<test-case id="${index}" name="Fixture.case_${index}" result="${index < 101 ? 'Failed' : 'Passed'}"/>`,
+    index < 101
+      ? `<test-case id="${index}" name="Fixture.case_${index}" result="Failed"><failure><message><![CDATA[System.IO.IOException : private fixture detail ${index}]]></message><stack-trace><![CDATA[private fixture path]]></stack-trace></failure></test-case>`
+      : `<test-case id="${index}" name="Fixture.case_${index}" result="Passed"/>`,
   ).join('');
   const summary = parseNUnitSummary(
     `<test-run total="102" passed="1" failed="101" skipped="0" inconclusive="0" result="Failed">${testCases}</test-run>`,
@@ -98,6 +102,36 @@ test('NUnit receipt records bounded failed test names without including failure 
   assert.equal(summary.failedTestNames.length, 100);
   assert.deepEqual(summary.failedTestNames.slice(0, 2), ['Fixture.case_0', 'Fixture.case_1']);
   assert.equal(summary.failedTestNamesTruncated, true);
+  assert.equal(summary.failedTestExceptionTypes.length, 100);
+  assert.deepEqual(summary.failedTestExceptionTypes, [
+    ...Array.from({ length: 100 }, (_, index) => ({
+      testName: `Fixture.case_${index}`,
+      exceptionType: 'System.IO.IOException',
+    })),
+  ]);
+  assert.equal(summary.failedTestExceptionTypesTruncated, true);
+  assert.equal(JSON.stringify(summary).includes('private fixture detail'), false);
+  assert.equal(JSON.stringify(summary).includes('private fixture path'), false);
+});
+
+test('NUnit receipt omits exception types outside the reviewed allowlist', () => {
+  const summary = parseNUnitSummary(
+    '<test-run total="1" passed="0" failed="1" skipped="0" inconclusive="0" result="Failed"><test-case name="Fixture.case" result="Failed"><failure><message><![CDATA[Fixture.PrivateException : private fixture detail]]></message></failure></test-case></test-run>',
+  );
+
+  assert.deepEqual(summary.failedTestExceptionTypes, []);
+  assert.equal(JSON.stringify(summary).includes('private fixture detail'), false);
+});
+
+test('NUnit parser keeps self-closing cases separate from later failures', () => {
+  const summary = parseNUnitSummary(
+    '<test-run total="2" passed="1" failed="1" skipped="0" inconclusive="0" result="Failed"><test-case name="Fixture.passes" result="Passed"/><test-case name="Fixture.fails" result="Failed"><failure><message><![CDATA[System.IO.IOException : private fixture detail]]></message></failure></test-case></test-run>',
+  );
+
+  assert.deepEqual(summary.failedTestNames, ['Fixture.fails']);
+  assert.deepEqual(summary.failedTestExceptionTypes, [
+    { testName: 'Fixture.fails', exceptionType: 'System.IO.IOException' },
+  ]);
 });
 
 test('Node TAP summary accounts for pass, fail, skip, todo, and cancelled cases', () => {

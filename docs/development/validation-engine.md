@@ -111,9 +111,12 @@ Each task requires a nonzero native case count. NUnit XML provides total,
 passed, failed, skipped, and inconclusive counts; the Node test contracts use
 the standard TAP summary with the same zero-case and accounting checks. The
 migration smoke emits one case only after the app starts against the workflow's ephemeral PostgreSQL service and `/ping` responds.
-NUnit receipts also include at most 100 failed test-case names, without test
-stdout or assertion messages, so platform failures can be identified from the
-short-lived CI artifact.
+NUnit receipts include at most 100 failed test-case names and at most 100
+exception types from a fixed allowlist. NUnit puts an exception type at the
+start of its failure message rather than in a separate XML field, so the parser
+keeps only that reviewed type token; it never exports failure messages, stack
+traces, or test stdout. Assertion text and unrecognized exception types remain
+private in the task log.
 
 The source fingerprint binds the commit, tree, working diff, configured build
 inputs, and test-source inventory. Text inputs and inventory files use Git's
@@ -122,9 +125,10 @@ Linux and macOS. Each platform receipt separately hashes its compiled test
 assembly byte-for-byte; platform binaries are allowed to differ. Before and
 after a task the engine checks that the source fingerprint has not moved. Logs
 stay private under the system temporary directory; the exported receipt carries
-counts and bounded failing test names only. Overlapping runs in one checkout
-are rejected. Runtime probes and task child processes
-receive an explicit environment allowlist and each task's declared settings.
+counts, bounded failing test names, and bounded allowlisted exception types
+only. Overlapping runs in one checkout are rejected. Runtime probes and task
+child processes receive an explicit environment allowlist and each task's
+declared settings.
 Every task gets run-owned home, temporary, XDG, and .NET CLI directories. NuGet
 packages use a private cache shared only within the validation run. Test tasks
 run with `CI=true` and `NODE_ENV=test` regardless of the invoking shell's values.
