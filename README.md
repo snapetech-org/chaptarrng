@@ -38,9 +38,14 @@ tracks both gates and the individual blockers, including active development
 that is not in a release yet.
 
 The published `0.9.969` release does not include a populated BookshelfNG
-database converter or a BookshelfNG package/channel bridge. Do not point
-ChaptarrNG at a BookshelfNG `/config` directory or treat the projects as
-drop-in replacements yet. See the current
+database converter or a BookshelfNG package/channel bridge. The current source
+checkout adds a staged converter for the exact BookshelfNG v158 SQLite schema;
+it validates every source table, checks database integrity, retains a
+timestamped backup, and refuses unsupported or ambiguous databases. It has not
+been validated against production databases, does not convert PostgreSQL, and
+does not provide a release-channel upgrade bridge. Keep a separate backup and
+do not treat the projects as drop-in replacements yet. See the
+[BookshelfNG conversion guide](docs/BOOKSHELF_CONVERSION.md) and current
 [BookshelfNG consolidation report](https://github.com/snapetech/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)
 for migration and release evidence.
 
@@ -56,13 +61,15 @@ runtime, while source builds require the .NET 10 SDK.
 - **Restricted service access:** ChaptarrNG `0.9.941` and later can use a SeerrNG-only API key for supported book requests, searches, library status, and pending imports without granting global administration or destructive access.
 - **Standalone additions maintained here:** An optional built-in indexer and download client can search configured ebook sources, use API-key downloads, and optionally fall back to browser-assisted links. Full backup archives can use passphrase-based authenticated encryption; the direct Chaptarr project separately offers encryption for quick-start settings backups.
 - **Safer list and file workflows:** Preview an import list's next sync, inspect durable per-list sync history, and review import matching evidence. Imports check occupied destinations before writing; supported archives can be extracted, and multipart audiobooks can be merged or converted with progress and cancellation.
-- **More metadata and library connections:** RanobeDB adds light-novel ebook metadata. Optional AudioBookShelf, Calibre, and Grimmory connections synchronize library data, while Emby/Jellyfin can refresh after an import.
+- **More metadata and library connections:** RanobeDB adds light-novel ebook metadata. Optional AudioBookShelf, Calibre, and Grimmory connections sync library data; BookLore can receive imported files through BookDrop, while Emby/Jellyfin can refresh after an import.
 - **Operations and automation:** An optional MQTT gateway publishes library snapshots and lifecycle events, including Home Assistant discovery. A separate Prometheus listener exposes low-cardinality metrics. Large library views use paged reads, and long author deletions run in the background.
 - **Fork-owned distribution:** ChaptarrNG publishes its own images and maintains an Unraid package. Its [fork feature guide](docs/FORK_FEATURES.md) compares these additions with the parent project.
 
 The [fork feature guide](docs/FORK_FEATURES.md) covers the additions and their
 limits. Dedicated guides explain [import-list preview and history](docs/IMPORT_LIST_SYNC.md),
 [external library connections](docs/EXTERNAL_LIBRARY_INTEGRATIONS.md),
+[BookLore BookDrop](docs/BOOKLORE_INTEGRATION.md),
+[BookshelfNG database conversion](docs/BOOKSHELF_CONVERSION.md),
 [MQTT and canonical events](docs/MQTT_GATEWAY.md), and
 [Prometheus metrics](docs/PROMETHEUS_METRICS.md). The
 [changelog](CHANGELOG.md) records changes by released version.
