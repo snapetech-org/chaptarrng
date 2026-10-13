@@ -24,6 +24,9 @@ namespace NzbDrone.Host
         private readonly IProcessProvider _processProvider;
         private readonly IRemoteAccessAdapter _remoteAccessAdapter;
         private readonly IAppFolderFactory _appFolderFactory;
+        private readonly IConnectionStringFactory _connectionStringFactory;
+        private readonly IStartupContext _startupContext;
+        private readonly IMigrationController _migrationController;
         private readonly Logger _logger;
 
         public UtilityModeRouter(IServiceProvider serviceProvider,
@@ -31,6 +34,9 @@ namespace NzbDrone.Host
                       IProcessProvider processProvider,
                       IRemoteAccessAdapter remoteAccessAdapter,
                       IAppFolderFactory appFolderFactory,
+                      IConnectionStringFactory connectionStringFactory,
+                      IStartupContext startupContext,
+                      IMigrationController migrationController,
                       Logger logger)
         {
             _serviceProvider = serviceProvider;
@@ -38,6 +44,9 @@ namespace NzbDrone.Host
             _processProvider = processProvider;
             _remoteAccessAdapter = remoteAccessAdapter;
             _appFolderFactory = appFolderFactory;
+            _connectionStringFactory = connectionStringFactory;
+            _startupContext = startupContext;
+            _migrationController = migrationController;
             _logger = logger;
         }
 
@@ -95,18 +104,15 @@ namespace NzbDrone.Host
                 case ApplicationModes.MigrateBookshelf:
                     {
                         _appFolderFactory.Register();
-                        var connectionStringFactory = _serviceProvider.Resolve<IConnectionStringFactory>();
-                        var startupContext = _serviceProvider.Resolve<IStartupContext>();
-                        var migrationController = _serviceProvider.Resolve<IMigrationController>();
-                        var database = connectionStringFactory.MainDbConnection;
+                        var database = _connectionStringFactory.MainDbConnection;
                         if (database.DatabaseType != DatabaseType.SQLite ||
                             DatabaseLineageGuard.Detect(database.ConnectionString, database.DatabaseType) != DatabaseLineage.BookshelfNG)
                         {
                             throw new InvalidDataException("No supported BookshelfNG SQLite database was found in this data directory. No database was changed.");
                         }
 
-                        var previewOnly = startupContext.PreviewBookshelfMigration;
-                        var result = migrationController.MigrateBookshelf(
+                        var previewOnly = _startupContext.PreviewBookshelfMigration;
+                        var result = _migrationController.MigrateBookshelf(
                             database.ConnectionString,
                             new MigrationContext(MigrationType.Main),
                             database.DatabaseType,
