@@ -48,7 +48,9 @@ For a branch you have not reviewed, copy `trusted-test-launcher.mjs` and
 `trusted-test-sandbox-policy.mjs` from the same reviewed revision to a location
 outside the checkout, keeping them together. The launcher snapshots only paths
 in the Git index, hides the original checkout and common host configuration and
-data roots, and runs candidate code offline. Stage new candidate files first.
+data roots, and runs candidate code offline. Credential files are excluded
+even when extensionless or stored in credential-named folders, while token-like
+source files remain in the snapshot. Stage new candidate files first.
 It opens each workspace, run-data, dependency, cache, and marker source before
 the sandbox masks host paths, then binds those pinned sources by inherited file
 descriptor. Each persisted task log is capped at 16 MiB and ends with a marker
