@@ -16,7 +16,7 @@ namespace Chaptarr.Http.Frontend.Mappers
         // Matches src/href asset URLs so we can prepend UrlBase and (optionally) append cache breakers.
         // Production HTML minification can remove attribute quotes, so support quoted and unquoted URLs.
         // Existing query strings (e.g. index.html adds ?cb=...) must survive sub-path reverse proxies.
-        private static readonly Regex ReplaceRegex = new Regex(@"(?<attribute>href|src)=(?<quote>[""'])?(?<path>[^""'<>\s]*?(?<extension>\.(?:css|js|png|ico|ics|svg|json))(?:\?[^""'<>\s]*)?)(?(quote)\k<quote>)(?:\s(?<nohash>data-no-hash))?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex ReplaceRegex = new Regex(@"(?<attribute>href|src)=(?<quote>[""'])?(?<path>[^""'<>\s]*?(?<extension>\.(?:json|css|png|ico|ics|svg|js))(?=[?""'\s>])(?:\?[^""'<>\s]*)?)(?(quote)\k<quote>)(?:\s(?<nohash>data-no-hash))?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         protected HtmlMapperBase(IDiskProvider diskProvider,
                                  Lazy<ICacheBreakerProvider> cacheBreakProviderFactory,
