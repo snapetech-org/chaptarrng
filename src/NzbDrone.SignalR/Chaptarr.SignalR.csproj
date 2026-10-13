@@ -4,6 +4,8 @@
     <OutputType>Library</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="System.IO.Abstractions" />
     <ProjectReference Include="..\NzbDrone.Core\Chaptarr.Core.csproj" />
   </ItemGroup>
