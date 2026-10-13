@@ -504,8 +504,6 @@ namespace Chaptarr.Http.Authentication
             // HandleResponse()/SkipHandler() here and otherwise signs the ticket in regardless. That
             // issued a cookie without the auth_stamp claim, which the cookie validator then rejected,
             // so a policy rejection surfaced as a silent redirect loop back to /login.
-            Logger.Warn("OIDC sign-in rejected by Chaptarr policy.");
-
             context.HandleResponse();
             context.Response.Redirect(BuildSsoFailedLoginUrl(configFileProvider, context.ReturnUri, GetOidcPolicyErrorCode(failure)));
             return System.Threading.Tasks.Task.CompletedTask;
