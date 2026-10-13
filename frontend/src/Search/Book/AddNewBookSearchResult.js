@@ -11,9 +11,9 @@ import { icons, sizes } from 'Helpers/Props';
 import dimensions from 'Styles/Variables/dimensions';
 import fonts from 'Styles/Variables/fonts';
 import dayjs from 'Utilities/Date/dayjsSetup';
+import formatDurationMinutes from 'Utilities/Date/formatDurationMinutes';
 import stripHtml from 'Utilities/String/stripHtml';
 import translate from 'Utilities/String/translate';
-import formatDurationMinutes from 'Utilities/Date/formatDurationMinutes';
 import AddNewBookModal from './AddNewBookModal';
 import styles from './AddNewBookSearchResult.css';
 

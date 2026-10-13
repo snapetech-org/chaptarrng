@@ -241,7 +241,7 @@ function ProxySettingsFields(props) {
             <FormInputGroup
               type={inputTypes.SELECT}
               name="proxyType"
-            values={getProxyTypeOptions()}
+              values={getProxyTypeOptions()}
               onChange={onInputChange}
               {...getInputProps(proxyType, 'http')}
             />
@@ -255,7 +255,7 @@ function ProxySettingsFields(props) {
             <FormInputGroup
               type={inputTypes.TEXT}
               name="proxyHostname"
-            placeholder={translate('HostnameExample')}
+              placeholder={translate('HostnameExample')}
               onChange={onInputChange}
               {...getInputProps(proxyHostname, '')}
             />

@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import translate from 'Utilities/String/translate';
 import { icons } from 'Helpers/Props';
+import translate from 'Utilities/String/translate';
 import FilterMenuContent from './FilterMenuContent';
 import Menu from './Menu';
 import ToolbarMenuButton from './ToolbarMenuButton';

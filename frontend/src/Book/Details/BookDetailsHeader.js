@@ -65,14 +65,20 @@ function getDownloadStatusLabel(queueItem, grabbed) {
   }
 
   if (conversionStatus === 'converting' || conversionStatus === 'cancelling') {
+    let title = translate('Converting');
+
+    if (convertToQuality) {
+      title = translate('ConvertingToQuality', { quality: convertToQuality });
+    }
+
+    if (conversionStatus === 'cancelling') {
+      title = translate('CancellingConversion');
+    }
+
     return {
       kind: kinds.PRIMARY,
       icon: icons.REFRESH,
-      title: conversionStatus === 'cancelling' ?
-        translate('CancellingConversion') :
-        convertToQuality ?
-          translate('ConvertingToQuality', { quality: convertToQuality }) :
-          translate('Converting')
+      title
     };
   }
 

@@ -1,10 +1,10 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import translate from 'Utilities/String/translate';
 import { createPortal } from 'react-dom';
 import Icon from 'Components/Icon';
 import { icons } from 'Helpers/Props';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
+import translate from 'Utilities/String/translate';
 import AuthorImage from './AuthorImage';
 import styles from './AuthorPoster.css';
 

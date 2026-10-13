@@ -7,12 +7,11 @@ import { filterTypes } from 'Helpers/Props';
 import { createThunk, handleThunks } from 'Store/thunks';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import dayjs from 'Utilities/Date/dayjsSetup';
+import translate from 'Utilities/String/translate';
 import { set, update } from './baseActions';
 import { executeCommandHelper } from './commandActions';
 import createHandleActions from './Creators/createHandleActions';
 import createClearReducer from './Creators/Reducers/createClearReducer';
-import translate from 'Utilities/String/translate';
-
 //
 // Variables
 

@@ -1,8 +1,8 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
-import translate from 'Utilities/String/translate';
 import Icon from 'Components/Icon';
+import translate from 'Utilities/String/translate';
 import Link from './Link';
 import styles from './IconButton.css';
 

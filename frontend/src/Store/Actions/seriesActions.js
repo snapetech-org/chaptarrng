@@ -1,13 +1,12 @@
 import { createAction } from 'redux-actions';
 import { sortDirections } from 'Helpers/Props';
 import { createThunk, handleThunks } from 'Store/thunks';
+import translate from 'Utilities/String/translate';
 import createFetchHandler from './Creators/createFetchHandler';
 import createHandleActions from './Creators/createHandleActions';
 import createSetClientSideCollectionSortReducer from './Creators/Reducers/createSetClientSideCollectionSortReducer';
 import createSetSettingValueReducer from './Creators/Reducers/createSetSettingValueReducer';
 import createSetTableOptionReducer from './Creators/Reducers/createSetTableOptionReducer';
-import translate from 'Utilities/String/translate';
-
 //
 // Variables
 

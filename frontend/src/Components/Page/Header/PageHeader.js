@@ -1,10 +1,10 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import translate from 'Utilities/String/translate';
 import keyboardShortcuts, { shortcuts } from 'Components/keyboardShortcuts';
 import IconButton from 'Components/Link/IconButton';
 import Link from 'Components/Link/Link';
 import { icons } from 'Helpers/Props';
+import translate from 'Utilities/String/translate';
 import AuthorSearchInputConnector from './AuthorSearchInputConnector';
 import ImportProgressIndicatorConnector from './ImportProgressIndicatorConnector';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';

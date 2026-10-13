@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import translate from 'Utilities/String/translate';
 import SegmentedToggle from 'Components/Form/SegmentedToggle';
+import translate from 'Utilities/String/translate';
 import styles from './InteractiveSearchMediaTypeToggle.css';
 
 function getLabel(mediaType) {

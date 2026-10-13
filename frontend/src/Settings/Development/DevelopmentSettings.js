@@ -326,7 +326,7 @@ class DevelopmentSettings extends Component {
                     <FormInputGroup
                       type={inputTypes.SELECT}
                       name="consoleLogLevel"
-          values={getLogLevelOptions()}
+                      values={getLogLevelOptions()}
                       onChange={onInputChange}
                       {...settings.consoleLogLevel}
                     />

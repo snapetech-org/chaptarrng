@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import SegmentedToggle from './SegmentedToggle';
 import translate from 'Utilities/String/translate';
+import SegmentedToggle from './SegmentedToggle';
 import styles from './MediaTypeToggle.css';
 
 function MediaTypeToggle(props) {

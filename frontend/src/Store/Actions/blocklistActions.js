@@ -4,14 +4,13 @@ import { sortDirections } from 'Helpers/Props';
 import { createThunk, handleThunks } from 'Store/thunks';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import serverSideCollectionHandlers from 'Utilities/serverSideCollectionHandlers';
+import translate from 'Utilities/String/translate';
 import { set, updateItem } from './baseActions';
 import createHandleActions from './Creators/createHandleActions';
 import createRemoveItemHandler from './Creators/createRemoveItemHandler';
 import createServerSideCollectionHandlers from './Creators/createServerSideCollectionHandlers';
 import createClearReducer from './Creators/Reducers/createClearReducer';
 import createSetTableOptionReducer from './Creators/Reducers/createSetTableOptionReducer';
-import translate from 'Utilities/String/translate';
-
 //
 // Variables
 

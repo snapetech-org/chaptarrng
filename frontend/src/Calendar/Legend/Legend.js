@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import translate from 'Utilities/String/translate';
 import { icons, kinds } from 'Helpers/Props';
+import translate from 'Utilities/String/translate';
 import LegendIconItem from './LegendIconItem';
 import LegendItem from './LegendItem';
 import styles from './Legend.css';

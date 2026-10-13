@@ -6,6 +6,7 @@ import bookEntities from 'Book/bookEntities';
 import { sortDirections } from 'Helpers/Props';
 import { createThunk, handleThunks } from 'Store/thunks';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
+import translate from 'Utilities/String/translate';
 import { removeItem, set, updateItem } from './baseActions';
 import createFetchHandler from './Creators/createFetchHandler';
 import createHandleActions from './Creators/createHandleActions';
@@ -14,8 +15,6 @@ import createClearReducer from './Creators/Reducers/createClearReducer';
 import createSetClientSideCollectionSortReducer from './Creators/Reducers/createSetClientSideCollectionSortReducer';
 import createSetTableOptionReducer from './Creators/Reducers/createSetTableOptionReducer';
 import styles from '../../BookFile/Editor/BookFileEditorSharedStyles.css';
-import translate from 'Utilities/String/translate';
-
 //
 // Variables
 

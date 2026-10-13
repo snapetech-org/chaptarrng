@@ -1,7 +1,6 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import translate from 'Utilities/String/translate';
 import Measure from 'Components/Measure';
 import Menu from 'Components/Menu/Menu';
 import MenuContent from 'Components/Menu/MenuContent';
@@ -11,6 +10,7 @@ import SpinnerIcon from 'Components/SpinnerIcon';
 import { forEach } from 'Helpers/elementChildren';
 import { align, icons } from 'Helpers/Props';
 import dimensions from 'Styles/Variables/dimensions';
+import translate from 'Utilities/String/translate';
 import styles from './PageToolbarSection.css';
 
 const BUTTON_WIDTH = parseInt(dimensions.toolbarButtonWidth);
