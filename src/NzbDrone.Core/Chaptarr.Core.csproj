@@ -23,7 +23,6 @@
     <PackageReference Include="Npgsql" />
     <PackageReference Include="RestSharp" />
     <PackageReference Include="System.IO.Abstractions" />
-    <PackageReference Include="TagLibSharp-Lidarr" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="Equ" />
     <PackageReference Include="MQTTnet" />
@@ -35,6 +34,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NzbDrone.Common\Chaptarr.Common.csproj" />
+    <ProjectReference Include="..\TagLibSharp\src\TaglibSharp\TaglibSharp.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Datastore\LegacyMigrations\**" />
