@@ -100,6 +100,11 @@ namespace NzbDrone.Core.Datastore
         public static DatabaseLineage Detect(string connectionString, DatabaseType databaseType)
         {
             using DbConnection connection = OpenReadConnection(connectionString, databaseType);
+            return Detect(connection, databaseType);
+        }
+
+        public static DatabaseLineage Detect(DbConnection connection, DatabaseType databaseType)
+        {
             if (connection == null)
             {
                 return DatabaseLineage.Empty;

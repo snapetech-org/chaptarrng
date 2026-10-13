@@ -69,7 +69,7 @@ namespace NzbDrone.Core.Datastore
                 using (var source = OpenConnection(snapshotPath, SqliteOpenMode.ReadOnly, sourceBuilder))
                 using (var target = OpenConnection(stagePath, SqliteOpenMode.ReadWrite, sourceBuilder))
                 {
-                    if (DatabaseLineageGuard.Detect(target.ConnectionString, DatabaseType.SQLite) != DatabaseLineage.Chaptarr)
+                    if (DatabaseLineageGuard.Detect(target, DatabaseType.SQLite) != DatabaseLineage.Chaptarr)
                     {
                         throw new InvalidDataException("The staged conversion target did not migrate to a native Chaptarr schema.");
                     }
@@ -227,7 +227,7 @@ namespace NzbDrone.Core.Datastore
                 }
             }
 
-            if (DatabaseLineageGuard.Detect(connectionString, DatabaseType.SQLite) != expectedLineage)
+            if (DatabaseLineageGuard.Detect(connection, DatabaseType.SQLite) != expectedLineage)
             {
                 throw new InvalidDataException($"The database '{Path.GetFileName(path)}' does not have the expected {expectedLineage} lineage.");
             }

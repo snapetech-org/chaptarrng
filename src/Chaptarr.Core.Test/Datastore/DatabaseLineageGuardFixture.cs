@@ -87,6 +87,16 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_detect_lineage_using_an_existing_connection()
+        {
+            Create("CREATE TABLE Authors (Id INTEGER PRIMARY KEY, AudiobookRootFolderPath TEXT, EbookRootFolderPath TEXT);");
+            using var connection = new SqliteConnection(ConnectionString);
+            connection.Open();
+
+            Assert.That(DatabaseLineageGuard.Detect(connection, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+        }
+
+        [Test]
         public void should_reject_corrupt_database_without_changing_bytes()
         {
             File.WriteAllText(_path, "not a database");
