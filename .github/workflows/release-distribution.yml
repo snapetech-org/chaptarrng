@@ -310,7 +310,10 @@ jobs:
           throw 'Chocolatey uninstall left the application payload behind.'
         }
 
-        choco install bookshelfng --version 0.4.21.69 --source 'https://community.chocolatey.org/api/v2/' --yes --no-progress
+        # Install the latest approved legacy package. GitHub release tags can
+        # be ahead of Chocolatey's moderation queue, so pinning the app release
+        # here can make this bridge test fail before exercising the upgrade.
+        choco install bookshelfng --source 'https://community.chocolatey.org/api/v2/' --yes --no-progress
         if ($LASTEXITCODE -ne 0) { throw 'Chocolatey could not install the last published BookshelfNG package for the bridge test.' }
         $legacyService = Get-Service -Name 'BookshelfNG' -ErrorAction Stop
         $legacyService.WaitForStatus('Running', [TimeSpan]::FromSeconds(90))
