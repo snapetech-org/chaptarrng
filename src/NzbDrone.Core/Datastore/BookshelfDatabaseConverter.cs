@@ -85,15 +85,19 @@ namespace NzbDrone.Core.Datastore
 
                 ValidateDatabase(stagePath, expectedLineage: DatabaseLineage.Chaptarr, checkForeignKeys: true);
 
-                // Retain a consistent SQLite backup before touching the source file or its WAL.
-                File.Move(snapshotPath, backupPath);
-                backupRetained = true;
-
-                CheckpointDatabase(sourcePath, sourceBuilder);
-                CheckpointDatabase(stagePath, sourceBuilder);
+                // Leave every file that moves or remains as a standalone database. A checkpoint
+                // alone does not change WAL mode; read-only consumers may still require -wal/-shm.
+                PrepareDatabaseForMove(sourcePath, sourceBuilder);
+                PrepareDatabaseForMove(snapshotPath, sourceBuilder);
+                PrepareDatabaseForMove(stagePath, sourceBuilder);
                 SqliteConnection.ClearAllPools();
                 DeleteSidecars(sourcePath);
+                DeleteSidecars(snapshotPath);
                 DeleteSidecars(stagePath);
+
+                // Retain a consistent SQLite backup before replacing the source database.
+                File.Move(snapshotPath, backupPath);
+                backupRetained = true;
 
                 // Both files are in the same directory, so this replacement is a same-filesystem rename.
                 File.Move(stagePath, sourcePath, overwrite: true);
@@ -233,7 +237,7 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
-        private static void CheckpointDatabase(string path, SqliteConnectionStringBuilder sourceBuilder)
+        private static void PrepareDatabaseForMove(string path, SqliteConnectionStringBuilder sourceBuilder)
         {
             if (!File.Exists(path))
             {
@@ -243,16 +247,25 @@ namespace NzbDrone.Core.Datastore
             using var connection = OpenConnection(path, SqliteOpenMode.ReadWrite, sourceBuilder);
             using var command = connection.CreateCommand();
             command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
-            using var reader = command.ExecuteReader();
-            if (reader.Read())
+            using (var reader = command.ExecuteReader())
             {
-                var busy = reader.GetInt32(0);
-                var frames = reader.GetInt32(1);
-                var checkpointed = reader.GetInt32(2);
-                if (busy != 0 || (frames >= 0 && checkpointed < frames))
+                if (reader.Read())
                 {
-                    throw new IOException($"SQLite WAL checkpoint was incomplete for '{Path.GetFileName(path)}'; promotion was stopped.");
+                    var busy = reader.GetInt32(0);
+                    var frames = reader.GetInt32(1);
+                    var checkpointed = reader.GetInt32(2);
+                    if (busy != 0 || (frames >= 0 && checkpointed < frames))
+                    {
+                        throw new IOException($"SQLite WAL checkpoint was incomplete for '{Path.GetFileName(path)}'; promotion was stopped.");
+                    }
                 }
+            }
+
+            command.CommandText = "PRAGMA journal_mode=DELETE;";
+            var journalMode = command.ExecuteScalar()?.ToString();
+            if (!string.Equals(journalMode, "delete", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new IOException($"SQLite journal mode could not be made self-contained for '{Path.GetFileName(path)}'; promotion was stopped.");
             }
         }
 

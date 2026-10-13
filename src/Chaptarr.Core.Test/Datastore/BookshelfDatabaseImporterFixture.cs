@@ -54,6 +54,12 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(File.Exists(backupPath), Is.True);
                 Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
                 Assert.That(DatabaseLineageGuard.Detect(ConnectionStringFor(backupPath), DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA journal_mode;"), Is.EqualTo("delete"));
+                Assert.That(QueryScalar<string>(backupPath, "PRAGMA journal_mode;"), Is.EqualTo("delete"));
+                Assert.That(File.Exists(_sourcePath + "-wal"), Is.False);
+                Assert.That(File.Exists(_sourcePath + "-shm"), Is.False);
+                Assert.That(File.Exists(backupPath + "-wal"), Is.False);
+                Assert.That(File.Exists(backupPath + "-shm"), Is.False);
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;").Length, Is.Zero);
                 Assert.That(QueryScalar<string>(backupPath, "SELECT ForeignBookId FROM Books WHERE Id = 30;"), Is.EqualTo("hardcover:book-30"));
@@ -236,6 +242,10 @@ namespace Chaptarr.Core.Test.Datastore
                 INSERT INTO Commands (Id, Name, Body, Priority, Status, QueuedAt, Trigger)
                 VALUES (100, 'OldCommand', '{}', 1, 0, '2026-01-04', 0);";
             data.ExecuteNonQuery();
+
+            using var journalMode = connection.CreateCommand();
+            journalMode.CommandText = "PRAGMA journal_mode=WAL;";
+            Assert.That(journalMode.ExecuteScalar()?.ToString(), Is.EqualTo("wal"));
         }
 
         private static string ConnectionStringFor(string path) => new SqliteConnectionStringBuilder

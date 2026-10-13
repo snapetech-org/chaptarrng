@@ -45,6 +45,8 @@ namespace Chaptarr.Core.Test.Datastore
                 INSERT INTO Books VALUES (12, 4, 'fixture-book');
                 INSERT INTO Commands VALUES (16, 'stale command');";
             command.ExecuteNonQuery();
+            command.CommandText = "PRAGMA journal_mode=WAL;";
+            Assert.That(command.ExecuteScalar()?.ToString(), Is.EqualTo("wal"));
         }
 
         [TearDown]
@@ -104,9 +106,15 @@ namespace Chaptarr.Core.Test.Datastore
             {
                 Assert.That(File.Exists(backupPath), Is.True);
                 Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(ReadJournalMode(_sourcePath), Is.EqualTo("delete"));
+                Assert.That(File.Exists(_sourcePath + "-wal"), Is.False);
+                Assert.That(File.Exists(_sourcePath + "-shm"), Is.False);
                 Assert.That(ReadAuthorName(_sourcePath), Is.EqualTo("/books"));
                 Assert.That(ReadBookAuthorId(_sourcePath), Is.EqualTo(8));
                 Assert.That(DatabaseLineageGuard.Detect(ConnectionStringFor(backupPath), DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(ReadJournalMode(backupPath), Is.EqualTo("delete"));
+                Assert.That(File.Exists(backupPath + "-wal"), Is.False);
+                Assert.That(File.Exists(backupPath + "-shm"), Is.False);
                 Assert.That(ReadBookId(backupPath), Is.EqualTo("fixture-book"));
             });
         }
@@ -226,6 +234,8 @@ namespace Chaptarr.Core.Test.Datastore
             command.ExecuteNonQuery();
             command.CommandText = "CREATE TABLE Books (Id INTEGER PRIMARY KEY, AuthorId INTEGER NOT NULL, ForeignBookId TEXT NOT NULL);";
             command.ExecuteNonQuery();
+            command.CommandText = "PRAGMA journal_mode=WAL;";
+            Assert.That(command.ExecuteScalar()?.ToString(), Is.EqualTo("wal"));
         }
 
         private static string ConnectionStringFor(string databasePath) => new SqliteConnectionStringBuilder
@@ -241,6 +251,15 @@ namespace Chaptarr.Core.Test.Datastore
             connection.Open();
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT ForeignBookId FROM Books WHERE Id = 12;";
+            return command.ExecuteScalar()?.ToString();
+        }
+
+        private static string ReadJournalMode(string databasePath)
+        {
+            using var connection = new SqliteConnection(ConnectionStringFor(databasePath));
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA journal_mode;";
             return command.ExecuteScalar()?.ToString();
         }
 
