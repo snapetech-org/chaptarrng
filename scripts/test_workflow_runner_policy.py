@@ -22,7 +22,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertRegex(push, r"(?m)^    branches:\s*\[\s*main\s*\]$")
         self.assertNotIn("**", push)
 
-    def test_persistent_runner_is_gated_to_main(self) -> None:
+    def test_persistent_runner_is_gated_to_trusted_prs_and_main(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         runner = next(
             line.strip()
