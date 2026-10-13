@@ -68,6 +68,18 @@ updates:
       time: "09:00"
       timezone: America/Regina
     open-pull-requests-limit: 10
+    groups:
+      docker-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      docker-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: docker-compose
     directory: "/"
@@ -77,3 +89,15 @@ updates:
       time: "09:00"
       timezone: America/Regina
     open-pull-requests-limit: 10
+    groups:
+      compose-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      compose-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
