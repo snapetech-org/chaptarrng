@@ -43,8 +43,8 @@ and unknown for semantic equivalence until the matrix checks pass.
 
 The current integration candidate combines the metadata-profile edition and
 series preferences, their consumer wiring and migration 115, with the larger
-upstream-backlog changes and the YunoHost publisher retirement. The merge does
-not complete the upstream issue/PR audit.
+upstream-backlog changes. The merge does not complete the upstream issue/PR
+audit.
 
 The pinned backlog snapshot at
 [`c26dd7f`](https://github.com/snapetech/chaptarrng/tree/c26dd7f) was 306
@@ -58,14 +58,13 @@ existing-file adoption, import matching and recovery, Calibre, AudioBookShelf,
 Grimmory, Emby/Jellyfin, MQTT/Home Assistant events, Prometheus metrics,
 import-list preview/history, and large-library browsing, performance, and
 mobile workflows. The integration candidate has since added validation and
-merge fixes. The YunoHost publisher and package have been removed; previously
-published assets and the external package repository were left untouched.
-These capabilities and proposed changes join the cumulative retirement blocker
-set. Unreviewed backlog requests are not treated as accepted product scope
-until maintainers adopt them.
+merge fixes. These capabilities and proposed changes join the cumulative
+retirement blocker set. Unreviewed backlog requests are not treated as accepted
+product scope until maintainers adopt them.
 
-The fork's Indonesian and Traditional Chinese language catalogs (with English fallback for untranslated keys), maintainer guidance,
-and YunoHost publisher retirement are already present in `main`. Upstream
+The fork's Indonesian and Traditional Chinese language catalogs (with English
+fallback for untranslated keys) and maintainer guidance are already present in
+`main`. Upstream
 PR #114 currently carries media-type preservation for scoped book lookup and
 remains a release dependency. All active feature work counts before it is
 published.
@@ -392,7 +391,7 @@ review of fixes, migrations, build changes, or deletions.
 | Large-library and background-operation behavior | Paged/virtualized views, bounded query work, batched reconciliation, fair download processing, and cancellable background commands | Run scale fixtures and verify query bounds, concurrency, progress, cancellation, and consistent state. |
 | Frontend performance and usability | React Query, route code splitting, mobile search/toolbar adjustments, and upstream bundle optimizations | Preserve loading/error behavior, keyboard/mobile access, route boundaries, and browser tests. |
 | Localization and locale-aware UI | Indonesian and Traditional Chinese, AudioBookShelf root-mapping and audiobook-mode translations, language/resource lookup updates, locale-direction metadata, and the localization roadmap | Keep these additions in the cumulative blocker set. Complete language review and browser/layout acceptance for affected locales before treating localization parity as closed. |
-| Release and distribution behavior | Fork-owned releases/images, Unraid packaging, platform build support, and the retired YunoHost publishing automation and package | Disposition every supported channel change; previously published YunoHost assets and the external package repository were left untouched. |
+| Release and distribution behavior | Fork-owned releases/images, Unraid packaging, and platform build support | Review retained channels and test package/image/service/data identities, upgrades, and rollback. |
 | Security, migrations, and compatibility fixes | API, import, authentication, database, dependency, container, and platform changes in the active source tree | Review every security boundary and migration; run the required platform and rollback checks. |
 | CI, validation, and maintainer workflow changes | Hosted-runner isolation, validation contracts, and the maintainer guidance added by merged PR #71 | Retain source-bound validation, clean hosted evidence, and reproducible maintainer workflows. |
 | Remaining post-fork changes | All other active-branch changes not already represented above | Disposition every changed path as retained, ported, or replaced by verified behavior; a path count alone is not parity. |
@@ -436,7 +435,7 @@ data, security, and packaging checks.
 | Operational events, observability, and import-list history | Active optional MQTT/Home Assistant gateway and canonical lifecycle events; low-cardinality Prometheus metrics; durable import-list sync preview/history | Optional aggregate-only diagnostics and existing release/validation workflows | Preserve opt-in defaults, event contracts, metric cardinality/security, import-list cursors, preview semantics, and historical records; verify restart and failure behavior. |
 | Backup, authentication, and security | Encrypted full-backup archives; API-key controls, login throttling, response redaction, update verification, and request hardening | Encrypted portable backups; legacy API/query-key aliases; trusted-proxy and request-limit behavior; Bookshelf secrets and existing credentials | Restore existing ChaptarrNG and Bookshelf archives; preserve credentials and rollback; keep restrictions at least as strong and never log secrets. |
 | Library browsing, performance, and operator workflow | Active server-paged book views, large-library query and cache improvements, mobile search/accessibility, cancellation/progress safeguards, and responsive import tools | Previewable media moves, bulk moves, and extra-file handling | Preserve page completeness and order, bounded memory/query behavior, responsive workflows, cancellation, and progress reporting on representative large libraries. |
-| Release, package, and update channels | ChaptarrNG GHCR releases and Unraid identity; YunoHost publishing and packaging have been retired from source | BookshelfNG's GHCR/Docker Hub tags, Unraid template, native installers, Linux package channels, Helm, and legacy update behavior | Preserve each retained channel or record an explicit maintainer decision to retire it; test historical installs, upgrades, package/image/service/data identities, and rollback. No single redirect reaches every installed copy. |
+| Release, package, and update channels | ChaptarrNG GHCR releases and Unraid identity | BookshelfNG's GHCR/Docker Hub tags, Unraid template, native installers, Linux package channels, Helm, and legacy update behavior | Preserve each retained channel or record an explicit maintainer decision to retire it; test historical installs, upgrades, package/image/service/data identities, and rollback. No single redirect reaches every installed copy. |
 | Localization | Indonesian and Traditional Chinese UI, AudioBookShelf translations, locale metadata, and locale-aware workflows | No separate BookshelfNG locale feature was identified; inherited keys remain in the source-path audit | Keep all supported strings, fallback behavior, and locale selection; run translation-key and rendered-UI checks against the released upstream build. |
 | Data and API compatibility | Existing ChaptarrNG databases, configuration, local IDs, and SeerrNG links | BookshelfNG databases/configuration and their provider identities, local IDs, settings, histories, and files; the source tree now has a staged converter for the exact v158 SQLite schema | Keep each source recoverable; validate the converter against populated real databases and release channels; preserve or reconcile identities and references; prove rollback, upgrade, and restart behavior. PostgreSQL and package/channel bridges remain open. |
 | Complete fork history and active changes | Every ChaptarrNG commit after the shared fork base, including the pinned backlog snapshot at `c26dd7f`, metadata-preference work from PR #73, localization from PR #72, and validation/maintainer-workflow work from PRs #69 and #71 | Every BookshelfNG commit/path in the pinned consolidation inventory | Generate and review exact source-to-upstream inventories for `main`, each active branch, and every open feature PR at retirement time. Retain, port, or prove equivalence for every behavior; a proposed removal remains blocked until an explicit maintainer decision. |
