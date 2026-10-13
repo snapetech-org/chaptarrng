@@ -399,11 +399,16 @@ export function parseNUnitSummary(xml) {
     // NUnit puts exception types in the first message token rather than a
     // dedicated XML field. Keep only a fixed, reviewed set of type names; never
     // copy the message, stack trace, paths, or other test data into receipts.
-    const messageContent = message.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)?.[1] ?? message.replace(/<[^>]*>/g, '');
+    const messageContent = message.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)?.[1] ?? message;
     const firstLine = messageContent.split(/\r?\n/, 1)[0].trim();
     const exceptionType = firstLine.match(/^([A-Za-z][A-Za-z0-9_.+`]+)\s*:/)?.[1];
     if (exceptionType && allowlistedExceptionTypes.has(exceptionType)) {
-      failedTestExceptionTypes.push({ testName: name, exceptionType });
+      const failureType = { testName: name, exceptionType };
+      const sqliteErrorCode = exceptionType === 'Microsoft.Data.Sqlite.SqliteException'
+        ? firstLine.match(/^Microsoft\.Data\.Sqlite\.SqliteException\s*:\s*SQLite Error\s+(\d+)\s*:/i)?.[1]
+        : undefined;
+      if (sqliteErrorCode) failureType.sqliteErrorCode = Number(sqliteErrorCode);
+      failedTestExceptionTypes.push(failureType);
     }
   }
   const summary = {

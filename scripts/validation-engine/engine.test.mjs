@@ -123,6 +123,35 @@ test('NUnit receipt omits exception types outside the reviewed allowlist', () =>
   assert.equal(JSON.stringify(summary).includes('private fixture detail'), false);
 });
 
+test('NUnit receipt records only the numeric SQLite error code', () => {
+  const summary = parseNUnitSummary(
+    '<test-run total="1" passed="0" failed="1" skipped="0" inconclusive="0" result="Failed"><test-case name="Fixture.database" result="Failed"><failure><message><![CDATA[Microsoft.Data.Sqlite.SqliteException : SQLite Error 14: private database path]]></message></failure></test-case></test-run>',
+  );
+
+  assert.deepEqual(summary.failedTestExceptionTypes, [
+    {
+      testName: 'Fixture.database',
+      exceptionType: 'Microsoft.Data.Sqlite.SqliteException',
+      sqliteErrorCode: 14,
+    },
+  ]);
+  const receipt = JSON.stringify(summary);
+  assert.equal(receipt.includes('private database path'), false);
+  assert.equal(receipt.includes('SQLite Error'), false);
+});
+
+test('NUnit receipt extracts exception types without rewriting message markup', () => {
+  const summary = parseNUnitSummary(
+    '<test-run total="1" passed="0" failed="1" skipped="0" inconclusive="0" result="Failed"><test-case name="Fixture.markup" result="Failed"><failure><message><![CDATA[System.IO.IOException : <script>private detail</script>]]></message></failure></test-case></test-run>',
+  );
+
+  assert.deepEqual(summary.failedTestExceptionTypes, [
+    { testName: 'Fixture.markup', exceptionType: 'System.IO.IOException' },
+  ]);
+  assert.equal(JSON.stringify(summary).includes('<script>'), false);
+  assert.equal(JSON.stringify(summary).includes('private detail'), false);
+});
+
 test('NUnit parser keeps self-closing cases separate from later failures', () => {
   const summary = parseNUnitSummary(
     '<test-run total="2" passed="1" failed="1" skipped="0" inconclusive="0" result="Failed"><test-case name="Fixture.passes" result="Passed"/><test-case name="Fixture.fails" result="Failed"><failure><message><![CDATA[System.IO.IOException : private fixture detail]]></message></failure></test-case></test-run>',

@@ -115,8 +115,10 @@ NUnit receipts include at most 100 failed test-case names and at most 100
 exception types from a fixed allowlist. NUnit puts an exception type at the
 start of its failure message rather than in a separate XML field, so the parser
 keeps only that reviewed type token; it never exports failure messages, stack
-traces, or test stdout. Assertion text and unrecognized exception types remain
-private in the task log.
+traces, or test stdout. For `Microsoft.Data.Sqlite.SqliteException`, it may also
+include the numeric SQLite error code so platform-specific database failures
+can be diagnosed without exporting the associated message. Assertion text and
+unrecognized exception types remain private in the task log.
 
 The source fingerprint binds the commit, tree, working diff, configured build
 inputs, and test-source inventory. Text inputs and inventory files use Git's
