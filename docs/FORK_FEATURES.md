@@ -28,25 +28,28 @@ ChaptarrNG maintains or is actively adding, including unpublished work in
 progress at the time of review. The union blocks retirement as a whole, and
 each capability remains an individual blocker until its evidence passes.
 
-At this review, the shared upstream comparison commit `e67374f` to ChaptarrNG
-`4582c13` spans 436 commits and 964 net-changed paths. The consolidation task
-commit contains 16 changed files: six product files, eight Core test fixtures,
-and two documentation files. These counts describe source history, not feature
-parity, and must be regenerated against the exact upstream and candidate
-revisions at any later retirement review. Beyond that pinned task commit, the
-current unpublished ChaptarrNG worktree also adds metadata-profile edition and
-series preferences, consumer wiring, database migration 115, API/UI changes,
-and focused tests. Those active changes belong in ChaptarrNG's cumulative
-retirement blocker set even before publication. **Confidence:** high for these
-pinned repository counts, moderate for the feature-level upstream comparison,
+At this review, upstream `develop` is `e67374f4` and ChaptarrNG `main` is
+`25226d41`; the fork is 574 commits ahead and zero behind, with 1,099
+net-changed paths (341 added, 758 modified). These counts describe source
+history, not feature parity, and must be regenerated against the exact upstream
+and candidate revisions at any later retirement review. ChaptarrNG also has
+open product and maintenance PRs #78, #97, and #99, plus dependency-update PRs;
+their accepted behavior and fixes count before merge or publication. The
+current unpublished BookshelfNG integration branch adds migration/configuration
+conversion through native migration 119, package and image bridges, regression
+fixes, release workflow changes, and documentation. All of that work belongs
+in the cumulative blocker set. **Confidence:** high for these pinned repository
+counts and open PR states, moderate for the feature-level upstream comparison,
 and unknown for semantic equivalence until the matrix checks pass.
 
-The current integration candidate combines the metadata-profile edition and
-series preferences, their consumer wiring and migration 115, with the larger
-upstream-backlog changes and the YunoHost publisher retirement. The merge does
-not complete the upstream issue/PR audit.
+The current integration candidate carries the metadata-profile edition and
+series preferences, their consumers, the BookshelfNG database/configuration
+migration, and the current upstream-backlog changes. It uses the ordinary
+ChaptarrNG executable and image for both fresh installs and migrated installs;
+there is no compatibility build. The merge does not complete the upstream
+issue/PR audit or either retirement gate.
 
-The pinned backlog snapshot at
+The earlier pinned backlog snapshot at
 [`c26dd7f`](https://github.com/snapetech/chaptarrng/tree/c26dd7f) was 306
 commits ahead and 13 behind ChaptarrNG `main`, with 680 changed paths (45,693
 insertions and 6,178 deletions). Its
@@ -329,7 +332,7 @@ changelog summarize user-facing changes and required operator actions.
 The fork also maintains an [Unraid Community Applications
 package](https://github.com/snapetech/chaptarrng-unraid). Check its instructions
 for supported architectures, paths, and upgrade steps.
-## ChaptarrNG retirement blockers
+## ChaptarrNG active retirement gates
 
 Retiring BookshelfNG into ChaptarrNG and retiring ChaptarrNG into upstream
 Chaptarr are separate decisions. The first gate is the complete BookshelfNG
@@ -412,7 +415,9 @@ encrypted full backups, and the Direct Download indexer/client with
 browser-assisted fallback. The `v0.9.969` container includes headless Chromium
 on AMD64 and ARM64; ARMv7 retains API-key downloads without browser fallback.
 
-## ChaptarrNG retirement blockers
+<a id="chaptarrng-retirement-blockers"></a>
+
+## Cumulative BookshelfNG and ChaptarrNG retirement matrix
 
 Retiring ChaptarrNG into upstream Chaptarr has a cumulative scope. It is a
 separate gate from retiring BookshelfNG into ChaptarrNG. Upstream must retain
@@ -459,20 +464,27 @@ later upstream commits. BookshelfNG's current inventory and migration evidence
 are recorded in its
 [consolidation report](https://github.com/snapetech/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)
 and [feature matrix](https://github.com/snapetech/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
-At candidate `d763525`, the unpublished consolidation worktree passed 3,966 of
-3,969 Chaptarr Core tests (3 skipped), including 36 focused preference and
-matching tests. The consolidation PR's migration-controller regression
-fixture passes 8/8 locally and proves a Bookshelf-shaped SQLite database is
-rejected before numbered migrations without changing source bytes. The current
-local candidate's focused `DownloadHistoryServiceDownloadIdCasingFixture`
-passes 3/3, including tests for imported and newer-grab events that use
-`BookId = 0`; this verifies target replay semantics, not a converter. The full
-Core suite has not been rerun on the current candidate, and hosted checks have
-not yet run for these latest changes. These results validate code paths and
-fail-closed behavior, not feature parity or conversion. The published
-`v0.9.969` release has no populated BookshelfNG converter or channel bridge.
-Until conversion, parity, consumer probes, and the applicable channel upgrades
-pass, neither BookshelfNG nor ChaptarrNG can be described as seamlessly
+The unpublished integration candidate passed preview, explicit apply, and
+ordinary startup on separate copies of one real populated BookshelfNG
+migration-158 SQLite database using the standard Linux/amd64 ChaptarrNG image.
+The preview left the source hash unchanged and accounted for all 127,177 rows;
+the retained backup matched all 39 source table definitions and every source
+row; the v119 target passed SQLite integrity and foreign-key checks. The run
+also preserved the saved port, URL base, API key, SSL setting, configured
+indexers, UI, and Docker image-pull update behavior. Eighty-one books needed an
+operator-selected media mapping; technical test choices were not reviewed as
+correct classifications, so this is not general migration approval.
+The complete Chaptarr Core suite passed 4,062 tests with 0 failures and 3
+skipped (4,065 total); this verifies the candidate's automated Core suite, not
+semantic feature parity or compatibility with other databases.
+
+This is one exact real SQLite input, not proof for older schema lineages,
+PostgreSQL, every provider/settings/client contract, rollback after target
+writes, or the complete feature matrix. The candidate remains unpublished;
+hosted checks and package/image bridges have not completed. The published
+`v0.9.969` release has no BookshelfNG converter or channel bridge. Until each
+capability and data path passes its own checks and every applicable upgrade,
+rollback, and redirect path is proven, neither fork can be called seamlessly
 replaceable.
 
 ## What would allow replacement

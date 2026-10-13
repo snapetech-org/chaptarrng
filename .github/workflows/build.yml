@@ -291,6 +291,10 @@ jobs:
         PLAYWRIGHT_BROWSERS_PATH: ${{ steps.private-runner-temp.outputs.path || runner.temp }}/playwright-browsers
       run: pwsh ./_tests/net10.0/playwright.ps1 install --with-deps chromium
 
+    - name: Verify Unraid package sync stays off feature branches
+      shell: bash
+      run: bash scripts/test-sync-unraid-package.sh
+
     - name: Test
       id: validation
       env:

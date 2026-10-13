@@ -3,7 +3,16 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(git -C "$script_dir/.." rev-parse --show-toplevel)"
-source_repo="$(basename "$repo_root")"
+source_branch="$(git -C "$repo_root" branch --show-current)"
+if [[ "$source_branch" != "main" ]]; then
+	echo "Skipping Unraid package sync from '$source_branch'; only main may update the companion repository."
+	exit 0
+fi
+
+origin_url="$(git -C "$repo_root" remote get-url origin 2>/dev/null || true)"
+source_repo="${origin_url%/}"
+source_repo="${source_repo##*/}"
+source_repo="${source_repo%.git}"
 
 case "$source_repo" in
 	bookshelfng|chaptarrng) ;;
