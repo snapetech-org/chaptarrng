@@ -5,4 +5,4 @@ area: localization
 action: none
 breaking: false
 ---
-All 2,295 ChaptarrNG Core messages now have entries in Spanish, Simplified and Traditional Chinese, Hindi, German, Japanese, French, Brazilian Portuguese, Arabic, Korean, Vietnamese, and Indonesian. Existing translations and machine translation fill the catalogs; product and technical terms stay unchanged. Fluent-speaker review remains open.
+The Spanish, Simplified and Traditional Chinese, Hindi, German, Japanese, French, Brazilian Portuguese, Arabic, Korean, Vietnamese, and Indonesian Core catalogs now contain all 2,295 English-source keys. Existing locale strings are preserved; missing keys use exact English fallbacks. This completes key coverage, not translation review. Native-speaker translation and review remain open.
