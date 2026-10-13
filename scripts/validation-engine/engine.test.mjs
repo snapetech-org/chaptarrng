@@ -8,6 +8,25 @@ import path from 'node:path';
 import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, runTask, sha256GitText } from './engine.mjs';
 import { validation } from './config.mjs';
 
+test('validation task SDK requirements match the hosted build workflow', () => {
+  const workflow = readFileSync('.github/workflows/build.yml', 'utf8');
+  const sdkVersions = [...workflow.matchAll(/dotnet-version:\s*([0-9]+\.[0-9]+\.[0-9]+)/g)]
+    .map((match) => match[1]);
+
+  assert.ok(sdkVersions.length > 0, 'Expected a pinned .NET SDK in the hosted build workflow');
+  assert.equal(new Set(sdkVersions).size, 1, 'Hosted build jobs must use one .NET SDK version');
+
+  const expectedPattern = `^${sdkVersions[0].replaceAll('.', '\\.')}$`;
+  const dotnetRuntimes = validation.tasks
+    .flatMap((task) => task.runtimes ?? [])
+    .filter((runtime) => runtime.command === 'dotnet');
+
+  assert.ok(dotnetRuntimes.length > 0, 'Expected validation tasks to check the .NET SDK');
+  for (const runtime of dotnetRuntimes) {
+    assert.equal(runtime.versionPattern, expectedPattern);
+  }
+});
+
 function withEnvironmentVariable(name, value, action) {
   const previous = process.env[name];
   if (value === undefined) delete process.env[name];
