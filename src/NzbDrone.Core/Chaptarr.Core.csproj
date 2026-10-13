@@ -7,6 +7,8 @@
     <PackageReference Include="Diacritical.Net" />
     <PackageReference Include="LazyCache" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
+    <!-- SqlClient and MimeKit pull this transitively; keep the patched version centrally pinned. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Polly" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
