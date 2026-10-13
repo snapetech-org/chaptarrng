@@ -21,7 +21,7 @@ namespace Chaptarr.Core.Test.Http
             public string StartUpFolder => "/app";
         }
 
-        private sealed class DiskProviderProxy : DispatchProxy
+        private class DiskProviderProxy : DispatchProxy
         {
             public string Html;
 
@@ -36,7 +36,7 @@ namespace Chaptarr.Core.Test.Http
             }
         }
 
-        private sealed class ConfigFileProviderProxy : DispatchProxy
+        private class ConfigFileProviderProxy : DispatchProxy
         {
             protected override object Invoke(MethodInfo targetMethod, object[] args)
             {
