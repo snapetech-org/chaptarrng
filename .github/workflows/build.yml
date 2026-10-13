@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+    types: [ opened, edited, reopened, synchronize ]
   workflow_call:
     secrets:
       SIXLABORS_LICENSE_KEY:
@@ -19,7 +20,7 @@ on:
 # batch of merges costs one build of the combined result rather than one each.
 # Release-called runs are never cancelled - that would silently drop the gate.
 concurrency:
-  group: build-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref_name }}
+  group: build-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref_name }}-${{ github.event.action == 'edited' && 'metadata' || 'source' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 permissions:
@@ -28,7 +29,7 @@ permissions:
 jobs:
   release-notes:
     name: Release-note contract
-    if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot'
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot' && (github.event.action != 'edited' || github.event.changes.body != null)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -63,6 +64,7 @@ jobs:
           --head "$HEAD_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
     # Pull request code always uses hosted runners; only main uses the local Linux runner.
     runs-on: ${{ matrix.os == 'ubuntu-latest' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) && fromJSON('["self-hosted","Linux","X64","host"]') || matrix.os }}
     strategy:
@@ -305,6 +307,7 @@ jobs:
         if-no-files-found: error
 
   postgres-migrations:
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
     runs-on: ubuntu-latest
     services:
       postgres:
