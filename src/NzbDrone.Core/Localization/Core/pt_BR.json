@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "Nenhum arquivo de livro foi encontrado na pasta selecionada.",
   "NamingAuthorFolderFormatHelpText": "Usado ao adicionar ou mover um autor pelo editor de autores",
   "RootFolderDockerReadPermissionHelpText": "Verifique se o contêiner do Docker tem permissão de leitura para este diretório.",
-  "UnknownFile": "(arquivo desconhecido)"
+  "UnknownFile": "(arquivo desconhecido)",
+  "BookFilesCountSingularMessage": "1 arquivo de livro",
+  "BookFilesCountPluralMessage": "{count} arquivos de livro",
+  "UnmappedFilesSendLogsFailureMessage": "Falha ao enviar os logs de correspondência para análise",
+  "UnmappedFilesSendLogsSuccessMessage": "Logs de correspondência enviados para análise",
+  "BootstrapRecoveryTitle": "Atualização necessária",
+  "BootstrapRecoveryMessage": "O Chaptarr não conseguiu carregar um ou mais arquivos do aplicativo. Atualize a página para continuar.",
+  "BootstrapRecoveryProxyHint": "Se isso continuar acontecendo atrás de um proxy reverso, desative o cache da interface e verifique se há tempos limite no servidor upstream.",
+  "BootstrapRecoveryRefreshButton": "Atualizar página",
+  "KeyboardShortcutOpenModal": "Abrir esta janela",
+  "KeyboardShortcutCloseModal": "Fechar a janela atual",
+  "KeyboardShortcutAcceptConfirmation": "Confirmar",
+  "KeyboardShortcutFocusSearch": "Focar o campo de pesquisa",
+  "KeyboardShortcutSaveSettings": "Salvar configurações"
 }

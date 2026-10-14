@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "Aucun fichier de livre n’a été trouvé dans le dossier sélectionné.",
   "NamingAuthorFolderFormatHelpText": "Utilisé lors de l’ajout ou du déplacement d’un auteur dans l’éditeur d’auteurs",
   "RootFolderDockerReadPermissionHelpText": "Vérifiez que le conteneur Docker dispose des droits de lecture sur ce répertoire.",
-  "UnknownFile": "(fichier inconnu)"
+  "UnknownFile": "(fichier inconnu)",
+  "BookFilesCountSingularMessage": "1 fichier de livre",
+  "BookFilesCountPluralMessage": "{count} fichiers de livre",
+  "UnmappedFilesSendLogsFailureMessage": "Échec de l’envoi des journaux de correspondance pour examen",
+  "UnmappedFilesSendLogsSuccessMessage": "Journaux de correspondance envoyés pour examen",
+  "BootstrapRecoveryTitle": "Actualisation requise",
+  "BootstrapRecoveryMessage": "Chaptarr n’a pas pu charger un ou plusieurs fichiers de l’application. Actualisez la page pour continuer.",
+  "BootstrapRecoveryProxyHint": "Si le problème persiste derrière un proxy inverse, désactivez la mise en cache de l’interface et vérifiez les délais d’attente du serveur en amont.",
+  "BootstrapRecoveryRefreshButton": "Actualiser la page",
+  "KeyboardShortcutOpenModal": "Ouvrir cette fenêtre",
+  "KeyboardShortcutCloseModal": "Fermer la fenêtre actuelle",
+  "KeyboardShortcutAcceptConfirmation": "Confirmer",
+  "KeyboardShortcutFocusSearch": "Placer le curseur dans le champ de recherche",
+  "KeyboardShortcutSaveSettings": "Enregistrer les paramètres"
 }

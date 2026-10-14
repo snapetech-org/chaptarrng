@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "لم يتم العثور على ملفات كتب في المجلد المحدد.",
   "NamingAuthorFolderFormatHelpText": "يُستخدم عند إضافة مؤلف أو نقله عبر محرر المؤلفين",
   "RootFolderDockerReadPermissionHelpText": "يُرجى التحقق من أن حاوية Docker لديها أذونات قراءة هذا الدليل.",
-  "UnknownFile": "(ملف غير معروف)"
+  "UnknownFile": "(ملف غير معروف)",
+  "BookFilesCountSingularMessage": "ملف كتاب واحد",
+  "BookFilesCountPluralMessage": "عدد ملفات الكتب: {count}",
+  "UnmappedFilesSendLogsFailureMessage": "تعذّر إرسال سجلات المطابقة للمراجعة",
+  "UnmappedFilesSendLogsSuccessMessage": "تم إرسال سجلات المطابقة للمراجعة",
+  "BootstrapRecoveryTitle": "يلزم تحديث الصفحة",
+  "BootstrapRecoveryMessage": "تعذّر على Chaptarr تحميل ملف واحد أو أكثر من ملفات التطبيق. حدّث الصفحة للمتابعة.",
+  "BootstrapRecoveryProxyHint": "إذا استمرت المشكلة خلف وكيل عكسي، عطّل التخزين المؤقت لواجهة المستخدم وتحقق من انتهاء مهلة الاتصال بالخادم الأصلي.",
+  "BootstrapRecoveryRefreshButton": "تحديث الصفحة",
+  "KeyboardShortcutOpenModal": "فتح هذه النافذة",
+  "KeyboardShortcutCloseModal": "إغلاق النافذة الحالية",
+  "KeyboardShortcutAcceptConfirmation": "تأكيد الإجراء",
+  "KeyboardShortcutFocusSearch": "تركيز مربع البحث",
+  "KeyboardShortcutSaveSettings": "حفظ الإعدادات"
 }

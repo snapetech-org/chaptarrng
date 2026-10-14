@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "No book files were found in the selected folder.",
   "NamingAuthorFolderFormatHelpText": "Used when adding a new author or moving an author via the author editor",
   "RootFolderDockerReadPermissionHelpText": "Please check that the Docker container has read permissions for this directory.",
-  "UnknownFile": "(unknown file)"
+  "UnknownFile": "(unknown file)",
+  "BookFilesCountSingularMessage": "1 book file",
+  "BookFilesCountPluralMessage": "{count} book files",
+  "UnmappedFilesSendLogsFailureMessage": "Failed to send matching logs for review",
+  "UnmappedFilesSendLogsSuccessMessage": "Matching logs sent for review",
+  "BootstrapRecoveryTitle": "Refresh Required",
+  "BootstrapRecoveryMessage": "Chaptarr couldn’t load one or more application files. Please refresh the page to continue.",
+  "BootstrapRecoveryProxyHint": "If this keeps happening behind a reverse proxy, disable caching for the UI and check for upstream timeouts.",
+  "BootstrapRecoveryRefreshButton": "Refresh Page",
+  "KeyboardShortcutOpenModal": "Open This Modal",
+  "KeyboardShortcutCloseModal": "Close Current Modal",
+  "KeyboardShortcutAcceptConfirmation": "Accept Confirmation Modal",
+  "KeyboardShortcutFocusSearch": "Focus Search Box",
+  "KeyboardShortcutSaveSettings": "Save Settings"
 }

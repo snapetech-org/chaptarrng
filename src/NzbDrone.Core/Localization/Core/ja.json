@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "選択したフォルダーに書籍ファイルが見つかりませんでした。",
   "NamingAuthorFolderFormatHelpText": "作者エディターで作者を追加または移動するときに使用します",
   "RootFolderDockerReadPermissionHelpText": "Dockerコンテナーにこのディレクトリの読み取り権限があることを確認してください。",
-  "UnknownFile": "（不明なファイル）"
+  "UnknownFile": "（不明なファイル）",
+  "BookFilesCountSingularMessage": "書籍ファイル 1 件",
+  "BookFilesCountPluralMessage": "{count} 件の書籍ファイル",
+  "UnmappedFilesSendLogsFailureMessage": "照合ログをレビュー用に送信できませんでした",
+  "UnmappedFilesSendLogsSuccessMessage": "照合ログをレビュー用に送信しました",
+  "BootstrapRecoveryTitle": "更新が必要です",
+  "BootstrapRecoveryMessage": "Chaptarr で 1 つ以上のアプリケーションファイルを読み込めませんでした。続行するにはページを再読み込みしてください。",
+  "BootstrapRecoveryProxyHint": "リバースプロキシ経由でこの問題が続く場合は、UI のキャッシュを無効にし、アップストリームのタイムアウトを確認してください。",
+  "BootstrapRecoveryRefreshButton": "ページを再読み込み",
+  "KeyboardShortcutOpenModal": "このモーダルを開く",
+  "KeyboardShortcutCloseModal": "現在のモーダルを閉じる",
+  "KeyboardShortcutAcceptConfirmation": "確認を実行",
+  "KeyboardShortcutFocusSearch": "検索ボックスにフォーカス",
+  "KeyboardShortcutSaveSettings": "設定を保存"
 }

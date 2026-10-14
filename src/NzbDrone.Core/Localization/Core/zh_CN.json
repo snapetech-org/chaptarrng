@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "在所选文件夹中未找到书籍文件。",
   "NamingAuthorFolderFormatHelpText": "在作者编辑器中添加或移动作者时使用",
   "RootFolderDockerReadPermissionHelpText": "请确认 Docker 容器对该目录具有读取权限。",
-  "UnknownFile": "（未知文件）"
+  "UnknownFile": "（未知文件）",
+  "BookFilesCountSingularMessage": "1 个书籍文件",
+  "BookFilesCountPluralMessage": "{count} 个书籍文件",
+  "UnmappedFilesSendLogsFailureMessage": "发送匹配日志以供审核失败",
+  "UnmappedFilesSendLogsSuccessMessage": "已发送匹配日志以供审核",
+  "BootstrapRecoveryTitle": "需要刷新",
+  "BootstrapRecoveryMessage": "Chaptarr 无法加载一个或多个应用程序文件。请刷新页面以继续。",
+  "BootstrapRecoveryProxyHint": "如果在反向代理后仍发生此问题，请关闭界面缓存并检查上游请求是否超时。",
+  "BootstrapRecoveryRefreshButton": "刷新页面",
+  "KeyboardShortcutOpenModal": "打开此对话框",
+  "KeyboardShortcutCloseModal": "关闭当前对话框",
+  "KeyboardShortcutAcceptConfirmation": "确认当前操作",
+  "KeyboardShortcutFocusSearch": "聚焦搜索框",
+  "KeyboardShortcutSaveSettings": "保存设置"
 }

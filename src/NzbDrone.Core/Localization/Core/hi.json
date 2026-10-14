@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "चुने गए फ़ोल्डर में पुस्तक फ़ाइलें नहीं मिलीं।",
   "NamingAuthorFolderFormatHelpText": "लेखक संपादक में लेखक जोड़ते या स्थानांतरित करते समय उपयोग किया जाता है",
   "RootFolderDockerReadPermissionHelpText": "जाँचें कि Docker कंटेनर को इस डायरेक्टरी को पढ़ने की अनुमति है।",
-  "UnknownFile": "(अज्ञात फ़ाइल)"
+  "UnknownFile": "(अज्ञात फ़ाइल)",
+  "BookFilesCountSingularMessage": "1 पुस्तक फ़ाइल",
+  "BookFilesCountPluralMessage": "{count} पुस्तक फ़ाइलें",
+  "UnmappedFilesSendLogsFailureMessage": "मिलान लॉग को समीक्षा के लिए भेजा नहीं जा सका",
+  "UnmappedFilesSendLogsSuccessMessage": "मिलान लॉग समीक्षा के लिए भेजे गए",
+  "BootstrapRecoveryTitle": "रीफ़्रेश करना ज़रूरी है",
+  "BootstrapRecoveryMessage": "Chaptarr एक या अधिक ऐप्लिकेशन फ़ाइलें लोड नहीं कर सका। जारी रखने के लिए पेज रीफ़्रेश करें।",
+  "BootstrapRecoveryProxyHint": "अगर रिवर्स प्रॉक्सी के पीछे भी यह समस्या बनी रहती है, तो UI कैशिंग बंद करें और अपस्ट्रीम टाइमआउट जाँचें।",
+  "BootstrapRecoveryRefreshButton": "पेज रीफ़्रेश करें",
+  "KeyboardShortcutOpenModal": "यह संवाद खोलें",
+  "KeyboardShortcutCloseModal": "मौजूदा संवाद बंद करें",
+  "KeyboardShortcutAcceptConfirmation": "पुष्टिकरण स्वीकार करें",
+  "KeyboardShortcutFocusSearch": "खोज बॉक्स पर फ़ोकस करें",
+  "KeyboardShortcutSaveSettings": "सेटिंग सहेजें"
 }

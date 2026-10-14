@@ -126,9 +126,12 @@ class AuthorDetailsHeader extends Component {
     let bookFilesCountMessage = translate('BookFilesCountMessage');
 
     if (bookFileCount === 1) {
-      bookFilesCountMessage = '1 book file';
+      bookFilesCountMessage = translate('BookFilesCountSingularMessage');
     } else if (bookFileCount > 1) {
-      bookFilesCountMessage = `${bookFileCount} book files`;
+      bookFilesCountMessage = translate(
+        'BookFilesCountPluralMessage',
+        { count: bookFileCount }
+      );
     }
 
     return (

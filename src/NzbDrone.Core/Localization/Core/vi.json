@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "Không tìm thấy tệp sách trong thư mục đã chọn.",
   "NamingAuthorFolderFormatHelpText": "Dùng khi thêm hoặc di chuyển tác giả trong trình chỉnh sửa tác giả",
   "RootFolderDockerReadPermissionHelpText": "Hãy kiểm tra vùng chứa Docker có quyền đọc thư mục này.",
-  "UnknownFile": "(tệp không xác định)"
+  "UnknownFile": "(tệp không xác định)",
+  "BookFilesCountSingularMessage": "1 tệp sách",
+  "BookFilesCountPluralMessage": "{count} tệp sách",
+  "UnmappedFilesSendLogsFailureMessage": "Không thể gửi nhật ký đối sánh để xem xét",
+  "UnmappedFilesSendLogsSuccessMessage": "Đã gửi nhật ký đối sánh để xem xét",
+  "BootstrapRecoveryTitle": "Cần tải lại",
+  "BootstrapRecoveryMessage": "Chaptarr không thể tải một hoặc nhiều tệp ứng dụng. Hãy tải lại trang để tiếp tục.",
+  "BootstrapRecoveryProxyHint": "Nếu sự cố vẫn xảy ra phía sau reverse proxy, hãy tắt bộ nhớ đệm giao diện và kiểm tra lỗi hết thời gian chờ ở máy chủ nguồn.",
+  "BootstrapRecoveryRefreshButton": "Tải lại trang",
+  "KeyboardShortcutOpenModal": "Mở hộp thoại này",
+  "KeyboardShortcutCloseModal": "Đóng hộp thoại hiện tại",
+  "KeyboardShortcutAcceptConfirmation": "Chấp nhận xác nhận",
+  "KeyboardShortcutFocusSearch": "Đưa tiêu điểm vào ô tìm kiếm",
+  "KeyboardShortcutSaveSettings": "Lưu cài đặt"
 }

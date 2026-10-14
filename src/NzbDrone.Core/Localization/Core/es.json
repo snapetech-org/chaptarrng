@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "No se encontraron archivos de libros en la carpeta seleccionada.",
   "NamingAuthorFolderFormatHelpText": "Se usa al añadir o mover un autor desde el editor de autores",
   "RootFolderDockerReadPermissionHelpText": "Comprueba que el contenedor de Docker tenga permisos de lectura para este directorio.",
-  "UnknownFile": "(archivo desconocido)"
+  "UnknownFile": "(archivo desconocido)",
+  "BookFilesCountSingularMessage": "1 archivo de libro",
+  "BookFilesCountPluralMessage": "{count} archivos de libro",
+  "UnmappedFilesSendLogsFailureMessage": "No se pudieron enviar los registros de coincidencias para su revisión",
+  "UnmappedFilesSendLogsSuccessMessage": "Se enviaron los registros de coincidencias para su revisión",
+  "BootstrapRecoveryTitle": "Se requiere actualizar",
+  "BootstrapRecoveryMessage": "Chaptarr no pudo cargar uno o más archivos de la aplicación. Actualice la página para continuar.",
+  "BootstrapRecoveryProxyHint": "Si esto sigue ocurriendo detrás de un proxy inverso, desactive la caché de la interfaz y compruebe si hay tiempos de espera del servidor de origen.",
+  "BootstrapRecoveryRefreshButton": "Actualizar página",
+  "KeyboardShortcutOpenModal": "Abrir este cuadro",
+  "KeyboardShortcutCloseModal": "Cerrar el cuadro actual",
+  "KeyboardShortcutAcceptConfirmation": "Aceptar el cuadro de confirmación",
+  "KeyboardShortcutFocusSearch": "Enfocar el cuadro de búsqueda",
+  "KeyboardShortcutSaveSettings": "Guardar la configuración"
 }

@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "Im ausgewählten Ordner wurden keine Buchdateien gefunden.",
   "NamingAuthorFolderFormatHelpText": "Wird beim Hinzufügen oder Verschieben eines Autors im Autoreneditor verwendet",
   "RootFolderDockerReadPermissionHelpText": "Prüfe, ob der Docker-Container Leseberechtigung für dieses Verzeichnis hat.",
-  "UnknownFile": "(Unbekannte Datei)"
+  "UnknownFile": "(Unbekannte Datei)",
+  "BookFilesCountSingularMessage": "1 Buchdatei",
+  "BookFilesCountPluralMessage": "{count} Buchdateien",
+  "UnmappedFilesSendLogsFailureMessage": "Passende Protokolle konnten nicht zur Prüfung gesendet werden",
+  "UnmappedFilesSendLogsSuccessMessage": "Passende Protokolle wurden zur Prüfung gesendet",
+  "BootstrapRecoveryTitle": "Aktualisierung erforderlich",
+  "BootstrapRecoveryMessage": "Chaptarr konnte eine oder mehrere Anwendungsdateien nicht laden. Aktualisieren Sie die Seite, um fortzufahren.",
+  "BootstrapRecoveryProxyHint": "Falls das weiterhin hinter einem Reverse-Proxy auftritt, deaktivieren Sie das Caching für die Benutzeroberfläche und prüfen Sie auf Zeitüberschreitungen beim Upstream.",
+  "BootstrapRecoveryRefreshButton": "Seite aktualisieren",
+  "KeyboardShortcutOpenModal": "Dieses Dialogfeld öffnen",
+  "KeyboardShortcutCloseModal": "Aktuelles Dialogfeld schließen",
+  "KeyboardShortcutAcceptConfirmation": "Bestätigungsdialog bestätigen",
+  "KeyboardShortcutFocusSearch": "Suchfeld fokussieren",
+  "KeyboardShortcutSaveSettings": "Einstellungen speichern"
 }

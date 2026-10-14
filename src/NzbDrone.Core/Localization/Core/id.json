@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "Tidak ada file buku yang ditemukan di folder yang dipilih.",
   "NamingAuthorFolderFormatHelpText": "Digunakan saat menambahkan atau memindahkan penulis melalui editor penulis",
   "RootFolderDockerReadPermissionHelpText": "Pastikan kontainer Docker memiliki izin baca untuk direktori ini.",
-  "UnknownFile": "(file tidak dikenal)"
+  "UnknownFile": "(file tidak dikenal)",
+  "BookFilesCountSingularMessage": "1 berkas buku",
+  "BookFilesCountPluralMessage": "{count} berkas buku",
+  "UnmappedFilesSendLogsFailureMessage": "Gagal mengirim log pencocokan untuk ditinjau",
+  "UnmappedFilesSendLogsSuccessMessage": "Log pencocokan dikirim untuk ditinjau",
+  "BootstrapRecoveryTitle": "Perlu memuat ulang",
+  "BootstrapRecoveryMessage": "Chaptarr tidak dapat memuat satu atau beberapa file aplikasi. Muat ulang halaman untuk melanjutkan.",
+  "BootstrapRecoveryProxyHint": "Jika masalah ini terus terjadi di balik reverse proxy, nonaktifkan cache UI dan periksa batas waktu pada server upstream.",
+  "BootstrapRecoveryRefreshButton": "Muat Ulang Halaman",
+  "KeyboardShortcutOpenModal": "Buka dialog ini",
+  "KeyboardShortcutCloseModal": "Tutup dialog saat ini",
+  "KeyboardShortcutAcceptConfirmation": "Terima konfirmasi",
+  "KeyboardShortcutFocusSearch": "Fokuskan kotak pencarian",
+  "KeyboardShortcutSaveSettings": "Simpan pengaturan"
 }

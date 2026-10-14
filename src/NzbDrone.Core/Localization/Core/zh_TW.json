@@ -2690,5 +2690,18 @@
   "InteractiveImportNoFilesFoundInFolder": "在選取的資料夾中找不到書籍檔案。",
   "NamingAuthorFolderFormatHelpText": "在作者編輯器中新增或移動作者時使用",
   "RootFolderDockerReadPermissionHelpText": "請確認 Docker 容器具有此目錄的讀取權限。",
-  "UnknownFile": "（未知檔案）"
+  "UnknownFile": "（未知檔案）",
+  "BookFilesCountSingularMessage": "1 個書籍檔案",
+  "BookFilesCountPluralMessage": "{count} 個書籍檔案",
+  "UnmappedFilesSendLogsFailureMessage": "無法傳送比對記錄以供審查",
+  "UnmappedFilesSendLogsSuccessMessage": "已傳送比對記錄以供審查",
+  "BootstrapRecoveryTitle": "需要重新整理",
+  "BootstrapRecoveryMessage": "Chaptarr 無法載入一個或多個應用程式檔案。請重新整理頁面以繼續。",
+  "BootstrapRecoveryProxyHint": "如果在反向代理後仍發生此問題，請停用介面快取並檢查上游逾時。",
+  "BootstrapRecoveryRefreshButton": "重新整理頁面",
+  "KeyboardShortcutOpenModal": "開啟此對話框",
+  "KeyboardShortcutCloseModal": "關閉目前的對話框",
+  "KeyboardShortcutAcceptConfirmation": "確認此操作",
+  "KeyboardShortcutFocusSearch": "聚焦搜尋框",
+  "KeyboardShortcutSaveSettings": "儲存設定"
 }
