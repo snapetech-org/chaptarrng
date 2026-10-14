@@ -6,6 +6,13 @@ discovered test inventory, native case totals, platform identity, workflow
 attempt, and private task logs. A final GitHub job reconciles the Linux,
 Windows, macOS, and PostgreSQL smoke receipts before the workflow is complete.
 
+## GitHub runner routing
+
+The Ubuntu Linux build-matrix entry may use the shared organization runner pool
+only when `TRUSTED_MAIN_RUNNERS_ENABLED` is set to `true`; while unset, it
+stays hosted. Pull requests and Windows/macOS matrix entries remain hosted. The
+organization group is restricted to this workflow on `refs/heads/main`.
+
 ## Local use
 
 Use Node.js `26.10.0` and .NET SDK `10.0.401`, matching the CI toolchain. Build
@@ -74,9 +81,19 @@ unreviewed candidate through the same launcher because planning imports its
 validation configuration. GitHub Actions remains responsible for hosted
 validation.
 
+Each runner has a limit of two concurrent validation tasks. The engine-contract
+command also caps Node's test-file workers at two, so it cannot fan out across
+every CPU reported by a large self-hosted host. On the platform nodes, the
+engine-contract suite can run beside the Core NUnit suite; their logs, NUnit
+results, and task environments are separate. The PostgreSQL smoke remains gated
+by the engine contracts on its dedicated node and still uses
+only the workflow's disposable databases. Tasks that share writable output
+must use the same concurrency group so the scheduler runs them in separate
+batches.
+
 During a run, the engine writes a compact task summary to stderr when each task
 starts and finishes, then once per minute while a task is still running. The
-counts cover completed tasks; the active task and its elapsed time are shown
+counts cover completed tasks; every active task and its elapsed time are shown
 separately. GitHub renders `GITHUB_STEP_SUMMARY` only after its workflow step
 finishes, so these updates appear in the live step log instead.
 
@@ -120,18 +137,20 @@ inputs, and test-source inventory. Text inputs and inventory files use Git's
 CRLF-to-LF normalization so Windows checkouts produce the same fingerprint as
 Linux and macOS. Each platform receipt separately hashes its compiled test
 assembly byte-for-byte; platform binaries are allowed to differ. Before and
-after a task the engine checks that the source fingerprint has not moved. Logs
-stay private under the system temporary directory; the exported receipt carries
-counts and bounded failing test names only. Overlapping runs in one checkout
-are rejected. Runtime probes and task child processes
+after each concurrent task batch the engine checks that the source fingerprint
+has not moved and blocks successful receipts if it changes. Logs stay private
+under the system temporary directory; the exported receipt carries counts and
+bounded failing test names only. Overlapping runs in one checkout are rejected.
+Runtime probes and task child processes
 receive an explicit environment allowlist and each task's declared settings.
 Every task gets run-owned home, temporary, XDG, and .NET CLI directories. NuGet
 packages use a private cache shared only within the validation run. Test tasks
 run with `CI=true` and `NODE_ENV=test` regardless of the invoking shell's values.
-For Linux Chromium tests, the engine creates a short private symlink under
-`/dev/shm` that points to the isolated task temp directory. This keeps
-Chromium's UNIX-domain socket path within the kernel limit without depending on
-shared `/tmp`; browser temp data still lands in the task directory.
+For Linux tests that use Chromium or start a nested trusted sandbox, the engine
+creates a short private symlink under `/dev/shm` that points to the isolated
+task temp directory. This keeps UNIX-domain socket paths within the kernel
+limit without depending on shared `/tmp`; temporary data still lands in the
+task directory.
 
 The artifact downloader preserves each runner receipt in its own subdirectory,
 and the reconciler finds `receipt.json` recursively so same-named artifacts do
