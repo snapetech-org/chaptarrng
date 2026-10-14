@@ -17,15 +17,12 @@ function getDelay(enabled, delay) {
   }
 
   if (!delay) {
-    return 'No Delay';
-  }
-
-  if (delay === 1) {
-    return '1 Minute';
+    return translate('NoDelay');
   }
 
   // TODO: use better units of time than just minutes
-  return `${delay} Minutes`;
+  const unit = delay === 1 ? 'FormatAgeMinute' : 'FormatAgeMinutes';
+  return `${delay} ${translate(unit)}`;
 }
 
 class DelayProfile extends Component {

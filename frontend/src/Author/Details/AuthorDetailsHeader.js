@@ -168,7 +168,9 @@ class AuthorDetailsHeader extends Component {
                     className={styles.monitorToggleButton}
                     monitored={monitored}
                     isDisabled={isMonitorToggleDisabled}
-                    disabledTooltip={isMonitorToggleDisabled ? `No ${selectedMediaType} root folder configured for this author` : undefined}
+                    disabledTooltip={isMonitorToggleDisabled ? translate('AuthorMissingMediaTypeRootFolder', {
+                      mediaType: translate(selectedMediaType === 'ebook' ? 'EbookLabel' : 'AudiobookLabel')
+                    }) : undefined}
                     isSaving={isSaving}
                     size={isSmallScreen ? 30: 40}
                     onPress={onMonitorTogglePress}
@@ -212,7 +214,7 @@ class AuthorDetailsHeader extends Component {
                 selectedMediaType === 'audiobook' && (audiobookFolder || audiobookRootFolderPath) &&
                   <Label
                     className={styles.detailsLabel}
-                    title={`Audiobook: ${audiobookFolder || audiobookRootFolderPath}`}
+                    title={`${translate('AudiobookLabel')}: ${audiobookFolder || audiobookRootFolderPath}`}
                     size={sizes.LARGE}
                   >
                     <Icon
@@ -230,7 +232,7 @@ class AuthorDetailsHeader extends Component {
                 selectedMediaType === 'ebook' && (ebookFolder || ebookRootFolderPath) &&
                   <Label
                     className={styles.detailsLabel}
-                    title={`Ebook: ${ebookFolder || ebookRootFolderPath}`}
+                    title={`${translate('EbookLabel')}: ${ebookFolder || ebookRootFolderPath}`}
                     size={sizes.LARGE}
                   >
                     <Icon
