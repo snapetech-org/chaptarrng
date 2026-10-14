@@ -35,8 +35,8 @@ describe source history, not feature parity, and must be regenerated against
 the exact upstream and candidate revisions at any later retirement review.
 Open product/validation PRs include #78, #100, #103, and #105–#108, in addition
 to dependency updates; all count before merge or publication. PR #100's
-migration implementation is pinned to `d65d15dc`; its current head
-`71c7afcd` adds a documentation-only evidence refresh. The candidate adds the
+migration implementation is pinned to `d65d15dc`; subsequent commits on the
+open PR contain documentation-only evidence refreshes. The candidate adds the
 converter to the ordinary ChaptarrNG startup path and includes native
 packaging and release-workflow changes. Focused migration fixtures passed
 23/23 on commit `4a74f056` and again on the synchronized implementation at
