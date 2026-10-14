@@ -487,6 +487,12 @@ capability and data path passes its own checks and every applicable upgrade,
 rollback, and redirect path is proven, neither fork can be called seamlessly
 replaceable.
 
+The release workflows enforce that distinction: standard ChaptarrNG releases
+publish the new ChaptarrNG identities, while old BookshelfNG package IDs and
+mutable image aliases remain untouched unless the shared
+`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` repository variable is explicitly set
+to `true` after the retirement gates pass.
+
 ## What would allow replacement
 
 ChaptarrNG can be retired into upstream Chaptarr only when a supported upstream

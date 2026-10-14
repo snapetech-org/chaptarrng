@@ -55,7 +55,16 @@ retains the original database backup. Older or unsupported schemas fail closed
 and remain a migration blocker.
 
 The package workflow publishes only when credentials and registrations are
-ready. Create or claim AUR `chaptarrng-bin` under the maintainer account, create
+ready. Standard ChaptarrNG releases publish only the ChaptarrNG package IDs.
+Publishing existing BookshelfNG package IDs also requires the
+`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` repository variable to be exactly
+`true`; its unset default prevents old package managers from redirecting
+before the migration, rollback, and channel gates pass. The same variable
+controls legacy mutable image tags and the BookshelfNG repository bridge.
+Prefer one organization Actions variable scoped to both repositories;
+otherwise set the same value in both. Do not enable only one side of the
+handoff.
+Create or claim AUR `chaptarrng-bin` under the maintainer account, create
 COPR `OWNER/chaptarrng`, and claim Chocolatey `chaptarrng`. Configure these
 ChaptarrNG repository secrets without putting their values in chat:
 
@@ -132,9 +141,12 @@ run. The public release asset, remaining publisher credentials, first-time
 registry setup, and publication remain open.
 The Docker workflow also has a candidate same-digest publisher for the old
 mutable GHCR and Docker Hub `latest`, `hardcover`, and `softcover` image names.
-It is not exercised against the live registries: GHCR package write access
-and Docker Hub credentials must be set up in ChaptarrNG, then each resulting
-digest must be checked. Historical version tags and pinned digests do not move. Windows
+The normal ChaptarrNG release leaves those aliases untouched unless
+`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED=true`; the BookshelfNG bridge uses the
+same gate. It is not exercised against the live registries: GHCR package write
+access and Docker Hub credentials must be set up in ChaptarrNG, then each
+resulting digest must be checked. Historical version tags and pinned digests do not move.
+Windows
 setup, Debian/PPA, Flatpak/AppImage, Helm, catalogs, and updater handoff still
 need separate tested bridges or an explicit retirement decision. Package work
 does not close the feature, data, SeerrNG, rollback, hosted-release, or full

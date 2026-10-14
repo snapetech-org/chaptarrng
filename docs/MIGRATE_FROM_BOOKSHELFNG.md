@@ -180,7 +180,13 @@ Snapetech cannot redirect. Candidate package bridges now keep the AUR
 identities while installing the same ChaptarrNG release asset used by fresh
 installs. They preserve each channel's old data path and service name, allowing
 the standard ChaptarrNG startup migration to run. These recipes have not yet
-been published. The Pacman upgrade from the published BookshelfNG AUR package
+been published. Ordinary ChaptarrNG releases publish only the ChaptarrNG
+package identities and image tags. Publishing the old BookshelfNG package and
+container identities requires `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED=true` in
+the ChaptarrNG repository; the same unset-by-default gate controls the separate
+BookshelfNG bridge workflow. Prefer one organization Actions variable scoped
+to both repositories, or set the same value in both; do not enable only one
+side. The Pacman upgrade from the published BookshelfNG AUR package
 to the candidate legacy package passed with config, data-marker, and service
 identity retained; service restart and actual database conversion remain
 untested through Pacman. Both AUR identities and both RPM identities build

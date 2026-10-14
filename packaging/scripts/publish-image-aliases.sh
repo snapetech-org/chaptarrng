@@ -15,10 +15,15 @@ fi
 summary="$GITHUB_STEP_SUMMARY"
 metadata_index=0
 failed=0
-publish_ghcr_aliases="${PUBLISH_GHCR_ALIASES:-true}"
+publish_ghcr_aliases="${PUBLISH_GHCR_ALIASES:-false}"
+publish_legacy_aliases="${PUBLISH_LEGACY_ALIASES:-false}"
 
 if [[ "$publish_ghcr_aliases" != "true" && "$publish_ghcr_aliases" != "false" ]]; then
   echo 'PUBLISH_GHCR_ALIASES must be true or false.' >&2
+  exit 2
+fi
+if [[ "$publish_legacy_aliases" != "true" && "$publish_legacy_aliases" != "false" ]]; then
+  echo 'PUBLISH_LEGACY_ALIASES must be true or false.' >&2
   exit 2
 fi
 
@@ -64,12 +69,16 @@ PY
   echo "The ChaptarrNG image was built once. Each alias below points to that same multi-architecture manifest digest."
 } >> "$summary"
 
-if [[ "$publish_ghcr_aliases" == "true" ]]; then
+if [[ "$publish_legacy_aliases" == "true" && "$publish_ghcr_aliases" == "true" ]]; then
   publish_alias "ghcr.io/snapetech/bookshelfng:latest" "$SOURCE_IMAGE"
   publish_alias "ghcr.io/snapetech/bookshelfng:hardcover" "$SOURCE_IMAGE"
   publish_alias "ghcr.io/snapetech/bookshelfng:softcover" "$SOURCE_IMAGE"
 else
-  echo '- GHCR legacy aliases: skipped because publishing was disabled for this invocation.' >> "$summary"
+  if [[ "$publish_legacy_aliases" != "true" ]]; then
+    echo '- GHCR legacy aliases: skipped because the BookshelfNG migration bridge is disabled.' >> "$summary"
+  else
+    echo '- GHCR legacy aliases: skipped because GHCR alias publication was disabled for this invocation.' >> "$summary"
+  fi
 fi
 
 if [[ "${DOCKERHUB_CONFIGURED:-false}" == "true" ]]; then
@@ -81,9 +90,13 @@ if [[ "${DOCKERHUB_CONFIGURED:-false}" == "true" ]]; then
       if [[ "sha256:$dockerhub_digest" == "$EXPECTED_DIGEST" ]]; then
         echo "- docker.io/snapetech/chaptarrng:$VERSION: mirrored with the standard image digest $EXPECTED_DIGEST." >> "$summary"
         publish_alias "docker.io/snapetech/chaptarrng:latest" "$dockerhub_source"
-        publish_alias "docker.io/snapetech/bookshelfng:latest" "$dockerhub_source"
-        publish_alias "docker.io/snapetech/bookshelfng:hardcover" "$dockerhub_source"
-        publish_alias "docker.io/snapetech/bookshelfng:softcover" "$dockerhub_source"
+        if [[ "$publish_legacy_aliases" == "true" ]]; then
+          publish_alias "docker.io/snapetech/bookshelfng:latest" "$dockerhub_source"
+          publish_alias "docker.io/snapetech/bookshelfng:hardcover" "$dockerhub_source"
+          publish_alias "docker.io/snapetech/bookshelfng:softcover" "$dockerhub_source"
+        else
+          echo '- Docker Hub BookshelfNG aliases: skipped because the migration bridge is disabled.' >> "$summary"
+        fi
       else
         echo "- Docker Hub version mirror digest was sha256:$dockerhub_digest; expected $EXPECTED_DIGEST." >> "$summary"
         failed=1

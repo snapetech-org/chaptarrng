@@ -10,6 +10,10 @@ on:
       branch:
         required: true
         type: string
+      legacy_bridge_enabled:
+        required: false
+        default: false
+        type: boolean
     secrets:
       SIXLABORS_LICENSE_KEY:
         required: true
@@ -22,6 +26,7 @@ env:
   # The public package predates the repository transfer into snapetech-org.
   # Keep the stable image identity used by existing installs and documentation.
   STANDARD_IMAGE: ghcr.io/snapetech/chaptarrng
+  REGISTRY: ghcr.io
 
 jobs:
   build-and-push:
@@ -184,6 +189,8 @@ jobs:
         EXPECTED_DIGEST: ${{ steps.build.outputs.digest }}
         VERSION: ${{ steps.docker-tags.outputs.version }}
         DOCKERHUB_CONFIGURED: ${{ steps.dockerhub-credentials.outputs.configured }}
+        PUBLISH_LEGACY_ALIASES: ${{ inputs.legacy_bridge_enabled }}
+        PUBLISH_GHCR_ALIASES: ${{ inputs.legacy_bridge_enabled }}
         RUNNER_TEMP: ${{ runner.temp }}
       run: packaging/scripts/publish-image-aliases.sh
 

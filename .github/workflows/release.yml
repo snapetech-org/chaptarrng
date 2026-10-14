@@ -254,6 +254,7 @@ jobs:
     with:
       sha: ${{ needs.release.outputs.sha }}
       branch: ${{ github.ref_name }}
+      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
 
   standalone-assets:
     name: Build ${{ matrix.rid }} standalone release asset
@@ -445,6 +446,7 @@ jobs:
     with:
       tag: ${{ needs.release.outputs.tag }}
       version: ${{ needs.release.outputs.version }}
+      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
     secrets:
       AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
       COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}

@@ -9,6 +9,10 @@ on:
       version:
         required: true
         type: string
+      legacy_bridge_enabled:
+        required: false
+        default: false
+        type: boolean
     secrets:
       AUR_SSH_KEY:
         required: false
@@ -28,6 +32,11 @@ on:
         description: Matching MAJOR.MINOR.PATCH version
         required: true
         type: string
+      legacy_bridge_enabled:
+        description: Also publish BookshelfNG package identities after all migration gates pass; requires the repository bridge variable.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -39,6 +48,7 @@ jobs:
     outputs:
       tag: ${{ steps.target.outputs.tag }}
       version: ${{ steps.target.outputs.version }}
+      legacy_bridge_enabled: ${{ steps.target.outputs.legacy_bridge_enabled }}
     steps:
     - id: target
       env:
@@ -47,19 +57,30 @@ jobs:
         VERSION: ${{ inputs.version }}
         EVENT_NAME: ${{ github.event_name }}
         REF: ${{ github.ref }}
+        REQUESTED_LEGACY_BRIDGE: ${{ inputs.legacy_bridge_enabled }}
+        MIGRATION_BRIDGE_GATE: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED || 'false' }}
       run: |
         set -euo pipefail
         [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]
         [[ "$TAG" == "v${VERSION}" ]]
         [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+        legacy_bridge_enabled=false
+        if [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true && "${MIGRATION_BRIDGE_GATE,,}" == true ]]; then
+          legacy_bridge_enabled=true
+        elif [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true ]]; then
+          echo 'Legacy BookshelfNG package publishing was requested, but CHAPTARRNG_MIGRATION_BRIDGE_ENABLED is not true; legacy publishing remains disabled.' >> "$GITHUB_STEP_SUMMARY"
+        fi
         if [[ "$EVENT_NAME" == workflow_dispatch && "$REF" != refs/heads/main ]]; then
           echo 'Package retries must run from main.' >&2
           exit 1
         fi
         state="$(gh release view "$TAG" --json isDraft,isPrerelease)"
         echo "$state" | jq -e '.isDraft == false and .isPrerelease == false' >/dev/null
-        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        {
+          echo "tag=$TAG"
+          echo "version=$VERSION"
+          echo "legacy_bridge_enabled=$legacy_bridge_enabled"
+        } >> "$GITHUB_OUTPUT"
 
   credentials:
     name: Check optional publisher credentials
@@ -140,6 +161,7 @@ jobs:
     - name: Push the tested package recipes
       env:
         AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}
       run: |
         set -euo pipefail
         work="$RUNNER_TEMP/aur-packages"
@@ -165,7 +187,13 @@ jobs:
           BatchMode yes
         EOF
         chmod 0600 ~/.ssh/config ~/.ssh/known_hosts
-        for pkgbase in chaptarrng-bin bookshelfng-bin; do
+        pkg_bases=(chaptarrng-bin)
+        if [[ "${LEGACY_BRIDGE_ENABLED,,}" == true ]]; then
+          pkg_bases+=(bookshelfng-bin)
+        else
+          echo 'BookshelfNG AUR identity publishing is disabled until the migration bridge gate is enabled.' >> "$GITHUB_STEP_SUMMARY"
+        fi
+        for pkgbase in "${pkg_bases[@]}"; do
           package_dir="$work/$pkgbase"
           repo="$RUNNER_TEMP/aur-repo-$pkgbase"
           if git ls-remote "https://aur.archlinux.org/${pkgbase}.git" HEAD >/dev/null 2>&1; then
@@ -385,11 +413,17 @@ jobs:
     - name: Publish package
       env:
         CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
         $packages = @(Get-ChildItem (Join-Path $env:RUNNER_TEMP 'chaptarrng-chocolatey-output') -Filter '*.nupkg' | Sort-Object Name)
-        if ($packages.Count -ne 2) { throw 'The validated ChaptarrNG and BookshelfNG package artifacts are required.' }
+        if ($env:LEGACY_BRIDGE_ENABLED -ne 'true') {
+          $packages = @($packages | Where-Object { $_.Name -like 'chaptarrng.*.nupkg' })
+          Write-Host 'BookshelfNG Chocolatey identity publishing is disabled until the migration bridge gate is enabled.'
+        }
+        $expectedCount = if ($env:LEGACY_BRIDGE_ENABLED -eq 'true') { 2 } else { 1 }
+        if ($packages.Count -ne $expectedCount) { throw "Expected $expectedCount package artifact(s) for the configured migration bridge state." }
         foreach ($package in $packages) {
           choco push $package.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
           if ($LASTEXITCODE -ne 0) { throw "Chocolatey rejected package $($package.Name)." }
@@ -423,7 +457,7 @@ jobs:
   trigger-legacy-copr:
     name: Trigger legacy bookshelfng COPR package
     needs: [credentials, release-target]
-    if: needs.credentials.outputs.bookshelfng_copr == 'true'
+    if: needs.credentials.outputs.bookshelfng_copr == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Submit the release tag to the existing bookshelfng COPR package
@@ -461,6 +495,7 @@ jobs:
         LEGACY_COPR_CONFIGURED: ${{ needs.credentials.outputs.bookshelfng_copr }}
         LEGACY_COPR_TRIGGER: ${{ needs.trigger-legacy-copr.result }}
         CHOCOLATEY_CONFIGURED: ${{ needs.credentials.outputs.chocolatey }}
+        LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}
         CHOCOLATEY_BUILD: ${{ needs.build-chocolatey.result }}
         CHOCOLATEY_PUSH: ${{ needs.publish-chocolatey.result }}
       run: |
@@ -470,5 +505,10 @@ jobs:
           echo "- ChaptarrNG COPR publisher configured: ${COPR_CONFIGURED}; trigger: ${COPR_TRIGGER}"
           echo "- Legacy bookshelfng COPR bridge configured: ${LEGACY_COPR_CONFIGURED}; trigger: ${LEGACY_COPR_TRIGGER}"
           echo "- Chocolatey package build: ${CHOCOLATEY_BUILD}; publisher configured: ${CHOCOLATEY_CONFIGURED}; push: ${CHOCOLATEY_PUSH}"
-          echo 'AUR, COPR, and Chocolatey publish both fresh-install and legacy package identities from the same ChaptarrNG release assets.'
+          echo "- BookshelfNG legacy package bridge enabled: ${LEGACY_BRIDGE_ENABLED:-false}"
+          if [[ "${LEGACY_BRIDGE_ENABLED:-false}" == true ]]; then
+            echo 'The legacy package bridge is enabled; eligible old identities use the same standard ChaptarrNG release assets.'
+          else
+            echo 'Only ChaptarrNG package identities are eligible for publication; BookshelfNG package identities remain unchanged.'
+          fi
         } >> "$GITHUB_STEP_SUMMARY"
