@@ -206,10 +206,10 @@ branch-guard now uses `tr`, and migration promotion uses `File.Replace`; the
 focused migration fixtures pass 23/23 locally. The latest hosted Windows run
 failed four migration/rollback tests. The new PR #100 receipt records only
 safe exception types, the first Chaptarr application method, and SQLite's
-numeric primary error code; exception text and paths remain redacted. A new
-exact-head rerun is required to capture that detail.
+numeric primary error code; exception text and paths remain redacted. A new exact-head Windows rerun is queued to capture that detail.
 PR #130 contains the Bash 3.2 branch-guard fix and its local tests pass; the
-current native macOS hosted run remains pending. Neither hosted blocker is
+current native macOS hosted run remains pending. The validation-engine tests
+for PR #100 pass 26/26 locally. Neither hosted blocker is
 closed.
 
 ## Limits and update channels
