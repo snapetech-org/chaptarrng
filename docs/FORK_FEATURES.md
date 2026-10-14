@@ -34,13 +34,15 @@ and ChaptarrNG `main` is `6731a436d890e2b56ebdb0875726e6250e720080`; the fork is
 describe source history, not feature parity, and must be regenerated against
 the exact upstream and candidate revisions at any later retirement review.
 Open product/validation PRs include #78, #100, #103, and #105–#108, in addition
-to dependency updates; all count before merge or publication. The current
-unpublished BookshelfNG migration candidate is PR #100 at `d65d15dc`. It adds
-the converter to the ordinary ChaptarrNG startup path and includes native
-packaging and release-workflow changes. The focused migration fixtures passed
-23/23 on commit `4a74f056` and passed again after the latest-main sync at
-current candidate `d65d15dc`. The exact-head macOS hosted job passed; Windows
-is running and the remaining hosted checks are queued. An
+to dependency updates; all count before merge or publication. PR #100's
+migration implementation is pinned to `d65d15dc`; its current head
+`71c7afcd` adds a documentation-only evidence refresh. The candidate adds the
+converter to the ordinary ChaptarrNG startup path and includes native
+packaging and release-workflow changes. Focused migration fixtures passed
+23/23 on commit `4a74f056` and again on the synchronized implementation at
+`d65d15dc`. The code-head macOS hosted job passed; Windows and the remaining
+checks were pending. Exact-head checks have restarted for the documentation
+refresh. An
 earlier Release-mode Core run passed 4,068 tests, but it is a prior snapshot,
 not a result for current head `d65d15dc`. All of this work belongs in the
 cumulative blocker set. **Confidence:** high for these pinned repository
