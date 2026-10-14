@@ -256,6 +256,32 @@ jobs:
       branch: ${{ github.ref_name }}
       legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
 
+  dispatch-legacy-ghcr:
+    name: Dispatch personal-account BookshelfNG GHCR bridge
+    needs: [release, docker, publish-release]
+    if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Create scoped bridge-repository token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: ${{ vars.CHAPTARRNG_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.CHAPTARRNG_AUTOMATION_APP_PRIVATE_KEY }}
+          owner: snapetech
+          repositories: bookshelfng-ghcr-release-bridge
+          permission-contents: write
+      - name: Dispatch verified standard image digest
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ needs.release.outputs.version }}
+          SOURCE_SHA: ${{ needs.release.outputs.sha }}
+          IMAGE_DIGEST: ${{ needs.docker.outputs.image_digest }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+        run: bash packaging/scripts/dispatch-ghcr-release-bridge.sh
+
   standalone-assets:
     name: Build ${{ matrix.rid }} standalone release asset
     needs: release

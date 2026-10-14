@@ -14,6 +14,10 @@ on:
         required: false
         default: false
         type: boolean
+    outputs:
+      image_digest:
+        description: Digest of the single standard ChaptarrNG image built and pushed by this workflow.
+        value: ${{ jobs.build-and-push.outputs.image_digest }}
     secrets:
       SIXLABORS_LICENSE_KEY:
         required: true
@@ -31,6 +35,8 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
     permissions:
       contents: read
       packages: write
@@ -190,7 +196,9 @@ jobs:
         VERSION: ${{ steps.docker-tags.outputs.version }}
         DOCKERHUB_CONFIGURED: ${{ steps.dockerhub-credentials.outputs.configured }}
         PUBLISH_LEGACY_ALIASES: ${{ inputs.legacy_bridge_enabled }}
-        PUBLISH_GHCR_ALIASES: ${{ inputs.legacy_bridge_enabled }}
+        # GHCR legacy aliases are written by the personal-account bridge
+        # repository because this source repository belongs to the org.
+        PUBLISH_GHCR_ALIASES: false
         RUNNER_TEMP: ${{ runner.temp }}
       run: packaging/scripts/publish-image-aliases.sh
 

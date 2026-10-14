@@ -214,22 +214,28 @@ closed.
 
 ## Limits and update channels
 
-The candidate release workflow builds the ordinary ChaptarrNG image once, then
-would retag its exact multi-architecture GHCR digest as legacy
-`bookshelfng:latest`, `bookshelfng:hardcover`, and `bookshelfng:softcover`.
-Docker Hub publication copies and verifies that same digest before setting
-the new ChaptarrNG and all three legacy mutable tags when publisher credentials
-are configured. Alias failures are recorded in the release summary and do not
-block the standard ChaptarrNG release. The migration gate stays open until
-source mapping, rollback, feature parity, populated-client behavior, release
-assets, channel upgrade/rollback evidence, and exact-digest publishing all
-pass. The current public tags have not been redirected. The existing GHCR
-packages are owned by the personal `snapetech` account, while the publishers
-run from `snapetech-org`; the package's Actions access picker currently offers
-no organization repository, so the legacy alias write is unproven. The
-Docker Hub publisher secret is also unavailable. Historical version tags and
-pinned digests remain unchanged. Mutable image tags only affect a later pull
-or recreation; they do not change a running container.
+The ordinary ChaptarrNG release builds one image. When the migration gate is
+enabled, the ChaptarrNG release workflow dispatches that image's exact
+multi-architecture digest to a small personal-account bridge, which republishes
+it as `ghcr.io/snapetech/bookshelfng:latest`, `:hardcover`, and `:softcover`.
+The bridge performs no build and verifies that each destination digest matches
+the source. Docker Hub publication uses the same standard image digest for
+the ChaptarrNG and BookshelfNG mutable tags when publisher credentials are
+configured. The BookshelfNG organization workflow no longer attempts to write
+the personal GHCR package itself.
+
+The GHCR bridge is currently only a local candidate: its repository has not
+been published, the GitHub App is not installed on the personal account for
+that repository, and the existing `bookshelfng` package has not granted it
+write access. The ChaptarrNG dispatch waits for the stable release to publish
+and the bridge refuses to replay a version that is no longer the latest.
+No legacy tag has been changed. Those setup and digest checks
+must pass alongside source mapping, rollback, feature parity, populated-client
+behavior, release assets, and per-channel upgrade/rollback evidence before the
+migration gate can open. The Docker Hub publisher secret is also unavailable.
+Historical version tags and pinned digests remain unchanged. Mutable image
+tags affect a later pull or recreation; they do not change a running
+container.
 
 The converter currently accepts only SQLite databases at BookshelfNG migration
 158. Older database schemas and PostgreSQL are unsupported. The populated test
@@ -248,7 +254,10 @@ container identities requires `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED=true` in
 the ChaptarrNG repository; the same unset-by-default gate controls the separate
 BookshelfNG bridge workflow. Prefer one organization Actions variable scoped
 to both repositories, or set the same value in both; do not enable only one
-side. The Pacman upgrade from the published BookshelfNG AUR package
+side. GHCR retagging is dispatched directly by the ChaptarrNG release workflow
+to a small, personal-account repository. That repository uses a GitHub App
+installation token scoped to its own contents and its own `GITHUB_TOKEN` for
+package writes. The Pacman upgrade from the published BookshelfNG AUR package
 to the candidate legacy package passed with config, data-marker, and service
 identity retained; service restart and actual database conversion remain
 untested through Pacman. Both AUR identities and both RPM identities build
@@ -267,10 +276,9 @@ configured in ChaptarrNG Actions, and the matching BookshelfNG
 webhook has been exercised against a COPR build, and the old project's
 external source bootstrap still needs its one-time update. The standard
 ChaptarrNG image publish path succeeded in release run `38267985018`, but its
-legacy BookshelfNG GHCR alias remains untested: both packages are personal
-`snapetech` packages, the workflows are in `snapetech-org`, and the Actions
-access picker offers no organization repository. The package link control also
-requires a same-owner repository. Chocolatey remains logged out in the
+legacy BookshelfNG GHCR alias remains untested: the personal-account bridge
+exists only in the local worktree and still needs publication, App
+installation, and `bookshelfng` package write access. Chocolatey remains logged out in the
 available browser; Proton Pass itself is not exposed through the browser
 control. Secret values are not printed or documented. Pinned, offline,
 third-party, Windows setup, Linux
