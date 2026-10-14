@@ -2203,37 +2203,37 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 {
                     throw;
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    _logger.Warn(e, "RanobeDB request failure getting book info for {0}", normalizedForeignBookId);
+                    _logger.WarnSafe("RanobeDB request failure getting book info.");
                     throw new BookNotFoundException(normalizedForeignBookId);
                 }
             }
 
             try
             {
-                _logger.Debug("Getting book info for foreignBookId: {0}", normalizedForeignBookId);
+                _logger.DebugSafe("Getting book info for foreignBookId: {0}", normalizedForeignBookId);
 
                 return PollBook(normalizedForeignBookId, mediaType, authorHintProviderId);
             }
-            catch (WebException e)
+            catch (WebException)
             {
-                _logger.Warn(e, "Request failure getting book info for {0}", normalizedForeignBookId);
+                _logger.WarnSafe("Request failure getting book info for {0}", normalizedForeignBookId);
                 throw new BookNotFoundException(normalizedForeignBookId);
             }
-            catch (HttpException e)
+            catch (HttpException)
             {
-                _logger.Warn(e, "Request failure getting book info for {0}", normalizedForeignBookId);
+                _logger.WarnSafe("Request failure getting book info for {0}", normalizedForeignBookId);
                 throw new BookNotFoundException(normalizedForeignBookId);
             }
-            catch (BadRequestException e)
+            catch (BadRequestException)
             {
-                _logger.Debug(e, "Bad request getting book info for {0}", normalizedForeignBookId);
+                _logger.DebugSafe("Bad request getting book info for {0}", normalizedForeignBookId);
                 throw new BookNotFoundException(normalizedForeignBookId);
             }
-            catch (BookInfoException e)
+            catch (BookInfoException)
             {
-                _logger.Warn(e, "Unexpected error getting book info for {0}", normalizedForeignBookId);
+                _logger.WarnSafe("Unexpected error getting book info for {0}", normalizedForeignBookId);
                 throw new BookNotFoundException(normalizedForeignBookId);
             }
         }
@@ -2259,27 +2259,27 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
             try
             {
-                _logger.Debug("Getting work info for foreignWorkId: {0}", normalizedForeignWorkId);
+                _logger.DebugSafe("Getting work info for foreignWorkId: {0}", normalizedForeignWorkId);
                 return PollBook(normalizedForeignWorkId, mediaType, authorHintProviderId);
             }
-            catch (WebException e)
+            catch (WebException)
             {
-                _logger.Warn(e, "Request failure getting work info for {0}", normalizedForeignWorkId);
+                _logger.WarnSafe("Request failure getting work info for {0}", normalizedForeignWorkId);
                 throw new BookNotFoundException(normalizedForeignWorkId);
             }
-            catch (HttpException e)
+            catch (HttpException)
             {
-                _logger.Warn(e, "Request failure getting work info for {0}", normalizedForeignWorkId);
+                _logger.WarnSafe("Request failure getting work info for {0}", normalizedForeignWorkId);
                 throw new BookNotFoundException(normalizedForeignWorkId);
             }
-            catch (BadRequestException e)
+            catch (BadRequestException)
             {
-                _logger.Debug(e, "Bad request getting work info for {0}", normalizedForeignWorkId);
+                _logger.DebugSafe("Bad request getting work info for {0}", normalizedForeignWorkId);
                 throw new BookNotFoundException(normalizedForeignWorkId);
             }
-            catch (BookInfoException e)
+            catch (BookInfoException)
             {
-                _logger.Warn(e, "Unexpected error getting work info for {0}", normalizedForeignWorkId);
+                _logger.WarnSafe("Unexpected error getting work info for {0}", normalizedForeignWorkId);
                 throw new BookNotFoundException(normalizedForeignWorkId);
             }
         }
@@ -2303,9 +2303,9 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 {
                     throw;
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    _logger.Warn(e, "RanobeDB request failure getting release info for {0}", normalizedForeignEditionId);
+                    _logger.WarnSafe("RanobeDB request failure getting release info.");
                     throw new BookNotFoundException(normalizedForeignEditionId);
                 }
             }
@@ -2315,24 +2315,24 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 _logger.DebugSafe("Getting edition info for foreignEditionId: {0}", normalizedForeignEditionId);
                 return PollEditionBook(normalizedForeignEditionId, mediaType);
             }
-            catch (WebException e)
+            catch (WebException)
             {
-                _logger.WarnSafe(e, "Request failure getting edition info for {0}", normalizedForeignEditionId);
+                _logger.WarnSafe("Request failure getting edition info for {0}", normalizedForeignEditionId);
                 throw new BookNotFoundException(normalizedForeignEditionId);
             }
-            catch (HttpException e)
+            catch (HttpException)
             {
-                _logger.WarnSafe(e, "Request failure getting edition info for {0}", normalizedForeignEditionId);
+                _logger.WarnSafe("Request failure getting edition info for {0}", normalizedForeignEditionId);
                 throw new BookNotFoundException(normalizedForeignEditionId);
             }
-            catch (BadRequestException e)
+            catch (BadRequestException)
             {
-                _logger.DebugSafe(e, "Bad request getting edition info for {0}", normalizedForeignEditionId);
+                _logger.DebugSafe("Bad request getting edition info for {0}", normalizedForeignEditionId);
                 throw new BookNotFoundException(normalizedForeignEditionId);
             }
-            catch (BookInfoException e)
+            catch (BookInfoException)
             {
-                _logger.WarnSafe(e, "Unexpected error getting edition info for {0}", normalizedForeignEditionId);
+                _logger.WarnSafe("Unexpected error getting edition info for {0}", normalizedForeignEditionId);
                 throw new BookNotFoundException(normalizedForeignEditionId);
             }
         }
@@ -2553,9 +2553,9 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 results.AddRange(books);
                 return results;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.Warn(ex, "[BookInfoProxy] RanobeDB search failed for '{0}'", title);
+                _logger.WarnSafe("[BookInfoProxy] RanobeDB search failed.");
                 return new List<object>();
             }
         }
