@@ -1,9 +1,15 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-ChaptarrNG ships one standard application and container build for new and
-migrated installations. The same `Chaptarr` executable provides an explicit
-preview and apply command. Normal startup also detects and converts a supported
-BookshelfNG database automatically.
+> **Not available in the current published release.** ChaptarrNG PR #100 is
+> still under review. The published `v0.9.969` image and packages do not contain
+> the converter, and no BookshelfNG update channel has been redirected. Keep
+> BookshelfNG installed until this guide is updated to name a released,
+> migration-enabled ChaptarrNG version and its tested channel-specific upgrade.
+
+The candidate uses one standard ChaptarrNG application and container build for
+fresh and migrated installations. The same `Chaptarr` executable provides an
+explicit preview and apply command. Normal startup also detects and converts a
+supported BookshelfNG database automatically.
 
 The converter currently supports BookshelfNG migration-158 SQLite databases.
 It makes a consistent snapshot, stages a fresh native Chaptarr database,
@@ -27,7 +33,7 @@ and leaves the source database untouched.
 ```sh
 docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech/chaptarrng:latest \
+  ghcr.io/snapetech/chaptarrng:<migration-enabled-version> \
   dotnet /app/Chaptarr.dll -preview-bookshelf-migration -data=/config
 ```
 
@@ -57,7 +63,7 @@ explicit apply command once:
 ```sh
 docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech/chaptarrng:latest \
+  ghcr.io/snapetech/chaptarrng:<migration-enabled-version> \
   dotnet /app/Chaptarr.dll -migrate-bookshelf -confirm-bookshelf-service-stopped -data=/config
 ```
 
@@ -75,7 +81,7 @@ BookshelfNG backup without changing either database:
 ```sh
 docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech/chaptarrng:latest \
+  ghcr.io/snapetech/chaptarrng:<migration-enabled-version> \
   dotnet /app/Chaptarr.dll -preview-bookshelf-restore \
     -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-GUID.db \
     -data=/config
@@ -86,7 +92,7 @@ After preview passes, apply the restore while all services remain stopped:
 ```sh
 docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech/chaptarrng:latest \
+  ghcr.io/snapetech/chaptarrng:<migration-enabled-version> \
   dotnet /app/Chaptarr.dll -restore-bookshelf \
     -confirm-bookshelf-service-stopped \
     -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-GUID.db \
@@ -193,27 +199,37 @@ candidate remains unpublished, and every
 feature, installation, and distribution channel is still an independent
 BookshelfNG retirement blocker.
 
-Hosted validation exposed two cross-platform issues on an earlier candidate:
+Hosted validation exposed two cross-platform issues on earlier candidates:
 Windows failed four migration promotion/rollback tests, and macOS Bash 3.2
 rejected the Unraid branch-guard script's Bash 4 uppercase expansion. The
-branch-guard now uses `tr`, and migration promotion now uses `File.Replace`;
-the focused migration fixtures pass 23/23 on Linux with these changes. The
-Windows fix still requires a hosted rerun, and the macOS branch guard must pass
-on its native runner before either hosted blocker can close.
+branch-guard now uses `tr`, and migration promotion uses `File.Replace`; the
+focused migration fixtures pass 23/23 locally. The latest hosted Windows run
+failed four migration/rollback tests. The new PR #100 receipt records only
+safe exception types, the first Chaptarr application method, and SQLite's
+numeric primary error code; exception text and paths remain redacted. A new
+exact-head rerun is required to capture that detail.
+PR #130 contains the Bash 3.2 branch-guard fix and its local tests pass; the
+current native macOS hosted run remains pending. Neither hosted blocker is
+closed.
 
 ## Limits and update channels
 
-The candidate Docker release builds the ordinary ChaptarrNG image once, then
-retags its exact multi-architecture GHCR digest as legacy
+The candidate release workflow builds the ordinary ChaptarrNG image once, then
+would retag its exact multi-architecture GHCR digest as legacy
 `bookshelfng:latest`, `bookshelfng:hardcover`, and `bookshelfng:softcover`.
 Docker Hub publication copies and verifies that same digest before setting
 the new ChaptarrNG and all three legacy mutable tags when publisher credentials
 are configured. Alias failures are recorded in the release summary and do not
-block the standard ChaptarrNG release. The migration gate stays open until the
-legacy tags have been redirected and verified. The current public tags have
-not been redirected; ChaptarrNG needs write access to the old GHCR package,
-and it has no Docker Hub publisher secret. Historical version tags and pinned
-digests remain unchanged.
+block the standard ChaptarrNG release. The migration gate stays open until
+source mapping, rollback, feature parity, populated-client behavior, release
+assets, channel upgrade/rollback evidence, and exact-digest publishing all
+pass. The current public tags have not been redirected. The existing GHCR
+packages are owned by the personal `snapetech` account, while the publishers
+run from `snapetech-org`; the package's Actions access picker currently offers
+no organization repository, so the legacy alias write is unproven. The
+Docker Hub publisher secret is also unavailable. Historical version tags and
+pinned digests remain unchanged. Mutable image tags only affect a later pull
+or recreation; they do not change a running container.
 
 The converter currently accepts only SQLite databases at BookshelfNG migration
 158. Older database schemas and PostgreSQL are unsupported. The populated test
@@ -237,8 +253,8 @@ to the candidate legacy package passed with config, data-marker, and service
 identity retained; service restart and actual database conversion remain
 untested through Pacman. Both AUR identities and both RPM identities build
 from a locally checksum-verified archive, and both RPMs pass isolated
-file-install checks. The public `v0.9.969` release still has no assets, so
-there is no public Linux or Windows archive or COPR source RPM to install.
+file-install checks. The public `v0.9.969` release has no standard archive,
+Windows installer, SRPM, or checksum assets to install.
 The new [COPR project](https://copr.fedorainfracloud.org/coprs/slskdn/chaptarrng/)
 is created for Fedora 43, 44, 45, and Rawhide x86_64. Its `chaptarrng`
 custom-source package is configured with auto-rebuild and the package-scoped
@@ -249,7 +265,14 @@ Docker Hub publisher secrets. The legacy `BOOKSHELFNG_COPR_WEBHOOK_URL` is
 configured in ChaptarrNG Actions, and the matching BookshelfNG
 `COPR_WEBHOOK_URL` was rotated to the same package-scoped endpoint. Neither
 webhook has been exercised against a COPR build, and the old project's
-external source bootstrap still needs its one-time update. Secret values are
-not printed or documented. Pinned, offline, third-party, Windows setup, Linux
+external source bootstrap still needs its one-time update. The standard
+ChaptarrNG image publish path succeeded in release run `38267985018`, but its
+legacy BookshelfNG GHCR alias remains untested: both packages are personal
+`snapetech` packages, the workflows are in `snapetech-org`, and the Actions
+access picker offers no organization repository. The package link control also
+requires a same-owner repository. Chocolatey remains logged out in the
+available browser; Proton Pass itself is not exposed through the browser
+control. Secret values are not printed or documented. Pinned, offline,
+third-party, Windows setup, Linux
 archive, Docker, Helm, and catalog installs still need their own tested
 handoff.

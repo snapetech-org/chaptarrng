@@ -132,6 +132,23 @@ test('NUnit receipt extracts a safe exception type and method from the failure b
   assert.doesNotMatch(JSON.stringify(summary), /secret database path|C:\\\\private|Converter.cs|line 42/);
 });
 
+test('NUnit SQLite receipt prefers an application frame and exports only the numeric SQLite code', () => {
+  const summary = parseNUnitSummary(`<test-run total="1" passed="0" failed="1" skipped="0" inconclusive="0" result="Failed">
+    <test-case name="Fixture.sqlite_open_failure" result="Failed"><failure><message><![CDATA[Microsoft.Data.Sqlite.SqliteException: SQLite Error 14: 'unable to open secret path']]></message><stack-trace><![CDATA[   at Microsoft.Data.Sqlite.SqliteConnectionInternal..ctor(String connectionString)
+   at NzbDrone.Core.Datastore.BookshelfDatabaseConverter.Convert(String source) in C:\\private\\work\\Converter.cs:line 42]]></stack-trace></failure></test-case>
+  </test-run>`);
+
+  assert.deepEqual(summary.failedTestDetails, [
+    {
+      name: 'Fixture.sqlite_open_failure',
+      exceptionType: 'Microsoft.Data.Sqlite.SqliteException',
+      stackFrame: 'NzbDrone.Core.Datastore.BookshelfDatabaseConverter.Convert',
+      sqliteErrorCode: 14,
+    },
+  ]);
+  assert.doesNotMatch(JSON.stringify(summary), /unable to open secret path|C:\\\\private|Converter.cs|line 42/);
+});
+
 test('Node TAP summary accounts for pass, fail, skip, todo, and cancelled cases', () => {
   assert.deepEqual(parseNodeTestSummary(
     '# tests 7\n# pass 3\n# fail 1\n# cancelled 1\n# skipped 1\n# todo 1\n',

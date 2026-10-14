@@ -30,24 +30,25 @@ each capability remains an individual blocker until its evidence passes.
 
 At this review, upstream `develop` is `e67374f4b3fed01bbf08f18672add944062fcb49`
 and ChaptarrNG `main` is `6731a436d890e2b56ebdb0875726e6250e720080`; the fork is
-582 commits ahead and zero behind, with 1,157 net-changed paths. These counts
-describe source history, not feature parity, and must be regenerated against
-the exact upstream and candidate revisions at any later retirement review.
-Open product/validation PRs include #78, #100, #103, and #105–#108, in addition
-to dependency updates; all count before merge or publication. PR #100's
-migration implementation is pinned to `d65d15dc`; subsequent commits on the
-open PR contain documentation-only evidence refreshes. The candidate adds the
-converter to the ordinary ChaptarrNG startup path and includes native
-packaging and release-workflow changes. Focused migration fixtures passed
-23/23 on commit `4a74f056` and again on the synchronized implementation at
-`d65d15dc`. The code-head macOS hosted job passed; Windows and the remaining
-checks were pending. Exact-head checks have restarted for the documentation
-refresh. An
-earlier Release-mode Core run passed 4,068 tests, but it is a prior snapshot,
-not a result for current head `d65d15dc`. All of this work belongs in the
-cumulative blocker set. **Confidence:** high for these pinned repository
-counts and open PR states, moderate for the feature-level upstream comparison,
-and unknown for semantic equivalence until the matrix checks pass.
+606 commits ahead and zero behind, with 1,485 net-changed paths. The current
+Bookshelf consolidation candidate, PR #100 at `99a4b842`, is 24 commits ahead
+of `main`, with 359 changed paths. These counts describe source history, not
+feature parity, and must be regenerated against the exact upstream and
+candidate revisions at any later retirement review. Open product, security,
+and validation PRs include #78, #100, #103, and #105–#109, in addition to open
+dependency updates; all count before merge or publication. PR #100 adds the
+converter to ordinary ChaptarrNG startup and includes native packaging and
+release-workflow changes. Its focused migration fixtures pass 23/23, and the
+local full Core suite passed 4,065 tests with 0 failures and 3 skipped on the
+same application sources as the current head. The latest hosted Windows run
+failed four migration/rollback tests. The validation receipt now records only
+safe exception types, the first Chaptarr application method, and SQLite's
+numeric primary error code; exception text and paths remain redacted. A fresh
+exact-head Windows run is required to capture that added diagnostic. All of
+this work belongs in the cumulative blocker set.
+**Confidence:** high for these pinned repository counts and open PR states,
+moderate for the feature-level upstream comparison, and unknown for semantic
+equivalence until the matrix checks pass.
 
 The current integration candidate carries the metadata-profile edition and
 series preferences, their consumers, the BookshelfNG database/configuration
@@ -366,7 +367,7 @@ or reduce ChaptarrNG's own released or actively developed blockers.
 | --- | --- | --- |
 | BookshelfNG capabilities carried into ChaptarrNG | Every capability and material enhancement in the BookshelfNG parity roadmap, including its settings, persisted data, identities, clients, and integrations | Demonstrate equivalent behavior on the supported upstream release, including converted data and existing client configurations; pass each row's acceptance checks. |
 | ChaptarrNG released features | Every capability ChaptarrNG introduced, materially extended, or maintains in this guide and the released changelog, including the SeerrNG contract, Direct Download, full-backup encryption, security behavior, and fork-specific operations | Show the behavior in a supported upstream release and validate the relevant APIs, security boundaries, operator workflows, and clients. |
-| ChaptarrNG active and unreleased features | At `main` `6731a436`, open product/validation work includes PR #78, PR #100 (BookshelfNG converter), PR #103, and security/localization work in PRs #105–#108, plus dependency updates. The consolidation candidate is PR #100 at `d65d15d`. | Preserve or replace every released and actively developed capability in a supported upstream release and pass its acceptance checks. Keep the ledger current as active work changes. |
+| ChaptarrNG active and unreleased features | At `main` `6731a436`, open product, security, and validation work includes PR #78, PR #100 (BookshelfNG converter), PR #103, and PRs #105–#109, plus open dependency updates. The consolidation candidate is PR #100 at `99a4b842`. | Preserve or replace every released and actively developed capability in a supported upstream release and pass its acceptance checks. Keep the ledger current as active work changes. |
 | Remaining fork-only source changes | Every post-fork source change not already accounted for by the capability rows, including fixes, migrations, APIs, security, build, and platform behavior | Disposition every changed path as retained, ported, or replaced by a verified equivalent. A path count is not feature parity. |
 | Release and installation channels | Each ChaptarrNG release, image, package, updater, and supported upgrade path, plus any channel carrying a migrated BookshelfNG installation | Test the exact published upgrade, configuration/data migration, rollback, and client/update continuity for each channel. |
 
@@ -451,7 +452,7 @@ data, security, and packaging checks.
 | Release, package, and update channels | ChaptarrNG GHCR releases and Unraid identity; YunoHost publishing and packaging have been retired from source | BookshelfNG's GHCR/Docker Hub tags, Unraid template, native installers, Linux package channels, Helm, and legacy update behavior | Preserve each retained channel or record an explicit maintainer decision to retire it; test historical installs, upgrades, package/image/service/data identities, and rollback. No single redirect reaches every installed copy. |
 | Localization | Indonesian and Traditional Chinese UI, AudioBookShelf translations, locale metadata, and locale-aware workflows | No separate BookshelfNG locale feature was identified; inherited keys remain in the source-path audit | Keep all supported strings, fallback behavior, and locale selection; run translation-key and rendered-UI checks against the released upstream build. |
 | Data and API compatibility | Existing ChaptarrNG databases, configuration, local IDs, and SeerrNG links | BookshelfNG databases/configuration and their provider identities, local IDs, settings, histories, and files | Keep each source recoverable; perform explicit staged conversion; preserve or reconcile identities and references; prove rollback, upgrade, and restart behavior for populated fixtures. |
-| Complete fork history and active changes | ChaptarrNG main at `6731a436`, the current BookshelfNG consolidation candidate at PR #100 `d65d15d`, and all active ChaptarrNG product/validation branches, including PRs #78, #103, and #105–#108 plus dependency updates | BookshelfNG main at `6dd0638` has 425 reachable post-fork commits and 1,043 net-changed paths; active BookshelfNG PRs #128 and #130 are tracked separately | Generate and review exact source-to-upstream inventories for `main`, each active branch, and every open feature PR at retirement time. Retain, port, or prove equivalence for every behavior; a proposed removal remains blocked until an explicit maintainer decision. |
+| Complete fork history and active changes | ChaptarrNG main at `6731a436`, the current BookshelfNG consolidation candidate at PR #100 `99a4b842`, and all active ChaptarrNG product, security, validation, and dependency branches, including PRs #78, #103, and #105–#109 | BookshelfNG main at `5d696fb0` has 426 reachable post-fork commits and 1,045 net-changed paths; active BookshelfNG PRs #128 and #130 are tracked separately | Generate and review exact source-to-upstream inventories for `main`, each active branch, and every open feature PR at retirement time. Retain, port, or prove equivalence for every behavior; a proposed removal remains blocked until an explicit maintainer decision. |
 
 The data row has known structural blockers: BookshelfNG separates `Authors`
 and `AuthorMetadata`, and one source book may split into multiple
@@ -482,9 +483,14 @@ Docker image-pull update behavior. Eighty-one books needed an operator-selected
 media mapping; technical test choices were not reviewed as correct
 classifications, so this is not general migration approval.
 
-The latest focused importer/converter fixtures passed 23/23 on ChaptarrNG
-commit `4a74f056`. PR #100 head `d65d15d` includes the current `main`; its
-hosted rerun is queued. Earlier full Core and synthetic rollback runs remain
+The latest focused importer/converter fixtures passed 23/23 on the application
+sources in ChaptarrNG PR #100 at `99a4b842`. The local full Core suite passed
+4,065 tests with 0 failures and 3 skipped; the validator-only commits since
+that application test changed no .NET sources. The latest hosted Windows run
+failed four migration/rollback cases. The new receipt captures only the safe
+exception type, first application method, and SQLite primary code to help
+diagnose those failures. A current exact-head run must pass before merge.
+Earlier synthetic rollback runs remain
 historical evidence, not a substitute for current exact-head checks. This
 proves one real SQLite input and focused conversion invariants, not older
 schemas, PostgreSQL, real-populated rollback, semantic feature parity, or

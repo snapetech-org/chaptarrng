@@ -451,12 +451,22 @@ function nunitFailureFrame(body) {
   if (!failure) return null;
   const stackTrace = failure[1].match(/<stack-trace\b[^>]*>([\s\S]*?)<\/stack-trace>/i)?.[1];
   if (!stackTrace) return null;
-  const firstFrame = decodeNUnitXmlText(stackTrace).split(/\r?\n/)
+  const methods = decodeNUnitXmlText(stackTrace).split(/\r?\n/)
     .map((line) => line.trim())
-    .find((line) => /^at\s+/.test(line));
-  if (!firstFrame) return null;
-  const method = firstFrame.match(/^at\s+([^ (]+)\s*\(/)?.[1];
+    .filter((line) => /^at\s+/.test(line))
+    .map((line) => line.match(/^at\s+([^ (]+)\s*\(/)?.[1])
+    .filter(Boolean);
+  const method = methods.find((candidate) => candidate.startsWith('NzbDrone.')) ?? methods[0];
   return method && /^[A-Za-z0-9_.$+`<>-]+$/.test(method) ? method : null;
+}
+
+function nunitFailureSqliteErrorCode(body) {
+  const failure = body.match(/<failure\b[^>]*>([\s\S]*?)<\/failure>/i);
+  if (!failure) return null;
+  const message = failure[1].match(/<message\b[^>]*>([\s\S]*?)<\/message>/i)?.[1];
+  if (!message) return null;
+  const code = decodeNUnitXmlText(message).match(/\bSQLite Error\s+(\d+):/i)?.[1];
+  return code === undefined ? null : Number(code);
 }
 
 export function parseNUnitSummary(xml) {
@@ -474,7 +484,10 @@ export function parseNUnitSummary(xml) {
     const bodyStart = match.index + tag.length;
     const bodyEnd = xml.indexOf('</test-case>', bodyStart);
     const body = tag.endsWith('/>') || bodyEnd < 0 ? '' : xml.slice(bodyStart, bodyEnd);
-    failedTestDetails.push({ name, exceptionType: nunitFailureType(body), stackFrame: nunitFailureFrame(body) });
+    const detail = { name, exceptionType: nunitFailureType(body), stackFrame: nunitFailureFrame(body) };
+    const sqliteErrorCode = nunitFailureSqliteErrorCode(body);
+    if (sqliteErrorCode !== null) detail.sqliteErrorCode = sqliteErrorCode;
+    failedTestDetails.push(detail);
   }
   const summary = {
     total: Number(attrs.total ?? attrs.testcasecount),

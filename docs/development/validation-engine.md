@@ -139,7 +139,10 @@ assembly byte-for-byte; platform binaries are allowed to differ. Before and
 after each concurrent task batch the engine checks that the source fingerprint
 has not moved and blocks successful receipts if it changes. Logs stay private
 under the system temporary directory; the exported receipt carries counts,
-bounded failing test names, and exception types only. Overlapping runs in one
+bounded failing test names, exception types, and allowlisted method names. For
+SQLite failures it also records only the numeric primary error code. Exception
+messages, paths, source values, and assertion contents stay out of receipts.
+Overlapping runs in one
 checkout are rejected.
 Runtime probes and task child processes
 receive an explicit environment allowlist and each task's declared settings.
