@@ -16,7 +16,7 @@ namespace Chaptarr.Core.Test.Datastore
         [SetUp]
         public void SetUp()
         {
-            _directory = Path.Combine(Path.GetTempPath(), $"bookshelf-converter-{Guid.NewGuid():N}");
+            _directory = Path.Combine(Path.GetTempPath(), $"bookshelf-converter-{Guid.NewGuid().ToString("N").Substring(0, 8)}");
             Directory.CreateDirectory(_directory);
             _sourcePath = Path.Combine(_directory, "readarr.db");
             _sourceConnectionString = new SqliteConnectionStringBuilder

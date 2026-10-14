@@ -83,7 +83,7 @@ docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
   ghcr.io/snapetech/chaptarrng:<migration-enabled-version> \
   dotnet /app/Chaptarr.dll -preview-bookshelf-restore \
-    -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-GUID.db \
+    -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-ID.db \
     -data=/config
 ```
 
@@ -95,7 +95,7 @@ docker run --rm \
   ghcr.io/snapetech/chaptarrng:<migration-enabled-version> \
   dotnet /app/Chaptarr.dll -restore-bookshelf \
     -confirm-bookshelf-service-stopped \
-    -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-GUID.db \
+    -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-ID.db \
     -data=/config
 ```
 

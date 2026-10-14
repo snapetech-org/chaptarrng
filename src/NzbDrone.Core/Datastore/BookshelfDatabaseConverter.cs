@@ -49,7 +49,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             var directory = Path.GetDirectoryName(sourcePath);
-            var suffix = Guid.NewGuid().ToString("N");
+            var suffix = Guid.NewGuid().ToString("N").Substring(0, 8);
             var stagePath = sourcePath + ".chaptarr-stage-" + suffix + ".db";
             var snapshotPath = sourcePath + ".bookshelf-snapshot-" + suffix + ".db";
             var backupPath = sourcePath + ".bookshelfng-backup-" + DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ") + "-" + suffix + ".db";
@@ -194,7 +194,7 @@ namespace NzbDrone.Core.Datastore
                 return new BookshelfDatabaseRollbackResult(sourceBackupPath, null, previewOnly: true);
             }
 
-            var suffix = Guid.NewGuid().ToString("N");
+            var suffix = Guid.NewGuid().ToString("N").Substring(0, 8);
             var stagePath = currentPath + ".bookshelf-restore-stage-" + suffix + ".db";
             var chaptarrBackupPath = currentPath + ".chaptarrng-backup-" + DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ") + "-" + suffix + ".db";
             var failedRestorePath = currentPath + ".bookshelf-restore-failed-" + suffix + ".db";
