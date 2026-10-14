@@ -397,6 +397,7 @@ test('test-only planning distinguishes local and hosted tasks regardless of ambi
   const engineContractTask = validation.tasks.find((task) => task.id === 'engine-contract-tests');
   assert.ok(engineContractTask);
   assert.equal(engineContractTask.command.includes('--test-concurrency=2'), true);
+  assert.equal(engineContractTask.shortTemporaryPath, true);
 
   const localPlan = withEnvironmentVariable('GITHUB_ACTIONS', undefined, () =>
     withEnvironmentVariable('VALIDATION_NODE_ID', undefined, () =>

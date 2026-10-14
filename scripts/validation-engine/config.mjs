@@ -86,6 +86,7 @@ export const validation = {
       kind: 'test',
       stage: 'tests',
       concurrencyGroup: 'engine-contract-output',
+      shortTemporaryPath: true,
       command: [process.execPath, '--test', '--test-concurrency=2', '--test-reporter=tap', 'scripts/validation-engine/engine.test.mjs', 'scripts/validation-engine/trusted-sandbox.contract.mjs', 'scripts/validation-engine/trusted-test-launcher.contract.mjs', 'scripts/validation-engine/reconcile.test.mjs'],
       resultFormat: 'node-test',
       inventory: ['validation-contracts', 'trusted-sandbox-contracts', 'trusted-launcher-contracts', 'reconciliation-contracts'],
