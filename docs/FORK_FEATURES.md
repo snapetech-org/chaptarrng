@@ -35,13 +35,16 @@ history, not feature parity, and must be regenerated against the exact upstream
 and candidate revisions at any later retirement review. Open product and
 maintenance PRs #78, #97, #100, and #101, along with active dependency updates
 including #96 and #98, count before merge or publication; PR #99 has merged.
-The current unpublished BookshelfNG integration candidate is PR #100 at
-`1141c79687302366463bf87fed4565c4cc76090c`. It adds migration/configuration
-conversion through native migration 119, package and image bridges, regression
-fixes, release workflow changes, and documentation. Its missing SQL test
-fixture has been restored and the focused importer suite passes 12/12 locally;
-fresh hosted checks are pending. All of that work belongs in the cumulative
-blocker set. **Confidence:** high for these pinned repository counts and open
+The current unpublished BookshelfNG integration candidate is PR #100. Its
+implementation snapshot is `1141c79687302366463bf87fed4565c4cc76090c`; the
+current PR head `a396472d` adds a documentation-only refresh. It adds
+migration/configuration conversion through native migration 119, package and
+image bridges, regression fixes, release workflow changes, and documentation.
+Its missing SQL test fixture has been restored. The focused importer suite
+passes 12/12 locally, and the full Release-mode Core suite passes 4,062 tests
+with 0 failures and 3 skips (4,065 total). Fresh hosted checks are pending. All
+of that work belongs in the cumulative blocker set. **Confidence:** high for
+these pinned repository counts and open
 PR states, moderate for the feature-level upstream comparison, and unknown for
 semantic equivalence until the matrix checks pass.
 
