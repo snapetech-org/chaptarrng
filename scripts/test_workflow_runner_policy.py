@@ -59,11 +59,12 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             "((github.event_name == 'push' && github.ref == 'refs/heads/main') "
             "|| (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))"
         )
-        expected = "$" + "{{ matrix.os == 'ubuntu-latest' && (" + main_condition + " && vars.TRUSTED_MAIN_RUNNERS_ENABLED == 'true' && 'trusted-main' || matrix.os }}"
+        trusted_runner_json = '{"group":"trusted-main","labels":["self-hosted","Linux","X64","host"]}'
+        expected = "$" + "{{ matrix.os == 'ubuntu-latest' && (" + main_condition + " && vars.TRUSTED_MAIN_RUNNERS_ENABLED == 'true' && fromJSON('" + trusted_runner_json + "') || matrix.os }}"
         self.assertEqual(runner, expected)
         self.assertNotIn("github.event_name == 'pull_request'", runner)
         self.assertNotIn("startsWith(github.ref, 'refs/heads/')", runner)
-        self.assertNotIn("fromJSON", runner)
+        self.assertIn("fromJSON('" + trusted_runner_json + "')", runner)
 
     def test_pr_body_edits_revalidate_notes_without_restarting_builds(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
