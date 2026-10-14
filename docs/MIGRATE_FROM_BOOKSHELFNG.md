@@ -231,9 +231,10 @@ untested through Pacman. Both AUR identities and both RPM identities build
 from a locally checksum-verified archive, and both RPMs pass isolated
 file-install checks. The public `v0.9.969` release
 still lacks the standard Linux/Windows assets. The AUR SSH key is configured
-in ChaptarrNG Actions, but the COPR login is expired and ChaptarrNG has no
-Chocolatey or Docker Hub publisher secrets. Similarly named secret entries
-exist in BookshelfNG and SeerrNG Actions, but their values and authorization
-for ChaptarrNG's package identities are unknown. Pinned, offline, third-party,
-Windows setup, Linux archive, Docker, Helm, and catalog installs still need
-their own tested handoff.
+in ChaptarrNG Actions, and COPR sign-in as `slskdn` is verified, but
+`slskdn/chaptarrng` has not been created and no package-scoped webhook is
+configured. ChaptarrNG has no Chocolatey or Docker Hub publisher secrets.
+Similarly named secret entries exist in BookshelfNG and SeerrNG Actions, but
+their values are not available to ChaptarrNG and are not treated as usable
+credentials. Pinned, offline, third-party, Windows setup, Linux archive,
+Docker, Helm, and catalog installs still need their own tested handoff.

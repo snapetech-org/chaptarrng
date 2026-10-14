@@ -64,36 +64,35 @@ controls legacy mutable image tags and the BookshelfNG repository bridge.
 Prefer one organization Actions variable scoped to both repositories;
 otherwise set the same value in both. Do not enable only one side of the
 handoff.
-Create or claim AUR `chaptarrng-bin` under the maintainer account, create
-COPR `OWNER/chaptarrng`, and claim Chocolatey `chaptarrng`. Configure these
-ChaptarrNG repository secrets without putting their values in chat:
+The new package identities are AUR `chaptarrng-bin`, COPR
+`slskdn/chaptarrng`, and Chocolatey `chaptarrng`. Configure the ChaptarrNG
+publisher secrets without putting their values in chat:
 
-- `AUR_SSH_KEY`: the AUR account key authorized to update both `chaptarrng-bin`
-  and the existing `bookshelfng-bin` recipe.
+- `AUR_SSH_KEY`: configured in ChaptarrNG Actions; the maintainer account must
+  own or be authorized to update both `chaptarrng-bin` and the existing
+  `bookshelfng-bin` recipe.
 - `COPR_WEBHOOK_URL`: custom webhook for the new ChaptarrNG COPR package.
 - `BOOKSHELFNG_COPR_WEBHOOK_URL`: custom webhook for the existing
   `slskdn/bookshelfng` package.
 - `CHOCOLATEY_API_KEY`: publisher key that can push both Chocolatey IDs.
 
-The AUR key is now configured in the ChaptarrNG repository and authenticated
-against the existing keefshape AUR account. The chaptarrng-bin AUR package
+The AUR key is configured in the ChaptarrNG repository and authenticated
+against the existing keefshape AUR account. The `chaptarrng-bin` AUR package
 is still absent and must wait for a public, checksummed standard release
-archive. The COPR API login on the workstation is expired; project and package
-creation therefore remain open until a valid COPR login is available.
-ChaptarrNG currently has no Chocolatey, COPR, or Docker Hub publisher secrets.
-Similarly named secret entries exist in BookshelfNG and SeerrNG Actions, but
-GitHub does not reveal their values and their authorization for ChaptarrNG's
-package identities has not been verified. The new ChaptarrNG COPR package will
-also need its package-scoped webhook after entry creation.
+archive. COPR sign-in as `slskdn` is verified; `slskdn/chaptarrng` has not yet
+been created and has no package-scoped webhook. ChaptarrNG currently has no
+COPR, Chocolatey, or Docker Hub publisher secrets. Similarly named secret
+entries exist in BookshelfNG and SeerrNG Actions, but GitHub does not reveal
+their values, so they are not treated as credentials available to ChaptarrNG.
 
 The public registry check found the existing AUR `bookshelfng-bin` package at
 `0.4.21.69-1`; `chaptarrng-bin` is not registered. COPR has the existing
 `slskdn/bookshelfng` project, while `slskdn/chaptarrng` is not present.
 Chocolatey has the existing `bookshelfng` package; the `chaptarrng` package
-page returns 404. The public ChaptarrNG `v0.9.969` release currently has no
-standard Linux or Windows archives, which these package recipes require.
-Registry publication therefore remains blocked even though the local AUR and
-RPM candidate builds passed.
+page returns 404. The public ChaptarrNG `v0.9.969` release has no standard
+Linux or Windows archives, which these package recipes require. Registry
+publication therefore remains blocked even though the local AUR and RPM
+candidate builds passed.
 
 For the new COPR project, configure `chaptarrng` as a custom-source package using
 [`packaging/rpm/copr-source.sh`](rpm/copr-source.sh), with `bash`, `curl`,
