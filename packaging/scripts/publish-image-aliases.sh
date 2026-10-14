@@ -15,6 +15,12 @@ fi
 summary="$GITHUB_STEP_SUMMARY"
 metadata_index=0
 failed=0
+publish_ghcr_aliases="${PUBLISH_GHCR_ALIASES:-true}"
+
+if [[ "$publish_ghcr_aliases" != "true" && "$publish_ghcr_aliases" != "false" ]]; then
+  echo 'PUBLISH_GHCR_ALIASES must be true or false.' >&2
+  exit 2
+fi
 
 publish_alias() {
   local target="$1"
@@ -58,9 +64,13 @@ PY
   echo "The ChaptarrNG image was built once. Each alias below points to that same multi-architecture manifest digest."
 } >> "$summary"
 
-publish_alias "ghcr.io/snapetech/bookshelfng:latest" "$SOURCE_IMAGE"
-publish_alias "ghcr.io/snapetech/bookshelfng:hardcover" "$SOURCE_IMAGE"
-publish_alias "ghcr.io/snapetech/bookshelfng:softcover" "$SOURCE_IMAGE"
+if [[ "$publish_ghcr_aliases" == "true" ]]; then
+  publish_alias "ghcr.io/snapetech/bookshelfng:latest" "$SOURCE_IMAGE"
+  publish_alias "ghcr.io/snapetech/bookshelfng:hardcover" "$SOURCE_IMAGE"
+  publish_alias "ghcr.io/snapetech/bookshelfng:softcover" "$SOURCE_IMAGE"
+else
+  echo '- GHCR legacy aliases: skipped because publishing was disabled for this invocation.' >> "$summary"
+fi
 
 if [[ "${DOCKERHUB_CONFIGURED:-false}" == "true" ]]; then
   dockerhub_source="docker.io/snapetech/chaptarrng:$VERSION"

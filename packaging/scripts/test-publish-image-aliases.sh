@@ -67,6 +67,7 @@ run_aliases() {
   local configured="$1"
   local expected_metadata_digest="$2"
   local inspected_manifest="$3"
+  local publish_ghcr="${4:-true}"
   : > "$work/publish.log"
   : > "$work/skopeo.log"
   : > "$work/summary.md"
@@ -82,6 +83,7 @@ run_aliases() {
     MOCK_MANIFEST="$inspected_manifest" \
     VERSION=1.2.3 \
     DOCKERHUB_CONFIGURED="$configured" \
+    PUBLISH_GHCR_ALIASES="$publish_ghcr" \
     bash "$script"
 }
 
@@ -106,6 +108,17 @@ printf '%s\t%s\n' \
   docker.io/snapetech/bookshelfng:softcover "$dockerhub_source" > "$work/expected-both.log"
 cmp "$work/expected-both.log" "$work/publish.log"
 grep -Fq "docker.io/snapetech/chaptarrng:1.2.3: mirrored with the standard image digest $digest" "$work/summary.md"
+[[ "$(wc -l < "$work/skopeo.log")" -eq 2 ]]
+
+run_aliases true "$digest" "$manifest" false
+dockerhub_source="docker.io/snapetech/chaptarrng:1.2.3"
+printf '%s\t%s\n' \
+  docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
+  docker.io/snapetech/bookshelfng:latest "$dockerhub_source" \
+  docker.io/snapetech/bookshelfng:hardcover "$dockerhub_source" \
+  docker.io/snapetech/bookshelfng:softcover "$dockerhub_source" > "$work/expected-dockerhub-only.log"
+cmp "$work/expected-dockerhub-only.log" "$work/publish.log"
+grep -Fq 'GHCR legacy aliases: skipped because publishing was disabled' "$work/summary.md"
 [[ "$(wc -l < "$work/skopeo.log")" -eq 2 ]]
 
 if run_aliases false 'sha256:deadbeef' "$manifest" > /dev/null 2>&1; then
