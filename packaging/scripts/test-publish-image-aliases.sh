@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# These checks match literal GitHub Actions expressions in the workflow file.
+# shellcheck disable=SC2016
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
@@ -62,6 +64,16 @@ manifest='{"schemaVersion":2}'
 digest="sha256:$(printf '%s\n' "$manifest" | sha256sum | cut -d ' ' -f1)"
 source="ghcr.io/snapetech/chaptarrng@${digest}"
 script="$repo_root/packaging/scripts/publish-image-aliases.sh"
+docker_workflow="$repo_root/.github/workflows/docker-publish.yml"
+
+grep -Fq 'STANDARD_IMAGE: ghcr.io/snapetech/chaptarrng' "$docker_workflow"
+grep -Fq 'image="${STANDARD_IMAGE}"' "$docker_workflow"
+grep -Fq 'SOURCE_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build.outputs.digest }}' "$docker_workflow"
+grep -Fq 'subject-name: ${{ env.STANDARD_IMAGE }}' "$docker_workflow"
+if grep -Fq 'ghcr.io/${{ github.repository }}' "$docker_workflow"; then
+  echo 'The published GHCR identity must not be derived from the transferred repository owner.' >&2
+  exit 1
+fi
 
 run_aliases() {
   local configured="$1"

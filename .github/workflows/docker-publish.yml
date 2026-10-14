@@ -19,7 +19,9 @@ on:
         required: false
 
 env:
-  REGISTRY: ghcr.io
+  # The public package predates the repository transfer into snapetech-org.
+  # Keep the stable image identity used by existing installs and documentation.
+  STANDARD_IMAGE: ghcr.io/snapetech/chaptarrng
 
 jobs:
   build-and-push:
@@ -116,7 +118,7 @@ jobs:
         fi
 
         tags=()
-        image="${REGISTRY}/${GITHUB_REPOSITORY,,}"
+        image="${STANDARD_IMAGE}"
 
         if [[ "$branch" == "main" ]]; then
           tags+=("$image:$branch")
@@ -178,7 +180,7 @@ jobs:
       continue-on-error: true
       shell: bash
       env:
-        SOURCE_IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}@${{ steps.build.outputs.digest }}
+        SOURCE_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build.outputs.digest }}
         EXPECTED_DIGEST: ${{ steps.build.outputs.digest }}
         VERSION: ${{ steps.docker-tags.outputs.version }}
         DOCKERHUB_CONFIGURED: ${{ steps.dockerhub-credentials.outputs.configured }}
@@ -189,6 +191,6 @@ jobs:
       if: steps.docker-tags.outputs.has_tags == 'true'
       uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
       with:
-        subject-name: ghcr.io/${{ github.repository }}
+        subject-name: ${{ env.STANDARD_IMAGE }}
         subject-digest: ${{ steps.build.outputs.digest }}
         push-to-registry: true

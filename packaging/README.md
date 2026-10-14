@@ -5,6 +5,13 @@ packages. It is built from the same ChaptarrNG source and migration utility as
 the standard container; package managers add only their service and filesystem
 integration. There is no compatibility build.
 
+The standard image remains `ghcr.io/snapetech/chaptarrng` after the GitHub
+repository transfer to `snapetech-org`. The existing public `chaptarrng` and
+`bookshelfng` container packages are not linked to a repository; grant the
+ChaptarrNG and BookshelfNG repositories Actions write access to their
+respective packages before enabling standard image publication or legacy
+alias updates.
+
 The new-install package identities are:
 
 | Channel | New-install identity | Release asset |

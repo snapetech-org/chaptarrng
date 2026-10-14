@@ -90,6 +90,10 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Test stable GHCR image identity and legacy aliases
+      if: matrix.os == 'ubuntu-latest'
+      run: bash packaging/scripts/test-publish-image-aliases.sh
+
     - name: Test self-hosted runner trust boundary
       if: matrix.os == 'ubuntu-latest'
       run: python3 scripts/test_workflow_runner_policy.py
