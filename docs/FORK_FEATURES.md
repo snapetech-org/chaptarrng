@@ -29,18 +29,21 @@ progress at the time of review. The union blocks retirement as a whole, and
 each capability remains an individual blocker until its evidence passes.
 
 At this review, upstream `develop` is `e67374f4` and ChaptarrNG `main` is
-`25226d41`; the fork is 574 commits ahead and zero behind, with 1,099
-net-changed paths (341 added, 758 modified). These counts describe source
+`4364742e`; the fork is 575 commits ahead and zero behind, with 1,100
+net-changed paths (342 added, 758 modified). These counts describe source
 history, not feature parity, and must be regenerated against the exact upstream
-and candidate revisions at any later retirement review. ChaptarrNG also has
-open product and maintenance PRs #78, #97, and #99, plus dependency-update PRs;
-their accepted behavior and fixes count before merge or publication. The
-current unpublished BookshelfNG integration branch adds migration/configuration
+and candidate revisions at any later retirement review. Open product and
+maintenance PRs #78, #97, #100, and #101, along with active dependency updates
+including #96 and #98, count before merge or publication; PR #99 has merged.
+The current unpublished BookshelfNG integration candidate is PR #100 at
+`1141c79687302366463bf87fed4565c4cc76090c`. It adds migration/configuration
 conversion through native migration 119, package and image bridges, regression
-fixes, release workflow changes, and documentation. All of that work belongs
-in the cumulative blocker set. **Confidence:** high for these pinned repository
-counts and open PR states, moderate for the feature-level upstream comparison,
-and unknown for semantic equivalence until the matrix checks pass.
+fixes, release workflow changes, and documentation. Its missing SQL test
+fixture has been restored and the focused importer suite passes 12/12 locally;
+fresh hosted checks are pending. All of that work belongs in the cumulative
+blocker set. **Confidence:** high for these pinned repository counts and open
+PR states, moderate for the feature-level upstream comparison, and unknown for
+semantic equivalence until the matrix checks pass.
 
 The current integration candidate carries the metadata-profile edition and
 series preferences, their consumers, the BookshelfNG database/configuration
