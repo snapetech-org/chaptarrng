@@ -2506,7 +2506,7 @@
   "DefaultMediaTypeSaved": "Le type de média par défaut a été enregistré.",
   "DeleteAllMatchedBookCopiesLabel": "Supprimer toutes les copies correspondantes de ce livre",
   "DeleteAllMatchedBookCopiesWithCountsLabel": "Supprimer toutes les copies correspondantes de ce livre ({counts})",
-  "DeleteAuthorBookFilesCountLabel": "Supprimer les fichiers de {count} livres",
+  "DeleteAuthorBookFilesCountLabel": "Supprimer {count} fichiers de livres",
   "DeleteAuthorFolderContentsHelpText": "Supprimer le dossier de l’auteur et son contenu",
   "DeleteAuthorFolderLabel": "Supprimer le dossier de l’auteur",
   "DeleteFilesAndDontAddBackForMatchedCopiesHelpText": "Si cette option est activée, la suppression des fichiers et l’exclusion de réajout s’appliquent à {mediaType} et à toutes les copies correspondantes du même livre.",

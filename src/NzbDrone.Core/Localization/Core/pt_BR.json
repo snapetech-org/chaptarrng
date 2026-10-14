@@ -2509,7 +2509,7 @@
   "DeleteAuthorBookFilesCountLabel": "Excluir {count} arquivos de livro",
   "DeleteAuthorFolderContentsHelpText": "Excluir a pasta do autor e todo o seu conteúdo",
   "DeleteAuthorFolderLabel": "Excluir pasta do autor",
-  "DeleteFilesAndDontAddBackForMatchedCopiesHelpText": "Se ativado, a exclusão de arquivos e a exclusão da lista de importação se aplicam a {mediaType} e a todas as cópias correspondentes do mesmo livro.",
+  "DeleteFilesAndDontAddBackForMatchedCopiesHelpText": "Se ativado, a exclusão dos arquivos e o bloqueio de nova inclusão se aplicam a {mediaType} e a todas as cópias correspondentes do mesmo livro.",
   "DeleteFilesForAllMatchedBooksHelpText": "Se ativado, o Chaptarr excluirá os arquivos de {mediaType} e de todas as cópias correspondentes do mesmo livro.",
   "DeleteFilesForAllMatchedBooksLabel": "Excluir os arquivos de todos os livros correspondentes",
   "DeleteFilesForMediaTypeHelpText": "Excluir os arquivos de {mediaType}.",

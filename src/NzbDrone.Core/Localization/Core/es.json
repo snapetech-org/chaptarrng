@@ -2479,7 +2479,7 @@
   "AuthorAudiobookImportFailed": "Falló la importación del audiolibro: {error}",
   "AuthorAudiobooksAddedEbooksFailed": "Los audiolibros se añadieron correctamente, pero no se pudieron importar los libros electrónicos.",
   "AuthorAudiobooksAddedEbooksQueued": "Se añadieron los audiolibros; los libros electrónicos quedaron en cola para importarse. {message}",
-  "AuthorDeleteQueuedNotification": "Se está eliminando a {name} en segundo plano. Se quitará cuando haya un trabajador disponible; puede salir de esta página.",
+  "AuthorDeleteQueuedNotification": "Se está eliminando a {name} en segundo plano. Se quitará cuando haya un proceso de trabajo disponible; puede salir de esta página.",
   "AuthorEbookImportFailedAudiobookQueued": "Falló la importación del libro electrónico: {error} (el audiolibro quedó en cola; puede volver a intentar importar los libros electrónicos más tarde).",
   "AuthorEbookImportFailedRetry": "Falló la importación del libro electrónico: {error} (para volver a intentarlo, seleccione Libros electrónicos y haga clic en Añadir).",
   "AuthorEbooksAddedAudiobooksQueued": "Se añadieron los libros electrónicos; los audiolibros quedaron en cola para importarse. {message}",

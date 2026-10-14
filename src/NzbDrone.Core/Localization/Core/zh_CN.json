@@ -2651,7 +2651,7 @@
   "UnableToLoadImportLists": "无法加载导入列表。",
   "UnableToLoadCustomFormatConditions": "无法加载自定义格式条件，请重试。",
   "UnableToPreviewMatchingLogs": "无法预览匹配日志",
-  "CutoffNotMetLabel": "未达到质量截止要求",
+  "CutoffNotMetLabel": "未达到质量门槛",
   "MyComputer": "我的电脑",
   "Matched": "已匹配",
   "NoMatch": "未匹配",
