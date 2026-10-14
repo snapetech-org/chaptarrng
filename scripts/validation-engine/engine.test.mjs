@@ -141,6 +141,30 @@ test('new visible messages exist in every target catalog with matching placehold
     'KeyboardShortcutAcceptConfirmation',
     'KeyboardShortcutFocusSearch',
     'KeyboardShortcutSaveSettings',
+    'Warnings',
+    'InteractiveImportChooseLabel',
+    'InteractiveImportLocalLabel',
+    'InteractiveImportSelectToAddLabel',
+    'InteractiveImportSelectAuthorToOverrideSuggestedBookTooltip',
+    'InteractiveImportSelectBookToOverrideSuggestedEditionTooltip',
+    'InteractiveImportSelectAuthorAndBookTooltip',
+    'InteractiveImportReadyUsingLocalLibraryTooltip',
+    'InteractiveImportSelectLocalEditionTooltip',
+    'InteractiveImportAddAndPinSuggestedEditionTooltip',
+    'InteractiveImportAddSuggestedWorkBeforeImportTooltip',
+    'InteractiveImportModeRequiredError',
+    'InteractiveImportAuthorRequiredError',
+    'InteractiveImportBookRequiredError',
+    'InteractiveImportEditionRequiredError',
+    'InteractiveImportQualityRequiredError',
+    'TablePageSizeMinimumError',
+    'TablePageSizeMaximumError',
+    'BackupTypeManual',
+    'BackupTypeBeforeUpdate',
+    'RejectionsWarnings',
+    'OnlyTorrent',
+    'OnlyUsenet',
+    'ProxyTestFailed',
   ];
   const catalogUrl = (locale) => new URL(`../../src/NzbDrone.Core/Localization/Core/${locale}.json`, import.meta.url);
   const english = JSON.parse(readFileSync(catalogUrl('en'), 'utf8'));
@@ -154,6 +178,56 @@ test('new visible messages exist in every target catalog with matching placehold
       assert.deepEqual(placeholders(catalog[key]), placeholders(english[key]), `${locale}.${key} placeholders must match`);
     }
   }
+});
+
+test('remaining fixed UI copy uses Core translations while runtime details stay intact', () => {
+  const importRow = readFileSync(new URL('../../frontend/src/InteractiveImport/Interactive/InteractiveImportRow.js', import.meta.url), 'utf8');
+  for (const key of [
+    'Warnings',
+    'RejectionsWarnings',
+    'InteractiveImportChooseLabel',
+    'InteractiveImportLocalLabel',
+    'InteractiveImportSelectToAddLabel',
+    'InteractiveImportSelectAuthorToOverrideSuggestedBookTooltip',
+    'InteractiveImportSelectBookToOverrideSuggestedEditionTooltip',
+    'InteractiveImportSelectAuthorAndBookTooltip',
+    'InteractiveImportReadyUsingLocalLibraryTooltip',
+    'InteractiveImportSelectLocalEditionTooltip',
+    'InteractiveImportAddAndPinSuggestedEditionTooltip',
+    'InteractiveImportAddSuggestedWorkBeforeImportTooltip',
+  ]) {
+    assert.ok(importRow.includes(`translate('${key}')`), `interactive import must use ${key}`);
+  }
+  assert.match(importRow, /title=\{path\}/);
+  assert.match(importRow, /\{rejection\.reason\}/);
+  assert.match(importRow, /\{warning\}/);
+  assert.doesNotMatch(importRow, /(?:statusTitle|bookTitleAttribute|editionTitleAttribute|actionLabel|actionTitle)\s*=\s*['"]/);
+
+  const importConnector = readFileSync(new URL('../../frontend/src/InteractiveImport/Interactive/InteractiveImportModalContentConnector.js', import.meta.url), 'utf8');
+  for (const key of [
+    'InteractiveImportModeRequiredError',
+    'InteractiveImportAuthorRequiredError',
+    'InteractiveImportBookRequiredError',
+    'InteractiveImportEditionRequiredError',
+    'InteractiveImportQualityRequiredError',
+  ]) {
+    assert.ok(importConnector.includes(`translate('${key}')`), `interactive import validation must use ${key}`);
+  }
+
+  const tableOptions = readFileSync(new URL('../../frontend/src/Components/Table/TableOptions/TableOptionsModal.js', import.meta.url), 'utf8');
+  assert.match(tableOptions, /translate\('TablePageSizeMinimumError',\s*\{\s*min:\s*5\s*\}\)/);
+  assert.match(tableOptions, /translate\('TablePageSizeMaximumError',\s*\{\s*max:\s*250\s*\}\)/);
+
+  const backupRow = readFileSync(new URL('../../frontend/src/System/Backup/BackupRow.js', import.meta.url), 'utf8');
+  assert.match(backupRow, /type === 'manual'[\s\S]*?translate\('BackupTypeManual'\)/);
+  assert.match(backupRow, /type === 'update'[\s\S]*?translate\('BackupTypeBeforeUpdate'\)/);
+
+  const delayProfile = readFileSync(new URL('../../frontend/src/Settings/Profiles/Delay/DelayProfile.js', import.meta.url), 'utf8');
+  assert.match(delayProfile, /translate\('OnlyTorrent'\)/);
+  assert.match(delayProfile, /translate\('OnlyUsenet'\)/);
+
+  const generalSettings = readFileSync(new URL('../../frontend/src/Settings/General/GeneralSettingsConnector.js', import.meta.url), 'utf8');
+  assert.match(generalSettings, /error\.message \|\| translate\('ProxyTestFailed'\)/);
 });
 
 test('test source patterns include nested project files but exclude sibling projects', () => {
