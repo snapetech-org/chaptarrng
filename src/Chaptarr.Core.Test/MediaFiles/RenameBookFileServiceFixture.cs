@@ -611,11 +611,16 @@ namespace Chaptarr.Core.Test.MediaFiles
 
             scenario.Service.Execute(new RenameFilesCommand(1, new List<int> { 1, 2 }));
 
-            Assert.That(scenario.Disk.Operations, Is.EqualTo(new[]
+            var expectedOperations = new List<string>();
+            if (!PathEqualityComparer.Instance.Equals(
+                Path.Combine(HobbFolder, "L'Assassin royal"),
+                Path.GetDirectoryName(OldBookFolder)))
             {
-                $"CreateFolder {NormalizePath(Path.Combine(HobbFolder, "L'Assassin royal"))}",
-                $"MoveFolder {NormalizePath(OldBookFolder)} -> {NormalizePath(NewBookFolder)}"
-            }));
+                expectedOperations.Add($"CreateFolder {NormalizePath(Path.Combine(HobbFolder, "L'Assassin royal"))}");
+            }
+
+            expectedOperations.Add($"MoveFolder {NormalizePath(OldBookFolder)} -> {NormalizePath(NewBookFolder)}");
+            Assert.That(scenario.Disk.Operations, Is.EqualTo(expectedOperations));
             Assert.That(scenario.Mover.MovedFileIds, Is.Empty);
             Assert.That(files.Select(f => NormalizePath(f.Path)), Is.EqualTo(new[]
             {
