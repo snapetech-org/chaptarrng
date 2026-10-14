@@ -84,6 +84,8 @@ test('NUnit summary keeps native pass, failure, skip and inconclusive totals', (
     result: 'Failed',
     failedTestNames: [],
     failedTestNamesTruncated: false,
+    failedTestDetails: [],
+    failedTestDetailsTruncated: false,
   });
 });
 
@@ -98,6 +100,21 @@ test('NUnit receipt records bounded failed test names without including failure 
   assert.equal(summary.failedTestNames.length, 100);
   assert.deepEqual(summary.failedTestNames.slice(0, 2), ['Fixture.case_0', 'Fixture.case_1']);
   assert.equal(summary.failedTestNamesTruncated, true);
+  assert.equal(summary.failedTestDetails.length, 100);
+  assert.equal(summary.failedTestDetailsTruncated, true);
+});
+
+test('NUnit receipt adds bounded failure types without exporting assertion messages or values', () => {
+  const summary = parseNUnitSummary(`<test-run total="2" passed="0" failed="2" skipped="0" inconclusive="0" result="Failed">
+    <test-case name="Fixture.io_failure" result="Failed"><failure><message><![CDATA[secret path]]></message><stack-trace><![CDATA[System.IO.IOException: secret path\n   at Fixture.io_failure()]]></stack-trace></failure></test-case>
+    <test-case name="Fixture.assertion" result="Failed"><failure><message><![CDATA[Expected: secret expected value\nBut was: secret actual value]]></message><stack-trace><![CDATA[   at Fixture.assertion()]]></stack-trace></failure></test-case>
+  </test-run>`);
+
+  assert.deepEqual(summary.failedTestDetails, [
+    { name: 'Fixture.io_failure', exceptionType: 'System.IO.IOException' },
+    { name: 'Fixture.assertion', exceptionType: 'NUnit.Framework.AssertionException' },
+  ]);
+  assert.doesNotMatch(JSON.stringify(summary), /secret path|secret expected value|secret actual value/);
 });
 
 test('Node TAP summary accounts for pass, fail, skip, todo, and cancelled cases', () => {
