@@ -22,12 +22,23 @@ git -C "$repo" add scripts/sync-unraid-package.sh
 git -C "$repo" commit --quiet -m 'test fixture'
 
 feature_output="$(cd "$repo" && bash scripts/sync-unraid-package.sh)"
-grep -Fq "Skipping Unraid package sync from 'codex/hook-test'" <<< "$feature_output"
-[[ ! -e "$work/${project}-unraid" ]]
+if ! grep -Fq "Skipping Unraid package sync from 'codex/hook-test'" <<< "$feature_output"; then
+	echo "Feature branch did not report the expected skip. Output was:" >&2
+	printf '%s\n' "$feature_output" >&2
+	exit 1
+fi
+if [[ -e "$work/${project}-unraid" ]]; then
+	echo 'The feature branch created a companion checkout unexpectedly.' >&2
+	exit 1
+fi
 
 git -C "$repo" switch --quiet --create main
 main_output="$(cd "$repo" && bash scripts/sync-unraid-package.sh 2>&1 || true)"
-grep -Fq 'No committed Unraid package source' <<< "$main_output"
+if ! grep -Fq 'No committed Unraid package source' <<< "$main_output"; then
+	echo "Main branch did not report the expected missing-source error. Output was:" >&2
+	printf '%s\n' "$main_output" >&2
+	exit 1
+fi
 if grep -Fq 'Skipping Unraid package sync' <<< "$main_output"; then
   echo 'The main branch was incorrectly skipped.' >&2
   exit 1

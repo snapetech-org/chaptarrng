@@ -273,7 +273,23 @@ namespace NzbDrone.Core.Datastore
                 // Read access keeps acquisition usable when a previous preview was run under a
                 // different container UID; the containing app-data directory still controls who
                 // can create the file in the first place.
-                return new FileStream(path, FileMode.OpenOrCreate, FileAccess.Read, FileShare.None);
+                if (!File.Exists(path))
+                {
+                    try
+                    {
+                        // OpenOrCreate with read-only access can create a file on Unix, but Windows
+                        // requires write access for that first creation. Create it once with write
+                        // access, then acquire the persistent lock read-only on every platform.
+                        using var create = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    }
+                    catch (IOException) when (File.Exists(path))
+                    {
+                        // Another converter created the stable lock path first. The exclusive
+                        // read handle below decides which process owns the conversion.
+                    }
+                }
+
+                return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
             }
             catch (IOException exception)
             {

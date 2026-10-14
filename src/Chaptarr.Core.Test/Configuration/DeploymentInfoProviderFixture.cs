@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Reflection;
 using NUnit.Framework;
 using NzbDrone.Common.Disk;
@@ -14,9 +15,10 @@ namespace Chaptarr.Core.Test.Configuration
         [Test]
         public void should_use_external_updates_for_native_package_bin_layout()
         {
-            var packageInfoPath = "/usr/lib/chaptarrng/bin/../package_info";
+            var startupFolder = "/usr/lib/chaptarrng/bin";
+            var packageInfoPath = Path.Combine(startupFolder, "..", "package_info");
             var diskProvider = CreateDiskProvider(packageInfoPath);
-            var appFolderInfo = new TestAppFolderInfo("/usr/lib/chaptarrng/bin");
+            var appFolderInfo = new TestAppFolderInfo(startupFolder);
 
             var deploymentInfo = new DeploymentInfoProvider(appFolderInfo, diskProvider);
 
@@ -29,9 +31,10 @@ namespace Chaptarr.Core.Test.Configuration
         [Test]
         public void should_not_load_package_info_outside_bin_startup_folder()
         {
-            var packageInfoPath = "/usr/lib/chaptarrng/app/../package_info";
+            var startupFolder = "/usr/lib/chaptarrng/app";
+            var packageInfoPath = Path.Combine(startupFolder, "..", "package_info");
             var diskProvider = CreateDiskProvider(packageInfoPath);
-            var appFolderInfo = new TestAppFolderInfo("/usr/lib/chaptarrng/app");
+            var appFolderInfo = new TestAppFolderInfo(startupFolder);
 
             var deploymentInfo = new DeploymentInfoProvider(appFolderInfo, diskProvider);
 
