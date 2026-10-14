@@ -145,9 +145,9 @@ The normal ChaptarrNG release leaves those aliases untouched unless
 `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED=true`; the BookshelfNG bridge uses the
 same gate. It is not exercised against the live registries: GHCR package write
 access and Docker Hub credentials must be set up in ChaptarrNG, then each
-resulting digest must be checked. Historical version tags and pinned digests do not move.
-Windows
-setup, Debian/PPA, Flatpak/AppImage, Helm, catalogs, and updater handoff still
-need separate tested bridges or an explicit retirement decision. Package work
+resulting digest must be checked. Historical version tags and pinned digests
+stay unchanged. Windows setup, Debian/PPA, Flatpak/AppImage, Helm, catalogs,
+and updater handoff still need separate tested bridges or an explicit
+retirement decision. Package work
 does not close the feature, data, SeerrNG, rollback, hosted-release, or full
 distribution retirement gates.

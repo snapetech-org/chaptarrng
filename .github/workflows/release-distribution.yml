@@ -410,24 +410,12 @@ jobs:
         name: chaptarrng-chocolatey-packages
         path: ${{ runner.temp }}/chaptarrng-chocolatey-output
 
-    - name: Publish package
+    - name: Publish new and eligible legacy package identities
       env:
         CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}
       shell: pwsh
-      run: |
-        $ErrorActionPreference = 'Stop'
-        $packages = @(Get-ChildItem (Join-Path $env:RUNNER_TEMP 'chaptarrng-chocolatey-output') -Filter '*.nupkg' | Sort-Object Name)
-        if ($env:LEGACY_BRIDGE_ENABLED -ne 'true') {
-          $packages = @($packages | Where-Object { $_.Name -like 'chaptarrng.*.nupkg' })
-          Write-Host 'BookshelfNG Chocolatey identity publishing is disabled until the migration bridge gate is enabled.'
-        }
-        $expectedCount = if ($env:LEGACY_BRIDGE_ENABLED -eq 'true') { 2 } else { 1 }
-        if ($packages.Count -ne $expectedCount) { throw "Expected $expectedCount package artifact(s) for the configured migration bridge state." }
-        foreach ($package in $packages) {
-          choco push $package.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
-          if ($LASTEXITCODE -ne 0) { throw "Chocolatey rejected package $($package.Name)." }
-        }
+      run: ./packaging/scripts/publish-chocolatey-packages.ps1
 
   trigger-copr:
     name: Trigger COPR build

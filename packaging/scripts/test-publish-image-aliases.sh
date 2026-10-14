@@ -67,6 +67,8 @@ script="$repo_root/packaging/scripts/publish-image-aliases.sh"
 docker_workflow="$repo_root/.github/workflows/docker-publish.yml"
 release_workflow="$repo_root/.github/workflows/release.yml"
 package_workflow="$repo_root/.github/workflows/release-distribution.yml"
+chocolatey_publish_script="$repo_root/packaging/scripts/publish-chocolatey-packages.ps1"
+build_workflow="$repo_root/.github/workflows/build.yml"
 
 grep -Fq 'STANDARD_IMAGE: ghcr.io/snapetech/chaptarrng' "$docker_workflow"
 grep -Fq 'REGISTRY: ghcr.io' "$docker_workflow"
@@ -87,7 +89,9 @@ grep -Fq 'needs.release-target.outputs.legacy_bridge_enabled' "$package_workflow
 grep -Fq 'LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}' "$package_workflow"
 grep -Fq 'pkg_bases=(chaptarrng-bin)' "$package_workflow"
 grep -Fq "if: needs.credentials.outputs.bookshelfng_copr == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'" "$package_workflow"
-grep -Fq 'BookshelfNG Chocolatey identity publishing is disabled until the migration bridge gate is enabled.' "$package_workflow"
+grep -Fq 'run: ./packaging/scripts/publish-chocolatey-packages.ps1' "$package_workflow"
+grep -Fq "LEGACY_BRIDGE_ENABLED -ne 'true'" "$chocolatey_publish_script"
+grep -Fq 'run: ./packaging/scripts/test-chocolatey-publish-gate.ps1' "$build_workflow"
 if grep -Fq 'ghcr.io/${{ github.repository }}' "$docker_workflow"; then
   echo 'The published GHCR identity must not be derived from the transferred repository owner.' >&2
   exit 1

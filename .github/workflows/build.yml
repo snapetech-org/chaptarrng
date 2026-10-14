@@ -94,6 +94,11 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: bash packaging/scripts/test-publish-image-aliases.sh
 
+    - name: Test Chocolatey legacy package publish gate
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: ./packaging/scripts/test-chocolatey-publish-gate.ps1
+
     - name: Test self-hosted runner trust boundary
       if: matrix.os == 'ubuntu-latest'
       run: python3 scripts/test_workflow_runner_policy.py
