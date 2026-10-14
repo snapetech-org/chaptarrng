@@ -58,13 +58,48 @@ explicit apply command once:
 docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
   ghcr.io/snapetech/chaptarrng:latest \
-  dotnet /app/Chaptarr.dll -migrate-bookshelf -data=/config
+  dotnet /app/Chaptarr.dll -migrate-bookshelf -confirm-bookshelf-service-stopped -data=/config
 ```
 
 Apply retains a backup beside the original database. Keep the independent
 directory copy and generated database backup until you have checked the
 library, root paths, profiles, indexers, download clients, notifications, and
-SeerrNG connection.
+SeerrNG connection. The explicit stopped-service flag makes the required
+quiescent data directory an operator-confirmed precondition.
+
+## Roll back after ChaptarrNG has started
+
+Stop every process using the data directory. First validate the retained
+BookshelfNG backup without changing either database:
+
+```sh
+docker run --rm \
+  -v /host/path/to/bookshelfng-config:/config \
+  ghcr.io/snapetech/chaptarrng:latest \
+  dotnet /app/Chaptarr.dll -preview-bookshelf-restore \
+    -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-GUID.db \
+    -data=/config
+```
+
+After preview passes, apply the restore while all services remain stopped:
+
+```sh
+docker run --rm \
+  -v /host/path/to/bookshelfng-config:/config \
+  ghcr.io/snapetech/chaptarrng:latest \
+  dotnet /app/Chaptarr.dll -restore-bookshelf \
+    -confirm-bookshelf-service-stopped \
+    -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-GUID.db \
+    -data=/config
+```
+
+Rollback validates the current ChaptarrNG database and exact supported
+BookshelfNG migration-158 backup before changing files. It preserves the
+current ChaptarrNG database, including writes made since conversion, as
+`readarr.db.chaptarrng-backup-<timestamp>-<id>.db`; the original
+`readarr.db.bookshelfng-backup-*` remains untouched. Start only BookshelfNG
+after restore. If promotion validation fails, the tool restores the prior
+ChaptarrNG database and preserves the failed restore candidate for inspection.
 
 ## Unraid
 
@@ -150,8 +185,11 @@ to choose `audiobook`, `ebook`, or `both` for each listed record.
 This proves one populated migration-158 SQLite path on Linux/amd64. It does not
 prove older BookshelfNG schemas, PostgreSQL conversion, every provider or
 notification setting, representative M4B conversion, hosted Windows/package
-upgrades, rollback after new target writes, populated SeerrNG requests, or
-complete feature parity. The candidate remains unpublished, and every
+upgrades, rollback against a real populated deployment, populated SeerrNG
+requests, or complete feature parity. Synthetic fixture coverage now exercises
+preview, rollback after a post-migration write, preservation of the current
+ChaptarrNG database, and rejection of a wrongly identified backup. The
+candidate remains unpublished, and every
 feature, installation, and distribution channel is still an independent
 BookshelfNG retirement blocker.
 

@@ -111,7 +111,7 @@ namespace NzbDrone.Core.Datastore
             return report;
         }
 
-        private static void ValidateSourceSchema(SqliteConnection source)
+        internal static void ValidateSourceSchema(SqliteConnection source)
         {
             var tables = GetTables(source);
             var missing = SupportedSourceTables.Except(tables, StringComparer.Ordinal).OrderBy(x => x).ToArray();

@@ -101,6 +101,94 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_preview_bookshelf_rollback_without_changing_either_database()
+        {
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var bookshelfBackupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+            var currentBefore = File.ReadAllBytes(_sourcePath);
+            var sourceBackupBefore = File.ReadAllBytes(bookshelfBackupPath);
+
+            var result = new BookshelfDatabaseConverter().Restore(_sourceConnectionString, bookshelfBackupPath, previewOnly: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.PreviewOnly, Is.True);
+                Assert.That(result.BookshelfBackupPath, Is.EqualTo(bookshelfBackupPath));
+                Assert.That(result.ChaptarrBackupPath, Is.Null);
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(currentBefore));
+                Assert.That(File.ReadAllBytes(bookshelfBackupPath), Is.EqualTo(sourceBackupBefore));
+                Assert.That(Directory.GetFiles(_directory, "readarr.db.chaptarrng-backup-*.db"), Is.Empty);
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelf-restore-stage-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_restore_the_source_and_retain_chaptarr_writes_for_rollback()
+        {
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var bookshelfBackupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+            var sourceBackupBefore = File.ReadAllBytes(bookshelfBackupPath);
+
+            using (var current = new SqliteConnection(_sourceConnectionString))
+            {
+                current.Open();
+                using var command = current.CreateCommand();
+                command.CommandText = "UPDATE Config SET Value = 'after-migration' WHERE Key = 'FixtureSetting';";
+                Assert.That(command.ExecuteNonQuery(), Is.EqualTo(1));
+            }
+
+            var result = new BookshelfDatabaseConverter().Restore(_sourceConnectionString, bookshelfBackupPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.PreviewOnly, Is.False);
+                Assert.That(File.Exists(result.ChaptarrBackupPath), Is.True);
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(DatabaseLineageGuard.Detect(ConnectionStringFor(result.ChaptarrBackupPath), DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'FixtureSetting';"), Is.EqualTo("preserved"));
+                Assert.That(QueryScalar<string>(result.ChaptarrBackupPath, "SELECT Value FROM Config WHERE Key = 'FixtureSetting';"), Is.EqualTo("after-migration"));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+                Assert.That(QueryScalar<string>(result.ChaptarrBackupPath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(result.ChaptarrBackupPath, "PRAGMA foreign_key_check;"), Is.Empty);
+                Assert.That(File.ReadAllBytes(bookshelfBackupPath), Is.EqualTo(sourceBackupBefore));
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelf-restore-stage-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_refuse_a_bookshelf_backup_with_the_wrong_identity_without_changing_the_current_database()
+        {
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var bookshelfBackupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+            var wrongIdentityPath = Path.Combine(_directory, "unrelated.db");
+            File.Copy(bookshelfBackupPath, wrongIdentityPath);
+            var currentBefore = File.ReadAllBytes(_sourcePath);
+            var sourceBackupBefore = File.ReadAllBytes(bookshelfBackupPath);
+
+            var exception = Assert.Throws<InvalidDataException>(() => new BookshelfDatabaseConverter().Restore(
+                _sourceConnectionString,
+                wrongIdentityPath));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain("not a retained BookshelfNG conversion backup"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(currentBefore));
+                Assert.That(File.ReadAllBytes(bookshelfBackupPath), Is.EqualTo(sourceBackupBefore));
+                Assert.That(Directory.GetFiles(_directory, "readarr.db.chaptarrng-backup-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
         public void should_refuse_an_unsupported_bookshelf_identity_without_changing_the_source()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))

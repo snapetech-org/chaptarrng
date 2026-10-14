@@ -110,6 +110,12 @@ namespace NzbDrone.Host
                         }
 
                         var previewOnly = _startupContext.PreviewBookshelfMigration;
+                        if (!previewOnly && !_startupContext.ConfirmBookshelfServiceStopped)
+                        {
+                            throw new InvalidOperationException(
+                                "Applying a BookshelfNG migration requires -confirm-bookshelf-service-stopped. Stop every process using this data directory first.");
+                        }
+
                         var migrationController = new MigrationController(_logger, new NLogLoggerProvider());
                         var result = migrationController.MigrateBookshelf(
                             database.ConnectionString,
@@ -125,6 +131,45 @@ namespace NzbDrone.Host
                         {
                             var row = table.Value;
                             Console.WriteLine($"{table.Key}: {row.SourceRows} | {row.PreservedRows} | {row.TransformedRows} | {row.RebuiltRows} | {row.ResetRows} — {row.TargetMapping}");
+                        }
+
+                        break;
+                    }
+
+                case ApplicationModes.RestoreBookshelf:
+                    {
+                        _appFolderFactory.Register();
+                        var database = _connectionStringFactory.MainDbConnection;
+                        if (database.DatabaseType != DatabaseType.SQLite ||
+                            DatabaseLineageGuard.Detect(database.ConnectionString, database.DatabaseType) != DatabaseLineage.Chaptarr)
+                        {
+                            throw new InvalidDataException("BookshelfNG rollback requires a valid ChaptarrNG SQLite database in this data directory.");
+                        }
+
+                        if (!_startupContext.Args.TryGetValue("bookshelf-backup", out var backupPath) ||
+                            string.IsNullOrWhiteSpace(backupPath))
+                        {
+                            throw new InvalidOperationException("BookshelfNG rollback requires -bookshelf-backup=/path/to/readarr.db.bookshelfng-backup-....db.");
+                        }
+
+                        var previewOnly = _startupContext.PreviewBookshelfRestore;
+                        if (!previewOnly && !_startupContext.ConfirmBookshelfServiceStopped)
+                        {
+                            throw new InvalidOperationException(
+                                "Restoring a BookshelfNG database requires -confirm-bookshelf-service-stopped. Stop every process using this data directory first.");
+                        }
+
+                        var result = new BookshelfDatabaseConverter().Restore(
+                            database.ConnectionString,
+                            backupPath,
+                            previewOnly);
+                        Console.WriteLine(previewOnly
+                            ? $"BookshelfNG rollback preview passed. The current ChaptarrNG database and source backup were not changed: {result.BookshelfBackupPath}"
+                            : $"BookshelfNG database restored from: {result.BookshelfBackupPath}");
+                        if (!previewOnly)
+                        {
+                            Console.WriteLine($"The previous ChaptarrNG database, including post-migration writes, is retained at: {result.ChaptarrBackupPath}");
+                            Console.WriteLine("Start only BookshelfNG against this restored database. Do not start ChaptarrNG until you intentionally convert again.");
                         }
 
                         break;

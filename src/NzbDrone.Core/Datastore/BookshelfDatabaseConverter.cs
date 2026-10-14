@@ -124,6 +124,147 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
+        /// <summary>
+        /// Restores a retained BookshelfNG source backup after a conversion. The current
+        /// ChaptarrNG database is kept as a separate sibling file before the source is restored.
+        /// </summary>
+        public BookshelfDatabaseRollbackResult Restore(
+            string currentConnectionString,
+            string bookshelfBackupPath,
+            bool previewOnly = false)
+        {
+            if (string.IsNullOrWhiteSpace(bookshelfBackupPath))
+            {
+                throw new ArgumentException("A retained BookshelfNG database backup path is required.", nameof(bookshelfBackupPath));
+            }
+
+            var currentBuilder = new SqliteConnectionStringBuilder(currentConnectionString);
+            if (currentBuilder.Mode == SqliteOpenMode.Memory ||
+                string.IsNullOrWhiteSpace(currentBuilder.DataSource) ||
+                string.Equals(currentBuilder.DataSource, ":memory:", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("BookshelfNG rollback requires a file-backed SQLite database.");
+            }
+
+            var currentPath = Path.GetFullPath(currentBuilder.DataSource);
+            if (!File.Exists(currentPath))
+            {
+                throw new FileNotFoundException("The current ChaptarrNG database does not exist.", currentPath);
+            }
+
+            var sourceBackupPath = Path.GetFullPath(bookshelfBackupPath);
+            if (!File.Exists(sourceBackupPath))
+            {
+                throw new FileNotFoundException("The retained BookshelfNG database backup does not exist.", sourceBackupPath);
+            }
+
+            var pathComparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            if (string.Equals(currentPath, sourceBackupPath, pathComparison))
+            {
+                throw new InvalidDataException("The BookshelfNG backup must be a separate file from the current ChaptarrNG database.");
+            }
+
+            var expectedBackupPrefix = Path.GetFileName(currentPath) + ".bookshelfng-backup-";
+            var backupFileName = Path.GetFileName(sourceBackupPath);
+            if (!backupFileName.StartsWith(expectedBackupPrefix, pathComparison) ||
+                !backupFileName.EndsWith(".db", pathComparison))
+            {
+                throw new InvalidDataException(
+                    $"'{backupFileName}' is not a retained BookshelfNG conversion backup for '{Path.GetFileName(currentPath)}'. No database was changed.");
+            }
+
+            var lockPath = currentPath + ".bookshelfng-conversion.lock";
+            using var conversionLock = AcquireConversionLock(lockPath);
+
+            if (DatabaseLineageGuard.Detect(currentConnectionString, DatabaseType.SQLite) != DatabaseLineage.Chaptarr)
+            {
+                throw new InvalidDataException("The current database is not a ChaptarrNG database. No database was changed.");
+            }
+
+            ValidateDatabase(currentPath, DatabaseLineage.Chaptarr, checkForeignKeys: true);
+            ValidateDatabase(sourceBackupPath, DatabaseLineage.BookshelfNG, checkForeignKeys: true);
+            using (var bookshelfBackup = OpenConnection(sourceBackupPath, SqliteOpenMode.ReadOnly, currentBuilder))
+            {
+                BookshelfDatabaseImporter.ValidateSourceSchema(bookshelfBackup);
+            }
+
+            if (previewOnly)
+            {
+                return new BookshelfDatabaseRollbackResult(sourceBackupPath, null, previewOnly: true);
+            }
+
+            var suffix = Guid.NewGuid().ToString("N");
+            var stagePath = currentPath + ".bookshelf-restore-stage-" + suffix + ".db";
+            var chaptarrBackupPath = currentPath + ".chaptarrng-backup-" + DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ") + "-" + suffix + ".db";
+            var failedRestorePath = currentPath + ".bookshelf-restore-failed-" + suffix + ".db";
+            try
+            {
+                File.Copy(sourceBackupPath, stagePath);
+                if (!OperatingSystem.IsWindows())
+                {
+                    File.SetUnixFileMode(stagePath, File.GetUnixFileMode(currentPath));
+                }
+
+                ValidateDatabase(stagePath, DatabaseLineage.BookshelfNG, checkForeignKeys: true);
+                using (var stagedBookshelf = OpenConnection(stagePath, SqliteOpenMode.ReadOnly, currentBuilder))
+                {
+                    BookshelfDatabaseImporter.ValidateSourceSchema(stagedBookshelf);
+                }
+
+                CheckpointDatabase(currentPath, currentBuilder);
+                SqliteConnection.ClearAllPools();
+                DeleteSidecars(currentPath);
+
+                // Keep the exact post-migration file, including any ChaptarrNG writes,
+                // before promoting the validated BookshelfNG copy.
+                File.Move(currentPath, chaptarrBackupPath);
+
+                try
+                {
+                    File.Move(stagePath, currentPath);
+                    ValidateDatabase(currentPath, DatabaseLineage.BookshelfNG, checkForeignKeys: true);
+                    using var restoredBookshelf = OpenConnection(currentPath, SqliteOpenMode.ReadOnly, currentBuilder);
+                    BookshelfDatabaseImporter.ValidateSourceSchema(restoredBookshelf);
+                }
+                catch (Exception restoreFailure)
+                {
+                    string failedPath = null;
+                    try
+                    {
+                        if (File.Exists(currentPath))
+                        {
+                            File.Move(currentPath, failedRestorePath);
+                            failedPath = failedRestorePath;
+                        }
+
+                        File.Move(chaptarrBackupPath, currentPath);
+                    }
+                    catch (Exception rollbackFailure)
+                    {
+                        throw new AggregateException(
+                            $"BookshelfNG rollback validation failed. The prior ChaptarrNG database remains at '{chaptarrBackupPath}' and must be restored manually.",
+                            restoreFailure,
+                            rollbackFailure);
+                    }
+
+                    throw new InvalidOperationException(
+                        "BookshelfNG rollback validation failed; the prior ChaptarrNG database was restored" +
+                        (failedPath == null ? "." : $". The failed BookshelfNG copy remains at '{failedPath}'."),
+                        restoreFailure);
+                }
+
+                return new BookshelfDatabaseRollbackResult(sourceBackupPath, chaptarrBackupPath, previewOnly: false);
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                if (File.Exists(stagePath))
+                {
+                    DeleteDatabaseFiles(stagePath);
+                }
+            }
+        }
+
         private static FileStream AcquireConversionLock(string path)
         {
             try
@@ -322,6 +463,20 @@ namespace NzbDrone.Core.Datastore
 
         public string BackupPath { get; }
         public BookshelfDatabaseImportReport ImportReport { get; }
+        public bool PreviewOnly { get; }
+    }
+
+    public sealed class BookshelfDatabaseRollbackResult
+    {
+        public BookshelfDatabaseRollbackResult(string bookshelfBackupPath, string chaptarrBackupPath, bool previewOnly)
+        {
+            BookshelfBackupPath = bookshelfBackupPath ?? throw new ArgumentNullException(nameof(bookshelfBackupPath));
+            ChaptarrBackupPath = chaptarrBackupPath;
+            PreviewOnly = previewOnly;
+        }
+
+        public string BookshelfBackupPath { get; }
+        public string ChaptarrBackupPath { get; }
         public bool PreviewOnly { get; }
     }
 

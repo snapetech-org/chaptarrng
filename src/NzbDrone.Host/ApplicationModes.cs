@@ -8,6 +8,7 @@ namespace NzbDrone.Host
         UninstallService,
         Service,
         RegisterUrl,
-        MigrateBookshelf
+        MigrateBookshelf,
+        RestoreBookshelf
     }
 }

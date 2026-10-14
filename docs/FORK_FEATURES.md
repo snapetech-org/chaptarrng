@@ -40,9 +40,10 @@ implementation snapshot is `1141c79687302366463bf87fed4565c4cc76090c`; the
 current PR head `a396472d` adds a documentation-only refresh. It adds
 migration/configuration conversion through native migration 119, package and
 image bridges, regression fixes, release workflow changes, and documentation.
-Its missing SQL test fixture has been restored. The focused importer suite
-passes 12/12 locally, and the full Release-mode Core suite passes 4,062 tests
-with 0 failures and 3 skips (4,065 total). Fresh hosted checks are pending. All
+Its missing SQL test fixture has been restored. The migration fixture passes
+15/15 locally, including rollback preview, rollback after a post-migration
+write, and wrong-backup rejection. The full Release-mode Core suite passes
+4,068 tests with 0 failures and 0 skips. Fresh hosted checks are pending. All
 of that work belongs in the cumulative blocker set. **Confidence:** high for
 these pinned repository counts and open
 PR states, moderate for the feature-level upstream comparison, and unknown for
@@ -480,13 +481,16 @@ also preserved the saved port, URL base, API key, SSL setting, configured
 indexers, UI, and Docker image-pull update behavior. Eighty-one books needed an
 operator-selected media mapping; technical test choices were not reviewed as
 correct classifications, so this is not general migration approval.
-The complete Chaptarr Core suite passed 4,062 tests with 0 failures and 3
-skipped (4,065 total); this verifies the candidate's automated Core suite, not
-semantic feature parity or compatibility with other databases.
+The complete Chaptarr Core suite passed 4,068 tests with 0 failures and 0
+skips. Fifteen migration fixture cases passed, including rollback preview,
+restoration after a post-migration write, preservation of that ChaptarrNG
+database, and rejection of a wrongly identified source backup. This verifies
+the candidate's automated Core suite and synthetic rollback path, not semantic
+feature parity or compatibility with other databases.
 
 This is one exact real SQLite input, not proof for older schema lineages,
-PostgreSQL, every provider/settings/client contract, rollback after target
-writes, or the complete feature matrix. The candidate remains unpublished;
+PostgreSQL, every provider/settings/client contract, rollback on a real
+populated deployment, or the complete feature matrix. The candidate remains unpublished;
 hosted checks and package/image bridges have not completed. The published
 `v0.9.969` release has no BookshelfNG converter or channel bridge. Until each
 capability and data path passes its own checks and every applicable upgrade,

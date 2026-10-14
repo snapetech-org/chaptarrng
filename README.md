@@ -43,9 +43,11 @@ using the ordinary ChaptarrNG Linux/amd64 image passed preview, explicit apply,
 and normal startup against separate copies of one real populated migration-158
 SQLite database. Its backup matched all 39 source table definitions and every
 source row. Eighty-one books still need operator-selected media mappings; test
-choices were not reviewed as correct classifications. Older schemas,
-PostgreSQL, complete settings/client behavior, rollback restoration, feature
-parity, and channel bridges remain open. Do not point ChaptarrNG at a
+choices were not reviewed as correct classifications. Synthetic rollback
+preview and restoration after a post-migration write now pass focused tests;
+real populated-deployment rollback remains open. Older schemas, PostgreSQL,
+complete settings/client behavior, feature parity, and channel bridges remain
+open. Do not point ChaptarrNG at a
 BookshelfNG `/config` directory or treat the projects as drop-in replacements
 yet. See the current
 [BookshelfNG consolidation report](https://github.com/snapetech/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)
