@@ -214,25 +214,26 @@ closed.
 
 ## Limits and update channels
 
-The ordinary ChaptarrNG release builds one image. When the migration gate is
-enabled, the ChaptarrNG release workflow dispatches that image's exact
-multi-architecture digest to a small personal-account bridge, which republishes
-it as `ghcr.io/snapetech/bookshelfng:latest`, `:hardcover`, and `:softcover`.
-The bridge performs no build and verifies that each destination digest matches
-the source. Docker Hub publication uses the same standard image digest for
-the ChaptarrNG and BookshelfNG mutable tags when publisher credentials are
-configured. The BookshelfNG organization workflow no longer attempts to write
-the personal GHCR package itself.
+The ordinary ChaptarrNG release builds one image. The candidate release
+workflow in PR #100 dispatches that image's exact multi-architecture digest to
+the public personal-account bridge repository
+[`snapetech/bookshelfng-ghcr-release-bridge`](https://github.com/snapetech/bookshelfng-ghcr-release-bridge),
+which republishes it as `ghcr.io/snapetech/bookshelfng:latest`, `:hardcover`,
+and `:softcover`. The bridge performs no build, serializes alias updates, and
+verifies that every destination digest matches the source. Its CI passed
+on commit `7e2d1b0`. The candidate BookshelfNG workflow change in PR #130
+removes the duplicate organization-owned GHCR publisher. Docker Hub
+publication uses the same standard image digest for the ChaptarrNG and
+BookshelfNG mutable tags when publisher credentials are configured.
 
-The GHCR bridge is currently only a local candidate: its repository has not
-been published, the GitHub App is not installed on the personal account for
-that repository, and the existing `bookshelfng` package has not granted it
-write access. The ChaptarrNG dispatch waits for the stable release to publish
-and the bridge refuses to replay a version that is no longer the latest.
-No legacy tag has been changed. Those setup and digest checks
-must pass alongside source mapping, rollback, feature parity, populated-client
-behavior, release assets, and per-channel upgrade/rollback evidence before the
-migration gate can open. The Docker Hub publisher secret is also unavailable.
+The bridge repository is public, but its GitHub App installation on the
+personal account and write access to the existing `bookshelfng` package are
+not configured. The ChaptarrNG dispatch waits for the stable release to
+publish, and the bridge refuses to replay a version that is no longer the
+latest. No legacy tag has changed. Those access and digest checks must pass
+alongside source mapping, rollback, feature parity, populated-client behavior,
+release assets, and per-channel upgrade/rollback evidence before the migration
+gate can open. The Docker Hub publisher secret is also unavailable.
 Historical version tags and pinned digests remain unchanged. Mutable image
 tags affect a later pull or recreation; they do not change a running
 container.
