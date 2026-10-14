@@ -369,11 +369,52 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
+        private static SqliteConnection OpenValidationConnection(string path, string readOnlyConnectionString)
+        {
+            var connection = new SqliteConnection(readOnlyConnectionString);
+            try
+            {
+                connection.Open();
+                return connection;
+            }
+            catch (SqliteException exception) when (exception.SqliteErrorCode == 14)
+            {
+                connection.Dispose();
+
+                // Some platforms cannot open a standalone WAL database read-only when its
+                // -wal/-shm sidecars are absent. Retry without Create semantics and make the
+                // connection query-only before any validation query runs.
+                var fallbackBuilder = new SqliteConnectionStringBuilder(readOnlyConnectionString)
+                {
+                    Mode = SqliteOpenMode.ReadWrite,
+                    Pooling = false
+                };
+                var fallback = new SqliteConnection(fallbackBuilder.ToString());
+                try
+                {
+                    fallback.Open();
+                    using var queryOnly = fallback.CreateCommand();
+                    queryOnly.CommandText = "PRAGMA query_only=ON;";
+                    queryOnly.ExecuteNonQuery();
+                    return fallback;
+                }
+                catch
+                {
+                    fallback.Dispose();
+                    throw;
+                }
+            }
+            catch
+            {
+                connection.Dispose();
+                throw;
+            }
+        }
+
         private static void ValidateDatabase(string path, DatabaseLineage expectedLineage, bool checkForeignKeys)
         {
             var connectionString = BuildConnectionString(new SqliteConnectionStringBuilder(), path, SqliteOpenMode.ReadOnly);
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
+            using var connection = OpenValidationConnection(path, connectionString);
 
             using (var integrity = connection.CreateCommand())
             {
