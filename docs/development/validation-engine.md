@@ -81,10 +81,12 @@ unreviewed candidate through the same launcher because planning imports its
 validation configuration. GitHub Actions remains responsible for hosted
 validation.
 
-Each runner has a limit of two concurrent validation tasks. On the platform
-nodes, the engine-contract suite can run beside the Core NUnit suite; their
-logs, NUnit results, and task environments are separate. The PostgreSQL smoke
-remains gated by the engine contracts on its dedicated node and still uses
+Each runner has a limit of two concurrent validation tasks. The engine-contract
+command also caps Node's test-file workers at two, so it cannot fan out across
+every CPU reported by a large self-hosted host. On the platform nodes, the
+engine-contract suite can run beside the Core NUnit suite; their logs, NUnit
+results, and task environments are separate. The PostgreSQL smoke remains gated
+by the engine contracts on its dedicated node and still uses
 only the workflow's disposable databases. Tasks that share writable output
 must use the same concurrency group so the scheduler runs them in separate
 batches.
