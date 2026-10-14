@@ -71,7 +71,8 @@ publisher secrets without putting their values in chat:
 - `AUR_SSH_KEY`: configured in ChaptarrNG Actions; the maintainer account must
   own or be authorized to update both `chaptarrng-bin` and the existing
   `bookshelfng-bin` recipe.
-- `COPR_WEBHOOK_URL`: custom webhook for the new ChaptarrNG COPR package.
+- `COPR_WEBHOOK_URL`: configured package-scoped custom webhook for the new
+  ChaptarrNG COPR package.
 - `BOOKSHELFNG_COPR_WEBHOOK_URL`: custom webhook for the existing
   `slskdn/bookshelfng` package.
 - `CHOCOLATEY_API_KEY`: publisher key that can push both Chocolatey IDs.
@@ -79,26 +80,37 @@ publisher secrets without putting their values in chat:
 The AUR key is configured in the ChaptarrNG repository and authenticated
 against the existing keefshape AUR account. The `chaptarrng-bin` AUR package
 is still absent and must wait for a public, checksummed standard release
-archive. COPR sign-in as `slskdn` is verified; `slskdn/chaptarrng` has not yet
-been created and has no package-scoped webhook. ChaptarrNG currently has no
-COPR, Chocolatey, or Docker Hub publisher secrets. Similarly named secret
-entries exist in BookshelfNG and SeerrNG Actions, but GitHub does not reveal
-their values, so they are not treated as credentials available to ChaptarrNG.
+archive. The public [COPR project](https://copr.fedorainfracloud.org/coprs/slskdn/chaptarrng/)
+exists for Fedora 43, 44, 45, and Rawhide x86_64. Its `chaptarrng`
+custom-source package uses `packaging/rpm/copr-source.sh`, has auto-rebuild
+enabled, and its package-scoped webhook is configured in ChaptarrNG Actions as
+`COPR_WEBHOOK_URL`. No COPR build has run yet: the public `v0.9.969` release
+has no assets, including the SRPM and checksum this package requires.
+
+ChaptarrNG still has no Chocolatey or Docker Hub publisher secrets. The
+legacy `BOOKSHELFNG_COPR_WEBHOOK_URL` is now configured in ChaptarrNG Actions;
+the matching `COPR_WEBHOOK_URL` in BookshelfNG Actions was rotated to the same
+package-scoped endpoint so its existing publisher remains usable. Neither
+webhook has been exercised against a COPR build, and the legacy project's
+external source bootstrap still needs its one-time update. GitHub does not
+reveal secret values, so they are not included here.
 
 The public registry check found the existing AUR `bookshelfng-bin` package at
-`0.4.21.69-1`; `chaptarrng-bin` is not registered. COPR has the existing
-`slskdn/bookshelfng` project, while `slskdn/chaptarrng` is not present.
+`0.4.21.69-1`; `chaptarrng-bin` is not registered. COPR has both the existing
+`slskdn/bookshelfng` project and the new `slskdn/chaptarrng` project, but the
+new project has no published builds yet.
 Chocolatey has the existing `bookshelfng` package; the `chaptarrng` package
 page returns 404. The public ChaptarrNG `v0.9.969` release has no standard
 Linux or Windows archives, which these package recipes require. Registry
 publication therefore remains blocked even though the local AUR and RPM
 candidate builds passed.
 
-For the new COPR project, configure `chaptarrng` as a custom-source package using
-[`packaging/rpm/copr-source.sh`](rpm/copr-source.sh), with `bash`, `curl`,
-`cpio`, and `rpm` available to its source script. Its package-scoped custom webhook
-receives the stable `vMAJOR.MINOR.PATCH` release tag and fetches the matching,
-checksummed SRPM from the public GitHub Release.
+The new COPR package uses [`packaging/rpm/copr-source.sh`](rpm/copr-source.sh),
+with `bash`, `curl`, `cpio`, and `rpm` as source-script build dependencies.
+Its package-scoped custom webhook receives the stable
+`vMAJOR.MINOR.PATCH` release tag and fetches the matching, checksummed SRPM
+from the public GitHub Release. The normal release workflow will trigger it
+only after the release and its SRPM sidecar are public.
 
 For the existing `slskdn/bookshelfng` project, update its custom-source script
 to [`packaging/legacy/rpm/copr-bookshelfng-source.sh`](legacy/rpm/copr-bookshelfng-source.sh).
@@ -128,7 +140,9 @@ enable `chaptarrng.service` after checking media-group access. Chocolatey
 installs and starts its service automatically.
 
 The legacy recipes and dual-publish workflow are candidates and have not been
-published. The AUR and RPM candidate builds pass against the local archive.
+published. The new COPR project and webhook are set up, but no package build
+has run because the current public release has no source RPM or standard
+archives. The AUR and RPM candidate builds pass against the local archive.
 On the Arch VM, Pacman upgraded the public BookshelfNG 0.4.21.69-1 package to
 the candidate 0.9.969-1 legacy package identity; the operator environment file
 and synthetic /var/lib/bookshelfng data marker survived, and the

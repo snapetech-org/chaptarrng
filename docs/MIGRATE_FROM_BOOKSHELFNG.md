@@ -229,12 +229,19 @@ to the candidate legacy package passed with config, data-marker, and service
 identity retained; service restart and actual database conversion remain
 untested through Pacman. Both AUR identities and both RPM identities build
 from a locally checksum-verified archive, and both RPMs pass isolated
-file-install checks. The public `v0.9.969` release
-still lacks the standard Linux/Windows assets. The AUR SSH key is configured
-in ChaptarrNG Actions, and COPR sign-in as `slskdn` is verified, but
-`slskdn/chaptarrng` has not been created and no package-scoped webhook is
-configured. ChaptarrNG has no Chocolatey or Docker Hub publisher secrets.
-Similarly named secret entries exist in BookshelfNG and SeerrNG Actions, but
-their values are not available to ChaptarrNG and are not treated as usable
-credentials. Pinned, offline, third-party, Windows setup, Linux archive,
-Docker, Helm, and catalog installs still need their own tested handoff.
+file-install checks. The public `v0.9.969` release still has no assets, so
+there is no public Linux or Windows archive or COPR source RPM to install.
+The new [COPR project](https://copr.fedorainfracloud.org/coprs/slskdn/chaptarrng/)
+is created for Fedora 43, 44, 45, and Rawhide x86_64. Its `chaptarrng`
+custom-source package is configured with auto-rebuild and the package-scoped
+webhook is stored in ChaptarrNG Actions as `COPR_WEBHOOK_URL`; COPR has not
+built or published a package yet. The AUR SSH key is configured, but
+`chaptarrng-bin` is not registered. ChaptarrNG still lacks Chocolatey and
+Docker Hub publisher secrets. The legacy `BOOKSHELFNG_COPR_WEBHOOK_URL` is
+configured in ChaptarrNG Actions, and the matching BookshelfNG
+`COPR_WEBHOOK_URL` was rotated to the same package-scoped endpoint. Neither
+webhook has been exercised against a COPR build, and the old project's
+external source bootstrap still needs its one-time update. Secret values are
+not printed or documented. Pinned, offline, third-party, Windows setup, Linux
+archive, Docker, Helm, and catalog installs still need their own tested
+handoff.
