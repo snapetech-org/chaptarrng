@@ -111,10 +111,25 @@ test('NUnit receipt adds bounded failure types without exporting assertion messa
   </test-run>`);
 
   assert.deepEqual(summary.failedTestDetails, [
-    { name: 'Fixture.io_failure', exceptionType: 'System.IO.IOException' },
-    { name: 'Fixture.assertion', exceptionType: 'NUnit.Framework.AssertionException' },
+    { name: 'Fixture.io_failure', exceptionType: 'System.IO.IOException', stackFrame: 'Fixture.io_failure' },
+    { name: 'Fixture.assertion', exceptionType: 'NUnit.Framework.AssertionException', stackFrame: 'Fixture.assertion' },
   ]);
   assert.doesNotMatch(JSON.stringify(summary), /secret path|secret expected value|secret actual value/);
+});
+
+test('NUnit receipt extracts a safe exception type and method from the failure body', () => {
+  const summary = parseNUnitSummary(`<test-run total="1" passed="0" failed="1" skipped="0" inconclusive="0" result="Failed">
+    <test-case name="Fixture.sqlite_failure" result="Failed"><failure><message><![CDATA[Microsoft.Data.Sqlite.SqliteException: secret database path]]></message><stack-trace><![CDATA[   at Chaptarr.Core.Datastore.BookshelfDatabaseConverter.Convert(String source) in C:\\private\\work\\Converter.cs:line 42]]></stack-trace></failure></test-case>
+  </test-run>`);
+
+  assert.deepEqual(summary.failedTestDetails, [
+    {
+      name: 'Fixture.sqlite_failure',
+      exceptionType: 'Microsoft.Data.Sqlite.SqliteException',
+      stackFrame: 'Chaptarr.Core.Datastore.BookshelfDatabaseConverter.Convert',
+    },
+  ]);
+  assert.doesNotMatch(JSON.stringify(summary), /secret database path|C:\\\\private|Converter.cs|line 42/);
 });
 
 test('Node TAP summary accounts for pass, fail, skip, todo, and cancelled cases', () => {

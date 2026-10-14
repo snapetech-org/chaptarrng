@@ -431,14 +431,32 @@ function nunitFailureType(body) {
   const exceptionAttribute = failure[1].match(/\bexception-type="([^"]+)"/i)?.[1];
   if (exceptionAttribute) return decodeNUnitXmlText(exceptionAttribute);
 
+  const message = failure[2].match(/<message\b[^>]*>([\s\S]*?)<\/message>/i)?.[1];
+  const decodedMessage = message ? decodeNUnitXmlText(message) : null;
+  const messageExceptionType = decodedMessage?.split(/\r?\n/).map((line) => line.trim()).find(Boolean)
+    ?.match(/^([A-Za-z_][\w.+`]*(?:Exception|Error))\b/)?.[1];
+  if (messageExceptionType) return messageExceptionType;
+
   const stackTrace = failure[2].match(/<stack-trace\b[^>]*>([\s\S]*?)<\/stack-trace>/i)?.[1];
   const firstStackLine = stackTrace ? decodeNUnitXmlText(stackTrace).split(/\r?\n/).map((line) => line.trim()).find(Boolean) : null;
   const stackExceptionType = firstStackLine?.match(/^([A-Za-z_][\w.+`]*(?:Exception|Error))\b/)?.[1];
   if (stackExceptionType) return stackExceptionType;
 
-  const message = failure[2].match(/<message\b[^>]*>([\s\S]*?)<\/message>/i)?.[1];
-  if (message && /^\s*Expected:/m.test(decodeNUnitXmlText(message))) return 'NUnit.Framework.AssertionException';
+  if (decodedMessage && /^\s*Expected:/m.test(decodedMessage)) return 'NUnit.Framework.AssertionException';
   return null;
+}
+
+function nunitFailureFrame(body) {
+  const failure = body.match(/<failure\b[^>]*>([\s\S]*?)<\/failure>/i);
+  if (!failure) return null;
+  const stackTrace = failure[1].match(/<stack-trace\b[^>]*>([\s\S]*?)<\/stack-trace>/i)?.[1];
+  if (!stackTrace) return null;
+  const firstFrame = decodeNUnitXmlText(stackTrace).split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => /^at\s+/.test(line));
+  if (!firstFrame) return null;
+  const method = firstFrame.match(/^at\s+([^ (]+)\s*\(/)?.[1];
+  return method && /^[A-Za-z0-9_.$+`<>-]+$/.test(method) ? method : null;
 }
 
 export function parseNUnitSummary(xml) {
@@ -456,7 +474,7 @@ export function parseNUnitSummary(xml) {
     const bodyStart = match.index + tag.length;
     const bodyEnd = xml.indexOf('</test-case>', bodyStart);
     const body = tag.endsWith('/>') || bodyEnd < 0 ? '' : xml.slice(bodyStart, bodyEnd);
-    failedTestDetails.push({ name, exceptionType: nunitFailureType(body) });
+    failedTestDetails.push({ name, exceptionType: nunitFailureType(body), stackFrame: nunitFailureFrame(body) });
   }
   const summary = {
     total: Number(attrs.total ?? attrs.testcasecount),
