@@ -102,8 +102,9 @@ namespace NzbDrone.Core.Datastore
                 DeleteSidecars(sourcePath);
                 DeleteSidecars(stagePath);
 
-                // Both files are in the same directory, so this replacement is a same-filesystem rename.
-                File.Move(stagePath, sourcePath, overwrite: true);
+                // Replace the existing database atomically on Windows as well as Unix.
+                // The source snapshot has already been retained as the rollback copy.
+                File.Replace(stagePath, sourcePath, destinationBackupFileName: null);
                 promoted = true;
 
                 return new BookshelfDatabaseConversionResult(backupPath, importReport, previewOnly: false);

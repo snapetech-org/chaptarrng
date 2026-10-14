@@ -23,7 +23,8 @@ case "$source_repo" in
 esac
 
 target_repo="${source_repo}-unraid"
-override_name="${source_repo^^}_UNRAID_REPO"
+source_repo_upper="$(printf '%s' "$source_repo" | tr '[:lower:]' '[:upper:]')"
+override_name="${source_repo_upper}_UNRAID_REPO"
 target_dir="${!override_name:-$(dirname "$repo_root")/$target_repo}"
 remote=origin
 branch=main

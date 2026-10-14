@@ -193,6 +193,14 @@ candidate remains unpublished, and every
 feature, installation, and distribution channel is still an independent
 BookshelfNG retirement blocker.
 
+Hosted validation exposed two cross-platform issues on an earlier candidate:
+Windows failed four migration promotion/rollback tests, and macOS Bash 3.2
+rejected the Unraid branch-guard script's Bash 4 uppercase expansion. The
+branch-guard now uses `tr`, and migration promotion now uses `File.Replace`;
+the focused migration fixtures pass 23/23 on Linux with these changes. The
+Windows fix still requires a hosted rerun, and the macOS branch guard must pass
+on its native runner before either hosted blocker can close.
+
 ## Limits and update channels
 
 The candidate Docker release builds the ordinary ChaptarrNG image once, then
