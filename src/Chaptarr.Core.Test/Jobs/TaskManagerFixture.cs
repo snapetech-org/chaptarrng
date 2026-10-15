@@ -183,7 +183,7 @@ namespace Chaptarr.Core.Test.Jobs
             Assert.That(rssNextExecution, Is.EqualTo(lastExecution.AddMinutes(17)));
             Assert.That(backupNextExecution, Is.EqualTo(lastExecution.AddMinutes(2 * 60 * 24)));
             Assert.That(repositoryProxy.UpdatedTasks.Select(t => t.TypeName), Is.EquivalentTo(new[] { typeof(RssSyncCommand).FullName, typeof(BackupCommand).FullName }));
-            Assert.That(repositoryProxy.GetDefinitionCalls, Is.EqualTo(2));
+            Assert.That(repositoryProxy.GetDefinitionCalls, Is.EqualTo(3));
         }
 
         [TestCase(0, 0)]
