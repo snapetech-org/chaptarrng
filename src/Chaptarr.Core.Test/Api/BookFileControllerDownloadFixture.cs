@@ -168,7 +168,9 @@ namespace Chaptarr.Core.Test.Api
             var result = _subject.DownloadBookFile(10) as PhysicalFileResult;
 
             Assert.That(result, Is.Not.Null);
-            Assert.That(result.FileName, Is.EqualTo(path));
+            // The served path is symlink-resolved, which differs from the seeded path when the temp directory is itself a link.
+            Assert.That(Path.GetFileName(result.FileName), Is.EqualTo("book.pdf"));
+            Assert.That(File.ReadAllBytes(result.FileName), Is.EqualTo(File.ReadAllBytes(path)));
             Assert.That(result.FileDownloadName, Is.EqualTo("book.pdf"));
             Assert.That(result.ContentType, Is.EqualTo("application/pdf"));
             Assert.That(result.EnableRangeProcessing, Is.True);
