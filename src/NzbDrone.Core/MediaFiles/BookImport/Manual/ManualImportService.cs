@@ -1455,6 +1455,15 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Manual
                 return false;
             }
 
+            // Another part of an expected book that was rejected or failed (for example a vanished file)
+            // means the download is incomplete even though a sibling part imported that same book.
+            if (importResults.Any(result => result.Result != ImportResultType.Imported &&
+                                            result.ImportDecision?.Item?.Book != null &&
+                                            expectedBookIds.Contains(result.ImportDecision.Item.Book.Id)))
+            {
+                return false;
+            }
+
             var expectedAudiobookBookIds = expectedBooks
                 .Where(book => book.MediaType == BookMediaType.Audiobook)
                 .Select(book => book.Id)
