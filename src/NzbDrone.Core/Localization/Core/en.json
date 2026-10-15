@@ -1227,6 +1227,8 @@
   "MinimumPages": "Minimum Pages",
   "MinimumPopularity": "Minimum Popularity",
   "Missing": "Missing",
+  "MissingBookSearchInterval": "Missing Book Search Interval",
+  "MissingBookSearchIntervalHelpText": "Interval in minutes between automatic searches for all missing monitored books. Set to zero to disable (default), otherwise 60 minutes or more. Large libraries can generate many indexer queries.",
   "MissingBooks": "Missing Books",
   "MissingBooksAuthorMonitored": "Missing Books (Author monitored)",
   "MissingBooksAuthorNotMonitored": "Missing Books (Author not monitored)",
