@@ -1040,6 +1040,17 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Manual
                             _logger.Debug(ex, "Failed to load edition {0} for manual import file '{1}'", file.EditionId, actualPath);
                         }
                     }
+                    else if (!string.IsNullOrWhiteSpace(file.ForeignEditionId) && book != null)
+                    {
+                        try
+                        {
+                            edition = SelectEditionOfBook(_editionService.GetEditionByForeignEditionId(file.ForeignEditionId), book);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Debug(ex, "Failed to resolve foreign edition {0} for manual import file '{1}'", file.ForeignEditionId, actualPath);
+                        }
+                    }
                 }
                 else if (!string.IsNullOrWhiteSpace(file.ForeignAuthorId))
                 {
@@ -1120,7 +1131,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Manual
                 }
 
                 if (isExplicitLocalSelection &&
-                    !ManualEditionSelectionMatchesBook(edition, book, file.EditionId, out var manualEditionRejection))
+                    !ManualEditionSelectionMatchesBook(edition, book, edition?.Id ?? file.EditionId, out var manualEditionRejection))
                 {
                     throw new InvalidOperationException(manualEditionRejection);
                 }
@@ -1630,7 +1641,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Manual
 
             if (requestedEditionId <= 0)
             {
-                rejectionReason = $"Edition must be selected for '{book.Title}'.";
+                rejectionReason = $"Edition must be selected for '{book.Title}'. Pass a numeric editionId, or a foreignEditionId that belongs to this book.";
                 return false;
             }
 
@@ -1671,6 +1682,11 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Manual
             }
 
             return true;
+        }
+
+        internal static Edition SelectEditionOfBook(Edition candidate, Book book)
+        {
+            return candidate != null && book != null && candidate.BookId == book.Id ? candidate : null;
         }
 
         internal static bool EditionBelongsToBook(Edition edition, Book book)
