@@ -126,6 +126,31 @@ namespace Chaptarr.Core.Test.Books
         }
 
         [Test]
+        public void schedule_retry_should_stop_with_a_failed_state_after_the_attempt_cap()
+        {
+            var repository = DispatchProxy.Create<IPendingAuthorImportRepository, RepositoryProxy>();
+            var events = new RecordingEventAggregator();
+            var subject = new PendingAuthorImportService(repository, null, events, LogManager.GetCurrentClassLogger());
+            var item = new PendingAuthorImport
+            {
+                Id = 43,
+                ProviderId = "gr:43",
+                AttemptCount = PendingAuthorImportService.MaxRetryAttempts - 1,
+                AudiobookStatus = PendingImportStatus.Pending,
+                EbookStatus = PendingImportStatus.NotRequested,
+                OverallStatus = PendingImportStatus.Retrying
+            };
+
+            subject.ScheduleRetry(item, "still not available");
+
+            Assert.That(item.OverallStatus, Is.EqualTo(PendingImportStatus.Failed));
+            Assert.That(item.AudiobookStatus, Is.EqualTo(PendingImportStatus.Failed));
+            Assert.That(item.EbookStatus, Is.EqualTo(PendingImportStatus.NotRequested));
+            Assert.That(item.LastError, Does.Contain("Gave up").And.Contain("still not available"));
+            Assert.That(events.Events, Has.Some.InstanceOf<PendingAuthorImportFailedEvent>());
+        }
+
+        [Test]
         public async Task new_pending_import_should_persist_zero_as_the_unbounded_retry_marker()
         {
             var repository = DispatchProxy.Create<IPendingAuthorImportRepository, RepositoryProxy>();
