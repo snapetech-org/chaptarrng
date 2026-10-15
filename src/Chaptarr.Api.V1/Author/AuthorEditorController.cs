@@ -29,7 +29,7 @@ namespace Chaptarr.Api.V1.Author
             IRootFolderService rootFolderService,
             IQualityProfileService qualityProfileService,
             IMetadataProfileService metadataProfileService,
-            IBackfillAuthorRootFolders rootFolderBackfill = null)
+            IBackfillAuthorRootFolders rootFolderBackfill)
         {
             _rootFolderBackfill = rootFolderBackfill;
             _authorService = authorService;

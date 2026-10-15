@@ -39,7 +39,7 @@ namespace Chaptarr.Core.Test.Books
             _service = new AuthorRootFolderBackfillService(authorService, rootService, config, new RecordingQueue(_pushed), LogManager.GetCurrentClassLogger());
         }
 
-        private Author AddAuthor(int id, string audiobookRoot, string ebookRoot, bool audioOverridden = false, bool ebookOverridden = false)
+        private Author AddAuthor(int id, string audiobookRoot, string ebookRoot, bool audioOverridden = false, bool ebookOverridden = false, int? qualityProfileId = 1)
         {
             var author = new Author
             {
@@ -47,11 +47,25 @@ namespace Chaptarr.Core.Test.Books
                 Name = "Author " + id,
                 AudiobookRootFolderPath = audiobookRoot,
                 EbookRootFolderPath = ebookRoot,
+                AudiobookQualityProfileId = qualityProfileId,
+                EbookQualityProfileId = qualityProfileId,
                 AudiobookSettingsManuallyOverridden = audioOverridden,
                 EbookSettingsManuallyOverridden = ebookOverridden
             };
             _authors.Add(author);
             return author;
+        }
+
+        [Test]
+        public void should_skip_a_missing_side_that_has_no_quality_profile()
+        {
+            var author = AddAuthor(9, "/lib/audio", null, qualityProfileId: null);
+
+            var result = _service.Backfill(false);
+
+            Assert.That(author.EbookRootFolderPath, Is.Null);
+            Assert.That(result.SkippedNoProfile, Is.EqualTo(1));
+            Assert.That(result.Updated, Is.EqualTo(0));
         }
 
         [Test]

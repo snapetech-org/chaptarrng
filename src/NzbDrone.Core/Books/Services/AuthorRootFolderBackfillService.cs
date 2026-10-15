@@ -23,6 +23,9 @@ namespace NzbDrone.Core.Books
         /// <summary>Authors left alone because no single default root folder could be determined.</summary>
         public int SkippedNoDefault { get; set; }
 
+        /// <summary>Authors whose missing side was left alone because it has no quality profile to pair with a root folder.</summary>
+        public int SkippedNoProfile { get; set; }
+
         public List<int> UpdatedAuthorIds { get; set; } = new();
     }
 
@@ -85,6 +88,14 @@ namespace NzbDrone.Core.Books
                     continue;
                 }
 
+                var missingSideProfile = missingAudiobook ? author.AudiobookQualityProfileId : author.EbookQualityProfileId;
+
+                if (!missingSideProfile.HasValue || missingSideProfile.Value <= 0)
+                {
+                    result.SkippedNoProfile++;
+                    continue;
+                }
+
                 var defaultRoot = missingAudiobook ? audiobookDefault : ebookDefault;
 
                 if (defaultRoot == null)
@@ -128,11 +139,12 @@ namespace NzbDrone.Core.Books
             {
                 var result = Backfill(false);
 
-                _logger.Info("Root folder backfill: {0} candidate author(s), {1} updated, {2} skipped (manual settings), {3} skipped (no single default)",
+                _logger.Info("Root folder backfill: {0} candidate author(s), {1} updated, {2} skipped (manual settings), {3} skipped (no single default), {4} skipped (no quality profile)",
                     result.Candidates,
                     result.Updated,
                     result.SkippedManuallyOverridden,
-                    result.SkippedNoDefault);
+                    result.SkippedNoDefault,
+                    result.SkippedNoProfile);
 
                 pending = result.UpdatedAuthorIds;
             }
