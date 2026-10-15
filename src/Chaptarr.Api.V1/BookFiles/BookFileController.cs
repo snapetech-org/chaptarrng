@@ -7,6 +7,7 @@ using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
 using Chaptarr.Http.REST;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using NLog;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Datastore.Events;
@@ -21,6 +22,7 @@ using NzbDrone.Http.REST.Attributes;
 using NzbDrone.SignalR;
 using BadRequestException = NzbDrone.Core.Exceptions.BadRequestException;
 using HttpStatusCode = System.Net.HttpStatusCode;
+using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation;
 
 namespace Chaptarr.Api.V1.BookFiles
@@ -211,6 +213,62 @@ namespace Chaptarr.Api.V1.BookFiles
             }
 
             return resource;
+        }
+
+        [HttpGet("{id:int}/download")]
+        public ActionResult DownloadBookFile(int id)
+        {
+            var bookFile = _mediaFileService.Get(id);
+
+            if (bookFile == null || bookFile.Path.IsNullOrWhiteSpace())
+            {
+                return NotFound();
+            }
+
+            string fullPath;
+            try
+            {
+                fullPath = Path.GetFullPath(bookFile.Path);
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return NotFound();
+            }
+
+            if (!IsInsideRootFolder(fullPath))
+            {
+                _logger.Warn("Refusing to serve book file {0}: path is outside every root folder", id);
+                return StatusCode((int)HttpStatusCode.Forbidden);
+            }
+
+            var info = new FileInfo(fullPath);
+            if (!info.Exists)
+            {
+                return NotFound();
+            }
+
+            // A link inside the library must not expose a file outside it.
+            if (info.LinkTarget != null)
+            {
+                var target = info.ResolveLinkTarget(true);
+                if (target == null || !target.Exists || !IsInsideRootFolder(target.FullName))
+                {
+                    _logger.Warn("Refusing to serve book file {0}: link target is outside every root folder", id);
+                    return StatusCode((int)HttpStatusCode.Forbidden);
+                }
+            }
+
+            if (!new FileExtensionContentTypeProvider().TryGetContentType(fullPath, out var contentType))
+            {
+                contentType = "application/octet-stream";
+            }
+
+            return PhysicalFile(fullPath, contentType, Path.GetFileName(fullPath), enableRangeProcessing: true);
+        }
+
+        private bool IsInsideRootFolder(string fullPath)
+        {
+            return _rootFolderService?.GetBestRootFolder(fullPath) != null;
         }
 
         [HttpGet]
