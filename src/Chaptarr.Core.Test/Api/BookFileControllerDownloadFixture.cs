@@ -141,6 +141,26 @@ namespace Chaptarr.Core.Test.Api
         }
 
         [Test]
+        public void should_forbid_file_reached_through_linked_parent_directory()
+        {
+            Seed(11, Path.Combine(_outside, "secret.pdf"));
+            var linkedDir = Path.Combine(_root, "linked");
+
+            try
+            {
+                Directory.CreateSymbolicLink(linkedDir, _outside);
+            }
+            catch (IOException)
+            {
+                Assert.Ignore("Symbolic links are not available");
+            }
+
+            _filesProxy.Files[11] = new BookFile { Id = 11, Path = Path.Combine(linkedDir, "secret.pdf") };
+
+            Assert.That(_subject.DownloadBookFile(11), Is.TypeOf<StatusCodeResult>());
+        }
+
+        [Test]
         public void should_return_attachment_for_file_inside_root()
         {
             var path = Seed(10, Path.Combine(_root, "book.pdf"));

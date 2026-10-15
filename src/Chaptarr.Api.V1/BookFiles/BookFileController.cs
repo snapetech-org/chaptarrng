@@ -247,15 +247,18 @@ namespace Chaptarr.Api.V1.BookFiles
                 return NotFound();
             }
 
-            // A link inside the library must not expose a file outside it.
-            if (info.LinkTarget != null)
+            // Links anywhere in the path (file or parent directories) must not expose
+            // anything outside the library.
+            var rootPath = _rootFolderService.GetBestRootFolder(fullPath).Path;
+            var realRoot = ResolveRealPath(Path.GetFullPath(rootPath));
+            var realFile = ResolveRealPath(fullPath);
+
+            if (realRoot == null || realFile == null ||
+                !realFile.StartsWith(realRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+                !new FileInfo(realFile).Exists)
             {
-                var target = info.ResolveLinkTarget(true);
-                if (target == null || !target.Exists || !IsInsideRootFolder(target.FullName))
-                {
-                    _logger.Warn("Refusing to serve book file {0}: link target is outside every root folder", id);
-                    return StatusCode((int)HttpStatusCode.Forbidden);
-                }
+                _logger.Warn("Refusing to serve book file {0}: resolved path is outside its root folder", id);
+                return StatusCode((int)HttpStatusCode.Forbidden);
             }
 
             if (!new FileExtensionContentTypeProvider().TryGetContentType(fullPath, out var contentType))
@@ -263,7 +266,39 @@ namespace Chaptarr.Api.V1.BookFiles
                 contentType = "application/octet-stream";
             }
 
-            return PhysicalFile(fullPath, contentType, Path.GetFileName(fullPath), enableRangeProcessing: true);
+            return PhysicalFile(realFile, contentType, Path.GetFileName(fullPath), enableRangeProcessing: true);
+        }
+
+        private static string ResolveRealPath(string fullPath)
+        {
+            try
+            {
+                var current = Path.GetPathRoot(fullPath);
+                var rest = fullPath.Substring(current.Length);
+
+                foreach (var segment in rest.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    current = Path.Combine(current, segment);
+                    var info = new FileInfo(current);
+
+                    if (info.LinkTarget != null)
+                    {
+                        var target = info.ResolveLinkTarget(true);
+                        if (target == null)
+                        {
+                            return null;
+                        }
+
+                        current = target.FullName;
+                    }
+                }
+
+                return current;
+            }
+            catch (IOException)
+            {
+                return null;
+            }
         }
 
         private bool IsInsideRootFolder(string fullPath)
