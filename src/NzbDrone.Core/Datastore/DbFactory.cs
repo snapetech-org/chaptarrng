@@ -47,7 +47,10 @@ namespace NzbDrone.Core.Datastore
             Dapper.SqlMapper.AddTypeHandler(typeof(DateTime), new SqliteUtcDateTimeHandler());
             Dapper.SqlMapper.AddTypeHandler(typeof(DateTime?), new SqliteNullableUtcDateTimeHandler());
 
-            TableMapping.Map();
+            if (TableMapping.Mapper.TableMap.Count == 0)
+            {
+                TableMapping.Map();
+            }
         }
 
         private static void InitializeEnvironment()
