@@ -687,7 +687,7 @@ namespace Chaptarr.Api.V1.Books
 
                 if (BookListPaging.IsRequested(offset, limit))
                 {
-                    Response.Headers["X-Total-Count"] = filteredBooks.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    Response.Headers["X-Total-Count"] = filteredBooks.Count.ToString(global::System.Globalization.CultureInfo.InvariantCulture);
                     filteredBooks = BookListPaging.Slice(filteredBooks, offset, limit, b => b.Id);
                 }
 

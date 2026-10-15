@@ -1,6 +1,6 @@
 using System;
-using FluentAssertions;
-using Moq;
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Exceptions;
@@ -14,83 +14,76 @@ namespace Chaptarr.Core.Test.Datastore
     {
         private const string CachePath = "/data/cache.db";
 
-        private Mock<IMigrationController> _migrations;
-        private Mock<IConnectionStringFactory> _connections;
-        private Mock<IDiskProvider> _disk;
+        private InterfaceStub<IMigrationController> _migrations;
+        private InterfaceStub<IDiskProvider> _disk;
         private DbFactory _factory;
+        private int _remainingFailures;
+
+        private int MigrateCalls => _migrations.Calls.Count(c => c.Name == "Migrate");
+        private List<string> Deleted => _disk.Calls.Where(c => c.Name == "DeleteFile").Select(c => (string)c.Args[0]).ToList();
 
         [SetUp]
         public void Setup()
         {
-            _migrations = new Mock<IMigrationController>();
-            _connections = new Mock<IConnectionStringFactory>();
-            _disk = new Mock<IDiskProvider>();
+            _migrations = InterfaceStub<IMigrationController>.Create(out var migrations);
+            _disk = InterfaceStub<IDiskProvider>.Create(out var disk);
+            var connections = InterfaceStub<IConnectionStringFactory>.Create(out var connectionsInstance);
+            InterfaceStub<IRestoreDatabase>.Create(out var restore);
 
             var info = new DatabaseConnectionInfo(DatabaseType.SQLite, "Data Source=" + CachePath);
-            _connections.SetupGet(c => c.CacheDbConnection).Returns(info);
-            _connections.SetupGet(c => c.MainDbConnection).Returns(info);
-            _connections.Setup(c => c.GetDatabasePath(It.IsAny<string>())).Returns(CachePath);
+            connections.Values["CacheDbConnection"] = info;
+            connections.Values["MainDbConnection"] = info;
+            connections.Values["GetDatabasePath"] = CachePath;
 
-            _factory = new DbFactory(_migrations.Object, _connections.Object, _disk.Object, Mock.Of<IRestoreDatabase>());
-        }
-
-        private void FailMigrations(int times)
-        {
-            var remaining = times;
-
-            _migrations
-                .Setup(m => m.Migrate(It.IsAny<string>(), It.IsAny<MigrationContext>(), It.IsAny<DatabaseType>()))
-                .Callback(() =>
+            _migrations.Handlers["Migrate"] = _ =>
+            {
+                if (_remainingFailures-- > 0)
                 {
-                    if (remaining-- > 0)
-                    {
-                        throw new InvalidOperationException("migration failed");
-                    }
-                });
+                    throw new InvalidOperationException("migration failed");
+                }
+            };
+
+            _factory = new DbFactory(migrations, connectionsInstance, disk, restore);
         }
 
         [Test]
         public void should_recreate_cache_database_when_migration_fails_once()
         {
-            FailMigrations(1);
+            _remainingFailures = 1;
 
             Assert.DoesNotThrow(() => _factory.Create(MigrationType.Cache));
 
-            _migrations.Verify(m => m.Migrate(It.IsAny<string>(), It.IsAny<MigrationContext>(), DatabaseType.SQLite), Times.Exactly(2));
-            _disk.Verify(d => d.DeleteFile(CachePath), Times.Once());
-            _disk.Verify(d => d.DeleteFile(CachePath + "-wal"), Times.Once());
-            _disk.Verify(d => d.DeleteFile(CachePath + "-shm"), Times.Once());
+            Assert.That(MigrateCalls, Is.EqualTo(2));
+            Assert.That(Deleted, Is.SupersetOf(new[] { CachePath, CachePath + "-wal", CachePath + "-shm" }));
         }
 
         [Test]
         public void should_not_touch_cache_database_when_migration_succeeds()
         {
-            FailMigrations(0);
-
             _factory.Create(MigrationType.Cache);
 
-            _migrations.Verify(m => m.Migrate(It.IsAny<string>(), It.IsAny<MigrationContext>(), It.IsAny<DatabaseType>()), Times.Once());
-            _disk.Verify(d => d.DeleteFile(It.IsAny<string>()), Times.Never());
+            Assert.That(MigrateCalls, Is.EqualTo(1));
+            Assert.That(Deleted, Is.Empty);
         }
 
         [Test]
         public void should_throw_when_cache_migration_fails_after_recreation()
         {
-            FailMigrations(2);
+            _remainingFailures = 2;
 
             Assert.Throws<ChaptarrStartupException>(() => _factory.Create(MigrationType.Cache));
 
-            _migrations.Verify(m => m.Migrate(It.IsAny<string>(), It.IsAny<MigrationContext>(), It.IsAny<DatabaseType>()), Times.Exactly(2));
+            Assert.That(MigrateCalls, Is.EqualTo(2));
         }
 
         [Test]
         public void should_not_delete_main_database_when_its_migration_fails()
         {
-            FailMigrations(1);
+            _remainingFailures = 1;
 
             Assert.Throws<ChaptarrStartupException>(() => _factory.Create(MigrationType.Main));
 
-            _disk.Verify(d => d.DeleteFile(It.IsAny<string>()), Times.Never());
+            Assert.That(Deleted, Is.Empty);
         }
     }
 }

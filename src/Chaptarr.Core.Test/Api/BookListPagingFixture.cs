@@ -1,6 +1,5 @@
 using System.Linq;
 using Chaptarr.Api.V1.Books;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace Chaptarr.Core.Test.Api
@@ -15,19 +14,19 @@ namespace Chaptarr.Core.Test.Api
         {
             var items = Ids.ToList();
 
-            BookListPaging.Slice(items, null, null, x => x).Should().Equal(5, 3, 1, 4, 2);
+            Assert.That(BookListPaging.Slice(items, null, null, x => x), Is.EqualTo(new[] { 5, 3, 1, 4, 2 }));
         }
 
         [Test]
         public void should_slice_by_id_order()
         {
-            BookListPaging.Slice(Ids.ToList(), 1, 2, x => x).Should().Equal(2, 3);
+            Assert.That(BookListPaging.Slice(Ids.ToList(), 1, 2, x => x), Is.EqualTo(new[] { 2, 3 }));
         }
 
         [Test]
         public void should_return_empty_beyond_the_end()
         {
-            BookListPaging.Slice(Ids.ToList(), 10, 5, x => x).Should().BeEmpty();
+            Assert.That(BookListPaging.Slice(Ids.ToList(), 10, 5, x => x), Is.Empty);
         }
 
         [Test]
@@ -35,8 +34,8 @@ namespace Chaptarr.Core.Test.Api
         {
             var many = Enumerable.Range(1, 1500).ToList();
 
-            BookListPaging.Slice(many, -4, 5000, x => x).Should().HaveCount(BookListPaging.MaxLimit);
-            BookListPaging.Slice(many, 0, 0, x => x).Should().HaveCount(1);
+            Assert.That(BookListPaging.Slice(many, -4, 5000, x => x), Has.Count.EqualTo(BookListPaging.MaxLimit));
+            Assert.That(BookListPaging.Slice(many, 0, 0, x => x), Has.Count.EqualTo(1));
         }
 
         [Test]
@@ -44,7 +43,7 @@ namespace Chaptarr.Core.Test.Api
         {
             var many = Enumerable.Range(1, 1500).ToList();
 
-            BookListPaging.Slice(many, 1200, null, x => x).Should().HaveCount(300);
+            Assert.That(BookListPaging.Slice(many, 1200, null, x => x), Has.Count.EqualTo(300));
         }
     }
 }

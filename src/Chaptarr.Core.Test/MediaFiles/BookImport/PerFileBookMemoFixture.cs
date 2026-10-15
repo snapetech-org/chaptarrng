@@ -11,6 +11,9 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
     {
         private readonly List<List<int>> _loads = new List<List<int>>();
 
+        [SetUp]
+        public void Setup() => _loads.Clear();
+
         private List<Book> LoadMany(List<int> ids)
         {
             _loads.Add(ids.ToList());
