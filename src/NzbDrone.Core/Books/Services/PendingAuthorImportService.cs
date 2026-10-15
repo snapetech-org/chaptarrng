@@ -611,9 +611,6 @@ namespace NzbDrone.Core.Books.Services
             }
         }
 
-        // About a week of retries at the steady five-minute cadence.
-        internal const int MaxRetryAttempts = 2000;
-
         public void ScheduleRetry(PendingAuthorImport item, string error)
         {
             while (true)
@@ -624,19 +621,7 @@ namespace NzbDrone.Core.Books.Services
                 current.LastAttemptAt = DateTime.UtcNow;
                 current.LastError = error;
                 current.NextAttemptAt = CalculateNextAttempt(current.AttemptCount);
-                var exhausted = current.AttemptCount >= MaxRetryAttempts;
-                if (exhausted)
-                {
-                    current.AudiobookStatus = current.HasAudiobook() ? PendingImportStatus.Failed : PendingImportStatus.NotRequested;
-                    current.EbookStatus = current.HasEbook() ? PendingImportStatus.Failed : PendingImportStatus.NotRequested;
-                    current.OverallStatus = PendingImportStatus.Failed;
-                    current.LastError = $"Gave up after {current.AttemptCount} attempts. Last error: {error}";
-                }
-                else
-                {
-                    current.OverallStatus = PendingImportStatus.Retrying;
-                }
-
+                current.OverallStatus = PendingImportStatus.Retrying;
                 current.UpdatedAt = DateTime.UtcNow;
 
                 var expectedVersion = current.Version;
@@ -652,13 +637,6 @@ namespace NzbDrone.Core.Books.Services
                 }
 
                 CopyMutableState(current, item);
-                if (exhausted)
-                {
-                    _logger.Warn("Pending import {0} reached {1} attempts and will not be retried automatically", current.Id, current.AttemptCount);
-                    _eventAggregator.PublishEvent(new PendingAuthorImportFailedEvent(current));
-                    return;
-                }
-
                 _logger.Debug("Scheduled retry for pending import {0} at {1}", current.Id, current.NextAttemptAt);
                 return;
             }
@@ -740,7 +718,6 @@ namespace NzbDrone.Core.Books.Services
 
                 item.NextAttemptAt = DateTime.UtcNow;
                 item.OverallStatus = PendingImportStatus.Retrying;
-                item.AttemptCount = 0;
                 item.MaxAttempts = 0;
                 item.UpdatedAt = DateTime.UtcNow;
 
