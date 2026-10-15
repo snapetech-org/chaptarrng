@@ -472,6 +472,58 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Manual
             return result;
         }
 
+        private string GetUnresolvableSuggestionWarning(LocalBook localBook, string path)
+        {
+            if (localBook?.Book != null ||
+                _authorService == null ||
+                _bookService == null ||
+                string.IsNullOrWhiteSpace(localBook?.SuggestedForeignAuthorId) ||
+                string.IsNullOrWhiteSpace(localBook.SuggestedForeignBookId))
+            {
+                return null;
+            }
+
+            try
+            {
+                if (!ProviderIdHelper.TryNormalize(localBook.SuggestedForeignAuthorId, defaultPrefix: null, out var authorId) ||
+                    !ProviderIdHelper.TryNormalize(localBook.SuggestedForeignBookId, defaultPrefix: null, out var workId))
+                {
+                    return null;
+                }
+
+                var author = _authorService.FindByProviderId(authorId.Substring(0, authorId.IndexOf(':')), ProviderIdHelper.StripPrefix(authorId));
+                if (author == null || author.Id <= 0)
+                {
+                    return null;
+                }
+
+                var mediaType = MediaFileExtensions.TextExtensions.Contains(Path.GetExtension(path ?? string.Empty))
+                    ? BookMediaType.Ebook
+                    : BookMediaType.Audiobook;
+                var catalogHasWork = _bookService
+                    .FindAllByWorkProviderId(workId.Substring(0, workId.IndexOf(':')), ProviderIdHelper.StripPrefix(workId), mediaType)
+                    .Any(book => book != null && book.AuthorId == author.Id && book.MediaType == mediaType);
+
+                return SuggestionCannotBeAddedFromMetadata(true, localBook.SuggestedForeignEditionId, catalogHasWork)
+                    ? $"Suggestion '{localBook.SuggestedBookTitle ?? workId}' cannot be added from metadata. Select a local book instead."
+                    : null;
+            }
+            catch (Exception ex)
+            {
+                _logger.Debug(ex, "Could not check suggested match for '{0}'", path);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// A suggestion is unresolvable when its author is already local but the author's catalog has no entry
+        /// for the suggested work and the suggestion carries no edition to build one from.
+        /// </summary>
+        internal static bool SuggestionCannotBeAddedFromMetadata(bool authorIsLocal, string suggestedForeignEditionId, bool catalogHasWork)
+        {
+            return authorIsLocal && !catalogHasWork && string.IsNullOrWhiteSpace(suggestedForeignEditionId);
+        }
+
         private static string Truncate(string value, int max)
         {
             return value == null || value.Length <= max ? value : value.Substring(0, max) + "...";
@@ -533,6 +585,12 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Manual
             if (conflictReason.IsNotNullOrWhiteSpace())
             {
                 rejections.Add(new Rejection(conflictReason, RejectionType.Temporary));
+            }
+
+            var unresolvableSuggestion = GetUnresolvableSuggestionWarning(decision.Item, actualPath);
+            if (unresolvableSuggestion.IsNotNullOrWhiteSpace())
+            {
+                rejections.Add(new Rejection(unresolvableSuggestion, RejectionType.Temporary));
             }
 
             item.Rejections = rejections;
