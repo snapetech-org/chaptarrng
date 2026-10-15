@@ -74,7 +74,7 @@ jobs:
           echo 'Package retries must run from main.' >&2
           exit 1
         fi
-        state="$(gh release view "$TAG" --json isDraft,isPrerelease)"
+        state="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease)"
         echo "$state" | jq -e '.isDraft == false and .isPrerelease == false' >/dev/null
         {
           echo "tag=$TAG"
