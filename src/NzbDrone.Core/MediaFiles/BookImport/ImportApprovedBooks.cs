@@ -104,7 +104,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             int editionId,
             bool manualReplaceExisting,
             BookImportBatchState batchState,
-            int incomingReleasePart = 0)
+            int incomingReleasePart = 0,
+            bool? incomingIsGraphicAudio = null)
         {
             if (existingFile?.Path.IsNullOrWhiteSpace() != false)
             {
@@ -121,6 +122,17 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             if (importSourcePath.IsNotNullOrWhiteSpace() &&
                 existingFile.Path.Equals(importSourcePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // A dramatized (GraphicAudio / full cast) recording and a straight read of the same
+            // edition are different productions, not an upgrade of one another. Only an explicit
+            // replace may swap one for the other. incomingIsGraphicAudio is null for non-audio imports.
+            if (!manualReplaceExisting &&
+                incomingIsGraphicAudio.HasValue &&
+                existingFile.MediaType == "audiobook" &&
+                existingFile.IsGraphicAudio != incomingIsGraphicAudio.Value)
             {
                 return false;
             }
@@ -1193,10 +1205,14 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                             .ToHashSet(StringComparer.OrdinalIgnoreCase)
                         : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+                    bool? incomingIsGraphicAudio = BookFile.DetermineMediaType(localBook.Quality) == "audiobook"
+                        ? localBook.IsGraphicAudio || DetectGraphicAudioFromLocalTags(localBook)
+                        : null;
+
                     var filesToReplace = existingFiles
                         .Where(f =>
                         {
-                            if (IsReplaceableExistingFile(f, localBook.Path, edition.Id, manualReplaceExisting, batchState, localBook.ReleasePart))
+                            if (IsReplaceableExistingFile(f, localBook.Path, edition.Id, manualReplaceExisting, batchState, localBook.ReleasePart, incomingIsGraphicAudio))
                             {
                                 return true;
                             }
