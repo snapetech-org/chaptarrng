@@ -163,6 +163,38 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_preserve_supplemental_catalog_preferences_and_credentials()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO Config (Key, Value) VALUES
+                        ('MetadataCatalogSources', 'openlibrary,googlebooks'),
+                        ('GoogleBooksApiKey', 'fixture-key-preserved'),
+                        ('MetadataTitleSourcePreference', 'openlibrary'),
+                        ('MetadataCoverSourcePreference', 'googlebooks');";
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataCatalogSources';"), Is.EqualTo("openlibrary,googlebooks"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'GoogleBooksApiKey';"), Is.EqualTo("fixture-key-preserved"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataTitleSourcePreference';"), Is.EqualTo("openlibrary"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataCoverSourcePreference';"), Is.EqualTo("googlebooks"));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'GoogleBooksApiKey';"), Is.EqualTo("fixture-key-preserved"));
+            });
+        }
+
+        [Test]
         public void should_upgrade_an_older_bookshelf_snapshot_and_keep_the_original_schema_for_rollback()
         {
             DowngradeSourceToMigration22();
