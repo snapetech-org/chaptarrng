@@ -33,5 +33,9 @@ if [[ "$ready" != "yes" ]]; then
   exit 1
 fi
 
+dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj \
+  --configuration Release --no-restore --no-build --verbosity normal \
+  --filter 'FullyQualifiedName~BookshelfPostgresDatabaseConverterFixture'
+
 echo "VALIDATION_TEST_CASES_PASSED=1"
-echo "PostgreSQL migrations smoke test passed."
+echo "PostgreSQL migrations and BookshelfNG conversion smoke tests passed."

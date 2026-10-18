@@ -52,30 +52,34 @@ migration checks in PR #126 and are on `main`, but are not in public `.977`.
 No release will be cut until the full retirement acceptance gates close; the
 merged release and distribution workflows now require
 `CHAPTARRNG_RELEASE_READY=true`. This is not yet real-data evidence or proof for
-every historical release. PostgreSQL
-BookshelfNG databases and two populated source databases are not supported.
-Books with no recorded
-format are retained in both ChaptarrNG catalogs, unmonitored, with a private
-review file so the operator can classify them after startup. The helper does
-not copy external media/download folders, translate every external setting,
-or update pinned images and package channels. The legacy bridge remains
-disabled. ChaptarrNG PR #127 merged to `main` as `b3089a39`, adding selectable
-supplemental catalogs, per-field metadata preferences, and exact-identity
-recovery for unmapped files. It is not in public `v0.9.977`; provider/settings
-behavior on converted operator data still needs acceptance. The current
-converter retains `BookImportMinimumMatchPercent` and maps it to the closest
-`BookMatchingStrictness` mode: 50–66 to Aggressive, 67–82 to Balanced, and
-83–99 to Strict. The original number stays in the imported config and the
-migration report names the translation. It is an approximation: the two
-applications use different fuzzy parsing and import-scoring algorithms. An
-explicit ChaptarrNG strictness value takes precedence, and an invalid legacy
-value stops conversion. PR #129 merged to `main` as `949ae3dd` with the opt-in
-M4B merge settings, tagged track order and chapter titles, original-track
-fallback, and move/copy source handling. Its clean head passed hosted platform
-and database checks. A synthetic two-track smoke validates the external
-converter and chapter sidecar only; importer end-to-end and representative-media
-acceptance remain open. Neither source change is in public `.977`. Full feature
-parity and several package-channel upgrades remain unverified.
+every historical release. The current work branch has a PostgreSQL converter
+candidate for one migration-158 source schema, but its hosted populated-data
+and rollback checks have not passed and no published release supports it.
+PostgreSQL and multiple-source-database migration remain unsupported for
+operators. See the
+[PostgreSQL migration candidate notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
+Books with no recorded format remain in both ChaptarrNG catalogs, unmonitored,
+with a private review file so the operator can classify them after startup.
+The helper does not copy external media/download folders, translate every
+external setting, or update pinned images and package channels. The legacy
+bridge remains disabled. ChaptarrNG PR #127 merged to `main` as `b3089a39`,
+adding selectable supplemental catalogs, per-field metadata preferences, and
+exact-identity recovery for unmapped files. It is not in public `v0.9.977`;
+provider/settings behavior on converted operator data still needs acceptance.
+The current converter retains `BookImportMinimumMatchPercent` and maps it to
+the closest `BookMatchingStrictness` mode: 50–66 to Aggressive, 67–82 to
+Balanced, and 83–99 to Strict. The original number stays in the imported
+config and the migration report names the translation. It is an approximation:
+the two applications use different fuzzy parsing and import-scoring
+algorithms. An explicit ChaptarrNG strictness value takes precedence, and an
+invalid legacy value stops conversion. PR #129 merged to `main` as `949ae3dd`
+with the opt-in M4B merge settings, tagged track order and chapter titles,
+original-track fallback, and move/copy source handling. Its clean head passed
+hosted platform and database checks. A synthetic two-track smoke validates the
+external converter and chapter sidecar only; importer end-to-end and
+representative-media acceptance remain open. Neither source change is in
+public `.977`. Full feature parity and several package-channel upgrades remain
+unverified.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 

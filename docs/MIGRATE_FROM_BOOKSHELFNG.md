@@ -48,8 +48,12 @@ This brings the source to migration 158, which the published `.977` converter
 accepts. For databases earlier than migration 14 that cannot be upgraded with
 BookshelfNG, do not switch to ChaptarrNG `.977`; the source fix is unreleased
 while the retirement freeze is active. Stop the service after it reaches an
-idle state, then run ChaptarrNG preview. PostgreSQL BookshelfNG databases are
-not supported by this converter.
+idle state, then run ChaptarrNG preview. The published `.977` converter does
+not support PostgreSQL BookshelfNG databases. This work branch contains an
+unreleased candidate for one PostgreSQL migration-158 schema, but its hosted
+populated-data test and rollback acceptance are still pending. Do not use it
+for operator data yet; see the
+[PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
 Environment variables are outside the database conversion. Preserve the
 BookshelfNG diagnostics variables if that optional module was explicitly
@@ -323,7 +327,7 @@ startup. The fallback removes the startup blocker, but it does not establish
 semantic parity for those books.
 
 This proves one populated migration-158 SQLite path on Linux/amd64. It does not
-prove older BookshelfNG schemas, PostgreSQL conversion, every provider or
+prove older BookshelfNG schemas, the PostgreSQL candidate, every provider or
 notification setting, representative M4B conversion, Windows-native
 conversion, package-channel upgrades, rollback against a real populated deployment, populated SeerrNG
 requests, or complete feature parity. Feature, installation, and distribution
@@ -382,8 +386,9 @@ The fixture has no `/library` mount or desktop browser, so normal startup also
 logged the expected missing-root and headless-browser warnings; those did not
 stop conversion or service startup. This validates the current public image's
 migration, rollback, and automatic startup paths against the synthetic fixture.
-It does not establish behavior for older schemas, PostgreSQL, live operator
-data, every BookshelfNG feature, or every package and update channel.
+It does not establish behavior for older schemas, PostgreSQL source
+conversion, live operator data, every BookshelfNG feature, or every package
+and update channel.
 
 ## Published image smoke test (2026-10-18)
 
@@ -400,10 +405,13 @@ to `Blocklist`. PR #126 merged the version-aware fix into `main`, with hosted
 migration checks passing, but the fix is not in the published release.
 Populated synthetic v22 coverage exercises conversion, rollback, and
 non-mutating preview. This does not establish older-schema behavior on real
-operator data or PostgreSQL source conversion. Supported databases can be
-migrated by normal ChaptarrNG startup or with the explicit preview/apply
-commands above. Both paths retain the untouched BookshelfNG source backup;
-rollback is available while the original backup remains intact.
+operator data or PostgreSQL source conversion. A PostgreSQL migration-158
+candidate is under review in this work branch; it has not passed its hosted
+populated-data and rollback fixture and is not available in a release.
+Supported SQLite databases can be migrated by normal ChaptarrNG startup or
+with the explicit preview/apply commands above. Both paths retain the
+untouched BookshelfNG source backup; rollback is available while the original
+backup remains intact.
 
 The public ChaptarrNG `v0.9.977` release contains the converter and standalone
 archives. The version-1-to-13 table-alias fix passed hosted validation on

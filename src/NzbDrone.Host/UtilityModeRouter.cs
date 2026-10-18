@@ -103,10 +103,10 @@ namespace NzbDrone.Host
                     {
                         _appFolderFactory.Register();
                         var database = _connectionStringFactory.MainDbConnection;
-                        if (database.DatabaseType != DatabaseType.SQLite ||
+                        if (database.DatabaseType is not (DatabaseType.SQLite or DatabaseType.PostgreSQL) ||
                             DatabaseLineageGuard.Detect(database.ConnectionString, database.DatabaseType) != DatabaseLineage.BookshelfNG)
                         {
-                            throw new InvalidDataException("No supported BookshelfNG SQLite database was found in this data directory. No database was changed.");
+                            throw new InvalidDataException("No supported BookshelfNG SQLite or PostgreSQL database was found in this data directory. No database was changed.");
                         }
 
                         var previewOnly = _startupContext.PreviewBookshelfMigration;
@@ -116,7 +116,7 @@ namespace NzbDrone.Host
                                 "Applying a BookshelfNG migration requires -confirm-bookshelf-service-stopped. Stop every process using this data directory first.");
                         }
 
-                        var migrationController = new MigrationController(_logger, new NLogLoggerProvider());
+                        var migrationController = new MigrationController(_logger, new NLogLoggerProvider(), new AppFolderInfo(_startupContext));
                         var result = migrationController.MigrateBookshelf(
                             database.ConnectionString,
                             new MigrationContext(MigrationType.Main),
@@ -140,16 +140,16 @@ namespace NzbDrone.Host
                     {
                         _appFolderFactory.Register();
                         var database = _connectionStringFactory.MainDbConnection;
-                        if (database.DatabaseType != DatabaseType.SQLite ||
+                        if (database.DatabaseType is not (DatabaseType.SQLite or DatabaseType.PostgreSQL) ||
                             DatabaseLineageGuard.Detect(database.ConnectionString, database.DatabaseType) != DatabaseLineage.Chaptarr)
                         {
-                            throw new InvalidDataException("BookshelfNG rollback requires a valid ChaptarrNG SQLite database in this data directory.");
+                            throw new InvalidDataException("BookshelfNG rollback requires a valid ChaptarrNG SQLite or PostgreSQL database in this data directory.");
                         }
 
                         if (!_startupContext.Args.TryGetValue("bookshelf-backup", out var backupPath) ||
                             string.IsNullOrWhiteSpace(backupPath))
                         {
-                            throw new InvalidOperationException("BookshelfNG rollback requires -bookshelf-backup=/path/to/readarr.db.bookshelfng-backup-....db.");
+                            throw new InvalidOperationException("BookshelfNG rollback requires -bookshelf-backup=/path/to/readarr.db.bookshelfng-backup-....db for SQLite or -bookshelf-backup=bookshelfng_backup_... for PostgreSQL.");
                         }
 
                         var previewOnly = _startupContext.PreviewBookshelfRestore;
@@ -159,12 +159,12 @@ namespace NzbDrone.Host
                                 "Restoring a BookshelfNG database requires -confirm-bookshelf-service-stopped. Stop every process using this data directory first.");
                         }
 
-                        var migrationController = new MigrationController(_logger, new NLogLoggerProvider());
-                        var result = new BookshelfDatabaseConverter().Restore(
+                        var migrationController = new MigrationController(_logger, new NLogLoggerProvider(), new AppFolderInfo(_startupContext));
+                        var result = migrationController.RestoreBookshelf(
                             database.ConnectionString,
+                            database.DatabaseType,
                             backupPath,
-                            previewOnly,
-                            migrationController.MigrateBookshelfSource);
+                            previewOnly);
                         Console.WriteLine(previewOnly
                             ? $"BookshelfNG rollback preview passed. The current ChaptarrNG database and source backup were not changed: {result.BookshelfBackupPath}"
                             : $"BookshelfNG database restored from: {result.BookshelfBackupPath}");

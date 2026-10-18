@@ -34,6 +34,11 @@ detailed feature inventory remains in the
   passed on its clean head. A synthetic two-track smoke validated the external
   converter and chapter sidecar, but not the importer end to end or
   representative media. This source is not in `.977`.
+- A separate work-branch candidate adds PostgreSQL migration for one
+  migration-158 source schema, with staged promotion, a retained backup schema,
+  preview, and rollback. Its populated PostgreSQL fixture has not passed
+  hosted CI and it has no operator-data acceptance. It is not supported by a
+  published release.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
   setting. ChaptarrNG has equivalent new-author path initialization in
@@ -55,11 +60,20 @@ checks passed on Linux, macOS, Windows, and PostgreSQL. Neither the source fix
 nor synthetic fixtures establish behavior on real older-schema operator data
 or every historical release. Schema 159 is rejected without changing the
 source. PostgreSQL source databases and two populated BookshelfNG databases
-remain unsupported.
-ChaptarrNG stages a native database, accounts for source rows, checks SQLite
-integrity and foreign keys, and promotes only after validation. Preview does
-not modify the source. Apply and rollback are explicit operations, and normal
-startup can run the same converter when it finds a supported source database.
+remain unsupported by published ChaptarrNG releases. A PostgreSQL
+migration-158 candidate is under review in this work branch; it does not
+support older PostgreSQL schemas and has not passed its hosted populated-data
+or rollback checks. Neither source-only fixtures nor an empty image-switch
+rehearsal establishes behavior on populated operator data or every historical
+release.
+The SQLite path stages a native database, accounts for source rows, checks
+SQLite integrity and foreign keys, and promotes only after validation. Preview
+does not modify the source. Apply and rollback are explicit operations, and
+normal startup can run the same converter when it finds a supported source
+database. The work-branch PostgreSQL candidate uses temporary schemas and
+transactional promotion, checks row accounting and both schema lineages, and
+retains the original tables in a backup schema; it has not passed hosted or
+operator-data acceptance.
 
 Some BookshelfNG books do not contain enough data to infer ebook versus
 audiobook. Preview writes a private review file. Operators can provide a
@@ -91,8 +105,11 @@ mode against expected behavior on converted data. The mapping is not in public
 For a source earlier than migration 14, first update BookshelfNG to its final
 `0.4.21.71` release so it can bring the database to migration 158. The `.977`
 converter does not include the later `main` fix, and no follow-up release is
-available while the release freeze is active. The converter does not accept
-PostgreSQL databases or two populated BookshelfNG databases at once. The
+available while the release freeze is active. The published `.977` converter
+does not accept PostgreSQL databases or two populated BookshelfNG databases
+at once. The separate work-branch PostgreSQL candidate supports only one
+migration-158 source schema and must not be used by operators until its
+acceptance gates close. The
 BookshelfNG helper archives appdata, but
 media/download volumes and settings stored outside appdata need separate
 handling. Keep the BookshelfNG service stopped, retain an independent backup,

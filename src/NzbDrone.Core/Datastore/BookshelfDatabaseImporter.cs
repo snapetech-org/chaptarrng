@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Data.Common;
 using System.IO;
 using System.Linq;
 using Microsoft.Data.Sqlite;
+using Npgsql;
+using NpgsqlTypes;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NzbDrone.Core.Configuration;
@@ -12,7 +15,7 @@ using NzbDrone.Core.MetadataSource.BookInfo;
 namespace NzbDrone.Core.Datastore
 {
     /// <summary>
-    /// Imports the latest BookshelfNG SQLite schema into a freshly migrated Chaptarr database.
+    /// Imports the latest BookshelfNG SQLite or PostgreSQL schema into a freshly migrated Chaptarr database.
     /// Unknown schema versions, tables, providers, and ambiguous relationships fail closed.
     /// </summary>
     public static class BookshelfDatabaseImporter
@@ -48,9 +51,9 @@ namespace NzbDrone.Core.Datastore
         };
 
         public static BookshelfDatabaseImportReport Import(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             string sourceDatabasePath)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
@@ -116,10 +119,16 @@ namespace NzbDrone.Core.Datastore
             ResetTable(source, report, "VersionInfo", "Chaptarr migration history was created before importing source rows.");
 
             RebuildProviderAliases(target, transaction, authors, books, editions, series);
+            if (target is NpgsqlConnection)
+            {
+                ResetPostgresSequences(target, transaction);
+                ReserveOrphanBookFileIds(source, target, transaction);
+            }
+
             return report;
         }
 
-        internal static void ValidateSourceSchema(SqliteConnection source)
+        internal static void ValidateSourceSchema(DbConnection source)
         {
             var tables = GetTables(source);
             var missing = SupportedSourceTables.Except(tables, StringComparer.Ordinal).OrderBy(x => x).ToArray();
@@ -131,9 +140,7 @@ namespace NzbDrone.Core.Datastore
                     "; unknown: " + string.Join(", ", unknown) + "). The source database was not changed.");
             }
 
-            using var command = source.CreateCommand();
-            command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM VersionInfo;";
-            var version = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+            var version = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(Version), 0) FROM VersionInfo;"), CultureInfo.InvariantCulture);
             if (version != SupportedSourceMigration)
             {
                 throw new InvalidDataException(
@@ -141,7 +148,7 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
-        internal static int ValidateSourceBackup(SqliteConnection source)
+        internal static int ValidateSourceBackup(DbConnection source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -151,9 +158,7 @@ namespace NzbDrone.Core.Datastore
                 throw new InvalidDataException("BookshelfNG backup has no migration history and cannot be upgraded by the bundled migration chain. The source database was not changed.");
             }
 
-            using var command = source.CreateCommand();
-            command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM VersionInfo;";
-            var version = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+            var version = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(Version), 0) FROM VersionInfo;"), CultureInfo.InvariantCulture);
             if (version < 1 || version > SupportedSourceMigration)
             {
                 throw new InvalidDataException(
@@ -175,15 +180,17 @@ namespace NzbDrone.Core.Datastore
             return version;
         }
 
-        private static void DeferForeignKeys(SqliteConnection target, SqliteTransaction transaction)
+        private static void DeferForeignKeys(DbConnection target, DbTransaction transaction)
         {
             using var command = target.CreateCommand();
             command.Transaction = transaction;
-            command.CommandText = "PRAGMA defer_foreign_keys = ON;";
+            command.CommandText = target is NpgsqlConnection
+                ? "SET CONSTRAINTS ALL DEFERRED;"
+                : "PRAGMA defer_foreign_keys = ON;";
             command.ExecuteNonQuery();
         }
 
-        private static void ClearTarget(SqliteConnection target, SqliteTransaction transaction)
+        private static void ClearTarget(DbConnection target, DbTransaction transaction)
         {
             foreach (var table in TargetTablesToClear)
             {
@@ -200,9 +207,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static Dictionary<(int SourceId, int MediaType), int> ImportQualityProfiles(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             BookshelfDatabaseImportReport report)
         {
             var sourceCount = CountRows(source, "QualityProfiles");
@@ -234,9 +241,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static Dictionary<int, int> ImportMetadataProfiles(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             BookshelfDatabaseImportReport report)
         {
             var sourceCount = CountRows(source, "MetadataProfiles");
@@ -259,9 +266,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static List<RootFolderMap> ImportRootFolders(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<(int SourceId, int MediaType), int> qualityProfiles,
             IReadOnlyDictionary<int, int> metadataProfiles,
             BookshelfDatabaseImportReport report)
@@ -334,9 +341,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static Dictionary<int, AuthorMap> ImportAuthors(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<(int SourceId, int MediaType), int> qualityProfiles,
             IReadOnlyDictionary<int, int> metadataProfiles,
             IReadOnlyList<RootFolderMap> rootFolders,
@@ -437,7 +444,7 @@ namespace NzbDrone.Core.Datastore
             SetIfPresent(values, "Genres", "[]");
         }
 
-        private static Dictionary<int, BookMediaState> ReadBookMediaTypes(SqliteConnection source)
+        private static Dictionary<int, BookMediaState> ReadBookMediaTypes(DbConnection source)
         {
             var result = new Dictionary<int, BookMediaState>();
             foreach (var row in ReadRows(source, "Editions"))
@@ -468,9 +475,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static Dictionary<int, BookMap> ImportBooks(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<int, AuthorMap> authors,
             IReadOnlyDictionary<int, BookMediaState> bookMediaTypes,
             IReadOnlyDictionary<int, BookshelfMediaChoice> mediaChoices,
@@ -594,9 +601,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static Dictionary<int, EditionMap> ImportEditions(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<int, BookMap> books,
             BookshelfDatabaseImportReport report)
         {
@@ -642,9 +649,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static Dictionary<int, BookFileMap> ImportBookFiles(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<int, EditionMap> editions,
             BookshelfDatabaseImportReport report)
         {
@@ -709,9 +716,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportExtraFiles(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<int, BookMap> books,
             IReadOnlyDictionary<int, BookFileMap> files,
             BookshelfDatabaseImportReport report)
@@ -753,9 +760,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportMetadataFiles(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<int, BookMap> books,
             IReadOnlyDictionary<int, BookFileMap> files,
             BookshelfDatabaseImportReport report)
@@ -809,7 +816,7 @@ namespace NzbDrone.Core.Datastore
                 "sidecar records are retained and book/file references are remapped without inventing relationships");
         }
 
-        private static void ReserveOrphanBookFileIds(SqliteConnection source, SqliteConnection target, SqliteTransaction transaction)
+        private static void ReserveOrphanBookFileIds(DbConnection source, DbConnection target, DbTransaction transaction)
         {
             var maxOrphanValue = Scalar(source, @"
                 SELECT MAX(BookFileId)
@@ -823,33 +830,102 @@ namespace NzbDrone.Core.Datastore
                          WHERE MetadataFiles.BookFileId IS NOT NULL
                            AND NOT EXISTS (SELECT 1 FROM BookFiles WHERE BookFiles.Id = MetadataFiles.BookFileId)
                   );");
-            if (maxOrphanValue == null || maxOrphanValue == DBNull.Value) return;
-            var maxOrphanId = Convert.ToInt64(maxOrphanValue, CultureInfo.InvariantCulture);
-
-            if (maxOrphanId == 0) return;
+            var maxOrphanId = maxOrphanValue == null || maxOrphanValue == DBNull.Value
+                ? 0
+                : Convert.ToInt64(maxOrphanValue, CultureInfo.InvariantCulture);
             if (maxOrphanId >= int.MaxValue)
             {
                 throw new InvalidDataException("BookshelfNG contains an orphaned book-file ID at the SQLite integer limit; conversion stopped before promotion to prevent future ID collisions.");
             }
 
+            if (target is NpgsqlConnection)
+            {
+                using var sequence = target.CreateCommand();
+                sequence.Transaction = transaction;
+                sequence.CommandText = "SELECT pg_get_serial_sequence('BookFiles', 'Id');";
+                var sequenceName = sequence.ExecuteScalar()?.ToString();
+                if (!string.IsNullOrWhiteSpace(sequenceName))
+                {
+                    using var setSequence = target.CreateCommand();
+                    setSequence.Transaction = transaction;
+                    setSequence.CommandText = @"
+                        SELECT setval(
+                            @sequence::regclass,
+                            GREATEST(@orphanId, COALESCE((SELECT MAX(Id) FROM BookFiles), 1)),
+                            GREATEST(@orphanId, COALESCE((SELECT MAX(Id) FROM BookFiles), 0)) > 0);";
+                    AddParameter(setSequence, "@sequence", sequenceName);
+                    AddParameter(setSequence, "@orphanId", maxOrphanId);
+                    setSequence.ExecuteScalar();
+                }
+
+                return;
+            }
+
+            if (maxOrphanId == 0) return;
+
             using var update = target.CreateCommand();
             update.Transaction = transaction;
             update.CommandText = "UPDATE sqlite_sequence SET seq = MAX(seq, @sequence) WHERE name = 'BookFiles';";
-            update.Parameters.AddWithValue("@sequence", maxOrphanId);
+            AddParameter(update, "@sequence", maxOrphanId);
             if (update.ExecuteNonQuery() == 0)
             {
                 using var insert = target.CreateCommand();
                 insert.Transaction = transaction;
                 insert.CommandText = "INSERT INTO sqlite_sequence (name, seq) VALUES ('BookFiles', @sequence);";
-                insert.Parameters.AddWithValue("@sequence", maxOrphanId);
+                AddParameter(insert, "@sequence", maxOrphanId);
                 insert.ExecuteNonQuery();
             }
         }
 
+        private static void ResetPostgresSequences(DbConnection target, DbTransaction transaction)
+        {
+            using var command = target.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+                SELECT sequenceNamespace.nspname,
+                       sequenceClass.relname,
+                       tableClass.relname,
+                       tableColumn.attname
+                  FROM pg_class sequenceClass
+                  JOIN pg_namespace sequenceNamespace ON sequenceNamespace.oid = sequenceClass.relnamespace
+                  JOIN pg_depend dependency ON dependency.objid = sequenceClass.oid
+                  JOIN pg_class tableClass ON tableClass.oid = dependency.refobjid
+                  JOIN pg_namespace tableNamespace ON tableNamespace.oid = tableClass.relnamespace
+                  JOIN pg_attribute tableColumn
+                    ON tableColumn.attrelid = tableClass.oid
+                   AND tableColumn.attnum = dependency.refobjsubid
+                 WHERE sequenceClass.relkind = 'S'
+                   AND dependency.deptype IN ('a', 'i')
+                   AND tableNamespace.nspname = current_schema()
+                 ORDER BY sequenceClass.relname;";
+
+            var sequences = new List<(string Schema, string Sequence, string Table, string Column)>();
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    sequences.Add((reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3)));
+                }
+            }
+
+            foreach (var sequence in sequences)
+            {
+                using var setSequence = target.CreateCommand();
+                setSequence.Transaction = transaction;
+                setSequence.CommandText = $@"
+                    SELECT setval(
+                        @sequence::regclass,
+                        GREATEST(COALESCE((SELECT MAX({Quote(sequence.Column)}) FROM {Quote(sequence.Table)}), 1), 1),
+                        COALESCE((SELECT MAX({Quote(sequence.Column)}) FROM {Quote(sequence.Table)}), 0) > 0);";
+                AddParameter(setSequence, "@sequence", Quote(sequence.Schema) + "." + Quote(sequence.Sequence));
+                setSequence.ExecuteScalar();
+            }
+        }
+
         private static Dictionary<int, SeriesMap> ImportSeries(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             BookshelfDatabaseImportReport report)
         {
             var sourceCount = CountRows(source, "Series");
@@ -875,9 +951,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportSeriesLinks(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<int, BookMap> books,
             IReadOnlyDictionary<int, SeriesMap> series,
             BookshelfDatabaseImportReport report)
@@ -915,7 +991,7 @@ namespace NzbDrone.Core.Datastore
                 "links are rebuilt for each corresponding audiobook and ebook row");
         }
 
-        private static void RebuildAuthorSeries(SqliteConnection target, SqliteTransaction transaction)
+        private static void RebuildAuthorSeries(DbConnection target, DbTransaction transaction)
         {
             if (!TableExists(target, "AuthorSeries")) return;
             using var command = target.CreateCommand();
@@ -929,9 +1005,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportBlocklist(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<int, AuthorMap> authors,
             IReadOnlyDictionary<int, BookMap> books,
             BookshelfDatabaseImportReport report)
@@ -976,9 +1052,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportDownloadHistory(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             BookshelfDatabaseImportReport report)
         {
             var sourceCount = CountRows(source, "DownloadHistory");
@@ -996,9 +1072,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportHistory(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<int, AuthorMap> authors,
             IReadOnlyDictionary<int, BookMap> books,
             IReadOnlyDictionary<int, BookFileMap> files,
@@ -1100,9 +1176,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportLists(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<(int SourceId, int MediaType), int> qualityProfiles,
             IReadOnlyDictionary<int, int> metadataProfiles,
             BookshelfDatabaseImportReport report)
@@ -1132,9 +1208,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportNamingConfig(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             BookshelfDatabaseImportReport report)
         {
             var sourceCount = CountRows(source, "NamingConfig");
@@ -1153,9 +1229,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportConfig(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             BookshelfDatabaseImportReport report)
         {
             const string legacyMatchKey = "bookimportminimummatchpercent";
@@ -1244,9 +1320,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void ImportNotifications(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             BookshelfDatabaseImportReport report)
         {
             var sourceCount = CountRows(source, "Notifications");
@@ -1268,9 +1344,9 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void CopyTable(
-            SqliteConnection source,
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
             BookshelfDatabaseImportReport report,
             string table,
             Action<Dictionary<string, object>> transform = null)
@@ -1299,15 +1375,15 @@ namespace NzbDrone.Core.Datastore
                 $"source {table} rows are mapped by their compatible fields into Chaptarr {table}");
         }
 
-        private static void ResetTable(SqliteConnection source, BookshelfDatabaseImportReport report, string table, string reason)
+        private static void ResetTable(DbConnection source, BookshelfDatabaseImportReport report, string table, string reason)
         {
             var sourceCount = CountRows(source, table);
             report.RecordTable(table, sourceCount, 0, 0, 0, sourceCount, reason);
         }
 
         private static void RebuildProviderAliases(
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection target,
+            DbTransaction transaction,
             IReadOnlyDictionary<int, AuthorMap> authors,
             IReadOnlyDictionary<int, BookMap> books,
             IReadOnlyDictionary<int, EditionMap> editions,
@@ -1340,7 +1416,7 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
-        private static void InsertAlias(SqliteConnection target, SqliteTransaction transaction, string entityType, int entityId, string scope, string canonicalId)
+        private static void InsertAlias(DbConnection target, DbTransaction transaction, string entityType, int entityId, string scope, string canonicalId)
         {
             var separator = canonicalId.IndexOf(':');
             if (separator <= 0 || separator == canonicalId.Length - 1) return;
@@ -1348,15 +1424,16 @@ namespace NzbDrone.Core.Datastore
             using var command = target.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = @"
-                INSERT OR IGNORE INTO ProviderAliasIndex
+                INSERT INTO ProviderAliasIndex
                     (EntityType, EntityId, Scope, Provider, NormalizedProviderId, CreatedAt, UpdatedAt)
-                VALUES (@entityType, @entityId, @scope, @provider, @providerId, @createdAt, @createdAt);";
-            command.Parameters.AddWithValue("@entityType", entityType);
-            command.Parameters.AddWithValue("@entityId", entityId);
-            command.Parameters.AddWithValue("@scope", scope);
-            command.Parameters.AddWithValue("@provider", canonicalId.Substring(0, separator));
-            command.Parameters.AddWithValue("@providerId", canonicalId.Substring(separator + 1));
-            command.Parameters.AddWithValue("@createdAt", DateTime.UtcNow);
+                VALUES (@entityType, @entityId, @scope, @provider, @providerId, @createdAt, @createdAt)
+                ON CONFLICT DO NOTHING;";
+            AddParameter(command, "@entityType", entityType);
+            AddParameter(command, "@entityId", entityId);
+            AddParameter(command, "@scope", scope);
+            AddParameter(command, "@provider", canonicalId.Substring(0, separator));
+            AddParameter(command, "@providerId", canonicalId.Substring(separator + 1));
+            AddParameter(command, "@createdAt", DateTime.UtcNow);
             command.ExecuteNonQuery();
         }
 
@@ -1556,28 +1633,71 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
-        private static HashSet<string> GetTables(SqliteConnection connection)
+        internal static HashSet<string> GetTables(DbConnection connection)
         {
             var result = new HashSet<string>(StringComparer.Ordinal);
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';";
+            command.CommandText = connection is SqliteConnection
+                ? "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';"
+                : "SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() AND table_type = 'BASE TABLE';";
             using var reader = command.ExecuteReader();
             while (reader.Read()) result.Add(reader.GetString(0));
             return result;
         }
 
-        private static bool TableExists(SqliteConnection connection, string table)
+        private static bool TableExists(DbConnection connection, string table)
         {
+            if (connection is NpgsqlConnection)
+            {
+                return GetTables(connection).Contains(table);
+            }
+
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = @name LIMIT 1;";
-            command.Parameters.AddWithValue("@name", table);
+            AddParameter(command, "@name", table);
             return command.ExecuteScalar() != null;
         }
 
-        private static Dictionary<string, ColumnInfo> GetColumns(SqliteConnection connection, string table)
+        private static Dictionary<string, ColumnInfo> GetColumns(DbConnection connection, string table)
         {
             var result = new Dictionary<string, ColumnInfo>(StringComparer.Ordinal);
             using var command = connection.CreateCommand();
+            if (connection is NpgsqlConnection)
+            {
+                command.CommandText = @"
+                    SELECT c.column_name, c.is_nullable, c.column_default, c.udt_name,
+                           EXISTS (
+                               SELECT 1
+                                 FROM information_schema.table_constraints tc
+                                 JOIN information_schema.key_column_usage kcu
+                                   ON kcu.constraint_schema = tc.constraint_schema
+                                  AND kcu.constraint_name = tc.constraint_name
+                                  AND kcu.table_name = tc.table_name
+                                WHERE tc.table_schema = current_schema()
+                                  AND tc.table_name = c.table_name
+                                  AND tc.constraint_type = 'PRIMARY KEY'
+                                  AND kcu.column_name = c.column_name
+                           )
+                      FROM information_schema.columns c
+                     WHERE c.table_schema = current_schema()
+                       AND c.table_name = @table
+                     ORDER BY c.ordinal_position;";
+                AddParameter(command, "@table", table);
+                using var postgresReader = command.ExecuteReader();
+                while (postgresReader.Read())
+                {
+                    var name = postgresReader.GetString(0);
+                    var notNull = string.Equals(postgresReader.GetString(1), "NO", StringComparison.OrdinalIgnoreCase);
+                    var defaultValue = postgresReader.IsDBNull(2) ? null : postgresReader.GetValue(2)?.ToString();
+                    var dataType = postgresReader.GetString(3);
+                    var primaryKey = postgresReader.GetBoolean(4);
+                    result[name] = new ColumnInfo(notNull, defaultValue, primaryKey, dataType);
+                }
+
+                if (result.Count == 0) throw new InvalidDataException($"Target table '{table}' does not exist in the staged Chaptarr schema.");
+                return result;
+            }
+
             command.CommandText = $"PRAGMA table_info({Quote(table)});";
             using var reader = command.ExecuteReader();
             while (reader.Read())
@@ -1587,28 +1707,29 @@ namespace NzbDrone.Core.Datastore
                 var defaultValueOrdinal = reader.GetOrdinal("dflt_value");
                 var defaultValue = reader.IsDBNull(defaultValueOrdinal) ? null : reader.GetValue(defaultValueOrdinal)?.ToString();
                 var primaryKey = reader.GetInt32(reader.GetOrdinal("pk")) != 0;
-                result[name] = new ColumnInfo(notNull, defaultValue, primaryKey);
+                var dataType = reader.GetString(reader.GetOrdinal("type"));
+                result[name] = new ColumnInfo(notNull, defaultValue, primaryKey, dataType);
             }
 
             if (result.Count == 0) throw new InvalidDataException($"Target table '{table}' does not exist in the staged Chaptarr schema.");
             return result;
         }
 
-        private static long CountRows(SqliteConnection connection, string table)
+        private static long CountRows(DbConnection connection, string table)
         {
             using var command = connection.CreateCommand();
             command.CommandText = $"SELECT COUNT(*) FROM {Quote(table)};";
             return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
-        private static object Scalar(SqliteConnection connection, string sql)
+        private static object Scalar(DbConnection connection, string sql)
         {
             using var command = connection.CreateCommand();
             command.CommandText = sql;
             return command.ExecuteScalar();
         }
 
-        private static IEnumerable<Dictionary<string, object>> ReadRows(SqliteConnection connection, string table)
+        private static IEnumerable<Dictionary<string, object>> ReadRows(DbConnection connection, string table)
         {
             using var command = connection.CreateCommand();
             command.CommandText = $"SELECT * FROM {Quote(table)} ORDER BY Id;";
@@ -1631,8 +1752,8 @@ namespace NzbDrone.Core.Datastore
         }
 
         private static void InsertRow(
-            SqliteConnection target,
-            SqliteTransaction transaction,
+            DbConnection target,
+            DbTransaction transaction,
             string table,
             IReadOnlyDictionary<string, ColumnInfo> targetColumns,
             IReadOnlyDictionary<string, object> values)
@@ -1660,7 +1781,8 @@ namespace NzbDrone.Core.Datastore
                 command.CommandText = $"INSERT INTO {Quote(table)} ({string.Join(", ", names)}) VALUES ({string.Join(", ", parameters)});";
                 for (var i = 0; i < insertValues.Length; i++)
                 {
-                    command.Parameters.AddWithValue(parameters[i], insertValues[i].Value ?? DBNull.Value);
+                    var column = targetColumns[insertValues[i].Key];
+                    AddParameter(command, parameters[i], NormalizeTargetValue(target, column, insertValues[i].Value), column);
                 }
             }
 
@@ -1668,10 +1790,72 @@ namespace NzbDrone.Core.Datastore
             {
                 command.ExecuteNonQuery();
             }
-            catch (SqliteException exception)
+            catch (DbException exception)
             {
                 throw new InvalidDataException($"BookshelfNG row could not be represented in Chaptarr table '{table}'; conversion was stopped before promotion.", exception);
             }
+        }
+
+        private static void AddParameter(DbCommand command, string name, object value, ColumnInfo targetColumn = null)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = name;
+            if (parameter is NpgsqlParameter postgresParameter && targetColumn?.DataType == "jsonb")
+            {
+                postgresParameter.NpgsqlDbType = NpgsqlDbType.Jsonb;
+            }
+            else if (parameter is NpgsqlParameter jsonParameter && targetColumn?.DataType == "json")
+            {
+                jsonParameter.NpgsqlDbType = NpgsqlDbType.Json;
+            }
+
+            parameter.Value = value ?? DBNull.Value;
+            command.Parameters.Add(parameter);
+        }
+
+        private static object NormalizeTargetValue(DbConnection target, ColumnInfo targetColumn, object value)
+        {
+            if (value == null || value == DBNull.Value || target is not NpgsqlConnection)
+            {
+                return value ?? DBNull.Value;
+            }
+
+            switch (targetColumn.DataType)
+            {
+                case "json":
+                case "jsonb":
+                    return value is JToken token ? token.ToString(Formatting.None) : value.ToString();
+                case "bool":
+                    if (value is bool boolean) return boolean;
+                    if (value is string text && bool.TryParse(text, out var parsedBoolean)) return parsedBoolean;
+                    return Convert.ToInt64(value, CultureInfo.InvariantCulture) != 0;
+                case "timestamptz":
+                    if (value is DateTimeOffset offset) return offset.ToUniversalTime();
+                    if (value is DateTime dateTime)
+                    {
+                        return dateTime.Kind == DateTimeKind.Utc
+                            ? dateTime
+                            : DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+                    }
+
+                    if (DateTimeOffset.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsedOffset))
+                    {
+                        return parsedOffset;
+                    }
+
+                    break;
+                case "timestamp":
+                    if (value is DateTime timestamp) return DateTime.SpecifyKind(timestamp, DateTimeKind.Unspecified);
+                    if (value is DateTimeOffset timestampOffset) return timestampOffset.UtcDateTime;
+                    if (DateTime.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedTimestamp))
+                    {
+                        return DateTime.SpecifyKind(parsedTimestamp, DateTimeKind.Unspecified);
+                    }
+
+                    break;
+            }
+
+            return value;
         }
 
         private static void SetIfPresent(IDictionary<string, object> values, string column, object value)
@@ -1726,7 +1910,7 @@ namespace NzbDrone.Core.Datastore
             return "\"" + identifier.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
         }
 
-        private sealed record ColumnInfo(bool NotNull, string DefaultValue, bool PrimaryKey)
+        private sealed record ColumnInfo(bool NotNull, string DefaultValue, bool PrimaryKey, string DataType = null)
         {
             public bool HasDefault => DefaultValue != null;
         }

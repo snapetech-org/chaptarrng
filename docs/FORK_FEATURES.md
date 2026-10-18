@@ -31,9 +31,12 @@ the [operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs
 and [retirement status page](BOOKSHELFNG_RETIREMENT.md). The `.977` release
 supports the final migration-158 SQLite schema. Populated synthetic migration
 coverage exercises conversion and rollback; this is not real older-schema
-operator data. PostgreSQL source conversion remains unsupported, and successful
-database conversion does not complete feature parity or legacy-channel
-handoff. ChaptarrNG AUR `.977` is published and COPR reports successful builds
+operator data. A work-branch PostgreSQL candidate supports one migration-158
+source schema, but its hosted populated-data and rollback checks remain
+pending; it is not supported by a published release. Successful database
+conversion does not complete feature parity or legacy-channel handoff. See
+the [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
+ChaptarrNG AUR `.977` is published and COPR reports successful builds
 for Fedora 43/44/45 and Rawhide x86_64. The Chocolatey package passed build and
 transition smoke validation, but publication returned HTTP 403 and the public
 feed has no `chaptarrng` entry. The legacy bridge remains disabled.
@@ -429,7 +432,7 @@ fixes, migrations, build changes, or deletions.
 
 | Capability or change | Current ChaptarrNG scope | Evidence required before upstream retirement |
 | --- | --- | --- |
-| BookshelfNG conversion and rollback | Standard image preview, apply, automatic startup conversion, retained source backup, rollback, per-format monitored-edition preservation, and an unmonitored dual-catalog fallback with a private review file; current `main` also embeds the SQLite upgrade chain through migration 158 | Publish the older-schema support; validate recognized historical schemas on real data, review follow-up, source rows, identities, settings, populated rollback, and each installation channel. |
+| BookshelfNG conversion and rollback | Standard image preview, apply, automatic startup conversion, retained source backup, rollback, per-format monitored-edition preservation, and an unmonitored dual-catalog fallback with a private review file; current `main` also embeds the SQLite upgrade chain through migration 158. A work-branch candidate adds staged PostgreSQL conversion for one migration-158 schema. | Publish the older-schema support; validate recognized historical schemas on real data, review follow-up, source rows, identities, settings, populated SQLite and PostgreSQL rollback, and each installation channel. The PostgreSQL candidate is not supported by a published release and has not passed hosted or operator-data acceptance. |
 | RanobeDB light-novel search and metadata | Read-only catalog search, stored work/release IDs, request pacing, and source-content limits | Preserve catalog behavior, identity, rate limits, licensing boundaries, and failure handling. |
 | Audible marketplace selection | US, UK, France, Germany, Italy, Spain, Canada, Australia, India, Japan, and Brazil storefronts for search and ASIN lookup | Preserve marketplace configuration, defaults, language headers, and result identity. |
 | Metadata profile filters and edition ranking | Genre exclusions/autocomplete; ISBN/ASIN missing-value filters; weighted edition terms; preferred series; language-change refresh; and filename, tag, Calibre, and AudioBookShelf consumers | Preserve profile migration/serialization, ranking order, missing-evidence behavior, refresh semantics, series consumers, and manual-review boundaries. |
@@ -553,8 +556,8 @@ embedded SQLite upgrade chain. Its pre-upgrade table guard rejects source
 versions before migration 14. PR #126 merged the version-aware fix and
 migration-1 rollback test into `main`; hosted Linux, macOS, Windows, and
 PostgreSQL migration checks passed, but the fix is not in `.977`. Synthetic
-coverage does not prove older-schema behavior on real data, PostgreSQL source
-conversion, populated real-data rollback, every provider/settings/client
+coverage does not prove older-schema behavior on real data, the PostgreSQL
+source-conversion candidate, populated real-data rollback, every provider/settings/client
 contract, semantic feature parity, or compatibility with every installation
 channel. Each capability and applicable upgrade, rollback, and redirect path
 remains an independent replacement gate. Releases remain frozen until all
