@@ -7,6 +7,7 @@ using FluentMigrator.Runner.Processors.Postgres;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using FluentMigratorPostgresOptions = FluentMigrator.Runner.Processors.Postgres.PostgresOptions;
 
 namespace NzbDrone.Core.Datastore.Migration.Framework
 {
@@ -25,7 +26,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             ILogger<Postgres15_0Processor> logger,
             IOptionsSnapshot<ProcessorOptions> options,
             IConnectionStringAccessor connectionStringAccessor,
-            PostgresOptions postgresOptions,
+            FluentMigratorPostgresOptions postgresOptions,
             string schemaName)
             : base(factory, generator, logger, options, connectionStringAccessor, postgresOptions)
         {
@@ -84,7 +85,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 sp.GetRequiredService<ILogger<Postgres15_0Processor>>(),
                 sp.GetRequiredService<IOptionsSnapshot<ProcessorOptions>>(),
                 sp.GetRequiredService<IConnectionStringAccessor>(),
-                sp.GetRequiredService<PostgresOptions>(),
+                sp.GetRequiredService<FluentMigratorPostgresOptions>(),
                 schemaName));
             services.AddScoped<IMigrationProcessor>(sp => sp.GetRequiredService<SchemaScopedPostgresProcessor>());
         }
