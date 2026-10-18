@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.MetadataSource.BookInfo;
 
 namespace Chaptarr.Core.Test.Books
 {
@@ -10,17 +11,19 @@ namespace Chaptarr.Core.Test.Books
         [Test]
         public void stable_work_tokens_should_exclude_internal_base_book_id()
         {
+            var supplementalProviderId = AdditionalMetadataSources.CreateProviderId("googlebooks", "book-1");
             var book = new Book
             {
                 BaseBookId = "sms-pocket-123",
                 HardcoverBookId = "hc:42",
                 GoodreadsWorkId = "gr:99",
-                OpenLibraryWorkId = "ol:OL123W"
+                OpenLibraryWorkId = "ol:OL123W",
+                AdditionalMetadataProviderId = supplementalProviderId
             };
 
             var tokens = BookIdentity.GetStableWorkProviderIdentityTokens(book);
 
-            Assert.That(tokens, Is.EquivalentTo(new[] { "hc:42", "gr:99", "ol:OL123W" }));
+            Assert.That(tokens, Is.EquivalentTo(new[] { "hc:42", "gr:99", "ol:OL123W", supplementalProviderId }));
             Assert.That(tokens, Does.Not.Contain("sms-pocket-123"));
         }
 

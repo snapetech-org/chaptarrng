@@ -747,6 +747,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 foreignAuthorId = canonicalSource + "-author:" + canonicalId;
             }
 
+            // Open Library IDs route to its fixed public API; this is provider dispatch, not an authorization decision.
+            // codeql[cs/user-controlled-bypass]
             if (_openLibraryMetadataProxy.HandlesAuthorId(foreignAuthorId))
             {
                 return _openLibraryMetadataProxy.GetAuthor(foreignAuthorId);

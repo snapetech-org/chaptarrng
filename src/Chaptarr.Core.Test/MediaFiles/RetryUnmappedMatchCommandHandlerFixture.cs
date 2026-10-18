@@ -691,6 +691,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 ["ISBN"] = new List<string> { "0-306-40615-2" }
             };
             var context = CreateContext(file, modified, 100);
+            context.RootFolders.RootFolder = CreateMixedRootFolder();
             context.CatalogSearch.OnIsbnSearch = isbn => new List<Book>
             {
                 new Book
@@ -779,6 +780,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 ["GOODREADS_ID"] = new List<string> { "1234567" }
             };
             var context = CreateContext(file, modified, 100);
+            context.RootFolders.RootFolder = CreateMixedRootFolder();
             context.CatalogSearch.OnGoodreadsBookIdSearch = (goodreadsId, getAllEditions) => new List<Book>
             {
                 new Book
@@ -826,6 +828,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 ["BOOK_PROVIDER_ID"] = new List<string> { workProviderId }
             };
             var context = CreateContext(file, modified, 100);
+            context.RootFolders.RootFolder = CreateMixedRootFolder();
             context.CatalogSearch.OnSearch = (title, author, getAllEditions, mediaType) => new List<Book>
             {
                 new Book
