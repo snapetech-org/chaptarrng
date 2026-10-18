@@ -316,7 +316,7 @@ ChaptarrNG database and preserves the failed restore candidate for inspection.
 
 ## Unraid
 
-> **Not approved for cutover yet.** BookshelfNG Unraid PR #5 contains a draft
+> **Not approved for cutover yet.** [BookshelfNG Unraid PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5) contains a draft
 > template handoff; its Community Applications upgrade and rollback flow has
 > not passed acceptance. Do not change the template or start ChaptarrNG against
 > the BookshelfNG appdata until the retirement gates close.
@@ -328,6 +328,13 @@ installs, while retaining the old `/config`, `/data`, `/download`, port,
 PUID/PGID, timezone, and Hardcover settings. Starting the container runs the
 regular ChaptarrNG app and its automatic migration. The old `config.xml` keeps
 the saved app port and URL base.
+
+The candidate template keeps `HARDCOVER=true` and `HARDCOVER_NATIVE=true` for
+the native Hardcover configuration it was built for. Preserve
+`HARDCOVER=false` for a Goodreads-primary source; the migration requires the
+same explicit mode during preview, automatic startup, and apply. The template
+XML and settings-preservation script passed locally, but the actual Community
+Applications update and rollback flow has not been run.
 
 Wait for the container health check, open the existing URL, and inspect
 **System > Logs**. The backup filename starts with
