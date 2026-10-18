@@ -62,6 +62,31 @@ the saved HTTP port, URL base, API key, and server settings. Keep the same media
 and download mounts and host/container port mappings. This preserves existing
 SeerrNG and reverse-proxy endpoints when those services used the old address.
 
+## Recovering unmapped files
+
+The published `v0.9.977` release retries unmapped files against the local
+library and Chaptarr's V5 matcher. A source-only candidate on the BookshelfNG
+parity branch adds configured-catalog recovery after those paths fail. It
+searches from an exact ISBN, ASIN, or provider-ID tag (including Goodreads IDs),
+or from one unambiguous book title and author tag. Every supplied identity field
+must match the result, including normalized title and author when present. The
+result must use the same media type and have stable provider work and author
+IDs. Conflicting or ambiguous results stay unmapped. A single result is sent
+through the existing pending-author-import flow; catalog search never moves or
+attaches a file directly. This candidate is not in `.977` and does not change
+release or channel acceptance status.
+
+## Matching setting compatibility
+
+The converter preserves BookshelfNG's `BookImportMinimumMatchPercent` row in
+the copied `Config` table, but ChaptarrNG does not consume that legacy key. Its
+`BookMatchingStrictness` setting uses different matching rules, so no exact
+value-by-value mapping is established. Before relying on automatic matching
+after conversion, review the ChaptarrNG strictness setting and verify it
+against the library's expected behavior. This remains a parity gate; the
+copied row is preservation of data, not preservation of the old threshold's
+behavior.
+
 ## Preview and apply
 
 Stop BookshelfNG first and make an independent copy of the entire data

@@ -33,6 +33,36 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             public List<SearchJsonResource> Search(string query) => _results;
         }
 
+        private sealed class MetadataPreferencesStub : IAdditionalBookMetadataProxy
+        {
+            public int BookPreferenceCalls { get; private set; }
+            public int AuthorImagePreferenceCalls { get; private set; }
+
+            public List<Book> Search(string query) => new();
+            public List<Book> SearchProvider(string query, string provider) => new();
+            public bool HandlesBookId(string foreignBookId) => false;
+            public bool HandlesAuthorId(string foreignAuthorId) => false;
+            public Tuple<string, Book, List<Author>> GetBook(string foreignBookId) => throw new NotImplementedException();
+            public Author GetAuthor(string foreignAuthorId) => throw new NotImplementedException();
+
+            public Book ApplyFieldSourcePreferences(Book book)
+            {
+                BookPreferenceCalls++;
+                book.Title = "Preferred title";
+                return book;
+            }
+
+            public Author ApplyAuthorImageSourcePreference(Author author, Book contextBook = null)
+            {
+                if (author != null)
+                {
+                    AuthorImagePreferenceCalls++;
+                }
+
+                return author;
+            }
+        }
+
         private class RecordingHttpClient : IHttpClient
         {
             private readonly Func<HttpRequest, HttpResponse> _handler;
@@ -76,6 +106,18 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                     return MetadataServerUrl;
                 }
 
+                if (targetMethod?.Name == "IsDefined")
+                {
+                    return false;
+                }
+
+                if (targetMethod?.Name.StartsWith("get_", StringComparison.Ordinal) == true)
+                {
+                    return targetMethod.ReturnType.IsValueType
+                        ? Activator.CreateInstance(targetMethod.ReturnType)
+                        : null;
+                }
+
                 throw new NotImplementedException($"Test proxy does not implement {targetMethod?.Name}");
             }
         }
@@ -86,7 +128,10 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             return new MetadataServerHealthGate(configService, new MetadataServerHealthService(logger), logger);
         }
 
-        private static BookInfoProxy CreateProxy(IHttpClient httpClient, IGoodreadsSearchProxy goodreadsSearchProxy = null)
+        private static BookInfoProxy CreateProxy(
+            IHttpClient httpClient,
+            IGoodreadsSearchProxy goodreadsSearchProxy = null,
+            IAdditionalBookMetadataProxy additionalBookMetadataProxy = null)
         {
             var configService = DispatchProxy.Create<IConfigService, ConfigServiceProxy>();
             var requestBuilder = new MetadataRequestBuilder(configService);
@@ -103,7 +148,8 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 requestBuilder: requestBuilder,
                 logger: LogManager.GetCurrentClassLogger(),
                 cacheManager: new CacheManager(),
-                metadataServerHealthGate: CreateHealthGate(configService));
+                metadataServerHealthGate: CreateHealthGate(configService),
+                additionalBookMetadataProxy: additionalBookMetadataProxy);
         }
 
         [Test]
@@ -890,6 +936,24 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             Assert.That(authorKey, Is.EqualTo("hc:999"));
             Assert.That(book.HardcoverBookId, Is.EqualTo("hc:12345"));
             Assert.That(book.BaseBookId, Is.EqualTo("hc:12345"));
+        }
+
+        [Test]
+        public void should_apply_supplemental_metadata_preferences_to_primary_catalog_refreshes()
+        {
+            var httpClient = new RecordingHttpClient(req =>
+                new HttpResponse(req, new HttpHeader { ContentType = "application/json" }, HardcoverWorkPayload, HttpStatusCode.OK));
+            var preferences = new MetadataPreferencesStub();
+            var proxy = CreateProxy(httpClient, additionalBookMetadataProxy: preferences);
+
+            var result = proxy.GetBookInfo("hc:383236", BookMediaType.Audiobook);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Item2.Title, Is.EqualTo("Preferred title"));
+                Assert.That(preferences.BookPreferenceCalls, Is.EqualTo(1));
+                Assert.That(preferences.AuthorImagePreferenceCalls, Is.GreaterThan(0));
+            });
         }
     }
 }

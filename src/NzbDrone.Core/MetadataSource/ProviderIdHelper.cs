@@ -13,7 +13,8 @@ namespace NzbDrone.Core.MetadataSource
             "gb",
             "az",
             "rn",
-            "rnr"
+            "rnr",
+            "meta"
         });
 
         private static readonly HashSet<string> CanonicalPrefixSet = new HashSet<string>(CanonicalPrefixesOrdered, StringComparer.OrdinalIgnoreCase);

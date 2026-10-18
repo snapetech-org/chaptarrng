@@ -97,6 +97,7 @@ namespace NzbDrone.Core.Books
         public string OpenLibraryAuthorId { get; set; }
         public string GoogleBooksAuthorId { get; set; }
         public string RanobeDbAuthorId { get; set; }
+        public string AdditionalMetadataProviderId { get; set; }
 
         // Optional in-memory provider ID sets from upstream metadata payloads (not persisted).
         // Used for robust matching when an entity gains new provider IDs upstream.
@@ -191,6 +192,7 @@ namespace NzbDrone.Core.Books
             OpenLibraryAuthorId = other.OpenLibraryAuthorId;
             GoogleBooksAuthorId = other.GoogleBooksAuthorId;
             RanobeDbAuthorId = other.RanobeDbAuthorId;
+            AdditionalMetadataProviderId = other.AdditionalMetadataProviderId;
             RemoteProviderIds = CloneProviderIds(other.RemoteProviderIds);
 
             // Standard identifiers

@@ -163,6 +163,7 @@ namespace NzbDrone.Core.Books
             author.GoogleBooksAuthorId = NormalizeOrNull(author.GoogleBooksAuthorId, "gb");
             author.AudnexusAuthorId = NormalizeOrNull(author.AudnexusAuthorId, "az");
             author.RanobeDbAuthorId = NormalizeOrNull(author.RanobeDbAuthorId, "rn");
+            author.AdditionalMetadataProviderId = NormalizeOrNull(author.AdditionalMetadataProviderId, "meta");
 
             if (author.CleanName.IsNullOrWhiteSpace())
             {
@@ -240,6 +241,7 @@ namespace NzbDrone.Core.Books
             AddProviderId(providerIds, author.GoogleBooksAuthorId);
             AddProviderId(providerIds, author.AudnexusAuthorId);
             AddProviderId(providerIds, author.RanobeDbAuthorId);
+            AddProviderId(providerIds, author.AdditionalMetadataProviderId);
 
             if (author.RemoteProviderIds != null)
             {
@@ -488,6 +490,11 @@ namespace NzbDrone.Core.Books
 	                case "rn":
 	                    canonicalPrefix = "rn";
 	                    finder = _authorRepository.FindByRanobeDbId;
+	                    break;
+
+	                case "meta":
+	                    canonicalPrefix = "meta";
+                    finder = _authorRepository.FindByAdditionalMetadataProviderId;
 	                    break;
 
 	                default:

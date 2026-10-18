@@ -62,6 +62,7 @@ namespace NzbDrone.Core.Books
         public string ASIN { get; set; }
         public string AudibleASIN { get; set; }
         public string RanobeDbBookId { get; set; }
+        public string AdditionalMetadataProviderId { get; set; }
 
         // Book grouping
         public string BaseBookId { get; set; }
@@ -295,6 +296,7 @@ namespace NzbDrone.Core.Books
 		            ASIN = CleanProviderIdForCopy(other.ASIN, ASIN);
 		            AudibleASIN = CleanProviderIdForCopy(other.AudibleASIN, AudibleASIN);
 		            RanobeDbBookId = CleanProviderIdForCopy(other.RanobeDbBookId, RanobeDbBookId);
+	            AdditionalMetadataProviderId = CleanProviderIdForCopy(other.AdditionalMetadataProviderId, AdditionalMetadataProviderId);
 		            RemoteProviderIds = CloneProviderIds(other.RemoteProviderIds);
 
 	            // New metadata fields (upstream authoritative; apply even when empty to ensure convergence)

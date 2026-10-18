@@ -20,6 +20,7 @@ namespace NzbDrone.Core.Books
         Author FindByOpenLibraryId(string openLibraryId);
         Author FindByGoogleBooksId(string googleBooksAuthorId);
         Author FindByRanobeDbId(string ranobeDbAuthorId);
+        Author FindByAdditionalMetadataProviderId(string providerId) => null;
         List<int> GetAuthorIdsByMetadataProfileId(int metadataProfileId);
         Dictionary<int, string> AllAuthorPaths();
         // The default exists only for lightweight test doubles. Every production implementation must override it.
@@ -90,6 +91,11 @@ namespace NzbDrone.Core.Books
         public Author FindByRanobeDbId(string ranobeDbAuthorId)
         {
             return Query(a => a.RanobeDbAuthorId == ranobeDbAuthorId).SingleOrDefault();
+        }
+
+        public Author FindByAdditionalMetadataProviderId(string providerId)
+        {
+            return Query(a => a.AdditionalMetadataProviderId == providerId).SingleOrDefault();
         }
 
         public Author FindByName(string cleanName)

@@ -324,7 +324,8 @@ namespace Chaptarr.Api.V1.Search
 	                ("gr", searchAuthor.GoodreadsAuthorId),
 	                ("ol", searchAuthor.OpenLibraryAuthorId),
 	                ("gb", searchAuthor.GoogleBooksAuthorId),
-	                ("az", searchAuthor.AudnexusAuthorId)
+                ("az", searchAuthor.AudnexusAuthorId),
+                ("meta", searchAuthor.AdditionalMetadataProviderId)
 	            };
 
             foreach (var (provider, id) in lookups)
@@ -368,6 +369,7 @@ namespace Chaptarr.Api.V1.Search
             Add(searchAuthor?.OpenLibraryAuthorId);
             Add(searchAuthor?.GoogleBooksAuthorId);
             Add(searchAuthor?.AudnexusAuthorId);
+            Add(searchAuthor?.AdditionalMetadataProviderId);
 
             if (searchAuthor?.RemoteProviderIds != null)
             {

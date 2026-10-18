@@ -10,7 +10,7 @@ namespace NzbDrone.Common.Instrumentation
         private static readonly Regex[] CleansingRules =
         {
             // Url
-            new (@"(?<=\?|&|: )((?:api|auth|pass)?key|(?:access[-_]?)?token|auth|user|uid|api|[a-z_]*apikey|account|passwd)=(?<secret>[^&=""]+?)(?=[ ""&=]|$)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            new (@"(?<=\?|&|: )((?:api|auth|pass)?key|wskey|(?:access[-_]?)?token|auth|user|uid|api|[a-z_]*apikey|account|passwd)=(?<secret>[^&=""]+?)(?=[ ""&=]|$)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             new (@"\b(?:authorization_code|code|client_secret|id_token|refresh_token|secret)=(?<secret>[^&\s=""]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             new (@"(?<=\?|&)[^=]*?(username|password)=(?<secret>[^&=]+?)(?= |&|$)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             // URL userinfo (http(s)://user:pass@host)

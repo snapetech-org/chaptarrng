@@ -452,6 +452,9 @@ namespace NzbDrone.Core.Books
 	                case "rn":
 	                    matches = Query(b => b.RanobeDbBookId == providerId && b.MediaType == mediaType);
 	                    break;
+                case "meta":
+                    matches = Query(b => b.AdditionalMetadataProviderId == providerId && b.MediaType == mediaType);
+                    break;
 		                case "az":
                     {
                         var normalizedAz = providerId.Contains(":")

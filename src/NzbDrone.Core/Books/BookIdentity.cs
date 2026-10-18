@@ -170,6 +170,7 @@ namespace NzbDrone.Core.Books
             AddStableWork(tokens, book.GoodreadsWorkId, "gr");
             AddStableWork(tokens, book.OpenLibraryWorkId, "ol");
             AddStableWork(tokens, book.RanobeDbBookId, "rn");
+            AddStableWork(tokens, book.AdditionalMetadataProviderId, "meta");
 
             foreach (var remoteProviderId in book.RemoteProviderIds ?? Enumerable.Empty<string>())
             {
@@ -265,7 +266,8 @@ namespace NzbDrone.Core.Books
             if (prefix.Equals("hc", StringComparison.OrdinalIgnoreCase) ||
                 prefix.Equals("gr", StringComparison.OrdinalIgnoreCase) ||
                 prefix.Equals("ol", StringComparison.OrdinalIgnoreCase) ||
-                prefix.Equals("rn", StringComparison.OrdinalIgnoreCase))
+                prefix.Equals("rn", StringComparison.OrdinalIgnoreCase) ||
+                prefix.Equals("meta", StringComparison.OrdinalIgnoreCase))
             {
                 tokens.Add(prefix.ToLowerInvariant() + ":" + id);
             }

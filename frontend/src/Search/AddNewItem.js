@@ -17,6 +17,20 @@ import AddNewBookSearchResultConnector from './Book/AddNewBookSearchResultConnec
 import AddNewSeriesSearchResult from './Series/AddNewSeriesSearchResult';
 import styles from './AddNewItem.css';
 
+const supplementalMetadataProviders = [
+  { key: 'openlibrary', name: 'enableOpenLibrary', label: 'OpenLibrary' },
+  { key: 'googlebooks', name: 'enableGoogleBooks', label: 'GoogleBooks', requiresGoogleBooksKey: true },
+  { key: 'loc', name: 'enableLoc', label: 'LibraryOfCongress' },
+  { key: 'gutendex', name: 'enableGutendex', label: 'Gutendex' },
+  { key: 'internetarchive', name: 'enableInternetArchive', label: 'InternetArchive' },
+  { key: 'ndl', name: 'enableNdl', label: 'NdlSearch' },
+  { key: 'europeana', name: 'enableEuropeana', label: 'Europeana', requiresEuropeanaKey: true },
+  { key: 'apify-goodreads', name: 'enableApifyGoodreads', label: 'ApifyGoodreadsActor', requiresApifyCredentials: true }
+];
+
+const supportsSeriesFilter = (provider) => provider !== 'goodreads' &&
+  !supplementalMetadataProviders.some((source) => source.key === provider);
+
 class AddNewItem extends Component {
 
   //
@@ -61,7 +75,7 @@ class AddNewItem extends Component {
 
     if (providerChanged || termChanged) {
       this.setState((prevState) => ({
-        activeFilter: (providerChanged ? provider : prevState.selectedProvider) === 'goodreads' && prevState.activeFilter === 'series' ?
+        activeFilter: !supportsSeriesFilter(providerChanged ? provider : prevState.selectedProvider) && prevState.activeFilter === 'series' ?
           'all' :
           prevState.activeFilter,
         term: termChanged ? term : prevState.term,
@@ -120,7 +134,7 @@ class AddNewItem extends Component {
   onProviderChange = ({ value }) => {
     this.setState((prevState) => ({
       selectedProvider: value,
-      activeFilter: value === 'goodreads' && prevState.activeFilter === 'series' ? 'all' : prevState.activeFilter
+      activeFilter: !supportsSeriesFilter(value) && prevState.activeFilter === 'series' ? 'all' : prevState.activeFilter
     }), () => {
       const { term } = this.state;
       if (term) {
@@ -186,18 +200,30 @@ class AddNewItem extends Component {
     const selectedProvider = this.state.selectedProvider;
     const activeFilter = this.state.activeFilter;
     const filteredItems = this.getFilteredResults();
-    const showSeriesFilter = selectedProvider !== 'goodreads';
+    const showSeriesFilter = supportsSeriesFilter(selectedProvider);
     const isHardcoverConfigured = this.props.isHardcoverConfigured !== false;
+    const metadataProviderConfig = this.props.metadataProviderConfig || {};
+    const metadataProviderSettings = metadataProviderConfig.item || {};
 
-    // Provider options - structured for future expansion
     const metadataProviders = [
       { key: 'hardcover', value: 'Hardcover', isDisabled: !isHardcoverConfigured },
       { key: 'goodreads', value: 'Goodreads' },
       { key: 'audible', value: translate('Audiobooks') }
-      // Future providers can be added here:
-      // { key: 'openlibrary', value: 'OpenLibrary' },
-      // { key: 'googlebooks', value: 'Google Books' }
     ];
+
+    if (metadataProviderConfig.isPopulated && !metadataProviderConfig.error) {
+      supplementalMetadataProviders.forEach((source) => {
+        const enabled = metadataProviderSettings[source.name];
+        const hasGoogleBooksKey = !source.requiresGoogleBooksKey || metadataProviderSettings.hasGoogleBooksApiKey;
+        const hasEuropeanaKey = !source.requiresEuropeanaKey || metadataProviderSettings.hasEuropeanaApiKey;
+        const hasApifyCredentials = !source.requiresApifyCredentials ||
+          (metadataProviderSettings.apifyGoodreadsActor && metadataProviderSettings.hasApifyToken);
+
+        if (enabled && hasGoogleBooksKey && hasEuropeanaKey && hasApifyCredentials) {
+          metadataProviders.push({ key: source.key, value: translate(source.label) });
+        }
+      });
+    }
 
     return (
       <PageContent title={translate('AddNewItem')}>
@@ -400,6 +426,7 @@ AddNewItem.propTypes = {
   term: PropTypes.string,
   provider: PropTypes.string,
   isHardcoverConfigured: PropTypes.bool,
+  metadataProviderConfig: PropTypes.object,
   isFetching: PropTypes.bool.isRequired,
   error: PropTypes.object,
   isAdding: PropTypes.bool.isRequired,

@@ -1,12 +1,12 @@
+import { push } from 'connected-react-router';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
-import { push } from 'connected-react-router';
-import { clearSearchResults, getSearchResults, updateSeriesEnrichment } from 'Store/Actions/searchActions';
-import { fetchRootFolders } from 'Store/Actions/settingsActions';
-import parseUrl from 'Utilities/String/parseUrl';
 import seriesEnrichmentService from 'Services/SeriesEnrichmentService';
+import { clearSearchResults, getSearchResults, updateSeriesEnrichment } from 'Store/Actions/searchActions';
+import { fetchMetadataProvider, fetchRootFolders } from 'Store/Actions/settingsActions';
+import parseUrl from 'Utilities/String/parseUrl';
 import AddNewItem from './AddNewItem';
 
 function createMapStateToProps() {
@@ -15,19 +15,21 @@ function createMapStateToProps() {
     (state) => state.authors.items.length,
     (state) => state.router.location,
     (state) => state.settings.hardcoverConfig,
-    (search, existingAuthorsCount, location, hardcoverConfig) => {
+    (state) => state.settings.metadataProvider,
+    (search, existingAuthorsCount, location, hardcoverConfig, metadataProviderConfig) => {
       const { params } = parseUrl(location.search);
       const { isPopulated, error, item } = hardcoverConfig;
-      const isHardcoverConfigured = (!isPopulated && !error)
-        ? null
-        : !!(item?.enabled && item?.hasToken);
+      const isHardcoverConfigured = (!isPopulated && !error) ?
+        null :
+        !!(item?.enabled && item?.hasToken);
 
       return {
         ...search,
         term: params.term,
         provider: params.provider,
         hasExistingAuthors: existingAuthorsCount > 0,
-        isHardcoverConfigured
+        isHardcoverConfigured,
+        metadataProviderConfig
       };
     }
   );
@@ -37,6 +39,7 @@ const mapDispatchToProps = {
   getSearchResults,
   clearSearchResults,
   fetchRootFolders,
+  fetchMetadataProvider,
   updateSeriesEnrichment,
   push
 };
@@ -54,12 +57,13 @@ class AddNewItemConnector extends Component {
 
   componentDidMount() {
     this.props.fetchRootFolders();
-    
+    this.props.fetchMetadataProvider();
+
     // Set up the enrichment callback
     seriesEnrichmentService.setEnrichmentCallback((data) => {
       this.props.updateSeriesEnrichment(data);
     });
-    
+
     // TODO: Connect to series enrichment service when search page loads
     // Temporarily disabled until SSE proxy is implemented in Chaptarr
     // seriesEnrichmentService.connect();
@@ -85,9 +89,9 @@ class AddNewItemConnector extends Component {
     if (this._searchTimeout) {
       clearTimeout(this._searchTimeout);
     }
-    
+
     this.props.clearSearchResults();
-    
+
     // TODO: Disconnect from series enrichment service when leaving search page
     // seriesEnrichmentService.disconnect();
   }
@@ -131,6 +135,7 @@ class AddNewItemConnector extends Component {
       term,
       provider,
       isHardcoverConfigured,
+      metadataProviderConfig,
       ...otherProps
     } = this.props;
 
@@ -139,6 +144,7 @@ class AddNewItemConnector extends Component {
         term={term}
         provider={provider}
         isHardcoverConfigured={isHardcoverConfigured}
+        metadataProviderConfig={metadataProviderConfig}
         {...otherProps}
         onSearchChange={this.onSearchChange}
         onClearSearch={this.onClearSearch}
@@ -152,9 +158,11 @@ AddNewItemConnector.propTypes = {
   term: PropTypes.string,
   provider: PropTypes.string,
   isHardcoverConfigured: PropTypes.bool,
+  metadataProviderConfig: PropTypes.object,
   getSearchResults: PropTypes.func.isRequired,
   clearSearchResults: PropTypes.func.isRequired,
   fetchRootFolders: PropTypes.func.isRequired,
+  fetchMetadataProvider: PropTypes.func.isRequired,
   updateSeriesEnrichment: PropTypes.func.isRequired,
   push: PropTypes.func.isRequired
 };

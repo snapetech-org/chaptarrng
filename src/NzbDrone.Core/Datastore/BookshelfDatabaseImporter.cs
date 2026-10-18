@@ -6,6 +6,7 @@ using System.Linq;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NzbDrone.Core.MetadataSource.BookInfo;
 
 namespace NzbDrone.Core.Datastore
 {
@@ -1297,6 +1298,32 @@ namespace NzbDrone.Core.Datastore
 
             var prefix = normalized.Substring(0, separator).Trim().ToLowerInvariant();
             var id = normalized.Substring(separator + 1).Trim();
+
+            // BookshelfNG namespaces its primary metadata API IDs to distinguish
+            // those records from IDs returned by direct catalogs. Strip that
+            // wrapper before applying Chaptarr's canonical provider rules.
+            if (prefix is "metadata-api" or "metadata-api-author")
+            {
+                return NormalizeSourceId(id, entityType);
+            }
+
+            var additionalSource = prefix.EndsWith("-author", StringComparison.Ordinal)
+                ? prefix.Substring(0, prefix.Length - "-author".Length)
+                : prefix;
+            if (AdditionalMetadataSources.IsSupportedSource(additionalSource))
+            {
+                var providerId = AdditionalMetadataSources.CreateProviderId(prefix, id);
+                if (!string.IsNullOrWhiteSpace(providerId))
+                {
+                    return providerId;
+                }
+            }
+
+            if (prefix == "meta" && AdditionalMetadataSources.TryParseProviderId(normalized, out _, out _))
+            {
+                return normalized;
+            }
+
             if (id.Length == 0 || id.Contains(':'))
             {
                 throw new InvalidDataException($"BookshelfNG {entityType} provider ID '{normalized}' is malformed.");
@@ -1334,6 +1361,7 @@ namespace NzbDrone.Core.Datastore
             switch (entityType)
             {
                 case "Author":
+                    SetIfPresent(values, "AdditionalMetadataProviderId", prefix == "meta" ? canonicalId : null);
                     SetIfPresent(values, prefix switch
                     {
                         "gr" => "GoodreadsAuthorId",
@@ -1346,6 +1374,7 @@ namespace NzbDrone.Core.Datastore
                     }, canonicalId);
                     break;
                 case "Book":
+                    SetIfPresent(values, "AdditionalMetadataProviderId", prefix == "meta" ? canonicalId : null);
                     SetIfPresent(values, prefix switch
                     {
                         "gr" => "GoodreadsWorkId",
