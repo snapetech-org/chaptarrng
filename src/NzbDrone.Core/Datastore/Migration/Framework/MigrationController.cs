@@ -293,7 +293,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
 
                 if (postgresVersionTableMetaData != null &&
                     !string.Equals(
-                        runner.VersionLoader.GetVersionTableMetaData().SchemaName,
+                        scope.ServiceProvider.GetRequiredService<IVersionTableMetaData>().SchemaName,
                         defaultSchema,
                         StringComparison.Ordinal))
                 {
