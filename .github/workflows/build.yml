@@ -285,6 +285,15 @@ jobs:
         retention-days: 7
         if-no-files-found: error
 
+    - name: Diagnose Bookshelf M4B import assertions
+      if: failure() && github.event_name == 'pull_request' && github.event.pull_request.number == 129 && runner.os == 'Linux'
+      continue-on-error: true
+      run: >-
+        dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj
+        --configuration Release --no-restore --no-build
+        --filter "FullyQualifiedName~legacy_bookshelf_m4b_opt_in|FullyQualifiedName~successful_legacy_m4b_merge|FullyQualifiedName~legacy_m4b_merge_should_fall_back_when_a_track_duration_cannot_be_read"
+        --logger "console;verbosity=normal"
+
     # CSS Modules generation rewrites tracked declaration files. Build the UI
     # after exporting the receipt so every validation node fingerprints the
     # same committed checkout as the PostgreSQL migration node.
