@@ -741,10 +741,10 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         {
             if (AdditionalMetadataSources.TryParseProviderId(foreignAuthorId, out var canonicalProvider, out var canonicalId))
             {
-                var source = canonicalProvider.EndsWith("-author", StringComparison.OrdinalIgnoreCase)
+                var canonicalSource = canonicalProvider.EndsWith("-author", StringComparison.OrdinalIgnoreCase)
                     ? canonicalProvider.Substring(0, canonicalProvider.Length - "-author".Length)
                     : canonicalProvider;
-                foreignAuthorId = source + "-author:" + canonicalId;
+                foreignAuthorId = canonicalSource + "-author:" + canonicalId;
             }
 
             if (_openLibraryMetadataProxy.HandlesAuthorId(foreignAuthorId))
