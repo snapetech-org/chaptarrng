@@ -3199,7 +3199,8 @@ namespace Chaptarr.Core.Test.MediaFiles
             IM4bConversionService conversion,
             string destinationDir,
             bool transferFilesOnDisk = false,
-            IDiskProvider diskProvider = null)
+            IDiskProvider diskProvider = null,
+            IBookService bookService = null)
         {
             var mover = new StubMoveBookFiles
             {
@@ -3214,7 +3215,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 new StubMetadataTagService(),
                 new StubMediaInfoExtractor(),
                 Proxy<IAuthorService>(),
-                Proxy<IBookService>(),
+                bookService ?? Proxy<IBookService>(),
                 CreateEditionService(new List<Edition> { edition }),
                 Proxy<IRecycleBinProvider>(),
                 Proxy<IExtraService>(),
@@ -3795,7 +3796,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                     new StubMetadataTagService(),
                     new StubMediaInfoExtractor(),
                     Proxy<IAuthorService>(),
-                    Proxy<IBookService>(),
+                    CreateBookService(new List<Book> { book }).Service,
                     CreateEditionService(new List<Edition> { edition }),
                     Proxy<IRecycleBinProvider>(),
                     Proxy<IExtraService>(),
@@ -3872,7 +3873,8 @@ namespace Chaptarr.Core.Test.MediaFiles
                     conversion,
                     destinationDir,
                     transferFilesOnDisk: true,
-                    diskProvider: CreateDiskProviderProxy());
+                    diskProvider: CreateDiskProviderProxy(),
+                    bookService: CreateBookService(new List<Book> { book }).Service);
 
                 var results = service.Import(
                     decisions,
@@ -3925,7 +3927,8 @@ namespace Chaptarr.Core.Test.MediaFiles
                     conversion,
                     destinationDir,
                     transferFilesOnDisk: true,
-                    diskProvider: CreateDiskProviderProxy());
+                    diskProvider: CreateDiskProviderProxy(),
+                    bookService: CreateBookService(new List<Book> { book }).Service);
 
                 var results = service.Import(
                     decisions,
