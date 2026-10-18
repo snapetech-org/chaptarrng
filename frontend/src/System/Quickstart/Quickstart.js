@@ -1,13 +1,16 @@
 import PropTypes from 'prop-types';
+import { HTML5toTouch } from 'rdndmb-html5-to-touch';
 import React from 'react';
 import { DndProvider } from 'react-dnd-multi-backend';
-import { HTML5toTouch } from 'rdndmb-html5-to-touch';
 import PageContent from 'Components/Page/PageContent';
 import PageContentBody from 'Components/Page/PageContentBody';
 import PageToolbar from 'Components/Page/Toolbar/PageToolbar';
 import PageToolbarButton from 'Components/Page/Toolbar/PageToolbarButton';
 import PageToolbarSection from 'Components/Page/Toolbar/PageToolbarSection';
 import { align, icons } from 'Helpers/Props';
+import {
+  getRootFolderMediaTypes,
+  getRootFolderMediaTypeScope } from 'Helpers/Props/folderTypes';
 import translate from 'Utilities/String/translate';
 import QuickstartAudioBookShelfSection from './QuickstartAudioBookShelfSection';
 import QuickstartCustomFormatsSection from './QuickstartCustomFormatsSection';
@@ -19,33 +22,68 @@ import QuickstartMatchingSection from './QuickstartMatchingSection';
 import QuickstartMetadataProfilesSection from './QuickstartMetadataProfilesSection';
 import QuickstartProxySection from './QuickstartProxySection';
 import QuickstartQualityProfilesSection from './QuickstartQualityProfilesSection';
+import quickstartReadiness from './quickstartReadiness.cjs';
 import QuickstartRootFoldersSection from './QuickstartRootFoldersSection';
 import QuickstartSection, { QuickstartSectionProvider, useQuickstartSections } from './QuickstartSection';
 import QuickstartSettingsBackupSection from './QuickstartSettingsBackupSection';
 import styles from './Quickstart.css';
+import summaryStyles from './QuickstartSetupSummary.css';
+
+const {
+  getQuickstartConnectionVisibility,
+  getQuickstartReadiness
+} = quickstartReadiness;
 
 const QUICKSTART_SECTION_KEYS = [
-  'optionalConnections',
+  'rootFolders',
   'indexers',
   'downloadClients',
   'customFormats',
   'qualityProfiles',
   'metadataProfiles',
   'matching',
-  'rootFolders',
+  'optionalConnections',
   'settingsBackup'
 ];
 
-const GUIDED_QUICKSTART_SECTION_KEYS = QUICKSTART_SECTION_KEYS.filter((sectionKey) => sectionKey !== 'settingsBackup');
-const GUIDED_REVIEW_SECTION_KEYS = [
-  'optionalConnections',
+const GUIDED_CORE_SECTION_KEYS = [
+  'rootFolders',
   'indexers',
-  'downloadClients',
-  'customFormats',
-  'qualityProfiles',
-  'metadataProfiles',
-  'matching'
+  'downloadClients'
 ];
+const GUIDED_REVIEW_SECTION_KEYS = ['indexers', 'downloadClients'];
+
+function getRootFolderScopeTranslationKey(scope) {
+  if (scope === 'ebook') {
+    return 'QuickstartRootFolderScopeEbook';
+  }
+
+  if (scope === 'audiobook') {
+    return 'QuickstartRootFolderScopeAudio';
+  }
+
+  if (scope === 'both') {
+    return 'QuickstartRootFolderScopeBoth';
+  }
+
+  return 'QuickstartSetupFormatUnknown';
+}
+
+function getSetupItemName(item) {
+  return item.name || item.implementationName || item.implementation;
+}
+
+function getSetupListSummary(isLoaded, items, emptyTranslationKey) {
+  if (!isLoaded) {
+    return translate('QuickstartSetupSummaryLoading');
+  }
+
+  if (items.length) {
+    return items.join(', ');
+  }
+
+  return translate(emptyTranslationKey);
+}
 
 function QuickstartSectionToolbar(props) {
   const {
@@ -122,28 +160,112 @@ function Quickstart(props) {
   } = props;
 
   const interactions = quickstartState?.interactions || {};
-  const isRootFoldersLoaded = rootFoldersState?.isPopulated === true;
-  const enabledIndexers = (indexersState?.items || []).filter((indexer) => indexer.enable);
-  const enabledDownloadClients = (downloadClientsState?.items || []).filter((downloadClient) => downloadClient.enable);
-  const hasRootFolders = (rootFoldersState?.items || []).length > 0;
-  const showGuidance = isRootFoldersLoaded && !hasRootFolders;
-  const guidedCompletedSectionKeys = [
-    interactions.optionalConnections && 'optionalConnections',
-    (enabledIndexers.length > 0 || interactions.indexers) && 'indexers',
-    (enabledDownloadClients.length > 0 || interactions.downloadClients) && 'downloadClients',
-    interactions.customFormats && 'customFormats',
-    interactions.qualityProfiles && 'qualityProfiles',
-    interactions.metadataProfiles && 'metadataProfiles',
-    interactions.matching && 'matching',
-    hasRootFolders && 'rootFolders'
+  const [rootFolderScope, setRootFolderScope] = React.useState(null);
+  const [connectionTestFailures, setConnectionTestFailures] = React.useState({});
+  const configuredRootFormats =
+    (rootFoldersState?.items || []).flatMap(getRootFolderMediaTypes);
+  const {
+    showAudioBookShelf,
+    showGrimmory,
+    showHardcover
+  } = getQuickstartConnectionVisibility({
+    configuredRootFormats,
+    selectedRootScope: rootFolderScope,
+    audioBookShelfConfigured: !!audioBookShelfNotification,
+    grimmoryConfigured: !!grimmoryNotification,
+    hardcoverConfigured: isHardcoverConfigured === true
+  });
+  const connectionTestFailed =
+    (showAudioBookShelf && connectionTestFailures.audioBookShelf) ||
+    (showGrimmory && connectionTestFailures.grimmory) ||
+    (showHardcover && connectionTestFailures.hardcover);
+  const optionalConnectionReviewItems = [];
+
+  if (showAudioBookShelf) {
+    optionalConnectionReviewItems.push(audioBookShelfNotification);
+  }
+  if (showGrimmory) {
+    optionalConnectionReviewItems.push(grimmoryNotification);
+  }
+  if (showHardcover) {
+    optionalConnectionReviewItems.push(isHardcoverConfigured === true);
+  }
+  const optionalConnectionsComplete = !!interactions.optionalConnections ||
+    (optionalConnectionReviewItems.length > 0 &&
+      optionalConnectionReviewItems.every(Boolean) &&
+      !connectionTestFailed);
+
+  const recordConnectionTestResult = (name, hasFailed) => {
+    setConnectionTestFailures((current) => ({
+      ...current,
+      [name]: hasFailed
+    }));
+  };
+
+  const getConnectionStatus = (name, configured, wasTested) => {
+    if (connectionTestFailures[name]) {
+      return translate('QuickstartConnectionFailed');
+    }
+    if (wasTested) {
+      return translate('QuickstartConnectionTested');
+    }
+    if (configured) {
+      return translate('QuickstartConnectionConfigured');
+    }
+    if (interactions.optionalConnections) {
+      return translate('QuickstartConnectionSkipped');
+    }
+    return translate('QuickstartConnectionNotConfigured');
+  };
+  const enabledIndexers = (indexersState.items || []).filter((indexer) => indexer.enable);
+  const enabledDownloadClients = (downloadClientsState.items || []).filter((client) => client.enable);
+  const setupRoots = rootFoldersState.items || [];
+  const configuredFormats = new Set(setupRoots.flatMap(getRootFolderMediaTypes));
+  const formatLabels = [];
+
+  if (configuredFormats.has('ebook')) {
+    formatLabels.push(translate('QuickstartRootFolderScopeEbook'));
+  }
+  if (configuredFormats.has('audiobook')) {
+    formatLabels.push(translate('QuickstartRootFolderScopeAudio'));
+  }
+  const formatSummary = getSetupListSummary(
+    rootFoldersState.isPopulated,
+    formatLabels,
+    'QuickstartSetupNoFormats'
+  );
+
+  const optionalConnectionStatuses = [
+    showAudioBookShelf && {
+      name: 'AudioBookShelf',
+      status: getConnectionStatus('audioBookShelf', !!audioBookShelfNotification, !!interactions.audioBookShelf)
+    },
+    showGrimmory && {
+      name: 'Grimmory',
+      status: getConnectionStatus('grimmory', !!grimmoryNotification, !!interactions.grimmory)
+    },
+    showHardcover && {
+      name: 'Hardcover',
+      status: getConnectionStatus('hardcover', isHardcoverConfigured === true, !!interactions.hardcover)
+    }
   ].filter(Boolean);
+  const {
+    showGuidance,
+    guidedInitialSectionKey,
+    guidedCompletedSectionKeys
+  } = getQuickstartReadiness({
+    indexersState,
+    downloadClientsState,
+    rootFoldersState,
+    interactions
+  });
 
   return (
     <PageContent title={translate('Quickstart')}>
       <QuickstartSectionProvider
         sectionKeys={QUICKSTART_SECTION_KEYS}
-        guidedSectionKeys={GUIDED_QUICKSTART_SECTION_KEYS}
-        guidedInitialSectionKey="optionalConnections"
+        guidedSectionKeys={GUIDED_CORE_SECTION_KEYS}
+        guidedInitialSectionKey={guidedInitialSectionKey}
         guidedReviewSectionKeys={GUIDED_REVIEW_SECTION_KEYS}
         guidedCompletedSectionKeys={guidedCompletedSectionKeys}
         isGuidedMode={showGuidance}
@@ -153,53 +275,12 @@ function Quickstart(props) {
 
         <PageContentBody>
           <DndProvider options={HTML5toTouch}>
-            <QuickstartSection
-              sectionKey="optionalConnections"
-              title={translate('QuickstartOptionalConnectionsTitle')}
-              isComplete={!!interactions.optionalConnections}
-            >
-              <div className={styles.optionalConnectionsRow}>
-                <div className={styles.optionalConnectionItem}>
-                  <QuickstartAudioBookShelfSection
-                    hasActiveAudioBookShelf={hasActiveAudioBookShelf}
-                    audioBookShelfNotification={audioBookShelfNotification}
-                    notificationsState={notificationsState}
-                    fetchNotificationSchema={fetchNotificationSchema}
-                    selectNotificationSchema={selectNotificationSchema}
-                    markSectionInteracted={markSectionInteracted}
-                    fetchNotifications={fetchNotifications}
-                    compact={true}
-                  />
-                </div>
-
-                <div className={styles.optionalConnectionItem}>
-                  <QuickstartGrimmorySection
-                    hasActiveGrimmory={hasActiveGrimmory}
-                    grimmoryNotification={grimmoryNotification}
-                    notificationsState={notificationsState}
-                    fetchNotificationSchema={fetchNotificationSchema}
-                    selectNotificationSchema={selectNotificationSchema}
-                    markSectionInteracted={markSectionInteracted}
-                    fetchNotifications={fetchNotifications}
-                    compact={true}
-                  />
-                </div>
-
-                <div className={styles.optionalConnectionItem}>
-                  <QuickstartHardcoverSection
-                    compact={true}
-                    isHardcoverConfigured={isHardcoverConfigured}
-                    hardcoverUsername={hardcoverUsername}
-                    hardcoverAvatarUrl={hardcoverAvatarUrl}
-                    markSectionInteracted={markSectionInteracted}
-                  />
-                </div>
-
-                <div className={styles.optionalConnectionItem}>
-                  <QuickstartProxySection proxies={proxies} />
-                </div>
-              </div>
-            </QuickstartSection>
+            <QuickstartRootFoldersSection
+              rootFolderScope={rootFolderScope}
+              onRootFolderScopeChange={setRootFolderScope}
+              markSectionInteracted={markSectionInteracted}
+              quickstartState={quickstartState}
+            />
 
             <QuickstartMAMSection
               mamIndexer={mamIndexer}
@@ -251,12 +332,187 @@ function Quickstart(props) {
               quickstartState={quickstartState}
             />
 
-            <QuickstartRootFoldersSection
-              markSectionInteracted={markSectionInteracted}
-              quickstartState={quickstartState}
-            />
+            <QuickstartSection
+              sectionKey="optionalConnections"
+              title={translate('QuickstartOptionalConnectionsTitle')}
+              isComplete={optionalConnectionsComplete}
+            >
+              <div className={styles.sectionDescription}>
+                {translate('QuickstartOptionalConnectionsDescription')}
+              </div>
+              <div className={styles.optionalConnectionsRow}>
+                {showAudioBookShelf && (
+                  <div className={styles.optionalConnectionItem}>
+                    <QuickstartAudioBookShelfSection
+                      hasActiveAudioBookShelf={hasActiveAudioBookShelf}
+                      audioBookShelfNotification={audioBookShelfNotification}
+                      notificationsState={notificationsState}
+                      fetchNotificationSchema={fetchNotificationSchema}
+                      selectNotificationSchema={selectNotificationSchema}
+                      markSectionInteracted={markSectionInteracted}
+                      fetchNotifications={fetchNotifications}
+                      wasSkipped={!!interactions.optionalConnections}
+                      onConnectionTestSuccess={() => recordConnectionTestResult('audioBookShelf', false)}
+                      onConnectionTestFailure={() => recordConnectionTestResult('audioBookShelf', true)}
+                      compact={true}
+                    />
+                  </div>
+                )}
+
+                {showGrimmory && (
+                  <div className={styles.optionalConnectionItem}>
+                    <QuickstartGrimmorySection
+                      hasActiveGrimmory={hasActiveGrimmory}
+                      grimmoryNotification={grimmoryNotification}
+                      notificationsState={notificationsState}
+                      fetchNotificationSchema={fetchNotificationSchema}
+                      selectNotificationSchema={selectNotificationSchema}
+                      markSectionInteracted={markSectionInteracted}
+                      fetchNotifications={fetchNotifications}
+                      wasSkipped={!!interactions.optionalConnections}
+                      onConnectionTestSuccess={() => recordConnectionTestResult('grimmory', false)}
+                      onConnectionTestFailure={() => recordConnectionTestResult('grimmory', true)}
+                      compact={true}
+                    />
+                  </div>
+                )}
+
+                {showHardcover && (
+                  <div className={styles.optionalConnectionItem}>
+                    <QuickstartHardcoverSection
+                      compact={true}
+                      isHardcoverConfigured={isHardcoverConfigured}
+                      hardcoverUsername={hardcoverUsername}
+                      hardcoverAvatarUrl={hardcoverAvatarUrl}
+                      markSectionInteracted={markSectionInteracted}
+                      wasSkipped={!!interactions.optionalConnections}
+                      onConnectionTestSuccess={() => recordConnectionTestResult('hardcover', false)}
+                      onConnectionTestFailure={() => recordConnectionTestResult('hardcover', true)}
+                    />
+                  </div>
+                )}
+
+                <div className={styles.optionalConnectionItem}>
+                  <QuickstartProxySection proxies={proxies} />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className={styles.quickstartSkipOptionalButton}
+                onClick={() => markSectionInteracted({ section: 'optionalConnections' })}
+              >
+                {translate('QuickstartSkipOptionalConnections')}
+              </button>
+            </QuickstartSection>
 
             <QuickstartSettingsBackupSection />
+
+            <section
+              className={summaryStyles.quickstartSetupSummary}
+              aria-labelledby="quickstart-setup-summary-title"
+            >
+              <h2
+                id="quickstart-setup-summary-title"
+                className={summaryStyles.quickstartSetupSummaryTitle}
+              >
+                {translate('QuickstartSetupSummaryTitle')}
+              </h2>
+
+              <div className={summaryStyles.quickstartSetupSummaryGrid}>
+                <div className={summaryStyles.quickstartSetupSummaryGroup}>
+                  <h3>{translate('QuickstartSetupFormats')}</h3>
+                  <p>{formatSummary}</p>
+                  {rootFolderScope && (
+                    <p className={summaryStyles.quickstartSetupSummaryHelp}>
+                      {translate('QuickstartSetupDraftScope', {
+                        scope: translate(getRootFolderScopeTranslationKey(rootFolderScope))
+                      })}
+                    </p>
+                  )}
+                </div>
+
+                <div className={summaryStyles.quickstartSetupSummaryGroup}>
+                  <h3>{translate('QuickstartSetupRoots')}</h3>
+                  {!rootFoldersState.isPopulated && (
+                    <p>{translate('QuickstartSetupSummaryLoading')}</p>
+                  )}
+                  {rootFoldersState.isPopulated && !setupRoots.length && (
+                    <p>{translate('QuickstartSetupNoRoots')}</p>
+                  )}
+                  {rootFoldersState.isPopulated && setupRoots.length > 0 && (
+                    <ul className={summaryStyles.quickstartSetupSummaryList}>
+                      {setupRoots.map((root) => {
+                        const scope = getRootFolderMediaTypeScope(root);
+                        const scopeLabel = translate(getRootFolderScopeTranslationKey(scope));
+
+                        return (
+                          <li key={root.id}>
+                            <span>{root.name || root.path}</span>
+                            {root.name && root.path && <span>{' — '}{root.path}</span>}
+                            <span className={summaryStyles.quickstartSetupSummaryHelp}> ({scopeLabel})</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                <div className={summaryStyles.quickstartSetupSummaryGroup}>
+                  <h3>{translate('QuickstartSetupIndexers')}</h3>
+                  {!indexersState.isPopulated && (
+                    <p>{translate('QuickstartSetupSummaryLoading')}</p>
+                  )}
+                  {indexersState.isPopulated && !enabledIndexers.length && (
+                    <p>{translate('QuickstartSetupNoEnabledIndexers')}</p>
+                  )}
+                  {indexersState.isPopulated && enabledIndexers.length > 0 && (
+                    <ul className={summaryStyles.quickstartSetupSummaryList}>
+                      {enabledIndexers.map((indexer) => (
+                        <li key={indexer.id}>
+                          {getSetupItemName(indexer)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className={summaryStyles.quickstartSetupSummaryGroup}>
+                  <h3>{translate('QuickstartSetupDownloadClients')}</h3>
+                  {!downloadClientsState.isPopulated && (
+                    <p>{translate('QuickstartSetupSummaryLoading')}</p>
+                  )}
+                  {downloadClientsState.isPopulated && !enabledDownloadClients.length && (
+                    <p>{translate('QuickstartSetupNoEnabledDownloadClients')}</p>
+                  )}
+                  {downloadClientsState.isPopulated && enabledDownloadClients.length > 0 && (
+                    <ul className={summaryStyles.quickstartSetupSummaryList}>
+                      {enabledDownloadClients.map((client) => (
+                        <li key={client.id}>
+                          {getSetupItemName(client)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className={summaryStyles.quickstartSetupSummaryGroup}>
+                  <h3>{translate('QuickstartSetupOptionalConnections')}</h3>
+                  {optionalConnectionStatuses.length ? (
+                    <ul className={summaryStyles.quickstartSetupSummaryList}>
+                      {optionalConnectionStatuses.map((connection) => (
+                        <li key={connection.name}>
+                          <span>{connection.name}</span>
+                          <span className={summaryStyles.quickstartSetupSummaryStatus}>{' — '}{connection.status}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>{translate('QuickstartSetupNoOptionalConnections')}</p>
+                  )}
+                </div>
+              </div>
+            </section>
           </DndProvider>
         </PageContentBody>
       </QuickstartSectionProvider>
