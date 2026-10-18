@@ -49,6 +49,7 @@ namespace NzbDrone.Core.MediaFiles
         public int TargetQualityId { get; set; }
         public string TargetQualityName { get; set; }
         public int AudioBitrate { get; set; }
+        public int AudioSampleRate { get; set; }
         public int AudioChannels { get; set; }
         public bool NoConversion { get; set; }
         public long ExpectedSourceDurationTicks { get; set; }
@@ -70,6 +71,7 @@ namespace NzbDrone.Core.MediaFiles
         public int TargetQualityId { get; set; }
         public string TargetQualityName { get; set; }
         public int AudioBitrate { get; set; }
+        public int AudioSampleRate { get; set; }
         public int AudioChannels { get; set; }
         public bool NoConversion { get; set; }
         public string TagMode { get; set; }

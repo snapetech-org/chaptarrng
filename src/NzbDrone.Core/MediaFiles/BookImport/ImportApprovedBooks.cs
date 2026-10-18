@@ -461,7 +461,21 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 _logger.Debug("[UPGRADE-CHECK] replaceExisting={0}, existingFiles.Any()={1}, filesToReplace={2}, UpgradeAllowed={3}",
                     replaceExisting, existingFiles.Any(), filesToReplace, qualityProfile?.UpgradeAllowed ?? true);
 
-                    var conversionResult = ConvertBookGroupIfNeeded(bookDecisions, book, author, downloadClientItem, replaceExisting, hasRejectedTrackedDownloadDecisions, downloadForced, cancellationToken);
+                    var hasRejectedLegacyM4bTracks = downloadClientItem != null &&
+                                                     BookshelfM4bCompatibility.HasRejectedTracksForEdition(
+                                                         decisions,
+                                                         book.Id,
+                                                         bookDecisions.FirstOrDefault()?.Item?.Edition?.Id ?? 0);
+                    var conversionResult = ConvertBookGroupIfNeeded(
+                        bookDecisions,
+                        book,
+                        author,
+                        downloadClientItem,
+                        replaceExisting,
+                        hasRejectedTrackedDownloadDecisions,
+                        hasRejectedLegacyM4bTracks,
+                        downloadForced,
+                        cancellationToken);
                     conversionWorkFolder = conversionResult.WorkFolder;
                     if (!conversionResult.Failed && conversionResult.Decisions == null)
                     {
@@ -789,13 +803,17 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     __bookGroupSw.ElapsedMilliseconds);
 
                     var retainConversionWorkFolder = false;
+                    var generatedResults = bookImportResults
+                        .Where(r => r.ImportDecision?.Item?.IsGeneratedConversion == true)
+                        .ToList();
+                    var generatedImport = generatedResults.FirstOrDefault(r => r.Result == ImportResultType.Imported);
+                    if (generatedImport != null)
+                    {
+                        RemoveLegacyM4bSourcesAfterImport(generatedImport.ImportDecision?.Item, importMode, downloadClientItem);
+                    }
+
                     if (conversionDownloadId.IsNotNullOrWhiteSpace())
                     {
-                        var generatedResults = bookImportResults
-                            .Where(r => r.ImportDecision?.Item?.IsGeneratedConversion == true)
-                            .ToList();
-                        var generatedImport = generatedResults.FirstOrDefault(r => r.Result == ImportResultType.Imported);
-
                         if (generatedImport != null)
                         {
                             _conversionTrackingService?.Progress(conversionDownloadId, 100m, "Converted M4B imported");
@@ -2137,6 +2155,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 DownloadClientItem downloadClientItem,
                 bool replaceExisting,
                 bool hasRejectedTrackedDownloadDecisions,
+                bool hasRejectedLegacyM4bTracks,
                 bool downloadForced,
                 CancellationToken cancellationToken)
             {
@@ -2161,19 +2180,32 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
                 var sourceQuality = first?.Quality?.Quality ?? Qualities.Quality.Unknown;
                 var qualityProfile = author.GetQualityProfileForQuality(sourceQuality);
-                var targetQuality = QualityConversionHelper.GetPlannedConversionTarget(author, first?.Quality);
-                var mergeMultiPartM4b = QualityConversionHelper.ShouldMergeMultiPartM4b(qualityProfile, first?.Quality);
+                var legacyM4bMerge = BookshelfM4bCompatibility.ShouldUseLegacyMerge(
+                    downloadClientItem != null && BookshelfM4bCompatibility.LegacyMergeEnabled,
+                    qualityProfile,
+                    bookDecisions,
+                    hasRejectedLegacyM4bTracks);
+                var targetQuality = legacyM4bMerge
+                    ? Qualities.Quality.M4B
+                    : QualityConversionHelper.GetPlannedConversionTarget(author, first?.Quality);
+                var mergeMultiPartM4b = legacyM4bMerge || QualityConversionHelper.ShouldMergeMultiPartM4b(qualityProfile, first?.Quality);
                 if (targetQuality != Qualities.Quality.M4B && !mergeMultiPartM4b)
                 {
                     return (bookDecisions, null, false, null);
                 }
 
-                var inputFiles = bookDecisions
+                var conversionSourceDecisions = legacyM4bMerge
+                    ? BookshelfM4bCompatibility.OrderTracks(bookDecisions)
+                    : bookDecisions;
+                var inputFiles = conversionSourceDecisions
                     .Select(d => d.Item?.Path)
                     .Where(p => !string.IsNullOrWhiteSpace(p))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(p => p, NaturalSortComparer.Instance)
                     .ToArray();
+                if (!legacyM4bMerge)
+                {
+                    inputFiles = inputFiles.OrderBy(p => p, NaturalSortComparer.Instance).ToArray();
+                }
 
                 if (inputFiles.Length == 0)
                 {
@@ -2186,7 +2218,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     return (bookDecisions, null, false, null);
                 }
 
-                var isOptionalMerge = targetQuality != Qualities.Quality.M4B;
+                var isOptionalMerge = legacyM4bMerge || targetQuality != Qualities.Quality.M4B;
 
                 (List<ImportDecision<LocalBook>> Decisions, string WorkFolder, bool Failed, string Error) ConversionFailed(string error, string fallbackCleanupRoot = null)
                 {
@@ -2275,18 +2307,36 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         _configService?.AudiobookConversionTagMode);
                     var sourceDuration = GetAudiobookConversionSourceDuration(inputFiles);
                     TryApplyMatchedEditionChapters(tagOptions, first.Edition, sourceDuration, book);
-                    var noConversion = isOptionalMerge && TryApplyMultiPartM4bMergeSources(tagOptions, bookDecisions, inputFiles, book);
+                    var fallbackChapterTitles = legacyM4bMerge
+                        ? BookshelfM4bCompatibility.GetChapterTitles(conversionSourceDecisions)
+                        : null;
+                    var mergeSourceResult = isOptionalMerge
+                        ? TryApplyMultiPartM4bMergeSources(
+                            tagOptions,
+                            conversionSourceDecisions,
+                            inputFiles,
+                            book,
+                            fallbackChapterTitles,
+                            forceReencode: legacyM4bMerge)
+                        : (NoConversion: false, CanProceed: true);
+                    if (!mergeSourceResult.CanProceed)
+                    {
+                        return ConversionFailed("Could not read a duration for every audiobook track.");
+                    }
+
+                    var noConversion = mergeSourceResult.NoConversion;
                     TryApplySourceSidecarCover(tagOptions, inputFiles, book, first.Edition);
                     ApplyConversionCoverFallback(tagOptions, book, first.Edition);
-                    ConversionTagProposalBuilder.RefreshManifestJson(tagOptions, bookDecisions.Select(d => d.Item));
-                    var audioBitrate = GetAudiobookConversionBitrate(inputFiles);
-                    var audioChannels = GetAudiobookConversionAudioChannels();
+                    ConversionTagProposalBuilder.RefreshManifestJson(tagOptions, conversionSourceDecisions.Select(d => d.Item));
+                    var audioBitrate = GetAudiobookConversionBitrate(inputFiles, legacyM4bMerge);
+                    var audioChannels = GetAudiobookConversionAudioChannels(legacyM4bMerge);
+                    var audioSampleRate = legacyM4bMerge ? 44100 : 0;
 
-                    if (TryFindReusableConversionArtifact(workRoot, inputFiles, convertedQuality, tagOptions, audioBitrate, audioChannels, noConversion, out var reusableOutputPath))
+                    if (TryFindReusableConversionArtifact(workRoot, inputFiles, convertedQuality, tagOptions, audioBitrate, audioSampleRate, audioChannels, noConversion, out var reusableOutputPath))
                     {
                         _conversionTrackingService?.Start(conversionId, Qualities.Quality.M4B.Id, Qualities.Quality.M4B.Name, "Using retained M4B");
                         _conversionTrackingService?.Progress(conversionId, 97m, "Using retained M4B");
-                        var reusableLocalBook = CreateGeneratedConversionLocalBook(first, bookDecisions, reusableOutputPath, inputFiles, convertedQuality, tagOptions);
+                        var reusableLocalBook = CreateGeneratedConversionLocalBook(first, bookDecisions, reusableOutputPath, inputFiles, convertedQuality, tagOptions, legacyM4bMerge);
                         _logger.Info("[CONVERSION] Reusing retained converted M4B for '{0}': {1}", book.Title, reusableOutputPath);
                         return (new List<ImportDecision<LocalBook>> { new ImportDecision<LocalBook>(reusableLocalBook) }, workRoot, false, null);
                     }
@@ -2360,6 +2410,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                             TargetQualityId = convertedQuality.Quality.Id,
                             TargetQualityName = convertedQuality.Quality.Name,
                             AudioBitrate = audioBitrate,
+                            AudioSampleRate = audioSampleRate,
                             AudioChannels = audioChannels,
                             NoConversion = noConversion,
                             ExpectedSourceDurationTicks = sourceDuration.Ticks,
@@ -2390,6 +2441,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         {
                             TempDirectory = workFolder,
                             AudioBitrate = audioBitrate,
+                            AudioSampleRate = audioSampleRate,
                             AudioChannels = audioChannels,
                             NoConversion = noConversion,
                             ExpectedSourceDuration = sourceDuration,
@@ -2423,7 +2475,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
                         if (result.RetainOutputOnFailure && DestinationFileExists(outputPath))
                         {
-                            WriteConversionArtifactManifest(workFolder, outputPath, inputFiles, convertedQuality, tagOptions, audioBitrate, audioChannels, noConversion);
+                            WriteConversionArtifactManifest(workFolder, outputPath, inputFiles, convertedQuality, tagOptions, audioBitrate, audioSampleRate, audioChannels, noConversion);
                             error = $"{error} Converted file retained at: {outputPath}";
                         }
 
@@ -2439,8 +2491,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
                     _conversionTrackingService?.Progress(conversionId, 97m, "Finalizing M4B");
 
-                    WriteConversionArtifactManifest(workFolder, outputPath, inputFiles, convertedQuality, tagOptions, audioBitrate, audioChannels, noConversion);
-                    var convertedLocalBook = CreateGeneratedConversionLocalBook(first, bookDecisions, outputPath, inputFiles, convertedQuality, tagOptions);
+                    WriteConversionArtifactManifest(workFolder, outputPath, inputFiles, convertedQuality, tagOptions, audioBitrate, audioSampleRate, audioChannels, noConversion);
+                    var convertedLocalBook = CreateGeneratedConversionLocalBook(first, bookDecisions, outputPath, inputFiles, convertedQuality, tagOptions, legacyM4bMerge);
 
                     _conversionTrackingService?.Progress(conversionId, 98m, "Preparing import");
                     _logger.Info("[CONVERSION] Converted {0} source files to M4B for '{1}': {2}", inputFiles.Length, book.Title, outputPath);
@@ -2520,25 +2572,45 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 _logger.Debug("[CONVERSION] Matched provider chapters will be stamped into converted M4B for '{0}' ({1} chapters).", book?.Title ?? edition.Title, chapters.Count);
             }
 
-            private bool TryApplyMultiPartM4bMergeSources(ConversionTagOptions tagOptions, IEnumerable<ImportDecision<LocalBook>> bookDecisions, string[] inputFiles, Book book)
+            private (bool NoConversion, bool CanProceed) TryApplyMultiPartM4bMergeSources(
+                ConversionTagOptions tagOptions,
+                IEnumerable<ImportDecision<LocalBook>> bookDecisions,
+                string[] inputFiles,
+                Book book,
+                string[] fallbackChapterTitles = null,
+                bool forceReencode = false)
             {
                 ConversionTagProposalBuilder.ApplyMultiPartMergeTags(tagOptions, bookDecisions.Select(d => d.Item));
 
-                var mergeSources = _m4bConversionService.ProbeMergeSources(inputFiles);
+                var mergeSources = fallbackChapterTitles == null
+                    ? _m4bConversionService.ProbeMergeSources(inputFiles)
+                    : _m4bConversionService.ProbeMergeSources(inputFiles, fallbackChapterTitles);
+                if (forceReencode && !mergeSources.HasCompleteDurations)
+                {
+                    return (false, false);
+                }
+
                 if (tagOptions != null && mergeSources.ChaptersTxtContent.IsNotNullOrWhiteSpace())
                 {
                     tagOptions.ChaptersTxtContent = mergeSources.ChaptersTxtContent;
                     tagOptions.ProviderChapterCount = null;
                     tagOptions.UseFilenamesAsChapters = false;
-                    _logger.Debug("[CONVERSION] Embedded chapters from {0} parts will be carried into the merged M4B for '{1}' ({2} chapters).", inputFiles.Length, book?.Title, mergeSources.EmbeddedChapterCount);
+                    if (mergeSources.EmbeddedChapterCount > 0)
+                    {
+                        _logger.Debug("[CONVERSION] Embedded chapters from {0} parts will be carried into the merged M4B for '{1}' ({2} chapters).", inputFiles.Length, book?.Title, mergeSources.EmbeddedChapterCount);
+                    }
+                    else
+                    {
+                        _logger.Debug("[CONVERSION] Track titles will be written as chapters in the merged M4B for '{0}'.", book?.Title);
+                    }
                 }
 
-                if (!mergeSources.CanCopyAudio)
+                if (forceReencode || !mergeSources.CanCopyAudio)
                 {
-                    _logger.Debug("[CONVERSION] Multi-part M4B parts for '{0}' differ in codec, sample rate or channels; re-encoding while merging.", book?.Title);
+                    _logger.Debug("[CONVERSION] Multi-part M4B parts for '{0}' will be re-encoded while merging.", book?.Title);
                 }
 
-                return mergeSources.CanCopyAudio;
+                return (!forceReencode && mergeSources.CanCopyAudio, true);
             }
 
             private void ApplyConversionCoverFallback(ConversionTagOptions tagOptions, Book book, Edition matchedEdition)
@@ -3009,16 +3081,51 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 _eventAggregator.PublishEvent(new BookFileConversionFailedEvent(source, inputFiles, book, author, targetQuality, outputPath, error, downloadClientItem));
             }
 
-            private LocalBook CreateGeneratedConversionLocalBook(LocalBook first, IReadOnlyList<ImportDecision<LocalBook>> bookDecisions, string outputPath, string[] inputFiles, QualityModel convertedQuality, ConversionTagOptions tagOptions)
+            private LocalBook CreateGeneratedConversionLocalBook(
+                LocalBook first,
+                IReadOnlyList<ImportDecision<LocalBook>> bookDecisions,
+                string outputPath,
+                string[] inputFiles,
+                QualityModel convertedQuality,
+                ConversionTagOptions tagOptions,
+                bool removeSourcesAfterImport)
             {
                 var outputInfo = new FileInfo(outputPath);
                 var localBook = PlanGeneratedConversionLocalBook(first, outputPath, inputFiles, convertedQuality);
                 localBook.Size = outputInfo.Length;
                 localBook.Modified = outputInfo.LastWriteTimeUtc;
+                localBook.RemoveGeneratedConversionSourcesAfterImport = removeSourcesAfterImport;
                 localBook.GeneratedConversionOutputSize = outputInfo.Length;
                 localBook.GeneratedConversionTagMode = tagOptions.Mode;
                 localBook.GeneratedConversionTagManifestJson = tagOptions.ManifestJson;
                 return localBook;
+            }
+
+            private void RemoveLegacyM4bSourcesAfterImport(LocalBook importedBook, ImportMode importMode, DownloadClientItem downloadClientItem)
+            {
+                if (importedBook?.RemoveGeneratedConversionSourcesAfterImport != true ||
+                    importMode == ImportMode.Copy ||
+                    (importMode == ImportMode.Auto && downloadClientItem != null && !downloadClientItem.CanMoveFiles))
+                {
+                    return;
+                }
+
+                foreach (var sourcePath in importedBook.GeneratedConversionSourcePaths?.Where(path => path.IsNotNullOrWhiteSpace()).Distinct(StringComparer.OrdinalIgnoreCase)
+                             ?? Enumerable.Empty<string>())
+                {
+                    try
+                    {
+                        if (_diskProvider?.FileExists(sourcePath) == true)
+                        {
+                            _diskProvider.DeleteFile(sourcePath);
+                            _logger.Debug("[CONVERSION] Removed source track after importing merged M4B: {0}", sourcePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warn(ex, "[CONVERSION] Merged M4B was imported, but source track {0} could not be removed", sourcePath);
+                    }
+                }
             }
 
             // The converted file as import will see it, before it exists. The destination check
@@ -3148,7 +3255,16 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 return existingEdition?.BookId == book.Id;
             }
 
-            private bool TryFindReusableConversionArtifact(string workRoot, string[] inputFiles, QualityModel targetQuality, ConversionTagOptions tagOptions, int audioBitrate, int audioChannels, bool noConversion, out string outputPath)
+            private bool TryFindReusableConversionArtifact(
+                string workRoot,
+                string[] inputFiles,
+                QualityModel targetQuality,
+                ConversionTagOptions tagOptions,
+                int audioBitrate,
+                int audioSampleRate,
+                int audioChannels,
+                bool noConversion,
+                out string outputPath)
             {
                 outputPath = null;
                 if (workRoot.IsNullOrWhiteSpace() || !Directory.Exists(workRoot))
@@ -3185,6 +3301,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         if (manifest == null ||
                             manifest.TargetQualityId != targetQuality?.Quality?.Id ||
                             manifest.AudioBitrate != audioBitrate ||
+                            manifest.AudioSampleRate != audioSampleRate ||
                             manifest.AudioChannels != audioChannels ||
                             manifest.NoConversion != noConversion ||
                             !string.Equals(manifest.TagSignature, tagSignature, StringComparison.Ordinal) ||
@@ -3219,7 +3336,16 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 return false;
             }
 
-            private void WriteConversionArtifactManifest(string workFolder, string outputPath, string[] inputFiles, QualityModel targetQuality, ConversionTagOptions tagOptions, int audioBitrate, int audioChannels, bool noConversion)
+            private void WriteConversionArtifactManifest(
+                string workFolder,
+                string outputPath,
+                string[] inputFiles,
+                QualityModel targetQuality,
+                ConversionTagOptions tagOptions,
+                int audioBitrate,
+                int audioSampleRate,
+                int audioChannels,
+                bool noConversion)
             {
                 try
                 {
@@ -3236,6 +3362,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         TargetQualityId = targetQuality?.Quality?.Id ?? 0,
                         TargetQualityName = targetQuality?.Quality?.Name,
                         AudioBitrate = audioBitrate,
+                        AudioSampleRate = audioSampleRate,
                         AudioChannels = audioChannels,
                         NoConversion = noConversion,
                         TagMode = tagOptions?.Mode,
@@ -3350,8 +3477,20 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 }
             }
 
-            private int GetAudiobookConversionBitrate(string[] inputFiles)
+            private int GetAudiobookConversionBitrate(string[] inputFiles, bool legacyM4bMerge)
             {
+                if (legacyM4bMerge)
+                {
+                    var bitrateValue = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.BitrateEnvironmentVariable);
+                    var legacyBitrate = BookshelfM4bCompatibility.ParseBitrateKbps(bitrateValue, out var invalid);
+                    if (invalid)
+                    {
+                        _logger.Warn("Ignoring invalid {0} value; using {1} kbps", BookshelfM4bCompatibility.BitrateEnvironmentVariable, BookshelfM4bCompatibility.DefaultBitrateKbps);
+                    }
+
+                    return legacyBitrate;
+                }
+
                 var maxBitrate = Clamp(_configService?.AudiobookConversionMaxBitrate ?? 64, 16, 320);
                 if (_configService?.AudiobookConversionNoUpscale != true)
                 {
@@ -3402,8 +3541,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 return Clamp(_configService?.AudiobookConversionConcurrentConversions ?? 1, 1, 16);
             }
 
-            private int GetAudiobookConversionAudioChannels()
+            private int GetAudiobookConversionAudioChannels(bool legacyM4bMerge)
             {
+                if (legacyM4bMerge)
+                {
+                    return 2;
+                }
+
                 return string.Equals(_configService?.AudiobookConversionAudioChannels, "mono", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
             }
 

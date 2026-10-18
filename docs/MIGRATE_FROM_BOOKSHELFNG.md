@@ -57,6 +57,14 @@ enabled; ChaptarrNG honors that choice only when the archived appdata also
 contains the old diagnostics module marker. See the
 [optional diagnostics guide](OPTIONAL_DIAGNOSTICS.md).
 
+BookshelfNG's `BOOKSHELF_M4B_MERGE`,
+`BOOKSHELF_M4B_AAC_BITRATE_KBPS`, and `BOOKSHELF_FFMPEG_PATH` variables are
+also outside database conversion. The published ChaptarrNG `v0.9.977` does not
+honor them. A source-only compatibility candidate is under review; keep
+`BOOKSHELF_M4B_MERGE` unset until a tested ChaptarrNG build with that support
+is available. In that candidate, the FFmpeg path must name the executable
+`ffmpeg` (`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.
+
 The conversion reuses the existing data directory and `config.xml`, preserving
 the saved HTTP port, URL base, API key, and server settings. Keep the same media
 and download mounts and host/container port mappings. This preserves existing

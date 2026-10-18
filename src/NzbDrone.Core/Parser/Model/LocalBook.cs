@@ -33,6 +33,7 @@ namespace NzbDrone.Core.Parser.Model
         public bool ExistingFile { get; set; }
         public bool IsGeneratedConversion { get; set; }
         public List<string> GeneratedConversionSourcePaths { get; set; }
+        public bool RemoveGeneratedConversionSourcesAfterImport { get; set; }
         public string GeneratedConversionOutputPath { get; set; }
         public long? GeneratedConversionOutputSize { get; set; }
         public QualityModel GeneratedConversionSourceQuality { get; set; }
