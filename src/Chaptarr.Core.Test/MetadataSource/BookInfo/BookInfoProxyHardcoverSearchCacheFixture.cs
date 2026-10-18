@@ -10,9 +10,9 @@ using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Exceptions;
 using NzbDrone.Core.MetadataSource;
 using NzbDrone.Core.MetadataSource.BookInfo;
-using NzbDrone.Core.MetadataSource.Goodreads;
 using NzbDrone.Core.MetadataSource.Hardcover;
 using Moq;
+using SearchJsonResource = NzbDrone.Core.MetadataSource.Goodreads.SearchJsonResource;
 
 namespace Chaptarr.Core.Test.MetadataSource.BookInfo
 {

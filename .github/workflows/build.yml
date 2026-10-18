@@ -380,12 +380,16 @@ jobs:
     - name: Restore dependencies
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-      run: dotnet restore src/Chaptarr.NoTests.sln
+      run: |
+        dotnet restore src/Chaptarr.NoTests.sln
+        dotnet restore src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj
 
     - name: Build (migrations smoke)
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-      run: dotnet build src/Chaptarr.NoTests.sln --configuration Release --no-restore
+      run: |
+        dotnet build src/Chaptarr.NoTests.sln --configuration Release --no-restore
+        dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore -p:UseSharedCompilation=false
 
     - name: Smoke - migrate up on fresh PostgreSQL
       id: validation
