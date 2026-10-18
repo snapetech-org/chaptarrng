@@ -233,6 +233,27 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_reject_an_invalid_legacy_threshold_even_when_an_explicit_mode_exists()
+        {
+            AddConfigValue("bookimportminimummatchpercent", "100");
+            AddConfigValue("bookmatchingstrictness", "strict");
+            var sourceBeforeConversion = File.ReadAllBytes(_sourcePath);
+
+            var exception = Assert.Throws<InvalidDataException>(() =>
+                new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                    _sourceConnectionString,
+                    new MigrationContext(MigrationType.Main),
+                    DatabaseType.SQLite));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain("integer from 50 through 99"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBeforeConversion));
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
         public void should_reject_an_out_of_range_legacy_match_threshold_without_changing_the_source()
         {
             AddConfigValue("bookimportminimummatchpercent", "100");

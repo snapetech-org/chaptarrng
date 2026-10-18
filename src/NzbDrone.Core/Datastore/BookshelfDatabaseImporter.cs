@@ -1175,6 +1175,21 @@ namespace NzbDrone.Core.Datastore
             var existingStrictnessValue = strictnessRows.SingleOrDefault() is { } strictnessRow
                 ? GetString(strictnessRow, "Value")
                 : null;
+            int? legacyPercent = null;
+            BookMatchingStrictness? legacyMappedStrictness = null;
+
+            if (legacyRows.Count == 1)
+            {
+                var rawPercent = GetString(legacyRows[0], "Value");
+                if (!int.TryParse(rawPercent, NumberStyles.Integer, CultureInfo.InvariantCulture, out var percent) ||
+                    !BookshelfMatchSettingMigration.TryMapMinimumMatchPercent(percent, out var mappedStrictness))
+                {
+                    throw new InvalidDataException("BookshelfNG BookImportMinimumMatchPercent must be an integer from 50 through 99; conversion stopped before promotion.");
+                }
+
+                legacyPercent = percent;
+                legacyMappedStrictness = mappedStrictness;
+            }
 
             if (!string.IsNullOrWhiteSpace(existingStrictnessValue))
             {
@@ -1188,16 +1203,9 @@ namespace NzbDrone.Core.Datastore
                     ? $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' was preserved"
                     : $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' took precedence; the BookshelfNG numeric match threshold was retained unchanged for audit because the matching algorithms differ";
             }
-            else if (legacyRows.Count == 1)
+            else if (legacyPercent.HasValue && legacyMappedStrictness.HasValue)
             {
-                var rawPercent = GetString(legacyRows[0], "Value");
-                if (!int.TryParse(rawPercent, NumberStyles.Integer, CultureInfo.InvariantCulture, out var percent) ||
-                    !BookshelfMatchSettingMigration.TryMapMinimumMatchPercent(percent, out var mappedStrictness))
-                {
-                    throw new InvalidDataException("BookshelfNG BookImportMinimumMatchPercent must be an integer from 50 through 99; conversion stopped before promotion.");
-                }
-
-                var mappedValue = mappedStrictness.ToString().ToLowerInvariant();
+                var mappedValue = legacyMappedStrictness.Value.ToString().ToLowerInvariant();
                 if (strictnessRows.Count == 1)
                 {
                     strictnessRows[0]["Value"] = mappedValue;
@@ -1211,7 +1219,7 @@ namespace NzbDrone.Core.Datastore
                     });
                 }
 
-                matchSettingDisposition = $"BookshelfNG BookImportMinimumMatchPercent={percent.ToString(CultureInfo.InvariantCulture)} was mapped to ChaptarrNG BookMatchingStrictness='{mappedValue}'; the original numeric row was retained. This is a documented closest-policy translation, not an equivalent implementation of BookshelfNG's fuzzy parser and weighted import-distance algorithms.";
+                matchSettingDisposition = $"BookshelfNG BookImportMinimumMatchPercent={legacyPercent.Value.ToString(CultureInfo.InvariantCulture)} was mapped to ChaptarrNG BookMatchingStrictness='{mappedValue}'; the original numeric row was retained. This is a documented closest-policy translation, not an equivalent implementation of BookshelfNG's fuzzy parser and weighted import-distance algorithms.";
             }
 
             var targetColumns = GetColumns(target, "Config");
