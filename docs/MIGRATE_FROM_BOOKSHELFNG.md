@@ -17,7 +17,13 @@
 > `0.4.21.71` release first. A later source-only fix passed hosted checks on
 > `main`, but is not in `.977` and is not available to operators during the
 > release freeze.
-Run [39132760214](https://github.com/snapetech-org/chaptarrng/actions/runs/39132760214) on `9c051d3d` reported NUnit source line 162 in `should_preview_convert_and_restore_a_current_bookshelf_postgres_schema`. The fixture seeded `BookImportMinimumMatchPercent` with its original casing but checked lowercase, a fixture expectation error. ChaptarrNG commit [b5bd9527](https://github.com/snapetech-org/chaptarrng/commit/b5bd9527) corrects the three retained-config checks. Exact-head run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892) on commit [`43bc6363`](https://github.com/snapetech-org/chaptarrng/commit/43bc6363) passed Linux, macOS, and Windows platform validation and all 4 synthetic PostgreSQL migration cases, including normal-startup conversion with backup retention. The candidate remains unsupported for operator data. PostgreSQL remains unsupported in published releases.
+> Draft ChaptarrNG PR #131's migration code was tested at snapshot
+> [`0d31609b`](https://github.com/snapetech-org/chaptarrng/commit/0d31609b).
+> Run [39142709701](https://github.com/snapetech-org/chaptarrng/actions/runs/39142709701)
+> passed Linux, macOS, and Windows builds, PostgreSQL migration, and
+> release-note checks. Analysis, dependency, and security checks passed. The
+> candidate remains unsupported for operator data.
+> PostgreSQL source conversion remains unsupported in published releases.
 > Pinned images,
 > native packages, and updater channels need separate upgrade steps; database
 > conversion alone does not update an installation channel.
@@ -89,8 +95,10 @@ The current ChaptarrNG work-branch candidate also maps a saved `HardcoverAuth`
 database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
 precedence, and the original BookshelfNG database remains available in the
 rollback backup. That native provider and token mapping are not in published
-`v0.9.977`. Exact-head hosted checks passed, but representative converted-data
-acceptance remains open; see the [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
+`v0.9.977`. On migration code snapshot `0d31609b`, Linux, macOS, and Windows
+builds, PostgreSQL migration, analysis, dependency, security, and release-note
+checks passed. Representative converted-data acceptance remains open; see the [PostgreSQL candidate
+notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 Do not treat this as supported migration behavior during the release freeze.
 
 BookshelfNG's `BOOKSHELF_M4B_MERGE`,

@@ -6,6 +6,7 @@
 > operator data until representative populated-data review and rollback
 > acceptance are complete and a release explicitly supports it. The hosted
 > synthetic PostgreSQL fixture passed 4/4 cases on run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892).
+> Draft PR #131's migration code was tested at snapshot [`0d31609b`](https://github.com/snapetech-org/chaptarrng/commit/0d31609b). Run [39142709701](https://github.com/snapetech-org/chaptarrng/actions/runs/39142709701) passed Linux, macOS, and Windows builds, PostgreSQL migration, and release-note checks. Analysis, dependency, and security checks passed.
 
 ## Candidate behavior
 
@@ -71,7 +72,7 @@ stored beside `readarr.db` in the ChaptarrNG app data directory.
 
 ## Acceptance still required
 
-- Hosted synthetic PostgreSQL conversion and rollback fixture: passed 4/4 cases on run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892). Representative operator data and rollback acceptance remain open.
+- Hosted synthetic PostgreSQL conversion and rollback fixture: passed 4/4 cases on earlier run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892); the migration code snapshot [0d31609b](https://github.com/snapetech-org/chaptarrng/commit/0d31609b) also passed the PostgreSQL job on [39142709701](https://github.com/snapetech-org/chaptarrng/actions/runs/39142709701). Representative operator data and rollback acceptance remain open.
 - Verify PostgreSQL BookshelfNG migrations and ChaptarrNG runtime startup in
   the supported deployment, including sequence allocation after import.
 - Rehearse a representative operator database and review every ambiguous media

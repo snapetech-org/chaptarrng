@@ -55,13 +55,28 @@ preview left its database bytes unchanged, and apply plus rollback passed
 integrity and foreign-key checks while retaining both source and converted
 backups. Ambiguous format choices remain for human review; this does not
 validate older schemas, PostgreSQL, installers, or full feature parity.
-The retirement branch adds a PostgreSQL converter candidate for one migration-158 source schema. Run [39132760214](https://github.com/snapetech-org/chaptarrng/actions/runs/39132760214) on `9c051d3d` reported NUnit source line 162 in `should_preview_convert_and_restore_a_current_bookshelf_postgres_schema`. The fixture seeded `BookImportMinimumMatchPercent` with its original casing but checked lowercase, a fixture expectation error. ChaptarrNG commit [b5bd9527](https://github.com/snapetech-org/chaptarrng/commit/b5bd9527) corrects all three retained-config checks. Exact-head run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892) on commit [`43bc6363`](https://github.com/snapetech-org/chaptarrng/commit/43bc6363) passed Linux, macOS, and Windows platform validation and the release-note contract; all 4 synthetic PostgreSQL migration cases also passed, including normal-startup conversion with backup retention. This does not establish operator-data acceptance. PostgreSQL and multiple-source-database migration remain unsupported for operators pending representative populated-data conversion and rollback, parity, and channel acceptance. The release and distribution workflows require `CHAPTARRNG_RELEASE_READY=true`; it is unset, and no release or legacy bridge may be published during the freeze. See the
+The migration code in draft PR #131 was tested at snapshot
+[`0d31609b`](https://github.com/snapetech-org/chaptarrng/commit/0d31609b).
+It includes older SQLite support, one migration-158 PostgreSQL source schema,
+native Hardcover identity handling, and BookOrbit Book Dock as a separately
+configured destination. Exact-head run
+[39142709701](https://github.com/snapetech-org/chaptarrng/actions/runs/39142709701)
+passed Linux, macOS, and Windows builds, PostgreSQL migration, and release-note
+checks. Analysis, dependency, and security checks have passed. These are
+candidate checks only: older schemas, PostgreSQL, multiple
+populated databases, and representative operator-data conversion remain
+unsupported. Keep the release freeze in place. See the
 [PostgreSQL migration candidate notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
+
 Books with no recorded format remain in both ChaptarrNG catalogs, unmonitored,
 with a private review file so the operator can classify them after startup.
 The helper does not copy external media/download folders, translate every
 external setting, or update pinned images and package channels. The legacy
-bridge remains disabled. ChaptarrNG PR #127 merged to `main` as `b3089a39`,
+bridge remains disabled. The local AUR BookshelfNG-identity `.977` candidate
+passed a network-disabled pacman upgrade from the public `.71` package and
+downgrade back, preserving an environment override and synthetic data canary.
+Systemd was not running, and package-level database conversion/restore remain
+untested; see the [package status](packaging/README.md). ChaptarrNG PR #127 merged to `main` as `b3089a39`,
 adding selectable supplemental catalogs, per-field metadata preferences, and
 exact-identity recovery for unmapped files. It is not in public `v0.9.977`;
 provider/settings behavior on converted operator data still needs acceptance.
@@ -89,7 +104,7 @@ also uses that mode to interpret bare numeric source IDs as Hardcover IDs;
 otherwise bare numeric IDs retain the Goodreads interpretation. Keep
 `HARDCOVER=true` (and do not set `HARDCOVER_NATIVE=false`) in the preview and
 migration environment when the BookshelfNG source used native Hardcover mode.
-This provider and its migration-time identity handling are source-only and are not in `.977`. Exact-head run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892) on commit [`43bc6363`](https://github.com/snapetech-org/chaptarrng/commit/43bc6363) passed all four synthetic PostgreSQL migration cases and the Linux, macOS, and Windows checks. Representative converted-data acceptance remains open. Do not use the candidate during the release freeze.
+This provider and its migration-time identity handling are source-only and are not in `.977`. PR #131 remains draft; on code snapshot `0d31609b`, PostgreSQL, Linux, macOS, and Windows checks passed. Representative converted-data acceptance remains open. Do not use the candidate during the release freeze.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 
