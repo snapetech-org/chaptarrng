@@ -1,7 +1,10 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Release status (2026-10-18).** Use the standard ChaptarrNG `v0.9.977` release or a
-> later stable version for the published BookshelfNG `0.4.21.71` release. That
+> **Release status (2026-10-18).** ChaptarrNG `v0.9.977` is still the latest
+> published release. Releases are frozen until the full BookshelfNG retirement
+> acceptance gates close; a source change or version bump is not a release.
+> Use the standard ChaptarrNG `v0.9.977` release for the published BookshelfNG
+> `0.4.21.71` release. That
 > BookshelfNG release includes an optional source-side helper that creates a
 > full appdata archive before invoking ChaptarrNG's preview, apply, and
 > rollback commands; see the
@@ -9,9 +12,11 @@
 > For an immutable Docker deployment, use
 > `ghcr.io/snapetech-org/chaptarrng:0.9.977`.
 > The release bundles the BookshelfNG source migration chain and supports the
-> exact migration-158 SQLite schema. Its current pre-upgrade check rejects
-> schemas before migration 14; upgrade those installations to the final
-> BookshelfNG `0.4.21.71` release first, or wait for the follow-up fix.
+> exact migration-158 SQLite schema. Its pre-upgrade check rejects schemas
+> before migration 14; upgrade those installations to the final BookshelfNG
+> `0.4.21.71` release first. A later source-only fix passed hosted checks on
+> `main`, but is not in `.977` and is not available to operators during the
+> release freeze.
 > Pinned images,
 > native packages, and updater channels need separate upgrade steps; database
 > conversion alone does not update an installation channel.
@@ -28,22 +33,23 @@ databases and bundles the BookshelfNG source migration chain. It upgrades a
 recognized source schema on a disposable copy, keeps the untouched snapshot
 for rollback, then stages a fresh native Chaptarr database, accounts for every
 source-table row, checks SQLite integrity and foreign keys, and promotes only
-after validation. The current release rejects schemas before migration 14
-because its table guard sees the pre-rename `Blacklist` name. A version-aware
-allowlist fix and authentic migration-1 rollback fixture are on a review branch;
-hosted validation and publication remain pending. Populated synthetic v22
-coverage exercises conversion and rollback, but it is not a real-data rehearsal
-or proof for every historical BookshelfNG release. Unknown or newer schemas
-fail closed without changing the source.
+after validation. The public `.977` release rejects schemas before migration
+14 because its table guard sees the pre-rename `Blacklist` name. PR #126 merged
+a version-aware allowlist fix and synthetic migration-1 rollback fixture into
+`main`; hosted Linux, macOS, Windows, and PostgreSQL migration checks passed.
+That source fix is not in `.977`. Populated synthetic v22 coverage exercises
+conversion and rollback, but it is not a real-data rehearsal or proof for every
+historical BookshelfNG release. Unknown or newer schemas fail closed without
+changing the source.
 
 If BookshelfNG is older than `0.4.21.71`, update it to that final release and
 let BookshelfNG finish its own database upgrade before switching applications.
 This brings the source to migration 158, which the published `.977` converter
 accepts. For databases earlier than migration 14 that cannot be upgraded with
-BookshelfNG, wait until the ChaptarrNG follow-up release publishes the
-version-aware table fix. Stop the service after it reaches an idle state, then
-run ChaptarrNG preview. PostgreSQL BookshelfNG databases are not supported by
-this converter.
+BookshelfNG, do not switch to ChaptarrNG `.977`; the source fix is unreleased
+while the retirement freeze is active. Stop the service after it reaches an
+idle state, then run ChaptarrNG preview. PostgreSQL BookshelfNG databases are
+not supported by this converter.
 
 Environment variables are outside the database conversion. Preserve the
 BookshelfNG diagnostics variables if that optional module was explicitly
@@ -343,10 +349,11 @@ Rollback preview and apply passed. The restored BookshelfNG database remained at
 ## Limits and update channels
 
 The published `v0.9.977` converter accepts SQLite databases at BookshelfNG
-migration 158 and bundles the source migration chain. Its table guard currently
-rejects versions before migration 14 because the chain has not yet renamed
-`Blacklist` to `Blocklist`; a fix is under hosted validation for a follow-up
-release. Populated synthetic v22 coverage exercises conversion, rollback, and
+migration 158 and bundles the source migration chain. Its table guard rejects
+versions before migration 14 because the chain has not yet renamed `Blacklist`
+to `Blocklist`. PR #126 merged the version-aware fix into `main`, with hosted
+migration checks passing, but the fix is not in the published release.
+Populated synthetic v22 coverage exercises conversion, rollback, and
 non-mutating preview. This does not establish older-schema behavior on real
 operator data or PostgreSQL source conversion. Supported databases can be
 migrated by normal ChaptarrNG startup or with the explicit preview/apply
@@ -354,8 +361,9 @@ commands above. Both paths retain the untouched BookshelfNG source backup;
 rollback is available while the original backup remains intact.
 
 The public ChaptarrNG `v0.9.977` release contains the converter and standalone
-archives. Its version-1-to-13 table-alias fix is pending hosted validation and
-publication in a follow-up release. Current package and image-channel status is tracked in
+archives. The version-1-to-13 table-alias fix passed hosted validation on
+`main` but remains unavailable in the public release during the freeze.
+Current package and image-channel status is tracked in
 [`packaging/README.md`](../packaging/README.md). The migration bridge is
 disabled: existing BookshelfNG package IDs and mutable image aliases do not
 currently redirect to ChaptarrNG. Pinned tags, digests, offline installs, and
