@@ -263,7 +263,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             if (databaseType == DatabaseType.PostgreSQL)
             {
                 var defaultSchema = GetPostgresCurrentSchema(connectionString);
-                migrationServices.AddScoped<IConventionSet>(_ => new DefaultConventionSet(defaultSchema, null));
+                migrationServices.AddSingleton<IConventionSet>(new DefaultConventionSet(defaultSchema, null));
             }
 
             serviceProvider = migrationServices.BuildServiceProvider();
