@@ -215,7 +215,7 @@ namespace NzbDrone.Core.Datastore
             var sourceCount = CountRows(source, "QualityProfiles");
             var targetColumns = GetColumns(target, "QualityProfiles");
             var map = new Dictionary<(int SourceId, int MediaType), int>();
-            var nextId = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(Id), 0) + 1 FROM QualityProfiles;"), CultureInfo.InvariantCulture);
+            var nextId = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(\"Id\"), 0) + 1 FROM \"QualityProfiles\";"), CultureInfo.InvariantCulture);
 
             foreach (var row in ReadRows(source, "QualityProfiles"))
             {
@@ -486,7 +486,7 @@ namespace NzbDrone.Core.Datastore
             var sourceCount = CountRows(source, "Books");
             var targetColumns = GetColumns(target, "Books");
             var result = new Dictionary<int, BookMap>();
-            var nextId = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(Id), 0) + 1 FROM Books;"), CultureInfo.InvariantCulture);
+            var nextId = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(\"Id\"), 0) + 1 FROM \"Books\";"), CultureInfo.InvariantCulture);
 
             foreach (var row in ReadRows(source, "Books"))
             {
@@ -819,16 +819,16 @@ namespace NzbDrone.Core.Datastore
         private static void ReserveOrphanBookFileIds(DbConnection source, DbConnection target, DbTransaction transaction)
         {
             var maxOrphanValue = Scalar(source, @"
-                SELECT MAX(BookFileId)
+                SELECT MAX(""BookFileId"")
                   FROM (
-                        SELECT ExtraFiles.BookFileId
-                          FROM ExtraFiles
-                         WHERE NOT EXISTS (SELECT 1 FROM BookFiles WHERE BookFiles.Id = ExtraFiles.BookFileId)
+                        SELECT ""ExtraFiles"".""BookFileId""
+                          FROM ""ExtraFiles""
+                         WHERE NOT EXISTS (SELECT 1 FROM ""BookFiles"" WHERE ""BookFiles"".""Id"" = ""ExtraFiles"".""BookFileId"")
                         UNION ALL
-                        SELECT MetadataFiles.BookFileId
-                          FROM MetadataFiles
-                         WHERE MetadataFiles.BookFileId IS NOT NULL
-                           AND NOT EXISTS (SELECT 1 FROM BookFiles WHERE BookFiles.Id = MetadataFiles.BookFileId)
+                        SELECT ""MetadataFiles"".""BookFileId""
+                          FROM ""MetadataFiles""
+                         WHERE ""MetadataFiles"".""BookFileId"" IS NOT NULL
+                           AND NOT EXISTS (SELECT 1 FROM ""BookFiles"" WHERE ""BookFiles"".""Id"" = ""MetadataFiles"".""BookFileId"")
                   );");
             var maxOrphanId = maxOrphanValue == null || maxOrphanValue == DBNull.Value
                 ? 0
@@ -842,7 +842,7 @@ namespace NzbDrone.Core.Datastore
             {
                 using var sequence = target.CreateCommand();
                 sequence.Transaction = transaction;
-                sequence.CommandText = "SELECT pg_get_serial_sequence('BookFiles', 'Id');";
+                sequence.CommandText = "SELECT pg_get_serial_sequence('\"BookFiles\"', 'Id');";
                 var sequenceName = sequence.ExecuteScalar()?.ToString();
                 if (!string.IsNullOrWhiteSpace(sequenceName))
                 {
@@ -851,8 +851,8 @@ namespace NzbDrone.Core.Datastore
                     setSequence.CommandText = @"
                         SELECT setval(
                             @sequence::regclass,
-                            GREATEST(@orphanId, COALESCE((SELECT MAX(Id) FROM BookFiles), 1)),
-                            GREATEST(@orphanId, COALESCE((SELECT MAX(Id) FROM BookFiles), 0)) > 0);";
+                            GREATEST(@orphanId, COALESCE((SELECT MAX(""Id"") FROM ""BookFiles""), 1)),
+                            GREATEST(@orphanId, COALESCE((SELECT MAX(""Id"") FROM ""BookFiles""), 0)) > 0);";
                     AddParameter(setSequence, "@sequence", sequenceName);
                     AddParameter(setSequence, "@orphanId", maxOrphanId);
                     setSequence.ExecuteScalar();
@@ -960,7 +960,7 @@ namespace NzbDrone.Core.Datastore
         {
             var sourceCount = CountRows(source, "SeriesBookLink");
             var targetColumns = GetColumns(target, "SeriesBookLink");
-            var nextId = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(Id), 0) + 1 FROM SeriesBookLink;"), CultureInfo.InvariantCulture);
+            var nextId = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(\"Id\"), 0) + 1 FROM \"SeriesBookLink\";"), CultureInfo.InvariantCulture);
 
             foreach (var row in ReadRows(source, "SeriesBookLink"))
             {
@@ -997,10 +997,10 @@ namespace NzbDrone.Core.Datastore
             using var command = target.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = @"
-                INSERT INTO AuthorSeries (SeriesId, AuthorId)
-                SELECT DISTINCT links.SeriesId, books.AuthorId
-                  FROM SeriesBookLink links
-                  JOIN Books books ON books.Id = links.BookId;";
+                INSERT INTO ""AuthorSeries"" (""SeriesId"", ""AuthorId"")
+                SELECT DISTINCT links.""SeriesId"", books.""AuthorId""
+                  FROM ""SeriesBookLink"" links
+                  JOIN ""Books"" books ON books.""Id"" = links.""BookId"";";
             command.ExecuteNonQuery();
         }
 
@@ -1468,8 +1468,8 @@ namespace NzbDrone.Core.Datastore
             using var command = target.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = @"
-                INSERT INTO ProviderAliasIndex
-                    (EntityType, EntityId, Scope, Provider, NormalizedProviderId, CreatedAt, UpdatedAt)
+                INSERT INTO ""ProviderAliasIndex""
+                    (""EntityType"", ""EntityId"", ""Scope"", ""Provider"", ""NormalizedProviderId"", ""CreatedAt"", ""UpdatedAt"")
                 VALUES (@entityType, @entityId, @scope, @provider, @providerId, @createdAt, @createdAt)
                 ON CONFLICT DO NOTHING;";
             AddParameter(command, "@entityType", entityType);

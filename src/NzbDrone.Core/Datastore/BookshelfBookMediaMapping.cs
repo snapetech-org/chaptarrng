@@ -120,18 +120,18 @@ namespace NzbDrone.Core.Datastore
         {
             using var command = source.CreateCommand();
             command.CommandText = @"
-                SELECT b.Id,
-                       COALESCE(b.Title, ''),
-                       COALESCE(am.Name, ''),
-                       b.Monitored,
-                       COUNT(e.Id),
-                       COUNT(DISTINCT CASE WHEN e.Id IS NOT NULL THEN CASE WHEN COALESCE(e.IsEbook, FALSE) = TRUE THEN 1 ELSE 0 END END),
-                       SUM(CASE WHEN e.Monitored = TRUE THEN 1 ELSE 0 END)
-                FROM Books b
-                LEFT JOIN AuthorMetadata am ON am.Id = b.AuthorMetadataId
-                LEFT JOIN Editions e ON e.BookId = b.Id
-                GROUP BY b.Id
-                ORDER BY b.Id;";
+                SELECT b.""Id"",
+                       COALESCE(b.""Title"", ''),
+                       COALESCE(am.""Name"", ''),
+                       b.""Monitored"",
+                       COUNT(e.""Id""),
+                       COUNT(DISTINCT CASE WHEN e.""Id"" IS NOT NULL THEN CASE WHEN COALESCE(e.""IsEbook"", FALSE) = TRUE THEN 1 ELSE 0 END END),
+                       SUM(CASE WHEN e.""Monitored"" = TRUE THEN 1 ELSE 0 END)
+                FROM ""Books"" b
+                LEFT JOIN ""AuthorMetadata"" am ON am.""Id"" = b.""AuthorMetadataId""
+                LEFT JOIN ""Editions"" e ON e.""BookId"" = b.""Id""
+                GROUP BY b.""Id""
+                ORDER BY b.""Id"";";
 
             var result = new List<ReviewBook>();
             using var reader = command.ExecuteReader();
