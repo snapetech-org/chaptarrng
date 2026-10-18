@@ -82,7 +82,21 @@ end-to-end SeerrNG request creation, availability statistics, history,
 pending-import retry/cancel operations, unchanged production settings, or a
 real BookshelfNG library.
 
-This smoke is evidence for the earlier ChaptarrNG candidate head
-`1a0a1cf78b404fe86d7b266facd8e843e435d9b4`. The later migration-candidate run
-on `e4db2d46` did not rerun this SeerrNG harness, so this result should not be
-read as exact-head SeerrNG validation.
+On 2026-10-18, the same SeerrNG harness also passed against the Linux artifact
+from exact PR #131 head
+[`0434148898576e1b220392163f18096682385400`](https://github.com/snapetech-org/chaptarrng/commit/0434148898576e1b220392163f18096682385400),
+Actions run [39176823002](https://github.com/snapetech-org/chaptarrng/actions/runs/39176823002),
+with SeerrNG source commit `0b267d5261524a2b0c233f59da8327180045c39e`. The
+ChaptarrNG artifact reported version `0.9.978.0`. The run used a disposable,
+empty SQLite database and synthetic SeerrNG runtime configuration. SeerrNG's
+adapter read status, discovered the capability contract, and received the
+empty paged book library. The restricted key was denied `/config/host` and
+unrelated `/command`; the global key was accepted by `/config/host`.
+
+This current-head smoke validates API and key behavior with an empty library;
+it does not replace the earlier populated-fixture smoke above. Neither run
+exercises end-to-end SeerrNG request creation, availability statistics,
+history, pending-import retry/cancel operations, unchanged production
+settings, or a real BookshelfNG library. The earlier populated fixture used
+candidate head `1a0a1cf78b404fe86d7b266facd8e843e435d9b4`; the current-head
+smoke does not establish converted-data acceptance.
