@@ -382,6 +382,13 @@ test('NUnit JSON marker keeps only bounded diagnostic fields in PostgreSQL recei
 
 test('NUnit JSON marker rejects malformed totals and drops path-bearing test names', () => {
   assert.throws(() => parseNUnitSummaryMarker('VALIDATION_NUNIT_SUMMARY={"total":0}'), /invalid case counts/);
+  assert.throws(() => parseNUnitSummaryMarker(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify({
+    total: 2,
+    passed: 1,
+    failed: 0,
+    skipped: 0,
+    inconclusive: 0,
+  })}`), /invalid case counts/);
   assert.throws(() => parseNUnitSummaryMarker('VALIDATION_NUNIT_SUMMARY=null'), /not an object/);
   const summary = parseNUnitSummaryMarker(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify({
     total: 1,

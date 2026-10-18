@@ -534,7 +534,9 @@ export function parseNUnitSummaryMarker(output) {
   try { value = JSON.parse(marker); } catch { throw new Error('NUnit summary marker is invalid JSON'); }
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('NUnit summary marker is not an object');
   const counts = ['total', 'passed', 'failed', 'skipped', 'inconclusive'];
-  if (!counts.every((key) => Number.isSafeInteger(value[key]) && value[key] >= 0) || value.total < 1) {
+  if (!counts.every((key) => Number.isSafeInteger(value[key]) && value[key] >= 0) ||
+      value.total < 1 ||
+      counts.slice(1).reduce((sum, key) => sum + value[key], 0) !== value.total) {
     throw new Error('NUnit summary marker has invalid case counts');
   }
 
