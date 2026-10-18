@@ -41,11 +41,18 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
 
             protected override object Invoke(MethodInfo targetMethod, object[] args)
             {
+                if (targetMethod?.Name == "IsDefined")
+                {
+                    return false;
+                }
+
                 return targetMethod?.Name switch
                 {
                     "get_HardcoverEnabled" => HardcoverEnabled,
                     "get_HardcoverApiToken" => HardcoverApiToken,
                     "get_MetadataServerUrl" => "http://metadata",
+                    _ when targetMethod?.Name.StartsWith("get_", StringComparison.Ordinal) == true =>
+                        targetMethod.ReturnType.IsValueType ? Activator.CreateInstance(targetMethod.ReturnType) : null,
                     _ => throw new NotImplementedException($"Test proxy does not implement {targetMethod?.Name}")
                 };
             }

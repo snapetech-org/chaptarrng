@@ -36,7 +36,9 @@ ChaptarrNG also initializes new author format paths from configured defaults,
 a behavior released in `v0.9.974`; explicit roots and existing authors are
 left alone. The next version bump is not a release: publication is frozen
 until the BookshelfNG migration, rollback, feature-parity, and install-channel
-acceptance gates are closed. Read the
+acceptance gates are closed. The merged release and distribution workflows
+fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
+remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
 The source migration runs on a disposable copy and keeps the original database
@@ -48,19 +50,22 @@ be renamed by the embedded chain. The version-aware fix and authentic
 migration-1 fixture passed the hosted Linux, macOS, Windows, and PostgreSQL
 migration checks in PR #126 and are on `main`, but are not in public `.977`.
 No release will be cut until the full retirement acceptance gates close; the
-manual Release workflow now requires `CHAPTARRNG_RELEASE_READY=true`. This is
-not yet real-data evidence or proof for every historical release. PostgreSQL
+merged release and distribution workflows now require
+`CHAPTARRNG_RELEASE_READY=true`. This is not yet real-data evidence or proof for
+every historical release. PostgreSQL
 BookshelfNG databases and two populated source databases are not supported.
 Books with no recorded
 format are retained in both ChaptarrNG catalogs, unmonitored, with a private
 review file so the operator can classify them after startup. The helper does
 not copy external media/download folders, translate every external setting,
 or update pinned images and package channels. The legacy bridge remains
-disabled. This parity branch also carries an unpublished candidate port of
-BookshelfNG's selectable supplemental catalog sources and per-field metadata
-preferences; it is not in public `v0.9.977` and has not closed that parity
-gate. Full feature parity and several package-channel upgrades are still
-unverified.
+disabled. This parity branch also carries unpublished candidates for
+BookshelfNG's selectable supplemental catalogs, per-field metadata preferences,
+and exact-identity catalog recovery for unmapped files. None is in public
+`v0.9.977` or closes the parity gate. The converter preserves
+`BookImportMinimumMatchPercent`, but ChaptarrNG's different
+`BookMatchingStrictness` setting does not yet map that legacy threshold. Full
+feature parity and several package-channel upgrades remain unverified.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 

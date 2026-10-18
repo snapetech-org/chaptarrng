@@ -1,7 +1,7 @@
 # BookshelfNG retirement status
 
-**Reviewed:** 2026-10-18 after ChaptarrNG `v0.9.977` was published and PR #126
-closed the oldest-schema code and hosted-test gap. This page is the current
+**Reviewed:** 2026-10-18 after ChaptarrNG `v0.9.977` was published and PR #128
+merged the fail-closed release and distribution gates. This page is the current
 handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
@@ -18,8 +18,14 @@ detailed feature inventory remains in the
   PostgreSQL migration checks passed. This fix is source-only until a later
   ChaptarrNG release.
 - ChaptarrNG releases are frozen while retirement gates remain open. The
-  manual Release workflow requires `CHAPTARRNG_RELEASE_READY=true`; do not set
-  it until parity, migration/rollback, and channel acceptance are complete.
+  merged release and distribution workflows require
+  `CHAPTARRNG_RELEASE_READY=true`; this repository variable remains unset.
+  Do not set it until parity, migration/rollback, and channel acceptance are
+  complete. The current `main` version bump to `.978` is source-only.
+- PR #127 contains the selectable supplemental-catalog candidate and the
+  conservative cross-catalog unmapped-file fallback. It remains source-only;
+  it has not closed the feature, data, or channel acceptance gates and is not
+  available in `.977`.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
   setting. ChaptarrNG has equivalent new-author path initialization in
@@ -64,6 +70,15 @@ ChaptarrNG `.977` converted it on normal startup, retained the original database
 and restored it through rollback; the BookshelfNG image started again on port
 8787. This does not validate real user data or the Unraid Community Apps flow.
 
+BookshelfNG's `BookImportMinimumMatchPercent` setting (default 70, valid range
+50–99) affects fuzzy title parsing and import acceptance. The converter copies
+the saved `Config` row, but ChaptarrNG uses `BookMatchingStrictness` with
+different matching semantics and currently ignores that legacy numeric key.
+There is no verified value-by-value mapping. Preserve this as an explicit
+settings-parity blocker until a tested migration mapping or maintainer-approved
+retirement decision exists; a copied database value does not prove behavior
+carries over.
+
 For a source earlier than migration 14, first update BookshelfNG to its final
 `0.4.21.71` release so it can bring the database to migration 158. The `.977`
 converter does not include the later `main` fix, and no follow-up release is
@@ -104,6 +119,9 @@ authorized while these gates remain open. The remaining work is:
 
 1. Close each BookshelfNG feature row with behavioral and converted-data
    evidence, or record an explicit maintainer decision to retire that behavior.
+   This includes the legacy numeric matching threshold; the current
+   cross-catalog fallback remains an unreleased candidate and needs identifier,
+   exact-name, ambiguity, and pending-import acceptance evidence.
 2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
    passes; validate older-schema support on representative operator data,
    then validate

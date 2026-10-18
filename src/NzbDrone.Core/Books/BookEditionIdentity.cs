@@ -597,7 +597,21 @@ namespace NzbDrone.Core.Books
         {
             if (foreignEditionId?.StartsWith("meta:", StringComparison.OrdinalIgnoreCase) == true)
             {
-                AddCanonicalRehomeToken(tokens, foreignEditionId, "meta");
+                try
+                {
+                    // Supplemental IDs are opaque base64url payloads. A trailing
+                    // "-ebook" or "-audiobook" can be part of the payload, so do
+                    // not strip the media suffix used by the other provider IDs.
+                    var normalized = ProviderIdHelper.Canonicalize(foreignEditionId, "meta");
+                    if (!string.IsNullOrWhiteSpace(normalized))
+                    {
+                        tokens.Add(normalized);
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                }
+
                 return;
             }
 

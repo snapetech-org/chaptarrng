@@ -12,8 +12,8 @@ using NzbDrone.Core.Datastore;
 using NzbDrone.Core.MediaFiles.BookImport;
 using NzbDrone.Core.MediaFiles.BookImport.Manual;
 using NzbDrone.Core.MediaFiles.BookImport.Services;
-using NzbDrone.Core.MetadataSource;
 using NzbDrone.Core.Messaging.Commands;
+using NzbDrone.Core.MetadataSource;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.RootFolders;
 
@@ -34,6 +34,7 @@ namespace NzbDrone.Core.MediaFiles.Commands
         private readonly IPendingAuthorImportService _pendingAuthorImportService;
         private readonly IRootFolderService _rootFolderService;
         private readonly IAuthorService _authorService;
+        private readonly ISearchForNewBook _catalogSearch;
         private readonly Logger _logger;
 
         public RetryUnmappedMatchCommandHandler(
@@ -50,6 +51,7 @@ namespace NzbDrone.Core.MediaFiles.Commands
             IPendingAuthorImportService pendingAuthorImportService,
             IRootFolderService rootFolderService,
             IAuthorService authorService,
+            ISearchForNewBook catalogSearch,
             Logger logger)
         {
             _mediaFileService = mediaFileService;
@@ -65,6 +67,7 @@ namespace NzbDrone.Core.MediaFiles.Commands
             _pendingAuthorImportService = pendingAuthorImportService;
             _rootFolderService = rootFolderService;
             _authorService = authorService;
+            _catalogSearch = catalogSearch;
             _logger = logger;
         }
 
@@ -148,6 +151,7 @@ namespace NzbDrone.Core.MediaFiles.Commands
                 .Where(unmatched => unmatched?.File?.Path != null && byPath.ContainsKey(unmatched.File.Path) && !matchedPaths.Contains(unmatched.File.Path))
                 .ToList();
 
+            var catalogSuggestions = AddCatalogSearchSuggestions(finalUnmatched);
             var existingAuthorImported = RematchExistingSuggestedAuthors(finalUnmatched, byPath, matchedPaths, alreadyLinkedPaths, applyFailedPaths);
             serverImported += existingAuthorImported;
             finalUnmatched = finalUnmatched
@@ -157,14 +161,20 @@ namespace NzbDrone.Core.MediaFiles.Commands
             MarkUnmatchedAttempts(finalUnmatched, byPath);
             var queuedAuthors = QueueSuggestedAuthorImports(finalUnmatched, byPath);
 
-            _logger.Info("[UNMAPPED-RETRY] Retry match complete: localImported={0}, serverImported={1}, alreadyLinked={2}, unmatched={3}, applyFailed={4}, queuedAuthors={5}, skipped={6}",
+            _logger.Info("[UNMAPPED-RETRY] Retry match complete: localImported={0}, serverImported={1}, catalogSuggestions={2}, alreadyLinked={3}, unmatched={4}, applyFailed={5}, queuedAuthors={6}, skipped={7}",
                 localImported,
                 serverImported,
+                catalogSuggestions,
                 alreadyLinkedPaths.Count,
                 finalUnmatched.Count,
                 applyFailedPaths.Count,
                 queuedAuthors,
                 skipped);
+        }
+
+        private int AddCatalogSearchSuggestions(IReadOnlyCollection<UnmatchedFile> unmatchedFiles)
+        {
+            return UnmappedCatalogSuggestionHelper.AddSuggestions(_catalogSearch, _logger, unmatchedFiles);
         }
 
         private DiscoveredFileWithMetadata BuildDiscoveredFile(BookFile file)
@@ -913,7 +923,8 @@ namespace NzbDrone.Core.MediaFiles.Commands
 
         private static IEnumerable<string> GetSpecificBookProviderIds(AuthorSuggestion suggestion)
         {
-            var normalized = NormalizeProviderId(suggestion?.BookProviderId, "hc");
+            var normalized = NormalizeProviderId(suggestion?.BookProviderId, null) ??
+                NormalizeProviderId(suggestion?.BookProviderId, "hc");
             if (!string.IsNullOrWhiteSpace(normalized))
             {
                 yield return normalized;
