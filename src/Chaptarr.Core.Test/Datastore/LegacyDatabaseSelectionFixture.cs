@@ -49,6 +49,16 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_ignore_an_empty_legacy_file_when_a_populated_sibling_exists()
+        {
+            File.WriteAllBytes(Path.Combine(_directory, "readarr.db"), Array.Empty<byte>());
+            var audioDatabasePath = Path.Combine(_directory, "audioarr.db");
+            CreateBookshelfDatabase(audioDatabasePath);
+
+            Assert.That(ResolveDatabasePath(), Is.EqualTo(audioDatabasePath));
+        }
+
+        [Test]
         public void should_stop_when_an_initialized_primary_and_a_legacy_database_both_exist()
         {
             CreateChaptarrDatabase(_primaryPath);
