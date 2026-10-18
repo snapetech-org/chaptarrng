@@ -1,15 +1,17 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Release status (2026-10-18).** Use the standard ChaptarrNG `v0.9.976` release or a
+> **Release status (2026-10-18).** Use the standard ChaptarrNG `v0.9.977` release or a
 > later stable version for the published BookshelfNG `0.4.21.71` release. That
 > BookshelfNG release includes an optional source-side helper that creates a
 > full appdata archive before invoking ChaptarrNG's preview, apply, and
 > rollback commands; see the
 > [BookshelfNG operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md).
 > For an immutable Docker deployment, use
-> `ghcr.io/snapetech-org/chaptarrng:0.9.976`.
-> The published converter supports the exact migration-158 SQLite schema.
-> Older-schema support is in `main` for the pending `v0.9.977` release.
+> `ghcr.io/snapetech-org/chaptarrng:0.9.977`.
+> The release bundles the BookshelfNG source migration chain and supports the
+> exact migration-158 SQLite schema. Its current pre-upgrade check rejects
+> schemas before migration 14; upgrade those installations to the final
+> BookshelfNG `0.4.21.71` release first, or wait for the follow-up fix.
 > Pinned images,
 > native packages, and updater channels need separate upgrade steps; database
 > conversion alone does not update an installation channel.
@@ -21,24 +23,27 @@ and container build. The `Chaptarr` executable provides an
 explicit preview and apply command. Normal startup also detects and converts a
 supported BookshelfNG database automatically.
 
-The published `v0.9.976` converter supports BookshelfNG migration-158 SQLite
-databases. Current `main` adds the embedded BookshelfNG SQLite migration
-chain, intended for `v0.9.977` after CI and release checks pass. It upgrades a
+The published `v0.9.977` converter supports BookshelfNG migration-158 SQLite
+databases and bundles the BookshelfNG source migration chain. It upgrades a
 recognized source schema on a disposable copy, keeps the untouched snapshot
 for rollback, then stages a fresh native Chaptarr database, accounts for every
 source-table row, checks SQLite integrity and foreign keys, and promotes only
-after validation. Unknown or newer schemas fail closed without changing the
-source. The synthetic older-schema regression starts at migration 22; it is
-not yet a real-data rehearsal or proof for every historical BookshelfNG
-release.
+after validation. The current release rejects schemas before migration 14
+because its table guard sees the pre-rename `Blacklist` name. A version-aware
+allowlist fix and authentic migration-1 rollback fixture are on a review branch;
+hosted validation and publication remain pending. Populated synthetic v22
+coverage exercises conversion and rollback, but it is not a real-data rehearsal
+or proof for every historical BookshelfNG release. Unknown or newer schemas
+fail closed without changing the source.
 
-Until `v0.9.977` is published, if BookshelfNG is older than `0.4.21.71`,
-update it to that final release and let BookshelfNG finish its own database
-upgrade before switching applications. The published `v0.9.976` converter
-expects migration 158. Once `v0.9.977` is available, its bundled chain can
-upgrade recognized older SQLite schemas on a temporary copy. Stop the service
-after it reaches an idle state, then run ChaptarrNG preview. PostgreSQL
-BookshelfNG databases are not supported by this converter.
+If BookshelfNG is older than `0.4.21.71`, update it to that final release and
+let BookshelfNG finish its own database upgrade before switching applications.
+This brings the source to migration 158, which the published `.977` converter
+accepts. For databases earlier than migration 14 that cannot be upgraded with
+BookshelfNG, wait until the ChaptarrNG follow-up release publishes the
+version-aware table fix. Stop the service after it reaches an idle state, then
+run ChaptarrNG preview. PostgreSQL BookshelfNG databases are not supported by
+this converter.
 
 Environment variables are outside the database conversion. Preserve the
 BookshelfNG diagnostics variables if that optional module was explicitly
@@ -62,7 +67,7 @@ and leaves the source database untouched.
 ```sh
 docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech-org/chaptarrng:0.9.976 \
+  ghcr.io/snapetech-org/chaptarrng:0.9.977 \
   dotnet /app/Chaptarr.dll -preview-bookshelf-migration -data=/config
 ```
 
@@ -116,7 +121,7 @@ explicit apply command once:
 ```sh
 docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech-org/chaptarrng:0.9.976 \
+  ghcr.io/snapetech-org/chaptarrng:0.9.977 \
   dotnet /app/Chaptarr.dll -migrate-bookshelf -confirm-bookshelf-service-stopped -data=/config
 ```
 
@@ -154,7 +159,7 @@ BookshelfNG backup without changing either database:
 ```sh
 docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech-org/chaptarrng:0.9.976 \
+  ghcr.io/snapetech-org/chaptarrng:0.9.977 \
   dotnet /app/Chaptarr.dll -preview-bookshelf-restore \
     -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-ID.db \
     -data=/config
@@ -165,7 +170,7 @@ After preview passes, apply the restore while all services remain stopped:
 ```sh
 docker run --rm \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech-org/chaptarrng:0.9.976 \
+  ghcr.io/snapetech-org/chaptarrng:0.9.977 \
   dotnet /app/Chaptarr.dll -restore-bookshelf \
     -confirm-bookshelf-service-stopped \
     -bookshelf-backup=/config/readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-ID.db \
@@ -259,7 +264,7 @@ and database copies were kept in a private VM scratch directory.
 The real database exposed 81 books whose media choice could not be derived
 from source relationships. Earlier test maps used explicit technical choices
 only; those choices were not reviewed as correct library classification. The
-published `v0.9.976` release instead keeps unresolved records in both catalogs
+published `v0.9.977` release keeps unresolved records in both catalogs
 without monitoring and retains a private review file. Operators still need to
 confirm the true format and monitoring intent for those records. A map can
 apply that review before conversion; otherwise correct the records after
@@ -329,21 +334,28 @@ migration, rollback, and automatic startup paths against the synthetic fixture.
 It does not establish behavior for older schemas, PostgreSQL, live operator
 data, every BookshelfNG feature, or every package and update channel.
 
+## Published image smoke test (2026-10-18)
+
+On an isolated Linux/amd64 Docker host, the published BookshelfNG `main` image reported version `0.4.21.71` and created an empty migration-158 SQLite database with 39 tables. After stopping it, ChaptarrNG `v0.9.977` started against the same `/config`, `/data`, and `/download` mounts. Its normal startup converted the database to Chaptarr migration 120, retained the untouched BookshelfNG backup, and listened on the saved port 8787. The converted database and source backup both passed SQLite integrity checks.
+
+Rollback preview and apply passed. The restored BookshelfNG database remained at migration 158 with 39 tables, and the previous BookshelfNG image started against it on port 8787. A test-only setting written after conversion remained in the retained ChaptarrNG backup. This was an empty-database Docker rehearsal; it does not validate populated operator data or the Unraid Community Apps template update flow.
+
 ## Limits and update channels
 
-The published `v0.9.976` converter accepts SQLite databases at exactly
-BookshelfNG migration 158. The `v0.9.977` candidate adds the embedded source
-migration chain; local synthetic evidence covers migration 22 through
-conversion and rollback, non-mutating preview, and rejection of a future
-schema. This does not establish older-schema behavior on real operator data or
-PostgreSQL source conversion. Supported databases can be migrated by normal
-ChaptarrNG startup or with the explicit preview/apply commands above. Both
-paths retain the untouched BookshelfNG source backup; rollback is available
-while the original backup remains intact.
+The published `v0.9.977` converter accepts SQLite databases at BookshelfNG
+migration 158 and bundles the source migration chain. Its table guard currently
+rejects versions before migration 14 because the chain has not yet renamed
+`Blacklist` to `Blocklist`; a fix is under hosted validation for a follow-up
+release. Populated synthetic v22 coverage exercises conversion, rollback, and
+non-mutating preview. This does not establish older-schema behavior on real
+operator data or PostgreSQL source conversion. Supported databases can be
+migrated by normal ChaptarrNG startup or with the explicit preview/apply
+commands above. Both paths retain the untouched BookshelfNG source backup;
+rollback is available while the original backup remains intact.
 
-The public ChaptarrNG `v0.9.976` release contains the converter and standalone
-archives. Older-schema support is pending publication in `v0.9.977`. Current
-package and image-channel status is tracked in
+The public ChaptarrNG `v0.9.977` release contains the converter and standalone
+archives. Its version-1-to-13 table-alias fix is pending hosted validation and
+publication in a follow-up release. Current package and image-channel status is tracked in
 [`packaging/README.md`](../packaging/README.md). The migration bridge is
 disabled: existing BookshelfNG package IDs and mutable image aliases do not
 currently redirect to ChaptarrNG. Pinned tags, digests, offline installs, and

@@ -2,8 +2,15 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using FluentMigrator.Runner.Generators;
+using FluentMigrator.Runner;
+using FluentMigrator.Runner.Initialization;
+using FluentMigrator.Runner.Processors;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Data.Sqlite;
 using NLog;
+using NLog.Extensions.Logging;
 using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
@@ -177,6 +184,114 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_upgrade_a_genuine_migration_22_schema_created_by_bookshelf_migrations()
+        {
+            CreateSourceThroughMigration(22);
+            SeedMigration22SourceWithLibrary();
+
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var result = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(File.Exists(result.BackupPath), Is.True);
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(QueryScalar<int>(result.BackupPath, "SELECT MAX(Version) FROM VersionInfo;"), Is.EqualTo(22));
+                Assert.That(QueryScalar<int>(result.BackupPath, "SELECT COUNT(*) FROM Books WHERE Id = 30 AND Title = 'Migration 22 fixture book';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(result.BackupPath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND IsEbook = 0;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(result.BackupPath, "SELECT Path FROM BookFiles WHERE Id = 50;"), Is.EqualTo("/library/Migration 22 Author/book.m4b"));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 30 AND Title = 'Migration 22 fixture book' AND MediaType = 0 AND AudiobookMonitored = 1;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND Monitored = 1;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Path FROM BookFiles WHERE Id = 50;"), Is.EqualTo("/library/Migration 22 Author/book.m4b"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'FixtureSetting';"), Is.EqualTo("preserved"));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+
+            var restored = new BookshelfDatabaseConverter().Restore(
+                _sourceConnectionString,
+                result.BackupPath,
+                migrateBookshelfSource: migrationController.MigrateBookshelfSource);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT MAX(Version) FROM VersionInfo;"), Is.EqualTo(22));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 30 AND Title = 'Migration 22 fixture book';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(File.Exists(restored.ChaptarrBackupPath), Is.True);
+            });
+        }
+
+        [Test]
+        public void should_upgrade_the_oldest_bookshelf_schema_and_keep_the_original_schema_for_rollback()
+        {
+            CreateSourceThroughMigration(1);
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+
+            var result = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(QueryScalar<int>(result.BackupPath, "SELECT MAX(Version) FROM VersionInfo;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books;"), Is.Zero);
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+
+            var restored = new BookshelfDatabaseConverter().Restore(
+                _sourceConnectionString,
+                result.BackupPath,
+                migrateBookshelfSource: migrationController.MigrateBookshelfSource);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT MAX(Version) FROM VersionInfo;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books;"), Is.Zero);
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(File.Exists(restored.ChaptarrBackupPath), Is.True);
+            });
+        }
+
+        [Test]
+        public void should_reject_a_legacy_table_alias_after_its_bookshelf_rename_migration()
+        {
+            DowngradeSourceToMigration22();
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = "ALTER TABLE Blocklist RENAME TO Blacklist;";
+                command.ExecuteNonQuery();
+            }
+
+            var before = File.ReadAllBytes(_sourcePath);
+            var exception = Assert.Throws<InvalidDataException>(() => new MigrationController(
+                LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).MigrateBookshelf(
+                    _sourceConnectionString,
+                    new MigrationContext(MigrationType.Main),
+                    DatabaseType.SQLite,
+                    previewOnly: false));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain("unknown: Blacklist"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
         public void should_reject_a_bookshelf_schema_newer_than_the_embedded_migration_chain()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))
@@ -196,7 +311,7 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(exception.Message, Does.Contain("newer than the bundled migration chain"));
+                Assert.That(exception.Message, Does.Contain("outside the bundled migration chain (1-158)"));
                 Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelf-migrate-*.db"), Is.Empty);
@@ -831,6 +946,71 @@ namespace Chaptarr.Core.Test.Datastore
                 ALTER TABLE ImportListStatus DROP COLUMN LastInfoSync;
                 ALTER TABLE ImportListStatus ADD COLUMN LastSyncListInfo DATETIME;
                 DELETE FROM VersionInfo WHERE Version > 22;";
+            command.ExecuteNonQuery();
+        }
+
+        private void CreateSourceThroughMigration(long targetVersion)
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(_sourcePath))
+            {
+                File.Delete(_sourcePath);
+            }
+
+            using var serviceProvider = new ServiceCollection()
+                .AddLogging(builder => builder.AddNLog())
+                .AddFluentMigratorCore()
+                .Configure<RunnerOptions>(options => options.IncludeUntaggedMaintenances = true)
+                .ConfigureRunner(builder => builder
+                    .AddNzbDroneSQLite()
+                    .WithGlobalConnectionString(_sourceConnectionString)
+                    .ScanIn(typeof(MigrationController).Assembly).For.All())
+                .Configure<TypeFilterOptions>(options => options.Namespace = "NzbDrone.Core.Datastore.BookshelfMigration")
+                .Configure<ProcessorOptions>(options =>
+                {
+                    options.PreviewOnly = false;
+                    options.Timeout = TimeSpan.FromMinutes(5);
+                })
+                .Configure<SelectingProcessorAccessorOptions>(options => options.ProcessorId = "SQLite")
+                .Configure<SelectingGeneratorAccessorOptions>(options => options.GeneratorId = "SQLite")
+                .BuildServiceProvider();
+
+            using var scope = serviceProvider.CreateScope();
+            var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+            MigrationContext.Current = new MigrationContext(MigrationType.Main);
+            try
+            {
+                runner.MigrateUp(targetVersion);
+            }
+            finally
+            {
+                MigrationContext.Current = null;
+            }
+        }
+
+        private void SeedMigration22SourceWithLibrary()
+        {
+            using var source = new SqliteConnection(_sourceConnectionString);
+            source.Open();
+            using var command = source.CreateCommand();
+            command.CommandText = @"
+                INSERT INTO Config (Key, Value) VALUES ('FixtureSetting', 'preserved');
+                INSERT INTO QualityProfiles (Id, Name, Cutoff, Items, UpgradeAllowed)
+                VALUES (1, 'Migration 22 profile', 1, '[]', 1);
+                INSERT INTO MetadataProfiles (Id, Name, MinPopularity, SkipMissingDate, SkipMissingIsbn, SkipPartsAndSets, SkipSeriesSecondary, AllowedLanguages)
+                VALUES (1, 'Migration 22 metadata', 0, 0, 0, 0, 0, '[]');
+                INSERT INTO RootFolders (Id, Path, Name, DefaultMetadataProfileId, DefaultQualityProfileId, DefaultMonitorOption, DefaultTags, IsCalibreLibrary)
+                VALUES (1, '/library', 'Library', 1, 1, 0, '[]', 0);
+                INSERT INTO AuthorMetadata (Id, ForeignAuthorId, TitleSlug, Name, Overview, Status, Images, Aliases, SortName, NameLastFirst, SortNameLastFirst)
+                VALUES (10, 'hardcover-author:author-10', 'migration-22-author', 'Migration 22 Author', 'Older-schema author', 0, '[]', '[]', 'Migration 22 Author', 'Author, Migration 22', 'Author, Migration 22');
+                INSERT INTO Authors (Id, CleanName, Path, Monitored, QualityProfileId, Tags, Added, MetadataProfileId, AuthorMetadataId)
+                VALUES (20, 'migration22author', '/library/Migration 22 Author', 1, 1, '[]', '2026-01-01', 1, 10);
+                INSERT INTO Books (Id, AuthorMetadataId, ForeignBookId, TitleSlug, Title, Links, Genres, Ratings, CleanTitle, Monitored, AnyEditionOk, Added)
+                VALUES (30, 10, 'hardcover:book-30', 'migration-22-book', 'Migration 22 fixture book', '[]', '[]', '{}', 'migration 22 fixture book', 1, 0, '2026-01-02');
+                INSERT INTO Editions (Id, BookId, ForeignEditionId, Title, TitleSlug, Images, IsEbook, Monitored, ManualAdd)
+                VALUES (40, 30, 'hardcover-edition:edition-40', 'Migration 22 audiobook', 'migration-22-edition', '[]', 0, 1, 0);
+                INSERT INTO BookFiles (Id, EditionId, CalibreId, Quality, Size, DateAdded, MediaInfo, Path)
+                VALUES (50, 40, 0, '{}', 1024, '2026-01-02', '{}', '/library/Migration 22 Author/book.m4b');";
             command.ExecuteNonQuery();
         }
 

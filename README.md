@@ -28,26 +28,30 @@ For local MCP access, see the [SnapeTech MCP integration guide](docs/integration
 
 ### BookshelfNG migration status
 
-ChaptarrNG `v0.9.976` includes the migration and rollback tools for the final
-BookshelfNG SQLite schema. The current `main` branch adds the embedded
-BookshelfNG SQLite migration chain; this older-schema support is pending the
-`v0.9.977` release. The BookshelfNG source helper creates an appdata archive
-before it runs the tools. ChaptarrNG also initializes new author format paths
-from configured defaults, a behavior released in `v0.9.974`; explicit roots
-and existing authors are left alone. Read the
+ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
+is the current published release. It includes the migration and rollback
+tools for BookshelfNG SQLite, plus the embedded source migration chain. The
+BookshelfNG helper creates an appdata archive before it runs the tools.
+ChaptarrNG also initializes new author format paths from configured defaults,
+a behavior released in `v0.9.974`; explicit roots and existing authors are
+left alone. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
-The new source migration runs on a disposable copy and keeps the original
-database for rollback. A synthetic v22 SQLite fixture upgrades through the
+The source migration runs on a disposable copy and keeps the original database
+for rollback. A populated synthetic v22 SQLite fixture upgrades through the
 embedded chain, converts, and rolls back; preview leaves the source unchanged,
-and a future schema is rejected. That is not yet real-data evidence or proof
-for every historical release. PostgreSQL BookshelfNG databases and two
-populated source databases are not supported. Books with no recorded format
-are retained in both ChaptarrNG catalogs, unmonitored, with a private review
-file so the operator can classify them after startup. The helper does not copy
-external media/download folders, translate every external setting, or update
-pinned images and package channels. The legacy bridge remains disabled, and
-full feature parity and several package-channel upgrades are still unverified.
+and a future schema is rejected. The published `.977` release currently
+rejects pre-migration-14 databases because their `Blacklist` table must first
+be renamed by the embedded chain. A fix and an authentic migration-1 fixture
+are being validated for the next release. This is not yet real-data evidence
+or proof for every historical release. PostgreSQL BookshelfNG databases and
+two populated source databases are not supported. Books with no recorded
+format are retained in both ChaptarrNG catalogs, unmonitored, with a private
+review file so the operator can classify them after startup. The helper does
+not copy external media/download folders, translate every external setting,
+or update pinned images and package channels. The legacy bridge remains
+disabled, and full feature parity and several package-channel upgrades are
+still unverified.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 
@@ -80,7 +84,7 @@ not be included in the latest published image yet.
 
 The [ChaptarrNG retirement matrix](docs/FORK_FEATURES.md#chaptarrng-retirement-blockers)
 defines the cumulative upstream gate: every BookshelfNG feature carried over
-and every ChaptarrNG feature introduced or maintained through `v0.9.976`
+and every ChaptarrNG feature introduced or maintained through `v0.9.977`
 blocks retirement as a whole and remains an individual acceptance gate.
 Carrying over a BookshelfNG capability adds to this set; it does not replace
 or reduce ChaptarrNG's own blockers.
