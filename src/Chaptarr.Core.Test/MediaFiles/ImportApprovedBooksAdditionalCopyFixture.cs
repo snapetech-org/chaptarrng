@@ -3800,7 +3800,11 @@ namespace Chaptarr.Core.Test.MediaFiles
                     }
                 })).ToList();
 
-                var mover = new StubMoveBookFiles { TransferFilesOnDisk = true };
+                var mover = new StubMoveBookFiles
+                {
+                    TransferFilesOnDisk = true,
+                    DestinationPath = Path.Combine(destinationDir, "Black Sheep.m4b")
+                };
                 for (var index = 0; index < sourcePaths.Length; index++)
                 {
                     mover.DestinationsBySource[sourcePaths[index]] = destinationPaths[index];
