@@ -19,6 +19,7 @@ using NzbDrone.Core.Datastore.Migration.Framework;
 namespace Chaptarr.Core.Test.Datastore
 {
     [TestFixture]
+    [NonParallelizable]
     public class BookshelfPostgresDatabaseConverterFixture
     {
         private string _baseConnectionString;
@@ -27,11 +28,17 @@ namespace Chaptarr.Core.Test.Datastore
         private string _temporaryDirectory;
         private HashSet<string> _schemasBefore;
         private NpgsqlConnection _testLockConnection;
+        private string _previousHardcoverMode;
+        private string _previousHardcoverNativeMode;
         private readonly List<string> _knownBackupSchemas = new();
 
         [SetUp]
         public void SetUp()
         {
+            _previousHardcoverMode = Environment.GetEnvironmentVariable("HARDCOVER");
+            _previousHardcoverNativeMode = Environment.GetEnvironmentVariable("HARDCOVER_NATIVE");
+            Environment.SetEnvironmentVariable("HARDCOVER", null);
+            Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", null);
             _knownBackupSchemas.Clear();
             _baseConnectionString = Environment.GetEnvironmentVariable("CHAPTARRNG_POSTGRES_TEST_CONNECTION");
             if (string.IsNullOrWhiteSpace(_baseConnectionString))
@@ -58,7 +65,12 @@ namespace Chaptarr.Core.Test.Datastore
         [TearDown]
         public void TearDown()
         {
-            if (string.IsNullOrWhiteSpace(_baseConnectionString)) return;
+            if (string.IsNullOrWhiteSpace(_baseConnectionString))
+            {
+                Environment.SetEnvironmentVariable("HARDCOVER", _previousHardcoverMode);
+                Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", _previousHardcoverNativeMode);
+                return;
+            }
 
             try
             {
@@ -79,6 +91,8 @@ namespace Chaptarr.Core.Test.Datastore
             }
             finally
             {
+                Environment.SetEnvironmentVariable("HARDCOVER", _previousHardcoverMode);
+                Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", _previousHardcoverNativeMode);
                 if (_testLockConnection != null)
                 {
                     try
@@ -109,6 +123,8 @@ namespace Chaptarr.Core.Test.Datastore
                 null,
                 new TestAppFolderInfo(_temporaryDirectory));
 
+            Environment.SetEnvironmentVariable("HARDCOVER", "true");
+
             var preview = controller.MigrateBookshelf(
                 sourceConnectionString,
                 new MigrationContext(MigrationType.Main),
@@ -119,6 +135,7 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(preview.BackupPath, Is.Null);
             Assert.That(preview.ImportReport.Tables["Books"].SourceRows, Is.EqualTo(1));
             Assert.That(preview.ImportReport.Tables["BookFiles"].SourceRows, Is.EqualTo(1));
+            Assert.That(preview.ImportReport.Tables["Books"].TargetMapping, Does.Contain("Hardcover"));
             Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
             Assert.That(GetSchemaNames(_baseConnectionString).Except(_schemasBefore, StringComparer.Ordinal).Any(schema => schema.StartsWith("chaptarr_stage_", StringComparison.Ordinal)), Is.False);
 
@@ -134,6 +151,12 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.Chaptarr));
             Assert.That(ReadConfigValue(sourceConnectionString, "bookmatchingstrictness"), Is.EqualTo("balanced"));
             Assert.That(ReadConfigValue(sourceConnectionString, "bookimportminimummatchpercent"), Is.EqualTo("70"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverApiToken"), Is.EqualTo("pg-fixture-token"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
+            Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Authors\" WHERE \"Id\" = 20 AND \"HardcoverAuthorId\" = 'hc:10';"), Is.EqualTo(1));
+            Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30 AND \"HardcoverBookId\" = 'hc:30';"), Is.EqualTo(1));
+            Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Editions\" WHERE \"Id\" = 40 AND \"HardcoverEditionId\" = '40';"), Is.EqualTo(1));
+            Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Series\" WHERE \"Id\" = 70 AND \"HardcoverSeriesId\" = 'hc:70';"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30 AND \"MediaType\" = 0 AND \"AudiobookMonitored\" = TRUE;"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Editions\" WHERE \"Id\" = 40 AND \"BookId\" = 30 AND \"Monitored\" = TRUE;"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"BookFiles\" WHERE \"Id\" = 50 AND \"EditionId\" = 40 AND \"Path\" = '/library/Fixture Author/book.m4b';"), Is.EqualTo(1));
@@ -142,6 +165,7 @@ namespace Chaptarr.Core.Test.Datastore
             var bookshelfBackupConnectionString = BuildConnectionString(_baseConnectionString, bookshelfBackupSchema);
             Assert.That(DatabaseLineageGuard.Detect(bookshelfBackupConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
             Assert.That(ReadConfigValue(bookshelfBackupConnectionString, "bookimportminimummatchpercent"), Is.EqualTo("70"));
+            Assert.That(ReadConfigValue(bookshelfBackupConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
             WriteConfigValue(sourceConnectionString, "FixtureSetting", "after-migration");
 
             var restorePreview = controller.RestoreBookshelf(
@@ -162,6 +186,7 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
             Assert.That(ReadConfigValue(sourceConnectionString, "bookimportminimummatchpercent"), Is.EqualTo("70"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
             Assert.That(ReadConfigValue(sourceConnectionString, "FixtureSetting"), Is.EqualTo("preserved"));
             var chaptarrBackupConnectionString = BuildConnectionString(_baseConnectionString, restored.ChaptarrBackupPath);
             Assert.That(DatabaseLineageGuard.Detect(chaptarrBackupConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.Chaptarr));
@@ -277,7 +302,9 @@ namespace Chaptarr.Core.Test.Datastore
             using var command = connection.CreateCommand();
             command.CommandText = @"
                 INSERT INTO Config (""Key"", ""Value"")
-                VALUES ('BookImportMinimumMatchPercent', '70')
+                VALUES
+                    ('BookImportMinimumMatchPercent', '70'),
+                    ('HardcoverAuth', 'Bearer pg-fixture-token')
                 ON CONFLICT (""Key"") DO UPDATE SET ""Value"" = EXCLUDED.""Value"";";
             command.ExecuteNonQuery();
         }
@@ -296,13 +323,15 @@ namespace Chaptarr.Core.Test.Datastore
                 VALUES (1, '/library', 'Library', 1, 1, 0, '[]', FALSE, NULL, 2);
                 INSERT INTO ""Config"" (""Id"", ""Key"", ""Value"") VALUES (2, 'FixtureSetting', 'preserved');
                 INSERT INTO ""AuthorMetadata"" (""Id"", ""ForeignAuthorId"", ""TitleSlug"", ""Name"", ""Overview"", ""Status"", ""Images"", ""Aliases"", ""SortName"", ""NameLastFirst"", ""SortNameLastFirst"")
-                VALUES (10, 'hardcover-author:author-10', 'fixture-author', 'Fixture Author', 'Fixture overview', 0, '[]', '[]', 'Fixture Author', 'Author, Fixture', 'Author, Fixture');
+                VALUES (10, '10', 'fixture-author', 'Fixture Author', 'Fixture overview', 0, '[]', '[]', 'Fixture Author', 'Author, Fixture', 'Author, Fixture');
                 INSERT INTO ""Authors"" (""Id"", ""CleanName"", ""Path"", ""Monitored"", ""QualityProfileId"", ""Tags"", ""Added"", ""MetadataProfileId"", ""AuthorMetadataId"", ""MonitorNewItems"", ""EbookPath"", ""AudiobookPath"", ""EbookQualityProfileId"", ""AudiobookQualityProfileId"", ""EbookMetadataProfileId"", ""AudiobookMetadataProfileId"")
                 VALUES (20, 'fixtureauthor', '/library/Fixture Author', TRUE, 1, '[]', '2026-01-01 00:00:00+00', 1, 10, 2, '/library/Fixture Author/Ebooks', '/library/Fixture Author/Audiobooks', NULL, 1, NULL, 1);
                 INSERT INTO ""Books"" (""Id"", ""AuthorMetadataId"", ""ForeignBookId"", ""TitleSlug"", ""Title"", ""Links"", ""Genres"", ""Ratings"", ""CleanTitle"", ""Monitored"", ""AnyEditionOk"", ""Added"", ""RelatedBooks"", ""LastSearchTime"")
-                VALUES (30, 10, 'hardcover:book-30', 'fixture-book', 'Fixture Book', '[]', '[]', '{}', 'fixture book', TRUE, FALSE, '2026-01-02 00:00:00+00', '[]', NULL);
+                VALUES (30, 10, '30', 'fixture-book', 'Fixture Book', '[]', '[]', '{}', 'fixture book', TRUE, FALSE, '2026-01-02 00:00:00+00', '[]', NULL);
                 INSERT INTO ""Editions"" (""Id"", ""BookId"", ""ForeignEditionId"", ""Isbn13"", ""Asin"", ""Title"", ""TitleSlug"", ""Images"", ""Links"", ""IsEbook"", ""Monitored"", ""ManualAdd"", ""Narrator"")
-                VALUES (40, 30, 'hardcover-edition:audio-40', NULL, NULL, 'Fixture Audiobook', 'audio-40', '[]', '[]', FALSE, TRUE, FALSE, 'A Narrator');
+                VALUES (40, 30, '40', NULL, NULL, 'Fixture Audiobook', 'audio-40', '[]', '[]', FALSE, TRUE, FALSE, 'A Narrator');
+                INSERT INTO ""Series"" (""Id"", ""ForeignSeriesId"", ""Title"", ""Numbered"", ""WorkCount"", ""PrimaryWorkCount"")
+                VALUES (70, '70', 'Fixture Series', TRUE, 1, 1);
                 INSERT INTO ""BookFiles"" (""Id"", ""EditionId"", ""CalibreId"", ""Quality"", ""Size"", ""DateAdded"", ""MediaInfo"", ""Modified"", ""Path"", ""Part"")
                 VALUES (50, 40, 0, '{}', 100, '2026-01-02 00:00:00+00', '{}', '2026-01-02 00:00:00+00', '/library/Fixture Author/book.m4b', 0);";
             command.ExecuteNonQuery();

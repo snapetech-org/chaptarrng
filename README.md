@@ -80,6 +80,18 @@ external converter and chapter sidecar only; importer end-to-end and
 representative-media acceptance remain open. Neither source change is in
 public `.977`. Full feature parity and several package-channel upgrades remain
 unverified.
+
+The current retirement work branch also ports BookshelfNG's native Hardcover
+metadata client and maps a saved `HardcoverAuth` setting to
+`HardcoverApiToken`. It preserves the existing `HARDCOVER_AUTH` and
+`HARDCOVER_API_KEY` environment options and routes Hardcover work, author, and
+edition IDs through the native provider when `HARDCOVER=true`. The converter
+also uses that mode to interpret bare numeric source IDs as Hardcover IDs;
+otherwise bare numeric IDs retain the Goodreads interpretation. Keep
+`HARDCOVER=true` (and do not set `HARDCOVER_NATIVE=false`) in the preview and
+migration environment when the BookshelfNG source used native Hardcover mode.
+This is source-only: it has not passed hosted tests or converted-operator-data
+review, is not in `.977`, and is not ready for use during the release freeze.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 

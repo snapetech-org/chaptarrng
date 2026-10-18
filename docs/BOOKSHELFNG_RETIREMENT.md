@@ -39,6 +39,15 @@ detailed feature inventory remains in the
   preview, and rollback. Its populated PostgreSQL fixture has not passed
   hosted CI and it has no operator-data acceptance. It is not supported by a
   published release.
+- This work branch also ports the native Hardcover metadata client and routes
+  `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps
+  a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting;
+  environment credentials remain external to the database. Bare numeric
+  source IDs follow the active mode: native Hardcover mode requires
+  `HARDCOVER=true` without `HARDCOVER_NATIVE=false` during preview and
+  conversion; otherwise they retain Goodreads identity. The preview report
+  names the selected interpretation. These changes have not passed hosted
+  tests or converted-data acceptance and are not in `.977`.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
   setting. ChaptarrNG has equivalent new-author path initialization in

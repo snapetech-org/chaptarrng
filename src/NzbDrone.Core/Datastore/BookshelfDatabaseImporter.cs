@@ -421,7 +421,7 @@ namespace NzbDrone.Core.Datastore
             var metadataCount = CountRows(source, "AuthorMetadata");
             var metadataTransformed = referencedMetadataIds.Count;
             report.RecordTable("Authors", sourceCount, 0, sourceCount, 0, 0,
-                "managed author rows are merged with their AuthorMetadata row while preserving Authors.Id");
+                "managed author rows are merged with their AuthorMetadata row while preserving Authors.Id; " + NumericProviderDisposition());
             report.RecordTable("AuthorMetadata", metadataCount, 0, metadataTransformed, 0, metadataCount - metadataTransformed,
                 "managed metadata is merged into Authors; unreferenced metadata-only cache rows are deliberately reset");
             return authors;
@@ -596,7 +596,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Books", sourceCount, 0, sourceCount, 0, 0,
-                $"BookshelfNG books are split by the source editions' media types and linked to the preserved managed author ID; {mediaChoices.Count(x => x.Value == BookshelfMediaChoice.BothUnmonitored)} unresolved books are kept in both catalogs without monitoring until reviewed");
+                $"BookshelfNG books are split by the source editions' media types and linked to the preserved managed author ID; {mediaChoices.Count(x => x.Value == BookshelfMediaChoice.BothUnmonitored)} unresolved books are kept in both catalogs without monitoring until reviewed; {NumericProviderDisposition()}");
             return result;
         }
 
@@ -644,7 +644,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Editions", sourceCount, 0, sourceCount, 0, 0,
-                "edition rows and IDs are preserved and attached to the corresponding audiobook or ebook book row");
+                "edition rows and IDs are preserved and attached to the corresponding audiobook or ebook book row; " + NumericProviderDisposition());
             return result;
         }
 
@@ -946,7 +946,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Series", sourceCount, 0, sourceCount, 0, 0,
-                "series IDs and descriptions are preserved; provider identity is routed into the matching Chaptarr provider field");
+                "series IDs and descriptions are preserved; provider identity is routed into the matching Chaptarr provider field; " + NumericProviderDisposition());
             return result;
         }
 
@@ -1236,15 +1236,24 @@ namespace NzbDrone.Core.Datastore
         {
             const string legacyMatchKey = "bookimportminimummatchpercent";
             const string chaptarrStrictnessKey = "bookmatchingstrictness";
+            const string legacyHardcoverTokenKey = "hardcoverauth";
+            const string chaptarrHardcoverTokenKey = "hardcoverapitoken";
 
             var configRows = ReadRows(source, "Config").ToList();
             var sourceCount = configRows.Count;
             var legacyRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMatchKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var strictnessRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrStrictnessKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var legacyHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var chaptarrHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
 
             if (legacyRows.Count > 1 || strictnessRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate match settings; conversion stopped before promotion.");
+            }
+
+            if (legacyHardcoverTokenRows.Count > 1 || chaptarrHardcoverTokenRows.Count > 1)
+            {
+                throw new InvalidDataException("BookshelfNG config contains duplicate Hardcover token settings; conversion stopped before promotion.");
             }
 
             var matchSettingDisposition = "no BookshelfNG numeric match threshold was present; ChaptarrNG's default matching mode applies";
@@ -1298,6 +1307,41 @@ namespace NzbDrone.Core.Datastore
                 matchSettingDisposition = $"BookshelfNG BookImportMinimumMatchPercent={legacyPercent.Value.ToString(CultureInfo.InvariantCulture)} was mapped to ChaptarrNG BookMatchingStrictness='{mappedValue}'; the original numeric row was retained. This is a documented closest-policy translation, not an equivalent implementation of BookshelfNG's fuzzy parser and weighted import-distance algorithms.";
             }
 
+            var hardcoverTokenDisposition = "no saved Hardcover token was present";
+            var legacyHardcoverToken = legacyHardcoverTokenRows.SingleOrDefault();
+            if (legacyHardcoverToken != null && !string.IsNullOrWhiteSpace(GetString(legacyHardcoverToken, "Value")))
+            {
+                var targetHardcoverToken = chaptarrHardcoverTokenRows.SingleOrDefault();
+                if (targetHardcoverToken != null)
+                {
+                    hardcoverTokenDisposition = "an explicit ChaptarrNG Hardcover token took precedence; the original BookshelfNG token row was retained";
+                }
+                else
+                {
+                    var token = GetString(legacyHardcoverToken, "Value").Trim();
+                    const string bearerPrefix = "Bearer ";
+                    if (token.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        token = token.Substring(bearerPrefix.Length).Trim();
+                    }
+
+                    if (targetHardcoverToken == null)
+                    {
+                        configRows.Add(new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["Key"] = "HardcoverApiToken",
+                            ["Value"] = token
+                        });
+                    }
+                    else
+                    {
+                        targetHardcoverToken["Value"] = token;
+                    }
+
+                    hardcoverTokenDisposition = "the saved BookshelfNG Hardcover token was copied to ChaptarrNG HardcoverApiToken; the original token row was retained";
+                }
+            }
+
             var targetColumns = GetColumns(target, "Config");
             foreach (var row in configRows)
             {
@@ -1316,7 +1360,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Config", sourceCount, 0, sourceCount, 0, 0,
-                "saved configuration is copied with compatible fields; " + matchSettingDisposition);
+                "saved configuration is copied with compatible fields; " + matchSettingDisposition + "; " + hardcoverTokenDisposition);
         }
 
         private static void ImportNotifications(
@@ -1461,7 +1505,14 @@ namespace NzbDrone.Core.Datastore
             var separator = normalized.IndexOf(':');
             if (separator < 0)
             {
-                if (normalized.All(char.IsDigit)) return "gr:" + normalized;
+                if (normalized.All(char.IsDigit))
+                {
+                    // BookshelfNG stores numeric IDs without a namespace when its
+                    // selected primary catalog owns the record. Preserve that
+                    // dialect while the migration runs under the same provider mode.
+                    return (IsNativeHardcoverPrimaryMode() ? "hc:" : "gr:") + normalized;
+                }
+
                 throw new InvalidDataException($"BookshelfNG {entityType} provider ID '{normalized}' has no recognized provider prefix.");
             }
 
@@ -1519,6 +1570,19 @@ namespace NzbDrone.Core.Datastore
             return prefix + ":" + id;
         }
 
+        private static bool IsNativeHardcoverPrimaryMode()
+        {
+            return string.Equals(Environment.GetEnvironmentVariable("HARDCOVER"), "true", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Environment.GetEnvironmentVariable("HARDCOVER_NATIVE"), "false", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NumericProviderDisposition()
+        {
+            return IsNativeHardcoverPrimaryMode()
+                ? "any bare numeric provider IDs are interpreted as Hardcover because native mode is enabled (HARDCOVER=true)"
+                : "any bare numeric provider IDs are interpreted as Goodreads because native Hardcover mode is disabled";
+        }
+
         private static void SetProviderColumns(IDictionary<string, object> values, string entityType, string canonicalId)
         {
             if (string.IsNullOrWhiteSpace(canonicalId)) return;
@@ -1564,7 +1628,10 @@ namespace NzbDrone.Core.Datastore
                                 SetIfPresent(values, "GoodreadsEditionId", goodreadsId);
                             }
                             break;
-                        case "hc": SetIfPresent(values, "HardcoverEditionId", canonicalId); break;
+                        // Chaptarr's HardcoverEditionId field stores the raw
+                        // catalog ID; ForeignEditionId and ProviderAliasIndex
+                        // carry the canonical provider-qualified form.
+                        case "hc": SetIfPresent(values, "HardcoverEditionId", id); break;
                         case "ol": SetIfPresent(values, "OpenLibraryEditionId", canonicalId); break;
                         case "gb": SetIfPresent(values, "GoogleBooksEditionId", canonicalId); break;
                         case "az":

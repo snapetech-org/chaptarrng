@@ -19,15 +19,23 @@ using NzbDrone.Core.MetadataSource.BookInfo;
 namespace Chaptarr.Core.Test.Datastore
 {
     [TestFixture]
+    [NonParallelizable]
     public class BookshelfDatabaseImporterFixture
     {
         private string _directory;
         private string _sourcePath;
         private string _sourceConnectionString;
+        private string _previousHardcoverMode;
+        private string _previousHardcoverNativeMode;
 
         [SetUp]
         public void SetUp()
         {
+            _previousHardcoverMode = Environment.GetEnvironmentVariable("HARDCOVER");
+            _previousHardcoverNativeMode = Environment.GetEnvironmentVariable("HARDCOVER_NATIVE");
+            Environment.SetEnvironmentVariable("HARDCOVER", null);
+            Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", null);
+
             _directory = Path.Combine(Path.GetTempPath(), $"bookshelf-importer-{Guid.NewGuid().ToString("N").Substring(0, 8)}");
             Directory.CreateDirectory(_directory);
             _sourcePath = Path.Combine(_directory, "readarr.db");
@@ -46,6 +54,48 @@ namespace Chaptarr.Core.Test.Datastore
         {
             SqliteConnection.ClearAllPools();
             if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
+            Environment.SetEnvironmentVariable("HARDCOVER", _previousHardcoverMode);
+            Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", _previousHardcoverNativeMode);
+        }
+
+        [Test]
+        public void should_preserve_bare_numeric_provider_ids_as_hardcover_ids_when_native_mode_is_enabled()
+        {
+            SetBareNumericProviderIds();
+            Environment.SetEnvironmentVariable("HARDCOVER", "true");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT HardcoverAuthorId FROM Authors WHERE Id = 20;"), Is.EqualTo("hc:10"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT HardcoverBookId FROM Books WHERE Id = 30;"), Is.EqualTo("hc:30"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT ForeignEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo("hc:40"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT HardcoverEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo("40"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT HardcoverSeriesId FROM Series WHERE Id = 70;"), Is.EqualTo("hc:70"));
+            });
+        }
+
+        [Test]
+        public void should_keep_bare_numeric_provider_ids_as_goodreads_ids_when_hardcover_mode_is_disabled()
+        {
+            SetBareNumericProviderIds();
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsAuthorId FROM Authors WHERE Id = 20;"), Is.EqualTo("gr:10"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsWorkId FROM Books WHERE Id = 30;"), Is.EqualTo("gr:30"));
+                Assert.That(QueryScalar<long>(_sourcePath, "SELECT GoodreadsEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo(40));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsSeriesId FROM Series WHERE Id = 70;"), Is.EqualTo("gr:70"));
+            });
         }
 
         [Test]
@@ -94,7 +144,7 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE AuthorId = 20;"), Is.EqualTo(2));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 30 AND MediaType = 0 AND AudiobookMonitored = 1 AND ForeignEditionId = 'hc:audio-40';"), Is.EqualTo(1));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 31 AND MediaType = 1 AND EbookMonitored = 0 AND ForeignEditionId IS NULL;"), Is.EqualTo(1));
-            Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND HardcoverEditionId = 'hc:audio-40';"), Is.EqualTo(1));
+            Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND HardcoverEditionId = 'audio-40';"), Is.EqualTo(1));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT NarratorNames FROM Editions WHERE Id = 40;"), Is.EqualTo("[\"A Narrator\"]"));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Images FROM Editions WHERE Id = 40;"), Is.EqualTo("[{\"Url\":\"https://covers.example/audio.jpg\",\"CoverType\":6}]"));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Links FROM Editions WHERE Id = 40;"), Is.EqualTo("[{\"Url\":\"https://catalog.example/audio-40\",\"Name\":\"Catalog\"}]"));
@@ -191,6 +241,62 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataTitleSourcePreference';"), Is.EqualTo("openlibrary"));
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataCoverSourcePreference';"), Is.EqualTo("googlebooks"));
                 Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'GoogleBooksApiKey';"), Is.EqualTo("fixture-key-preserved"));
+            });
+        }
+
+        [Test]
+        public void should_migrate_a_saved_bookshelf_hardcover_token_to_the_chaptarr_setting()
+        {
+            AddConfigValue("HardcoverAuth", "Bearer fixture-hardcover-token");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverApiToken';"), Is.EqualTo("fixture-hardcover-token"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverAuth';"), Is.EqualTo("Bearer fixture-hardcover-token"));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'HardcoverAuth';"), Is.EqualTo("Bearer fixture-hardcover-token"));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'HardcoverApiToken';"), Is.Zero);
+            });
+        }
+
+        [Test]
+        public void should_preserve_an_explicit_chaptarr_hardcover_token_over_the_legacy_value()
+        {
+            AddConfigValue("HardcoverAuth", "fixture-legacy-token");
+            AddConfigValue("HardcoverApiToken", "fixture-explicit-token");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverApiToken';"), Is.EqualTo("fixture-explicit-token"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverAuth';"), Is.EqualTo("fixture-legacy-token"));
+            });
+        }
+
+        [Test]
+        public void should_preserve_an_explicitly_cleared_chaptarr_hardcover_token()
+        {
+            AddConfigValue("HardcoverAuth", "fixture-legacy-token");
+            AddConfigValue("HardcoverApiToken", string.Empty);
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverApiToken';"), Is.Empty);
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverAuth';"), Is.EqualTo("fixture-legacy-token"));
             });
         }
 
@@ -1042,6 +1148,19 @@ namespace Chaptarr.Core.Test.Datastore
                 INSERT INTO Commands (Id, Name, Body, Priority, Status, QueuedAt, Trigger)
                 VALUES (100, 'OldCommand', '{}', 1, 0, '2026-01-04', 0);";
             data.ExecuteNonQuery();
+        }
+
+        private void SetBareNumericProviderIds()
+        {
+            using var source = new SqliteConnection(_sourceConnectionString);
+            source.Open();
+            using var command = source.CreateCommand();
+            command.CommandText = @"
+                UPDATE AuthorMetadata SET ForeignAuthorId = '10' WHERE Id = 10;
+                UPDATE Books SET ForeignBookId = '30' WHERE Id = 30;
+                UPDATE Editions SET ForeignEditionId = '40' WHERE Id = 40;
+                UPDATE Series SET ForeignSeriesId = '70' WHERE Id = 70;";
+            command.ExecuteNonQuery();
         }
 
         private void InsertBookWithoutEdition(int id, bool monitored)

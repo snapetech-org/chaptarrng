@@ -61,6 +61,24 @@ enabled; ChaptarrNG honors that choice only when the archived appdata also
 contains the old diagnostics module marker. See the
 [optional diagnostics guide](OPTIONAL_DIAGNOSTICS.md).
 
+Preserve `HARDCOVER=true`, `HARDCOVER_AUTH`, `HARDCOVER_API_KEY`, and any
+custom `HARDCOVER_API_URL` environment value used by the BookshelfNG install.
+Run preview and migration with the same `HARDCOVER` and `HARDCOVER_NATIVE`
+values as the source install. When native Hardcover mode is active, BookshelfNG
+stores many primary provider IDs as bare numbers; the converter uses
+`HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) to preserve those as
+Hardcover identities. Without native mode, bare numeric IDs remain Goodreads
+identities. Preview reports this interpretation for authors, books, editions,
+and series. Changing the mode during conversion can associate every bare
+numeric ID with the wrong provider.
+
+The current ChaptarrNG work-branch candidate also maps a saved `HardcoverAuth`
+database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
+precedence, and the original BookshelfNG database remains available in the
+rollback backup. That native provider and token mapping are not in published
+`v0.9.977`, have not cleared hosted and converted-data acceptance, and must not
+be treated as supported migration behavior during the release freeze.
+
 BookshelfNG's `BOOKSHELF_M4B_MERGE`,
 `BOOKSHELF_M4B_AAC_BITRATE_KBPS`, and `BOOKSHELF_FFMPEG_PATH` variables are
 also outside database conversion. The published ChaptarrNG `v0.9.977` does not
