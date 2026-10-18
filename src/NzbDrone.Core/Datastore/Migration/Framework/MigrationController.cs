@@ -257,13 +257,13 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                         .AddSQLite() // Use SQLite runner (Microsoft.Data.Sqlite)
                         .WithGlobalConnectionString(connectionString);
 
-                    runnerBuilder.ScanIn(Assembly.GetExecutingAssembly()).For.All();
-
                     if (postgresVersionTableMetaData != null)
                     {
                         // FluentMigrator's VersionInfo table is independent of the migration convention set.
                         runnerBuilder.WithVersionTable(postgresVersionTableMetaData);
                     }
+
+                    runnerBuilder.ScanIn(Assembly.GetExecutingAssembly()).For.All();
                 })
                 .Configure<TypeFilterOptions>(opt => opt.Namespace = "NzbDrone.Core.Datastore.Migration")
                 .Configure<ProcessorOptions>(opt =>
@@ -290,6 +290,16 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             using (var scope = serviceProvider.CreateScope())
             {
                 var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+
+                if (postgresVersionTableMetaData != null &&
+                    !string.Equals(
+                        runner.VersionLoader.GetVersionTableMetaData().SchemaName,
+                        defaultSchema,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        "PostgreSQL migration history was not scoped to the active schema. No migration was run.");
+                }
 
                 MigrationContext.Current = migrationContext;
 
