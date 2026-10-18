@@ -3817,7 +3817,15 @@ namespace Chaptarr.Core.Test.MediaFiles
                     importMode: ImportMode.Copy,
                     cancellationToken: CancellationToken.None);
 
-                Assert.That(conversion.ConvertCalls, Is.EqualTo(1));
+                var resolvedProfile = author.GetQualityProfileForQuality(Quality.MP3);
+                var shouldMerge = BookshelfM4bCompatibility.ShouldUseLegacyMerge(
+                    BookshelfM4bCompatibility.LegacyMergeEnabled,
+                    resolvedProfile,
+                    decisions,
+                    false);
+                Assert.That(conversion.ConvertCalls, Is.EqualTo(1),
+                    $"LegacyEnabled={BookshelfM4bCompatibility.LegacyMergeEnabled}; profile={resolvedProfile?.ProfileType}; " +
+                    $"ShouldUseLegacyMerge={shouldMerge}; results={string.Join("; ", results.Select(result => $"{result.Result}: {string.Join(" | ", result.Errors)}"))}");
                 Assert.That(conversion.LastInputFiles, Is.EqualTo(new[] { sourcePaths[2], sourcePaths[1], sourcePaths[0] }));
                 Assert.That(conversion.LastFallbackChapterTitles, Is.EqualTo(new[] { "First track", "Second track", "Last disc" }));
                 Assert.That(conversion.LastOptions.AudioBitrate, Is.EqualTo(128));
@@ -3874,7 +3882,9 @@ namespace Chaptarr.Core.Test.MediaFiles
                     cancellationToken: CancellationToken.None);
 
                 Assert.That(conversion.ConvertCalls, Is.EqualTo(1));
-                Assert.That(results.Any(result => result.Result == ImportResultType.Imported), Is.True);
+                var resultSummary = string.Join("; ", results.Select(result =>
+                    $"{result.Result}: {string.Join(" | ", result.Errors)} ({result.ImportDecision.Item.Path})"));
+                Assert.That(results.Any(result => result.Result == ImportResultType.Imported), Is.True, resultSummary);
                 Assert.That(sourcePaths.All(File.Exists), Is.EqualTo(shouldKeepSources));
                 Assert.That(File.Exists(Path.Combine(destinationDir, "Black Sheep.m4b")), Is.True);
             }
@@ -3925,7 +3935,9 @@ namespace Chaptarr.Core.Test.MediaFiles
                     cancellationToken: CancellationToken.None);
 
                 Assert.That(conversion.ConvertCalls, Is.Zero);
-                Assert.That(results.Select(result => result.Result), Is.All.EqualTo(ImportResultType.Imported));
+                var resultSummary = string.Join("; ", results.Select(result =>
+                    $"{result.Result}: {string.Join(" | ", result.Errors)} ({result.ImportDecision.Item.Path})"));
+                Assert.That(results.Select(result => result.Result), Is.All.EqualTo(ImportResultType.Imported), resultSummary);
                 Assert.That(decisions.All(decision => File.Exists(decision.Item.Path)), Is.True);
                 Assert.That(Directory.GetFiles(destinationDir, "*.mp3"), Has.Length.EqualTo(2));
             }
