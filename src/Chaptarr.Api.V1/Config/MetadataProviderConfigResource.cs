@@ -1,7 +1,7 @@
 using System;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MetadataSource.BookInfo;
-using Readarr.Http.REST;
+using Chaptarr.Http.REST;
 
 namespace Chaptarr.Api.V1.Config
 {
