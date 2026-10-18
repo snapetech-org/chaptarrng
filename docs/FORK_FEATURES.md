@@ -553,6 +553,15 @@ a media map: the review file was private to UID 99, and the `both` choice
 created monitored audiobook and ebook records. The primary fixture contains
 one author, one source book, two editions, two files, and two history rows.
 
+On 2026-10-18, the published `v0.9.977` Linux/amd64 image also passed
+preview, explicit apply, restore preview, and rollback against a private
+populated migration-158 SQLite snapshot. Preview kept the source bytes
+unchanged. Apply retained a source backup with the same logical database
+contents, and rollback restored that source while retaining the converted
+database. Integrity and foreign-key checks passed on both backups and the
+restored database. The unresolved format choices were not classified; this
+validates one database round trip, not semantic migration acceptance.
+
 The converter is now publicly available in the standard image, beginning with
 [`v0.9.970`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.970).
 The latest published `v0.9.977` supports migration-158 SQLite and bundles the
@@ -561,11 +570,13 @@ versions before migration 14. PR #126 merged the version-aware fix and
 migration-1 rollback test into `main`; hosted Linux, macOS, Windows, and
 PostgreSQL migration checks passed, but the fix is not in `.977`. Synthetic
 coverage does not prove older-schema behavior on real data, the PostgreSQL
-source-conversion candidate, populated real-data rollback, every provider/settings/client
-contract, semantic feature parity, or compatibility with every installation
-channel. Each capability and applicable upgrade, rollback, and redirect path
-remains an independent replacement gate. Releases remain frozen until all
-retirement gates close.
+source-conversion candidate, every provider/settings/client contract,
+semantic feature parity, or compatibility with every installation channel.
+The populated migration-158 SQLite round trip covers one private snapshot; it
+does not close operator media review, in-place deployment rollback, or any
+installation-channel gate. Each capability and applicable upgrade, rollback,
+and redirect path remains an independent replacement gate. Releases remain
+frozen until all retirement gates close.
 
 The release workflows enforce that distinction: standard ChaptarrNG releases
 publish the new ChaptarrNG identities, while old BookshelfNG package IDs and

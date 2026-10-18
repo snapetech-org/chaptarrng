@@ -367,6 +367,31 @@ conversion, package-channel upgrades, rollback against a real populated deployme
 requests, or complete feature parity. Feature, installation, and distribution
 channels remain separate continuity checks.
 
+## Published-image populated SQLite round trip (2026-10-18)
+
+The public ChaptarrNG `v0.9.977` Linux/amd64 image was also tested against a
+private populated migration-158 SQLite snapshot. The live BookshelfNG service
+and database were not used as the test target. Preview completed with the
+snapshot database bytes unchanged and created no migration backup. It produced
+private media-review artifacts; no media map was supplied, so ambiguous format
+choices remain for operator review.
+
+Explicit apply on a separate copy reached native Chaptarr migration v120 and
+retained the migration-158 source backup. The source backup matched the input
+snapshot's logical database contents. The converted database and retained
+source backup both passed SQLite integrity and foreign-key checks. On that
+copy, restore preview passed, and explicit rollback restored migration 158
+with the same logical database contents as the source snapshot. Rollback kept
+the migration-120 ChaptarrNG database as a separate backup matching its
+pre-restore contents; both databases passed integrity and foreign-key checks.
+A second isolated restore-preview check left both database files byte-for-byte
+unchanged and created no ChaptarrNG backup artifact.
+
+This adds populated SQLite apply and rollback evidence for one migration-158
+database. It does not resolve ambiguous media classifications or establish
+older-schema, PostgreSQL, Windows-native, package-channel, external-client, or
+full feature-parity acceptance. No user data or database files were committed.
+
 An earlier hosted Windows run of the migration candidate failed four
 promotion/rollback cases. The Linux image checks below do not establish a
 passing native Windows migration run.

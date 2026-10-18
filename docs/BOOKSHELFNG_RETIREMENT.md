@@ -62,7 +62,7 @@ or every historical release. Schema 159 is rejected without changing the
 source. PostgreSQL source databases and two populated BookshelfNG databases
 remain unsupported by published ChaptarrNG releases. A PostgreSQL
 migration-158 candidate is under review in this work branch; it does not
-support older PostgreSQL schemas. The candidate remains unaccepted for operator data; see the [PostgreSQL migration notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). Neither source-only fixtures nor an empty image-switch rehearsal establishes behavior on populated operator data or every historical release.
+support older PostgreSQL schemas. The candidate remains unaccepted for operator data; see the [PostgreSQL migration notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). A separate private populated migration-158 SQLite snapshot completed preview, apply, and rollback with the public .977 image on Linux/amd64; the source and converted backups passed logical-content, integrity, and foreign-key checks. This covers one populated SQLite round trip, not older schemas, PostgreSQL, human review of ambiguous formats, or installation-channel handoff; details are in the [operator guide](MIGRATE_FROM_BOOKSHELFNG.md).
 The SQLite path stages a native database, accounts for source rows, checks
 SQLite integrity and foreign keys, and promotes only after validation. Preview
 does not modify the source. Apply and rollback are explicit operations, and
@@ -186,9 +186,6 @@ authorized while these gates remain open. The remaining work is:
    ambiguous media choice, and verify external clients against the converted
    library before enabling automatic aliases.
 
-The conversion preview, source-side archive helper, synthetic conversion and
-rollback checks, and package templates are present. Full feature parity,
-representative real-world rollback, all legacy package publications, and a
-universal automatic update path are not established. See the
+The conversion preview, source-side archive helper, synthetic conversion checks, and package templates are present. A populated migration-158 SQLite copy has now completed apply and rollback with the public image, but an in-place deployment cutover, full feature parity, all legacy package publications, and a universal automatic update path are not established. See the
 [BookshelfNG operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
 and the linked parity roadmap for the detailed evidence ledger.
