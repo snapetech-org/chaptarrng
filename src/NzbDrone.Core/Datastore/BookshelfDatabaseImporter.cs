@@ -140,7 +140,7 @@ namespace NzbDrone.Core.Datastore
                     "; unknown: " + string.Join(", ", unknown) + "). The source database was not changed.");
             }
 
-            var version = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(Version), 0) FROM VersionInfo;"), CultureInfo.InvariantCulture);
+            var version = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(\"Version\"), 0) FROM \"VersionInfo\";"), CultureInfo.InvariantCulture);
             if (version != SupportedSourceMigration)
             {
                 throw new InvalidDataException(
@@ -158,7 +158,7 @@ namespace NzbDrone.Core.Datastore
                 throw new InvalidDataException("BookshelfNG backup has no migration history and cannot be upgraded by the bundled migration chain. The source database was not changed.");
             }
 
-            var version = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(Version), 0) FROM VersionInfo;"), CultureInfo.InvariantCulture);
+            var version = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(\"Version\"), 0) FROM \"VersionInfo\";"), CultureInfo.InvariantCulture);
             if (version < 1 || version > SupportedSourceMigration)
             {
                 throw new InvalidDataException(

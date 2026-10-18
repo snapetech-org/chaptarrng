@@ -295,6 +295,20 @@ namespace Chaptarr.Core.Test.Datastore
             {
                 MigrationContext.Current = null;
             }
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+                    SELECT COUNT(*)
+                      FROM information_schema.tables
+                     WHERE table_schema = current_schema()
+                       AND table_type = 'BASE TABLE'
+                       AND table_name IN ('Config', 'VersionInfo');";
+                Assert.That(Convert.ToInt32(command.ExecuteScalar()), Is.EqualTo(2),
+                    "BookshelfNG source migrations must create Config and VersionInfo in the requested PostgreSQL schema.");
+            }
         }
 
         private static void SeedMatchingThreshold(string connectionString)
@@ -303,7 +317,7 @@ namespace Chaptarr.Core.Test.Datastore
             connection.Open();
             using var command = connection.CreateCommand();
             command.CommandText = @"
-                INSERT INTO Config (""Key"", ""Value"")
+                INSERT INTO ""Config"" (""Key"", ""Value"")
                 VALUES
                     ('BookImportMinimumMatchPercent', '70'),
                     ('HardcoverAuth', 'Bearer pg-fixture-token')
