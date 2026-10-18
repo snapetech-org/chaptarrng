@@ -463,6 +463,21 @@ On an isolated Linux/amd64 Docker host, the published BookshelfNG `main` image r
 
 Rollback preview and apply passed. The restored BookshelfNG database remained at migration 158 with 39 tables, and the previous BookshelfNG image started against it on port 8787. A test-only setting written after conversion remained in the retained ChaptarrNG backup. This was an empty-database Docker rehearsal; it does not validate populated operator data or the Unraid Community Apps template update flow.
 
+## AUR package candidate rehearsal (2026-10-18)
+
+In an isolated Arch container, the active BookshelfNG `.71` systemd service was
+upgraded through the local BookshelfNG-identity `.977` package candidate. The
+pacman hooks stopped and restarted the service; ChaptarrNG startup converted a
+synthetic populated migration-158 database to migration 120 and retained the
+source backup. Restore preview and apply returned it to migration 158, retained
+the converted database, and passed SQLite integrity and foreign-key checks.
+Pacman downgrade restored `.71`, and the BookshelfNG service started against the
+restored database. The config override and synthetic data canary survived the
+transition. `systemd-networkd-wait-online` was masked only in the test container
+because its network was disconnected. This validates the candidate's synthetic
+service and database path, not operator data or host-specific settings; the
+candidate remains unpublished. See the [package test record](../packaging/README.md).
+
 ## Limits and update channels
 
 The published `v0.9.977` converter accepts SQLite databases at BookshelfNG

@@ -29,7 +29,7 @@ upgraded safely.
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
 | --- | --- | --- | --- |
-| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade and synthetic populated migration/restore checks | Test the active systemd handoff and conversion/rollback with representative operator data before publishing the candidate |
+| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped | Test the old package identity in a Fedora upgrade before enabling its bridge |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
 | Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged | Verify legacy registry write access and digest equality before enabling the bridge |
@@ -74,10 +74,27 @@ BookshelfNG migration-158 SQLite database to ChaptarrNG migration 120. The
 preview left the source bytes unchanged; apply retained the source backup and
 passed SQLite integrity and foreign-key checks. Restore returned the active
 database to migration 158, retained the converted database as a backup, and
-passed the same checks. This validates the package-level database path on
-synthetic data. Systemd was not running, so active service stop/restart was not
-exercised; conversion and rollback with representative operator data remain
-open. The candidate remains unpublished.
+passed the same checks.
+
+A second rehearsal booted systemd in a network-isolated Arch container. It
+started the public `.71` BookshelfNG package against the same populated fixture,
+then upgraded the active service to the local `.977` candidate. The pacman hook
+stopped the BookshelfNG process before replacement; the post-upgrade hook
+reloaded systemd and started ChaptarrNG, whose normal startup converted the
+database to migration 120. The migration-158 source backup passed integrity and
+foreign-key checks; the target had two format-specific book rows and passed the
+same checks. The environment override was retained with a `.pacnew` default,
+and the data canary remained intact.
+
+With the service stopped, restore preview preserved both database hashes.
+Explicit restore returned the database to migration 158 and retained the
+converted migration-120 database as a backup; both passed integrity and
+foreign-key checks. Pacman downgrade restored `.71`, and starting the service
+opened the restored database. The test container had no network, so
+`systemd-networkd-wait-online` was masked only inside that disposable container
+to let its `network-online.target` complete. This validates synthetic package
+and service lifecycle behavior; representative operator data and host-specific
+settings remain open. The candidate remains unpublished.
 
 ## Migration behavior and limits
 
@@ -116,11 +133,10 @@ retirement decision.
 
 ## Work required before enabling the legacy bridge
 
-- Test the AUR candidate's active-systemd handoff and migration-158
-  conversion/rollback with representative operator data; test the old-identity
-  COPR and Chocolatey upgrades in disposable systems. Preserve service settings
-  and data paths, retain the source backup, and verify rollback without losing
-  later writes.
+- Validate the AUR candidate with representative operator data and
+  host-specific service settings; test the old-identity COPR and Chocolatey
+  upgrades in disposable systems. Preserve service settings and data paths,
+  retain the source backup, and verify rollback without losing later writes.
 - Resolve Chocolatey HTTP 403 authorization, publish the `chaptarrng` identity,
   and confirm its public checksum matches the tested package.
 - Publish and validate the migration-1-to-13 alias fix before recommending

@@ -77,8 +77,13 @@ passed an isolated, network-disabled pacman upgrade from the public `.71`
 package and downgrade back, preserving an environment override and synthetic
 data canary. Its installed package also passed preview, conversion, restore,
 and SQLite integrity/foreign-key checks against a synthetic populated
-migration-158 database. Systemd was not running, and acceptance with operator
-data remains open; see the [package status](packaging/README.md). ChaptarrNG PR #127 merged to `main` as `b3089a39`,
+migration-158 database. Systemd was not running in that package-only rehearsal.
+A separate network-isolated Arch systemd rehearsal upgraded the active `.71`
+service; ChaptarrNG started and converted the database, then restore and
+downgrade returned to active BookshelfNG. This uses synthetic data, and the
+network-online wait was masked inside the test container. Acceptance with
+operator data remains open; see the [package status](packaging/README.md).
+ChaptarrNG PR #127 merged to `main` as `b3089a39`,
 adding selectable supplemental catalogs, per-field metadata preferences, and
 exact-identity recovery for unmapped files. It is not in public `v0.9.977`;
 provider/settings behavior on converted operator data still needs acceptance.
