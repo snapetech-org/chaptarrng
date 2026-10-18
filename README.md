@@ -41,6 +41,13 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+The migration handles one source database per appdata directory. It stops if
+both `readarr.db` and `audioarr.db` are populated, rather than choosing or
+merging them. Migrate independent BookshelfNG installations separately. To
+combine their tracked media into one library, use BookshelfNG's
+[two-instance consolidation runbook](https://github.com/snapetech-org/bookshelfng/blob/main/README.md#one-instance-for-ebooks-and-audiobooks)
+first; database history, profiles, monitoring, and settings are not merged.
+
 The source migration runs on a disposable copy and keeps the original database
 for rollback. A populated synthetic v22 SQLite fixture upgrades through the
 embedded chain, converts, and rolls back; preview leaves the source unchanged,

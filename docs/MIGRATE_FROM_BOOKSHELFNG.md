@@ -42,6 +42,11 @@ or pick one silently. Keep independently operated installations in separate
 appdata directories and migrate each one separately. If both files belong to
 data stored together, preserve the original directory and resolve database
 ownership and shared settings before making separate working copies.
+If you want one combined library, consolidate tracked media into the
+BookshelfNG instance you are keeping with the
+[two-instance consolidation runbook](https://github.com/snapetech-org/bookshelfng/blob/main/README.md#one-instance-for-ebooks-and-audiobooks),
+verify that library, and then migrate that instance. The runbook does not merge
+database histories, profiles, monitoring, or settings.
 
 The published `v0.9.977` converter supports BookshelfNG migration-158 SQLite
 databases and bundles the BookshelfNG source migration chain. It upgrades a
