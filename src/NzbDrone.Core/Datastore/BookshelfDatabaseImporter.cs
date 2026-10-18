@@ -829,7 +829,7 @@ namespace NzbDrone.Core.Datastore
                           FROM ""MetadataFiles""
                          WHERE ""MetadataFiles"".""BookFileId"" IS NOT NULL
                            AND NOT EXISTS (SELECT 1 FROM ""BookFiles"" WHERE ""BookFiles"".""Id"" = ""MetadataFiles"".""BookFileId"")
-                  );");
+                  ) AS OrphanedBookFileIds;");
             var maxOrphanId = maxOrphanValue == null || maxOrphanValue == DBNull.Value
                 ? 0
                 : Convert.ToInt64(maxOrphanValue, CultureInfo.InvariantCulture);
@@ -1799,7 +1799,7 @@ namespace NzbDrone.Core.Datastore
         private static IEnumerable<Dictionary<string, object>> ReadRows(DbConnection connection, string table)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT * FROM {Quote(table)} ORDER BY Id;";
+            command.CommandText = $"SELECT * FROM {Quote(table)} ORDER BY {Quote("Id")};";
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {

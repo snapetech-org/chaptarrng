@@ -130,7 +130,7 @@ namespace NzbDrone.Core.Datastore
                 FROM ""Books"" b
                 LEFT JOIN ""AuthorMetadata"" am ON am.""Id"" = b.""AuthorMetadataId""
                 LEFT JOIN ""Editions"" e ON e.""BookId"" = b.""Id""
-                GROUP BY b.""Id""
+                GROUP BY b.""Id"", b.""Title"", am.""Name"", b.""Monitored""
                 ORDER BY b.""Id"";";
 
             var result = new List<ReviewBook>();
