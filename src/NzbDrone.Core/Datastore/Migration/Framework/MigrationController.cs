@@ -236,17 +236,35 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             // FluentMigrator processor/generator ids are case-sensitive and use "SQLite"/"PostgreSQL"
             // (older versions used "sqlite"/"postgres").
             var db = databaseType == DatabaseType.SQLite ? "SQLite" : "PostgreSQL";
+            var defaultSchema = databaseType == DatabaseType.PostgreSQL
+                ? GetPostgresCurrentSchema(connectionString)
+                : null;
+            var postgresVersionTableMetaData = defaultSchema == null
+                ? null
+                : new SchemaScopedVersionTableMetaData(
+                    new DefaultConventionSet(defaultSchema, null),
+                    Options.Create(new RunnerOptions { IncludeUntaggedMaintenances = true }),
+                    defaultSchema);
 
             var migrationServices = new ServiceCollection()
                 .AddLogging(b => b.AddNLog())
                 .AddFluentMigratorCore()
                 .Configure<RunnerOptions>(cfg => cfg.IncludeUntaggedMaintenances = true)
-                .ConfigureRunner(
-                    builder => builder
-                    .AddPostgres()
-                    .AddSQLite() // Use SQLite runner (Microsoft.Data.Sqlite)
-                    .WithGlobalConnectionString(connectionString)
-                    .ScanIn(Assembly.GetExecutingAssembly()).For.All())
+                .ConfigureRunner(builder =>
+                {
+                    var runnerBuilder = builder
+                        .AddPostgres()
+                        .AddSQLite() // Use SQLite runner (Microsoft.Data.Sqlite)
+                        .WithGlobalConnectionString(connectionString);
+
+                    runnerBuilder.ScanIn(Assembly.GetExecutingAssembly()).For.All();
+
+                    if (postgresVersionTableMetaData != null)
+                    {
+                        // FluentMigrator's VersionInfo table is independent of the migration convention set.
+                        runnerBuilder.WithVersionTable(postgresVersionTableMetaData);
+                    }
+                })
                 .Configure<TypeFilterOptions>(opt => opt.Namespace = "NzbDrone.Core.Datastore.Migration")
                 .Configure<ProcessorOptions>(opt =>
                 {
@@ -264,13 +282,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
 
             if (databaseType == DatabaseType.PostgreSQL)
             {
-                var defaultSchema = GetPostgresCurrentSchema(connectionString);
                 migrationServices.AddSingleton<IConventionSet>(new DefaultConventionSet(defaultSchema, null));
-                migrationServices.AddScoped<IVersionTableMetaData>(serviceProvider =>
-                    new SchemaScopedVersionTableMetaData(
-                        serviceProvider.GetRequiredService<IConventionSet>(),
-                        serviceProvider.GetRequiredService<IOptions<RunnerOptions>>(),
-                        defaultSchema));
             }
 
             serviceProvider = migrationServices.BuildServiceProvider();
