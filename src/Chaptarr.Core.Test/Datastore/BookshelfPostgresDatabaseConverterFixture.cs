@@ -264,7 +264,7 @@ namespace Chaptarr.Core.Test.Datastore
             });
         }
 
-        private static void MigrateBookshelfSourceToLatest(string connectionString)
+        private void MigrateBookshelfSourceToLatest(string connectionString)
         {
             var migrationServices = new ServiceCollection()
                 .AddLogging(builder => builder.AddNLog())
