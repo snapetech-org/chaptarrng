@@ -52,7 +52,7 @@ namespace Chaptarr.Core.Test.Notifications
         }
 
         [Test]
-        public void should_stream_files_to_bookdock_with_a_bearer_token_and_preserve_sources()
+        public void should_stream_a_duplicate_file_once_with_a_bearer_token_and_preserve_the_source()
         {
             var path = Path.Combine(Path.GetTempPath(), $"bookorbit-{Guid.NewGuid():N}.epub");
             File.WriteAllText(path, "test-book-content");
@@ -81,7 +81,7 @@ namespace Chaptarr.Core.Test.Notifications
 
                 Create(transport).UploadFiles(Settings, new[] { path, path });
 
-                Assert.That(transport.RequestedUrls.Count, Is.EqualTo(3));
+                Assert.That(transport.RequestedUrls.Count, Is.EqualTo(2));
                 Assert.That(File.ReadAllText(path), Is.EqualTo("test-book-content"));
             }
             finally
