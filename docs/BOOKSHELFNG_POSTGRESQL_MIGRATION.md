@@ -4,16 +4,14 @@
 > convert a PostgreSQL BookshelfNG database. The converter in this work branch
 > is a candidate for one BookshelfNG schema at migration 158. Do not use it for
 > operator data until representative populated-data review and rollback
-> acceptance are complete and a release explicitly supports it. Earlier
-> synthetic PostgreSQL snapshots `43bc6363` and `0d31609b` passed migration and
-> platform checks. Exact-head run
-> [39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430)
-> on `1a0a1cf78b404fe86d7b266facd8e843e435d9b4` passed Linux, macOS, and
-> Windows builds/tests, PostgreSQL target migrations and BookshelfNG converter
-> fixtures, release-note validation, and receipt reconciliation. CodeQL,
-> dependency review, and dependency/secret scans also passed on this head.
-> These are candidate CI checks only; PostgreSQL operator-data acceptance
-> remains open.
+> acceptance are complete and a release explicitly supports it. Exact-head run
+> [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100)
+> passed on PR head `e4db2d46` (CI merge candidate `724029a2`): Linux, macOS,
+> Windows, release-note validation, and receipt reconciliation passed; the
+> PostgreSQL migration fixture passed 4/4 cases. CodeQL, dependency review,
+> secret scan, and NuGet submission checks also passed. This validates one
+> synthetic migration-158 schema only; PostgreSQL operator-data acceptance and
+> independent backup/restore validation remain open.
 
 ## Candidate behavior
 
@@ -79,7 +77,7 @@ stored beside `readarr.db` in the ChaptarrNG app data directory.
 
 ## Acceptance still required
 
-- Hosted synthetic PostgreSQL conversion and rollback fixture: passed 4/4 cases on earlier run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892); the migration code snapshot [0d31609b](https://github.com/snapetech-org/chaptarrng/commit/0d31609b) also passed the PostgreSQL job on [39142709701](https://github.com/snapetech-org/chaptarrng/actions/runs/39142709701). Representative operator data and rollback acceptance remain open.
+- Hosted synthetic PostgreSQL conversion and rollback fixture: passed 4/4 cases on exact-head run [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100), including normal-startup conversion and backup retention. This is one synthetic migration-158 schema. Representative operator data, independent backup/restore, and rollback acceptance on a supported deployment remain open.
 - Verify PostgreSQL BookshelfNG migrations and ChaptarrNG runtime startup in
   the supported deployment, including sequence allocation after import.
 - Rehearse a representative operator database and review every ambiguous media

@@ -118,9 +118,10 @@ This exposed a provider-mode handoff hazard in the prior candidate. The current
 source change makes migration fail closed if bare numeric IDs are present and
 `HARDCOVER` is unset or invalid, and the Docker release workflow now builds
 separate softcover and Hardcover compatibility targets for the legacy aliases.
-Those changes are source-only; their exact-head hosted build and channel checks
-are still pending. This rehearsal used a synthetic fixture and does not
-establish behavior on operator data or validate the Unraid template handoff.
+At the time of this 2026-10-18 rehearsal, these changes were source-only and
+exact-head hosted checks were still pending. The later exact-head result is
+recorded below. This rehearsal used a synthetic fixture and does not establish
+behavior on operator data or validate the Unraid template handoff.
 
 These results show the candidate's SQLite preview, apply, automatic startup,
 data mapping, refusal, rollback, and populated API paths working together on
@@ -136,3 +137,54 @@ See [retirement status](../BOOKSHELFNG_RETIREMENT.md), the
 [operator migration guide](../MIGRATE_FROM_BOOKSHELFNG.md), and the
 [PostgreSQL candidate notes](../BOOKSHELFNG_POSTGRESQL_MIGRATION.md) for the
 remaining acceptance gates.
+
+## Exact-head provider-mode validation (2026-10-18)
+
+ChaptarrNG PR #131 head `e4db2d461773ea59cc57440d1226fcfcf24ccb58` passed
+[exact-head run 39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100).
+GitHub validated PR merge candidate `724029a27e37458994ee3e5d3d9c4601f3d1c5a2`.
+Platform receipts reported:
+
+- Linux: 4,341 passed, 0 failed, 4 skipped, 2 inconclusive.
+- macOS: 4,338 passed, 0 failed, 7 skipped, 2 inconclusive.
+- Windows: 4,304 passed, 0 failed, 10 skipped, 33 inconclusive.
+- PostgreSQL migration fixture: 4/4 cases passed, including normal-startup
+  conversion and backup retention.
+- Release-note validation and native-runner receipt reconciliation passed.
+  C#, JavaScript/TypeScript, Python, and Actions CodeQL, dependency review,
+  secret scan, and NuGet submission checks passed. The disposable-fork check
+  was skipped by its pull-request policy.
+
+The Linux artifact reports ChaptarrNG `0.9.978.0`; its `Chaptarr.Core.dll`
+SHA-256 is
+`74089c13ebfa844acb8363a72cf8fc634fc04e5f73d0945fc8d40a785c308e4a`. I built
+that artifact into an isolated local ASP.NET runtime image and tested three
+copies of the populated synthetic migration-158 database created by the
+published BookshelfNG `.71` binary. The original source database hash was
+`9861ec1bb7d940841b564a00000ef35de43cac7a84b85ad1b733e1f2824d3ab0`.
+
+- With `HARDCOVER` unset, preview exited with the explicit fail-closed message;
+  the source hash and schema version 158 remained unchanged.
+- With `HARDCOVER=false`, preview left the source hash unchanged and apply
+  mapped author/book/edition/series IDs into Goodreads fields. The converted
+  database reached schema 121 and passed SQLite integrity and foreign-key
+  checks.
+- With `HARDCOVER=true`, preview and apply preserved author `hc:9001`, book
+  `hc:9002`, editions `9003`/`9004`, and series `hc:9005` in Hardcover fields.
+  Normal startup also converted a separate copy, served `/ping`, returned one
+  author and two books across ebook and audiobook formats, retained the source
+  backup, and passed integrity and foreign-key checks.
+- Restore preview left the converted database unchanged. Explicit rollback
+  restored the retained BookshelfNG snapshot byte-for-byte (SHA-256
+  `f59219f827571eb7111b3a2067d708e4193dc338e3dce9fffbf1d10d27c6e273`),
+  returned to schema 158, and preserved the ChaptarrNG schema-121 backup
+  (SHA-256
+  `ab57924a7662bbf7a8184b8627ebab9d0d18f53c18d8c693f4093d9d184b4301`).
+  Integrity and foreign-key checks passed after restore.
+
+These are hosted candidate checks and local synthetic rehearsals. They do not
+establish representative operator-data acceptance, review of ambiguous media
+choices, provider API parity, PostgreSQL operator-data rollback, or installer
+and update-channel acceptance. ChaptarrNG `v0.9.977` and BookshelfNG `0.4.21.71`
+remain the latest public releases; no image, package, release, or compatibility
+alias was published or advanced during these checks.

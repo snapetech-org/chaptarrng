@@ -81,3 +81,8 @@ This verifies the populated read path and key boundary. It does not exercise
 end-to-end SeerrNG request creation, availability statistics, history,
 pending-import retry/cancel operations, unchanged production settings, or a
 real BookshelfNG library.
+
+This smoke is evidence for the earlier ChaptarrNG candidate head
+`1a0a1cf78b404fe86d7b266facd8e843e435d9b4`. The later migration-candidate run
+on `e4db2d46` did not rerun this SeerrNG harness, so this result should not be
+read as exact-head SeerrNG validation.

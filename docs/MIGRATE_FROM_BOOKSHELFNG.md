@@ -21,15 +21,15 @@
 > release freeze.
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 > contains the migration candidate. Exact-head run
-> [39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430)
-> on `1a0a1cf78b404fe86d7b266facd8e843e435d9b4` passed Linux, macOS, and
-> Windows builds/tests, PostgreSQL migration and BookshelfNG converter
-> fixtures, release-note validation, and receipt reconciliation. CodeQL,
-> dependency review, and dependency/secret scans passed on the same head. Its
-> Linux artifact passed synthetic preview, apply, rollback, fail-closed,
-> automatic-startup, populated-API, and SeerrNG restricted-key checks using a
-> database created by the released BookshelfNG `.71` binary. This remains
-> candidate evidence only and does not support operator cutover; see the
+> [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100)
+> passed on PR head `e4db2d46` (CI merge candidate `724029a2`): Linux, macOS,
+> Windows, PostgreSQL migration, release-note validation, and receipt
+> reconciliation passed. CodeQL, dependency review, secret scan, and NuGet
+> submission checks also passed. The final Linux artifact passed synthetic
+> preview/apply/rollback in Goodreads and Hardcover modes, fail-closed behavior
+> when provider mode is missing, and automatic-startup conversion with a
+> populated API. This remains candidate evidence, not operator-data or
+> install-channel acceptance; see the
 > [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 > PostgreSQL source conversion remains unsupported in published releases.
 > Pinned images,
@@ -527,8 +527,15 @@ byte-for-byte, retained the converted database separately, and the `.71`
 Hardcover image reopened the restored source. The current source candidate now
 fails closed on bare IDs when the mode is unset or invalid, and adds separate
 compatibility image targets for the legacy Goodreads and Hardcover aliases.
-Those targets still need exact-head hosted validation; this synthetic rehearsal
-does not establish operator-data or installer acceptance. See the detailed
+Exact-head run [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100)
+passed the provider-mode regression and PostgreSQL fixture checks. The final
+Linux artifact refused conversion without a provider mode, preserved Goodreads
+and Hardcover identities with their explicit modes, converted during normal
+startup, and restored the source byte-for-byte during rollback. Local BuildKit
+target checks and hosted alias/bridge regression scripts also pass; the actual
+GHCR compatibility images and alias dispatch have not been built or published.
+This synthetic rehearsal does not establish operator-data or installer
+acceptance. See the detailed
 [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 
 ## AUR package candidate rehearsal (2026-10-18)

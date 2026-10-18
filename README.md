@@ -68,17 +68,19 @@ integrity and foreign-key checks while retaining both source and converted
 backups. Ambiguous format choices remain for human review; this does not
 validate older schemas, PostgreSQL, installers, or full feature parity.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
-contains the older SQLite and one-schema PostgreSQL migration work, native
+contains older SQLite and one-schema PostgreSQL migration support, native
 Hardcover identity handling, and a separately configured BookOrbit Book Dock
-destination. Exact-head run [39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430)
-passed on an earlier PR head; later provider-mode and image-alias changes are
-awaiting exact-head validation. A local image-switch rehearsal against
-synthetic data from the released BookshelfNG `.71` Hardcover image showed that
-the provider mode must carry across the switch: without `HARDCOVER=true`, bare
-IDs were interpreted as Goodreads; with it, Hardcover IDs, API records, and
-byte-for-byte rollback were preserved. The candidate now fails closed when
-the mode is absent and has separate legacy-mode image targets. This remains
-synthetic evidence, not operator-data or channel acceptance. Details are in the
+destination. Exact-head run [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100)
+passed on PR head `e4db2d46` (CI merge candidate `724029a2`): Linux, macOS,
+Windows, PostgreSQL migration, release-note validation, and receipt
+reconciliation passed; CodeQL, dependency review, and security scans passed
+too. The final Linux artifact refused migration when provider mode was absent
+without changing the source, preserved Goodreads IDs with `HARDCOVER=false`,
+and preserved Hardcover IDs with `HARDCOVER=true`. Automatic startup converted
+the synthetic library and served its author and both format records; explicit
+rollback restored the retained BookshelfNG database byte-for-byte and kept the
+ChaptarrNG backup. This is synthetic evidence, not operator-data or
+installation-channel acceptance. Details are in the
 [migration fixture evidence](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 Keep the release freeze in place. See the [PostgreSQL migration candidate
 notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
