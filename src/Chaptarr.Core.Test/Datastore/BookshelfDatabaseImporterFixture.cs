@@ -2,8 +2,15 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using FluentMigrator.Runner.Generators;
+using FluentMigrator.Runner;
+using FluentMigrator.Runner.Initialization;
+using FluentMigrator.Runner.Processors;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Data.Sqlite;
 using NLog;
+using NLog.Extensions.Logging;
 using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
@@ -173,6 +180,36 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelf-migrate-*.db"), Is.Empty);
                 Assert.That(Directory.GetFiles(_directory, "*.chaptarr-stage-*.db"), Is.Empty);
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelf-snapshot-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_upgrade_a_genuine_migration_22_schema_created_by_bookshelf_migrations()
+        {
+            CreateSourceThroughMigration(22);
+
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = "INSERT INTO Config (Key, Value) VALUES ('FixtureSetting', 'preserved');";
+                command.ExecuteNonQuery();
+            }
+
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var result = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(QueryScalar<int>(result.BackupPath, "SELECT MAX(Version) FROM VersionInfo;"), Is.EqualTo(22));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'FixtureSetting';"), Is.EqualTo("preserved"));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
             });
         }
 
@@ -832,6 +869,45 @@ namespace Chaptarr.Core.Test.Datastore
                 ALTER TABLE ImportListStatus ADD COLUMN LastSyncListInfo DATETIME;
                 DELETE FROM VersionInfo WHERE Version > 22;";
             command.ExecuteNonQuery();
+        }
+
+        private void CreateSourceThroughMigration(long targetVersion)
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(_sourcePath))
+            {
+                File.Delete(_sourcePath);
+            }
+
+            using var serviceProvider = new ServiceCollection()
+                .AddLogging(builder => builder.AddNLog())
+                .AddFluentMigratorCore()
+                .Configure<RunnerOptions>(options => options.IncludeUntaggedMaintenances = true)
+                .ConfigureRunner(builder => builder
+                    .AddNzbDroneSQLite()
+                    .WithGlobalConnectionString(_sourceConnectionString)
+                    .ScanIn(typeof(MigrationController).Assembly).For.All())
+                .Configure<TypeFilterOptions>(options => options.Namespace = "NzbDrone.Core.Datastore.BookshelfMigration")
+                .Configure<ProcessorOptions>(options =>
+                {
+                    options.PreviewOnly = false;
+                    options.Timeout = TimeSpan.FromMinutes(5);
+                })
+                .Configure<SelectingProcessorAccessorOptions>(options => options.ProcessorId = "SQLite")
+                .Configure<SelectingGeneratorAccessorOptions>(options => options.GeneratorId = "SQLite")
+                .BuildServiceProvider();
+
+            using var scope = serviceProvider.CreateScope();
+            var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+            MigrationContext.Current = new MigrationContext(MigrationType.Main);
+            try
+            {
+                runner.MigrateUp(targetVersion);
+            }
+            finally
+            {
+                MigrationContext.Current = null;
+            }
         }
 
         private static string ConnectionStringFor(string path) => new SqliteConnectionStringBuilder
