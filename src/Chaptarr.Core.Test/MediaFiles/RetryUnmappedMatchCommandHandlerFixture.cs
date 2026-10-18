@@ -814,6 +814,55 @@ namespace Chaptarr.Core.Test.MediaFiles
         }
 
         [Test]
+        public void retry_match_uses_exact_canonical_provider_id_when_title_and_author_tags_are_missing()
+        {
+            var modified = new DateTime(2026, 7, 4, 1, 0, 0, DateTimeKind.Utc);
+            var file = CreateUnmappedFile(1, "/books/unknown-book.epub", modified, 100, "unknown-book", null);
+            file.MediaType = "ebook";
+            var workProviderId = AdditionalMetadataSources.CreateProviderId("googlebooks", "book-1");
+            var authorProviderId = AdditionalMetadataSources.CreateProviderId("googlebooks-author", "author-1");
+            file.AllTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["BOOK_PROVIDER_ID"] = new List<string> { workProviderId }
+            };
+            var context = CreateContext(file, modified, 100);
+            context.CatalogSearch.OnSearch = (title, author, getAllEditions, mediaType) => new List<Book>
+            {
+                new Book
+                {
+                    Title = "Exact Catalog Book",
+                    MediaType = BookMediaType.Ebook,
+                    AdditionalMetadataProviderId = workProviderId,
+                    Author = new Author { Name = "Exact Catalog Author", AdditionalMetadataProviderId = authorProviderId }
+                }
+            };
+            context.Matching.OnMatch = (matchedFiles, restrictToAuthorId, matchingContext, call) => new FileMatchResult
+            {
+                UnmatchedFiles = matchedFiles.Select(matchedFile => new UnmatchedFile
+                {
+                    File = matchedFile,
+                    Reason = "NO_MATCH"
+                }).ToArray()
+            };
+
+            context.Sut.Execute(new RetryUnmappedMatchCommand
+            {
+                MediaType = "ebook",
+                UnmappedFiles = new UnmappedFilesSelection { Scope = "all" }
+            });
+
+            Assert.That(context.CatalogSearch.Calls, Has.Count.EqualTo(1));
+            Assert.That(context.CatalogSearch.Calls[0].Title, Is.EqualTo(workProviderId));
+            Assert.That(context.CatalogSearch.Calls[0].Author, Is.Null);
+            Assert.That(context.CatalogSearch.Calls[0].GetAllEditions, Is.True);
+            Assert.That(context.CatalogSearch.Calls[0].MediaType, Is.EqualTo(BookMediaType.Ebook));
+            Assert.That(context.PendingImports.Enqueued, Has.Count.EqualTo(1));
+            Assert.That(context.PendingImports.Enqueued.Single().ProviderId, Is.EqualTo(authorProviderId));
+            Assert.That(context.Media.Updated.Any(updated => updated.MatchDetails?.Contains($"books={workProviderId}", StringComparison.Ordinal) == true), Is.True);
+            Assert.That(context.Import.Imports, Is.Empty);
+        }
+
+        [Test]
         public void retry_match_does_not_accept_a_provider_id_search_candidate_with_a_different_identifier()
         {
             var modified = new DateTime(2026, 7, 4, 1, 0, 0, DateTimeKind.Utc);
