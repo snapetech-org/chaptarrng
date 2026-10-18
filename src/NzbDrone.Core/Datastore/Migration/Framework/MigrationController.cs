@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using FluentMigrator.Runner;
+using FluentMigrator.Runner.Conventions;
 using FluentMigrator.Runner.Generators;
 using FluentMigrator.Runner.Initialization;
 using FluentMigrator.Runner.Processors;
@@ -12,6 +13,7 @@ using Microsoft.Data.Sqlite;
 using NLog;
 using NLog.Extensions.Logging;
 using NzbDrone.Common.EnvironmentInfo;
+using Npgsql;
 
 namespace NzbDrone.Core.Datastore.Migration.Framework
 {
@@ -148,6 +150,21 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             return Path.Combine(dataDirectory, "readarr.db");
         }
 
+        private static string GetPostgresCurrentSchema(string connectionString)
+        {
+            using var connection = new NpgsqlConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT current_schema();";
+            var schema = command.ExecuteScalar()?.ToString();
+            if (string.IsNullOrWhiteSpace(schema))
+            {
+                throw new InvalidOperationException("PostgreSQL migrations require a current schema.");
+            }
+
+            return schema;
+        }
+
         public void MigrateBookshelfSource(string connectionString)
         {
             if (DatabaseLineageGuard.Detect(connectionString, DatabaseType.SQLite) != DatabaseLineage.BookshelfNG)
@@ -218,7 +235,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             // (older versions used "sqlite"/"postgres").
             var db = databaseType == DatabaseType.SQLite ? "SQLite" : "PostgreSQL";
 
-            serviceProvider = new ServiceCollection()
+            var migrationServices = new ServiceCollection()
                 .AddLogging(b => b.AddNLog())
                 .AddFluentMigratorCore()
                 .Configure<RunnerOptions>(cfg => cfg.IncludeUntaggedMaintenances = true)
@@ -241,8 +258,15 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 .Configure<SelectingGeneratorAccessorOptions>(cfg =>
                 {
                     cfg.GeneratorId = db;
-                })
-                .BuildServiceProvider();
+                });
+
+            if (databaseType == DatabaseType.PostgreSQL)
+            {
+                var defaultSchema = GetPostgresCurrentSchema(connectionString);
+                migrationServices.AddScoped<IConventionSet>(_ => new DefaultConventionSet(defaultSchema));
+            }
+
+            serviceProvider = migrationServices.BuildServiceProvider();
 
             using (var scope = serviceProvider.CreateScope())
             {

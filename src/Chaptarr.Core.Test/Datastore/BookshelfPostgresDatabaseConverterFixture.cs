@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FluentMigrator.Runner;
+using FluentMigrator.Runner.Conventions;
 using FluentMigrator.Runner.Generators;
 using FluentMigrator.Runner.Initialization;
 using FluentMigrator.Runner.Processors;
@@ -265,7 +266,7 @@ namespace Chaptarr.Core.Test.Datastore
 
         private static void MigrateBookshelfSourceToLatest(string connectionString)
         {
-            using var serviceProvider = new ServiceCollection()
+            var migrationServices = new ServiceCollection()
                 .AddLogging(builder => builder.AddNLog())
                 .AddFluentMigratorCore()
                 .Configure<RunnerOptions>(options => options.IncludeUntaggedMaintenances = true)
@@ -280,8 +281,9 @@ namespace Chaptarr.Core.Test.Datastore
                     options.Timeout = TimeSpan.FromMinutes(5);
                 })
                 .Configure<SelectingProcessorAccessorOptions>(options => options.ProcessorId = "PostgreSQL")
-                .Configure<SelectingGeneratorAccessorOptions>(options => options.GeneratorId = "PostgreSQL")
-                .BuildServiceProvider();
+                .Configure<SelectingGeneratorAccessorOptions>(options => options.GeneratorId = "PostgreSQL");
+            migrationServices.AddScoped<IConventionSet>(_ => new DefaultConventionSet(_sourceSchema));
+            using var serviceProvider = migrationServices.BuildServiceProvider();
 
             using var scope = serviceProvider.CreateScope();
             MigrationContext.Current = new MigrationContext(MigrationType.Main);
