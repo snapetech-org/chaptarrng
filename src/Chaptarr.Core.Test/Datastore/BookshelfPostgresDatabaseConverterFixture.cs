@@ -159,7 +159,7 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.Chaptarr));
             Assert.That(ReadConfigValue(sourceConnectionString, "bookmatchingstrictness"), Is.EqualTo("balanced"));
-            Assert.That(ReadConfigValue(sourceConnectionString, "bookimportminimummatchpercent"), Is.EqualTo("70"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverApiToken"), Is.EqualTo("pg-fixture-token"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
             Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 1} AND \"Key\" = 'bookmatchingstrictness';"), Is.EqualTo(1));
@@ -176,7 +176,7 @@ namespace Chaptarr.Core.Test.Datastore
 
             var bookshelfBackupConnectionString = BuildConnectionString(_baseConnectionString, bookshelfBackupSchema);
             Assert.That(DatabaseLineageGuard.Detect(bookshelfBackupConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
-            Assert.That(ReadConfigValue(bookshelfBackupConnectionString, "bookimportminimummatchpercent"), Is.EqualTo("70"));
+            Assert.That(ReadConfigValue(bookshelfBackupConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
             Assert.That(ReadConfigValue(bookshelfBackupConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
             WriteConfigValue(sourceConnectionString, "FixtureSetting", "after-migration");
 
@@ -197,7 +197,7 @@ namespace Chaptarr.Core.Test.Datastore
             _knownBackupSchemas.Add(restored.ChaptarrBackupPath);
 
             Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
-            Assert.That(ReadConfigValue(sourceConnectionString, "bookimportminimummatchpercent"), Is.EqualTo("70"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
             Assert.That(ReadConfigValue(sourceConnectionString, "FixtureSetting"), Is.EqualTo("preserved"));
             var chaptarrBackupConnectionString = BuildConnectionString(_baseConnectionString, restored.ChaptarrBackupPath);
