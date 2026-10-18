@@ -856,12 +856,13 @@ query GetAuthorEditions($id: Int!, $limit: Int!, $offset: Int!) {
             var workId = GetInt(work["id"]);
             var format = GetString(edition["edition_format"]);
             var slug = GetString(work["slug"]);
-            var narrator = string.Join("; ", (work["contributions"] as JArray ?? new JArray())
+            var narratorNames = (work["contributions"] as JArray ?? new JArray())
                 .OfType<JObject>()
                 .Where(x => IsNarratorRole(GetString(x["contribution"])))
                 .Select(x => GetString(AsObject(x["author"])?["name"]))
                 .Where(x => x.IsNotNullOrWhiteSpace())
-                .Distinct(StringComparer.InvariantCultureIgnoreCase));
+                .Distinct(StringComparer.InvariantCultureIgnoreCase)
+                .ToList();
             var contributors = SelectAuthorContributions(work["contributions"] as JArray)
                 .Select(x => new ContributorResource
                 {
@@ -879,7 +880,7 @@ query GetAuthorEditions($id: Int!, $limit: Int!, $offset: Int!) {
                 Title = CleanSubtitle(title, subtitle),
                 Language = GetString(AsObject(edition["language"])?["code3"]),
                 Format = format.IsNullOrWhiteSpace() ? GetString(edition["physical_format"]) : format,
-                Narrator = narrator,
+                NarratorNames = narratorNames,
                 EditionInformation = WithFallback(GetString(edition["edition_information"]), GetString(edition["physical_information"])),
                 Publisher = GetString(AsObject(edition["publisher"])?["name"]),
                 ImageUrl = GetString(work["cached_image"]),

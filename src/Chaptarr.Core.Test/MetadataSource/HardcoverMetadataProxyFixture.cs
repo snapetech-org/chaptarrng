@@ -120,6 +120,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
             work.Books[0].Contributors.Should().HaveCount(2);
             work.Books[0].Contributors[1].ForeignId.Should().Be(43);
             work.Books[0].Format.Should().Be("Paperback");
+            work.Books[0].NarratorNames.Should().ContainSingle().Which.Should().Be("Voice Example");
             requests.Should().HaveCount(2);
             requests.Should().OnlyContain(x => x.Url.FullUri == "https://api.hardcover.app/v1/graphql");
             requests.Should().OnlyContain(x => x.Headers.GetSingleValue("Authorization") == "Bearer test-token");
@@ -352,6 +353,15 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
                             ""name"": ""Donald Kingsbury"",
                             ""slug"": ""donald-kingsbury"",
                             ""bio"": ""Writer."",
+                            ""cached_image"": null
+                        }
+                    }, {
+                        ""contribution"": ""narrator"",
+                        ""author"": {
+                            ""id"": 44,
+                            ""name"": ""Voice Example"",
+                            ""slug"": ""voice-example"",
+                            ""bio"": null,
                             ""cached_image"": null
                         }
                     }],

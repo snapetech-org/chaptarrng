@@ -125,6 +125,7 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                         Title = "Native Book Edition",
                         Isbn13 = "9780000000001",
                         Format = "Audiobook",
+                        NarratorNames = new List<string> { "Voice Example" },
                         Contributors = new List<ContributorResource> { new() { ForeignId = 42 } }
                     }
                 },
@@ -298,6 +299,7 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 Assert.That(result.Item2.Editions, Has.Count.EqualTo(1));
                 Assert.That(result.Item2.Editions[0].HardcoverEditionId, Is.EqualTo("201"));
                 Assert.That(result.Item2.Editions[0].ForeignEditionId, Is.EqualTo("hc:edition:201"));
+                Assert.That(result.Item2.Editions[0].NarratorNames, Is.EqualTo(new[] { "Voice Example" }));
                 Assert.That(result.Item2.Author.HardcoverAuthorId, Is.EqualTo("hc:42"));
             });
         }

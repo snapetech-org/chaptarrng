@@ -4373,6 +4373,11 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         {
             var isHardcover = string.Equals(provider, "hardcover", StringComparison.OrdinalIgnoreCase);
             var rawId = resource.ForeignId.ToString();
+            var narratorNames = (resource.NarratorNames ?? new List<string>())
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name.Trim())
+                .Distinct(StringComparer.InvariantCultureIgnoreCase)
+                .ToList();
             var edition = new Edition
             {
                 ForeignEditionId = isHardcover ? $"hc:edition:{rawId}" : EnsureCanonicalProviderId(rawId, "gr"),
@@ -4385,6 +4390,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 Language = resource.Language,
                 Overview = resource.Description,
                 Format = resource.Format,
+                Narrator = narratorNames.FirstOrDefault() ?? string.Empty,
+                NarratorNames = narratorNames,
                 IsEbook = resource.IsEbook,
                 Disambiguation = resource.EditionInformation,
                 Publisher = resource.Publisher,
