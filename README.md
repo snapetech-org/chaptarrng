@@ -70,15 +70,15 @@ validate older schemas, PostgreSQL, installers, or full feature parity.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 contains the older SQLite and one-schema PostgreSQL migration work, native
 Hardcover identity handling, and a separately configured BookOrbit Book Dock
-destination. Exact-head run [39167162488](https://github.com/snapetech-org/chaptarrng/actions/runs/39167162488)
-on `2334625b4ca57c22c39f09d6780830e4e4f1e79c` passed Linux, macOS, and
-Windows builds/tests, PostgreSQL migrations, release-note validation, and
-native-runner receipt reconciliation. CodeQL, dependency review, and
-dependency/secret scans also passed on this head. The candidate Linux
-artifact converted and restored a populated synthetic database built with the
-released BookshelfNG `.71` binary, and converted it again during ordinary
-startup in a network-isolated sandbox. This is candidate evidence only, not
-operator-data acceptance. Details are in the
+destination. Exact-head run [39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430)
+on `1a0a1cf78b404fe86d7b266facd8e843e435d9b4` passed Linux, macOS, and
+Windows builds/tests, PostgreSQL migration and BookshelfNG converter fixtures,
+release-note validation, and receipt reconciliation. CodeQL, dependency
+review, and dependency/secret scans passed on the same head. Its Linux
+artifact passed preview, apply, rollback, fail-closed cases, automatic
+startup, populated API, and SeerrNG restricted-key checks against synthetic
+data created by the released BookshelfNG `.71` binary. This is candidate
+evidence only, not operator-data acceptance. Details are in the
 [migration fixture evidence](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 Keep the release freeze in place. See the [PostgreSQL migration candidate
 notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).

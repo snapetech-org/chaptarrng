@@ -65,10 +65,19 @@ integration/seerrng-smoke.compose.yml down -v`.
 
 ## Recorded smoke evidence
 
-On 2026-10-18, the disposable Compose smoke passed against ChaptarrNG candidate
-`0.9.978.0`, built from PR #131 source head `9c3e1f00`, and SeerrNG source
-commit `0b267d526`. It verified status and capability discovery, read the
-empty paged book library, and confirmed the restricted key is rejected for
-administrative and unrelated command routes. Because the library was empty,
-this run does not verify migrated provider IDs, availability, history,
-pending imports, saved SeerrNG settings, or a populated BookshelfNG library.
+On 2026-10-18, `scripts/chaptarrng-integration-smoke.mjs` passed against
+ChaptarrNG candidate `0.9.978.0` from PR #131 source head
+`1a0a1cf78b404fe86d7b266facd8e843e435d9b4` (Build run
+[39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430))
+and SeerrNG source commit `0b267d526`. The candidate started with a populated
+synthetic migration-158 fixture created by the published BookshelfNG `.71`
+binary. The smoke verified status and capability discovery, one audiobook
+through SeerrNG's format-scoped paged-library adapter, denial of administrative
+and unrelated command routes using the restricted key, and administrator
+access using the global key. The raw ChaptarrNG API exposed one author and
+separate audiobook and ebook records with their migrated provider IDs.
+
+This verifies the populated read path and key boundary. It does not exercise
+end-to-end SeerrNG request creation, availability statistics, history,
+pending-import retry/cancel operations, unchanged production settings, or a
+real BookshelfNG library.

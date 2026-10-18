@@ -1,32 +1,34 @@
 # BookshelfNG migration fixture evidence
 
-**Reviewed:** 2026-10-18. **Scope:** synthetic end-to-end data built by the
-published BookshelfNG `0.4.21.71` Linux binary and exercised with an
-unpublished ChaptarrNG candidate. This is maintainer evidence, not operator
-cutover approval.
+**Reviewed:** 2026-10-18. **Scope:** synthetic data created by the published
+BookshelfNG `0.4.21.71` Linux binary and tested with an unpublished ChaptarrNG
+candidate. This is maintainer evidence, not approval to cut over operator data.
 
 ## Candidate and fixture
 
 - ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131),
-  commit `2334625b4ca57c22c39f09d6780830e4e4f1e79c`.
+  commit `1a0a1cf78b404fe86d7b266facd8e843e435d9b4`.
 - Exact-head Build run:
-  [39167162488](https://github.com/snapetech-org/chaptarrng/actions/runs/39167162488).
-  Linux, macOS, and Windows builds/tests, PostgreSQL migrations, release-note
-  validation, and native-runner receipt reconciliation passed. CodeQL,
-  dependency review, and dependency/secret scan checks also passed on this
-  head. The PR remains draft.
-- The Linux artifact from that run reports ChaptarrNG `0.9.978.0`; its
-  executable SHA-256 is
-  `dfdaae95b9cbd6a4cfe44cfe042f7e6ef87ca60402be00fa8376dc1d9fea1194`.
+  [39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430).
+  Linux, macOS, and Windows builds/tests, PostgreSQL target migrations and
+  BookshelfNG converter fixtures, release-note validation, and validation
+  receipt reconciliation passed. CodeQL, dependency review, and
+  dependency/secret scan checks passed on the same head. PR #131 remains
+  draft.
+- The Linux artifact reports ChaptarrNG `0.9.978.0`. Its `Chaptarr` apphost
+  SHA-256 is
+  `dfdaae95b9cbd6a4cfe44cfe042f7e6ef87ca60402be00fa8376dc1d9fea1194`; the
+  `Chaptarr.Core.dll` SHA-256 is
+  `19852117505d35c9f5819ac8a5a2583d3ff01c2e79e99de1cc3fe1e2fd211e52`.
 - Source: the published BookshelfNG `0.4.21.71` Linux x64 release archive,
   SHA-256
-  `4197d53b757ebe99642fb8f4213f963dd54641401d1f188ab6daadcb3b024d5d`;
-  extracted `Readarr` executable SHA-256
+  `4197d53b757ebe99642fb8f4213f963dd54641401d1f188ab6daadcb3b024d5d`; its
+  extracted `Readarr` executable SHA-256 is
   `0d7c82722b1948cc4d33de139698050944b1f4f1647006836364cd9b736e5f6b`.
-- The BookshelfNG fixture helper started that released binary on loopback,
-  migrated a disposable database to schema 158, and populated deterministic
-  linked records. No production backup, real credentials, external service,
-  or real media was used. Fixture credentials and paths are synthetic.
+- The fixture helper started that released binary on loopback, upgraded a
+  disposable database to schema 158, and populated linked records. No
+  production backup, real credentials, external service, or real media was
+  used. Fixture credentials and paths are synthetic.
 
 The fixture contains one author, one book/work, two editions (ebook and
 audiobook), two book files, one extra file, one metadata sidecar, one series
@@ -34,61 +36,71 @@ and link, one user, one notification, one history row, one download-history
 row, one blocklist row, two roots, one tag, and six settings. It uses bare
 numeric Hardcover IDs as stored by BookshelfNG native Hardcover mode. The
 settings cover a fake Hardcover token, match threshold `75`, supplemental
-catalogs, per-field source preferences, and a fake Google Books key.
+catalogs, per-field source preferences, and a fake Google Books key. The
+source `NamingConfig` table is empty, matching the default-settings case.
 
 ## Runtime results
 
-The following checks used separate disposable copies of that fixture and the
-Linux candidate artifact:
+The following checks used separate disposable copies of the fixture and the
+Linux artifact from run `39169786430`:
 
-- **Preview:** passed. SHA-256 checks showed the source `readarr.db` and its
-  WAL were unchanged. SQLite shared-memory state and a conversion lock file
-  are transient runtime files, so this statement is limited to the database
-  and WAL contents.
+- **Preview:** passed. The SHA-256 of `readarr.db` was unchanged
+  (`2e3bd5e423f543e19244b5105d53f2651fc52f2a05523a24f42e040c7961d55b`).
 - **Explicit apply:** passed with the required
-  `-confirm-bookshelf-service-stopped` option. The source was migrated on a
-  working copy and retained at schema 158. The ChaptarrNG database reached
-  schema 121 and passed `integrity_check` with zero foreign-key errors.
-- **Data disposition:** the single source book became separate ebook and
+  `-confirm-bookshelf-service-stopped` option. The target reached ChaptarrNG
+  schema 121, passed SQLite `integrity_check`, and had no foreign-key errors.
+  One BookshelfNG backup remained at schema 158 with its original author/book
+  rows and empty naming-settings table.
+- **Naming defaults:** the imported target retained one seeded ChaptarrNG
+  naming row (`MultiEpisodeStyle = 0`) when BookshelfNG had no saved row. The
+  source importer fixture also verifies that saved BookshelfNG naming settings
+  replace the target defaults without leaving a duplicate row.
+- **Data and settings:** the single source work became separate ebook and
   audiobook catalog records. Both editions and files remained; the extra
   file, metadata sidecar, series relationship, user, notification, history,
   download history, blocklist, roots, and tag were retained. The native
-  Hardcover author ID became `hc:9001`, and six provider alias rows were
-  created. Ebook/audiobook quality and metadata profile overrides remained
-  attached to their formats.
-- **Settings:** the native Hardcover credential was mapped to
-  `HardcoverApiToken`; the original source setting remained in the retained
-  backup. Threshold `75` mapped to `Balanced`, and the original numeric
-  setting was retained for audit. The report identifies this as a lossy
-  approximation between different matching algorithms. Supplemental catalog
-  choices, per-field preferences, and the fake Google Books key were retained.
-  BookLore notification settings and triggers were retained unchanged.
-- **Restore:** after a synthetic post-migration config write, restore preview
-  passed and explicit restore succeeded. The restored source matched the
-  original fixture's logical SQLite dump, SHA-256
-  `ec9cb0f49c83e30108f7dbe89a0f153b031f3157704acf0fd01fed7da4317477`.
-  It returned to schema 158 with the original row counts, passed integrity and
-  foreign-key checks, and kept the ChaptarrNG backup containing the converted
-  state and post-migration write.
-- **Ordinary startup:** passed in a network-isolated sandbox on another fresh
-  fixture copy. ChaptarrNG automatically converted the source, retained one
-  BookshelfNG backup, reached schema 121, and passed SQLite integrity and
-  foreign-key checks. The process was stopped after conversion was observed.
-- **Fail-closed cases:** two populated legacy database candidates were
-  rejected as ambiguous; schema 159 was rejected as newer than the bundled
-  chain; and apply without stopped-service confirmation was refused. Each
-  refusal left the source database unchanged.
+  Hardcover author ID became `hc:9001`, the book ID became `hc:9002`, and six
+  provider alias rows were created. Ebook/audiobook quality and metadata
+  profile overrides remained attached to their formats. The saved Hardcover
+  credential mapped to `HardcoverApiToken`; the source setting remained in the
+  backup. Threshold `75` mapped to `Balanced` as a documented lossy
+  approximation, and the supplemental catalog preferences and fake Google
+  Books key were retained. BookLore notification settings and triggers were
+  retained unchanged.
+- **Automatic startup:** passed in a network-isolated container. ChaptarrNG
+  converted the source, retained one schema-158 BookshelfNG backup, and
+  reached schema 121 with one author and two format-specific book records.
+  SQLite integrity and foreign-key checks passed. Startup logs had no error,
+  fatal, or author-path-repair failure lines. The API returned the migrated
+  author, audiobook, ebook, provider identities, and one file for each format.
+- **SeerrNG integration:** `scripts/chaptarrng-integration-smoke.mjs` passed
+  against this populated candidate and SeerrNG source commit `0b267d526`. It
+  verified status, capability discovery, one audiobook through SeerrNG's
+  format-scoped paged-library adapter, and denial of an administrative route
+  and unrelated command with the restricted key. The raw ChaptarrNG library
+  exposed both the audiobook and ebook records. This did not exercise
+  end-to-end SeerrNG request creation, history, pending-import retries, or
+  existing operator settings.
+- **Restore:** preview did not change the target or source backup. Explicit
+  restore returned the database to schema 158 with the original author/book
+  rows, passed integrity and foreign-key checks, and retained the schema-121
+  ChaptarrNG database separately.
+- **Fail-closed cases:** apply without stopped-service confirmation, two
+  populated source database candidates, and future schema 159 were rejected.
+  Each source database hash remained unchanged and no conversion backup was
+  created.
 
-The successful synthetic runtime evidence shows the current candidate's
-SQLite preview, apply, startup conversion, data mapping, refusal, and rollback
-paths working together for this fixture. It does not establish correct media
-classification for ambiguous real records, PostgreSQL operator-data safety,
-all historical schemas, provider/client continuity, real installation or
-updater behavior, or feature parity. Do not use this candidate for operator
-data. ChaptarrNG `v0.9.977` remains the latest public release, and releases,
-packages, images, and compatibility bridges remain frozen.
+These results show the candidate's SQLite preview, apply, automatic startup,
+data mapping, refusal, rollback, and populated API paths working together on
+this synthetic fixture. They do not establish correct classification of
+ambiguous real records, PostgreSQL operator-data safety, behavior for every
+historical schema, complete provider/client continuity, end-to-end request
+parity, or installation-channel behavior. Do not use this candidate for
+operator data. ChaptarrNG `v0.9.977` remains the latest public release; no
+release, package, image, or compatibility bridge was published during these
+checks.
 
 See [retirement status](../BOOKSHELFNG_RETIREMENT.md), the
 [operator migration guide](../MIGRATE_FROM_BOOKSHELFNG.md), and the
 [PostgreSQL candidate notes](../BOOKSHELFNG_POSTGRESQL_MIGRATION.md) for the
-published limits and remaining acceptance gates.
+remaining acceptance gates.

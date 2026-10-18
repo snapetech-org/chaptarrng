@@ -7,12 +7,13 @@
 > acceptance are complete and a release explicitly supports it. Earlier
 > synthetic PostgreSQL snapshots `43bc6363` and `0d31609b` passed migration and
 > platform checks. Exact-head run
-> [39167162488](https://github.com/snapetech-org/chaptarrng/actions/runs/39167162488)
-> on `2334625b4ca57c22c39f09d6780830e4e4f1e79c` passed Linux, macOS, and
-> Windows builds/tests, PostgreSQL migrations, release-note validation, and
-> native-runner receipt reconciliation. CodeQL, dependency review, and
-> dependency/secret scans also passed on this head. These remain candidate CI
-> checks only; PostgreSQL operator-data acceptance remains open.
+> [39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430)
+> on `1a0a1cf78b404fe86d7b266facd8e843e435d9b4` passed Linux, macOS, and
+> Windows builds/tests, PostgreSQL target migrations and BookshelfNG converter
+> fixtures, release-note validation, and receipt reconciliation. CodeQL,
+> dependency review, and dependency/secret scans also passed on this head.
+> These are candidate CI checks only; PostgreSQL operator-data acceptance
+> remains open.
 
 ## Candidate behavior
 

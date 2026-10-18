@@ -31,7 +31,7 @@ the [operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs
 and [retirement status page](BOOKSHELFNG_RETIREMENT.md). The `.977` release
 supports the final migration-158 SQLite schema. Populated synthetic migration
 coverage exercises conversion and rollback; this is not real older-schema
-operator data. The PostgreSQL candidate supports one migration-158 source schema. Exact-head run [39167162488](https://github.com/snapetech-org/chaptarrng/actions/runs/39167162488) on `2334625b4ca57c22c39f09d6780830e4e4f1e79c` passed Linux, macOS, and Windows builds/tests, PostgreSQL migrations, release-note validation, native-runner receipt reconciliation, CodeQL, dependency review, and dependency/secret scans. Its Linux artifact also passed preview, apply, rollback, refusal, and ordinary-startup conversion against a synthetic migration-158 database built by the published BookshelfNG `.71` binary. This is candidate CI and synthetic data only; it remains unsupported for operator data and is not in a published release. See the detailed [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md) and [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131).
+operator data. The PostgreSQL candidate supports one migration-158 source schema. Exact-head run [39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430) on `1a0a1cf78b404fe86d7b266facd8e843e435d9b4` passed Linux, macOS, and Windows builds/tests, PostgreSQL migrations and BookshelfNG converter fixtures, release-note validation, receipt reconciliation, CodeQL, dependency review, and dependency/secret scans. Its Linux artifact passed preview, apply, rollback, fail-closed cases, and automatic-startup conversion against a synthetic migration-158 database built by the published BookshelfNG `.71` binary. A populated API and SeerrNG restricted-key smoke also passed. This is candidate CI and synthetic data only; it remains unsupported for operator data and is not in a published release. See the detailed [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md) and [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131).
 Successful database
 conversion does not complete feature parity or legacy-channel handoff. See
 the [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
@@ -154,11 +154,14 @@ Setup and behavior:
 - [API identity and lifecycle contract](./API_IDENTITY_AND_LIFECYCLE.md)
 - [SeerrNG Bookshelf backend guide](https://github.com/snapetech-org/seerrng/blob/main/docs/using-seerr/bookshelf-backend.md)
 
-The disposable Compose smoke passed on 2026-10-18 against candidate
-`0.9.978.0`: it verified status and capability discovery, an empty paged
-library read, and rejection of administrative and unrelated command routes by
-the restricted key. The empty library leaves converted-data and request
-history acceptance open; see the [recorded smoke scope](./SEERRNG_INTEGRATION.md#recorded-smoke-evidence).
+The populated fixture smoke passed on 2026-10-18 against candidate
+`0.9.978.0`, source head `1a0a1cf7`, and SeerrNG `0b267d526`. It verified
+status/capability discovery, one audiobook through SeerrNG's paged-library
+adapter, the migrated audiobook and ebook provider identities in ChaptarrNG,
+and rejection of administrative and unrelated command routes by the restricted
+key. End-to-end SeerrNG requests, history, pending-import operations, production
+settings, and real operator data remain unverified; see the [recorded smoke
+scope](./SEERRNG_INTEGRATION.md#recorded-smoke-evidence).
 
 ## Library identity and file organization
 
