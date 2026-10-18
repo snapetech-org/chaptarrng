@@ -189,6 +189,23 @@ namespace Chaptarr.Core.Test.Download
             {
                 Assert.That(exception.Message, Is.EqualTo("qBittorrent rejected the torrent file due to a conflict"));
                 Assert.That(proxy.AddedTorrentFiles, Has.Count.EqualTo(1));
+                Assert.That(proxy.LoadedHashes, Is.EqualTo(new[] { "abcdef1234" }));
+                Assert.That(proxy.Labels, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_adopt_an_existing_torrent_file_when_qbittorrent_returns_a_conflict()
+        {
+            var proxy = new TestProxy { AddException = ConflictException() };
+            proxy.HashesByCategory["ebooks"] = new List<string> { "abcdef1234" };
+            var client = CreateClient(proxy);
+
+            var result = client.AddTorrentFile(CreateRemoteBook(), "ABCDEF1234");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.EqualTo("ABCDEF1234"));
                 Assert.That(proxy.LoadedHashes, Is.Empty);
                 Assert.That(proxy.Labels, Is.Empty);
             });
@@ -227,6 +244,23 @@ namespace Chaptarr.Core.Test.Download
             {
                 Assert.That(exception.Message, Is.EqualTo("qBittorrent rejected the magnet link due to a conflict"));
                 Assert.That(proxy.AddedMagnetLinks, Has.Count.EqualTo(1));
+                Assert.That(proxy.LoadedHashes, Is.EqualTo(new[] { "abcdef1234" }));
+                Assert.That(proxy.Labels, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_adopt_an_existing_magnet_torrent_when_qbittorrent_returns_a_conflict()
+        {
+            var proxy = new TestProxy { AddException = ConflictException() };
+            proxy.HashesByCategory["ebooks"] = new List<string> { "abcdef1234" };
+            var client = CreateClient(proxy);
+
+            var result = client.AddMagnet(CreateRemoteBook(), "ABCDEF1234");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.EqualTo("ABCDEF1234"));
                 Assert.That(proxy.LoadedHashes, Is.Empty);
                 Assert.That(proxy.Labels, Is.Empty);
             });
@@ -301,7 +335,7 @@ namespace Chaptarr.Core.Test.Download
         {
             var proxy = new TestProxy
             {
-                AddException = new DownloadClientException("qBittorrent rejected the torrent add request (response: Fails.)."),
+                AddException = ConflictException(),
                 TorrentLoaded = true
             };
             var client = CreateClient(proxy);
@@ -311,6 +345,7 @@ namespace Chaptarr.Core.Test.Download
             Assert.Multiple(() =>
             {
                 Assert.That(exception.Message, Is.EqualTo("qBittorrent already has this torrent outside Chaptarr's categories"));
+                Assert.That(proxy.LoadedHashes, Is.EqualTo(new[] { "abcdef1234" }));
                 Assert.That(proxy.Labels, Is.Empty);
             });
         }
