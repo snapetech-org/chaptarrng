@@ -29,7 +29,7 @@ upgraded safely.
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
 | --- | --- | --- | --- |
-| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains on the BookshelfNG payload | Test an old-package upgrade through conversion and rollback |
+| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains on the BookshelfNG payload; the `0.9.977-1` ChaptarrNG-payload candidate builds locally | Test replacing the published old package through conversion and rollback |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped | Test the old package identity in a Fedora upgrade before enabling its bridge |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
 | Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged | Verify legacy registry write access and digest equality before enabling the bridge |
@@ -57,6 +57,14 @@ disabled. The ChaptarrNG AUR
 identity was published at `0.9.977-1`; the BookshelfNG AUR identity was not
 updated. The `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` Actions variable is `false`,
 so old package IDs and image aliases do not redirect to ChaptarrNG.
+
+On 2026-10-18, the AUR build script built both `chaptarrng-bin 0.9.977-1`
+and a local `bookshelfng-bin 0.9.977-1` candidate against the public Linux
+release archive. Package-content checks confirmed the ChaptarrNG executable
+and package metadata in both packages, plus the legacy service and
+`/etc/bookshelfng/bookshelfng.env` path in the candidate. This verifies that
+the recipes can package the `.977` payload; it does not test replacing the
+published BookshelfNG package, service handoff, data migration, or rollback.
 
 ## Migration behavior and limits
 
