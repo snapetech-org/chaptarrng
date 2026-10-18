@@ -70,11 +70,10 @@ validate older schemas, PostgreSQL, installers, or full feature parity.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 contains the older SQLite and one-schema PostgreSQL migration work, native
 Hardcover identity handling, and a separately configured BookOrbit Book Dock
-destination. Exact-head run [39153630005](https://github.com/snapetech-org/chaptarrng/actions/runs/39153630005)
-on `cee4dfa0` passed Linux, macOS, and Windows builds and test suites,
+destination. Exact-head run [39160998428](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998428)
+on `18d04722` passed Linux, macOS, and Windows builds and test suites,
 PostgreSQL migrations, release-note validation, and native-runner receipt
-reconciliation. Exact-head CodeQL, dependency-review, and security checks also
-passed. Windows reported 4,349 tests passed and none failed. This is candidate
+reconciliation. CodeQL [39160994259](https://github.com/snapetech-org/chaptarrng/actions/runs/39160994259), dependency review [39160998450](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998450), and security analysis [39160998456](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998456) also passed on this head. Validation receipts record 4,345 .NET cases per OS and four PostgreSQL smoke cases. This is candidate
 CI evidence only; operator-data acceptance remains open. Keep the
 release freeze in place. See the [PostgreSQL migration candidate
 notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).

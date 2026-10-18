@@ -21,11 +21,10 @@
 > release freeze.
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 > contains the migration candidate. Exact-head run
-> [39153630005](https://github.com/snapetech-org/chaptarrng/actions/runs/39153630005)
-> on `cee4dfa0` passed Linux, macOS, and Windows builds and test suites,
+> [39160998428](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998428)
+> on `18d04722` passed Linux, macOS, and Windows builds and test suites,
 > PostgreSQL migrations, release-note validation, and native-runner receipt
-> reconciliation. CodeQL, dependency-review, and security checks passed on the
-> same head. This is candidate CI evidence only; it remains unsupported for
+> reconciliation. CodeQL [39160994259](https://github.com/snapetech-org/chaptarrng/actions/runs/39160994259), dependency review [39160998450](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998450), and security analysis [39160998456](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998456) passed on the same head. This is candidate CI evidence only; it remains unsupported for
 > operator data.
 > PostgreSQL source conversion remains unsupported in published releases.
 > Pinned images,
