@@ -303,7 +303,7 @@ namespace NzbDrone.Core.Datastore
         {
             var result = new HashSet<string>(StringComparer.Ordinal);
             using var command = connection.CreateCommand();
-            command.Transaction = transaction;
+            SetTransaction(command, transaction);
             command.CommandText = @"
                 SELECT table_name
                   FROM information_schema.tables
@@ -327,7 +327,7 @@ namespace NzbDrone.Core.Datastore
             {
                 using var command = source.CreateCommand();
                 command.CommandText = $"SELECT COUNT(*) FROM {Quote(table)};";
-                counts.Add(table, Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
+                counts.Add(table, System.Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture));
             }
 
             return counts;
@@ -364,7 +364,7 @@ namespace NzbDrone.Core.Datastore
         private static void MoveRemainingSequences(NpgsqlConnection connection, DbTransaction transaction, string fromSchema, string toSchema)
         {
             using var command = connection.CreateCommand();
-            command.Transaction = transaction;
+            SetTransaction(command, transaction);
             command.CommandText = "SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = @schema ORDER BY sequence_name;";
             AddParameter(command, "@schema", fromSchema);
             var sequences = new List<string>();
@@ -413,9 +413,20 @@ namespace NzbDrone.Core.Datastore
         private static void Execute(NpgsqlConnection connection, DbTransaction transaction, string sql)
         {
             using var command = connection.CreateCommand();
-            command.Transaction = transaction;
+            SetTransaction(command, transaction);
             command.CommandText = sql;
             command.ExecuteNonQuery();
+        }
+
+        private static void SetTransaction(NpgsqlCommand command, DbTransaction transaction)
+        {
+            if (transaction == null) return;
+            if (transaction is not NpgsqlTransaction postgresTransaction)
+            {
+                throw new ArgumentException("The PostgreSQL BookshelfNG converter requires an Npgsql transaction.", nameof(transaction));
+            }
+
+            command.Transaction = postgresTransaction;
         }
 
         private static void AcquireMigrationLock(NpgsqlConnection connection)
