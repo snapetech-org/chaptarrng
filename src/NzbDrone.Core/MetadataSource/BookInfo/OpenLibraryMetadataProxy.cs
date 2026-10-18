@@ -183,7 +183,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             var cacheKey = authorId ?? (TryGetId(foreignAuthorId, AuthorPrefix, 'A', out var parsedId) ? parsedId : null);
             // Reject invalid provider IDs before calling Open Library; this validation does not grant or bypass authorization.
 
-            // codeql[cs/user-controlled-bypass]
+            // lgtm[cs/user-controlled-bypass]
             if (cacheKey == null)
             {
                 throw new AuthorNotFoundException(foreignAuthorId);
@@ -192,7 +192,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             JObject resource;
             // The parsed ID selects a fixed Open Library endpoint (name search or author key lookup); neither branch changes authorization.
 
-            // codeql[cs/user-controlled-bypass]
+            // lgtm[cs/user-controlled-bypass]
             if (authorId != null)
             {
                 resource = SearchAuthorByName(Uri.UnescapeDataString(authorId));

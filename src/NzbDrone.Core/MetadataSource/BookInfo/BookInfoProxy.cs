@@ -173,7 +173,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
             // The provider prefix selects an allowlisted public catalog. This is provider dispatch, not an authorization decision.
 
-            // codeql[cs/user-controlled-bypass]
+            // lgtm[cs/user-controlled-bypass]
             if (_additionalBookMetadataProxy.HandlesAuthorId(foreignAuthorId))
             {
                 return _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(
