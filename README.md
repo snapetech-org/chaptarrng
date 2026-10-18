@@ -117,11 +117,12 @@ algorithms. An explicit ChaptarrNG strictness value takes precedence, and an
 invalid legacy value stops conversion. PR #129 merged to `main` as `949ae3dd`
 with the opt-in M4B merge settings, tagged track order and chapter titles,
 original-track fallback, and move/copy source handling. Its clean head passed
-hosted platform and database checks. A synthetic two-track smoke validates the
-external converter and chapter sidecar only; importer end-to-end and
-representative-media acceptance remain open. Neither source change is in
-public `.977`. Full feature parity and several package-channel upgrades remain
-unverified.
+hosted platform and database checks. The current retirement candidate also
+passes a tool-enabled synthetic two-track importer smoke through the real
+converter: it checks track order, chapters, metadata, database registration,
+and Move-mode cleanup. Representative-media acceptance remains open, and
+neither source change is in public `.977`. Full feature parity and several
+package-channel upgrades remain unverified.
 
 The current retirement work branch also ports BookshelfNG's native Hardcover
 metadata client and maps a saved `HardcoverAuth` setting to

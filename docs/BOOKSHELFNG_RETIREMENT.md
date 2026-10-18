@@ -31,11 +31,13 @@ detailed feature inventory remains in the
   M4B merge settings, tagged track ordering and chapter titles, original-track
   fallback, and safe move/copy source handling. Hosted Linux, macOS, Windows,
   PostgreSQL migration, CodeQL, dependency/security, and release-note checks
-  passed on its clean head. A synthetic two-track smoke validated the external
-  converter and chapter sidecar, but not the importer end to end or
-  representative media. Focused importer tests cover merge selection,
-  chapter/tag behavior, and fallback with a mocked converter. This source is
-  not in `.977`.
+  passed on its clean head. The current retirement candidate passes a
+  tool-enabled synthetic two-track importer smoke using the real converter; it
+  verifies track order, chapter titles and offsets, metadata, one registered
+  file, and Move-mode source cleanup. Focused importer tests also cover merge
+  selection and fallback with a mocked converter. Representative media,
+  embedded-chapter compatibility, real-tool failure recovery, and restart or
+  resume behavior remain open. This source is not in `.977`.
 - The current retirement candidate is draft ChaptarrNG
   [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131). It adds
   older SQLite support, one migration-158 PostgreSQL source schema, native
@@ -198,11 +200,13 @@ and falls back to importing the original tracks if merging fails. After a
 successful import it removes only the consumed source tracks in move mode and
 keeps them in copy mode.
 
-This is source-only and is not in `v0.9.977`. Hosted platform and database
-checks passed, and the synthetic external-tool smoke preserved supplied
-chapter titles and offsets. Representative-media checks for tags, embedded
-chapters, conversion failure, source retention, and restart/resume behavior
-remain open. It does not close the Audiobook processing and tags row in
+This is source-only and is not in `v0.9.977`. The current retirement candidate
+passes a tool-enabled importer smoke with generated two-track input and the
+real converter. It checks track ordering, chapter titles and offsets, album
+and title metadata, library registration, and source deletion in Move mode.
+Representative files, embedded-chapter compatibility, real-tool failure
+recovery, Copy-mode source retention, and restart/resume behavior remain open.
+It does not close the Audiobook processing and tags row in
 [the feature matrix](FORK_FEATURES.md). Keep the legacy merge setting unset
 until a build containing the accepted implementation is installed.
 

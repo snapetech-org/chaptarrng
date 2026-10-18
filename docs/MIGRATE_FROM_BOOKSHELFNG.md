@@ -135,10 +135,16 @@ also outside database conversion. The published ChaptarrNG `v0.9.977` does not
 honor them. ChaptarrNG PR #129 merged the compatibility implementation to
 `main` as `949ae3dd`, but it is not in `.977`; keep `BOOKSHELF_M4B_MERGE` unset
 until a build with that support is available and the remaining acceptance
-gates close. Focused importer tests cover merge selection, chapter/tag behavior,
-and fallback with a mocked converter; full import using representative M4B
-files remains open. The implementation requires the FFmpeg executable to be named
-`ffmpeg` (`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.
+gates close. The current retirement candidate's
+`real_m4b_tool_should_merge_and_import_legacy_multipart_audiobook_when_installed`
+test passes in a tool-enabled Linux container with `m4b-tool` 0.5.2, `mp4v2`
+2.1.1, and FFmpeg/FFprobe 6.1.1. It generates two MP3 tracks and imports them
+through the real converter, verifying tag-based track order, chapter titles
+and offsets, output metadata, library registration, and source cleanup in Move
+mode. Representative files, embedded-chapter compatibility, real-tool failure
+recovery, Copy-mode source retention, and restart/resume behavior remain open.
+The implementation requires the FFmpeg executable to be named `ffmpeg`
+(`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.
 
 The conversion reuses the existing data directory and `config.xml`, preserving
 the saved HTTP port, URL base, API key, and server settings. Keep the same media
