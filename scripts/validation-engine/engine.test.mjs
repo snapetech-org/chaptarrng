@@ -6,7 +6,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
-import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, parseNUnitSummaryMarker, runTask, runTaskPool, sha256GitText } from './engine.mjs';
+import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, parseNUnitDiagnosticMarker, parseNUnitSummaryMarker, runTask, runTaskPool, sha256GitText } from './engine.mjs';
 import { validation } from './config.mjs';
 
 function withEnvironmentVariable(name, value, action) {
@@ -401,6 +401,39 @@ test('NUnit JSON marker rejects malformed totals and drops path-bearing test nam
   })}`);
   assert.deepEqual(summary.failedTestNames, []);
   assert.deepEqual(summary.failedTestDetails, []);
+});
+
+test('NUnit diagnostic marker keeps only whitelisted result metadata', () => {
+  assert.deepEqual(parseNUnitDiagnosticMarker('VALIDATION_NUNIT_DIAGNOSTIC={"reason":"unexpected-result-file-count","resultFileCount":0}'), {
+    reason: 'unexpected-result-file-count',
+    resultFileCount: 0,
+  });
+  assert.throws(() => parseNUnitDiagnosticMarker('VALIDATION_NUNIT_DIAGNOSTIC={"reason":"/private/path","resultFileCount":0}'), /invalid/);
+  assert.deepEqual(parseNUnitDiagnosticMarker('VALIDATION_NUNIT_DIAGNOSTIC={"reason":"invalid-result-xml","resultFileCount":1,"path":"/private/path"}'), {
+    reason: 'invalid-result-xml',
+    resultFileCount: 1,
+  });
+});
+
+test('task receipts retain safe PostgreSQL NUnit result-file diagnostics', async (t) => {
+  const runRoot = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-postgres-diagnostic-'));
+  t.after(() => rmSync(runRoot, { recursive: true, force: true }));
+  const marker = 'VALIDATION_NUNIT_DIAGNOSTIC={"reason":"unexpected-result-file-count","resultFileCount":0}\n';
+  const spec = {
+    id: 'postgres-migrations-smoke',
+    resultFormat: 'nunit-summary-json',
+    command: [process.execPath, '-e', `process.stdout.write(${JSON.stringify(marker)}); process.exitCode = 1;`],
+    timeoutSeconds: 10,
+  };
+
+  const receipt = await runTask({ id: spec.id }, runRoot, spec);
+  assert.equal(receipt.status, 'failed');
+  assert.equal(receipt.error, 'NUnit summary was missing or invalid');
+  assert.deepEqual(receipt.nunitDiagnostic, {
+    reason: 'unexpected-result-file-count',
+    resultFileCount: 0,
+  });
+  assert.doesNotMatch(JSON.stringify(receipt), /private\/path/);
 });
 
 test('task receipts retain safe PostgreSQL NUnit details without raw messages or paths', async (t) => {

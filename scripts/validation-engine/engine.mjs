@@ -581,6 +581,29 @@ export function parseNUnitSummaryMarker(output) {
   };
 }
 
+export function parseNUnitDiagnosticMarker(output) {
+  const marker = [...output.matchAll(/^VALIDATION_NUNIT_DIAGNOSTIC=([^\r\n]+)$/gm)].at(-1)?.[1];
+  if (!marker || marker.length > 1024) throw new Error('NUnit diagnostic marker is missing or too large');
+
+  let value;
+  try { value = JSON.parse(marker); } catch { throw new Error('NUnit diagnostic marker is invalid JSON'); }
+  const reasons = [
+    'unexpected-result-file-count',
+    'unreadable-result-file',
+    'missing-test-run-summary',
+    'invalid-case-counts',
+    'invalid-result-xml',
+  ];
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      !reasons.includes(value.reason) ||
+      !Number.isSafeInteger(value.resultFileCount) ||
+      value.resultFileCount < 0 || value.resultFileCount > 100) {
+    throw new Error('NUnit diagnostic marker is invalid');
+  }
+
+  return { reason: value.reason, resultFileCount: value.resultFileCount };
+}
+
 function formatElapsed(milliseconds) {
   const seconds = Math.floor(milliseconds / 1000);
   return `${Math.floor(seconds / 60)}m${String(seconds % 60).padStart(2, '0')}s`;
@@ -835,6 +858,7 @@ export async function runTask(task, runRoot, testSpec = null) {
   let failedTestNamesTruncated = false;
   let failedTestDetails = [];
   let failedTestDetailsTruncated = false;
+  let nunitDiagnostic = null;
   let summaryError = null;
   if (task.id === 'dotnet-core-tests') {
     try {
@@ -865,6 +889,7 @@ export async function runTask(task, runRoot, testSpec = null) {
       if (summary.result && summary.result !== 'Passed') summaryError = `NUnit reported ${summary.result}`;
     } catch {
       summaryError = 'NUnit summary was missing or invalid';
+      try { nunitDiagnostic = parseNUnitDiagnosticMarker(output); } catch { /* keep the bounded generic summary error */ }
     }
   } else if (spec.resultFormat === 'node-test') {
     try {
@@ -907,6 +932,7 @@ export async function runTask(task, runRoot, testSpec = null) {
     failedTestNamesTruncated,
     failedTestDetails,
     failedTestDetailsTruncated,
+    nunitDiagnostic,
     inventory: task.inventory,
     artifactInputs: artifactsBefore,
   };

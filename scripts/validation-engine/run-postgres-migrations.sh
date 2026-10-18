@@ -40,6 +40,8 @@ write_nunit_summary() {
   mapfile -d '' result_files < <(find "$test_results_directory" -type f -name '*.xml' -print0)
   if (( ${#result_files[@]} != 1 )); then
     echo "Expected one NUnit result XML file; found ${#result_files[@]}." >&2
+    printf 'VALIDATION_NUNIT_DIAGNOSTIC={"reason":"unexpected-result-file-count","resultFileCount":%s}\n' "${#result_files[@]}"
+    echo "NUnit summary unavailable."
     return 1
   fi
 
@@ -65,8 +67,16 @@ try {
   };
   process.stdout.write(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify(diagnostic)}\n`);
 } catch (error) {
-  const reason = error instanceof Error ? error.message : 'Unknown NUnit result error';
-  process.stderr.write(`${reason}\n`);
+  const message = error instanceof Error ? error.message : '';
+  const reason = error?.code === 'EACCES' || error?.code === 'ENOENT'
+    ? 'unreadable-result-file'
+    : message === 'NUnit XML is missing its test-run summary'
+      ? 'missing-test-run-summary'
+      : message.includes('case counts')
+        ? 'invalid-case-counts'
+        : 'invalid-result-xml';
+  process.stderr.write('NUnit result summary could not be read or parsed.\n');
+  process.stdout.write(`VALIDATION_NUNIT_DIAGNOSTIC=${JSON.stringify({ reason, resultFileCount: 1 })}\n`);
   process.stdout.write('NUnit summary unavailable.\n');
   process.exitCode = 1;
 }
