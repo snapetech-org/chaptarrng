@@ -232,6 +232,7 @@ namespace NzbDrone.Core.Books
             book.GoodreadsWorkId = CanonicalizeOrNull(book.GoodreadsWorkId, "gr");
             book.OpenLibraryWorkId = CanonicalizeOrNull(book.OpenLibraryWorkId, "ol");
             book.RanobeDbBookId = CanonicalizeOrNull(book.RanobeDbBookId, "rn");
+            book.AdditionalMetadataProviderId = CanonicalizeOrNull(book.AdditionalMetadataProviderId, "meta");
             book.BaseBookId = CanonicalizeBaseBookId(book);
         }
 
@@ -704,6 +705,11 @@ namespace NzbDrone.Core.Books
                         repositoryProvider = "rn";
                         break;
 
+                    case "meta":
+                        canonicalPrefix = "meta";
+                        repositoryProvider = "meta";
+                        break;
+
                     default:
                         return null;
                 }
@@ -788,6 +794,11 @@ namespace NzbDrone.Core.Books
                         repositoryProvider = "rn";
                         break;
 
+                    case "meta":
+                        canonicalPrefix = "meta";
+                        repositoryProvider = "meta";
+                        break;
+
                     case "isbn":
                         return HydrateLookupBooks(_bookRepository.FindAllByProviderIdAndMediaType("isbn", NormalizeIsbnProviderId(providerId), mediaType) ?? new List<Book>());
 
@@ -827,7 +838,7 @@ namespace NzbDrone.Core.Books
                 }
 
                 provider = provider.Trim().ToLowerInvariant();
-                if (provider is not ("hc" or "gr" or "ol" or "gb" or "az" or "rn"))
+                if (provider is not ("hc" or "gr" or "ol" or "gb" or "az" or "rn" or "meta"))
                 {
                     return new List<Book>();
                 }

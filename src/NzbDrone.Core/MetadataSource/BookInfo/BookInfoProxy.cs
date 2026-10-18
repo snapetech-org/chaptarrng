@@ -64,6 +64,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         private readonly IBookService _bookService;
         private readonly IEditionService _editionService;
         private readonly IConfigService _configService;
+        private readonly IAdditionalBookMetadataProxy _additionalBookMetadataProxy;
         private readonly Logger _logger;
         private readonly IMetadataRequestBuilder _requestBuilder;
         private readonly IMetadataServerHealthGate _metadataServerHealthGate;
@@ -84,7 +85,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                              IMetadataRequestBuilder requestBuilder,
                              Logger logger,
                              ICacheManager cacheManager,
-                             IMetadataServerHealthGate metadataServerHealthGate)
+                             IMetadataServerHealthGate metadataServerHealthGate,
+                             IAdditionalBookMetadataProxy additionalBookMetadataProxy = null)
         {
             _httpClient = httpClient;
             _cachedHttpClient = cachedHttpClient;
@@ -96,6 +98,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             _bookService = bookService;
             _editionService = editionService;
             _configService = configService;
+            _additionalBookMetadataProxy = additionalBookMetadataProxy ??
+                new AdditionalBookMetadataProxy(httpClient, cachedHttpClient, cacheManager, configService, logger);
             _requestBuilder = requestBuilder;
             _cache = cacheManager.GetCache<HashSet<string>>(GetType());
             _hardcoverSearchCache = cacheManager.GetCache<List<object>>(GetType(), "hardcoverSearch");
@@ -167,10 +171,17 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         {
             _logger.DebugSafe("Getting Author details for ID: {0}", foreignAuthorId);
 
+            if (_additionalBookMetadataProxy.HandlesAuthorId(foreignAuthorId))
+            {
+                return _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(
+                    _additionalBookMetadataProxy.GetAuthor(foreignAuthorId));
+            }
+
             if (IsRanobeDbId(foreignAuthorId))
             {
                 var ranobeAuthor = _ranobeDbProxy.GetAuthorInfo(foreignAuthorId, useCache);
-                return ranobeAuthor ?? throw new AuthorNotFoundException(foreignAuthorId);
+                return _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(
+                    ranobeAuthor ?? throw new AuthorNotFoundException(foreignAuthorId));
             }
 
             if (IsRanobeDbReleaseId(foreignAuthorId))
@@ -187,7 +198,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             if (foreignAuthorId.Contains(":"))
             {
                 _logger.DebugSafe("Detected provider-prefixed V5 ID: {0}", foreignAuthorId);
-                return GetAuthorInfoFromV5(foreignAuthorId, useCache, importAllWorks: false);
+                return _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(
+                    GetAuthorInfoFromV5(foreignAuthorId, useCache, importAllWorks: false));
             }
 
             // A bare number carries no provider. Every provider numbers its authors from the same
@@ -206,10 +218,10 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             {
                 if (useCache)
                 {
-                    return PollAuthor(foreignAuthorId);
+                    return _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(PollAuthor(foreignAuthorId));
                 }
 
-                return PollAuthorUncached(foreignAuthorId);
+                return _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(PollAuthorUncached(foreignAuthorId));
             }
             catch (BookInfoException e)
             {
@@ -221,6 +233,12 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         public async Task<Author> GetAuthorInfoAsync(string foreignAuthorId, bool useCache = true)
         {
             _logger.Debug("Getting Author details (async) for ID: {0}", foreignAuthorId);
+
+            if (_additionalBookMetadataProxy.HandlesAuthorId(foreignAuthorId))
+            {
+                return _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(
+                    _additionalBookMetadataProxy.GetAuthor(foreignAuthorId));
+            }
 
             if (IsRanobeDbId(foreignAuthorId))
             {
@@ -235,7 +253,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             if (foreignAuthorId.Contains(":"))
             {
                 _logger.Debug("Detected provider-prefixed V5 ID: {0}", foreignAuthorId);
-                return await GetAuthorInfoFromV5Async(foreignAuthorId, useCache, importAllWorks: false);
+                return _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(
+                    await GetAuthorInfoFromV5Async(foreignAuthorId, useCache, importAllWorks: false));
             }
 
             // Same contract as the sync path: a bare number has no provider meaning, so it is
@@ -2183,6 +2202,25 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         {
             var normalizedForeignBookId = NormalizeGoodreadsProviderId(foreignBookId);
 
+            if (_additionalBookMetadataProxy.HandlesBookId(normalizedForeignBookId))
+            {
+                try
+                {
+                    var result = ApplySupplementalMetadataPreferences(_additionalBookMetadataProxy.GetBook(normalizedForeignBookId));
+                    result.Item2.MediaType = mediaType;
+                    return result;
+                }
+                catch (BookNotFoundException)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    _logger.WarnSafe(e, "Supplemental metadata request failure getting book info for {0}", normalizedForeignBookId);
+                    throw new BookNotFoundException(normalizedForeignBookId);
+                }
+            }
+
             if (IsRanobeDbReleaseId(normalizedForeignBookId))
             {
                 throw new InvalidProviderIdException(normalizedForeignBookId, "RanobeDB release IDs identify editions, not books.");
@@ -2197,7 +2235,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                 try
                 {
-                    return _ranobeDbProxy.GetBookInfo(normalizedForeignBookId, useCache) ?? throw new BookNotFoundException(normalizedForeignBookId);
+                    return ApplySupplementalMetadataPreferences(
+                        _ranobeDbProxy.GetBookInfo(normalizedForeignBookId, useCache) ?? throw new BookNotFoundException(normalizedForeignBookId));
                 }
                 catch (BookNotFoundException)
                 {
@@ -2214,7 +2253,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             {
                 _logger.DebugSafe("Getting book info for foreignBookId: {0}", normalizedForeignBookId);
 
-                return PollBook(normalizedForeignBookId, mediaType, authorHintProviderId);
+                return ApplySupplementalMetadataPreferences(PollBook(normalizedForeignBookId, mediaType, authorHintProviderId));
             }
             catch (WebException e)
             {
@@ -2242,6 +2281,11 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         {
             var normalizedForeignWorkId = NormalizeGoodreadsProviderId(foreignWorkId);
 
+            if (_additionalBookMetadataProxy.HandlesBookId(normalizedForeignWorkId))
+            {
+                return GetBookInfo(normalizedForeignWorkId, mediaType, authorHintProviderId, useCache);
+            }
+
             if (IsRanobeDbReleaseId(normalizedForeignWorkId))
             {
                 throw new InvalidProviderIdException(normalizedForeignWorkId, "RanobeDB release IDs identify editions, not works.");
@@ -2260,7 +2304,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             try
             {
                 _logger.Debug("Getting work info for foreignWorkId: {0}", normalizedForeignWorkId);
-                return PollBook(normalizedForeignWorkId, mediaType, authorHintProviderId);
+                return ApplySupplementalMetadataPreferences(PollBook(normalizedForeignWorkId, mediaType, authorHintProviderId));
             }
             catch (WebException e)
             {
@@ -2288,6 +2332,11 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         {
             var normalizedForeignEditionId = NormalizeGoodreadsProviderId(foreignEditionId);
 
+            if (_additionalBookMetadataProxy.HandlesBookId(normalizedForeignEditionId))
+            {
+                return GetBookInfo(normalizedForeignEditionId, mediaType, useCache: useCache);
+            }
+
             if (IsRanobeDbReleaseId(normalizedForeignEditionId))
             {
                 if (mediaType != BookMediaType.Ebook)
@@ -2297,7 +2346,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                 try
                 {
-                    return _ranobeDbProxy.GetEditionInfo(normalizedForeignEditionId, useCache) ?? throw new BookNotFoundException(normalizedForeignEditionId);
+                    return ApplySupplementalMetadataPreferences(
+                        _ranobeDbProxy.GetEditionInfo(normalizedForeignEditionId, useCache) ?? throw new BookNotFoundException(normalizedForeignEditionId));
                 }
                 catch (BookNotFoundException)
                 {
@@ -2313,7 +2363,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             try
             {
                 _logger.DebugSafe("Getting edition info for foreignEditionId: {0}", normalizedForeignEditionId);
-                return PollEditionBook(normalizedForeignEditionId, mediaType);
+                return ApplySupplementalMetadataPreferences(PollEditionBook(normalizedForeignEditionId, mediaType));
             }
             catch (WebException e)
             {
@@ -2335,6 +2385,37 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 _logger.WarnSafe(e, "Unexpected error getting edition info for {0}", normalizedForeignEditionId);
                 throw new BookNotFoundException(normalizedForeignEditionId);
             }
+        }
+
+        private Tuple<string, Book, List<Author>> ApplySupplementalMetadataPreferences(
+            Tuple<string, Book, List<Author>> bookInfo)
+        {
+            if (bookInfo?.Item2 == null)
+            {
+                return bookInfo;
+            }
+
+            var book = bookInfo.Item2;
+            _additionalBookMetadataProxy.ApplyFieldSourcePreferences(book);
+
+            var authors = bookInfo.Item3;
+            if (authors != null)
+            {
+                for (var index = 0; index < authors.Count; index++)
+                {
+                    authors[index] = _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(authors[index], book);
+                }
+            }
+
+            if (book.Author != null)
+            {
+                var authorIndex = authors?.FindIndex(author => ReferenceEquals(author, book.Author)) ?? -1;
+                book.Author = authorIndex >= 0
+                    ? authors[authorIndex]
+                    : _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(book.Author, book);
+            }
+
+            return bookInfo;
         }
 
         private static string NormalizeGoodreadsProviderId(string foreignBookId)
@@ -2365,6 +2446,11 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         public List<object> SearchForNewEntity(string title, string provider)
         {
             _logger.DebugSafe($"[BookInfoProxy] SearchForNewEntity called with title: '{title}', provider: '{provider ?? "null"}'");
+
+            if (AdditionalMetadataSources.IsSupportedSource(provider))
+            {
+                return BuildAdditionalSearchResults(_additionalBookMetadataProxy.SearchProvider(title, provider));
+            }
 
             if (provider?.Equals("ranobedb", StringComparison.OrdinalIgnoreCase) == true ||
                 provider?.Equals("ranobe", StringComparison.OrdinalIgnoreCase) == true ||
@@ -2479,6 +2565,16 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                     var filtered = FilterHardcoverSearchResultsPreservingOrder(mapped, title);
                     ApplyAuthorSearchSummaries(filtered.OfType<Author>(), "hardcover");
+                    ApplySearchMetadataPreferences(filtered.OfType<Book>());
+                    foreach (var author in filtered.OfType<Author>())
+                    {
+                        _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(author);
+                    }
+
+                    if (_additionalBookMetadataProxy != null)
+                    {
+                        filtered.AddRange(BuildAdditionalSearchResults(_additionalBookMetadataProxy.Search(title)));
+                    }
 
                     _logger.Debug($"[BookInfoProxy] Hardcover filtered results: {filtered.Count}");
                     return filtered;
@@ -2530,6 +2626,44 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
             _logger.Debug($"[BookInfoProxy] Final result count: {result.Count} (unique authors + books)");
             return result;
+        }
+
+        private List<object> BuildAdditionalSearchResults(IEnumerable<Book> books)
+        {
+            var results = (books ?? Enumerable.Empty<Book>())
+                .Where(book => book != null)
+                .ToList();
+
+            foreach (var book in results)
+            {
+                _additionalBookMetadataProxy.ApplyFieldSourcePreferences(book);
+                book.Author = _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(book.Author, book);
+            }
+
+            var authors = results
+                .Select(book => book.Author)
+                .Where(author => author != null && !author.Name.IsNullOrWhiteSpace())
+                .DistinctBy(author => GetAuthorMetadataKey(author))
+                .ToList();
+
+            var output = new List<object>(authors.Count + results.Count);
+            output.AddRange(authors);
+            output.AddRange(results);
+            return output;
+        }
+
+        private void ApplySearchMetadataPreferences(IEnumerable<Book> books)
+        {
+            foreach (var book in books ?? Enumerable.Empty<Book>())
+            {
+                if (book == null)
+                {
+                    continue;
+                }
+
+                _additionalBookMetadataProxy.ApplyFieldSourcePreferences(book);
+                book.Author = _additionalBookMetadataProxy.ApplyAuthorImageSourcePreference(book.Author, book);
+            }
         }
 
         private List<object> SearchRanobeDbEntities(string title)
@@ -2718,7 +2852,19 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     q = slug;
                 }
 
-                return Search(q, getAllEditions, mediaType);
+                var primaryResults = Search(q, getAllEditions, mediaType);
+                ApplySearchMetadataPreferences(primaryResults);
+                var supplementalResults = _additionalBookMetadataProxy.Search(q);
+                ApplySearchMetadataPreferences(supplementalResults);
+                supplementalResults.ForEach(supplementalBook =>
+                {
+                    if (mediaType.HasValue)
+                    {
+                        supplementalBook.MediaType = mediaType.Value;
+                    }
+                });
+
+                return primaryResults.Concat(supplementalResults).ToList();
             }
             catch (HttpException ex)
             {
@@ -5415,6 +5561,14 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             if (!string.IsNullOrEmpty(author.AudnexusAuthorId))
             {
                 return author.AudnexusAuthorId;
+            }
+            if (!string.IsNullOrEmpty(author.RanobeDbAuthorId))
+            {
+                return author.RanobeDbAuthorId;
+            }
+            if (!string.IsNullOrEmpty(author.AdditionalMetadataProviderId))
+            {
+                return author.AdditionalMetadataProviderId;
             }
 
             // Fallback to name-based key

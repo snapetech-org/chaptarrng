@@ -426,6 +426,108 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("MetadataSource", value); }
         }
 
+        public string MetadataCatalogSources
+        {
+            get { return GetValue("MetadataCatalogSources", string.Empty); }
+            set { SetValue("MetadataCatalogSources", value ?? string.Empty); }
+        }
+
+        public string AdditionalMetadataSources
+        {
+            get { return GetValue("AdditionalMetadataSources", string.Empty); }
+            set { SetValue("AdditionalMetadataSources", value ?? string.Empty); }
+        }
+
+        public string OpenLibraryContactEmail
+        {
+            get { return GetValue("OpenLibraryContactEmail", string.Empty); }
+            set { SetValue("OpenLibraryContactEmail", value ?? string.Empty); }
+        }
+
+        public string MetadataTitleSourcePreference
+        {
+            get { return GetValue("MetadataTitleSourcePreference", string.Empty); }
+            set { SetValue("MetadataTitleSourcePreference", value ?? string.Empty); }
+        }
+
+        public string MetadataDescriptionSourcePreference
+        {
+            get { return GetValue("MetadataDescriptionSourcePreference", string.Empty); }
+            set { SetValue("MetadataDescriptionSourcePreference", value ?? string.Empty); }
+        }
+
+        public string MetadataPublisherSourcePreference
+        {
+            get { return GetValue("MetadataPublisherSourcePreference", string.Empty); }
+            set { SetValue("MetadataPublisherSourcePreference", value ?? string.Empty); }
+        }
+
+        public string MetadataLanguageSourcePreference
+        {
+            get { return GetValue("MetadataLanguageSourcePreference", string.Empty); }
+            set { SetValue("MetadataLanguageSourcePreference", value ?? string.Empty); }
+        }
+
+        public string MetadataReleaseDateSourcePreference
+        {
+            get { return GetValue("MetadataReleaseDateSourcePreference", string.Empty); }
+            set { SetValue("MetadataReleaseDateSourcePreference", value ?? string.Empty); }
+        }
+
+        public string MetadataPageCountSourcePreference
+        {
+            get { return GetValue("MetadataPageCountSourcePreference", string.Empty); }
+            set { SetValue("MetadataPageCountSourcePreference", value ?? string.Empty); }
+        }
+
+        public string MetadataCoverSourcePreference
+        {
+            get { return GetValue("MetadataCoverSourcePreference", string.Empty); }
+            set { SetValue("MetadataCoverSourcePreference", value ?? string.Empty); }
+        }
+
+        public string MetadataAuthorImageSourcePreference
+        {
+            get { return GetValue("MetadataAuthorImageSourcePreference", string.Empty); }
+            set { SetValue("MetadataAuthorImageSourcePreference", value ?? string.Empty); }
+        }
+
+        public string MetadataGenresSourcePreference
+        {
+            get { return GetValue("MetadataGenresSourcePreference", string.Empty); }
+            set { SetValue("MetadataGenresSourcePreference", value ?? string.Empty); }
+        }
+
+        public string GoogleBooksApiKey
+        {
+            get { return GetValue("GoogleBooksApiKey", string.Empty); }
+            set { SetValue("GoogleBooksApiKey", value ?? string.Empty); }
+        }
+
+        public string EuropeanaApiKey
+        {
+            get { return GetValue("EuropeanaApiKey", string.Empty); }
+            set { SetValue("EuropeanaApiKey", value ?? string.Empty); }
+        }
+
+        public string ApifyGoodreadsActor
+        {
+            get { return GetValue("ApifyGoodreadsActor", string.Empty); }
+            set { SetValue("ApifyGoodreadsActor", value ?? string.Empty); }
+        }
+
+        public string ApifyToken
+        {
+            get { return GetValue("ApifyToken", string.Empty); }
+            set { SetValue("ApifyToken", value ?? string.Empty); }
+        }
+
+        public string ApifyGoodreadsInputTemplate
+        {
+            get { return GetValue("ApifyGoodreadsInputTemplate", string.Empty); }
+            set { SetValue("ApifyGoodreadsInputTemplate", value ?? string.Empty); }
+        }
+
         public string MetadataServerUrl
         {
             get { return GetValue("MetadataServerUrl", "https://api2.chaptarr.com"); }

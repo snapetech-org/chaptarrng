@@ -50,6 +50,7 @@ namespace NzbDrone.Core.Books
             Add(ids, NormalizeProviderIdOrNull(book.GoodreadsWorkId, "gr"));
             Add(ids, NormalizeProviderIdOrNull(book.OpenLibraryWorkId, "ol"));
             Add(ids, NormalizeProviderIdOrNull(book.RanobeDbBookId, "rn"));
+            Add(ids, NormalizeProviderIdOrNull(book.AdditionalMetadataProviderId, "meta"));
 
             return ids
                 .Where(id => !string.IsNullOrWhiteSpace(id))
@@ -85,6 +86,10 @@ namespace NzbDrone.Core.Books
                 Add(ids, NormalizeProviderId(edition?.GoogleBooksEditionId, "gb"));
                 Add(ids, NormalizeAmazonProviderId(edition?.Asin));
                 Add(ids, NormalizeAmazonProviderId(edition?.AudibleASIN));
+                if (edition?.ForeignEditionId?.StartsWith("meta:", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    Add(ids, NormalizeProviderIdOrNull(edition.ForeignEditionId, "meta"));
+                }
                 if (edition?.ForeignEditionId?.StartsWith("rnr:", StringComparison.OrdinalIgnoreCase) == true)
                 {
                     Add(ids, NormalizeProviderIdOrNull(edition.ForeignEditionId, "rnr"));
@@ -580,11 +585,22 @@ namespace NzbDrone.Core.Books
                 return NormalizeProviderIdOrNull(trimmed, "rnr");
             }
 
+            if (trimmed.StartsWith("meta:", StringComparison.OrdinalIgnoreCase))
+            {
+                return NormalizeProviderIdOrNull(trimmed, "meta");
+            }
+
             return null;
         }
 
         private static void AddStableRehomeTokenFromForeignEditionId(HashSet<string> tokens, string foreignEditionId)
         {
+            if (foreignEditionId?.StartsWith("meta:", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                AddCanonicalRehomeToken(tokens, foreignEditionId, "meta");
+                return;
+            }
+
             var value = StripKnownEditionMediaSuffix(foreignEditionId);
             if (string.IsNullOrWhiteSpace(value))
             {
@@ -618,7 +634,9 @@ namespace NzbDrone.Core.Books
             if (value.StartsWith("rnr:", StringComparison.OrdinalIgnoreCase))
             {
                 AddCanonicalRehomeToken(tokens, value, "rnr");
+                return;
             }
+
         }
 
         private static void AddHardcoverEditionRehomeToken(HashSet<string> tokens, string value)

@@ -40,6 +40,7 @@ namespace Chaptarr.Api.V1.Books
         public string OpenLibraryWorkId { get; set; }
         public string RanobeDbBookId { get; set; }
         public string GoogleBooksId { get; set; }
+        public string AdditionalMetadataProviderId { get; set; }
         public string ASIN { get; set; }
         public string AudibleASIN { get; set; }
         public string TitleSlug { get; set; }
@@ -203,6 +204,7 @@ namespace Chaptarr.Api.V1.Books
                 OpenLibraryWorkId = model.OpenLibraryWorkId,
                 RanobeDbBookId = model.RanobeDbBookId,
                 GoogleBooksId = BookEditionIdentity.GetGoogleBooksEditionId(model),
+                AdditionalMetadataProviderId = model.AdditionalMetadataProviderId,
                 ASIN = BookEditionIdentity.GetAsin(model),
                 AudibleASIN = BookEditionIdentity.GetAudibleAsin(model),
 
@@ -689,6 +691,7 @@ namespace Chaptarr.Api.V1.Books
             string goodreadsWorkId = resource.GoodreadsWorkId;
             string openLibraryWorkId = resource.OpenLibraryWorkId;
             string ranobeDbBookId = resource.RanobeDbBookId;
+            string additionalMetadataProviderId = resource.AdditionalMetadataProviderId;
             string googleBooksId = resource.GoogleBooksId;
             string audibleAsin = null;
 
@@ -723,6 +726,10 @@ namespace Chaptarr.Api.V1.Books
                             else if (foreignBookId.StartsWith("rn:", StringComparison.OrdinalIgnoreCase))
                             {
                                 ranobeDbBookId ??= TryCanonicalizeWorkId(foreignBookId, "rn");
+                            }
+                            else if (foreignBookId.StartsWith("meta:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                additionalMetadataProviderId ??= TryCanonicalizeWorkId(foreignBookId, "meta");
                             }
                             else if (foreignBookId.StartsWith("az:", StringComparison.OrdinalIgnoreCase))
                             {
@@ -770,6 +777,7 @@ namespace Chaptarr.Api.V1.Books
                 GoodreadsWorkId = goodreadsWorkId,
                 OpenLibraryWorkId = openLibraryWorkId,
                 RanobeDbBookId = ranobeDbBookId,
+                AdditionalMetadataProviderId = additionalMetadataProviderId,
                 GoogleBooksId = null,
                 ASIN = null,
                 RemoteProviderIds = BuildRemoteProviderIds(hardcoverBookId, goodreadsWorkId, openLibraryWorkId, ranobeDbBookId)
@@ -887,6 +895,12 @@ namespace Chaptarr.Api.V1.Books
             if (!string.IsNullOrWhiteSpace(ranobeDbBookId))
             {
                 return ranobeDbBookId;
+            }
+
+            var additionalMetadataProviderId = TryCanonicalizeWorkId(model?.AdditionalMetadataProviderId, "meta");
+            if (!string.IsNullOrWhiteSpace(additionalMetadataProviderId))
+            {
+                return additionalMetadataProviderId;
             }
 
             if (BookIdentity.GetStableWorkProviderIdentityTokens(model).Count > 0)

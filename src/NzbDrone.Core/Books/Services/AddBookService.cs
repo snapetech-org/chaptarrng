@@ -121,6 +121,11 @@ namespace NzbDrone.Core.Books
                     dbBook = _bookService.FindByProviderId("ol", ProviderIdHelper.Canonicalize(book.OpenLibraryWorkId, "ol"), book.MediaType);
                 }
 
+                if (dbBook == null && !string.IsNullOrWhiteSpace(book.AdditionalMetadataProviderId))
+                {
+                    dbBook = _bookService.FindByProviderId("meta", ProviderIdHelper.Normalize(book.AdditionalMetadataProviderId, "meta"), book.MediaType);
+                }
+
             if (dbBook == null && BookEditionIdentity.GetGoogleBooksEditionId(book, _logger, "AddBookService.AddBook.Lookup") is string googleBooksEditionId &&
                 !string.IsNullOrEmpty(googleBooksEditionId))
             {
@@ -614,8 +619,10 @@ namespace NzbDrone.Core.Books
                          (author.HardcoverAuthorId, "hc"),
                          (author.GoodreadsAuthorId, "gr"),
                          (author.OpenLibraryAuthorId, "ol"),
+                         (author.GoogleBooksAuthorId, "gb"),
                          (author.AudnexusAuthorId, "az"),
-                         (author.RanobeDbAuthorId, "rn")
+                         (author.RanobeDbAuthorId, "rn"),
+                         (author.AdditionalMetadataProviderId, "meta")
                      })
             {
                 if (string.IsNullOrWhiteSpace(providerId))
@@ -924,7 +931,7 @@ namespace NzbDrone.Core.Books
 
             var prefixes = !string.IsNullOrWhiteSpace(expectedPrefix)
                 ? new[] { expectedPrefix }
-                : new[] { "hc", "gr", "ol", "rn" };
+                : new[] { "hc", "gr", "ol", "gb", "rn", "meta" };
 
             foreach (var prefix in prefixes)
             {

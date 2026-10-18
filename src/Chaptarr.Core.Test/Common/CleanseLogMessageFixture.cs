@@ -11,6 +11,8 @@ namespace Chaptarr.Core.Test.Common
     {
         [TestCase("http://user:pass@example.com/path", "user:pass")]
         [TestCase("http://user:pass@example.com/path?apikey=abc", "abc")]
+        [TestCase("https://api.europeana.eu/record/v2/search.json?wskey=private-europeana-key&query=books", "private-europeana-key")]
+        [TestCase("https://www.googleapis.com/books/v1/volumes?key=private-google-key&q=books", "private-google-key")]
         [TestCase("Authorization: Bearer supersecrettoken", "supersecrettoken")]
         [TestCase("Proxy-Authorization: Basic dXNlcjpwYXNz", "dXNlcjpwYXNz")]
         [TestCase("Cookie: session=abc123; other=def456", "abc123")]

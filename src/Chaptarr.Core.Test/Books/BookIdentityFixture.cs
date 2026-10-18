@@ -225,6 +225,21 @@ namespace Chaptarr.Core.Test.Books
         }
 
         [Test]
+        public void supplemental_catalog_edition_ids_should_be_trusted_and_part_of_canonical_identity()
+        {
+            const string providerId = "meta:YWJjLTEyMw-ebook";
+            var edition = new Edition { ForeignEditionId = providerId };
+            var book = new Book { Editions = new List<Edition> { edition } };
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(BookEditionIdentity.GetTrustedForeignEditionId(edition), Is.EqualTo(providerId));
+                Assert.That(BookEditionIdentity.GetCanonicalEditionProviderIds(book), Does.Contain(providerId));
+                Assert.That(BookEditionIdentity.GetStableEditionRehomeTokens(edition), Does.Contain(providerId));
+            });
+        }
+
+        [Test]
         public void readarr_facade_hardcover_edition_id_should_parse_typed_and_foreign_ids()
         {
             Assert.Multiple(() =>

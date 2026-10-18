@@ -43,6 +43,7 @@ namespace NzbDrone.Core.Books
             Add(tokens, author.GoogleBooksAuthorId, "gb");
             Add(tokens, author.AudnexusAuthorId, "az");
             Add(tokens, author.RanobeDbAuthorId, "rn");
+            Add(tokens, author.AdditionalMetadataProviderId, "meta");
 
             foreach (var providerId in author.RemoteProviderIds ?? Enumerable.Empty<string>())
             {

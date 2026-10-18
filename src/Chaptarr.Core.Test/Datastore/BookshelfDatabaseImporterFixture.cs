@@ -14,6 +14,7 @@ using NLog.Extensions.Logging;
 using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
+using NzbDrone.Core.MetadataSource.BookInfo;
 
 namespace Chaptarr.Core.Test.Datastore
 {
@@ -116,6 +117,49 @@ namespace Chaptarr.Core.Test.Datastore
                 new MigrationContext(MigrationType.Main),
                 DatabaseType.SQLite);
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books;"), Is.EqualTo(2), "a restart must not repeat the conversion");
+        }
+
+        [Test]
+        public void should_preserve_supplemental_catalog_ids_and_aliases_while_retaining_the_original_source()
+        {
+            const string sourceAuthorId = "person/123:456";
+            const string sourceBookId = "work/123:456";
+            const string sourceEditionId = "volume/123:456";
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    UPDATE AuthorMetadata SET ForeignAuthorId = 'loc-author:person/123:456' WHERE Id = 10;
+                    UPDATE Books SET ForeignBookId = 'loc:work/123:456' WHERE Id = 30;
+                    UPDATE Editions SET ForeignEditionId = 'googlebooks:volume/123:456' WHERE Id = 40;";
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+            var authorProviderId = AdditionalMetadataSources.CreateProviderId("loc-author", sourceAuthorId);
+            var bookProviderId = AdditionalMetadataSources.CreateProviderId("loc", sourceBookId);
+            var editionProviderId = AdditionalMetadataSources.CreateProviderId("googlebooks", sourceEditionId);
+            var authorNormalizedId = authorProviderId.Substring("meta:".Length);
+            var bookNormalizedId = bookProviderId.Substring("meta:".Length);
+            var editionNormalizedId = editionProviderId.Substring("meta:".Length);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT AdditionalMetadataProviderId FROM Authors WHERE Id = 20;"), Is.EqualTo(authorProviderId));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT AdditionalMetadataProviderId FROM Books WHERE Id = 30;"), Is.EqualTo(bookProviderId));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT ForeignEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo(editionProviderId));
+                Assert.That(QueryScalar<int>(_sourcePath, $"SELECT COUNT(*) FROM ProviderAliasIndex WHERE EntityType = 'Author' AND EntityId = 20 AND Scope = 'author' AND Provider = 'meta' AND NormalizedProviderId = '{authorNormalizedId}';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, $"SELECT COUNT(*) FROM ProviderAliasIndex WHERE EntityType = 'Book' AND EntityId = 30 AND Scope = 'work' AND Provider = 'meta' AND NormalizedProviderId = '{bookNormalizedId}';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, $"SELECT COUNT(*) FROM ProviderAliasIndex WHERE EntityType = 'Edition' AND EntityId = 40 AND Scope = 'edition' AND Provider = 'meta' AND NormalizedProviderId = '{editionNormalizedId}';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT ForeignAuthorId FROM AuthorMetadata WHERE Id = 10;"), Is.EqualTo("loc-author:person/123:456"));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT ForeignBookId FROM Books WHERE Id = 30;"), Is.EqualTo("loc:work/123:456"));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT ForeignEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo("googlebooks:volume/123:456"));
+            });
         }
 
         [Test]
@@ -424,7 +468,7 @@ namespace Chaptarr.Core.Test.Datastore
                     new MigrationContext(MigrationType.Main),
                     DatabaseType.SQLite));
 
-            Assert.That(exception.Message, Does.Contain("unsupported provider"));
+            Assert.That(exception.Message, Does.Contain("no recognized provider prefix"));
             Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
             Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
         }

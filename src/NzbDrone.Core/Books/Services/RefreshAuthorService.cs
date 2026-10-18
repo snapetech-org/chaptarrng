@@ -3037,7 +3037,8 @@ namespace NzbDrone.Core.Books
                 (provider == "ol" && ProviderIdHelper.Normalize(a.OpenLibraryAuthorId, "ol") == normalizedPrefixedId) ||
                 (provider == "gb" && ProviderIdHelper.Normalize(a.GoogleBooksAuthorId, "gb") == normalizedPrefixedId) ||
                 (provider == "az" && ProviderIdHelper.Normalize(a.AudnexusAuthorId, "az") == normalizedPrefixedId) ||
-                (provider == "rn" && ProviderIdHelper.Normalize(a.RanobeDbAuthorId, "rn") == normalizedPrefixedId));
+                (provider == "rn" && ProviderIdHelper.Normalize(a.RanobeDbAuthorId, "rn") == normalizedPrefixedId) ||
+                (provider == "meta" && ProviderIdHelper.Normalize(a.AdditionalMetadataProviderId, "meta") == normalizedPrefixedId));
 
             if (author != null)
             {

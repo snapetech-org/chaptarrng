@@ -34,7 +34,9 @@ tools for BookshelfNG SQLite, plus the embedded source migration chain. The
 BookshelfNG helper creates an appdata archive before it runs the tools.
 ChaptarrNG also initializes new author format paths from configured defaults,
 a behavior released in `v0.9.974`; explicit roots and existing authors are
-left alone. Read the
+left alone. The next version bump is not a release: publication is frozen
+until the BookshelfNG migration, rollback, feature-parity, and install-channel
+acceptance gates are closed. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
 The source migration runs on a disposable copy and keeps the original database
@@ -42,16 +44,23 @@ for rollback. A populated synthetic v22 SQLite fixture upgrades through the
 embedded chain, converts, and rolls back; preview leaves the source unchanged,
 and a future schema is rejected. The published `.977` release currently
 rejects pre-migration-14 databases because their `Blacklist` table must first
-be renamed by the embedded chain. A fix and an authentic migration-1 fixture
-are being validated for the next release. This is not yet real-data evidence
-or proof for every historical release. PostgreSQL BookshelfNG databases and
-two populated source databases are not supported. Books with no recorded
+be renamed by the embedded chain. The version-aware fix and authentic
+migration-1 fixture passed the hosted Linux, macOS, Windows, and PostgreSQL
+migration checks in PR #126 and are on `main`, but are not in public `.977`.
+No release will be cut until the full retirement acceptance gates close; the
+manual Release workflow now requires `CHAPTARRNG_RELEASE_READY=true`. This is
+not yet real-data evidence or proof for every historical release. PostgreSQL
+BookshelfNG databases and two populated source databases are not supported.
+Books with no recorded
 format are retained in both ChaptarrNG catalogs, unmonitored, with a private
 review file so the operator can classify them after startup. The helper does
 not copy external media/download folders, translate every external setting,
 or update pinned images and package channels. The legacy bridge remains
-disabled, and full feature parity and several package-channel upgrades are
-still unverified.
+disabled. This parity branch also carries an unpublished candidate port of
+BookshelfNG's selectable supplemental catalog sources and per-field metadata
+preferences; it is not in public `v0.9.977` and has not closed that parity
+gate. Full feature parity and several package-channel upgrades are still
+unverified.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 
@@ -126,7 +135,14 @@ See the [SeerrNG Bookshelf backend guide](https://github.com/snapetech-org/seerr
 
 ## Metadata
 
-ChaptarrNG is not compatible with Readarr's metadata sources. It uses Chaptarr's modular pipeline to resolve entities across metadata providers and aggregate their data through automated refinement and consensus. Metadata work remains an ongoing effort.
+ChaptarrNG does not use Readarr's metadata-provider plugin protocol. It uses
+Chaptarr's modular pipeline to resolve entities across metadata providers and
+aggregate their data through automated refinement and consensus. The current
+source checkout also includes optional Open Library, Google Books, Library of
+Congress, Gutendex, Internet Archive, NDL, Europeana, and Apify catalogs, plus
+per-field source preferences. These additions are not in public `v0.9.977`.
+See the [supplemental metadata guide](docs/SUPPLEMENTAL_METADATA.md) for
+configuration and provider identity details.
 
 For light-novel eBooks, ChaptarrNG can search RanobeDB explicitly and store its
 work and release IDs alongside the normal eBook records. RanobeDB's public API

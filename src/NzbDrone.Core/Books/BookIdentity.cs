@@ -170,6 +170,7 @@ namespace NzbDrone.Core.Books
             AddStableWork(tokens, book.GoodreadsWorkId, "gr");
             AddStableWork(tokens, book.OpenLibraryWorkId, "ol");
             AddStableWork(tokens, book.RanobeDbBookId, "rn");
+            AddStableWork(tokens, book.AdditionalMetadataProviderId, "meta");
 
             foreach (var remoteProviderId in book.RemoteProviderIds ?? Enumerable.Empty<string>())
             {

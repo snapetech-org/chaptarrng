@@ -15,29 +15,28 @@ branch at
 [`e67374f`](https://github.com/Chaptarr/chaptarr/commit/e67374f), which is in
 ChaptarrNG `main`'s history.
 
-**Migration update (2026-10-18).** ChaptarrNG `v0.9.977` is published with the
-BookshelfNG converter and rollback commands, ordinary startup conversion, and
-an unmonitored dual-catalog fallback for records whose format cannot be
-inferred. Release validation passed on Linux, macOS, Windows, and the
-PostgreSQL migration smoke. BookshelfNG `0.4.21.71` is published as the final
-source release; its issue #114 request is closed, and it includes the
-source-side appdata archive helper. ChaptarrNG `v0.9.974` and later also
-initialize missing format-specific roots for new authors; explicit roots and
-existing authors or files are left alone. See the
-[operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
+**Migration update (2026-10-18).** ChaptarrNG `v0.9.977` is the latest
+published release. It includes the BookshelfNG converter and rollback
+commands, ordinary startup conversion, and an unmonitored dual-catalog
+fallback for records whose format cannot be inferred. PR #126 merged the
+version-aware migration-1-to-13 table guard into `main`; hosted Linux, macOS,
+Windows, and PostgreSQL migration checks passed. The fix is not in public
+`.977`, and releases remain frozen until all retirement acceptance gates close.
+The manual Release workflow requires `CHAPTARRNG_RELEASE_READY=true`.
+BookshelfNG `0.4.21.71` is published as the final source release; its issue
+#114 request is closed, and it includes the source-side appdata archive helper.
+ChaptarrNG `v0.9.974` and later initialize missing format-specific roots for
+new authors; explicit roots and existing authors or files are left alone. See
+the [operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
 and [retirement status page](BOOKSHELFNG_RETIREMENT.md). The `.977` release
-bundles the source migration chain and accepts the final migration-158 SQLite
-schema. Its guard currently rejects source versions before migration 14
-because they still use the `Blacklist` table name. A version-aware fix and an
-authentic migration-1 rollback fixture are under hosted validation for a
-follow-up release. Populated synthetic migration-22 coverage exercises
-conversion and rollback; this is not real older-schema data. PostgreSQL source
-conversion remains unsupported, and successful database conversion does not
-complete feature parity or legacy-channel handoff. ChaptarrNG AUR `.977` is
-published and COPR reports successful builds for Fedora 43/44/45 and Rawhide
-x86_64. The Chocolatey package passed build and transition smoke validation,
-but publication returned HTTP 403 and the public feed has no `chaptarrng`
-entry. The legacy bridge remains disabled.
+supports the final migration-158 SQLite schema. Populated synthetic migration
+coverage exercises conversion and rollback; this is not real older-schema
+operator data. PostgreSQL source conversion remains unsupported, and successful
+database conversion does not complete feature parity or legacy-channel
+handoff. ChaptarrNG AUR `.977` is published and COPR reports successful builds
+for Fedora 43/44/45 and Rawhide x86_64. The Chocolatey package passed build and
+transition smoke validation, but publication returned HTTP 403 and the public
+feed has no `chaptarrng` entry. The legacy bridge remains disabled.
 
 This guide groups behavior rather than listing every fix, dependency update,
 or upstream report. Some items need reproduction or depend on an external
@@ -482,11 +481,12 @@ large-screen startup work. `v0.9.971` fixed delay-profile reordering;
 input in the frontend toolchain. `v0.9.974` initializes new authors' missing
 format-specific roots from configured defaults. `v0.9.975` publishes the
 package handoff changes; `v0.9.976` preserves unresolved BookshelfNG records
-in both catalogs without monitoring and writes a private review file. `v0.9.977`
-bundles the BookshelfNG SQLite upgrade chain and the optional aggregate-only
-diagnostics module. The current source table guard still rejects pre-migration-14
-databases; the version-aware fix remains under hosted validation. The changelog
-includes operator actions.
+in both catalogs without monitoring and writes a private review file. `v0.9.977` bundles the BookshelfNG SQLite upgrade chain and the optional
+aggregate-only diagnostics module. The public `.977` converter still rejects
+pre-migration-14 databases. PR #126 merged the version-aware source fix and
+migration-1 rollback fixture into `main`; its Linux, macOS, Windows, and
+PostgreSQL migration checks passed. The fix remains unreleased while the
+retirement gates are open. No release will be cut until those gates close.
 
 <a id="chaptarrng-retirement-blockers"></a>
 
@@ -549,14 +549,16 @@ one author, one source book, two editions, two files, and two history rows.
 The converter is now publicly available in the standard image, beginning with
 [`v0.9.970`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.970).
 The latest published `v0.9.977` supports migration-158 SQLite and bundles the
-embedded SQLite upgrade chain. Its current pre-upgrade table guard rejects
-source versions before migration 14; the version-aware fix and migration-1
-rollback test are on a review branch with hosted validation pending. Populated
-synthetic v22 coverage exercises conversion and rollback, but does not prove
-older-schema behavior on real data, PostgreSQL conversion, real-populated
-rollback, every provider/settings/client contract, semantic feature parity, or
-compatibility with every installation channel. Each capability and applicable
-upgrade, rollback, and redirect path remains an independent replacement gate.
+embedded SQLite upgrade chain. Its pre-upgrade table guard rejects source
+versions before migration 14. PR #126 merged the version-aware fix and
+migration-1 rollback test into `main`; hosted Linux, macOS, Windows, and
+PostgreSQL migration checks passed, but the fix is not in `.977`. Synthetic
+coverage does not prove older-schema behavior on real data, PostgreSQL source
+conversion, populated real-data rollback, every provider/settings/client
+contract, semantic feature parity, or compatibility with every installation
+channel. Each capability and applicable upgrade, rollback, and redirect path
+remains an independent replacement gate. Releases remain frozen until all
+retirement gates close.
 
 The release workflows enforce that distinction: standard ChaptarrNG releases
 publish the new ChaptarrNG identities, while old BookshelfNG package IDs and

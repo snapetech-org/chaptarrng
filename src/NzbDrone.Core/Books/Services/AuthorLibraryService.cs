@@ -1436,7 +1436,8 @@ namespace NzbDrone.Core.Books.Services
                    ProviderIdHelper.Normalize(author.OpenLibraryAuthorId, "ol") ??
                    ProviderIdHelper.Normalize(author.GoogleBooksAuthorId, "gb") ??
                    ProviderIdHelper.Normalize(author.AudnexusAuthorId, "az") ??
-                   ProviderIdHelper.Normalize(author.RanobeDbAuthorId, "rn");
+                   ProviderIdHelper.Normalize(author.RanobeDbAuthorId, "rn") ??
+                   ProviderIdHelper.Normalize(author.AdditionalMetadataProviderId, "meta");
         }
 
         private static string NormalizeRequestedProviderId(string providerId)

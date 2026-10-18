@@ -13698,6 +13698,10 @@
             "type": "string",
             "nullable": true
           },
+          "additionalMetadataProviderId": {
+            "type": "string",
+            "nullable": true
+          },
           "googleBooksId": {
             "type": "string",
             "nullable": true
@@ -17123,6 +17127,144 @@
             "type": "boolean"
           },
           "embedMetadata": {
+            "type": "boolean"
+          },
+          "audibleMarketplace": {
+            "type": "string",
+            "nullable": true
+          },
+          "enableGoogleBooks": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "enableLoc": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "enableGutendex": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "enableInternetArchive": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "enableNdl": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "enableEuropeana": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "enableApifyGoodreads": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "enableOpenLibrary": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "sourcesFromEnvironment": {
+            "type": "boolean"
+          },
+          "openLibraryContactEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "openLibraryContactEmailFromEnvironment": {
+            "type": "boolean"
+          },
+          "metadataTitleSourcePreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadataDescriptionSourcePreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadataPublisherSourcePreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadataLanguageSourcePreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadataReleaseDateSourcePreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadataPageCountSourcePreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadataCoverSourcePreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadataAuthorImageSourcePreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadataGenresSourcePreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "googleBooksApiKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasGoogleBooksApiKey": {
+            "type": "boolean"
+          },
+          "googleBooksApiKeyFromEnvironment": {
+            "type": "boolean"
+          },
+          "clearGoogleBooksApiKey": {
+            "type": "boolean"
+          },
+          "europeanaApiKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasEuropeanaApiKey": {
+            "type": "boolean"
+          },
+          "europeanaApiKeyFromEnvironment": {
+            "type": "boolean"
+          },
+          "clearEuropeanaApiKey": {
+            "type": "boolean"
+          },
+          "apifyGoodreadsActor": {
+            "type": "string",
+            "nullable": true
+          },
+          "apifyGoodreadsActorFromEnvironment": {
+            "type": "boolean"
+          },
+          "clearApifyGoodreadsActor": {
+            "type": "boolean"
+          },
+          "apifyToken": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasApifyToken": {
+            "type": "boolean"
+          },
+          "apifyTokenFromEnvironment": {
+            "type": "boolean"
+          },
+          "clearApifyToken": {
+            "type": "boolean"
+          },
+          "apifyGoodreadsInputTemplate": {
+            "type": "string",
+            "nullable": true
+          },
+          "apifyGoodreadsInputTemplateFromEnvironment": {
             "type": "boolean"
           }
         },

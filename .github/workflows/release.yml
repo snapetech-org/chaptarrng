@@ -15,6 +15,18 @@ jobs:
   preflight:
     runs-on: ubuntu-latest
     steps:
+    - name: Require retirement readiness approval
+      env:
+        RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ "$RELEASE_READY" != "true" ]]; then
+          echo "::error::Releases are frozen until the BookshelfNG retirement readiness gates are complete."
+          echo "Set CHAPTARRNG_RELEASE_READY=true only after the documented parity, migration, rollback, and channel gates pass."
+          exit 1
+        fi
+
     - name: Require a releasable branch
       shell: bash
       run: |
