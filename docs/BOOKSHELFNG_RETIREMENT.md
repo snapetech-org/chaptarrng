@@ -1,8 +1,8 @@
 # BookshelfNG retirement status
 
-**Reviewed:** 2026-10-18 after ChaptarrNG `v0.9.977` was published and an
-oldest-schema gap was found. This page is the current handoff summary for moving
-BookshelfNG users to ChaptarrNG. The
+**Reviewed:** 2026-10-18 after ChaptarrNG `v0.9.977` was published and PR #126
+closed the oldest-schema code and hosted-test gap. This page is the current
+handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
@@ -11,11 +11,15 @@ detailed feature inventory remains in the
 - ChaptarrNG `v0.9.977` is published with the standard image, migration tools,
   the embedded BookshelfNG SQLite migration chain, and standalone release
   archives.
-- The published `.977` converter rejects source schemas before migration 14:
-  those databases contain `Blacklist`, which the embedded BookshelfNG chain
-  renames to `Blocklist`. A narrowly versioned allowlist fix and authentic
-  migration-1 rollback coverage are on a review branch; hosted validation and
-  a follow-up release are pending.
+- The published `.977` converter still rejects source schemas before
+  migration 14 because they contain `Blacklist`, which the embedded chain
+  later renames to `Blocklist`. PR #126 merged the version-aware guard and
+  authentic migration-1 coverage to `main`; hosted Linux, macOS, Windows, and
+  PostgreSQL migration checks passed. This fix is source-only until a later
+  ChaptarrNG release.
+- ChaptarrNG releases are frozen while retirement gates remain open. The
+  manual Release workflow requires `CHAPTARRNG_RELEASE_READY=true`; do not set
+  it until parity, migration/rollback, and channel acceptance are complete.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
   setting. ChaptarrNG has equivalent new-author path initialization in
@@ -29,16 +33,15 @@ detailed feature inventory remains in the
 The published ChaptarrNG `v0.9.977` converter accepts the BookshelfNG
 migration-158 SQLite database and bundles the BookshelfNG SQLite migration
 chain. It upgrades a disposable copy before import and retains the untouched
-snapshot as the rollback source. The converter currently rejects migration
-versions 1–13 at its pre-upgrade table check because the chain has not yet
-renamed `Blacklist` to `Blocklist`. The fix is on a review branch and remains
-unreleased until its hosted tests pass. Populated synthetic v22 coverage
-passes the targeted local test and the hosted full-suite run is in progress.
-A synthetic migration-1 case for the oldest chain boundary and rollback is on
-the same branch with hosted validation pending. These do not establish
-behavior on real older-schema operator data or every historical release. Schema 159 is
-rejected without changing the source. PostgreSQL source databases and two
-populated BookshelfNG databases remain unsupported.
+snapshot as the rollback source. The `.977` converter still rejects versions
+1–13 at its pre-upgrade table check; those versions retain `Blacklist` until
+the embedded chain renames it. PR #126 merged the version-aware guard and
+synthetic migration-1 rollback coverage into `main`, and its hosted migration
+checks passed on Linux, macOS, Windows, and PostgreSQL. Neither the source fix
+nor synthetic fixtures establish behavior on real older-schema operator data
+or every historical release. Schema 159 is rejected without changing the
+source. PostgreSQL source databases and two populated BookshelfNG databases
+remain unsupported.
 ChaptarrNG stages a native database, accounts for source rows, checks SQLite
 integrity and foreign keys, and promotes only after validation. Preview does
 not modify the source. Apply and rollback are explicit operations, and normal
@@ -62,10 +65,11 @@ and restored it through rollback; the BookshelfNG image started again on port
 8787. This does not validate real user data or the Unraid Community Apps flow.
 
 For a source earlier than migration 14, first update BookshelfNG to its final
-`0.4.21.71` release so it can bring the database to migration 158, or wait for
-the ChaptarrNG follow-up release that contains the version-1-to-13 fix. The
-converter does not accept PostgreSQL databases or two populated BookshelfNG
-databases at once. The BookshelfNG helper archives appdata, but
+`0.4.21.71` release so it can bring the database to migration 158. The `.977`
+converter does not include the later `main` fix, and no follow-up release is
+available while the release freeze is active. The converter does not accept
+PostgreSQL databases or two populated BookshelfNG databases at once. The
+BookshelfNG helper archives appdata, but
 media/download volumes and settings stored outside appdata need separate
 handling. Keep the BookshelfNG service stopped, retain an independent backup,
 and follow the
@@ -95,12 +99,14 @@ offline, third-party, or manually installed copy automatically.
 ## Retirement acceptance
 
 BookshelfNG is not ready to retire solely because the converter and a
-ChaptarrNG release exist. The remaining work is:
+ChaptarrNG release exist. No new ChaptarrNG release or legacy redirect is
+authorized while these gates remain open. The remaining work is:
 
 1. Close each BookshelfNG feature row with behavioral and converted-data
    evidence, or record an explicit maintainer decision to retire that behavior.
-2. Publish the fix for migration-1-to-13 inputs and validate older-schema
-   support, then validate
+2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
+   passes; validate older-schema support on representative operator data,
+   then validate
    old-identity AUR, COPR, Chocolatey, Helm, container, and Unraid
    upgrades through install, conversion, restart, backup retention, and
    rollback.
