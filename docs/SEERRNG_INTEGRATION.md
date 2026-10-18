@@ -47,6 +47,7 @@ absolute SeerrNG checkout path and distinct random values for
 
 ```sh
 SEERRNG_SOURCE=/path/to/seerrng \
+SEERRNG_NODE_MODULES=/path/to/seerrng/node_modules \
 CHAPTARR_GLOBAL_API_KEY='use-a-separate-long-random-key' \
 CHAPTARR_SEERR_API_KEY='use-another-long-random-key' \
 docker compose -f integration/seerrng-smoke.compose.yml \
@@ -57,5 +58,17 @@ docker compose -f integration/seerrng-smoke.compose.yml \
 The smoke test connects from a separate container, confirms SeerrNG can read
 ChaptarrNG status and the paged book library through its format-scoped API,
 and confirms the service key is rejected for administrative and unrelated
-command routes. Remove the test stack afterward with `docker compose -f
+command routes. `SEERRNG_NODE_MODULES` must point to the installed dependency
+directory so the separate smoke container can resolve SeerrNG's runtime
+packages. Remove the test stack afterward with `docker compose -f
 integration/seerrng-smoke.compose.yml down -v`.
+
+## Recorded smoke evidence
+
+On 2026-10-18, the disposable Compose smoke passed against ChaptarrNG candidate
+`0.9.978.0`, built from PR #131 source head `9c3e1f00`, and SeerrNG source
+commit `0b267d526`. It verified status and capability discovery, read the
+empty paged book library, and confirmed the restricted key is rejected for
+administrative and unrelated command routes. Because the library was empty,
+this run does not verify migrated provider IDs, availability, history,
+pending imports, saved SeerrNG settings, or a populated BookshelfNG library.

@@ -5,12 +5,15 @@ on an isolated Compose network, and checks capability discovery, paged book
 reads, and the restricted service key.
 
 Set the inputs in the shell; the Compose file does not need a `.env` file:
-the SeerrNG checkout must have dependencies installed and `dist/` built first
-(`yarn install --frozen-lockfile && yarn build` from that checkout).
+the SeerrNG checkout must have dependencies installed and its server built
+first (`pnpm install --frozen-lockfile && pnpm build:server` from that checkout).
+The smoke container mounts both the source tree and its installed `node_modules`
+read-only so it can run SeerrNG's integration script with the same dependencies.
 
 ```sh
 export SIXLABORS_LICENSE_FILE="$HOME/Downloads/sixlabors.lic"
 export SEERRNG_SOURCE="/path/to/seerrng"
+export SEERRNG_NODE_MODULES="$(realpath "$SEERRNG_SOURCE/node_modules")"
 export CHAPTARR_GLOBAL_API_KEY="$(openssl rand -hex 24)"
 export CHAPTARR_SEERR_API_KEY="$(openssl rand -hex 24)"
 

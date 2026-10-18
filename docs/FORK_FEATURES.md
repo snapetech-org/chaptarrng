@@ -154,6 +154,12 @@ Setup and behavior:
 - [API identity and lifecycle contract](./API_IDENTITY_AND_LIFECYCLE.md)
 - [SeerrNG Bookshelf backend guide](https://github.com/snapetech-org/seerrng/blob/main/docs/using-seerr/bookshelf-backend.md)
 
+The disposable Compose smoke passed on 2026-10-18 against candidate
+`0.9.978.0`: it verified status and capability discovery, an empty paged
+library read, and rejection of administrative and unrelated command routes by
+the restricted key. The empty library leaves converted-data and request
+history acceptance open; see the [recorded smoke scope](./SEERRNG_INTEGRATION.md#recorded-smoke-evidence).
+
 ## Library identity and file organization
 
 The API distinguishes durable provider identities from local database IDs and
