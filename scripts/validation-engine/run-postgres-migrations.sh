@@ -3,7 +3,7 @@ set -euo pipefail
 
 data_dir="$(mktemp -d "${TMPDIR:-/tmp}/chaptarr-migrations.XXXXXX")"
 app_log="$data_dir/app.log"
-test_results="$data_dir/postgres.nunit.xml"
+test_results_directory="$data_dir/nunit-results"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 app_pid=""
 cleanup() {
@@ -36,7 +36,14 @@ if [[ "$ready" != "yes" ]]; then
 fi
 
 write_nunit_summary() {
-  node --input-type=module - "$test_results" "$script_dir/engine.mjs" <<'NODE'
+  local result_files=()
+  mapfile -d '' result_files < <(find "$test_results_directory" -type f -name '*.xml' -print0)
+  if (( ${#result_files[@]} != 1 )); then
+    echo "Expected one NUnit result XML file; found ${#result_files[@]}." >&2
+    return 1
+  fi
+
+  node --input-type=module - "${result_files[0]}" "$script_dir/engine.mjs" <<'NODE'
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
@@ -57,23 +64,24 @@ try {
     failedTestDetailsTruncated: summary.failedTestDetailsTruncated,
   };
   process.stdout.write(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify(diagnostic)}\n`);
-} catch {
+} catch (error) {
+  const reason = error instanceof Error ? error.message : 'Unknown NUnit result error';
+  process.stderr.write(`${reason}\n`);
   process.stdout.write('NUnit summary unavailable.\n');
   process.exitCode = 1;
 }
 NODE
-
 }
+
+mkdir -p "$test_results_directory"
 
 if ! dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj \
   --configuration Release --no-restore --no-build --verbosity normal \
   --filter 'FullyQualifiedName~BookshelfPostgresDatabaseConverterFixture' \
-  "--logger:nunit;LogFilePath=$test_results"; then
-  if [[ -f "$test_results" ]]; then
-    write_nunit_summary || true
-  else
-    echo "NUnit summary unavailable."
-  fi
+  -- \
+  "NUnit.WorkDirectory=$data_dir" \
+  "NUnit.TestOutputXml=nunit-results"; then
+  write_nunit_summary || true
   exit 1
 fi
 
