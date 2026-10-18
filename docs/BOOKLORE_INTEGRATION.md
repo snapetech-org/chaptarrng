@@ -81,12 +81,19 @@ legacy BookLore connection after verifying the new destination. ChaptarrNG
 does not infer that a saved BookLore URL or password belongs to a different
 BookOrbit server.
 
-The proxy tests cover streamed uploads, redirects, credential rejection,
-size rejection, stopping a partial batch, and a later upload attempt. The
-Bookshelf conversion fixture checks that a BookLore row's provider identity,
-settings, credentials, release-import trigger, and retained backup survive
-conversion. Live BookOrbit acceptance and a real-user transition remain open
-in the [retirement matrix](FORK_FEATURES.md#bookshelfng-parity-matrix).
+The unpublished retirement candidate's proxy tests cover streamed uploads,
+redirects, credential rejection, size rejection, stopping a partial batch,
+and a later upload attempt. An isolated self-hosted BookOrbit v3.2.0 instance
+also passed a live API contract check: initial setup returned 201, login and
+Book Dock summary returned 200, a generated EPUB upload returned 201 and
+appeared in the Book Dock listing, and an unsupported `.txt` upload was
+rejected with HTTP 400. This verifies the API and file-admission path; it does
+not verify BookOrbit's later processing of a production book or a transition
+using a real BookLore user's settings. The Bookshelf conversion fixture checks
+that a BookLore row's provider identity, settings, credentials, release-import
+trigger, and retained backup survive conversion. BookOrbit support remains
+candidate source work and is not in published `v0.9.977`; see the
+[retirement matrix](FORK_FEATURES.md#bookshelfng-parity-matrix).
 
 ## Upstream references
 
@@ -97,6 +104,7 @@ in the [retirement matrix](FORK_FEATURES.md#bookshelfng-parity-matrix).
 - [BookLore v2.4.0 data-conflict response](https://github.com/booklore-app/booklore/blob/f397e98c5ab021b02e8930ce278583af11637238/booklore-api/src/main/java/org/booklore/exception/GlobalExceptionHandler.java)
 - [BookLore v2.4.0 accepted file extensions](https://github.com/booklore-app/booklore/blob/f397e98c5ab021b02e8930ce278583af11637238/booklore-api/src/main/java/org/booklore/model/enums/BookFileExtension.java)
 - [BookLore repository and BookOrbit successor notice](https://github.com/booklore-app/booklore)
-- [BookOrbit login request](https://github.com/bookorbit/bookorbit/blob/main/server/src/modules/auth/dto/login.dto.ts)
-- [BookOrbit Book Dock upload endpoint and permission](https://github.com/bookorbit/bookorbit/blob/main/server/src/modules/book-dock/book-dock.controller.ts)
-- [BookOrbit upload format validation](https://github.com/bookorbit/bookorbit/blob/main/server/src/modules/upload/upload-validator.service.ts)
+- [BookOrbit v3.2.0 login request](https://github.com/bookorbit/bookorbit/blob/v3.2.0/server/src/modules/auth/dto/login.dto.ts)
+- [BookOrbit v3.2.0 Book Dock upload endpoint and permission](https://github.com/bookorbit/bookorbit/blob/v3.2.0/server/src/modules/book-dock/book-dock.controller.ts)
+- [BookOrbit v3.2.0 upload format validation](https://github.com/bookorbit/bookorbit/blob/v3.2.0/server/src/modules/upload/upload-validator.service.ts)
+- [BookOrbit v3.2.0 release](https://github.com/bookorbit/bookorbit/releases/tag/v3.2.0)

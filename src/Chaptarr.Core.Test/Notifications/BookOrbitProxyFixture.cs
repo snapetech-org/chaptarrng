@@ -28,6 +28,7 @@ namespace Chaptarr.Core.Test.Notifications
             transport.AddRoute(url => url.EndsWith("/library/api/v1/auth/login"), request =>
             {
                 Assert.That(request.AllowAutoRedirect, Is.False);
+                Assert.That(request.LogHttpError, Is.False);
                 var body = Encoding.UTF8.GetString(request.ContentData);
                 Assert.That(body, Does.Contain("\"username\":\"migration-fixture\""));
                 Assert.That(body, Does.Contain("\"password\":\"test-password\""));
@@ -38,6 +39,7 @@ namespace Chaptarr.Core.Test.Notifications
                 Assert.Multiple(() =>
                 {
                     Assert.That(request.AllowAutoRedirect, Is.False);
+                    Assert.That(request.LogHttpError, Is.False);
                     Assert.That(request.Method, Is.EqualTo(HttpMethod.Get));
                     Assert.That(request.Headers.GetSingleValue("Authorization"), Is.EqualTo("Bearer test-token"));
                 });
@@ -65,6 +67,7 @@ namespace Chaptarr.Core.Test.Notifications
                     Assert.Multiple(() =>
                     {
                         Assert.That(request.AllowAutoRedirect, Is.False);
+                        Assert.That(request.LogHttpError, Is.False);
                         Assert.That(request.Headers.GetSingleValue("Authorization"), Is.EqualTo("Bearer test-token"));
                         Assert.That(request.ContentData, Is.Null);
                         Assert.That(request.Content.Headers.ContentType.MediaType, Is.EqualTo("multipart/form-data"));
@@ -129,6 +132,8 @@ namespace Chaptarr.Core.Test.Notifications
                     Assert.That(failure.Message, Does.Contain("HTTP 413"));
                     Assert.That(failure.Message, Does.Not.Contain("remote diagnostics"));
                     Assert.That(failure.Message, Does.Not.Contain(Settings.Password));
+                    Assert.That(failure.ToString(), Does.Not.Contain("remote diagnostics"));
+                    Assert.That(failure.ToString(), Does.Not.Contain(Settings.Password));
                 });
 
                 proxy.UploadFiles(Settings, new[] { secondPath });

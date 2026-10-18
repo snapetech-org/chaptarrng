@@ -63,9 +63,15 @@ BookshelfNG notification rows are copied with their provider name, settings,
 credentials, and event triggers. A BookLore row remains connected to its
 saved BookLore URL and account; migration cannot assume that these settings
 identify a separate BookOrbit server. The current source candidate adds
-BookOrbit as a separate Book Dock destination. Configure and test that
+BookOrbit as a separate Book Dock destination. The unpublished retirement
+candidate's proxy tests cover authenticated streaming, redirect refusal,
+rejected credentials and files, and partial-batch handling. A live contract
+check against an isolated BookOrbit v3.2.0 instance passed setup, login,
+permission checking, EPUB upload/listing, and unsupported-file rejection.
+This checks upload admission, not BookOrbit's later processing of a production
+book or a real-user handoff. Configure and test a separate BookOrbit
 connection in **Settings > Connect** after migration, then keep or disable the
-legacy BookLore connection as needed. This candidate is not in published
+legacy BookLore connection as needed. This source candidate is not in published
 `v0.9.977` while the release freeze remains active.
 
 Preserve `HARDCOVER=true`, `HARDCOVER_AUTH`, `HARDCOVER_API_KEY`, and any

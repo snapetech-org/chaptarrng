@@ -40,13 +40,18 @@ namespace NzbDrone.Core.Notifications.BookOrbit
             }
             catch (HttpException ex) when (IsBookDockPermissionRejection(ex))
             {
-                _logger.Warn(ex, "BookOrbit account has no Book Dock access at {0}", settings.BaseUrl);
+                _logger.Warn("BookOrbit denied Book Dock access with HTTP {0} at {1}", (int)ex.Response.StatusCode, settings.BaseUrl);
                 return new ValidationFailure(string.Empty, "The BookOrbit account must have Book Dock Access permission.");
             }
             catch (HttpException ex) when (IsCredentialRejection(ex))
             {
-                _logger.Warn(ex, "BookOrbit rejected the configured login at {0}", settings.BaseUrl);
+                _logger.Warn("BookOrbit rejected the configured login with HTTP {0} at {1}", (int)ex.Response.StatusCode, settings.BaseUrl);
                 return new ValidationFailure(nameof(settings.Password), "BookOrbit rejected the login. Check the credentials and password-login policy.");
+            }
+            catch (HttpException ex)
+            {
+                _logger.Warn("BookOrbit returned HTTP {0} at {1}", (int)ex.Response.StatusCode, settings.BaseUrl);
+                return new ValidationFailure(string.Empty, "Unable to connect to BookOrbit. Check the URL, credentials, and logs.");
             }
             catch (Exception ex)
             {
@@ -97,6 +102,7 @@ namespace NzbDrone.Core.Notifications.BookOrbit
                 password = settings.Password
             }));
             request.AllowAutoRedirect = false;
+            request.LogHttpError = false;
             request.RequestTimeout = TimeSpan.FromSeconds(30);
 
             var response = _httpClient.Execute(request);
@@ -118,12 +124,12 @@ namespace NzbDrone.Core.Notifications.BookOrbit
         private void VerifyBookDockAccess(BookOrbitSettings settings, string accessToken)
         {
             var request = new HttpRequestBuilder($"{settings.BaseUrl.TrimEnd('/')}/api/v1/book-dock/summary")
-                .Get()
                 .SetHeader("Authorization", $"Bearer {accessToken}")
                 .Accept(HttpAccept.Json)
                 .Build();
 
             request.AllowAutoRedirect = false;
+            request.LogHttpError = false;
             request.RequestTimeout = TimeSpan.FromSeconds(30);
             var response = _httpClient.Execute(request);
             if ((int)response.StatusCode < 200 || (int)response.StatusCode >= 300)
@@ -160,6 +166,7 @@ namespace NzbDrone.Core.Notifications.BookOrbit
                 .Build();
 
             request.AllowAutoRedirect = false;
+            request.LogHttpError = false;
             request.RequestTimeout = TimeSpan.FromHours(1);
             request.ContentSummary = $"file={Path.GetFileName(path)} ({fileStream.Length} bytes)";
             request.SetContent(formContent);
@@ -171,22 +178,22 @@ namespace NzbDrone.Core.Notifications.BookOrbit
             }
             catch (HttpException ex)
             {
-                throw UploadFailure(path, (int)ex.Response.StatusCode, ex);
+                throw UploadFailure(path, (int)ex.Response.StatusCode);
             }
 
             if ((int)response.StatusCode < 200 || (int)response.StatusCode >= 300)
             {
-                throw UploadFailure(path, (int)response.StatusCode, null);
+                throw UploadFailure(path, (int)response.StatusCode);
             }
 
             _logger.Info("Uploaded {0} to BookOrbit Book Dock", Path.GetFileName(path));
         }
 
-        private static WebException UploadFailure(string path, int statusCode, Exception innerException)
+        private static WebException UploadFailure(string path, int statusCode)
         {
             return new WebException(
                 $"BookOrbit rejected '{Path.GetFileName(path)}' with HTTP {statusCode}. Check its Book Dock permissions, accepted formats, and upload-size limit.",
-                innerException,
+                null,
                 WebExceptionStatus.ProtocolError,
                 null);
         }
