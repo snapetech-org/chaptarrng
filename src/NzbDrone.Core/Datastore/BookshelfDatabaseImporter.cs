@@ -6,6 +6,7 @@ using System.Linq;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MetadataSource.BookInfo;
 
 namespace NzbDrone.Core.Datastore
@@ -80,7 +81,7 @@ namespace NzbDrone.Core.Datastore
             ImportBlocklist(source, target, transaction, authors, books, report);
             ImportDownloadHistory(source, target, transaction, report);
 
-            CopyTable(source, target, transaction, report, "Config");
+            ImportConfig(source, target, transaction, report);
             CopyTable(source, target, transaction, report, "CustomFilters");
             CopyTable(source, target, transaction, report, "CustomFormats");
             CopyTable(source, target, transaction, report, "DelayProfiles");
@@ -1149,6 +1150,97 @@ namespace NzbDrone.Core.Datastore
 
             report.RecordTable("NamingConfig", sourceCount, 0, sourceCount, 0, 0,
                 "filename and folder patterns are preserved; target-only naming settings use Chaptarr defaults");
+        }
+
+        private static void ImportConfig(
+            SqliteConnection source,
+            SqliteConnection target,
+            SqliteTransaction transaction,
+            BookshelfDatabaseImportReport report)
+        {
+            const string legacyMatchKey = "bookimportminimummatchpercent";
+            const string chaptarrStrictnessKey = "bookmatchingstrictness";
+
+            var configRows = ReadRows(source, "Config").ToList();
+            var sourceCount = configRows.Count;
+            var legacyRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMatchKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var strictnessRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrStrictnessKey, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (legacyRows.Count > 1 || strictnessRows.Count > 1)
+            {
+                throw new InvalidDataException("BookshelfNG config contains duplicate match settings; conversion stopped before promotion.");
+            }
+
+            var matchSettingDisposition = "no BookshelfNG numeric match threshold was present; ChaptarrNG's default matching mode applies";
+            var existingStrictnessValue = strictnessRows.SingleOrDefault() is { } strictnessRow
+                ? GetString(strictnessRow, "Value")
+                : null;
+            int? legacyPercent = null;
+            BookMatchingStrictness? legacyMappedStrictness = null;
+
+            if (legacyRows.Count == 1)
+            {
+                var rawPercent = GetString(legacyRows[0], "Value");
+                if (!int.TryParse(rawPercent, NumberStyles.Integer, CultureInfo.InvariantCulture, out var percent) ||
+                    !BookshelfMatchSettingMigration.TryMapMinimumMatchPercent(percent, out var mappedStrictness))
+                {
+                    throw new InvalidDataException("BookshelfNG BookImportMinimumMatchPercent must be an integer from 50 through 99; conversion stopped before promotion.");
+                }
+
+                legacyPercent = percent;
+                legacyMappedStrictness = mappedStrictness;
+            }
+
+            if (!string.IsNullOrWhiteSpace(existingStrictnessValue))
+            {
+                if (!Enum.TryParse(existingStrictnessValue, ignoreCase: true, out BookMatchingStrictness parsedStrictness) ||
+                    !Enum.IsDefined(typeof(BookMatchingStrictness), parsedStrictness))
+                {
+                    throw new InvalidDataException("BookshelfNG config contains an invalid BookMatchingStrictness value; conversion stopped before promotion.");
+                }
+
+                matchSettingDisposition = legacyRows.Count == 0
+                    ? $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' was preserved"
+                    : $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' took precedence; the BookshelfNG numeric match threshold was retained unchanged for audit because the matching algorithms differ";
+            }
+            else if (legacyPercent.HasValue && legacyMappedStrictness.HasValue)
+            {
+                var mappedValue = legacyMappedStrictness.Value.ToString().ToLowerInvariant();
+                if (strictnessRows.Count == 1)
+                {
+                    strictnessRows[0]["Value"] = mappedValue;
+                }
+                else
+                {
+                    configRows.Add(new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["Key"] = chaptarrStrictnessKey,
+                        ["Value"] = mappedValue
+                    });
+                }
+
+                matchSettingDisposition = $"BookshelfNG BookImportMinimumMatchPercent={legacyPercent.Value.ToString(CultureInfo.InvariantCulture)} was mapped to ChaptarrNG BookMatchingStrictness='{mappedValue}'; the original numeric row was retained. This is a documented closest-policy translation, not an equivalent implementation of BookshelfNG's fuzzy parser and weighted import-distance algorithms.";
+            }
+
+            var targetColumns = GetColumns(target, "Config");
+            foreach (var row in configRows)
+            {
+                var unmapped = row.Where(x => x.Value != null && !targetColumns.ContainsKey(x.Key))
+                    .Select(x => x.Key)
+                    .OrderBy(x => x, StringComparer.Ordinal)
+                    .ToArray();
+                if (unmapped.Length > 0)
+                {
+                    throw new InvalidDataException(
+                        $"BookshelfNG Config row '{GetString(row, "Key")}' has non-empty fields with no Chaptarr mapping: " +
+                        string.Join(", ", unmapped.Select(x => "Config." + x)) + ". Conversion stopped before promotion.");
+                }
+
+                InsertRow(target, transaction, "Config", targetColumns, Intersect(row, targetColumns));
+            }
+
+            report.RecordTable("Config", sourceCount, 0, sourceCount, 0, 0,
+                "saved configuration is copied with compatible fields; " + matchSettingDisposition);
         }
 
         private static void ImportNotifications(
