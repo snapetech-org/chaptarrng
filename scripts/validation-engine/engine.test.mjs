@@ -6,7 +6,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
-import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, parseNUnitDiagnosticMarker, parseNUnitSummaryMarker, runTask, runTaskPool, sha256GitText } from './engine.mjs';
+import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, parseSmokeDiagnosticMarker, parseNUnitSummaryMarker, runTask, runTaskPool, sha256GitText } from './engine.mjs';
 import { validation } from './config.mjs';
 
 function withEnvironmentVariable(name, value, action) {
@@ -403,22 +403,33 @@ test('NUnit JSON marker rejects malformed totals and drops path-bearing test nam
   assert.deepEqual(summary.failedTestDetails, []);
 });
 
-test('NUnit diagnostic marker keeps only whitelisted result metadata', () => {
-  assert.deepEqual(parseNUnitDiagnosticMarker('VALIDATION_NUNIT_DIAGNOSTIC={"reason":"unexpected-result-file-count","resultFileCount":0}'), {
+test('smoke diagnostic marker keeps only whitelisted result metadata', () => {
+  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"unexpected-result-file-count","resultFileCount":0}'), {
+    stage: 'result-reporting',
     reason: 'unexpected-result-file-count',
     resultFileCount: 0,
   });
-  assert.throws(() => parseNUnitDiagnosticMarker('VALIDATION_NUNIT_DIAGNOSTIC={"reason":"/private/path","resultFileCount":0}'), /invalid/);
-  assert.deepEqual(parseNUnitDiagnosticMarker('VALIDATION_NUNIT_DIAGNOSTIC={"reason":"invalid-result-xml","resultFileCount":1,"path":"/private/path"}'), {
+  assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"/private/path","resultFileCount":0}'), /invalid/);
+  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"invalid-result-xml","resultFileCount":1,"path":"/private/path"}'), {
+    stage: 'result-reporting',
     reason: 'invalid-result-xml',
     resultFileCount: 1,
   });
+  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":false,"exceptionType":"Npgsql.NpgsqlException"}'), {
+    stage: 'application-startup',
+    reason: 'application-not-ready',
+    resultFileCount: 0,
+    readinessTimeoutSeconds: 300,
+    processExited: false,
+    exceptionType: 'Npgsql.NpgsqlException',
+  });
+  assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"application-not-ready","resultFileCount":0}'), /stage and reason/);
 });
 
-test('task receipts retain safe PostgreSQL NUnit result-file diagnostics', async (t) => {
+test('task receipts retain safe PostgreSQL smoke startup diagnostics', async (t) => {
   const runRoot = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-postgres-diagnostic-'));
   t.after(() => rmSync(runRoot, { recursive: true, force: true }));
-  const marker = 'VALIDATION_NUNIT_DIAGNOSTIC={"reason":"unexpected-result-file-count","resultFileCount":0}\n';
+  const marker = 'VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":false,"exceptionType":"Npgsql.NpgsqlException"}\n';
   const spec = {
     id: 'postgres-migrations-smoke',
     resultFormat: 'nunit-summary-json',
@@ -429,9 +440,13 @@ test('task receipts retain safe PostgreSQL NUnit result-file diagnostics', async
   const receipt = await runTask({ id: spec.id }, runRoot, spec);
   assert.equal(receipt.status, 'failed');
   assert.equal(receipt.error, 'NUnit summary was missing or invalid');
-  assert.deepEqual(receipt.nunitDiagnostic, {
-    reason: 'unexpected-result-file-count',
+  assert.deepEqual(receipt.smokeDiagnostic, {
+    stage: 'application-startup',
+    reason: 'application-not-ready',
     resultFileCount: 0,
+    readinessTimeoutSeconds: 300,
+    processExited: false,
+    exceptionType: 'Npgsql.NpgsqlException',
   });
   assert.doesNotMatch(JSON.stringify(receipt), /private\/path/);
 });

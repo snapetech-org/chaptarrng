@@ -581,27 +581,42 @@ export function parseNUnitSummaryMarker(output) {
   };
 }
 
-export function parseNUnitDiagnosticMarker(output) {
-  const marker = [...output.matchAll(/^VALIDATION_NUNIT_DIAGNOSTIC=([^\r\n]+)$/gm)].at(-1)?.[1];
-  if (!marker || marker.length > 1024) throw new Error('NUnit diagnostic marker is missing or too large');
+export function parseSmokeDiagnosticMarker(output) {
+  const marker = [...output.matchAll(/^VALIDATION_SMOKE_DIAGNOSTIC=([^\r\n]+)$/gm)].at(-1)?.[1];
+  if (!marker || marker.length > 1024) throw new Error('Smoke diagnostic marker is missing or too large');
 
   let value;
-  try { value = JSON.parse(marker); } catch { throw new Error('NUnit diagnostic marker is invalid JSON'); }
+  try { value = JSON.parse(marker); } catch { throw new Error('Smoke diagnostic marker is invalid JSON'); }
   const reasons = [
+    'application-not-ready',
     'unexpected-result-file-count',
     'unreadable-result-file',
     'missing-test-run-summary',
     'invalid-case-counts',
     'invalid-result-xml',
   ];
+  const stages = ['application-startup', 'result-reporting'];
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
       !reasons.includes(value.reason) ||
+      !stages.includes(value.stage) ||
       !Number.isSafeInteger(value.resultFileCount) ||
       value.resultFileCount < 0 || value.resultFileCount > 100) {
-    throw new Error('NUnit diagnostic marker is invalid');
+    throw new Error('Smoke diagnostic marker is invalid');
   }
 
-  return { reason: value.reason, resultFileCount: value.resultFileCount };
+  const diagnostic = { stage: value.stage, reason: value.reason, resultFileCount: value.resultFileCount };
+  if (Number.isSafeInteger(value.readinessTimeoutSeconds) && value.readinessTimeoutSeconds > 0 && value.readinessTimeoutSeconds <= 600) {
+    diagnostic.readinessTimeoutSeconds = value.readinessTimeoutSeconds;
+  }
+  if (typeof value.processExited === 'boolean') diagnostic.processExited = value.processExited;
+  if (typeof value.exceptionType === 'string' && value.exceptionType.length <= 160 &&
+      /^[A-Za-z_][A-Za-z0-9_.+]*Exception$/.test(value.exceptionType)) {
+    diagnostic.exceptionType = value.exceptionType;
+  }
+  if ((diagnostic.reason === 'application-not-ready') !== (diagnostic.stage === 'application-startup')) {
+    throw new Error('Smoke diagnostic marker has an invalid stage and reason');
+  }
+  return diagnostic;
 }
 
 function formatElapsed(milliseconds) {
@@ -858,7 +873,7 @@ export async function runTask(task, runRoot, testSpec = null) {
   let failedTestNamesTruncated = false;
   let failedTestDetails = [];
   let failedTestDetailsTruncated = false;
-  let nunitDiagnostic = null;
+  let smokeDiagnostic = null;
   let summaryError = null;
   if (task.id === 'dotnet-core-tests') {
     try {
@@ -889,7 +904,7 @@ export async function runTask(task, runRoot, testSpec = null) {
       if (summary.result && summary.result !== 'Passed') summaryError = `NUnit reported ${summary.result}`;
     } catch {
       summaryError = 'NUnit summary was missing or invalid';
-      try { nunitDiagnostic = parseNUnitDiagnosticMarker(output); } catch { /* keep the bounded generic summary error */ }
+      try { smokeDiagnostic = parseSmokeDiagnosticMarker(output); } catch { /* keep the bounded generic summary error */ }
     }
   } else if (spec.resultFormat === 'node-test') {
     try {
@@ -932,7 +947,7 @@ export async function runTask(task, runRoot, testSpec = null) {
     failedTestNamesTruncated,
     failedTestDetails,
     failedTestDetailsTruncated,
-    nunitDiagnostic,
+    smokeDiagnostic,
     inventory: task.inventory,
     artifactInputs: artifactsBefore,
   };

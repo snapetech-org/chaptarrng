@@ -6,6 +6,7 @@ app_log="$data_dir/app.log"
 test_results_directory="$data_dir/nunit-results"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 app_pid=""
+readiness_timeout_seconds=300
 cleanup() {
   if [[ -n "$app_pid" ]]; then
     kill "$app_pid" >/dev/null 2>&1 || true
@@ -21,9 +22,12 @@ dotnet run --project src/NzbDrone.Console/Chaptarr.Console.csproj \
 app_pid=$!
 
 ready=""
-for _ in $(seq 1 90); do
+for _ in $(seq 1 "$readiness_timeout_seconds"); do
   if curl -fsS "http://127.0.0.1:8789/ping" >/dev/null 2>&1; then
     ready="yes"
+    break
+  fi
+  if ! kill -0 "$app_pid" >/dev/null 2>&1; then
     break
   fi
   sleep 1
@@ -31,6 +35,17 @@ done
 
 if [[ "$ready" != "yes" ]]; then
   echo "Chaptarr failed to start or /ping did not become ready."
+  app_exited=false
+  if ! kill -0 "$app_pid" >/dev/null 2>&1; then
+    app_exited=true
+  fi
+  exception_type="$(grep -Eo '[A-Za-z_][A-Za-z0-9_.+]*Exception' "$app_log" | head -n 1 || true)"
+  exception_json="null"
+  if [[ "$exception_type" =~ ^[A-Za-z_][A-Za-z0-9_.+]*Exception$ ]]; then
+    exception_json="$(node -e 'process.stdout.write(JSON.stringify(process.argv[1]))' "$exception_type")"
+  fi
+  printf 'VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":%s,"processExited":%s,"exceptionType":%s}\n' \
+    "$readiness_timeout_seconds" "$app_exited" "$exception_json"
   tail -n 400 "$app_log" || true
   exit 1
 fi
@@ -40,7 +55,7 @@ write_nunit_summary() {
   mapfile -d '' result_files < <(find "$test_results_directory" -type f -name '*.xml' -print0)
   if (( ${#result_files[@]} != 1 )); then
     echo "Expected one NUnit result XML file; found ${#result_files[@]}." >&2
-    printf 'VALIDATION_NUNIT_DIAGNOSTIC={"reason":"unexpected-result-file-count","resultFileCount":%s}\n' "${#result_files[@]}"
+    printf 'VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"unexpected-result-file-count","resultFileCount":%s}\n' "${#result_files[@]}"
     echo "NUnit summary unavailable."
     return 1
   fi
@@ -76,7 +91,7 @@ try {
         ? 'invalid-case-counts'
         : 'invalid-result-xml';
   process.stderr.write('NUnit result summary could not be read or parsed.\n');
-  process.stdout.write(`VALIDATION_NUNIT_DIAGNOSTIC=${JSON.stringify({ reason, resultFileCount: 1 })}\n`);
+  process.stdout.write(`VALIDATION_SMOKE_DIAGNOSTIC=${JSON.stringify({ stage: 'result-reporting', reason, resultFileCount: 1 })}\n`);
   process.stdout.write('NUnit summary unavailable.\n');
   process.exitCode = 1;
 }

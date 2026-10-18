@@ -139,7 +139,7 @@ export const validation = {
       ],
       githubOnly: true,
       nodeIds: ['chaptarr-postgres-linux-X64'],
-      timeoutSeconds: 180,
+      timeoutSeconds: 600,
     },
   ],
 };
