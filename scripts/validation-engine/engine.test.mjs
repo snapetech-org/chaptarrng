@@ -415,7 +415,7 @@ test('smoke diagnostic marker keeps only whitelisted result metadata', () => {
     reason: 'invalid-result-xml',
     resultFileCount: 1,
   });
-  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":false,"exceptionType":"DryIoc.ContainerException","exceptionTypes":["DryIoc.ContainerException","System.InvalidOperationException"],"startupFrames":["DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException","DryIoc.Interpreter.InterpretAndUnwrapExceptions"]}'), {
+  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":false,"exceptionType":"DryIoc.ContainerException","exceptionTypes":["DryIoc.ContainerException","System.InvalidOperationException"],"startupFrames":["DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException","DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException","DryIoc.Interpreter.InterpretAndUnwrapExceptions"]}'), {
     stage: 'application-startup',
     reason: 'application-not-ready',
     resultFileCount: 0,
@@ -423,7 +423,7 @@ test('smoke diagnostic marker keeps only whitelisted result metadata', () => {
     processExited: false,
     exceptionType: 'DryIoc.ContainerException',
     exceptionTypes: ['DryIoc.ContainerException', 'System.InvalidOperationException'],
-    startupFrames: ['DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException', 'DryIoc.Interpreter.InterpretAndUnwrapExceptions'],
+    startupFrames: ['DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException', 'DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException', 'DryIoc.Interpreter.InterpretAndUnwrapExceptions'],
   });
   assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"exceptionTypes":["/private/path"]}'), /exception types are invalid/);
   assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"startupFrames":["/private/path"]}'), /startup frames are invalid/);

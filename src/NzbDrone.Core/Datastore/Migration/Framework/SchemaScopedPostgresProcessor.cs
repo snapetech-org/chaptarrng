@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using FluentMigrator;
 using FluentMigrator.Runner.Generators.Postgres;
@@ -18,7 +19,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
     {
         public const string ProcessorId = "ChaptarrPostgreSQL";
 
-        private readonly SchemaScopedQuerySchema _querySchema;
+        private readonly string _schemaName;
 
         public SchemaScopedPostgresProcessor(
             PostgresDbFactory factory,
@@ -30,7 +31,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             string schemaName)
             : base(factory, generator, logger, options, connectionStringAccessor, postgresOptions)
         {
-            _querySchema = new SchemaScopedQuerySchema(this, schemaName);
+            _schemaName = schemaName;
         }
 
         public override string DatabaseType => "PostgreSQL15_0";
@@ -44,37 +45,44 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
 
         public override bool SchemaExists(string schemaName)
         {
-            return _querySchema.SchemaExists(schemaName);
+            // Call the base implementation directly. Delegating through an IQuerySchema
+            // wrapper around this processor would dispatch back into this override.
+            return base.SchemaExists(ResolveSchemaName(schemaName, _schemaName));
         }
 
         public override bool TableExists(string schemaName, string tableName)
         {
-            return _querySchema.TableExists(schemaName, tableName);
+            return base.TableExists(ResolveSchemaName(schemaName, _schemaName), tableName);
         }
 
         public override bool ColumnExists(string schemaName, string tableName, string columnName)
         {
-            return _querySchema.ColumnExists(schemaName, tableName, columnName);
+            return base.ColumnExists(ResolveSchemaName(schemaName, _schemaName), tableName, columnName);
         }
 
         public override bool ConstraintExists(string schemaName, string tableName, string constraintName)
         {
-            return _querySchema.ConstraintExists(schemaName, tableName, constraintName);
+            return base.ConstraintExists(ResolveSchemaName(schemaName, _schemaName), tableName, constraintName);
         }
 
         public override bool IndexExists(string schemaName, string tableName, string indexName)
         {
-            return _querySchema.IndexExists(schemaName, tableName, indexName);
+            return base.IndexExists(ResolveSchemaName(schemaName, _schemaName), tableName, indexName);
         }
 
         public override bool SequenceExists(string schemaName, string sequenceName)
         {
-            return _querySchema.SequenceExists(schemaName, sequenceName);
+            return base.SequenceExists(ResolveSchemaName(schemaName, _schemaName), sequenceName);
         }
 
         public override bool DefaultValueExists(string schemaName, string tableName, string columnName, object defaultValue)
         {
-            return _querySchema.DefaultValueExists(schemaName, tableName, columnName, defaultValue);
+            return base.DefaultValueExists(ResolveSchemaName(schemaName, _schemaName), tableName, columnName, defaultValue);
+        }
+
+        internal static string ResolveSchemaName(string schemaName, string defaultSchemaName)
+        {
+            return string.IsNullOrWhiteSpace(schemaName) ? defaultSchemaName : schemaName;
         }
 
         public static void Register(IServiceCollection services, string schemaName)

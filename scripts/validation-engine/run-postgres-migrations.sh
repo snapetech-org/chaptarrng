@@ -41,7 +41,7 @@ if [[ "$ready" != "yes" ]]; then
   fi
   exception_types="$(grep -Eo '[A-Za-z_][A-Za-z0-9_.+]*Exception[[:space:]]*:' "$app_log" | sed -E 's/[[:space:]]*:$//' | awk '!seen[$0]++ && count < 8 { print; count++ }' || true)"
   exception_type="${exception_types%%$'\n'*}"
-  startup_frames="$(grep -Eo 'at [A-Za-z_][A-Za-z0-9_.+]*\(' "$app_log" | sed -E 's/^at //; s/\($//' | awk '!seen[$0]++ && count < 8 { print; count++ }' || true)"
+  startup_frames="$(grep -Eo 'at [A-Za-z_][A-Za-z0-9_.+]*\(' "$app_log" | sed -E 's/^at //; s/\($//' | awk 'count < 8 { print; count++ }' || true)"
   exception_json="null"
   if [[ "$exception_type" =~ ^[A-Za-z_][A-Za-z0-9_.+]*Exception$ ]]; then
     exception_json="$(node -e 'process.stdout.write(JSON.stringify(process.argv[1]))' "$exception_type")"

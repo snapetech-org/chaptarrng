@@ -124,7 +124,8 @@ migration smoke emits one case only after the app starts against the workflow's 
 If startup fails, the receipt instead records a bounded diagnostic with the
 stage, reason, readiness timeout, process exit state, and up to eight exception
 type names and stack-frame identifiers. It omits exception messages, method
-arguments, and filesystem paths.
+arguments, and filesystem paths. Frame order and repeats are retained so a
+recursive startup path remains visible.
 NUnit receipts also include at most 100 failed test-case names and exception
 types. They omit test stdout, assertion messages, and test values, so platform
 failures can be narrowed down from the short-lived CI artifact without exposing

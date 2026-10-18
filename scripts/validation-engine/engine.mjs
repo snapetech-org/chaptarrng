@@ -625,7 +625,7 @@ export function parseSmokeDiagnosticMarker(output) {
       typeof item !== 'string' || item.length > 240 || !/^[A-Za-z_][A-Za-z0-9_.+`]*$/.test(item))) {
       throw new Error('Smoke diagnostic startup frames are invalid');
     }
-    diagnostic.startupFrames = [...new Set(value.startupFrames)];
+    diagnostic.startupFrames = value.startupFrames.slice();
   }
   if ((diagnostic.reason === 'application-not-ready') !== (diagnostic.stage === 'application-startup')) {
     throw new Error('Smoke diagnostic marker has an invalid stage and reason');
