@@ -17,7 +17,7 @@
 > `0.4.21.71` release first. A later source-only fix passed hosted checks on
 > `main`, but is not in `.977` and is not available to operators during the
 > release freeze.
-Run [39132760214](https://github.com/snapetech-org/chaptarrng/actions/runs/39132760214) on `9c051d3d` failed at NUnit source line 162 in `should_preview_convert_and_restore_a_current_bookshelf_postgres_schema`. The fixture seeds `BookImportMinimumMatchPercent` with that exact casing but the assertion queried the key in lowercase; this identifies a fixture expectation error, not a converter failure. The three retained-config lookups now use the source casing. Exact-head hosted validation of this correction is pending. The candidate remains unsupported for operator data. PostgreSQL remains unsupported for operators.
+Run [39132760214](https://github.com/snapetech-org/chaptarrng/actions/runs/39132760214) on `9c051d3d` reported NUnit source line 162 in `should_preview_convert_and_restore_a_current_bookshelf_postgres_schema`. The fixture seeded `BookImportMinimumMatchPercent` with its original casing but checked lowercase, a fixture expectation error. ChaptarrNG commit [b5bd9527](https://github.com/snapetech-org/chaptarrng/commit/b5bd9527) corrects the three retained-config checks. Exact-head run [39133225495](https://github.com/snapetech-org/chaptarrng/actions/runs/39133225495) passed Linux, macOS, and Windows platform validation and all 3 synthetic PostgreSQL migration cases. The candidate remains unsupported for operator data. PostgreSQL remains unsupported in published releases.
 > Pinned images,
 > native packages, and updater channels need separate upgrade steps; database
 > conversion alone does not update an installation channel.
