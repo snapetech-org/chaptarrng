@@ -369,7 +369,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT \"Value\" FROM Config WHERE \"Key\" = @key;";
+            command.CommandText = "SELECT \"Value\" FROM \"Config\" WHERE \"Key\" = @key;";
             command.Parameters.AddWithValue("@key", key);
             return command.ExecuteScalar()?.ToString();
         }
