@@ -3,8 +3,9 @@
 > **Not supported in a published release.** ChaptarrNG `v0.9.977` cannot
 > convert a PostgreSQL BookshelfNG database. The converter in this work branch
 > is a candidate for one BookshelfNG schema at migration 158. Do not use it for
-> operator data until hosted PostgreSQL checks, populated-data review, and
-> rollback acceptance are complete and a release explicitly supports it.
+> operator data until representative populated-data review and rollback
+> acceptance are complete and a release explicitly supports it. The hosted
+> synthetic PostgreSQL fixture passed 4/4 cases on run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892).
 
 ## Candidate behavior
 
@@ -35,7 +36,7 @@ ChaptarrNG token. The original BookshelfNG row remains in the source backup;
 the migration report describes the mapping without including the token value.
 Earlier hosted runs found and corrected staging-schema lookup and migration-runner API issues. Run [39125697386](https://github.com/snapetech-org/chaptarrng/actions/runs/39125697386) on `fb99a694` compiled the candidate but failed because the smoke runner could not produce a valid NUnit summary. Its receipt contained no test totals or failed cases, so it did not establish a converter assertion failure. Commit `8ab6100a` adds bounded diagnostics for the NUnit result-file state. Run [39126322692](https://github.com/snapetech-org/chaptarrng/actions/runs/39126322692) failed after about 90 seconds with a missing NUnit summary, no totals, and no safe diagnostic; the cause is unconfirmed.
 
-Run [39132760214](https://github.com/snapetech-org/chaptarrng/actions/runs/39132760214) on `9c051d3d` reported NUnit source line 162 in `should_preview_convert_and_restore_a_current_bookshelf_postgres_schema`. The fixture seeded `BookImportMinimumMatchPercent` with its original casing but checked lowercase, a fixture expectation error. ChaptarrNG commit [b5bd9527](https://github.com/snapetech-org/chaptarrng/commit/b5bd9527) corrects all three retained-config checks. Exact-head run [39133225495](https://github.com/snapetech-org/chaptarrng/actions/runs/39133225495) passed Linux, macOS, and Windows platform validation, all 3 synthetic PostgreSQL migration cases, and the release-note contract. This validates the migration-158 fixture only. The candidate remains unsupported for operator data and unpublished pending representative populated-data conversion and rollback, parity, and channel acceptance.
+Run [39132760214](https://github.com/snapetech-org/chaptarrng/actions/runs/39132760214) on `9c051d3d` reported NUnit source line 162 in `should_preview_convert_and_restore_a_current_bookshelf_postgres_schema`. The fixture seeded `BookImportMinimumMatchPercent` with its original casing but checked lowercase, a fixture expectation error. ChaptarrNG commit [b5bd9527](https://github.com/snapetech-org/chaptarrng/commit/b5bd9527) corrects all three retained-config checks. Exact-head run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892) on commit [`43bc6363`](https://github.com/snapetech-org/chaptarrng/commit/43bc6363) passed Linux, macOS, and Windows platform validation and the release-note contract; all 4 synthetic PostgreSQL migration cases also passed, including normal-startup conversion with backup retention. This validates the migration-158 fixture only. The candidate remains unsupported for operator data and unpublished pending representative populated-data conversion and rollback, parity, and channel acceptance.
 Numeric provider IDs follow the active
 BookshelfNG mode: run preview and conversion
 with `HARDCOVER=true` and without `HARDCOVER_NATIVE=false` when the source uses
@@ -70,7 +71,7 @@ stored beside `readarr.db` in the ChaptarrNG app data directory.
 
 ## Acceptance still required
 
-- Pass the hosted populated PostgreSQL conversion and rollback fixture.
+- Hosted synthetic PostgreSQL conversion and rollback fixture: passed 4/4 cases on run [39135608892](https://github.com/snapetech-org/chaptarrng/actions/runs/39135608892). Representative operator data and rollback acceptance remain open.
 - Verify PostgreSQL BookshelfNG migrations and ChaptarrNG runtime startup in
   the supported deployment, including sequence allocation after import.
 - Rehearse a representative operator database and review every ambiguous media
