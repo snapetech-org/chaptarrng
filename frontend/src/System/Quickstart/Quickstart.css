@@ -750,3 +750,22 @@
     min-width: 96px;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .progressContainer,
+  .section,
+  .checkIcon,
+  .downloadClientItem {
+    animation: none;
+  }
+
+  .section {
+    opacity: 1;
+  }
+
+  .progressFill,
+  .collapsedSection,
+  .downloadClientItem {
+    transition: none;
+  }
+}

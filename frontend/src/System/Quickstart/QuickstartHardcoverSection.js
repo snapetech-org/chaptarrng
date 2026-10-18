@@ -33,6 +33,12 @@ class QuickstartHardcoverSection extends Component {
     if (markSectionInteracted) {
       markSectionInteracted({ section: 'hardcover' });
     }
+
+    this.props.onConnectionSuccess?.();
+  };
+
+  onConnectionFailure = (error) => {
+    this.props.onConnectionFailure?.(error);
   };
 
   //
@@ -90,6 +96,7 @@ class QuickstartHardcoverSection extends Component {
             isOpen={isApiKeyModalOpen}
             onModalClose={this.onApiKeyModalClose}
             onConnectionSuccess={this.onConnectionSuccess}
+            onConnectionFailure={this.onConnectionFailure}
           />
         </>
       );
@@ -133,6 +140,7 @@ class QuickstartHardcoverSection extends Component {
           isOpen={isApiKeyModalOpen}
           onModalClose={this.onApiKeyModalClose}
           onConnectionSuccess={this.onConnectionSuccess}
+          onConnectionFailure={this.onConnectionFailure}
         />
       </div>
     );
@@ -144,7 +152,9 @@ QuickstartHardcoverSection.propTypes = {
   hardcoverUsername: PropTypes.string,
   hardcoverAvatarUrl: PropTypes.string,
   compact: PropTypes.bool,
-  markSectionInteracted: PropTypes.func
+  markSectionInteracted: PropTypes.func,
+  onConnectionSuccess: PropTypes.func,
+  onConnectionFailure: PropTypes.func
 };
 
 export default QuickstartHardcoverSection;

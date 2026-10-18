@@ -146,6 +146,12 @@ class QuickstartAudioBookShelfSection extends Component {
     if (markSectionInteracted) {
       markSectionInteracted({ section: 'audioBookShelf' });
     }
+
+    this.props.onTestConnectionSuccess?.();
+  };
+
+  onTestConnectionFailure = (error) => {
+    this.props.onTestConnectionFailure?.(error);
   };
 
   //
@@ -198,6 +204,7 @@ class QuickstartAudioBookShelfSection extends Component {
             onModalClose={this.onEditNotificationModalClose}
             onDeleteNotificationPress={this.onDeleteNotificationPress}
             onTestConnectionSuccess={this.onTestConnectionSuccess}
+            onTestConnectionFailure={this.onTestConnectionFailure}
           />
 
           <ConfirmModal
@@ -247,6 +254,7 @@ class QuickstartAudioBookShelfSection extends Component {
           onModalClose={this.onEditNotificationModalClose}
           onDeleteNotificationPress={this.onDeleteNotificationPress}
           onTestConnectionSuccess={this.onTestConnectionSuccess}
+          onTestConnectionFailure={this.onTestConnectionFailure}
         />
 
         <ConfirmModal
@@ -272,7 +280,9 @@ QuickstartAudioBookShelfSection.propTypes = {
   selectNotificationSchema: PropTypes.func.isRequired,
   deleteNotification: PropTypes.func.isRequired,
   markSectionInteracted: PropTypes.func,
-  fetchNotifications: PropTypes.func
+  fetchNotifications: PropTypes.func,
+  onTestConnectionSuccess: PropTypes.func,
+  onTestConnectionFailure: PropTypes.func
 };
 
 export default connect(null, { deleteNotification })(QuickstartAudioBookShelfSection);

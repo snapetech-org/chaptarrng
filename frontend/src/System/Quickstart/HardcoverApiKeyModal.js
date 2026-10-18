@@ -104,6 +104,8 @@ class HardcoverApiKeyModal extends Component {
         isSaving: false,
         saveError: errorMessage
       });
+
+      this.props.onConnectionFailure?.(xhr);
     });
   };
 
@@ -206,7 +208,8 @@ HardcoverApiKeyModal.propTypes = {
   fetchHardcoverConfig: PropTypes.func.isRequired,
   isOpen: PropTypes.bool.isRequired,
   onModalClose: PropTypes.func.isRequired,
-  onConnectionSuccess: PropTypes.func
+  onConnectionSuccess: PropTypes.func,
+  onConnectionFailure: PropTypes.func
 };
 
 const mapDispatchToProps = {

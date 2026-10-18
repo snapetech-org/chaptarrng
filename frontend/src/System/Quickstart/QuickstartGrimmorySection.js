@@ -141,6 +141,12 @@ class QuickstartGrimmorySection extends Component {
     if (markSectionInteracted) {
       markSectionInteracted({ section: 'grimmory' });
     }
+
+    this.props.onTestConnectionSuccess?.();
+  };
+
+  onTestConnectionFailure = (error) => {
+    this.props.onTestConnectionFailure?.(error);
   };
 
   //
@@ -193,6 +199,7 @@ class QuickstartGrimmorySection extends Component {
             onModalClose={this.onEditNotificationModalClose}
             onDeleteNotificationPress={this.onDeleteNotificationPress}
             onTestConnectionSuccess={this.onTestConnectionSuccess}
+            onTestConnectionFailure={this.onTestConnectionFailure}
           />
 
           <ConfirmModal
@@ -242,6 +249,7 @@ class QuickstartGrimmorySection extends Component {
           onModalClose={this.onEditNotificationModalClose}
           onDeleteNotificationPress={this.onDeleteNotificationPress}
           onTestConnectionSuccess={this.onTestConnectionSuccess}
+          onTestConnectionFailure={this.onTestConnectionFailure}
         />
 
         <ConfirmModal
@@ -267,7 +275,9 @@ QuickstartGrimmorySection.propTypes = {
   selectNotificationSchema: PropTypes.func.isRequired,
   deleteNotification: PropTypes.func.isRequired,
   markSectionInteracted: PropTypes.func,
-  fetchNotifications: PropTypes.func
+  fetchNotifications: PropTypes.func,
+  onTestConnectionSuccess: PropTypes.func,
+  onTestConnectionFailure: PropTypes.func
 };
 
 export default connect(null, { deleteNotification })(QuickstartGrimmorySection);
