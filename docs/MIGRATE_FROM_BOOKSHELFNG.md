@@ -17,12 +17,14 @@
 > `0.4.21.71` release first. A later source-only fix passed hosted checks on
 > `main`, but is not in `.977` and is not available to operators during the
 > release freeze.
-> Draft ChaptarrNG PR #131's migration code was tested at snapshot
-> [`0d31609b`](https://github.com/snapetech-org/chaptarrng/commit/0d31609b).
-> Run [39142709701](https://github.com/snapetech-org/chaptarrng/actions/runs/39142709701)
-> passed Linux, macOS, and Windows builds, PostgreSQL migration, and
-> release-note checks. Analysis, dependency, and security checks passed. The
-> candidate remains unsupported for operator data.
+> Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
+> contains the migration candidate. Exact-head run
+> [39152023939](https://github.com/snapetech-org/chaptarrng/actions/runs/39152023939)
+> on `ea6fcd46` passed Linux, macOS, and Windows builds and test suites,
+> PostgreSQL migrations, release-note validation, and native-runner receipt
+> reconciliation. CodeQL, dependency-review, and security checks passed on the
+> same head. This is candidate CI evidence only; it remains unsupported for
+> operator data.
 > PostgreSQL source conversion remains unsupported in published releases.
 > Pinned images,
 > native packages, and updater channels need separate upgrade steps; database
@@ -39,7 +41,12 @@ Migration selects one supported database per appdata directory. If both
 `readarr.db` and `audioarr.db` are non-empty in the same directory, the current
 source resolver stops with an ambiguity error; migration does not merge them
 or pick one silently. Keep independently operated installations in separate
-appdata directories and migrate each one separately. If both files belong to
+appdata directories and migrate each one separately. The published BookshelfNG `.71`
+helper may print a zero-byte `readarr.db` beside a populated `audioarr.db`;
+ChaptarrNG
+`.977` independently resolves the sole populated legacy database. BookshelfNG
+PR #154 fixed the helper's candidate selection on source `main`, after `.71`;
+that fix is not in the published helper. If both files belong to
 data stored together, preserve the original directory and resolve database
 ownership and shared settings before making separate working copies.
 If you want one combined library, consolidate tracked media into the
@@ -108,9 +115,8 @@ The current ChaptarrNG work-branch candidate also maps a saved `HardcoverAuth`
 database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
 precedence, and the original BookshelfNG database remains available in the
 rollback backup. That native provider and token mapping are not in published
-`v0.9.977`. On migration code snapshot `0d31609b`, Linux, macOS, and Windows
-builds, PostgreSQL migration, analysis, dependency, security, and release-note
-checks passed. Representative converted-data acceptance remains open; see the [PostgreSQL candidate
+`v0.9.977`. PR #131 remains draft; check its current exact-head results. Representative
+converted-data acceptance remains open; see the [PostgreSQL candidate
 notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 Do not treat this as supported migration behavior during the release freeze.
 

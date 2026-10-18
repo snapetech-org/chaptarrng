@@ -62,18 +62,17 @@ preview left its database bytes unchanged, and apply plus rollback passed
 integrity and foreign-key checks while retaining both source and converted
 backups. Ambiguous format choices remain for human review; this does not
 validate older schemas, PostgreSQL, installers, or full feature parity.
-The migration code in draft PR #131 was tested at snapshot
-[`0d31609b`](https://github.com/snapetech-org/chaptarrng/commit/0d31609b).
-It includes older SQLite support, one migration-158 PostgreSQL source schema,
-native Hardcover identity handling, and BookOrbit Book Dock as a separately
-configured destination. Exact-head run
-[39142709701](https://github.com/snapetech-org/chaptarrng/actions/runs/39142709701)
-passed Linux, macOS, and Windows builds, PostgreSQL migration, and release-note
-checks. Analysis, dependency, and security checks have passed. These are
-candidate checks only: older schemas, PostgreSQL, multiple
-populated databases, and representative operator-data conversion remain
-unsupported. Keep the release freeze in place. See the
-[PostgreSQL migration candidate notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
+Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
+contains the older SQLite and one-schema PostgreSQL migration work, native
+Hardcover identity handling, and a separately configured BookOrbit Book Dock
+destination. Exact-head run [39152023939](https://github.com/snapetech-org/chaptarrng/actions/runs/39152023939)
+on `ea6fcd46` passed Linux, macOS, and Windows builds and test suites,
+PostgreSQL migrations, release-note validation, and native-runner receipt
+reconciliation. Exact-head CodeQL, dependency-review, and security checks also
+passed. Windows reported 4,349 tests passed and none failed. This is candidate
+CI evidence only; operator-data acceptance remains open. Keep the
+release freeze in place. See the [PostgreSQL migration candidate
+notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
 Books with no recorded format remain in both ChaptarrNG catalogs, unmonitored,
 with a private review file so the operator can classify them after startup.
@@ -118,7 +117,7 @@ also uses that mode to interpret bare numeric source IDs as Hardcover IDs;
 otherwise bare numeric IDs retain the Goodreads interpretation. Keep
 `HARDCOVER=true` (and do not set `HARDCOVER_NATIVE=false`) in the preview and
 migration environment when the BookshelfNG source used native Hardcover mode.
-This provider and its migration-time identity handling are source-only and are not in `.977`. PR #131 remains draft; on code snapshot `0d31609b`, PostgreSQL, Linux, macOS, and Windows checks passed. Representative converted-data acceptance remains open. Do not use the candidate during the release freeze.
+This provider and its migration-time identity handling are source-only and are not in `.977`. PR #131 remains draft; see its current exact-head checks and keep the candidate unsupported for operator data until representative conversion and rollback acceptance are complete.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 
