@@ -218,6 +218,11 @@ namespace Chaptarr.Core.Test.Datastore
                 null,
                 new TestAppFolderInfo(_temporaryDirectory));
 
+            // This fixture seeds bare numeric IDs from BookshelfNG's native
+            // Hardcover mode. Startup migration must receive the same explicit
+            // source mode as the preview/apply workflow.
+            Environment.SetEnvironmentVariable("HARDCOVER", "true");
+
             controller.Migrate(
                 sourceConnectionString,
                 new MigrationContext(MigrationType.Main),
@@ -237,6 +242,8 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(DatabaseLineageGuard.Detect(backupConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
                 Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30;"), Is.EqualTo(1));
                 Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"BookFiles\" WHERE \"Id\" = 50 AND \"EditionId\" = 40;"), Is.EqualTo(1));
+                Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Authors\" WHERE \"Id\" = 20 AND \"HardcoverAuthorId\" = 'hc:10';"), Is.EqualTo(1));
+                Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30 AND \"HardcoverBookId\" = 'hc:30';"), Is.EqualTo(1));
                 Assert.That(ReadConfigValue(backupConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
                 Assert.That(ReadScalarInt(backupConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30;"), Is.EqualTo(1));
             });
