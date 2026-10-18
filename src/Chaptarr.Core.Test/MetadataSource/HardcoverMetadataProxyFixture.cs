@@ -2,21 +2,26 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using FluentAssertions;
+using NLog;
 using Moq;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using NzbDrone.Common.Cache;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MetadataSource.BookInfo;
 using NzbDrone.Core.MetadataSource.Hardcover;
-using NzbDrone.Core.Test.Framework;
 
 namespace NzbDrone.Core.Test.MetadataSource.Hardcover
 {
     [TestFixture]
     [NonParallelizable]
-    public class HardcoverMetadataProxyFixture : CoreTest<HardcoverMetadataProxy>
+    public class HardcoverMetadataProxyFixture
     {
+        private Mock<IHttpClient> _httpClient;
+        private Mock<IConfigService> _configService;
+        private HardcoverMetadataProxy Subject { get; set; }
+
         private string _previousHardcover;
         private string _previousNativeMode;
         private string _previousAuth;
@@ -37,6 +42,14 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
             Environment.SetEnvironmentVariable("HARDCOVER_AUTH", "Bearer test-token");
             Environment.SetEnvironmentVariable("HARDCOVER_API_KEY", null);
             Environment.SetEnvironmentVariable("HARDCOVER_API_URL", null);
+
+            _httpClient = new Mock<IHttpClient>();
+            _configService = new Mock<IConfigService>();
+            Subject = new HardcoverMetadataProxy(
+                _httpClient.Object,
+                LogManager.GetCurrentClassLogger(),
+                new CacheManager(),
+                _configService.Object);
         }
 
         [TearDown]
@@ -80,7 +93,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         public void should_use_saved_token_when_environment_credentials_are_missing()
         {
             Environment.SetEnvironmentVariable("HARDCOVER_AUTH", null);
-            Mocker.GetMock<IConfigService>()
+            _configService
                 .Setup(x => x.HardcoverApiToken)
                 .Returns("saved-hardcover-token");
 
@@ -91,7 +104,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         public void should_search_and_map_native_work()
         {
             var requests = new List<HttpRequest>();
-            Mocker.GetMock<IHttpClient>()
+            _httpClient
                 .Setup(x => x.Execute(It.IsAny<HttpRequest>()))
                 .Returns<HttpRequest>(request =>
                 {
@@ -130,7 +143,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         public void should_search_when_optional_edition_metadata_is_json_null()
         {
             var requests = new List<HttpRequest>();
-            Mocker.GetMock<IHttpClient>()
+            _httpClient
                 .Setup(x => x.Execute(It.IsAny<HttpRequest>()))
                 .Returns<HttpRequest>(request =>
                 {
@@ -162,7 +175,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         [Test]
         public void should_return_empty_results_when_search_envelope_is_json_null()
         {
-            Mocker.GetMock<IHttpClient>()
+            _httpClient
                 .Setup(x => x.Execute(It.IsAny<HttpRequest>()))
                 .Returns<HttpRequest>(request => new HttpResponse(request,
                     new HttpHeader { { "Content-Type", "application/json" } },
@@ -175,7 +188,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         public void should_resolve_identifier_to_native_work()
         {
             var requests = new List<HttpRequest>();
-            Mocker.GetMock<IHttpClient>()
+            _httpClient
                 .Setup(x => x.Execute(It.IsAny<HttpRequest>()))
                 .Returns<HttpRequest>(request =>
                 {
@@ -202,7 +215,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         public void should_load_author_works_in_batched_pages()
         {
             var requests = new List<HttpRequest>();
-            Mocker.GetMock<IHttpClient>()
+            _httpClient
                 .Setup(x => x.Execute(It.IsAny<HttpRequest>()))
                 .Returns<HttpRequest>(request =>
                 {
@@ -229,7 +242,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         [Test]
         public void should_keep_author_endpoint_works_when_nested_author_ids_differ()
         {
-            Mocker.GetMock<IHttpClient>()
+            _httpClient
                 .Setup(x => x.Execute(It.IsAny<HttpRequest>()))
                 .Returns<HttpRequest>(request =>
                 {
