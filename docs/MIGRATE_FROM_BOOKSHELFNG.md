@@ -59,6 +59,15 @@ enabled; ChaptarrNG honors that choice only when the archived appdata also
 contains the old diagnostics module marker. See the
 [optional diagnostics guide](OPTIONAL_DIAGNOSTICS.md).
 
+BookshelfNG notification rows are copied with their provider name, settings,
+credentials, and event triggers. A BookLore row remains connected to its
+saved BookLore URL and account; migration cannot assume that these settings
+identify a separate BookOrbit server. The current source candidate adds
+BookOrbit as a separate Book Dock destination. Configure and test that
+connection in **Settings > Connect** after migration, then keep or disable the
+legacy BookLore connection as needed. This candidate is not in published
+`v0.9.977` while the release freeze remains active.
+
 Preserve `HARDCOVER=true`, `HARDCOVER_AUTH`, `HARDCOVER_API_KEY`, and any
 custom `HARDCOVER_API_URL` environment value used by the BookshelfNG install.
 Run preview and migration with the same `HARDCOVER` and `HARDCOVER_NATIVE`

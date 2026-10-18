@@ -1,7 +1,8 @@
 # BookLore integration
 
-ChaptarrNG supports BookLore as an optional notification destination. BookLore
-is an external app; ChaptarrNG does not require, install, or bundle it.
+ChaptarrNG supports BookLore and BookOrbit as optional notification
+destinations. They are external apps; ChaptarrNG does not require, install, or
+bundle either one.
 
 ## Configure BookDrop uploads
 
@@ -46,11 +47,46 @@ to a credential-validation error without retrying.
 ## BookOrbit status
 
 BookLore's repository identifies BookOrbit as its official successor and says
-BookLore is entering maintenance mode. This integration targets BookLore's
-API; compatibility with BookOrbit has not been verified. The
-[retirement matrix](FORK_FEATURES.md#bookshelfng-parity-matrix) keeps the
-BookLore behavior and the BookOrbit or legacy-user transition as open
-upstream-retirement work.
+BookLore is entering maintenance mode. ChaptarrNG has a separate **BookOrbit**
+destination for Book Dock uploads; it does not change the existing BookLore
+provider or rewrite imported BookLore settings.
+
+### Configure Book Dock uploads
+
+In **Settings > Connect**, add **BookOrbit** and enter its base URL, username,
+and password. The default URL is `http://localhost:3000`. Use a BookOrbit
+account with the **Book Dock Access** permission and password login enabled.
+The connection test verifies login and read access to Book Dock; BookOrbit checks the upload permission,
+accepted format, and maximum file size when each file is sent.
+
+After an import, ChaptarrNG streams each imported file to BookOrbit's Book
+Dock as a multipart `file` upload. ChaptarrNG leaves the source files in place
+and uploads files sequentially. If BookOrbit rejects a file, the notification
+fails and stops at that file. Earlier uploads remain in Book Dock and later
+files in that event are not sent. The upload is not atomic: if you retry a
+partial batch, check Book Dock first so accepted files are not added again.
+
+BookOrbit's current API uses `POST /api/v1/auth/login` with the configured
+username and password, then sends the returned bearer token to
+`POST /api/v1/book-dock/upload` with multipart field `file`. A successful
+upload returns `201 Created`. ChaptarrNG does not follow redirects for either
+request. Set the base URL to BookOrbit's final canonical address, including
+any reverse-proxy path.
+
+BookshelfNG notification rows configured for BookLore remain configured for
+BookLore after migration. Review the migrated BookLore settings, install or
+upgrade BookOrbit separately, grant Book Dock Access to an upload account,
+then add and test a BookOrbit connection in ChaptarrNG. Keep or disable the
+legacy BookLore connection after verifying the new destination. ChaptarrNG
+does not infer that a saved BookLore URL or password belongs to a different
+BookOrbit server.
+
+The proxy tests cover streamed uploads, redirects, credential rejection,
+size rejection, stopping a partial batch, and a later upload attempt. The
+Bookshelf conversion fixture checks that a BookLore row's provider identity,
+settings, credentials, release-import trigger, and retained backup survive
+conversion. Live BookOrbit acceptance and a real-user transition remain open
+in the [retirement matrix](FORK_FEATURES.md#bookshelfng-parity-matrix).
 
 ## Upstream references
 
@@ -61,3 +97,6 @@ upstream-retirement work.
 - [BookLore v2.4.0 data-conflict response](https://github.com/booklore-app/booklore/blob/f397e98c5ab021b02e8930ce278583af11637238/booklore-api/src/main/java/org/booklore/exception/GlobalExceptionHandler.java)
 - [BookLore v2.4.0 accepted file extensions](https://github.com/booklore-app/booklore/blob/f397e98c5ab021b02e8930ce278583af11637238/booklore-api/src/main/java/org/booklore/model/enums/BookFileExtension.java)
 - [BookLore repository and BookOrbit successor notice](https://github.com/booklore-app/booklore)
+- [BookOrbit login request](https://github.com/bookorbit/bookorbit/blob/main/server/src/modules/auth/dto/login.dto.ts)
+- [BookOrbit Book Dock upload endpoint and permission](https://github.com/bookorbit/bookorbit/blob/main/server/src/modules/book-dock/book-dock.controller.ts)
+- [BookOrbit upload format validation](https://github.com/bookorbit/bookorbit/blob/main/server/src/modules/upload/upload-validator.service.ts)

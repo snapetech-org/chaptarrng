@@ -15,6 +15,7 @@ using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
 using NzbDrone.Core.MetadataSource.BookInfo;
+using NzbDrone.Core.Notifications.BookLore;
 
 namespace Chaptarr.Core.Test.Datastore
 {
@@ -167,6 +168,41 @@ namespace Chaptarr.Core.Test.Datastore
                 new MigrationContext(MigrationType.Main),
                 DatabaseType.SQLite);
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books;"), Is.EqualTo(2), "a restart must not repeat the conversion");
+        }
+
+        [Test]
+        public void should_preserve_booklore_notification_settings_and_release_import_trigger()
+        {
+            const string settings = "{\"BaseUrl\":\"https://booklore.example\",\"Username\":\"migration-fixture\",\"Password\":\"fixture-only-password\"}";
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                    VALUES (113, 'BookLore', 0, @settings, @implementation, @configContract, 0, '[]', 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);";
+                command.Parameters.AddWithValue("@settings", settings);
+                command.Parameters.AddWithValue("@implementation", typeof(BookLore).Name);
+                command.Parameters.AddWithValue("@configContract", typeof(BookLoreSettings).Name);
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+            const string preservedRow = @"SELECT COUNT(*) FROM Notifications
+                WHERE Id = 113 AND Name = 'BookLore' AND Implementation = 'BookLore'
+                    AND ConfigContract = 'BookLoreSettings'
+                    AND Settings = '{""BaseUrl"":""https://booklore.example"",""Username"":""migration-fixture"",""Password"":""fixture-only-password""}'
+                    AND OnReleaseImport = 1;";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, preservedRow), Is.EqualTo(1), "the ChaptarrNG database must retain the BookLore provider, credentials, and import trigger");
+                Assert.That(QueryScalar<int>(backupPath, preservedRow), Is.EqualTo(1), "the retained BookshelfNG backup must preserve the original BookLore settings and trigger");
+            });
         }
 
         [Test]

@@ -74,7 +74,7 @@ Chaptarr retirement is complete.
 The cumulative blocker set includes the features released through
 `v0.9.976`: BookshelfNG migration and rollback, author-root backfill, managed
 book-file downloads, recurring missing-book searches, Audible marketplace
-selection, BookLore BookDrop uploads, metadata edition/series preferences,
+selection, BookLore BookDrop uploads, candidate BookOrbit Book Dock uploads, metadata edition/series preferences,
 import-list preview and history, new localization catalogs, paged full-library
 API reads, PostgreSQL TLS, split-release part preservation, and the associated
 matching, performance, and safety improvements. YunoHost publishing was
@@ -300,13 +300,15 @@ in the import-list guide.
 ## External library connections
 
 The current checkout adds or extends connections for AudioBookShelf, Grimmory,
-Calibre Content Server, BookLore BookDrop, and Emby/Jellyfin. Their scope
+Calibre Content Server, BookLore BookDrop, candidate BookOrbit Book Dock, and Emby/Jellyfin. Their scope
 differs: AudioBookShelf can receive covers and compatible forwarded metadata;
 Grimmory can refresh, publish, and forward sidecar edits; Calibre-backed roots
 route ebook imports through Calibre while the separate Content Server
 connection can mirror ChaptarrNG changes; BookLore can receive imported books
-through a streamed BookDrop upload; and Emby/Jellyfin can refresh after a
-grabbed release is imported.
+through a streamed BookDrop upload; BookOrbit can receive streamed Book Dock
+uploads through a separately configured account; and Emby/Jellyfin can refresh
+after a grabbed release is imported. BookOrbit support is candidate source work
+and is not in public `v0.9.977`.
 
 Ignore-tag settings are evaluated against tags on the external item and are
 case-insensitive. Automatic pushes skip ignored items, while the documented
@@ -445,7 +447,7 @@ fixes, migrations, build changes, or deletions.
 | Split audiobook release parts | Import numbered parts side by side; expose `{ReleasePart}` and `{ReleaseParts}` naming tokens; preserve chapters when retagging M4B files | Verify new imports do not replace sibling parts and older records remain unchanged; check token values and chapter preservation. |
 | Existing torrent adoption and seeding | Reuse tracked download data without breaking the seed | Prove correct category, wrong category, completed-download, and seeding-state behavior. |
 | Import-list preview and durable sync history | Dry-run preview, per-list outcome history, and provider cursor commits only after successful processing | Preserve read-only preview semantics, counters, cursor safety, retention, and restart behavior. |
-| External library connections | AudioBookShelf, Grimmory, Calibre roots/Content Server, BookLore BookDrop uploads, and Emby/Jellyfin refresh/synchronization | Preserve each provider's direction, field ownership, loop suppression, ignored-item rules, identifiers, streaming behavior, and failure recovery. |
+| External library connections | AudioBookShelf, Grimmory, Calibre roots/Content Server, BookLore BookDrop uploads, candidate BookOrbit Book Dock uploads, and Emby/Jellyfin refresh/synchronization | Preserve each provider's direction, field ownership, loop suppression, ignored-item rules, identifiers, streaming behavior, and failure recovery. BookOrbit tests cover authenticated streaming, redirect refusal, credential rejection, destination size rejection, partial-batch stopping, and a later upload attempt; its live contract and operator transition remain open. |
 | MQTT Gateway and canonical lifecycle events | Versioned library snapshots, lifecycle requests, and optional Home Assistant discovery | Preserve topic/payload contracts, opt-in behavior, retained-state cleanup, and existing webhook compatibility. |
 | Prometheus metrics | Separate optional listener with low-cardinality queue, health, task, and import metrics | Preserve disabled-by-default exposure, metric names/types, and bounded labels. |
 | Large-library and background-operation behavior | Paged/virtualized views and full-library API paging with totals, bounded query work, batched reconciliation, fair download processing, per-folder scan progress, and cancellable background commands | Run scale fixtures and verify page completeness, query bounds, concurrency, progress, cancellation, and consistent state. |
@@ -474,7 +476,7 @@ on AMD64 and ARM64; ARMv7 retains API-key downloads without browser fallback.
 
 `v0.9.970` added BookshelfNG migration and rollback, root-folder backfill,
 managed book-file downloads, missing-book search scheduling, Audible
-marketplaces, BookLore BookDrop, metadata edition/series preferences,
+marketplaces, BookLore BookDrop, candidate BookOrbit Book Dock, metadata edition/series preferences,
 import-list preview and history, 12 additional language catalogs, full-library
 API paging, and PostgreSQL TLS settings. It also improved split-audiobook
 handling, manual-import evidence, alternate-edition search, scan progress, and
@@ -512,7 +514,7 @@ upstream release must pass behavioral, data, security, and packaging checks.
 | Format records, profiles, and storage | ChaptarrNG's media-specific models, roots, and standalone ebook/audiobook workflows | Multiple compatible formats on a book; format-specific folders and profile overrides; previewable moves and extra-file handling | Preserve file-to-book relationships, profile fallback, paths, move previews, collisions, and sibling-format isolation; convert existing data without moving media unexpectedly. |
 | Audiobook processing and tags | Native conversion, multipart handling, part-number tokens, preserved M4B chapters, and AudioBookShelf metadata/cover propagation | Opt-in M4B merge behavior, chapter/part semantics, and BookshelfNG's byte-preserving MPEG-4 `chpl` TagLib patch | ChaptarrNG PR #129 merged the opt-in merge setting, tagged track order/titles, conservative conversion fallback, and move/copy source handling. Hosted checks pass; importer tests cover merge selection, chapter/tag behavior, and fallback with a mocked converter. A synthetic external-tool smoke preserved supplied chapter titles and offsets, but representative files and a real converter-to-import flow remain untested. The implementation is not in `.977`. Prove chapter preservation, order, tags, source retention, conversion failure recovery, and representative M4B compatibility before closing the gate. |
 | Acquisition and download safety | Built-in Direct Download indexer/client, staged state, API-key downloads, browser fallback, redirect validation, scheduled missing-book search, MyAnonaMouse account-health warnings, and safe import recovery | Existing-torrent adoption/seeding preservation and BookshelfNG-specific source ordering, transfer recovery, and client compatibility | Keep both acquisition paths and their security boundaries; test wrong-category and seeding cases, destination ownership, URL order, private-network redirect rejection, interrupted transfer recovery, and supported architectures. |
-| Standalone integrations and privacy | ChaptarrNG standalone app; Calibre Content Server conversion/push, AudioBookShelf and Grimmory metadata propagation, BookLore BookDrop upload, Emby/Jellyfin library refresh integrations, and an optional aggregate-only diagnostics plugin | BookLore BookDrop, Calibre, MyAnonamouse, Audiobookshelf sidecars, and optional aggregate-only diagnostics | Preserve every integration and its settings/data contract; verify BookDrop streaming and recovery; diagnostics stays off without an explicit opt-in. Migration preserves an existing BookshelfNG opt-in only when both the legacy enable flag and archived optional-module marker are present. |
+| Standalone integrations and privacy | ChaptarrNG standalone app; Calibre Content Server conversion/push, AudioBookShelf and Grimmory metadata propagation, BookLore BookDrop and candidate BookOrbit Book Dock uploads, Emby/Jellyfin library refresh integrations, and an optional aggregate-only diagnostics plugin | BookLore BookDrop, Calibre, MyAnonamouse, Audiobookshelf sidecars, and optional aggregate-only diagnostics | Preserve every integration and its settings/data contract; the conversion fixture preserves the legacy BookLore row, credentials, trigger, and retained source backup. Keep BookOrbit as an explicit user-configured destination; verify it against a live instance and record the legacy-user transition. Diagnostics stays off without explicit opt-in. Migration preserves an existing BookshelfNG opt-in only when both the legacy enable flag and archived optional-module marker are present. |
 | Operational events, observability, and import-list history | Optional MQTT/Home Assistant gateway and canonical lifecycle events; low-cardinality Prometheus metrics; durable import-list sync preview/history | Optional aggregate-only diagnostics and existing release/validation workflows | Preserve opt-in defaults, event contracts, metric cardinality/security, import-list cursors, preview semantics, and historical records; verify restart and failure behavior. |
 | Backup, authentication, and security | Encrypted full-backup archives; API-key controls, login throttling, response redaction, update verification, and request hardening | Encrypted portable backups; legacy API/query-key aliases; trusted-proxy and request-limit behavior; Bookshelf secrets and existing credentials | Restore existing ChaptarrNG and Bookshelf archives; preserve credentials and rollback; keep restrictions at least as strong and never log secrets. |
 | Library browsing, performance, and operator workflow | Server-paged views and full-library API paging with totals; large-library query and cache improvements; root-folder backfill; managed file downloads; mobile accessibility; per-folder progress; cancellation safeguards | Previewable media moves, bulk moves, and extra-file handling | Preserve page completeness and order, root containment, no-file-move backfill, bounded memory/query behavior, responsive workflows, cancellation, and progress on representative large libraries. |
