@@ -347,6 +347,8 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             var (proxy, _) = CreateProxy(searchClient, nativeProvider);
 
             var results = proxy.SearchForNewEntity("Native Book", "hardcover");
+            var books = results.OfType<Book>().ToList();
+            var authors = results.OfType<Author>().ToList();
 
             Assert.Multiple(() =>
             {
@@ -354,9 +356,9 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 Assert.That(nativeProvider.SearchWasInteractive, Is.True);
                 Assert.That(nativeProvider.WorkWasInteractive, Is.True);
                 Assert.That(searchClient.CallCount, Is.Zero);
-                Assert.That(results.OfType<Book>(), Has.Count.EqualTo(1));
-                Assert.That(results.OfType<Author>(), Has.Count.EqualTo(1));
-                Assert.That(results.OfType<Book>().Single().HardcoverBookId, Is.EqualTo("hc:101"));
+                Assert.That(books, Has.Count.EqualTo(1));
+                Assert.That(authors, Has.Count.EqualTo(1));
+                Assert.That(books.Single().HardcoverBookId, Is.EqualTo("hc:101"));
             });
         }
 
