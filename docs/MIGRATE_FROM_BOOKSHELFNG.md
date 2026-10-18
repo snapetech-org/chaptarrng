@@ -19,8 +19,8 @@
 > release freeze.
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 > contains the migration candidate. Exact-head run
-> [39152023939](https://github.com/snapetech-org/chaptarrng/actions/runs/39152023939)
-> on `ea6fcd46` passed Linux, macOS, and Windows builds and test suites,
+> [39153630005](https://github.com/snapetech-org/chaptarrng/actions/runs/39153630005)
+> on `cee4dfa0` passed Linux, macOS, and Windows builds and test suites,
 > PostgreSQL migrations, release-note validation, and native-runner receipt
 > reconciliation. CodeQL, dependency-review, and security checks passed on the
 > same head. This is candidate CI evidence only; it remains unsupported for
@@ -528,6 +528,14 @@ manual image/package change or a separately validated legacy-identity bridge.
 The bridge must preserve each channel's app-data path and service settings and
 must be tested as an upgrade, including startup conversion and rollback, before
 it is enabled.
+
+A local Fedora 44 RPM transaction upgraded the published BookshelfNG `.71`
+package to a `.977` bridge candidate and downgraded back while preserving
+config/data canaries. The candidate used the legacy package identity; its
+`systemctl` scriptlet checks were mocked and RPM dependencies were bypassed.
+The current legacy COPR repo has no package entries, so this does not validate
+installation through COPR/DNF, a real systemd service, or database migration.
+See the [package-channel status](../packaging/README.md).
 
 Database conversion is only one retirement requirement. ChaptarrNG does not
 yet provide full BookshelfNG behavior parity. Follow the separate

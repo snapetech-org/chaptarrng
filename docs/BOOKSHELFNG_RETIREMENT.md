@@ -40,8 +40,8 @@ detailed feature inventory remains in the
   [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131). It adds
   older SQLite support, one migration-158 PostgreSQL source schema, native
   Hardcover identity handling, and BookOrbit Book Dock as a separate
-  destination. Exact-head run [39152023939](https://github.com/snapetech-org/chaptarrng/actions/runs/39152023939)
-  on `ea6fcd46` passed Linux, macOS, and Windows builds and test suites,
+  destination. Exact-head run [39153630005](https://github.com/snapetech-org/chaptarrng/actions/runs/39153630005)
+  on `cee4dfa0` passed Linux, macOS, and Windows builds and test suites,
   PostgreSQL migrations, release-note validation, and native-runner receipt
   reconciliation. CodeQL, dependency-review, and security checks passed on the
   same head. This is candidate CI evidence only; the candidate remains
@@ -136,7 +136,7 @@ and follow the
 | --- | --- | --- |
 | Docker / GHCR | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same published multi-architecture image digest. | Legacy BookshelfNG aliases have not been redirected. Mutable tags affect a later pull/recreate; pinned tags and digests need an operator change. |
 | AUR | `chaptarrng-bin 0.9.977-1` is published. | `bookshelfng-bin 0.4.21.71-1` remains public. A local `.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and active systemd service handoff checks. The test used a network-isolated Arch container and a synthetic migration-158 database; representative operator data and host-specific settings remain open. |
-| Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped. |
+| Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |
 | Chocolatey | The `.977` package built and the hosted BookshelfNG-to-ChaptarrNG upgrade smoke passed, but Chocolatey returned HTTP 403 on publish; the live feed has no `chaptarrng` entry. | BookshelfNG `0.4.21.70` remains public. Its identity was not submitted because the bridge is disabled. |
 | Unraid | The ChaptarrNG template is maintained separately. | A legacy-template handoff is drafted in BookshelfNG Unraid PR #5; its Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
 | Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, Flatpak, AppImage, Helm, standalone installers, third-party catalogs, pinned/offline installs, and manually managed services do not all have a tested identity-preserving bridge. |
@@ -190,9 +190,11 @@ authorized while these gates remain open. The remaining work is:
    then validate
    old-identity AUR, COPR, Chocolatey, Helm, container, and Unraid
    upgrades through install, conversion, restart, backup retention, and
-   rollback.
-3. Resolve the Chocolatey HTTP 403; the `.977` COPR build is verified, while
-   each old-identity package build still needs testing;
+   rollback. The local Fedora RPM transaction rehearsal proves package/file
+   handling only; validate a live COPR/DNF handoff if that identity is kept.
+3. Resolve the Chocolatey HTTP 403; the `.977` COPR build is verified. The
+   old-identity RPM package transaction was rehearsed locally, but the legacy
+   COPR repo currently has no packages and no live DNF handoff was tested;
    verify each published package checksum or image digest against the tested
    artifact.
 4. Decide and document handoffs for historical channels that cannot be

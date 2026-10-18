@@ -65,8 +65,8 @@ validate older schemas, PostgreSQL, installers, or full feature parity.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 contains the older SQLite and one-schema PostgreSQL migration work, native
 Hardcover identity handling, and a separately configured BookOrbit Book Dock
-destination. Exact-head run [39152023939](https://github.com/snapetech-org/chaptarrng/actions/runs/39152023939)
-on `ea6fcd46` passed Linux, macOS, and Windows builds and test suites,
+destination. Exact-head run [39153630005](https://github.com/snapetech-org/chaptarrng/actions/runs/39153630005)
+on `cee4dfa0` passed Linux, macOS, and Windows builds and test suites,
 PostgreSQL migrations, release-note validation, and native-runner receipt
 reconciliation. Exact-head CodeQL, dependency-review, and security checks also
 passed. Windows reported 4,349 tests passed and none failed. This is candidate
@@ -89,6 +89,10 @@ service; ChaptarrNG started and converted the database, then restore and
 downgrade returned to active BookshelfNG. This uses synthetic data, and the
 network-online wait was masked inside the test container. Acceptance with
 operator data remains open; see the [package status](packaging/README.md).
+The Fedora RPM bridge candidate also passed a `.71` to `.977` package
+transaction and downgrade with config/data canaries. Its `systemctl` scriptlet
+checks were mocked, and the current legacy COPR repo contains no package
+entries, so live DNF/COPR and real-systemd RPM acceptance remain open.
 ChaptarrNG PR #127 merged to `main` as `b3089a39`,
 adding selectable supplemental catalogs, per-field metadata preferences, and
 exact-identity recovery for unmapped files. It is not in public `v0.9.977`;
@@ -426,6 +430,7 @@ dotnet _output/publish/Chaptarr.Console.dll
 Note: the inherited assembly is named `Chaptarr.dll` on Linux/macOS and `Chaptarr.Console.dll` on Windows.
 
 ## Documentation
+- [Setup experience contract](docs/development/setup-experience-contract.md): evolve Quickstart in place for ChaptarrNG's ebook and audiobook workflow
 - [UI localization roadmap](docs/localization-roadmap.md): current locale order, translated high-use strings, and remaining catalog work
 
 - Default ChaptarrNG web UI: http://localhost:8789

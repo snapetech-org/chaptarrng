@@ -30,7 +30,7 @@ upgraded safely.
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
 | --- | --- | --- | --- |
 | AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
-| COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped | Test the old package identity in a Fedora upgrade before enabling its bridge |
+| COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
 | Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged | Verify legacy registry write access and digest equality before enabling the bridge |
 
@@ -57,6 +57,18 @@ disabled. The ChaptarrNG AUR
 identity was published at `0.9.977-1`; the BookshelfNG AUR identity was not
 updated. The `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` Actions variable is `false`,
 so old package IDs and image aliases do not redirect to ChaptarrNG.
+
+The current legacy COPR repository metadata contains no package entries for
+Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 transaction test
+installed the published BookshelfNG `.71` RPM, upgraded it to a locally built
+`.977` `bookshelfng` RPM candidate from the current bridge spec, and downgraded
+to `.71`. The test preserved a config override and data canary. A mocked
+`systemctl` verified stop-then-start scriptlet ordering during upgrade; the
+downgrade was performed after an explicit stop and followed by a manual start.
+The RPM transaction used `--nodeps`, did not run a real systemd service, and
+did not migrate a database. This validates the package identity and file
+handling only. It does not validate an install or upgrade through COPR/DNF;
+there is no currently published old-identity package in that repository.
 
 On 2026-10-18, the AUR build script built both `chaptarrng-bin 0.9.977-1`
 and a local `bookshelfng-bin 0.9.977-1` candidate against the public Linux
@@ -134,9 +146,12 @@ retirement decision.
 ## Work required before enabling the legacy bridge
 
 - Validate the AUR candidate with representative operator data and
-  host-specific service settings; test the old-identity COPR and Chocolatey
-  upgrades in disposable systems. Preserve service settings and data paths,
-  retain the source backup, and verify rollback without losing later writes.
+  host-specific service settings; the Fedora `.71` to `.977` RPM transaction
+  rehearsal passed with canaries, but the legacy COPR repo is empty and live
+  DNF/COPR upgrade acceptance remains open. Test the old-identity Chocolatey
+  upgrade in a disposable Windows system. Preserve service settings and data
+  paths, retain the source backup, and verify rollback without losing later
+  writes.
 - Resolve Chocolatey HTTP 403 authorization, publish the `chaptarrng` identity,
   and confirm its public checksum matches the tested package.
 - Publish and validate the migration-1-to-13 alias fix before recommending
