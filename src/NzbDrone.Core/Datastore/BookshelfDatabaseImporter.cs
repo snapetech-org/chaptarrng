@@ -1241,6 +1241,11 @@ namespace NzbDrone.Core.Datastore
 
             var configRows = ReadRows(source, "Config").ToList();
             var sourceCount = configRows.Count;
+            var targetColumns = GetColumns(target, "Config");
+            var nextGeneratedConfigId = configRows
+                .Select(row => GetNullableInt(row, "Id") ?? 0)
+                .DefaultIfEmpty(0)
+                .Max();
             var legacyRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMatchKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var strictnessRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrStrictnessKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var legacyHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -1297,11 +1302,16 @@ namespace NzbDrone.Core.Datastore
                 }
                 else
                 {
-                    configRows.Add(new Dictionary<string, object>(StringComparer.Ordinal)
+                    var mappedStrictness = new Dictionary<string, object>(StringComparer.Ordinal)
                     {
                         ["Key"] = chaptarrStrictnessKey,
                         ["Value"] = mappedValue
-                    });
+                    };
+                    if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+                    {
+                        mappedStrictness["Id"] = checked(++nextGeneratedConfigId);
+                    }
+                    configRows.Add(mappedStrictness);
                 }
 
                 matchSettingDisposition = $"BookshelfNG BookImportMinimumMatchPercent={legacyPercent.Value.ToString(CultureInfo.InvariantCulture)} was mapped to ChaptarrNG BookMatchingStrictness='{mappedValue}'; the original numeric row was retained. This is a documented closest-policy translation, not an equivalent implementation of BookshelfNG's fuzzy parser and weighted import-distance algorithms.";
@@ -1327,11 +1337,16 @@ namespace NzbDrone.Core.Datastore
 
                     if (targetHardcoverToken == null)
                     {
-                        configRows.Add(new Dictionary<string, object>(StringComparer.Ordinal)
+                        var mappedToken = new Dictionary<string, object>(StringComparer.Ordinal)
                         {
                             ["Key"] = "HardcoverApiToken",
                             ["Value"] = token
-                        });
+                        };
+                        if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+                        {
+                            mappedToken["Id"] = checked(++nextGeneratedConfigId);
+                        }
+                        configRows.Add(mappedToken);
                     }
                     else
                     {
@@ -1342,7 +1357,6 @@ namespace NzbDrone.Core.Datastore
                 }
             }
 
-            var targetColumns = GetColumns(target, "Config");
             foreach (var row in configRows)
             {
                 var unmapped = row.Where(x => x.Value != null && !targetColumns.ContainsKey(x.Key))
