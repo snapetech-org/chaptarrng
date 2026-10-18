@@ -528,6 +528,17 @@ namespace Chaptarr.Core.Test.MediaFiles
                     return File.Exists((string)args[0]);
                 }
 
+                if (targetMethod?.Name == nameof(IDiskProvider.DeleteFile) && args.Length == 1)
+                {
+                    var path = (string)args[0];
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }
+
+                    return null;
+                }
+
                 if (targetMethod?.Name == nameof(IDiskProvider.GetFileSize))
                 {
                     return new FileInfo((string)args[0]).Length;
@@ -3183,10 +3194,16 @@ namespace Chaptarr.Core.Test.MediaFiles
 
         // Names files the way the file name builder does with a {PartNumber} token: a suffix only
         // when the file is one part of several.
-        private static ImportApprovedBooks CreateServiceForPartNaming(Edition edition, IM4bConversionService conversion, string destinationDir)
+        private static ImportApprovedBooks CreateServiceForPartNaming(
+            Edition edition,
+            IM4bConversionService conversion,
+            string destinationDir,
+            bool transferFilesOnDisk = false,
+            IDiskProvider diskProvider = null)
         {
             var mover = new StubMoveBookFiles
             {
+                TransferFilesOnDisk = transferFilesOnDisk,
                 DestinationFor = bookFile => Path.Combine(
                     destinationDir,
                     bookFile.PartCount > 1 ? $"Black Sheep - {bookFile.Part:00}{Path.GetExtension(bookFile.Path)}" : $"Black Sheep{Path.GetExtension(bookFile.Path)}")
@@ -3195,7 +3212,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             return new ImportApprovedBooks(
                 new StubMediaFileService(),
                 new StubMetadataTagService(),
-                Proxy<IMediaInfoExtractor>(),
+                new StubMediaInfoExtractor(),
                 Proxy<IAuthorService>(),
                 Proxy<IBookService>(),
                 CreateEditionService(new List<Edition> { edition }),
@@ -3210,7 +3227,13 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Proxy<ISeriesService>(),
                 Proxy<IQualityProfileService>(),
                 conversion,
-                LogManager.GetLogger("ImportApprovedBooksAdditionalCopyFixture"));
+                LogManager.GetLogger("ImportApprovedBooksAdditionalCopyFixture"),
+                diskProvider: diskProvider);
+        }
+
+        private static IDiskProvider CreateDiskProviderProxy()
+        {
+            return DispatchProxy.Create<IDiskProvider, DiskProviderProxy>();
         }
 
         private static List<ImportDecision<LocalBook>> MultiPartDecisions(string sourceDir, Author author, Book book, Edition edition, int partCount)
@@ -3770,7 +3793,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 var service = new ImportApprovedBooks(
                     new StubMediaFileService(),
                     new StubMetadataTagService(),
-                    Proxy<IMediaInfoExtractor>(),
+                    new StubMediaInfoExtractor(),
                     Proxy<IAuthorService>(),
                     Proxy<IBookService>(),
                     CreateEditionService(new List<Edition> { edition }),
@@ -3836,7 +3859,12 @@ namespace Chaptarr.Core.Test.MediaFiles
                 var decisions = MultiPartDecisions(sourceDir, author, book, edition, partCount: 3);
                 var sourcePaths = decisions.Select(decision => decision.Item.Path).ToArray();
                 var conversion = new SuccessfulM4bConversionService();
-                var service = CreateServiceForPartNaming(edition, conversion, destinationDir);
+                var service = CreateServiceForPartNaming(
+                    edition,
+                    conversion,
+                    destinationDir,
+                    transferFilesOnDisk: true,
+                    diskProvider: CreateDiskProviderProxy());
 
                 var results = service.Import(
                     decisions,
@@ -3848,6 +3876,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Assert.That(conversion.ConvertCalls, Is.EqualTo(1));
                 Assert.That(results.Any(result => result.Result == ImportResultType.Imported), Is.True);
                 Assert.That(sourcePaths.All(File.Exists), Is.EqualTo(shouldKeepSources));
+                Assert.That(File.Exists(Path.Combine(destinationDir, "Black Sheep.m4b")), Is.True);
             }
             finally
             {
@@ -3881,7 +3910,12 @@ namespace Chaptarr.Core.Test.MediaFiles
                 var (_, author, book, edition) = CreateAudiobookConversionGraph(233);
                 var decisions = MultiPartDecisions(sourceDir, author, book, edition, partCount: 2);
                 var conversion = new FailingM4bConversionService { HasCompleteMergeDurations = false };
-                var service = CreateServiceForPartNaming(edition, conversion, destinationDir);
+                var service = CreateServiceForPartNaming(
+                    edition,
+                    conversion,
+                    destinationDir,
+                    transferFilesOnDisk: true,
+                    diskProvider: CreateDiskProviderProxy());
 
                 var results = service.Import(
                     decisions,
@@ -3893,6 +3927,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Assert.That(conversion.ConvertCalls, Is.Zero);
                 Assert.That(results.Select(result => result.Result), Is.All.EqualTo(ImportResultType.Imported));
                 Assert.That(decisions.All(decision => File.Exists(decision.Item.Path)), Is.True);
+                Assert.That(Directory.GetFiles(destinationDir, "*.mp3"), Has.Length.EqualTo(2));
             }
             finally
             {
