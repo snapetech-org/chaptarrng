@@ -6,7 +6,7 @@ Readarr. The fork was created on August 31, 2026 from the parent repository's
 `develop` branch at the
 [shared fork-base commit](https://github.com/Chaptarr/chaptarr/commit/423b1bba1d47657d24ddfbf9c5418892972a1229).
 This guide covers the published feature set through
-[`v0.9.976`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.976)
+[`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 and the additional feature and maintenance work present in the current fork
 checkout. The source comparison below was refreshed on 2026-10-17; release and
 migration evidence is dated separately. The [changelog](../CHANGELOG.md) is
@@ -15,7 +15,7 @@ branch at
 [`e67374f`](https://github.com/Chaptarr/chaptarr/commit/e67374f), which is in
 ChaptarrNG `main`'s history.
 
-**Migration update (2026-10-18).** ChaptarrNG `v0.9.976` is published with the
+**Migration update (2026-10-18).** ChaptarrNG `v0.9.977` is published with the
 BookshelfNG converter and rollback commands, ordinary startup conversion, and
 an unmonitored dual-catalog fallback for records whose format cannot be
 inferred. Release validation passed on Linux, macOS, Windows, and the
@@ -25,19 +25,19 @@ source-side appdata archive helper. ChaptarrNG `v0.9.974` and later also
 initialize missing format-specific roots for new authors; explicit roots and
 existing authors or files are left alone. See the
 [operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
-and [retirement status page](BOOKSHELFNG_RETIREMENT.md). The `v0.9.976`
-release supports migration-158 SQLite. Current `main` embeds the BookshelfNG
-SQLite migration chain for recognized older schemas on a disposable copy; the
-change is pending publication in `v0.9.977`. A synthetic v22 fixture passes
-upgrade, conversion, rollback, non-mutating preview, and future-schema refusal.
-This does not establish real-data behavior for older schemas. PostgreSQL
-source conversion remains unsupported, and successful database conversion
-does not complete feature parity or legacy-channel handoff. The `v0.9.976`
-GitHub release, GHCR image, and ChaptarrNG AUR package are published. Its
-standard COPR trigger succeeded,
-but the package build was not independently verified. The Chocolatey package
-passed build and upgrade smoke validation but its publish was rejected with
-HTTP 403; the old package remains public at `0.9.973`.
+and [retirement status page](BOOKSHELFNG_RETIREMENT.md). The `.977` release
+bundles the source migration chain and accepts the final migration-158 SQLite
+schema. Its guard currently rejects source versions before migration 14
+because they still use the `Blacklist` table name. A version-aware fix and an
+authentic migration-1 rollback fixture are under hosted validation for a
+follow-up release. Populated synthetic migration-22 coverage exercises
+conversion and rollback; this is not real older-schema data. PostgreSQL source
+conversion remains unsupported, and successful database conversion does not
+complete feature parity or legacy-channel handoff. ChaptarrNG AUR `.977` is
+published and COPR reports successful builds for Fedora 43/44/45 and Rawhide
+x86_64. The Chocolatey package passed build and transition smoke validation,
+but publication returned HTTP 403 and the public feed has no `chaptarrng`
+entry. The legacy bridge remains disabled.
 
 This guide groups behavior rather than listing every fix, dependency update,
 or upstream report. Some items need reproduction or depend on an external
@@ -408,7 +408,7 @@ or reduce ChaptarrNG's own released and maintained blockers.
 | Blocker set | Scope to preserve | Evidence required to close |
 | --- | --- | --- |
 | BookshelfNG capabilities carried into ChaptarrNG | Every capability and material enhancement in the BookshelfNG parity roadmap, including its settings, persisted data, identities, clients, and integrations | Demonstrate equivalent behavior on the supported upstream release, including converted data and existing client configurations; pass each row's acceptance checks. |
-| ChaptarrNG released and maintained features | Every capability ChaptarrNG introduced, materially extended, or maintains through `v0.9.976`, including the SeerrNG contract, Direct Download, full-backup encryption, migration tools, new operator workflows, security behavior, and fork-specific integrations | Show the behavior in a supported upstream release and validate the relevant APIs, security boundaries, operator workflows, and clients. |
+| ChaptarrNG released and maintained features | Every capability ChaptarrNG introduced, materially extended, or maintains through `v0.9.977`, including the SeerrNG contract, Direct Download, full-backup encryption, migration tools, new operator workflows, security behavior, and fork-specific integrations | Show the behavior in a supported upstream release and validate the relevant APIs, security boundaries, operator workflows, and clients. |
 | Current upstream blocker and source inventory | Historical 2026-10-17 snapshot: ChaptarrNG `main` was `c922fe79682e`, 658 commits ahead of and zero behind Chaptarr `develop` at `e67374f4`; it had 1,671 changed paths. Chaptarr PR #114 remains open. BookshelfNG `main` was `a4b1146d34af`; PRs #128 and #130 are merged. BookshelfNG issue #114 is now closed; issue #144 remains open. | Preserve or replace every accepted capability and source change in a supported upstream release and pass its acceptance checks. The broader upstream issue/PR audit remains paused and incomplete; refresh this inventory before any retirement decision. |
 | Remaining fork-only source changes | Every post-fork source change not already accounted for by the capability rows, including fixes, migrations, APIs, security, build, and platform behavior | Disposition every changed path as retained, ported, or replaced by a verified equivalent. A path count is not feature parity. |
 | Release and installation channels | Each ChaptarrNG release, image, package, updater, and supported upgrade path, plus any channel carrying a migrated BookshelfNG installation | Test the exact published upgrade, configuration/data migration, rollback, and client/update continuity for each channel. |
@@ -465,7 +465,7 @@ data-migration requirements pass against a supported upstream release.
 ## Release history
 
 The [changelog](../CHANGELOG.md) records the maintained release line through
-`v0.9.976`, including format-scoped requests, fork identity and Unraid
+`v0.9.977`, including format-scoped requests, fork identity and Unraid
 distribution, capability discovery, the restricted SeerrNG service key,
 encrypted full backups, and the Direct Download indexer/client with
 browser-assisted fallback. The `v0.9.969` container includes headless Chromium
@@ -482,8 +482,11 @@ large-screen startup work. `v0.9.971` fixed delay-profile reordering;
 input in the frontend toolchain. `v0.9.974` initializes new authors' missing
 format-specific roots from configured defaults. `v0.9.975` publishes the
 package handoff changes; `v0.9.976` preserves unresolved BookshelfNG records
-in both catalogs without monitoring and writes a private review file. The
-changelog includes operator actions.
+in both catalogs without monitoring and writes a private review file. `v0.9.977`
+bundles the BookshelfNG SQLite upgrade chain and the optional aggregate-only
+diagnostics module. The current source table guard still rejects pre-migration-14
+databases; the version-aware fix remains under hosted validation. The changelog
+includes operator actions.
 
 <a id="chaptarrng-retirement-blockers"></a>
 
@@ -493,7 +496,7 @@ Retiring ChaptarrNG into upstream Chaptarr has a cumulative scope. It is a
 separate gate from retiring BookshelfNG into ChaptarrNG. Upstream must retain
 or replace the complete union of (1) every BookshelfNG capability carried into
 the consolidated product and (2) every ChaptarrNG feature introduced or
-maintained through `v0.9.976`. This union blocks ChaptarrNG retirement as a
+maintained through `v0.9.977`. This union blocks ChaptarrNG retirement as a
 whole, and every row below is an independent blocker. The broader upstream
 issue/PR implementation remains paused and incomplete. A matching feature
 name, a README claim, or similar code does not close a row; the supported
@@ -545,13 +548,15 @@ one author, one source book, two editions, two files, and two history rows.
 
 The converter is now publicly available in the standard image, beginning with
 [`v0.9.970`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.970).
-The latest published `v0.9.976` supports migration-158 SQLite. Current `main`
-adds an embedded SQLite upgrade chain intended for `v0.9.977`; only a
-synthetic v22 fixture has exercised it so far. This evidence does not prove
-older-schema behavior on real data or PostgreSQL conversion, real-populated
-rollback, every provider/settings/client contract, semantic feature parity, or compatibility
-with every installation channel. Each capability and applicable upgrade,
-rollback, and redirect path remains an independent replacement gate.
+The latest published `v0.9.977` supports migration-158 SQLite and bundles the
+embedded SQLite upgrade chain. Its current pre-upgrade table guard rejects
+source versions before migration 14; the version-aware fix and migration-1
+rollback test are on a review branch with hosted validation pending. Populated
+synthetic v22 coverage exercises conversion and rollback, but does not prove
+older-schema behavior on real data, PostgreSQL conversion, real-populated
+rollback, every provider/settings/client contract, semantic feature parity, or
+compatibility with every installation channel. Each capability and applicable
+upgrade, rollback, and redirect path remains an independent replacement gate.
 
 The release workflows enforce that distinction: standard ChaptarrNG releases
 publish the new ChaptarrNG identities, while old BookshelfNG package IDs and
