@@ -35,12 +35,8 @@ if [[ "$ready" != "yes" ]]; then
   exit 1
 fi
 
-if ! dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj \
-  --configuration Release --no-restore --no-build --verbosity normal \
-  --filter 'FullyQualifiedName~BookshelfPostgresDatabaseConverterFixture' \
-  "--logger:nunit;LogFilePath=$test_results"; then
-  if [[ -f "$test_results" ]]; then
-    node --input-type=module - "$test_results" "$script_dir/engine.mjs" <<'NODE'
+write_nunit_summary() {
+  node --input-type=module - "$test_results" "$script_dir/engine.mjs" <<'NODE'
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
@@ -48,16 +44,40 @@ const [resultsPath, enginePath] = process.argv.slice(2);
 try {
   const { parseNUnitSummary } = await import(pathToFileURL(enginePath).href);
   const summary = parseNUnitSummary(readFileSync(resultsPath, 'utf8'));
-  process.stdout.write(`${JSON.stringify({ total: summary.total, failed: summary.failed, failedTestDetails: summary.failedTestDetails }, null, 2)}\n`);
+  const diagnostic = {
+    total: summary.total,
+    passed: summary.passed,
+    failed: summary.failed,
+    skipped: summary.skipped,
+    inconclusive: summary.inconclusive,
+    result: summary.result,
+    failedTestNames: summary.failedTestNames,
+    failedTestNamesTruncated: summary.failedTestNamesTruncated,
+    failedTestDetails: summary.failedTestDetails,
+    failedTestDetailsTruncated: summary.failedTestDetailsTruncated,
+  };
+  process.stdout.write(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify(diagnostic)}\n`);
 } catch {
-  process.stdout.write('NUnit failure summary unavailable.\n');
+  process.stdout.write('NUnit summary unavailable.\n');
+  process.exitCode = 1;
 }
 NODE
+
+}
+
+if ! dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj \
+  --configuration Release --no-restore --no-build --verbosity normal \
+  --filter 'FullyQualifiedName~BookshelfPostgresDatabaseConverterFixture' \
+  "--logger:nunit;LogFilePath=$test_results"; then
+  if [[ -f "$test_results" ]]; then
+    write_nunit_summary || true
   else
-    echo "PostgreSQL conversion smoke failed before NUnit results were written."
+    echo "NUnit summary unavailable."
   fi
   exit 1
 fi
+
+write_nunit_summary
 
 echo "VALIDATION_TEST_CASES_PASSED=1"
 echo "PostgreSQL migrations and BookshelfNG conversion smoke tests passed."

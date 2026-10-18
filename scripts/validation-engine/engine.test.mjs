@@ -6,7 +6,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
-import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, runTask, runTaskPool, sha256GitText } from './engine.mjs';
+import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, parseNUnitSummaryMarker, runTask, runTaskPool, sha256GitText } from './engine.mjs';
 import { validation } from './config.mjs';
 
 function withEnvironmentVariable(name, value, action) {
@@ -338,6 +338,101 @@ test('NUnit SQLite receipt prefers an application frame and exports only safe SQ
     },
   ]);
   assert.doesNotMatch(JSON.stringify(summary), /SecretData|no such column|C:\\\\private|Converter.cs|line 42/);
+});
+
+test('NUnit JSON marker keeps only bounded diagnostic fields in PostgreSQL receipts', () => {
+  const marker = JSON.stringify({
+    total: 2,
+    passed: 1,
+    failed: 1,
+    skipped: 0,
+    inconclusive: 0,
+    result: 'Failed',
+    failedTestNames: ['NzbDrone.Core.Test.Datastore.Fixture.should_fail'],
+    failedTestNamesTruncated: false,
+    failedTestDetails: [{
+      name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
+      exceptionType: 'System.InvalidOperationException',
+      stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+      message: 'private database error',
+      path: 'C:\\private\\source.db',
+    }],
+    failedTestDetailsTruncated: false,
+  });
+  const summary = parseNUnitSummaryMarker(`VALIDATION_NUNIT_SUMMARY=${marker}`);
+
+  assert.deepEqual(summary, {
+    total: 2,
+    passed: 1,
+    failed: 1,
+    skipped: 0,
+    inconclusive: 0,
+    result: 'Failed',
+    failedTestNames: ['NzbDrone.Core.Test.Datastore.Fixture.should_fail'],
+    failedTestNamesTruncated: false,
+    failedTestDetails: [{
+      name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
+      exceptionType: 'System.InvalidOperationException',
+      stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+    }],
+    failedTestDetailsTruncated: false,
+  });
+  assert.doesNotMatch(JSON.stringify(summary), /private database error|source\.db/);
+});
+
+test('NUnit JSON marker rejects malformed totals and drops path-bearing test names', () => {
+  assert.throws(() => parseNUnitSummaryMarker('VALIDATION_NUNIT_SUMMARY={"total":0}'), /invalid case counts/);
+  assert.throws(() => parseNUnitSummaryMarker('VALIDATION_NUNIT_SUMMARY=null'), /not an object/);
+  const summary = parseNUnitSummaryMarker(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify({
+    total: 1,
+    passed: 0,
+    failed: 1,
+    skipped: 0,
+    inconclusive: 0,
+    failedTestNames: ['C:\\private\\Fixture.test'],
+    failedTestDetails: [{ name: 'C:\\private\\Fixture.test', exceptionType: 'System.InvalidOperationException' }],
+  })}`);
+  assert.deepEqual(summary.failedTestNames, []);
+  assert.deepEqual(summary.failedTestDetails, []);
+});
+
+test('task receipts retain safe PostgreSQL NUnit details without raw messages or paths', async (t) => {
+  const runRoot = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-postgres-summary-'));
+  t.after(() => rmSync(runRoot, { recursive: true, force: true }));
+  const marker = `VALIDATION_NUNIT_SUMMARY=${JSON.stringify({
+    total: 1,
+    passed: 0,
+    failed: 1,
+    skipped: 0,
+    inconclusive: 0,
+    result: 'Failed',
+    failedTestNames: ['NzbDrone.Core.Test.Datastore.Fixture.should_fail'],
+    failedTestDetails: [{
+      name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
+      exceptionType: 'System.InvalidOperationException',
+      stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+      message: 'private database error',
+      path: 'C:\\private\\source.db',
+    }],
+  })}\n`;
+  const spec = {
+    id: 'postgres-migrations-smoke',
+    resultFormat: 'nunit-summary-json',
+    command: [process.execPath, '-e', `process.stdout.write(${JSON.stringify(marker)}); process.exitCode = 1;`],
+    timeoutSeconds: 10,
+  };
+
+  const receipt = await runTask({ id: spec.id }, runRoot, spec);
+  assert.equal(receipt.status, 'failed');
+  assert.equal(receipt.activeCases, 1);
+  assert.equal(receipt.failedCases, 1);
+  assert.equal(receipt.error, 'NUnit reported Failed');
+  assert.deepEqual(receipt.failedTestDetails, [{
+    name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
+    exceptionType: 'System.InvalidOperationException',
+    stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+  }]);
+  assert.doesNotMatch(JSON.stringify(receipt), /private database error|source\.db/);
 });
 
 test('Node TAP summary accounts for pass, fail, skip, todo, and cancelled cases', () => {

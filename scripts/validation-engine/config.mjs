@@ -118,6 +118,7 @@ export const validation = {
       stage: 'tests',
       concurrencyGroup: 'postgres-smoke-fixtures',
       command: ['bash', 'scripts/validation-engine/run-postgres-migrations.sh'],
+      resultFormat: 'nunit-summary-json',
       env: {
         Chaptarr__Postgres__Host: 'localhost',
         Chaptarr__Postgres__Port: '5432',

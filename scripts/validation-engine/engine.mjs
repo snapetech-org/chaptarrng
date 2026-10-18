@@ -526,6 +526,59 @@ export function parseNUnitSummary(xml) {
   };
 }
 
+export function parseNUnitSummaryMarker(output) {
+  const marker = [...output.matchAll(/^VALIDATION_NUNIT_SUMMARY=([^\r\n]+)$/gm)].at(-1)?.[1];
+  if (!marker || marker.length > 128 * 1024) throw new Error('NUnit summary marker is missing or too large');
+
+  let value;
+  try { value = JSON.parse(marker); } catch { throw new Error('NUnit summary marker is invalid JSON'); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('NUnit summary marker is not an object');
+  const counts = ['total', 'passed', 'failed', 'skipped', 'inconclusive'];
+  if (!counts.every((key) => Number.isSafeInteger(value[key]) && value[key] >= 0) || value.total < 1) {
+    throw new Error('NUnit summary marker has invalid case counts');
+  }
+
+  const safeName = (name) => typeof name === 'string' && name.length <= 200 && !/[\\/:\r\n\x00-\x1f]/.test(name)
+    ? name
+    : null;
+  const safeIdentifier = (identifier) => typeof identifier === 'string' && identifier.length <= 200 && /^[A-Za-z0-9_.$+`<>-]+$/.test(identifier)
+    ? identifier
+    : null;
+  const failedTestNames = (Array.isArray(value.failedTestNames) ? value.failedTestNames : [])
+    .map(safeName).filter(Boolean);
+  const failedTestDetails = (Array.isArray(value.failedTestDetails) ? value.failedTestDetails : [])
+    .map((detail) => {
+      const name = safeName(detail?.name);
+      if (!name) return null;
+      const result = { name };
+      const exceptionType = safeIdentifier(detail.exceptionType);
+      const stackFrame = safeIdentifier(detail.stackFrame);
+      if (exceptionType) result.exceptionType = exceptionType;
+      if (stackFrame) result.stackFrame = stackFrame;
+      if (Number.isSafeInteger(detail.sqliteErrorCode) && detail.sqliteErrorCode > 0 && detail.sqliteErrorCode < 10000) {
+        result.sqliteErrorCode = detail.sqliteErrorCode;
+      }
+      if (['missing-column', 'missing-table', 'syntax-error', 'duplicate-object', 'constraint-failed', 'sqlite-error'].includes(detail.sqliteErrorKind)) {
+        result.sqliteErrorKind = detail.sqliteErrorKind;
+      }
+      return result;
+    })
+    .filter(Boolean);
+
+  return {
+    total: value.total,
+    passed: value.passed,
+    failed: value.failed,
+    skipped: value.skipped,
+    inconclusive: value.inconclusive,
+    result: ['Passed', 'Failed'].includes(value.result) ? value.result : null,
+    failedTestNames: failedTestNames.slice(0, 100),
+    failedTestNamesTruncated: value.failedTestNamesTruncated === true || failedTestNames.length > 100,
+    failedTestDetails: failedTestDetails.slice(0, 100),
+    failedTestDetailsTruncated: value.failedTestDetailsTruncated === true || failedTestDetails.length > 100,
+  };
+}
+
 function formatElapsed(milliseconds) {
   const seconds = Math.floor(milliseconds / 1000);
   return `${Math.floor(seconds / 60)}m${String(seconds % 60).padStart(2, '0')}s`;
@@ -795,6 +848,22 @@ export async function runTask(task, runRoot, testSpec = null) {
       failedTestDetailsTruncated = summary.failedTestDetailsTruncated;
       if (summary.result && summary.result !== 'Passed') summaryError = `NUnit reported ${summary.result}`;
     } catch (error) { summaryError = error.message; }
+  } else if (spec.resultFormat === 'nunit-summary-json') {
+    try {
+      const summary = parseNUnitSummaryMarker(output);
+      activeCases = summary.total;
+      passedCases = summary.passed;
+      failedCases = summary.failed;
+      skippedCases = summary.skipped;
+      inconclusiveCases = summary.inconclusive;
+      failedTestNames = summary.failedTestNames;
+      failedTestNamesTruncated = summary.failedTestNamesTruncated;
+      failedTestDetails = summary.failedTestDetails;
+      failedTestDetailsTruncated = summary.failedTestDetailsTruncated;
+      if (summary.result && summary.result !== 'Passed') summaryError = `NUnit reported ${summary.result}`;
+    } catch {
+      summaryError = 'NUnit summary was missing or invalid';
+    }
   } else if (spec.resultFormat === 'node-test') {
     try {
       const summary = parseNodeTestSummary(output);
