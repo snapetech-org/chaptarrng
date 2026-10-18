@@ -17,6 +17,10 @@
 > `0.4.21.71` release first. A later source-only fix passed hosted checks on
 > `main`, but is not in `.977` and is not available to operators during the
 > release freeze.
+> The current retirement-branch PostgreSQL fixture failed on `0211ed91` when
+> a migration repair check queried `VersionInfo` outside the staged schema.
+> Commit `ef519cd7` scopes that check to the active schema; its exact hosted
+> rerun is queued, so PostgreSQL remains unsupported for operators.
 > Pinned images,
 > native packages, and updater channels need separate upgrade steps; database
 > conversion alone does not update an installation channel.
@@ -50,9 +54,9 @@ BookshelfNG, do not switch to ChaptarrNG `.977`; the source fix is unreleased
 while the retirement freeze is active. Stop the service after it reaches an
 idle state, then run ChaptarrNG preview. The published `.977` converter does
 not support PostgreSQL BookshelfNG databases. This work branch contains an
-unreleased candidate for one PostgreSQL migration-158 schema, but its hosted
-populated-data test and rollback acceptance are still pending. Do not use it
-for operator data yet; see the
+unreleased candidate for one PostgreSQL migration-158 schema. Its `0211ed91`
+hosted run failed during the staged-target preflight; the `ef519cd7` fix is
+queued for exact-head validation. Do not use it for operator data; see the
 [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
 Environment variables are outside the database conversion. Preserve the
@@ -76,8 +80,10 @@ The current ChaptarrNG work-branch candidate also maps a saved `HardcoverAuth`
 database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
 precedence, and the original BookshelfNG database remains available in the
 rollback backup. That native provider and token mapping are not in published
-`v0.9.977`, have not cleared hosted and converted-data acceptance, and must not
-be treated as supported migration behavior during the release freeze.
+`v0.9.977` and have not cleared exact-head hosted or converted-data acceptance.
+The current hosted rerun includes this work but is queued behind the prior
+candidate validation. Do not treat it as supported migration behavior during
+the release freeze.
 
 BookshelfNG's `BOOKSHELF_M4B_MERGE`,
 `BOOKSHELF_M4B_AAC_BITRATE_KBPS`, and `BOOKSHELF_FFMPEG_PATH` variables are
@@ -85,7 +91,9 @@ also outside database conversion. The published ChaptarrNG `v0.9.977` does not
 honor them. ChaptarrNG PR #129 merged the compatibility implementation to
 `main` as `949ae3dd`, but it is not in `.977`; keep `BOOKSHELF_M4B_MERGE` unset
 until a build with that support is available and the remaining acceptance
-gates close. The implementation requires the FFmpeg executable to be named
+gates close. Focused importer tests cover merge selection, chapter/tag behavior,
+and fallback with a mocked converter; full import using representative M4B
+files remains open. The implementation requires the FFmpeg executable to be named
 `ffmpeg` (`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.
 
 The conversion reuses the existing data directory and `config.xml`, preserving
@@ -423,9 +431,10 @@ to `Blocklist`. PR #126 merged the version-aware fix into `main`, with hosted
 migration checks passing, but the fix is not in the published release.
 Populated synthetic v22 coverage exercises conversion, rollback, and
 non-mutating preview. This does not establish older-schema behavior on real
-operator data or PostgreSQL source conversion. A PostgreSQL migration-158
-candidate is under review in this work branch; it has not passed its hosted
-populated-data and rollback fixture and is not available in a release.
+operator data or PostgreSQL source conversion. The PostgreSQL migration-158
+candidate's hosted run on `0211ed91` failed in its staged-target version
+preflight. The fix is on `ef519cd7`, and the exact hosted rerun is queued; the
+candidate remains unavailable to operators and in any release.
 Supported SQLite databases can be migrated by normal ChaptarrNG startup or
 with the explicit preview/apply commands above. Both paths retain the
 untouched BookshelfNG source backup; rollback is available while the original

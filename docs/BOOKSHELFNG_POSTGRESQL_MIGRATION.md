@@ -33,8 +33,13 @@ The candidate importer translates a saved `HardcoverAuth` config row to
 ChaptarrNG's `HardcoverApiToken` setting when the source has no explicit
 ChaptarrNG token. The original BookshelfNG row remains in the source backup;
 the migration report describes the mapping without including the token value.
-The matching PostgreSQL fixture is still awaiting hosted validation. Numeric
-provider IDs follow the active BookshelfNG mode: run preview and conversion
+The exact hosted run on `0211ed91` failed the populated fixture during its
+initial staged target migration: the version-repair preflight queried
+`VersionInfo` outside the active schema. Commit `ef519cd7` scopes the preflight
+to that schema; its exact hosted rerun is queued. This candidate remains
+unsupported for operator data until the rerun and the remaining acceptance
+checks pass. Numeric provider IDs follow the active BookshelfNG mode: run
+preview and conversion
 with `HARDCOVER=true` and without `HARDCOVER_NATIVE=false` when the source uses
 native Hardcover, or the importer will interpret bare numbers as Goodreads
 IDs. The preview report states the interpretation applied to authors, books,

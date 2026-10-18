@@ -68,10 +68,17 @@ databases and bundles the BookshelfNG SQLite migration chain. It upgrades
 recognized source schemas on a disposable copy before conversion; the raw
 snapshot remains available for rollback. The current `.977` pre-upgrade check
 rejects source schemas before migration 14 because they still have `Blacklist`.
-A fix and authentic migration-1 coverage are being validated for a follow-up
-release. Populated synthetic migration-22 tests cover conversion and rollback;
-real older-schema operator data remains untested. Unknown or newer schemas,
-PostgreSQL sources, and two populated source databases fail closed.
+PR #126's version-aware table check and authentic migration-1
+rollback fixture passed hosted Linux, macOS, Windows, and PostgreSQL migration
+checks, but the fix is still source-only. No follow-up release will be cut
+until the full retirement gates close. Populated synthetic migration-22 tests
+cover conversion and rollback; real older-schema operator data remains
+untested. Unknown or newer schemas, PostgreSQL sources, and two populated
+source databases fail closed in the published `.977` build.
+The separate PostgreSQL candidate is limited to one migration-158 schema. Its
+hosted run on `0211ed91` failed during the staged-target version preflight;
+commit `ef519cd7` scopes the check to the active schema and is queued for exact
+hosted validation. The candidate is not supported in a published build.
 The importer keeps records with unresolved formats in both catalogs
 without monitoring, writes a private review file, retains the source backup,
 and supports validated rollback.

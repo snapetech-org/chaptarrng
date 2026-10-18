@@ -49,14 +49,16 @@ rejects pre-migration-14 databases because their `Blacklist` table must first
 be renamed by the embedded chain. The version-aware fix and authentic
 migration-1 fixture passed the hosted Linux, macOS, Windows, and PostgreSQL
 migration checks in PR #126 and are on `main`, but are not in public `.977`.
-No release will be cut until the full retirement acceptance gates close; the
-merged release and distribution workflows now require
-`CHAPTARRNG_RELEASE_READY=true`. This is not yet real-data evidence or proof for
-every historical release. The current work branch has a PostgreSQL converter
-candidate for one migration-158 source schema, but its hosted populated-data
-and rollback checks have not passed and no published release supports it.
-PostgreSQL and multiple-source-database migration remain unsupported for
-operators. See the
+This is not real-data evidence or proof for every historical release. The
+retirement branch adds a PostgreSQL converter candidate for one migration-158
+source schema. Its hosted run on `0211ed91` failed in the populated preview,
+conversion, and rollback fixture: a migration repair preflight queried
+`VersionInfo` outside the staging schema. Commit `ef519cd7` scopes that check
+to the active schema; its exact hosted rerun is queued. PostgreSQL and
+multiple-source-database migration remain unsupported for operators until the
+candidate passes and the remaining acceptance gates close. The release and
+distribution workflows require `CHAPTARRNG_RELEASE_READY=true`; it is unset,
+and no release or legacy bridge may be published during the freeze. See the
 [PostgreSQL migration candidate notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 Books with no recorded format remain in both ChaptarrNG catalogs, unmonitored,
 with a private review file so the operator can classify them after startup.
@@ -92,6 +94,8 @@ otherwise bare numeric IDs retain the Goodreads interpretation. Keep
 migration environment when the BookshelfNG source used native Hardcover mode.
 This is source-only: it has not passed hosted tests or converted-operator-data
 review, is not in `.977`, and is not ready for use during the release freeze.
+The exact hosted rerun includes this provider work but remains queued behind
+the prior candidate validation.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 

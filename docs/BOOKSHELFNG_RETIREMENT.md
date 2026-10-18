@@ -33,11 +33,16 @@ detailed feature inventory remains in the
   PostgreSQL migration, CodeQL, dependency/security, and release-note checks
   passed on its clean head. A synthetic two-track smoke validated the external
   converter and chapter sidecar, but not the importer end to end or
-  representative media. This source is not in `.977`.
+  representative media. Focused importer tests cover merge selection,
+  chapter/tag behavior, and fallback with a mocked converter. This source is
+  not in `.977`.
 - A separate work-branch candidate adds PostgreSQL migration for one
   migration-158 source schema, with staged promotion, a retained backup schema,
-  preview, and rollback. Its populated PostgreSQL fixture has not passed
-  hosted CI and it has no operator-data acceptance. It is not supported by a
+  preview, and rollback. The exact hosted run on `0211ed91` failed its populated
+  preview/convert/restore fixture when the migration repair hook queried
+  `VersionInfo` outside the active staging schema. Commit `ef519cd7` scopes the
+  preflight to the active schema; its exact hosted rerun is queued. The
+  candidate still has no operator-data acceptance and is not supported by a
   published release.
 - This work branch also ports the native Hardcover metadata client and routes
   `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps
@@ -46,8 +51,9 @@ detailed feature inventory remains in the
   source IDs follow the active mode: native Hardcover mode requires
   `HARDCOVER=true` without `HARDCOVER_NATIVE=false` during preview and
   conversion; otherwise they retain Goodreads identity. The preview report
-  names the selected interpretation. These changes have not passed hosted
-  tests or converted-data acceptance and are not in `.977`.
+  names the selected interpretation. Its exact hosted validation is queued
+  with the PostgreSQL fix; converted-data acceptance remains open, and this
+  work is not in `.977`.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
   setting. ChaptarrNG has equivalent new-author path initialization in
@@ -71,8 +77,9 @@ or every historical release. Schema 159 is rejected without changing the
 source. PostgreSQL source databases and two populated BookshelfNG databases
 remain unsupported by published ChaptarrNG releases. A PostgreSQL
 migration-158 candidate is under review in this work branch; it does not
-support older PostgreSQL schemas and has not passed its hosted populated-data
-or rollback checks. Neither source-only fixtures nor an empty image-switch
+support older PostgreSQL schemas. The hosted run on `0211ed91` failed in its
+schema-aware version preflight; the fix is on `ef519cd7`, with an exact hosted
+rerun queued. Neither source-only fixtures nor an empty image-switch
 rehearsal establishes behavior on populated operator data or every historical
 release.
 The SQLite path stages a native database, accounts for source rows, checks
@@ -81,8 +88,8 @@ does not modify the source. Apply and rollback are explicit operations, and
 normal startup can run the same converter when it finds a supported source
 database. The work-branch PostgreSQL candidate uses temporary schemas and
 transactional promotion, checks row accounting and both schema lineages, and
-retains the original tables in a backup schema; it has not passed hosted or
-operator-data acceptance.
+retains the original tables in a backup schema. Its latest fix is awaiting
+exact-head hosted validation, and operator-data acceptance remains open.
 
 Some BookshelfNG books do not contain enough data to infer ebook versus
 audiobook. Preview writes a private review file. Operators can provide a
