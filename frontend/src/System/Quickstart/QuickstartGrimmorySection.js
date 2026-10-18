@@ -20,7 +20,8 @@ class QuickstartGrimmorySection extends Component {
       isEditNotificationModalOpen: false,
       isDeleteNotificationModalOpen: false,
       pendingOpenGrimmory: false,
-      schemaSelectionError: false
+      schemaSelectionError: false,
+      connectionStatus: null
     };
   }
 
@@ -137,10 +138,17 @@ class QuickstartGrimmorySection extends Component {
   };
 
   onTestConnectionSuccess = () => {
+    this.setState({ connectionStatus: 'tested' });
+    this.props.onConnectionTestSuccess?.();
     const { markSectionInteracted } = this.props;
     if (markSectionInteracted) {
       markSectionInteracted({ section: 'grimmory' });
     }
+  };
+
+  onTestConnectionFailure = () => {
+    this.setState({ connectionStatus: 'failed' });
+    this.props.onConnectionTestFailure?.();
   };
 
   //
@@ -149,14 +157,16 @@ class QuickstartGrimmorySection extends Component {
   render() {
     const {
       hasActiveGrimmory,
-      grimmoryNotification
+      grimmoryNotification,
+      wasSkipped
     } = this.props;
 
     const {
       isEditNotificationModalOpen,
       isDeleteNotificationModalOpen,
       pendingOpenGrimmory,
-      schemaSelectionError
+      schemaSelectionError,
+      connectionStatus
     } = this.state;
 
     const buttonText = grimmoryNotification ?
@@ -166,6 +176,20 @@ class QuickstartGrimmorySection extends Component {
       (this.props.notificationsState.isSchemaFetching || pendingOpenGrimmory);
     const schemaError = !this.props.notificationsState.isSchemaFetching &&
       (this.props.notificationsState.schemaError || schemaSelectionError);
+    let statusKey = 'QuickstartConnectionNotConfigured';
+
+    if (wasSkipped) {
+      statusKey = 'QuickstartConnectionSkipped';
+    }
+    if (grimmoryNotification) {
+      statusKey = 'QuickstartConnectionConfigured';
+    }
+    if (connectionStatus === 'tested') {
+      statusKey = 'QuickstartConnectionTested';
+    }
+    if (connectionStatus === 'failed') {
+      statusKey = 'QuickstartConnectionFailed';
+    }
 
     if (this.props.compact) {
       return (
@@ -178,6 +202,9 @@ class QuickstartGrimmorySection extends Component {
             >
               {buttonText}
             </button>
+          </div>
+          <div className={styles.quickstartConnectionStatus}>
+            {translate(statusKey)}
           </div>
 
           {
@@ -193,6 +220,7 @@ class QuickstartGrimmorySection extends Component {
             onModalClose={this.onEditNotificationModalClose}
             onDeleteNotificationPress={this.onDeleteNotificationPress}
             onTestConnectionSuccess={this.onTestConnectionSuccess}
+            onTestConnectionFailure={this.onTestConnectionFailure}
           />
 
           <ConfirmModal
@@ -228,6 +256,9 @@ class QuickstartGrimmorySection extends Component {
             {buttonText}
           </button>
         </div>
+        <div className={styles.quickstartConnectionStatus}>
+          {translate(statusKey)}
+        </div>
 
         {
           schemaError &&
@@ -242,6 +273,7 @@ class QuickstartGrimmorySection extends Component {
           onModalClose={this.onEditNotificationModalClose}
           onDeleteNotificationPress={this.onDeleteNotificationPress}
           onTestConnectionSuccess={this.onTestConnectionSuccess}
+          onTestConnectionFailure={this.onTestConnectionFailure}
         />
 
         <ConfirmModal
@@ -262,6 +294,9 @@ QuickstartGrimmorySection.propTypes = {
   hasActiveGrimmory: PropTypes.bool,
   grimmoryNotification: PropTypes.object,
   compact: PropTypes.bool,
+  wasSkipped: PropTypes.bool,
+  onConnectionTestSuccess: PropTypes.func,
+  onConnectionTestFailure: PropTypes.func,
   notificationsState: PropTypes.object.isRequired,
   fetchNotificationSchema: PropTypes.func.isRequired,
   selectNotificationSchema: PropTypes.func.isRequired,

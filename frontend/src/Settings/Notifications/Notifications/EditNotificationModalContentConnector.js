@@ -51,7 +51,15 @@ class EditNotificationModalContentConnector extends Component {
     this.fetchRootFoldersIfNeeded();
   }
 
-  componentDidUpdate(prevProps, prevState) {
+  componentDidUpdate(prevProps) {
+    if (prevProps.isTesting && !this.props.isTesting) {
+      if (this.props.saveError && this.props.onTestConnectionFailure) {
+        this.props.onTestConnectionFailure(this.props.saveError);
+      } else if (this.props.onTestConnectionSuccess) {
+        this.props.onTestConnectionSuccess();
+      }
+    }
+
     if (prevProps.isSaving && !this.props.isSaving && !this.props.saveError) {
       this.props.onModalClose();
     }
@@ -142,6 +150,7 @@ EditNotificationModalContentConnector.propTypes = {
   id: PropTypes.number,
   isFetching: PropTypes.bool.isRequired,
   isSaving: PropTypes.bool.isRequired,
+  isTesting: PropTypes.bool.isRequired,
   saveError: PropTypes.object,
   isDeleting: PropTypes.bool,
   deleteError: PropTypes.object,
@@ -155,6 +164,8 @@ EditNotificationModalContentConnector.propTypes = {
   testNotification: PropTypes.func.isRequired,
   toggleAdvancedSettings: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired,
+  onTestConnectionFailure: PropTypes.func,
+  onTestConnectionSuccess: PropTypes.func,
   rootFolders: PropTypes.arrayOf(PropTypes.object).isRequired,
   isRootFoldersPopulated: PropTypes.bool.isRequired,
   isRootFoldersFetching: PropTypes.bool,
