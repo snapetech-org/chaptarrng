@@ -212,20 +212,20 @@ namespace NzbDrone.Core.MediaFiles
             var tags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var pair in rawTags)
             {
-                if (!tags.TryGetValue(pair.Key, out var values))
+                if (!tags.TryGetValue(pair.Key, out var existingValues))
                 {
                     tags[pair.Key] = pair.Value?.ToList() ?? new List<string>();
                 }
                 else if (pair.Value != null)
                 {
-                    values.AddRange(pair.Value);
+                    existingValues.AddRange(pair.Value);
                 }
             }
 
             TagCanonicalizer.AddCanonicalKeys(tags);
 
-            return tags.TryGetValue(key, out var values) && values.Count == 1
-                ? values[0]
+            return tags.TryGetValue(key, out var canonicalValues) && canonicalValues.Count == 1
+                ? canonicalValues[0]
                 : null;
         }
     }
