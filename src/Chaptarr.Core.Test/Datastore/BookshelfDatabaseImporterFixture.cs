@@ -228,6 +228,42 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_upgrade_the_oldest_bookshelf_schema_and_keep_the_original_schema_for_rollback()
+        {
+            CreateSourceThroughMigration(1);
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+
+            var result = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(QueryScalar<int>(result.BackupPath, "SELECT MAX(Version) FROM VersionInfo;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books;"), Is.Zero);
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+
+            var restored = new BookshelfDatabaseConverter().Restore(
+                _sourceConnectionString,
+                result.BackupPath,
+                migrateBookshelfSource: migrationController.MigrateBookshelfSource);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT MAX(Version) FROM VersionInfo;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books;"), Is.Zero);
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(File.Exists(restored.ChaptarrBackupPath), Is.True);
+            });
+        }
+
+        [Test]
         public void should_reject_a_bookshelf_schema_newer_than_the_embedded_migration_chain()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))
@@ -937,8 +973,8 @@ namespace Chaptarr.Core.Test.Datastore
                 VALUES (1, 'Migration 22 metadata', 0, 0, 0, 0, 0, '[]');
                 INSERT INTO RootFolders (Id, Path, Name, DefaultMetadataProfileId, DefaultQualityProfileId, DefaultMonitorOption, DefaultTags, IsCalibreLibrary)
                 VALUES (1, '/library', 'Library', 1, 1, 0, '[]', 0);
-                INSERT INTO AuthorMetadata (Id, ForeignAuthorId, TitleSlug, Name, Overview, Status, Images, Aliases)
-                VALUES (10, 'hardcover-author:author-10', 'migration-22-author', 'Migration 22 Author', 'Older-schema author', 0, '[]', '[]');
+                INSERT INTO AuthorMetadata (Id, ForeignAuthorId, TitleSlug, Name, Overview, Status, Images, Aliases, SortName, NameLastFirst, SortNameLastFirst)
+                VALUES (10, 'hardcover-author:author-10', 'migration-22-author', 'Migration 22 Author', 'Older-schema author', 0, '[]', '[]', 'Migration 22 Author', 'Author, Migration 22', 'Author, Migration 22');
                 INSERT INTO Authors (Id, CleanName, Path, Monitored, QualityProfileId, Tags, Added, MetadataProfileId, AuthorMetadataId)
                 VALUES (20, 'migration22author', '/library/Migration 22 Author', 1, 1, '[]', '2026-01-01', 1, 10);
                 INSERT INTO Books (Id, AuthorMetadataId, ForeignBookId, TitleSlug, Title, Links, Genres, Ratings, CleanTitle, Monitored, AnyEditionOk, Added)

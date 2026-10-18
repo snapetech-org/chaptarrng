@@ -138,21 +138,31 @@ namespace NzbDrone.Core.Datastore
             if (source == null) throw new ArgumentNullException(nameof(source));
 
             var tables = GetTables(source);
-            var unknown = tables.Except(SupportedSourceTables, StringComparer.Ordinal).OrderBy(x => x).ToArray();
-            if (unknown.Length > 0 || !tables.Contains("VersionInfo"))
+            if (!tables.Contains("VersionInfo"))
             {
-                throw new InvalidDataException(
-                    "BookshelfNG backup table set cannot be upgraded by the bundled migration chain (unknown: " +
-                    string.Join(", ", unknown) + "). The source database was not changed.");
+                throw new InvalidDataException("BookshelfNG backup has no migration history and cannot be upgraded by the bundled migration chain. The source database was not changed.");
             }
 
             using var command = source.CreateCommand();
             command.CommandText = "SELECT COALESCE(MAX(Version), 0) FROM VersionInfo;";
             var version = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
-            if (version < 0 || version > SupportedSourceMigration)
+            if (version < 1 || version > SupportedSourceMigration)
             {
                 throw new InvalidDataException(
-                    $"BookshelfNG schema version {version} is newer than the bundled migration chain (latest {SupportedSourceMigration}). The source database was not changed.");
+                    $"BookshelfNG schema version {version} is outside the bundled migration chain (1-{SupportedSourceMigration}). The source database was not changed.");
+            }
+
+            // Migration 14 renames this table. Accept it only on snapshots whose recorded
+            // migration will perform that rename; later source schemas must use Blocklist.
+            var historicalTables = version < 14
+                ? SupportedSourceTables.Append("Blacklist")
+                : SupportedSourceTables;
+            var unknown = tables.Except(historicalTables, StringComparer.Ordinal).OrderBy(x => x).ToArray();
+            if (unknown.Length > 0)
+            {
+                throw new InvalidDataException(
+                    "BookshelfNG backup table set cannot be upgraded by the bundled migration chain (unknown: " +
+                    string.Join(", ", unknown) + "). The source database was not changed.");
             }
 
             return version;
