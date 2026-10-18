@@ -250,26 +250,42 @@ namespace Chaptarr.Core.Test.MediaFiles
         private sealed class FailingM4bConversionService : IM4bConversionService
         {
             public int ConvertCalls { get; private set; }
+            public int CanConvertCalls { get; private set; }
+            public int EstimateCalls { get; private set; }
+            public int ProbeMergeSourcesCalls { get; private set; }
             public string[] LastInputFiles { get; private set; }
             public string[] LastFallbackChapterTitles { get; private set; }
             public string LastOutputFile { get; private set; }
             public ConversionOptions LastOptions { get; private set; }
             public bool HasCompleteMergeDurations { get; set; } = true;
 
-            public bool CanConvert(string[] inputFiles) => true;
-
-            public ConversionEstimate EstimateConversion(string[] inputFiles) => new ConversionEstimate
+            public bool CanConvert(string[] inputFiles)
             {
-                CanConvert = true,
-                InputFileCount = inputFiles?.Length ?? 0,
-                TotalInputSize = 1024,
-                EstimatedOutputSize = 1024
-            };
+                CanConvertCalls++;
+                return true;
+            }
 
-            public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles) => new();
+            public ConversionEstimate EstimateConversion(string[] inputFiles)
+            {
+                EstimateCalls++;
+                return new ConversionEstimate
+                {
+                    CanConvert = true,
+                    InputFileCount = inputFiles?.Length ?? 0,
+                    TotalInputSize = 1024,
+                    EstimatedOutputSize = 1024
+                };
+            }
+
+            public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles)
+            {
+                ProbeMergeSourcesCalls++;
+                return new();
+            }
 
             public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles, string[] fallbackChapterTitles)
             {
+                ProbeMergeSourcesCalls++;
                 LastFallbackChapterTitles = fallbackChapterTitles;
                 return new M4bMergeSourceInfo { HasCompleteDurations = HasCompleteMergeDurations };
             }
@@ -3826,7 +3842,10 @@ namespace Chaptarr.Core.Test.MediaFiles
                     false);
                 Assert.That(conversion.ConvertCalls, Is.EqualTo(1),
                     $"LegacyEnabled={BookshelfM4bCompatibility.LegacyMergeEnabled}; profile={resolvedProfile?.ProfileType}; " +
-                    $"ShouldUseLegacyMerge={shouldMerge}; results={string.Join("; ", results.Select(result => $"{result.Result}: {string.Join(" | ", result.Errors)}"))}");
+                    $"ShouldUseLegacyMerge={shouldMerge}; CanConvertCalls={conversion.CanConvertCalls}; " +
+                    $"EstimateCalls={conversion.EstimateCalls}; ProbeMergeSourcesCalls={conversion.ProbeMergeSourcesCalls}; " +
+                    $"HasCompleteMergeDurations={conversion.HasCompleteMergeDurations}; " +
+                    $"results={string.Join("; ", results.Select(result => $"{result.Result}: {string.Join(" | ", result.Errors)}"))}");
                 Assert.That(conversion.LastInputFiles, Is.EqualTo(new[] { sourcePaths[2], sourcePaths[1], sourcePaths[0] }));
                 Assert.That(conversion.LastFallbackChapterTitles, Is.EqualTo(new[] { "First track", "Second track", "Last disc" }));
                 Assert.That(conversion.LastOptions.AudioBitrate, Is.EqualTo(128));
