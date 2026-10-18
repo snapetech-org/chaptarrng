@@ -194,6 +194,9 @@ jobs:
       with:
         node-version: 26.10.0
 
+    - name: Test Quickstart setup readiness
+      run: node --test frontend/src/System/Quickstart/quickstartReadiness.test.cjs
+
     - name: Install Yarn
       run: npm install --global yarn@1.22.22
 
