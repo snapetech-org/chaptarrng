@@ -75,7 +75,7 @@ RUN test -s /app/UI/index.html
 ###### runtime stage ######
 # Keep the cross-platform runtime on the exact .NET patch tag. MCR advertises
 # an index digest for this image but currently rejects requests by that digest.
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.12
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.12 AS runtime
 
 # Copy Playwright Chromium from the browser stage
 COPY --from=browser /ms-playwright /ms-playwright
@@ -150,3 +150,16 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=2m --retries=3 \
     CMD ["/usr/local/bin/chaptarr-healthcheck"]
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["dotnet", "/app/Chaptarr.dll", "-nobrowser", "-data=/config"]
+
+# These two lightweight targets preserve the source provider mode when an
+# existing BookshelfNG image alias is redirected to ChaptarrNG. The normal
+# ChaptarrNG target intentionally leaves HARDCOVER unset so new installs do
+# not silently choose a primary catalog.
+FROM runtime AS bookshelf-softcover
+ENV HARDCOVER=false
+
+FROM runtime AS bookshelf-hardcover
+ENV HARDCOVER=true
+
+# Keep the default Docker build target the ordinary ChaptarrNG image.
+FROM runtime AS chaptarrng-standard

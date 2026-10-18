@@ -71,14 +71,14 @@ Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 contains the older SQLite and one-schema PostgreSQL migration work, native
 Hardcover identity handling, and a separately configured BookOrbit Book Dock
 destination. Exact-head run [39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430)
-on `1a0a1cf78b404fe86d7b266facd8e843e435d9b4` passed Linux, macOS, and
-Windows builds/tests, PostgreSQL migration and BookshelfNG converter fixtures,
-release-note validation, and receipt reconciliation. CodeQL, dependency
-review, and dependency/secret scans passed on the same head. Its Linux
-artifact passed preview, apply, rollback, fail-closed cases, automatic
-startup, populated API, and SeerrNG restricted-key checks against synthetic
-data created by the released BookshelfNG `.71` binary. This is candidate
-evidence only, not operator-data acceptance. Details are in the
+passed on an earlier PR head; later provider-mode and image-alias changes are
+awaiting exact-head validation. A local image-switch rehearsal against
+synthetic data from the released BookshelfNG `.71` Hardcover image showed that
+the provider mode must carry across the switch: without `HARDCOVER=true`, bare
+IDs were interpreted as Goodreads; with it, Hardcover IDs, API records, and
+byte-for-byte rollback were preserved. The candidate now fails closed when
+the mode is absent and has separate legacy-mode image targets. This remains
+synthetic evidence, not operator-data or channel acceptance. Details are in the
 [migration fixture evidence](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 Keep the release freeze in place. See the [PostgreSQL migration candidate
 notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
@@ -125,12 +125,15 @@ The current retirement work branch also ports BookshelfNG's native Hardcover
 metadata client and maps a saved `HardcoverAuth` setting to
 `HardcoverApiToken`. It preserves the existing `HARDCOVER_AUTH` and
 `HARDCOVER_API_KEY` environment options and routes Hardcover work, author, and
-edition IDs through the native provider when `HARDCOVER=true`. The converter
-also uses that mode to interpret bare numeric source IDs as Hardcover IDs;
-otherwise bare numeric IDs retain the Goodreads interpretation. Keep
-`HARDCOVER=true` (and do not set `HARDCOVER_NATIVE=false`) in the preview and
-migration environment when the BookshelfNG source used native Hardcover mode.
-This provider and its migration-time identity handling are source-only and are not in `.977`. PR #131 remains draft; see its current exact-head checks and keep the candidate unsupported for operator data until representative conversion and rollback acceptance are complete.
+edition IDs through the native provider when `HARDCOVER=true`. During migration,
+bare numeric source IDs require an explicit `HARDCOVER=true` or `HARDCOVER=false`
+mode; an unset or invalid value now fails closed instead of guessing Goodreads.
+Keep `HARDCOVER=true` (and do not set `HARDCOVER_NATIVE=false`) in preview and
+migration when the BookshelfNG source used native Hardcover mode. This provider
+and migration handling are source-only and are not in `.977`. PR #131 remains
+draft; see its current exact-head checks and keep the candidate unsupported for
+operator data until representative conversion and rollback acceptance are
+complete.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 

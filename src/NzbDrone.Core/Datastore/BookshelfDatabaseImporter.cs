@@ -1536,8 +1536,9 @@ namespace NzbDrone.Core.Datastore
                 {
                     // BookshelfNG stores numeric IDs without a namespace when its
                     // selected primary catalog owns the record. Preserve that
-                    // dialect while the migration runs under the same provider mode.
-                    return (IsNativeHardcoverPrimaryMode() ? "hc:" : "gr:") + normalized;
+                    // dialect only when the source provider mode is explicit. Guessing
+                    // here can silently attach every record to the wrong catalog.
+                    return (RequireNativeHardcoverPrimaryMode() ? "hc:" : "gr:") + normalized;
                 }
 
                 throw new InvalidDataException($"BookshelfNG {entityType} provider ID '{normalized}' has no recognized provider prefix.");
@@ -1597,17 +1598,39 @@ namespace NzbDrone.Core.Datastore
             return prefix + ":" + id;
         }
 
-        private static bool IsNativeHardcoverPrimaryMode()
+        private static bool? ConfiguredNativeHardcoverPrimaryMode()
         {
-            return string.Equals(Environment.GetEnvironmentVariable("HARDCOVER"), "true", StringComparison.OrdinalIgnoreCase) &&
+            if (!bool.TryParse(Environment.GetEnvironmentVariable("HARDCOVER"), out var nativeHardcover))
+            {
+                return null;
+            }
+
+            return nativeHardcover &&
                 !string.Equals(Environment.GetEnvironmentVariable("HARDCOVER_NATIVE"), "false", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool RequireNativeHardcoverPrimaryMode()
+        {
+            var mode = ConfiguredNativeHardcoverPrimaryMode();
+            if (mode.HasValue)
+            {
+                return mode.Value;
+            }
+
+            throw new InvalidDataException(
+                "BookshelfNG contains a bare numeric provider ID, but its primary catalog mode is not explicit. " +
+                "Set HARDCOVER=true to preserve native Hardcover IDs or HARDCOVER=false to preserve Goodreads IDs. " +
+                "The source database was not changed.");
         }
 
         private static string NumericProviderDisposition()
         {
-            return IsNativeHardcoverPrimaryMode()
-                ? "any bare numeric provider IDs are interpreted as Hardcover because native mode is enabled (HARDCOVER=true)"
-                : "any bare numeric provider IDs are interpreted as Goodreads because native Hardcover mode is disabled";
+            return ConfiguredNativeHardcoverPrimaryMode() switch
+            {
+                true => "any bare numeric provider IDs are interpreted as Hardcover because native mode is enabled (HARDCOVER=true)",
+                false => "any bare numeric provider IDs are interpreted as Goodreads because native Hardcover mode is disabled",
+                _ => "bare numeric provider IDs require an explicit HARDCOVER=true or HARDCOVER=false source mode; conversion fails closed if any are present"
+            };
         }
 
         private static void SetProviderColumns(IDictionary<string, object> values, string entityType, string canonicalId)

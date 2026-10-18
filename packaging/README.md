@@ -37,7 +37,7 @@ upgraded safely.
 | AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
-| Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged | Verify legacy registry write access and digest equality before enabling the bridge |
+| Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode. | Validate all three manifests and old-alias digest routing on exact-head CI before enabling the bridge |
 
 Core release validation passed on Linux, macOS, Windows, and PostgreSQL. The
 Windows Chocolatey build and package-transition smoke also passed: it
@@ -137,9 +137,15 @@ and supports validated rollback.
 
 Docker Compose, Unraid, and other container users can change the image to
 `ghcr.io/snapetech-org/chaptarrng` and retain `/config`, media/download mounts,
-ports, UID/GID, and environment settings. Unraid has a ChaptarrNG template.
-Only mutable aliases can be repointed; pinned versions and image digests need
-an operator change. A repointed tag does not change a running container.
+ports, UID/GID, and environment settings. BookshelfNG stores no primary-provider
+marker alongside bare numeric IDs, so direct migration must preserve
+`HARDCOVER=true` or explicitly set `HARDCOVER=false`; the converter now fails
+closed if neither mode is available. The legacy mutable-image bridge will map
+the old `hardcover`/`main`/`latest` aliases to a Hardcover-enabled compatibility
+image and `softcover` to a Goodreads-mode image. These targets and alias changes
+are source-only, have not been published, and remain gated. Pinned versions and
+image digests still need an operator change. A repointed tag does not change a
+running container.
 
 BookshelfNG's in-app updater still checks its existing upstream update service,
 which ChaptarrNG cannot redirect. Automatic migration must therefore use a

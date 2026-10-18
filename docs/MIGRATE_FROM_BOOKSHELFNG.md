@@ -113,10 +113,12 @@ Run preview and migration with the same `HARDCOVER` and `HARDCOVER_NATIVE`
 values as the source install. When native Hardcover mode is active, BookshelfNG
 stores many primary provider IDs as bare numbers; the converter uses
 `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) to preserve those as
-Hardcover identities. Without native mode, bare numeric IDs remain Goodreads
-identities. Preview reports this interpretation for authors, books, editions,
-and series. Changing the mode during conversion can associate every bare
-numeric ID with the wrong provider.
+Hardcover identities. Set `HARDCOVER=false` for a Goodreads-primary source.
+If `HARDCOVER` is unset or invalid, conversion now fails closed when it reaches
+a bare numeric ID instead of silently assigning Goodreads identity. Preview
+reports the selected interpretation for authors, books, editions, and series.
+Changing the mode during conversion can associate every bare numeric ID with
+the wrong provider.
 
 The current ChaptarrNG work-branch candidate also maps a saved `HardcoverAuth`
 database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
@@ -342,9 +344,13 @@ database.
 > **Not approved for cutover yet.** Do not change the image or start ChaptarrNG
 > against BookshelfNG appdata until migration and rollback acceptance close.
 
-Change the image to the standard ChaptarrNG tag and retain the old host paths,
-container mount targets, and port mapping. For an installation that used the
-default BookshelfNG port, the shape is:
+Change the image to ChaptarrNG and retain the old host paths, container mount
+targets, and port mapping. For a manual cutover, set `HARDCOVER=true` for a
+native Hardcover BookshelfNG source or `HARDCOVER=false` for a Goodreads-primary
+source. The compatibility image targets being added to the release workflow
+will set the matching mode for the legacy mutable aliases; they have not been
+published or enabled while the release freeze is active. For an installation
+that used the default BookshelfNG port, the shape is:
 
 ```yaml
 services:
@@ -355,6 +361,7 @@ services:
       PUID: "99"
       PGID: "100"
       TZ: Etc/UTC
+      HARDCOVER: "true" # use false for a Goodreads-primary BookshelfNG source
     volumes:
       - /host/path/to/bookshelfng-config:/config
       - /host/path/to/media:/data
@@ -500,6 +507,22 @@ and update channel.
 On an isolated Linux/amd64 Docker host, the published BookshelfNG `main` image reported version `0.4.21.71` and created an empty migration-158 SQLite database with 39 tables. After stopping it, ChaptarrNG `v0.9.977` started against the same `/config`, `/data`, and `/download` mounts. Its normal startup converted the database to Chaptarr migration 120, retained the untouched BookshelfNG backup, and listened on the saved port 8787. The converted database and source backup both passed SQLite integrity checks.
 
 Rollback preview and apply passed. The restored BookshelfNG database remained at migration 158 with 39 tables, and the previous BookshelfNG image started against it on port 8787. A test-only setting written after conversion remained in the retained ChaptarrNG backup. This was an empty-database Docker rehearsal; it does not validate populated operator data or the Unraid Community Apps template update flow.
+
+## Provider-mode image-switch and rollback (2026-10-18)
+
+A follow-up rehearsal used a populated synthetic database served by the public
+BookshelfNG `.71` Hardcover image. It exposed that starting the prior Chaptarr
+candidate without `HARDCOVER=true` could misclassify bare numeric provider IDs
+as Goodreads IDs. With the source mode preserved, migration kept author,
+book, and edition IDs in Hardcover fields, passed database integrity checks,
+and served the converted API records. Rollback restored the source database
+byte-for-byte, retained the converted database separately, and the `.71`
+Hardcover image reopened the restored source. The current source candidate now
+fails closed on bare IDs when the mode is unset or invalid, and adds separate
+compatibility image targets for the legacy Goodreads and Hardcover aliases.
+Those targets still need exact-head hosted validation; this synthetic rehearsal
+does not establish operator-data or installer acceptance. See the detailed
+[fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 
 ## AUR package candidate rehearsal (2026-10-18)
 

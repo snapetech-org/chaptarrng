@@ -90,6 +90,38 @@ Linux artifact from run `39169786430`:
   Each source database hash remained unchanged and no conversion backup was
   created.
 
+## Docker image-switch and rollback rehearsal (2026-10-18)
+
+A second, isolated rehearsal used the public BookshelfNG `.71` Hardcover image
+(`ghcr.io/snapetech-org/bookshelfng:hardcover-v0.4.21.71`, digest
+`sha256:fc9c8b5b91808d10cbe66dc2338243b2db79452778640c6963493363c389430b`).
+The release fixture helper created a populated synthetic schema-158 database;
+the source container reported BookshelfNG `0.4.21.71` and served its author and
+book through the API.
+
+An initial Chaptarr candidate container was started without the source image's
+`HARDCOVER=true` setting. It promoted the bare numeric IDs into Goodreads
+fields. Repeating the same image switch with `HARDCOVER=true` preserved author
+`hc:9001`, book `hc:9002`, and editions `hc:9003` and `hc:9004` in the
+Hardcover fields. The converted database reached Chaptarr schema 121, passed
+SQLite integrity checks, had no foreign-key errors, retained the BookshelfNG
+source backup, and served the migrated author plus both format-specific book
+records through the Chaptarr API.
+
+With Chaptarr stopped, rollback preview left both database hashes unchanged.
+Explicit rollback restored the source schema-158 database byte-for-byte from
+its retained backup and kept the converted Chaptarr database as a separate
+backup. The released `.71` Hardcover image then reopened the restored source
+database and served the author and book API records again.
+
+This exposed a provider-mode handoff hazard in the prior candidate. The current
+source change makes migration fail closed if bare numeric IDs are present and
+`HARDCOVER` is unset or invalid, and the Docker release workflow now builds
+separate softcover and Hardcover compatibility targets for the legacy aliases.
+Those changes are source-only; their exact-head hosted build and channel checks
+are still pending. This rehearsal used a synthetic fixture and does not
+establish behavior on operator data or validate the Unraid template handoff.
+
 These results show the candidate's SQLite preview, apply, automatic startup,
 data mapping, refusal, rollback, and populated API paths working together on
 this synthetic fixture. They do not establish correct classification of

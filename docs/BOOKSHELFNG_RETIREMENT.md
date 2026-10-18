@@ -51,7 +51,7 @@ detailed feature inventory remains in the
   ChaptarrNG naming defaults when the source has no saved naming row. This is
   synthetic candidate evidence, not operator-data acceptance; see the
   [detailed fixture report](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
-- This work branch also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs follow the active mode: native Hardcover mode requires `HARDCOVER=true` without `HARDCOVER_NATIVE=false` during preview and conversion; otherwise they retain Goodreads identity. The preview report names the selected interpretation. These source-only provider and helper changes are not in .977; PR #131 remains draft and converted-data acceptance remains open.
+- This work branch also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs now require an explicit mode: `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) selects Hardcover, and `HARDCOVER=false` selects Goodreads. An unset or invalid mode fails closed. The Docker candidate builds separate softcover and Hardcover compatibility targets so legacy aliases can retain that mode; `latest`, `main`, and `hardcover` must use the Hardcover target, while `softcover` must use the Goodreads target. These source changes are not in `.977`, PR #131 remains draft, and converted-data acceptance remains open.
 - BookshelfNG's BookLore notification settings and `OnReleaseImport` trigger are copied unchanged into ChaptarrNG, and remain in the retained source backup. A separate BookOrbit Book Dock destination is candidate work in this branch; it does not rewrite BookLore URLs or credentials. Mock tests cover login, Book Dock permission, streamed uploads, redirects, rejected credentials/files, and partial-batch failure. An isolated BookOrbit v3.2.0 live API check passed setup, login, permission check, EPUB upload/listing, and unsupported-file rejection. That does not verify downstream processing of a production book or a real-user handoff. The integration is not in `.977`, and the broader retirement gate remains open.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
@@ -118,6 +118,20 @@ ChaptarrNG `.977` converted it on normal startup, retained the original database
 and restored it through rollback; the BookshelfNG image started again on port
 8787. This does not validate real user data or the Unraid Community Apps flow.
 
+A follow-up 2026-10-18 image-switch rehearsal used a populated synthetic
+database from the BookshelfNG `.71` Hardcover image. The previous Chaptarr
+candidate, started without `HARDCOVER=true`, assigned bare numeric provider IDs
+to Goodreads. Repeating the switch with the source provider mode preserved
+Hardcover IDs, converted data and API results, and passed SQLite integrity and
+foreign-key checks. Rollback preview was byte-preserving; rollback restored the
+source database byte-for-byte, kept the converted database as a backup, and the
+`.71` image reopened the restored source. ChaptarrNG now fails closed when a
+bare numeric ID has no explicit provider mode and builds separate Goodreads
+and Hardcover compatibility targets for the legacy aliases. Those changes are
+source-only and await exact-head hosted validation. This synthetic rehearsal
+does not establish operator-data acceptance or validate the Unraid template
+handoff; details are in the [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
+
 BookshelfNG's `BookImportMinimumMatchPercent` setting (default 70, valid range
 50–99) affects fuzzy title parsing and import acceptance. The current source
 converter retains the original row and, when no explicit ChaptarrNG mode is
@@ -147,7 +161,7 @@ and follow the
 
 | Channel | Published ChaptarrNG state | BookshelfNG handoff state |
 | --- | --- | --- |
-| Docker / GHCR | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same published multi-architecture image digest. | Legacy BookshelfNG aliases have not been redirected. Mutable tags affect a later pull/recreate; pinned tags and digests need an operator change. |
+| Docker / GHCR | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same published multi-architecture image digest. | Legacy aliases remain unchanged. The current ChaptarrNG source candidate builds separate compatibility image targets: `latest`, `main`, and `hardcover` preserve native Hardcover mode; `softcover` preserves Goodreads mode. Exact-head build and alias checks remain pending, and the bridge stays disabled. Pinned version tags and digests need an operator change. |
 | AUR | `chaptarrng-bin 0.9.977-1` is published. | `bookshelfng-bin 0.4.21.71-1` remains public. A local `.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and active systemd service handoff checks. The test used a network-isolated Arch container and a synthetic migration-158 database; representative operator data and host-specific settings remain open. |
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |
 | Chocolatey | The `.977` package built and the hosted BookshelfNG-to-ChaptarrNG upgrade smoke passed, but Chocolatey returned HTTP 403 on publish; the live feed has no `chaptarrng` entry. | BookshelfNG `0.4.21.70` remains public. Its identity was not submitted because the bridge is disabled. |
