@@ -22,11 +22,18 @@ detailed feature inventory remains in the
   `CHAPTARRNG_RELEASE_READY=true`; this repository variable remains unset.
   Do not set it until parity, migration/rollback, and channel acceptance are
   complete. The current `main` version bump to `.978` is source-only.
-- PR #127 contains the selectable supplemental-catalog candidate and the
-  conservative cross-catalog unmapped-file fallback, including exact ISBN,
-  ASIN, provider-ID, and title/author recovery. It remains source-only;
-  it has not closed the feature, data, or channel acceptance gates and is not
-  available in `.977`.
+- ChaptarrNG PR #127 merged to `main` as `b3089a39`, adding selectable
+  supplemental catalogs, per-field preferences, and conservative
+  cross-catalog unmapped-file recovery through exact ISBN, ASIN, provider ID,
+  or normalized title/author evidence. It remains source-only and is not
+  available in `.977`; converted-data and settings acceptance remain open.
+- ChaptarrNG PR #129 merged to `main` as `949ae3dd`, adding opt-in BookshelfNG
+  M4B merge settings, tagged track ordering and chapter titles, original-track
+  fallback, and safe move/copy source handling. Hosted Linux, macOS, Windows,
+  PostgreSQL migration, CodeQL, dependency/security, and release-note checks
+  passed on its clean head. A synthetic two-track smoke validated the external
+  converter and chapter sidecar, but not the importer end to end or
+  representative media. This source is not in `.977`.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
   setting. ChaptarrNG has equivalent new-author path initialization in
@@ -72,13 +79,14 @@ and restored it through rollback; the BookshelfNG image started again on port
 8787. This does not validate real user data or the Unraid Community Apps flow.
 
 BookshelfNG's `BookImportMinimumMatchPercent` setting (default 70, valid range
-50–99) affects fuzzy title parsing and import acceptance. The converter copies
-the saved `Config` row, but ChaptarrNG uses `BookMatchingStrictness` with
-different matching semantics and currently ignores that legacy numeric key.
-There is no verified value-by-value mapping. Preserve this as an explicit
-settings-parity blocker until a tested migration mapping or maintainer-approved
-retirement decision exists; a copied database value does not prove behavior
-carries over.
+50–99) affects fuzzy title parsing and import acceptance. The current source
+converter retains the original row and, when no explicit ChaptarrNG mode is
+present, translates the nearest policy band: 50–66 to Aggressive, 67–82 to
+Balanced, and 83–99 to Strict. The migration report names the chosen mode, and
+invalid values stop conversion. This is deliberately an approximation because
+the two applications use different matching algorithms; validate the selected
+mode against expected behavior on converted data. The mapping is not in public
+`.977`.
 
 For a source earlier than migration 14, first update BookshelfNG to its final
 `0.4.21.71` release so it can bring the database to migration 158. The `.977`
@@ -108,10 +116,10 @@ scheduled BookshelfNG bridge workflow confirmed that it found a stable
 ChaptarrNG release but skipped publishing because the gate is off. Do not turn
 the gate on until the feature and channel acceptance items below are closed.
 
-### Audiobook merge compatibility candidate
+### Audiobook merge compatibility
 
-The current ChaptarrNG source branch contains an unpublished compatibility
-candidate for BookshelfNG's opt-in `BOOKSHELF_M4B_MERGE` behavior. It is limited
+ChaptarrNG main contains an unpublished compatibility implementation for
+BookshelfNG's opt-in `BOOKSHELF_M4B_MERGE` behavior. It is limited
 to tracked audiobook downloads with at least two approved, non-M4B tracks for
 the same local book and edition, and it keeps the feature disabled unless that
 environment variable is explicitly `true`. The candidate preserves disc/track
@@ -122,12 +130,13 @@ and falls back to importing the original tracks if merging fails. After a
 successful import it removes only the consumed source tracks in move mode and
 keeps them in copy mode.
 
-This is source-only and is not in `v0.9.977`. The candidate still needs hosted
-validation and representative-media checks for tags, chapters, conversion
-failure, source retention, and restart/resume behavior. It does not close the
-Audiobook processing and tags row in [the feature matrix](FORK_FEATURES.md).
-Keep the legacy merge setting unset until a build containing the accepted
-implementation is installed.
+This is source-only and is not in `v0.9.977`. Hosted platform and database
+checks passed, and the synthetic external-tool smoke preserved supplied
+chapter titles and offsets. Representative-media checks for tags, embedded
+chapters, conversion failure, source retention, and restart/resume behavior
+remain open. It does not close the Audiobook processing and tags row in
+[the feature matrix](FORK_FEATURES.md). Keep the legacy merge setting unset
+until a build containing the accepted implementation is installed.
 
 BookshelfNG's in-app updater checks the Readarr-owned update service, which
 Snapetech cannot redirect. No single server-side change can move every pinned,
@@ -141,9 +150,10 @@ authorized while these gates remain open. The remaining work is:
 
 1. Close each BookshelfNG feature row with behavioral and converted-data
    evidence, or record an explicit maintainer decision to retire that behavior.
-   This includes the legacy numeric matching threshold; the current
-   cross-catalog fallback remains an unreleased candidate and needs identifier,
-   exact-name, ambiguity, and pending-import acceptance evidence.
+   This includes validating the lossy numeric matching-policy translation
+   against converted data. The cross-catalog fallback is merged source work,
+   not in `.977`; it needs identifier, exact-name, ambiguity, and pending-import
+   acceptance evidence.
 2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
    passes; validate older-schema support on representative operator data,
    then validate

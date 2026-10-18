@@ -60,9 +60,10 @@ contains the old diagnostics module marker. See the
 BookshelfNG's `BOOKSHELF_M4B_MERGE`,
 `BOOKSHELF_M4B_AAC_BITRATE_KBPS`, and `BOOKSHELF_FFMPEG_PATH` variables are
 also outside database conversion. The published ChaptarrNG `v0.9.977` does not
-honor them. A source-only compatibility candidate is under review; keep
-`BOOKSHELF_M4B_MERGE` unset until a tested ChaptarrNG build with that support
-is available. In that candidate, the FFmpeg path must name the executable
+honor them. ChaptarrNG PR #129 merged the compatibility implementation to
+`main` as `949ae3dd`, but it is not in `.977`; keep `BOOKSHELF_M4B_MERGE` unset
+until a build with that support is available and the remaining acceptance
+gates close. The implementation requires the FFmpeg executable to be named
 `ffmpeg` (`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.
 
 The conversion reuses the existing data directory and `config.xml`, preserving
@@ -73,27 +74,38 @@ SeerrNG and reverse-proxy endpoints when those services used the old address.
 ## Recovering unmapped files
 
 The published `v0.9.977` release retries unmapped files against the local
-library and Chaptarr's V5 matcher. A source-only candidate on the BookshelfNG
-parity branch adds configured-catalog recovery after those paths fail. It
+library and Chaptarr's V5 matcher. ChaptarrNG PR #127 merged configured-catalog
+recovery to `main` as `b3089a39`; that source change is not in `.977`. It
+searches after those paths fail and
 searches from an exact ISBN, ASIN, or provider-ID tag (including Goodreads IDs),
 or from one unambiguous book title and author tag. Every supplied identity field
 must match the result, including normalized title and author when present. The
 result must use the same media type and have stable provider work and author
 IDs. Conflicting or ambiguous results stay unmapped. A single result is sent
 through the existing pending-author-import flow; catalog search never moves or
-attaches a file directly. This candidate is not in `.977` and does not change
-release or channel acceptance status.
+attaches a file directly. This source change does not change release or
+channel acceptance status.
 
 ## Matching setting compatibility
 
-The converter preserves BookshelfNG's `BookImportMinimumMatchPercent` row in
-the copied `Config` table, but ChaptarrNG does not consume that legacy key. Its
-`BookMatchingStrictness` setting uses different matching rules, so no exact
-value-by-value mapping is established. Before relying on automatic matching
-after conversion, review the ChaptarrNG strictness setting and verify it
-against the library's expected behavior. This remains a parity gate; the
-copied row is preservation of data, not preservation of the old threshold's
-behavior.
+The published ChaptarrNG `v0.9.977` converter preserves the legacy
+`BookImportMinimumMatchPercent` row but does not apply it. The current source
+importer retains that row and, when the source has no explicit
+`BookMatchingStrictness`, maps the closest policy band:
+
+| BookshelfNG percentage | ChaptarrNG mode |
+| --- | --- |
+| 50–66 | Aggressive |
+| 67–82 | Balanced |
+| 83–99 | Strict |
+
+An explicit ChaptarrNG mode takes precedence. The migration report names the
+mapping and the original numeric row remains for audit. Values outside 50–99
+stop conversion before promotion. This is a lossy policy translation: the
+applications use different fuzzy-title and import-scoring algorithms. Review
+the chosen mode against expected behavior on converted data; do not treat it as
+an exact recreation of BookshelfNG matching. This source change is not in
+`.977` while the release freeze remains active.
 
 ## Preview and apply
 

@@ -195,6 +195,64 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_translate_the_legacy_match_threshold_and_retain_its_original_value()
+        {
+            AddConfigValue("bookimportminimummatchpercent", "70");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.EqualTo("balanced"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo("70"));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo("70"));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.Zero);
+            });
+        }
+
+        [Test]
+        public void should_preserve_an_explicit_chaptarr_match_mode_over_the_legacy_threshold()
+        {
+            AddConfigValue("bookimportminimummatchpercent", "50");
+            AddConfigValue("bookmatchingstrictness", "strict");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.EqualTo("strict"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo("50"));
+            });
+        }
+
+        [Test]
+        public void should_reject_an_out_of_range_legacy_match_threshold_without_changing_the_source()
+        {
+            AddConfigValue("bookimportminimummatchpercent", "100");
+            var sourceBeforeConversion = File.ReadAllBytes(_sourcePath);
+
+            var exception = Assert.Throws<InvalidDataException>(() =>
+                new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                    _sourceConnectionString,
+                    new MigrationContext(MigrationType.Main),
+                    DatabaseType.SQLite));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain("integer from 50 through 99"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBeforeConversion));
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
         public void should_upgrade_an_older_bookshelf_snapshot_and_keep_the_original_schema_for_rollback()
         {
             DowngradeSourceToMigration22();
@@ -1096,6 +1154,17 @@ namespace Chaptarr.Core.Test.Datastore
             Mode = SqliteOpenMode.ReadOnly,
             Pooling = false
         }.ConnectionString;
+
+        private void AddConfigValue(string key, string value)
+        {
+            using var source = new SqliteConnection(_sourceConnectionString);
+            source.Open();
+            using var command = source.CreateCommand();
+            command.CommandText = "INSERT INTO Config (Key, Value) VALUES (@key, @value);";
+            command.Parameters.AddWithValue("@key", key);
+            command.Parameters.AddWithValue("@value", value);
+            command.ExecuteNonQuery();
+        }
 
         private static T QueryScalar<T>(string databasePath, string sql)
         {
