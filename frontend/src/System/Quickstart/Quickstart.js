@@ -336,8 +336,9 @@ function Quickstart(props) {
                       selectNotificationSchema={selectNotificationSchema}
                       markSectionInteracted={markSectionInteracted}
                       fetchNotifications={fetchNotifications}
-                      onTestConnectionSuccess={() => onConnectionTestSuccess('audioBookShelf')}
-                      onTestConnectionFailure={(error) => onConnectionTestFailure('audioBookShelf', error)}
+                      wasSkipped={!!interactions.optionalConnections}
+                      onConnectionTestSuccess={() => onConnectionTestSuccess('audioBookShelf')}
+                      onConnectionTestFailure={(error) => onConnectionTestFailure('audioBookShelf', error)}
                       compact={true}
                     />
                   </div>
@@ -353,8 +354,9 @@ function Quickstart(props) {
                       selectNotificationSchema={selectNotificationSchema}
                       markSectionInteracted={markSectionInteracted}
                       fetchNotifications={fetchNotifications}
-                      onTestConnectionSuccess={() => onConnectionTestSuccess('grimmory')}
-                      onTestConnectionFailure={(error) => onConnectionTestFailure('grimmory', error)}
+                      wasSkipped={!!interactions.optionalConnections}
+                      onConnectionTestSuccess={() => onConnectionTestSuccess('grimmory')}
+                      onConnectionTestFailure={(error) => onConnectionTestFailure('grimmory', error)}
                       compact={true}
                     />
                   </div>
@@ -367,9 +369,10 @@ function Quickstart(props) {
                       isHardcoverConfigured={isHardcoverConfigured}
                       hardcoverUsername={hardcoverUsername}
                       hardcoverAvatarUrl={hardcoverAvatarUrl}
+                      wasSkipped={!!interactions.optionalConnections}
                       markSectionInteracted={markSectionInteracted}
-                      onConnectionSuccess={() => onConnectionTestSuccess('hardcover')}
-                      onConnectionFailure={(error) => onConnectionTestFailure('hardcover', error)}
+                      onConnectionTestSuccess={() => onConnectionTestSuccess('hardcover')}
+                      onConnectionTestFailure={(error) => onConnectionTestFailure('hardcover', error)}
                     />
                   </div>
                 )}

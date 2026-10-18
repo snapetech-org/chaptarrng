@@ -418,6 +418,11 @@
   gap: 6px;
 }
 
+.quickstartConnectionStatus {
+  color: var(--helpTextColor);
+  font-size: 12px;
+}
+
 .hardcoverAvatar {
   width: 22px;
   height: 22px;
