@@ -100,9 +100,11 @@ namespace Chaptarr.Core.Test.MediaFiles
             public List<(string Title, string Author, bool GetAllEditions, BookMediaType? MediaType)> Calls { get; } = new();
             public List<string> IsbnSearches { get; } = new();
             public List<string> AsinSearches { get; } = new();
+            public List<(int GoodreadsId, bool GetAllEditions)> GoodreadsBookSearches { get; } = new();
             public Func<string, string, bool, BookMediaType?, List<Book>> OnSearch { get; set; }
             public Func<string, List<Book>> OnIsbnSearch { get; set; }
             public Func<string, List<Book>> OnAsinSearch { get; set; }
+            public Func<int, bool, List<Book>> OnGoodreadsBookIdSearch { get; set; }
 
             public List<Book> SearchForNewBook(string title, string author, bool getAllEditions = true, BookMediaType? mediaType = null)
             {
@@ -121,7 +123,11 @@ namespace Chaptarr.Core.Test.MediaFiles
                 AsinSearches.Add(asin);
                 return OnAsinSearch?.Invoke(asin) ?? new List<Book>();
             }
-            public List<Book> SearchByGoodreadsBookId(int goodreadsId, bool getAllEditions) => throw new NotImplementedException();
+            public List<Book> SearchByGoodreadsBookId(int goodreadsId, bool getAllEditions)
+            {
+                GoodreadsBookSearches.Add((goodreadsId, getAllEditions));
+                return OnGoodreadsBookIdSearch?.Invoke(goodreadsId, getAllEditions) ?? new List<Book>();
+            }
         }
 
         private sealed class RecordingMatchingService : IFileMatchingService
@@ -760,6 +766,140 @@ namespace Chaptarr.Core.Test.MediaFiles
             Assert.That(context.PendingImports.Enqueued.Single().ProviderId, Is.EqualTo("hc:456"));
             Assert.That(context.Media.Updated.Any(updated => updated.MatchDetails?.Contains("books=hc:123", StringComparison.Ordinal) == true), Is.True);
             Assert.That(context.Import.Imports, Is.Empty);
+        }
+
+        [Test]
+        public void retry_match_uses_exact_goodreads_id_when_title_and_author_tags_are_missing()
+        {
+            var modified = new DateTime(2026, 7, 4, 1, 0, 0, DateTimeKind.Utc);
+            var file = CreateUnmappedFile(1, "/books/unknown-book.epub", modified, 100, "unknown-book", null);
+            file.MediaType = "ebook";
+            file.AllTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["GOODREADS_ID"] = new List<string> { "1234567" }
+            };
+            var context = CreateContext(file, modified, 100);
+            context.CatalogSearch.OnGoodreadsBookIdSearch = (goodreadsId, getAllEditions) => new List<Book>
+            {
+                new Book
+                {
+                    Title = "Exact Goodreads Book",
+                    MediaType = BookMediaType.Ebook,
+                    GoodreadsBookId = "1234567",
+                    GoodreadsWorkId = "gr:7654321",
+                    Author = new Author { Name = "Exact Goodreads Author", GoodreadsAuthorId = "gr:456" }
+                }
+            };
+            context.Matching.OnMatch = (matchedFiles, restrictToAuthorId, matchingContext, call) => new FileMatchResult
+            {
+                UnmatchedFiles = matchedFiles.Select(matchedFile => new UnmatchedFile
+                {
+                    File = matchedFile,
+                    Reason = "NO_MATCH"
+                }).ToArray()
+            };
+
+            context.Sut.Execute(new RetryUnmappedMatchCommand
+            {
+                MediaType = "ebook",
+                UnmappedFiles = new UnmappedFilesSelection { Scope = "all" }
+            });
+
+            Assert.That(context.CatalogSearch.GoodreadsBookSearches, Is.EqualTo(new[] { (1234567, true) }));
+            Assert.That(context.CatalogSearch.Calls, Is.Empty);
+            Assert.That(context.PendingImports.Enqueued, Has.Count.EqualTo(1));
+            Assert.That(context.PendingImports.Enqueued.Single().ProviderId, Is.EqualTo("gr:456"));
+            Assert.That(context.Media.Updated.Any(updated => updated.MatchDetails?.Contains("books=gr:7654321", StringComparison.Ordinal) == true), Is.True);
+            Assert.That(context.Import.Imports, Is.Empty);
+        }
+
+        [Test]
+        public void retry_match_does_not_accept_a_provider_id_search_candidate_with_a_different_identifier()
+        {
+            var modified = new DateTime(2026, 7, 4, 1, 0, 0, DateTimeKind.Utc);
+            var file = CreateUnmappedFile(1, "/books/unknown-book.epub", modified, 100, "unknown-book", null);
+            file.MediaType = "ebook";
+            file.AllTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["WORK_PROVIDER_ID"] = new List<string> { "hc:expected" }
+            };
+            var context = CreateContext(file, modified, 100);
+            context.CatalogSearch.OnSearch = (title, author, getAllEditions, mediaType) => new List<Book>
+            {
+                new Book
+                {
+                    Title = "Different Provider Work",
+                    MediaType = BookMediaType.Ebook,
+                    HardcoverBookId = "hc:other",
+                    Author = new Author { Name = "Provider Author", HardcoverAuthorId = "hc:456" }
+                }
+            };
+            context.Matching.OnMatch = (matchedFiles, restrictToAuthorId, matchingContext, call) => new FileMatchResult
+            {
+                UnmatchedFiles = matchedFiles.Select(matchedFile => new UnmatchedFile
+                {
+                    File = matchedFile,
+                    Reason = "NO_MATCH"
+                }).ToArray()
+            };
+
+            context.Sut.Execute(new RetryUnmappedMatchCommand
+            {
+                MediaType = "ebook",
+                UnmappedFiles = new UnmappedFilesSelection { Scope = "all" }
+            });
+
+            Assert.That(context.CatalogSearch.Calls, Has.Count.EqualTo(1));
+            Assert.That(context.CatalogSearch.Calls[0].Title, Is.EqualTo("hc:expected"));
+            Assert.That(context.CatalogSearch.Calls[0].Author, Is.Null);
+            Assert.That(context.CatalogSearch.Calls[0].GetAllEditions, Is.True);
+            Assert.That(context.CatalogSearch.Calls[0].MediaType, Is.EqualTo(BookMediaType.Ebook));
+            Assert.That(context.PendingImports.Enqueued, Is.Empty);
+            Assert.That(context.Media.Updated.Any(updated => updated.MatchDetails?.StartsWith("PENDING_AUTHOR_IMPORT:", StringComparison.Ordinal) == true), Is.False);
+        }
+
+        [Test]
+        public void retry_match_does_not_fall_back_to_title_when_provider_id_tags_conflict()
+        {
+            var modified = new DateTime(2026, 7, 4, 1, 0, 0, DateTimeKind.Utc);
+            var file = CreateUnmappedFile(1, "/books/Catalog Book/01.epub", modified, 100, "Catalog Book", null);
+            file.MediaType = "ebook";
+            file.AllTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["TITLE"] = new List<string> { "Catalog Book" },
+                ["AUTHOR"] = new List<string> { "Catalog Author" },
+                ["BOOK_PROVIDER_ID"] = new List<string> { "hc:one" },
+                ["WORK_PROVIDER_ID"] = new List<string> { "hc:two" }
+            };
+            var context = CreateContext(file, modified, 100);
+            context.CatalogSearch.OnSearch = (title, author, getAllEditions, mediaType) => new List<Book>
+            {
+                new Book
+                {
+                    Title = "Catalog Book",
+                    MediaType = BookMediaType.Ebook,
+                    HardcoverBookId = "hc:one",
+                    Author = new Author { Name = "Catalog Author", HardcoverAuthorId = "hc:456" }
+                }
+            };
+            context.Matching.OnMatch = (matchedFiles, restrictToAuthorId, matchingContext, call) => new FileMatchResult
+            {
+                UnmatchedFiles = matchedFiles.Select(matchedFile => new UnmatchedFile
+                {
+                    File = matchedFile,
+                    Reason = "NO_MATCH"
+                }).ToArray()
+            };
+
+            context.Sut.Execute(new RetryUnmappedMatchCommand
+            {
+                MediaType = "ebook",
+                UnmappedFiles = new UnmappedFilesSelection { Scope = "all" }
+            });
+
+            Assert.That(context.CatalogSearch.Calls, Is.Empty);
+            Assert.That(context.PendingImports.Enqueued, Is.Empty);
+            Assert.That(context.Media.Updated.Any(updated => updated.MatchDetails?.StartsWith("PENDING_AUTHOR_IMPORT:", StringComparison.Ordinal) == true), Is.False);
         }
 
         [Test]

@@ -23,7 +23,8 @@ detailed feature inventory remains in the
   Do not set it until parity, migration/rollback, and channel acceptance are
   complete. The current `main` version bump to `.978` is source-only.
 - PR #127 contains the selectable supplemental-catalog candidate and the
-  conservative cross-catalog unmapped-file fallback. It remains source-only;
+  conservative cross-catalog unmapped-file fallback, including exact ISBN,
+  ASIN, provider-ID, and title/author recovery. It remains source-only;
   it has not closed the feature, data, or channel acceptance gates and is not
   available in `.977`.
 - BookshelfNG `0.4.21.71` is published as the final source release.

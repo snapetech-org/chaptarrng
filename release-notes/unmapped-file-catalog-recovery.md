@@ -6,4 +6,4 @@ action: Review pending-author suggestions created when unmapped files match one 
 breaking: false
 ---
 
-Unmapped-file retries can now search enabled catalogs after local and V5 matching fail. ChaptarrNG queues a pending-author import only when identifiers or normalized title and author uniquely match one work; it leaves ambiguous files unmatched and never attaches them directly.
+Unmapped-file retries search enabled catalogs after local and V5 matching fail. Exact ISBN, ASIN, provider IDs, or normalized title and author can create a pending-author import when one work matches. Ambiguous files stay unmatched; catalog search never attaches them directly.

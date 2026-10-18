@@ -67,13 +67,14 @@ SeerrNG and reverse-proxy endpoints when those services used the old address.
 The published `v0.9.977` release retries unmapped files against the local
 library and Chaptarr's V5 matcher. A source-only candidate on the BookshelfNG
 parity branch adds configured-catalog recovery after those paths fail. It
-searches only from an exact ISBN/ASIN, or from one unambiguous book title and
-author tag; the returned record must carry the same identifier or exact
-normalized title and author and must have stable provider work and author IDs.
-Conflicting results stay unmapped. A single result is sent through the
-existing pending-author-import flow; catalog search never moves or attaches a
-file directly. This candidate is not in `.977` and does not change release or
-channel acceptance status.
+searches from an exact ISBN, ASIN, or provider-ID tag (including Goodreads IDs),
+or from one unambiguous book title and author tag. Every supplied identity field
+must match the result, including normalized title and author when present. The
+result must use the same media type and have stable provider work and author
+IDs. Conflicting or ambiguous results stay unmapped. A single result is sent
+through the existing pending-author-import flow; catalog search never moves or
+attaches a file directly. This candidate is not in `.977` and does not change
+release or channel acceptance status.
 
 ## Matching setting compatibility
 

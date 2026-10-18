@@ -61,7 +61,7 @@ not copy external media/download folders, translate every external setting,
 or update pinned images and package channels. The legacy bridge remains
 disabled. This parity branch also carries unpublished candidates for
 BookshelfNG's selectable supplemental catalogs, per-field metadata preferences,
-and exact-identity catalog recovery for unmapped files. None is in public
+and exact identifier/name catalog recovery for unmapped files. None is in public
 `v0.9.977` or closes the parity gate. The converter preserves
 `BookImportMinimumMatchPercent`, but ChaptarrNG's different
 `BookMatchingStrictness` setting does not yet map that legacy threshold. Full

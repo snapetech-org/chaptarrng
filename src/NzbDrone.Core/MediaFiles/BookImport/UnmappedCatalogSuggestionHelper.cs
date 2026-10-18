@@ -13,6 +13,30 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 {
     internal static class UnmappedCatalogSuggestionHelper
     {
+        private static readonly string[] CanonicalProviderIdTagNames =
+        {
+            "PROVIDER_ID",
+            "BOOK_PROVIDER_ID",
+            "WORK_PROVIDER_ID",
+            "EDITION_PROVIDER_ID",
+            "FOREIGN_BOOK_ID",
+            "FOREIGN_WORK_ID",
+            "FOREIGN_EDITION_ID"
+        };
+
+        private static readonly string[] GoodreadsWorkIdTagNames =
+        {
+            "GOODREADS_WORK_ID"
+        };
+
+        private static readonly string[] GoodreadsEditionIdTagNames =
+        {
+            "GOODREADS_ID",
+            "GOODREADS_BOOK_ID",
+            "GOODREADS_EDITION_ID",
+            "GR_ID"
+        };
+
         public static int AddSuggestions(ISearchForNewBook catalogSearch, Logger logger, IReadOnlyCollection<UnmatchedFile> unmatchedFiles)
         {
             if (catalogSearch == null)
@@ -56,6 +80,27 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     catch (Exception ex)
                     {
                         logger.Debug(ex, "[UNMAPPED-RETRY] Catalog ASIN search failed");
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(query.ProviderId))
+                {
+                    try
+                    {
+                        if (query.GoodreadsEditionLookup && int.TryParse(query.ProviderId.Substring("gr:".Length), NumberStyles.None, CultureInfo.InvariantCulture, out var goodreadsId))
+                        {
+                            results.AddRange(WithRequestedMediaType(catalogSearch.SearchByGoodreadsBookId(goodreadsId, getAllEditions: true), query.MediaType));
+                        }
+                        else
+                        {
+                            results.AddRange(WithRequestedMediaType(
+                                catalogSearch.SearchForNewBook(query.ProviderId, null, getAllEditions: true, mediaType: query.MediaType),
+                                query.MediaType));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Debug(ex, "[UNMAPPED-RETRY] Catalog provider-ID search failed for '{0}'", query.ProviderId);
                     }
                 }
 
@@ -134,7 +179,12 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             var normalizedAuthor = NormalizeCatalogEvidence(author);
             var isbn = NormalizeCatalogIsbn(GetSingleTagValue(file.AllTags, "ISBN", "ISBN13", "ISBN10", "ISBN-13", "ISBN-10"));
             var asin = NormalizeCatalogAsin(GetSingleTagValue(file.AllTags, "ASIN", "AUDIBLE_ASIN"));
-            if ((normalizedTitle == null || normalizedAuthor == null) && isbn == null && asin == null)
+            if (!TryGetProviderIdEvidence(file.AllTags, out var providerIdEvidence))
+            {
+                return false;
+            }
+
+            if ((normalizedTitle == null || normalizedAuthor == null) && isbn == null && asin == null && providerIdEvidence == null)
             {
                 return false;
             }
@@ -147,11 +197,133 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 NormalizedAuthor = normalizedAuthor,
                 Isbn = isbn,
                 Asin = asin,
+                ProviderId = providerIdEvidence?.ProviderId,
+                GoodreadsEditionLookup = providerIdEvidence?.GoodreadsEditionLookup == true,
                 MediaType = mediaType.Value,
-                Key = $"{(int)mediaType.Value}\u001f{normalizedTitle}\u001f{normalizedAuthor}\u001f{isbn}\u001f{asin}"
+                Key = $"{(int)mediaType.Value}\u001f{normalizedTitle}\u001f{normalizedAuthor}\u001f{isbn}\u001f{asin}\u001f{providerIdEvidence?.ProviderId}"
             };
 
             return true;
+        }
+
+        private static bool TryGetProviderIdEvidence(Dictionary<string, List<string>> tags, out ProviderIdEvidence providerIdEvidence)
+        {
+            providerIdEvidence = null;
+            if (tags == null || tags.Count == 0)
+            {
+                return true;
+            }
+
+            var evidence = new List<ProviderIdEvidence>();
+            foreach (var key in CanonicalProviderIdTagNames)
+            {
+                if (!TryGetSingleTagValue(tags, key, out var value, out var ambiguous))
+                {
+                    continue;
+                }
+
+                if (ambiguous || !TryCanonicalizeProviderId(value, null, out var providerId))
+                {
+                    return false;
+                }
+
+                evidence.Add(new ProviderIdEvidence(providerId, false));
+            }
+
+            foreach (var key in GoodreadsWorkIdTagNames)
+            {
+                if (!TryGetSingleTagValue(tags, key, out var value, out var ambiguous))
+                {
+                    continue;
+                }
+
+                if (ambiguous || !TryCanonicalizeProviderId(value, "gr", out var providerId))
+                {
+                    return false;
+                }
+
+                evidence.Add(new ProviderIdEvidence(providerId, false));
+            }
+
+            foreach (var key in GoodreadsEditionIdTagNames)
+            {
+                if (!TryGetSingleTagValue(tags, key, out var value, out var ambiguous))
+                {
+                    continue;
+                }
+
+                if (ambiguous || !TryCanonicalizeProviderId(value, "gr", out var providerId))
+                {
+                    return false;
+                }
+
+                evidence.Add(new ProviderIdEvidence(providerId, true));
+            }
+
+            var distinctIds = evidence
+                .Select(item => item.ProviderId)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (distinctIds.Count == 0)
+            {
+                return true;
+            }
+
+            if (distinctIds.Count != 1)
+            {
+                return false;
+            }
+
+            providerIdEvidence = new ProviderIdEvidence(
+                distinctIds[0],
+                evidence.Any(item => item.GoodreadsEditionLookup));
+            return true;
+        }
+
+        private static bool TryGetSingleTagValue(Dictionary<string, List<string>> tags, string key, out string value, out bool ambiguous)
+        {
+            value = null;
+            ambiguous = false;
+            var entry = tags.FirstOrDefault(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase));
+            if (entry.Key == null)
+            {
+                return false;
+            }
+
+            var values = (entry.Value ?? new List<string>())
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => item.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (values.Count == 0)
+            {
+                return false;
+            }
+
+            if (values.Count != 1)
+            {
+                ambiguous = true;
+                return true;
+            }
+
+            value = values[0];
+            return true;
+        }
+
+        private static bool TryCanonicalizeProviderId(string value, string defaultPrefix, out string providerId)
+        {
+            providerId = null;
+            try
+            {
+                providerId = ProviderIdHelper.Canonicalize(value, defaultPrefix);
+                return !string.IsNullOrWhiteSpace(providerId);
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
         }
 
         private static string GetSingleTagValue(Dictionary<string, List<string>> tags, params string[] keys)
@@ -229,7 +401,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             }
 
             if (query.NormalizedTitle == null && query.NormalizedAuthor == null &&
-                query.Isbn == null && query.Asin == null)
+                query.Isbn == null && query.Asin == null && query.ProviderId == null)
             {
                 return false;
             }
@@ -239,7 +411,19 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 return false;
             }
 
-            return query.Asin == null || BookHasAsin(book, query.Asin);
+            if (query.Asin != null && !BookHasAsin(book, query.Asin))
+            {
+                return false;
+            }
+
+            if (query.ProviderId != null &&
+                !BookIdentity.GetStableWorkProviderIdentityTokens(book).Contains(query.ProviderId) &&
+                !BookIdentity.GetEditionProviderIdentityTokens(book).Contains(query.ProviderId))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private static bool BookHasIsbn(Book book, string isbn)
@@ -401,8 +585,22 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             public string NormalizedAuthor { get; set; }
             public string Isbn { get; set; }
             public string Asin { get; set; }
+            public string ProviderId { get; set; }
+            public bool GoodreadsEditionLookup { get; set; }
             public BookMediaType MediaType { get; set; }
             public string Key { get; set; }
+        }
+
+        private sealed class ProviderIdEvidence
+        {
+            public ProviderIdEvidence(string providerId, bool goodreadsEditionLookup)
+            {
+                ProviderId = providerId;
+                GoodreadsEditionLookup = goodreadsEditionLookup;
+            }
+
+            public string ProviderId { get; }
+            public bool GoodreadsEditionLookup { get; }
         }
 
         private sealed class CatalogSearchQueryItem
