@@ -264,6 +264,34 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_reject_a_legacy_table_alias_after_its_bookshelf_rename_migration()
+        {
+            DowngradeSourceToMigration22();
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = "ALTER TABLE Blocklist RENAME TO Blacklist;";
+                command.ExecuteNonQuery();
+            }
+
+            var before = File.ReadAllBytes(_sourcePath);
+            var exception = Assert.Throws<InvalidDataException>(() => new MigrationController(
+                LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).MigrateBookshelf(
+                    _sourceConnectionString,
+                    new MigrationContext(MigrationType.Main),
+                    DatabaseType.SQLite,
+                    previewOnly: false));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain("unknown: Blacklist"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+            });
+        }
+
+        [Test]
         public void should_reject_a_bookshelf_schema_newer_than_the_embedded_migration_chain()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))

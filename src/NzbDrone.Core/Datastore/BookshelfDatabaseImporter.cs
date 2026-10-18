@@ -28,6 +28,12 @@ namespace NzbDrone.Core.Datastore
             "ScheduledTasks", "Series", "SeriesBookLink", "Tags", "Users", "VersionInfo"
         };
 
+        private static readonly HashSet<string> HistoricalSourceTableAliases = new(StringComparer.Ordinal)
+        {
+            // Bookshelf migration 14 renames this table to Blocklist.
+            "Blacklist"
+        };
+
         private static readonly string[] TargetTablesToClear =
         {
             "ProviderAliasIndex", "AuthorSeries", "SeriesBookLink", "EditionNarratorLink", "BookNarratorLink",
@@ -152,10 +158,9 @@ namespace NzbDrone.Core.Datastore
                     $"BookshelfNG schema version {version} is outside the bundled migration chain (1-{SupportedSourceMigration}). The source database was not changed.");
             }
 
-            // Migration 14 renames this table. Accept it only on snapshots whose recorded
-            // migration will perform that rename; later source schemas must use Blocklist.
+            // Accept a historical alias only when the bundled migration chain will transform it.
             var historicalTables = version < 14
-                ? SupportedSourceTables.Append("Blacklist")
+                ? SupportedSourceTables.Concat(HistoricalSourceTableAliases)
                 : SupportedSourceTables;
             var unknown = tables.Except(historicalTables, StringComparer.Ordinal).OrderBy(x => x).ToArray();
             if (unknown.Length > 0)
