@@ -200,7 +200,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 ProviderId = providerIdEvidence?.ProviderId,
                 GoodreadsEditionLookup = providerIdEvidence?.GoodreadsEditionLookup == true,
                 MediaType = mediaType.Value,
-                Key = $"{(int)mediaType.Value}\u001f{normalizedTitle}\u001f{normalizedAuthor}\u001f{isbn}\u001f{asin}\u001f{providerIdEvidence?.ProviderId}"
+                Key = $"{(int)mediaType.Value}\u001f{normalizedTitle}\u001f{normalizedAuthor}\u001f{isbn}\u001f{asin}\u001f{providerIdEvidence?.ProviderId}\u001f{providerIdEvidence?.GoodreadsEditionLookup}"
             };
 
             return true;
