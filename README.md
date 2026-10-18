@@ -70,12 +70,17 @@ validate older schemas, PostgreSQL, installers, or full feature parity.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 contains the older SQLite and one-schema PostgreSQL migration work, native
 Hardcover identity handling, and a separately configured BookOrbit Book Dock
-destination. Exact-head run [39160998428](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998428)
-on `18d04722` passed Linux, macOS, and Windows builds and test suites,
-PostgreSQL migrations, release-note validation, and native-runner receipt
-reconciliation. CodeQL [39160994259](https://github.com/snapetech-org/chaptarrng/actions/runs/39160994259), dependency review [39160998450](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998450), and security analysis [39160998456](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998456) also passed on this head. Validation receipts record 4,345 .NET cases per OS and four PostgreSQL smoke cases. This is candidate
-CI evidence only; operator-data acceptance remains open. Keep the
-release freeze in place. See the [PostgreSQL migration candidate
+destination. Exact-head run [39167162488](https://github.com/snapetech-org/chaptarrng/actions/runs/39167162488)
+on `2334625b4ca57c22c39f09d6780830e4e4f1e79c` passed Linux, macOS, and
+Windows builds/tests, PostgreSQL migrations, release-note validation, and
+native-runner receipt reconciliation. CodeQL, dependency review, and
+dependency/secret scans also passed on this head. The candidate Linux
+artifact converted and restored a populated synthetic database built with the
+released BookshelfNG `.71` binary, and converted it again during ordinary
+startup in a network-isolated sandbox. This is candidate evidence only, not
+operator-data acceptance. Details are in the
+[migration fixture evidence](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
+Keep the release freeze in place. See the [PostgreSQL migration candidate
 notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
 Books with no recorded format remain in both ChaptarrNG catalogs, unmonitored,

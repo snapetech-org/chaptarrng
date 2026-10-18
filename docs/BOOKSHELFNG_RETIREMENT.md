@@ -40,11 +40,16 @@ detailed feature inventory remains in the
   [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131). It adds
   older SQLite support, one migration-158 PostgreSQL source schema, native
   Hardcover identity handling, and BookOrbit Book Dock as a separate
-  destination. Exact-head run [39160998428](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998428)
-  on `18d04722` passed Linux, macOS, and Windows builds and test suites,
-  PostgreSQL migrations, release-note validation, and native-runner receipt
-  reconciliation. CodeQL [39160994259](https://github.com/snapetech-org/chaptarrng/actions/runs/39160994259), dependency review [39160998450](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998450), and security analysis [39160998456](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998456) passed on the same head. This is candidate CI evidence only; the candidate remains
-  unsupported for operator data.
+  destination. Exact-head run [39167162488](https://github.com/snapetech-org/chaptarrng/actions/runs/39167162488)
+  on `2334625b4ca57c22c39f09d6780830e4e4f1e79c` passed Linux, macOS, and
+  Windows builds/tests, PostgreSQL migrations, release-note validation, and
+  native-runner receipt reconciliation. CodeQL, dependency review, and
+  dependency/secret scans also passed on this head. The candidate Linux
+  artifact passed preview, apply, rollback, fail-closed cases, and ordinary
+  startup conversion with a synthetic populated migration-158 database built
+  by the published BookshelfNG `.71` binary. This remains synthetic candidate
+  evidence, not operator-data acceptance; see the
+  [detailed fixture report](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 - This work branch also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs follow the active mode: native Hardcover mode requires `HARDCOVER=true` without `HARDCOVER_NATIVE=false` during preview and conversion; otherwise they retain Goodreads identity. The preview report names the selected interpretation. These source-only provider and helper changes are not in .977; PR #131 remains draft and converted-data acceptance remains open.
 - BookshelfNG's BookLore notification settings and `OnReleaseImport` trigger are copied unchanged into ChaptarrNG, and remain in the retained source backup. A separate BookOrbit Book Dock destination is candidate work in this branch; it does not rewrite BookLore URLs or credentials. Mock tests cover login, Book Dock permission, streamed uploads, redirects, rejected credentials/files, and partial-batch failure. An isolated BookOrbit v3.2.0 live API check passed setup, login, permission check, EPUB upload/listing, and unsupported-file rejection. That does not verify downstream processing of a production book or a real-user handoff. The integration is not in `.977`, and the broader retirement gate remains open.
 - BookshelfNG `0.4.21.71` is published as the final source release.

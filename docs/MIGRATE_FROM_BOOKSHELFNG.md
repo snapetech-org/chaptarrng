@@ -21,11 +21,15 @@
 > release freeze.
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 > contains the migration candidate. Exact-head run
-> [39160998428](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998428)
-> on `18d04722` passed Linux, macOS, and Windows builds and test suites,
-> PostgreSQL migrations, release-note validation, and native-runner receipt
-> reconciliation. CodeQL [39160994259](https://github.com/snapetech-org/chaptarrng/actions/runs/39160994259), dependency review [39160998450](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998450), and security analysis [39160998456](https://github.com/snapetech-org/chaptarrng/actions/runs/39160998456) passed on the same head. This is candidate CI evidence only; it remains unsupported for
-> operator data.
+> [39167162488](https://github.com/snapetech-org/chaptarrng/actions/runs/39167162488)
+> on `2334625b4ca57c22c39f09d6780830e4e4f1e79c` passed Linux, macOS, and
+> Windows builds/tests, PostgreSQL migrations, release-note validation, and
+> native-runner receipt reconciliation. CodeQL, dependency review, and
+> dependency/secret scans also passed on that head. Its Linux artifact passed
+> synthetic migration, rollback, fail-closed, and ordinary-startup checks
+> against a database created by the released BookshelfNG `.71` binary. This is
+> candidate evidence only and does not support operator cutover; see the
+> [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 > PostgreSQL source conversion remains unsupported in published releases.
 > Pinned images,
 > native packages, and updater channels need separate upgrade steps; database
