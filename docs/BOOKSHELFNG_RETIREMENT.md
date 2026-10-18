@@ -58,6 +58,14 @@ detailed feature inventory remains in the
 
 ## Database migration contract
 
+**Current operator decision: preview only.** The published `.977` converter
+can assess the exact migration-158 SQLite schema without changing the source,
+but applying migration or starting ChaptarrNG against BookshelfNG appdata is
+not approved until data, parity, rollback, and channel acceptance close.
+Normal ChaptarrNG startup automatically converts a supported source database,
+so keep BookshelfNG in service and do not point a ChaptarrNG install at its
+appdata yet.
+
 The published ChaptarrNG `v0.9.977` converter accepts the BookshelfNG
 migration-158 SQLite database and bundles the BookshelfNG SQLite migration
 chain. It upgrades a disposable copy before import and retains the untouched

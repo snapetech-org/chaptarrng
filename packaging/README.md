@@ -8,6 +8,11 @@ and filesystem integration. See the
 [ChaptarrNG v0.9.977 release](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 for the published archives, checksums, and source RPMs.
 
+The old-identity package recipes remain disabled candidates. Do not install a
+bridge package or point ChaptarrNG at BookshelfNG appdata until migration,
+rollback, feature-parity, and channel acceptance gates close. Normal startup
+can convert a supported BookshelfNG database automatically.
+
 For current BookshelfNG migration and legacy-channel acceptance status, see
 [BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
 

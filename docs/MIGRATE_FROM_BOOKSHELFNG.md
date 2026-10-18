@@ -3,11 +3,13 @@
 > **Release status (2026-10-18).** ChaptarrNG `v0.9.977` is still the latest
 > published release. Releases are frozen until the full BookshelfNG retirement
 > acceptance gates close; a source change or version bump is not a release.
-> Use the standard ChaptarrNG `v0.9.977` release for the published BookshelfNG
-> `0.4.21.71` release. That
-> BookshelfNG release includes an optional source-side helper that creates a
-> full appdata archive before invoking ChaptarrNG's preview, apply, and
-> rollback commands; see the
+> The published `.977` converter supports read-only preview for BookshelfNG
+> `0.4.21.71` with a migration-158 SQLite database. Migration is not approved
+> for production cutover yet: do not apply it, install a bridge package, or
+> start ChaptarrNG against BookshelfNG appdata. Keep BookshelfNG in service
+> until the acceptance gates close. The `.71` source helper can archive
+> appdata and invoke migration commands, but its availability does not grant
+> cutover approval; see the
 > [BookshelfNG operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md).
 > For an immutable Docker deployment, use
 > `ghcr.io/snapetech-org/chaptarrng:0.9.977`.
@@ -32,10 +34,11 @@
 > See [BookshelfNG retirement status](BOOKSHELFNG_RETIREMENT.md) for live
 > package/channel state and the remaining acceptance gates.
 
-Fresh and migrated installations use the same standard ChaptarrNG application
-and container build. The `Chaptarr` executable provides an
-explicit preview and apply command. Normal startup also detects and converts a
-supported BookshelfNG database automatically.
+An approved future migration will use the standard ChaptarrNG application and
+container build. The `Chaptarr` executable provides explicit preview and apply
+commands, and normal startup also detects and converts a supported BookshelfNG
+database automatically. Do not run normal ChaptarrNG startup against
+BookshelfNG appdata while cutover remains unapproved.
 
 Migration selects one supported database per appdata directory. If both
 `readarr.db` and `audioarr.db` are non-empty in the same directory, the current
@@ -172,7 +175,7 @@ the chosen mode against expected behavior on converted data; do not treat it as
 an exact recreation of BookshelfNG matching. This source change is not in
 `.977` while the release freeze remains active.
 
-## Preview and apply
+## Read-only preview and gated apply path
 
 Stop BookshelfNG first and make an independent copy of the entire data
 directory. Run the preview with the **same regular ChaptarrNG release** that
@@ -231,8 +234,12 @@ choices. It also rejects map entries for books that are no longer ambiguous,
 including when the current source needs no map; remove stale entries or use the
 updated review file, then preview again instead of guessing.
 
-After preview succeeds, either let normal startup apply conversion or run the
-explicit apply command once:
+Once the retirement gates close and apply is approved, either let normal
+startup apply conversion or run the explicit apply command once:
+
+> **Do not run this apply command or normal startup against BookshelfNG data
+> during the current release freeze.** The migration and rollback commands are
+> implemented, but operator-data, parity, and channel acceptance remain open.
 
 ```sh
 docker run --rm \
@@ -303,6 +310,11 @@ ChaptarrNG database and preserves the failed restore candidate for inspection.
 
 ## Unraid
 
+> **Not approved for cutover yet.** BookshelfNG Unraid PR #5 contains a draft
+> template handoff; its Community Applications upgrade and rollback flow has
+> not passed acceptance. Do not change the template or start ChaptarrNG against
+> the BookshelfNG appdata until the retirement gates close.
+
 Stop BookshelfNG and back up the full appdata directory. In **Apps > Previous
 Apps**, apply the updated BookshelfNG template. It points to
 `ghcr.io/snapetech-org/chaptarrng:latest`, the same image used by fresh ChaptarrNG
@@ -322,6 +334,9 @@ BookshelfNG image. Do not start BookshelfNG against a ChaptarrNG-converted
 database.
 
 ## Docker Compose
+
+> **Not approved for cutover yet.** Do not change the image or start ChaptarrNG
+> against BookshelfNG appdata until migration and rollback acceptance close.
 
 Change the image to the standard ChaptarrNG tag and retain the old host paths,
 container mount targets, and port mapping. For an installation that used the
@@ -507,10 +522,11 @@ migration checks passing, but the fix is not in the published release.
 Populated synthetic v22 coverage exercises conversion, rollback, and
 non-mutating preview. This does not establish older-schema behavior on real
 operator data or PostgreSQL source conversion. The PostgreSQL candidate remains unavailable to operators and unpublished; see the [candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
-Supported SQLite databases can be migrated by normal ChaptarrNG startup or
-with the explicit preview/apply commands above. Both paths retain the
-untouched BookshelfNG source backup; rollback is available while the original
-backup remains intact.
+The published SQLite converter can preview a migration-158 source, but apply
+is not approved during the current release freeze. Do not start normal
+ChaptarrNG against BookshelfNG appdata: startup automatically converts a
+supported source database. Keep BookshelfNG in service until the acceptance
+gates close and a supported cutover is announced.
 
 The public ChaptarrNG `v0.9.977` release contains the converter and standalone
 archives. The version-1-to-13 table-alias fix passed hosted validation on

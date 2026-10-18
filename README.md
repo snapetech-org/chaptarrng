@@ -41,6 +41,11 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+Until those gates close, the published converter is for read-only preview
+only. Do not apply a conversion or start ChaptarrNG against BookshelfNG's
+appdata: normal ChaptarrNG startup automatically converts a supported source
+database. Keep BookshelfNG in service.
+
 The migration handles one source database per appdata directory. It stops if
 both `readarr.db` and `audioarr.db` are populated, rather than choosing or
 merging them. Migrate independent BookshelfNG installations separately. To
