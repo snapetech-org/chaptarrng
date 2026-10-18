@@ -67,8 +67,13 @@ synthetic migration-1 rollback coverage into `main`, and its hosted migration
 checks passed on Linux, macOS, Windows, and PostgreSQL. Neither the source fix
 nor synthetic fixtures establish behavior on real older-schema operator data
 or every historical release. Schema 159 is rejected without changing the
-source. PostgreSQL source databases and two populated BookshelfNG databases
-remain unsupported by published ChaptarrNG releases. A PostgreSQL
+source. PostgreSQL source databases and merging two populated BookshelfNG
+databases from one appdata directory remain unsupported by published
+ChaptarrNG releases. ChaptarrNG refuses multiple non-empty legacy candidates
+instead of guessing or merging. Independently operated BookshelfNG instances
+can be migrated one at a time with separate appdata directories; co-located
+databases need their ownership and settings resolved before separate copies can
+be migrated. A PostgreSQL
 migration-158 candidate is under review in this work branch; it does not
 support older PostgreSQL schemas. The candidate remains unaccepted for operator data; see the [PostgreSQL migration notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). A separate private populated migration-158 SQLite snapshot completed preview, apply, and rollback with the public .977 image on Linux/amd64; the source and converted backups passed logical-content, integrity, and foreign-key checks. This covers one populated SQLite round trip, not older schemas, PostgreSQL, human review of ambiguous formats, or installation-channel handoff; details are in the [operator guide](MIGRATE_FROM_BOOKSHELFNG.md).
 The SQLite path stages a native database, accounts for source rows, checks
@@ -113,8 +118,9 @@ For a source earlier than migration 14, first update BookshelfNG to its final
 `0.4.21.71` release so it can bring the database to migration 158. The `.977`
 converter does not include the later `main` fix, and no follow-up release is
 available while the release freeze is active. The published `.977` converter
-does not accept PostgreSQL databases or two populated BookshelfNG databases
-at once. The separate work-branch PostgreSQL candidate supports only one
+does not accept PostgreSQL databases or merge two populated BookshelfNG
+databases from one appdata directory. Independently operated instances can be
+migrated separately with isolated appdata directories. The separate work-branch PostgreSQL candidate supports only one
 migration-158 source schema and must not be used by operators until its
 acceptance gates close. The
 BookshelfNG helper archives appdata, but

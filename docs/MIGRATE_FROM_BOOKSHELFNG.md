@@ -35,6 +35,14 @@ and container build. The `Chaptarr` executable provides an
 explicit preview and apply command. Normal startup also detects and converts a
 supported BookshelfNG database automatically.
 
+Migration selects one supported database per appdata directory. If both
+`readarr.db` and `audioarr.db` are non-empty in the same directory, the current
+source resolver stops with an ambiguity error; migration does not merge them
+or pick one silently. Keep independently operated installations in separate
+appdata directories and migrate each one separately. If both files belong to
+data stored together, preserve the original directory and resolve database
+ownership and shared settings before making separate working copies.
+
 The published `v0.9.977` converter supports BookshelfNG migration-158 SQLite
 databases and bundles the BookshelfNG source migration chain. It upgrades a
 recognized source schema on a disposable copy, keeps the untouched snapshot
