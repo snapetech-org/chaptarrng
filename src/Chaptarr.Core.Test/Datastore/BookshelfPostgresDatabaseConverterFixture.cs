@@ -282,7 +282,7 @@ namespace Chaptarr.Core.Test.Datastore
                 })
                 .Configure<SelectingProcessorAccessorOptions>(options => options.ProcessorId = "PostgreSQL")
                 .Configure<SelectingGeneratorAccessorOptions>(options => options.GeneratorId = "PostgreSQL");
-            migrationServices.AddScoped<IConventionSet>(_ => new DefaultConventionSet(_sourceSchema));
+            migrationServices.AddScoped<IConventionSet>(_ => new DefaultConventionSet(_sourceSchema, null));
             using var serviceProvider = migrationServices.BuildServiceProvider();
 
             using var scope = serviceProvider.CreateScope();
