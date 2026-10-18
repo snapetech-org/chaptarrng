@@ -1845,7 +1845,8 @@ namespace NzbDrone.Core.Datastore
             {
                 var names = insertValues.Select(x => Quote(x.Key)).ToArray();
                 var parameters = insertValues.Select((_, index) => "@p" + index.ToString(CultureInfo.InvariantCulture)).ToArray();
-                command.CommandText = $"INSERT INTO {Quote(table)} ({string.Join(", ", names)}) VALUES ({string.Join(", ", parameters)});";
+                var identityOverride = target is NpgsqlConnection ? " OVERRIDING SYSTEM VALUE" : string.Empty;
+                command.CommandText = $"INSERT INTO {Quote(table)} ({string.Join(", ", names)}){identityOverride} VALUES ({string.Join(", ", parameters)});";
                 for (var i = 0; i < insertValues.Length; i++)
                 {
                     var column = targetColumns[insertValues[i].Key];
