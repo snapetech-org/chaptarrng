@@ -55,7 +55,7 @@ for input in invalid_version invalid_sha invalid_digest invalid_repository; do
   fi
 done
 
-if rg -q 'CHAPTARRNG_AUTOMATION_APP_PRIVATE_KEY|GH_TOKEN|token' "$work/payload.json"; then
+if grep -Eq 'CHAPTARRNG_AUTOMATION_APP_PRIVATE_KEY|GH_TOKEN|token' "$work/payload.json"; then
   echo 'The dispatch payload contains credential material.' >&2
   exit 1
 fi
