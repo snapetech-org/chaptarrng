@@ -45,7 +45,7 @@ namespace NzbDrone.Core.Datastore
             "ExtraFiles", "OtherFiles", "MetadataFiles", "BookFiles", "Editions", "Books", "Authors", "Series",
             "Narrators", "NarratorMetadata", "ImportListExclusions", "ImportListStatus", "ImportLists", "Indexers",
             "IndexerStatus", "Notifications", "NotificationStatus", "DownloadClients", "DownloadClientStatus", "Metadata",
-            "MetadataProfiles", "NamingConfig", "QualityProfiles", "QualityDefinitions", "CustomFormats", "CustomFilters",
+            "MetadataProfiles", "QualityProfiles", "QualityDefinitions", "CustomFormats", "CustomFilters",
             "DelayProfiles", "ReleaseProfiles", "RemotePathMappings", "RootFolders", "Tags", "Users", "History",
             "DownloadHistory", "Blocklist", "PendingReleases", "ScheduledTasks", "Commands", "Config"
         };
@@ -1213,15 +1213,28 @@ namespace NzbDrone.Core.Datastore
             DbTransaction transaction,
             BookshelfDatabaseImportReport report)
         {
-            var sourceCount = CountRows(source, "NamingConfig");
+            var sourceRows = ReadRows(source, "NamingConfig").ToList();
+            var sourceCount = sourceRows.Count;
             var targetColumns = GetColumns(target, "NamingConfig");
-            foreach (var row in ReadRows(source, "NamingConfig"))
+
+            // The migrated Chaptarr database already has a valid default naming row.
+            // BookshelfNG can have an empty NamingConfig table when the operator has
+            // never changed its defaults, so keep the target default in that case.
+            if (sourceCount > 0)
             {
-                var values = Intersect(row, targetColumns);
-                SetIfPresent(values, "MultiEpisodeStyle", 0);
-                SetIfPresent(values, "AuthorFolderFormat", GetString(row, "AuthorFolderFormat") ?? "{Author Name}");
-                SetIfPresent(values, "StandardBookFormat", GetString(row, "StandardBookFormat") ?? "{Book Title}");
-                InsertRow(target, transaction, "NamingConfig", targetColumns, values);
+                using var clear = target.CreateCommand();
+                clear.Transaction = transaction;
+                clear.CommandText = $"DELETE FROM {Quote("NamingConfig")};";
+                clear.ExecuteNonQuery();
+
+                foreach (var row in sourceRows)
+                {
+                    var values = Intersect(row, targetColumns);
+                    SetIfPresent(values, "MultiEpisodeStyle", 0);
+                    SetIfPresent(values, "AuthorFolderFormat", GetString(row, "AuthorFolderFormat") ?? "{Author Name}");
+                    SetIfPresent(values, "StandardBookFormat", GetString(row, "StandardBookFormat") ?? "{Book Title}");
+                    InsertRow(target, transaction, "NamingConfig", targetColumns, values);
+                }
             }
 
             report.RecordTable("NamingConfig", sourceCount, 0, sourceCount, 0, 0,

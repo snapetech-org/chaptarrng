@@ -100,6 +100,36 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_replace_target_naming_defaults_when_bookshelf_has_saved_settings()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO NamingConfig (Id, ReplaceIllegalCharacters, AuthorFolderFormat, RenameBooks, StandardBookFormat, ColonReplacementFormat)
+                    VALUES (5, 0, '{Author NameLastFirst}', 1, '{Book Title} custom', 4);";
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM NamingConfig;"), Is.EqualTo(1),
+                    "saved BookshelfNG settings must replace the seeded Chaptarr defaults");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT MultiEpisodeStyle FROM NamingConfig WHERE Id = 5;"), Is.Zero);
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT ReplaceIllegalCharacters FROM NamingConfig WHERE Id = 5;"), Is.Zero);
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT RenameBooks FROM NamingConfig WHERE Id = 5;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT AuthorFolderFormat FROM NamingConfig WHERE Id = 5;"), Is.EqualTo("{Author NameLastFirst}"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT StandardBookFormat FROM NamingConfig WHERE Id = 5;"), Is.EqualTo("{Book Title} custom"));
+            });
+        }
+
+        [Test]
         public void should_convert_a_populated_v158_bookshelf_database_and_preserve_media_relationships()
         {
             new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
@@ -115,6 +145,8 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(DatabaseLineageGuard.Detect(ConnectionStringFor(backupPath), DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;").Length, Is.Zero);
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM NamingConfig WHERE MultiEpisodeStyle = 0 AND LENGTH(StandardBookFormat) > 0 AND LENGTH(AuthorFolderFormat) > 0;"), Is.EqualTo(1),
+                    "an empty BookshelfNG naming table must retain Chaptarr's migrated defaults");
                 Assert.That(QueryScalar<string>(backupPath, "SELECT ForeignBookId FROM Books WHERE Id = 30;"), Is.EqualTo("hardcover:book-30"));
             });
 
