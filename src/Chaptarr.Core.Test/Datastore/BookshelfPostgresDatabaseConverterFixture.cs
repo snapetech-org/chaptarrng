@@ -337,7 +337,7 @@ namespace Chaptarr.Core.Test.Datastore
                 VALUES (1, 'Audio metadata', 0, FALSE, FALSE, FALSE, FALSE, '[]', '3|audible', 'The Fixture Series');
                 INSERT INTO ""RootFolders"" (""Id"", ""Path"", ""Name"", ""DefaultMetadataProfileId"", ""DefaultQualityProfileId"", ""DefaultMonitorOption"", ""DefaultTags"", ""IsCalibreLibrary"", ""CalibreSettings"", ""DefaultNewItemMonitorOption"") OVERRIDING SYSTEM VALUE
                 VALUES (1, '/library', 'Library', 1, 1, 0, '[]', FALSE, NULL, 2);
-                INSERT INTO ""Config"" (""Id"", ""Key"", ""Value"") OVERRIDING SYSTEM VALUE VALUES (2, 'FixtureSetting', 'preserved');
+                INSERT INTO ""Config"" (""Id"", ""Key"", ""Value"") OVERRIDING SYSTEM VALUE VALUES (3, 'FixtureSetting', 'preserved');
                 INSERT INTO ""AuthorMetadata"" (""Id"", ""ForeignAuthorId"", ""TitleSlug"", ""Name"", ""Overview"", ""Status"", ""Images"", ""Aliases"", ""SortName"", ""NameLastFirst"", ""SortNameLastFirst"") OVERRIDING SYSTEM VALUE
                 VALUES (10, '10', 'fixture-author', 'Fixture Author', 'Fixture overview', 0, '[]', '[]', 'Fixture Author', 'Author, Fixture', 'Author, Fixture');
                 INSERT INTO ""Authors"" (""Id"", ""CleanName"", ""Path"", ""Monitored"", ""QualityProfileId"", ""Tags"", ""Added"", ""MetadataProfileId"", ""AuthorMetadataId"", ""MonitorNewItems"", ""EbookPath"", ""AudiobookPath"", ""EbookQualityProfileId"", ""AudiobookQualityProfileId"", ""EbookMetadataProfileId"", ""AudiobookMetadataProfileId"") OVERRIDING SYSTEM VALUE
