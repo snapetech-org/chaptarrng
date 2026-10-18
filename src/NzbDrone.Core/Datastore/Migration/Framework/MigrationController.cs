@@ -236,6 +236,9 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             // FluentMigrator processor/generator ids are case-sensitive and use "SQLite"/"PostgreSQL"
             // (older versions used "sqlite"/"postgres").
             var db = databaseType == DatabaseType.SQLite ? "SQLite" : "PostgreSQL";
+            var processorId = databaseType == DatabaseType.PostgreSQL
+                ? SchemaScopedPostgresProcessor.ProcessorId
+                : db;
             var defaultSchema = databaseType == DatabaseType.PostgreSQL
                 ? GetPostgresCurrentSchema(connectionString)
                 : null;
@@ -273,7 +276,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 })
                 .Configure<SelectingProcessorAccessorOptions>(cfg =>
                 {
-                    cfg.ProcessorId = db;
+                    cfg.ProcessorId = processorId;
                 })
                 .Configure<SelectingGeneratorAccessorOptions>(cfg =>
                 {
@@ -283,6 +286,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             if (databaseType == DatabaseType.PostgreSQL)
             {
                 migrationServices.AddSingleton<IConventionSet>(new DefaultConventionSet(defaultSchema, null));
+                SchemaScopedPostgresProcessor.Register(migrationServices, defaultSchema);
             }
 
             serviceProvider = migrationServices.BuildServiceProvider();

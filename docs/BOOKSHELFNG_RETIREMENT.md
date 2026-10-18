@@ -38,12 +38,19 @@ detailed feature inventory remains in the
   not in `.977`.
 - A separate work-branch candidate adds PostgreSQL migration for one
   migration-158 source schema, with staged promotion, a retained backup schema,
-  preview, and rollback. The exact hosted run on `0211ed91` failed its populated
-  preview/convert/restore fixture when the migration repair hook queried
-  `VersionInfo` outside the active staging schema. Commit `ef519cd7` scopes the
-  preflight to the active schema; its exact hosted rerun is queued. The
-  candidate still has no operator-data acceptance and is not supported by a
-  published release.
+  preview, and rollback. The exact hosted run on `e67f28ed` failed its populated
+  preview/convert/restore fixture because migration 10 checked `public.Editions`
+  and skipped the staging `Subtitle` column. Commit `8f0bbc29` adds the column
+  through the active PostgreSQL search path and verifies the runner's
+  version-table schema. The exact run on `8f0bbc29` then failed to compile
+  because `IMigrationRunner` has no `VersionLoader` property. Commit `50f58223`
+  reads the registered `IVersionTableMetaData` service instead; its PostgreSQL
+  fixture then failed at migration 23 because an unqualified schema check
+  examined `public.NamingConfig` and skipped the staging
+  `EbookRenameBooks` column. The working tree now routes PostgreSQL's
+  unqualified schema queries through the active schema and adds a focused
+  regression test; exact-head CI is still required. The candidate has no
+  operator-data acceptance and is not supported by a published release.
 - This work branch also ports the native Hardcover metadata client and routes
   `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps
   a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting;
@@ -51,9 +58,10 @@ detailed feature inventory remains in the
   source IDs follow the active mode: native Hardcover mode requires
   `HARDCOVER=true` without `HARDCOVER_NATIVE=false` during preview and
   conversion; otherwise they retain Goodreads identity. The preview report
-  names the selected interpretation. Its exact hosted validation is queued
-  with the PostgreSQL fix; converted-data acceptance remains open, and this
-  work is not in `.977`.
+  names the selected interpretation. The exact hosted run on `50f58223` failed
+  its PostgreSQL migration fixture; the schema-query correction is in the
+  working tree and awaits exact-head CI. Converted-data acceptance remains
+  open, and this work is not in `.977`.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
   setting. ChaptarrNG has equivalent new-author path initialization in
@@ -77,9 +85,16 @@ or every historical release. Schema 159 is rejected without changing the
 source. PostgreSQL source databases and two populated BookshelfNG databases
 remain unsupported by published ChaptarrNG releases. A PostgreSQL
 migration-158 candidate is under review in this work branch; it does not
-support older PostgreSQL schemas. The hosted run on `0211ed91` failed in its
-schema-aware version preflight; the fix is on `ef519cd7`, with an exact hosted
-rerun queued. Neither source-only fixtures nor an empty image-switch
+support older PostgreSQL schemas. The hosted run on `e67f28ed` failed because
+migration 10 checked the public schema instead of the active staging schema.
+Commit `8f0bbc29` corrects the PostgreSQL column migration. Its exact run then
+failed to compile because `IMigrationRunner` has no `VersionLoader` property.
+Commit `50f58223` reads the registered `IVersionTableMetaData` service instead;
+its fixture then failed at migration 23 after another unqualified schema check
+looked in `public.NamingConfig` and skipped `EbookRenameBooks` in staging. The
+working tree now routes unqualified PostgreSQL schema queries to the active
+schema and adds a focused regression test; exact-head CI remains necessary.
+Neither source-only fixtures nor an empty image-switch
 rehearsal establishes behavior on populated operator data or every historical
 release.
 The SQLite path stages a native database, accounts for source rows, checks
@@ -88,8 +103,8 @@ does not modify the source. Apply and rollback are explicit operations, and
 normal startup can run the same converter when it finds a supported source
 database. The work-branch PostgreSQL candidate uses temporary schemas and
 transactional promotion, checks row accounting and both schema lineages, and
-retains the original tables in a backup schema. Its latest fix is awaiting
-exact-head hosted validation, and operator-data acceptance remains open.
+retains the original tables in a backup schema. The schema-query correction
+awaits exact-head hosted validation, and operator-data acceptance remains open.
 
 Some BookshelfNG books do not contain enough data to infer ebook versus
 audiobook. Preview writes a private review file. Operators can provide a
@@ -140,7 +155,7 @@ and follow the
 | AUR | `chaptarrng-bin 0.9.977-1` is published. | `bookshelfng-bin 0.4.21.71-1` remains on the BookshelfNG payload; the old identity has not been upgraded to ChaptarrNG. |
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped. |
 | Chocolatey | The `.977` package built and the hosted BookshelfNG-to-ChaptarrNG upgrade smoke passed, but Chocolatey returned HTTP 403 on publish; the live feed has no `chaptarrng` entry. | BookshelfNG `0.4.21.70` remains public. Its identity was not submitted because the bridge is disabled. |
-| Unraid | The ChaptarrNG template is maintained separately. | Existing BookshelfNG templates and containers still need an explicit image/template update. |
+| Unraid | The ChaptarrNG template is maintained separately. | A legacy-template handoff is drafted in BookshelfNG Unraid PR #5; its Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
 | Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, Flatpak, AppImage, Helm, standalone installers, third-party catalogs, pinned/offline installs, and manually managed services do not all have a tested identity-preserving bridge. |
 
 The compatibility package and image publishers are implemented behind the

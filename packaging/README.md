@@ -76,9 +76,18 @@ cover conversion and rollback; real older-schema operator data remains
 untested. Unknown or newer schemas, PostgreSQL sources, and two populated
 source databases fail closed in the published `.977` build.
 The separate PostgreSQL candidate is limited to one migration-158 schema. Its
-hosted run on `0211ed91` failed during the staged-target version preflight;
-commit `ef519cd7` scopes the check to the active schema and is queued for exact
-hosted validation. The candidate is not supported in a published build.
+exact hosted run on `e67f28ed` failed because migration 10 checked
+`public.Editions` instead of the active staging schema and skipped the staging
+`Subtitle` column. Commit `8f0bbc29` adds that column through PostgreSQL's
+active search path and verifies the runner's version-table schema. Its exact
+run failed to compile because `IMigrationRunner` has no `VersionLoader`
+property. Commit `50f58223` reads the registered `IVersionTableMetaData`
+service instead; its fixture then failed at migration 23 because an
+unqualified schema check examined `public.NamingConfig` and skipped
+`EbookRenameBooks` in staging. The working tree now routes unqualified
+PostgreSQL schema checks to the active schema and adds a focused regression
+test; exact-head CI is still required. The candidate is not supported in a
+published build.
 The importer keeps records with unresolved formats in both catalogs
 without monitoring, writes a private review file, retains the source backup,
 and supports validated rollback.

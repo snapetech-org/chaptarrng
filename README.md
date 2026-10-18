@@ -51,10 +51,17 @@ migration-1 fixture passed the hosted Linux, macOS, Windows, and PostgreSQL
 migration checks in PR #126 and are on `main`, but are not in public `.977`.
 This is not real-data evidence or proof for every historical release. The
 retirement branch adds a PostgreSQL converter candidate for one migration-158
-source schema. Its hosted run on `0211ed91` failed in the populated preview,
-conversion, and rollback fixture: a migration repair preflight queried
-`VersionInfo` outside the staging schema. Commit `ef519cd7` scopes that check
-to the active schema; its exact hosted rerun is queued. PostgreSQL and
+source schema. The exact hosted run on `e67f28ed` failed because migration 10
+checked `public.Editions` instead of the active staging schema and skipped the
+staging `Subtitle` column. Commit `8f0bbc29` adds the PostgreSQL column
+through the active search path and checks the runner's version-table schema.
+The exact run on `8f0bbc29` then failed to compile because `IMigrationRunner`
+has no `VersionLoader` property. Commit `50f58223` reads the registered
+`IVersionTableMetaData` service instead; its PostgreSQL fixture then failed at
+migration 23 because an unqualified schema check inspected `public.NamingConfig`
+and skipped `EbookRenameBooks` in staging. The working tree now routes
+unqualified PostgreSQL schema checks to the active schema and adds a focused
+regression test; exact-head CI is still required. PostgreSQL and
 multiple-source-database migration remain unsupported for operators until the
 candidate passes and the remaining acceptance gates close. The release and
 distribution workflows require `CHAPTARRNG_RELEASE_READY=true`; it is unset,
@@ -94,8 +101,9 @@ otherwise bare numeric IDs retain the Goodreads interpretation. Keep
 migration environment when the BookshelfNG source used native Hardcover mode.
 This is source-only: it has not passed hosted tests or converted-operator-data
 review, is not in `.977`, and is not ready for use during the release freeze.
-The exact hosted rerun includes this provider work but remains queued behind
-the prior candidate validation.
+The exact hosted run on `50f58223` failed its PostgreSQL migration fixture;
+the schema-query correction is now in the working tree and awaits exact-head
+CI. Converted-data checks remain open.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 

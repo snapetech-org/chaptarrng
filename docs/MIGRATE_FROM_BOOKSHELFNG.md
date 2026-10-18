@@ -17,10 +17,17 @@
 > `0.4.21.71` release first. A later source-only fix passed hosted checks on
 > `main`, but is not in `.977` and is not available to operators during the
 > release freeze.
-> The current retirement-branch PostgreSQL fixture failed on `0211ed91` when
-> a migration repair check queried `VersionInfo` outside the staged schema.
-> Commit `ef519cd7` scopes that check to the active schema; its exact hosted
-> rerun is queued, so PostgreSQL remains unsupported for operators.
+> The exact PostgreSQL fixture on `e67f28ed` failed because migration 10 checked
+> `public.Editions` and skipped the `Subtitle` column in its staging schema.
+> Commit `8f0bbc29` adds that PostgreSQL column through the active search path
+> and verifies the runner's version-table schema. Its exact run failed to
+> compile because `IMigrationRunner` has no `VersionLoader` property. Commit
+> `50f58223` reads the registered `IVersionTableMetaData` service instead; its
+> fixture then failed at migration 23 because an unqualified schema check
+> examined `public.NamingConfig` and skipped the staging `EbookRenameBooks`
+> column. The working tree adds a PostgreSQL schema-query wrapper and focused
+> regression test; exact-head CI is still required. PostgreSQL remains
+> unsupported for operators.
 > Pinned images,
 > native packages, and updater channels need separate upgrade steps; database
 > conversion alone does not update an installation channel.
@@ -54,9 +61,15 @@ BookshelfNG, do not switch to ChaptarrNG `.977`; the source fix is unreleased
 while the retirement freeze is active. Stop the service after it reaches an
 idle state, then run ChaptarrNG preview. The published `.977` converter does
 not support PostgreSQL BookshelfNG databases. This work branch contains an
-unreleased candidate for one PostgreSQL migration-158 schema. Its `0211ed91`
-hosted run failed during the staged-target preflight; the `ef519cd7` fix is
-queued for exact-head validation. Do not use it for operator data; see the
+unreleased candidate for one PostgreSQL migration-158 schema. Its exact run on
+`e67f28ed` failed because migration 10 checked `public.Editions` instead of the
+staging schema. The `8f0bbc29` column fix was followed by a compile failure:
+`IMigrationRunner` has no `VersionLoader` property. Commit `50f58223` reads the
+registered `IVersionTableMetaData` service; its PostgreSQL fixture then failed
+at migration 23 because an unqualified check examined `public.NamingConfig`
+and skipped a staging column. The working tree routes unqualified PostgreSQL
+schema checks to the active schema; exact-head CI is still required. Do not
+use it for operator data; see the
 [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
 Environment variables are outside the database conversion. Preserve the
@@ -81,9 +94,10 @@ database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
 precedence, and the original BookshelfNG database remains available in the
 rollback backup. That native provider and token mapping are not in published
 `v0.9.977` and have not cleared exact-head hosted or converted-data acceptance.
-The current hosted rerun includes this work but is queued behind the prior
-candidate validation. Do not treat it as supported migration behavior during
-the release freeze.
+The exact hosted run on `50f58223` failed its PostgreSQL migration fixture;
+the schema-query correction is now in the working tree and awaits exact-head
+CI. Do not treat this as supported migration behavior during the release
+freeze.
 
 BookshelfNG's `BOOKSHELF_M4B_MERGE`,
 `BOOKSHELF_M4B_AAC_BITRATE_KBPS`, and `BOOKSHELF_FFMPEG_PATH` variables are
@@ -432,9 +446,16 @@ migration checks passing, but the fix is not in the published release.
 Populated synthetic v22 coverage exercises conversion, rollback, and
 non-mutating preview. This does not establish older-schema behavior on real
 operator data or PostgreSQL source conversion. The PostgreSQL migration-158
-candidate's hosted run on `0211ed91` failed in its staged-target version
-preflight. The fix is on `ef519cd7`, and the exact hosted rerun is queued; the
-candidate remains unavailable to operators and in any release.
+candidate's hosted run on `e67f28ed` failed because migration 10 checked
+`public.Editions` instead of the active staging schema. Commit `8f0bbc29` adds
+the missing PostgreSQL column through the active search path. Its exact run
+failed to compile because `IMigrationRunner` has no `VersionLoader` property;
+commit `50f58223` reads the registered `IVersionTableMetaData` service instead.
+Its fixture failed at migration 23 because an unqualified schema check
+examined `public.NamingConfig` and skipped a staging column. The working tree
+routes unqualified PostgreSQL checks to the active schema and adds a focused
+regression test; exact-head CI is still required. The candidate remains
+unavailable to operators and in any release.
 Supported SQLite databases can be migrated by normal ChaptarrNG startup or
 with the explicit preview/apply commands above. Both paths retain the
 untouched BookshelfNG source backup; rollback is available while the original
