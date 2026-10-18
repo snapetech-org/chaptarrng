@@ -331,24 +331,24 @@ namespace Chaptarr.Core.Test.Datastore
             connection.Open();
             using var command = connection.CreateCommand();
             command.CommandText = @"
-                INSERT INTO ""QualityProfiles"" (""Id"", ""Name"", ""Cutoff"", ""Items"", ""UpgradeAllowed"")
+                INSERT INTO ""QualityProfiles"" (""Id"", ""Name"", ""Cutoff"", ""Items"", ""UpgradeAllowed"") OVERRIDING SYSTEM VALUE
                 VALUES (1, 'Audio default', 1, '[]', TRUE);
-                INSERT INTO ""MetadataProfiles"" (""Id"", ""Name"", ""MinPopularity"", ""SkipMissingDate"", ""SkipMissingIsbn"", ""SkipPartsAndSets"", ""SkipSeriesSecondary"", ""AllowedLanguages"", ""PreferredEditionTerms"", ""PreferredSeries"")
+                INSERT INTO ""MetadataProfiles"" (""Id"", ""Name"", ""MinPopularity"", ""SkipMissingDate"", ""SkipMissingIsbn"", ""SkipPartsAndSets"", ""SkipSeriesSecondary"", ""AllowedLanguages"", ""PreferredEditionTerms"", ""PreferredSeries"") OVERRIDING SYSTEM VALUE
                 VALUES (1, 'Audio metadata', 0, FALSE, FALSE, FALSE, FALSE, '[]', '3|audible', 'The Fixture Series');
-                INSERT INTO ""RootFolders"" (""Id"", ""Path"", ""Name"", ""DefaultMetadataProfileId"", ""DefaultQualityProfileId"", ""DefaultMonitorOption"", ""DefaultTags"", ""IsCalibreLibrary"", ""CalibreSettings"", ""DefaultNewItemMonitorOption"")
+                INSERT INTO ""RootFolders"" (""Id"", ""Path"", ""Name"", ""DefaultMetadataProfileId"", ""DefaultQualityProfileId"", ""DefaultMonitorOption"", ""DefaultTags"", ""IsCalibreLibrary"", ""CalibreSettings"", ""DefaultNewItemMonitorOption"") OVERRIDING SYSTEM VALUE
                 VALUES (1, '/library', 'Library', 1, 1, 0, '[]', FALSE, NULL, 2);
-                INSERT INTO ""Config"" (""Id"", ""Key"", ""Value"") VALUES (2, 'FixtureSetting', 'preserved');
-                INSERT INTO ""AuthorMetadata"" (""Id"", ""ForeignAuthorId"", ""TitleSlug"", ""Name"", ""Overview"", ""Status"", ""Images"", ""Aliases"", ""SortName"", ""NameLastFirst"", ""SortNameLastFirst"")
+                INSERT INTO ""Config"" (""Id"", ""Key"", ""Value"") OVERRIDING SYSTEM VALUE VALUES (2, 'FixtureSetting', 'preserved');
+                INSERT INTO ""AuthorMetadata"" (""Id"", ""ForeignAuthorId"", ""TitleSlug"", ""Name"", ""Overview"", ""Status"", ""Images"", ""Aliases"", ""SortName"", ""NameLastFirst"", ""SortNameLastFirst"") OVERRIDING SYSTEM VALUE
                 VALUES (10, '10', 'fixture-author', 'Fixture Author', 'Fixture overview', 0, '[]', '[]', 'Fixture Author', 'Author, Fixture', 'Author, Fixture');
-                INSERT INTO ""Authors"" (""Id"", ""CleanName"", ""Path"", ""Monitored"", ""QualityProfileId"", ""Tags"", ""Added"", ""MetadataProfileId"", ""AuthorMetadataId"", ""MonitorNewItems"", ""EbookPath"", ""AudiobookPath"", ""EbookQualityProfileId"", ""AudiobookQualityProfileId"", ""EbookMetadataProfileId"", ""AudiobookMetadataProfileId"")
+                INSERT INTO ""Authors"" (""Id"", ""CleanName"", ""Path"", ""Monitored"", ""QualityProfileId"", ""Tags"", ""Added"", ""MetadataProfileId"", ""AuthorMetadataId"", ""MonitorNewItems"", ""EbookPath"", ""AudiobookPath"", ""EbookQualityProfileId"", ""AudiobookQualityProfileId"", ""EbookMetadataProfileId"", ""AudiobookMetadataProfileId"") OVERRIDING SYSTEM VALUE
                 VALUES (20, 'fixtureauthor', '/library/Fixture Author', TRUE, 1, '[]', '2026-01-01 00:00:00+00', 1, 10, 2, '/library/Fixture Author/Ebooks', '/library/Fixture Author/Audiobooks', NULL, 1, NULL, 1);
-                INSERT INTO ""Books"" (""Id"", ""AuthorMetadataId"", ""ForeignBookId"", ""TitleSlug"", ""Title"", ""Links"", ""Genres"", ""Ratings"", ""CleanTitle"", ""Monitored"", ""AnyEditionOk"", ""Added"", ""RelatedBooks"", ""LastSearchTime"")
+                INSERT INTO ""Books"" (""Id"", ""AuthorMetadataId"", ""ForeignBookId"", ""TitleSlug"", ""Title"", ""Links"", ""Genres"", ""Ratings"", ""CleanTitle"", ""Monitored"", ""AnyEditionOk"", ""Added"", ""RelatedBooks"", ""LastSearchTime"") OVERRIDING SYSTEM VALUE
                 VALUES (30, 10, '30', 'fixture-book', 'Fixture Book', '[]', '[]', '{}', 'fixture book', TRUE, FALSE, '2026-01-02 00:00:00+00', '[]', NULL);
-                INSERT INTO ""Editions"" (""Id"", ""BookId"", ""ForeignEditionId"", ""Isbn13"", ""Asin"", ""Title"", ""TitleSlug"", ""Images"", ""Links"", ""IsEbook"", ""Monitored"", ""ManualAdd"", ""Narrator"")
+                INSERT INTO ""Editions"" (""Id"", ""BookId"", ""ForeignEditionId"", ""Isbn13"", ""Asin"", ""Title"", ""TitleSlug"", ""Images"", ""Links"", ""IsEbook"", ""Monitored"", ""ManualAdd"", ""Narrator"") OVERRIDING SYSTEM VALUE
                 VALUES (40, 30, '40', NULL, NULL, 'Fixture Audiobook', 'audio-40', '[]', '[]', FALSE, TRUE, FALSE, 'A Narrator');
-                INSERT INTO ""Series"" (""Id"", ""ForeignSeriesId"", ""Title"", ""Numbered"", ""WorkCount"", ""PrimaryWorkCount"")
+                INSERT INTO ""Series"" (""Id"", ""ForeignSeriesId"", ""Title"", ""Numbered"", ""WorkCount"", ""PrimaryWorkCount"") OVERRIDING SYSTEM VALUE
                 VALUES (70, '70', 'Fixture Series', TRUE, 1, 1);
-                INSERT INTO ""BookFiles"" (""Id"", ""EditionId"", ""CalibreId"", ""Quality"", ""Size"", ""DateAdded"", ""MediaInfo"", ""Modified"", ""Path"", ""Part"")
+                INSERT INTO ""BookFiles"" (""Id"", ""EditionId"", ""CalibreId"", ""Quality"", ""Size"", ""DateAdded"", ""MediaInfo"", ""Modified"", ""Path"", ""Part"") OVERRIDING SYSTEM VALUE
                 VALUES (50, 40, 0, '{}', 100, '2026-01-02 00:00:00+00', '{}', '2026-01-02 00:00:00+00', '/library/Fixture Author/book.m4b', 0);";
             command.ExecuteNonQuery();
         }
