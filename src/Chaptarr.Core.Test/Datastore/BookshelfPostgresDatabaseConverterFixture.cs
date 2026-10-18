@@ -206,6 +206,43 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_convert_a_bookshelf_postgres_source_during_normal_startup_migration()
+        {
+            var sourceConnectionString = BuildConnectionString(_baseConnectionString, _sourceSchema);
+            MigrateBookshelfSourceToLatest(sourceConnectionString);
+            SeedMatchingThreshold(sourceConnectionString);
+            SeedCurrentBookshelfSourceWithLibrary(sourceConnectionString);
+
+            var controller = new MigrationController(
+                LogManager.GetLogger(nameof(BookshelfPostgresDatabaseConverterFixture)),
+                null,
+                new TestAppFolderInfo(_temporaryDirectory));
+
+            controller.Migrate(
+                sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.PostgreSQL);
+
+            var createdSchemas = GetSchemaNames(_baseConnectionString)
+                .Except(_schemasBefore, StringComparer.Ordinal)
+                .ToArray();
+            var bookshelfBackupSchema = createdSchemas
+                .Single(schema => schema.StartsWith("bookshelfng_backup_", StringComparison.Ordinal));
+            _knownBackupSchemas.Add(bookshelfBackupSchema);
+
+            var backupConnectionString = BuildConnectionString(_baseConnectionString, bookshelfBackupSchema);
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(DatabaseLineageGuard.Detect(backupConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30;"), Is.EqualTo(1));
+                Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"BookFiles\" WHERE \"Id\" = 50 AND \"EditionId\" = 40;"), Is.EqualTo(1));
+                Assert.That(ReadConfigValue(backupConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
+                Assert.That(ReadScalarInt(backupConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30;"), Is.EqualTo(1));
+            });
+        }
+
+        [Test]
         public void should_reject_a_newer_postgres_source_without_changing_its_tables()
         {
             var sourceConnectionString = BuildConnectionString(_baseConnectionString, _sourceSchema);
