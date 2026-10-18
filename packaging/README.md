@@ -29,7 +29,7 @@ upgraded safely.
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
 | --- | --- | --- | --- |
-| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains on the BookshelfNG payload; the `0.9.977-1` ChaptarrNG-payload candidate builds locally | Test replacing the published old package through conversion and rollback |
+| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade and downgrade checks | Test active-service handoff and populated database conversion/restore before publishing the candidate |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped | Test the old package identity in a Fedora upgrade before enabling its bridge |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
 | Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged | Verify legacy registry write access and digest equality before enabling the bridge |
@@ -62,9 +62,20 @@ On 2026-10-18, the AUR build script built both `chaptarrng-bin 0.9.977-1`
 and a local `bookshelfng-bin 0.9.977-1` candidate against the public Linux
 release archive. Package-content checks confirmed the ChaptarrNG executable
 and package metadata in both packages, plus the legacy service and
-`/etc/bookshelfng/bookshelfng.env` path in the candidate. This verifies that
-the recipes can package the `.977` payload; it does not test replacing the
-published BookshelfNG package, service handoff, data migration, or rollback.
+`/etc/bookshelfng/bookshelfng.env` path in the candidate. A second isolated
+Arch Linux rehearsal installed the published AUR version `0.4.21.71-1`,
+then upgraded the same package identity to the local
+`.977` candidate with network access disabled, then downgraded the package to
+`.71`. The package database reported `.977-1` after upgrade and `.71-1` after
+downgrade; the Chaptarr executable and legacy service unit were present after
+upgrade, the old Readarr executable path was removed, and downgrade restored
+the old executable. A modified environment file was kept with a `.pacnew`
+file for the new default, and a synthetic file under `/var/lib/bookshelfng`
+was unchanged through both operations. This verifies pacman package upgrade
+and downgrade on a disposable system. Systemd was not running, so active
+service stop/restart was not exercised; populated database conversion and
+restore through this package are still untested, and the candidate remains
+unpublished.
 
 ## Migration behavior and limits
 
@@ -103,9 +114,10 @@ retirement decision.
 
 ## Work required before enabling the legacy bridge
 
-- Test AUR, COPR, and Chocolatey old-identity upgrades in disposable systems.
-  Preserve service settings and data paths, convert the migration-158 fixture,
-  retain the source backup, and verify rollback without losing later writes.
+- Test the AUR candidate's active-systemd handoff and populated migration-158
+  conversion/rollback; test the old-identity COPR and Chocolatey upgrades in
+  disposable systems. Preserve service settings and data paths, retain the
+  source backup, and verify rollback without losing later writes.
 - Resolve Chocolatey HTTP 403 authorization, publish the `chaptarrng` identity,
   and confirm its public checksum matches the tested package.
 - Publish and validate the migration-1-to-13 alias fix before recommending

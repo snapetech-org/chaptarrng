@@ -120,7 +120,7 @@ and follow the
 | Channel | Published ChaptarrNG state | BookshelfNG handoff state |
 | --- | --- | --- |
 | Docker / GHCR | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same published multi-architecture image digest. | Legacy BookshelfNG aliases have not been redirected. Mutable tags affect a later pull/recreate; pinned tags and digests need an operator change. |
-| AUR | `chaptarrng-bin 0.9.977-1` is published. | `bookshelfng-bin 0.4.21.71-1` remains on the BookshelfNG payload. A local `.977-1` legacy-identity candidate passed package-content checks, but published-package upgrade and rollback are untested. |
+| AUR | `chaptarrng-bin 0.9.977-1` is published. | `bookshelfng-bin 0.4.21.71-1` remains public. A local `.977-1` candidate passed isolated pacman upgrade and downgrade checks with configuration and synthetic data preservation; active-service handoff and populated database conversion/restore remain untested. |
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped. |
 | Chocolatey | The `.977` package built and the hosted BookshelfNG-to-ChaptarrNG upgrade smoke passed, but Chocolatey returned HTTP 403 on publish; the live feed has no `chaptarrng` entry. | BookshelfNG `0.4.21.70` remains public. Its identity was not submitted because the bridge is disabled. |
 | Unraid | The ChaptarrNG template is maintained separately. | A legacy-template handoff is drafted in BookshelfNG Unraid PR #5; its Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
