@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using NLog;
@@ -353,6 +354,7 @@ namespace Chaptarr.Core.Test.Download
         [Test]
         public void should_keep_an_actively_seeding_torrent_completed_but_not_movable_or_removable()
         {
+            var downloadPath = Path.Combine(Path.GetTempPath(), "qbittorrent-downloads");
             var proxy = new TestProxy
             {
                 Preferences = new QBittorrentPreferences { DhtEnabled = true, MaxRatioEnabled = true, MaxRatio = 2.0f }
@@ -365,6 +367,8 @@ namespace Chaptarr.Core.Test.Download
                     Name = "Seeding ebook",
                     Category = "ebooks",
                     State = "uploading",
+                    SavePath = downloadPath,
+                    ContentPath = Path.Combine(downloadPath, "Seeding ebook.m4b"),
                     Progress = 1.0,
                     Ratio = 2.0f,
                     RatioLimit = -2
@@ -392,6 +396,7 @@ namespace Chaptarr.Core.Test.Download
         [Test]
         public void should_only_allow_moving_a_paused_completed_torrent_after_its_seed_limit()
         {
+            var downloadPath = Path.Combine(Path.GetTempPath(), "qbittorrent-downloads");
             var proxy = new TestProxy();
             proxy.TorrentsByCategory["ebooks"] = new List<QBittorrentTorrent>
             {
@@ -401,6 +406,8 @@ namespace Chaptarr.Core.Test.Download
                     Name = "Below seed limit",
                     Category = "ebooks",
                     State = "pausedUP",
+                    SavePath = downloadPath,
+                    ContentPath = Path.Combine(downloadPath, "Below seed limit.m4b"),
                     Progress = 1.0,
                     Ratio = 1.99f,
                     RatioLimit = 2.0f
@@ -411,6 +418,8 @@ namespace Chaptarr.Core.Test.Download
                     Name = "At seed limit",
                     Category = "ebooks",
                     State = "pausedUP",
+                    SavePath = downloadPath,
+                    ContentPath = Path.Combine(downloadPath, "At seed limit.m4b"),
                     Progress = 1.0,
                     Ratio = 2.0f,
                     RatioLimit = 2.0f
@@ -429,6 +438,8 @@ namespace Chaptarr.Core.Test.Download
 
             Assert.Multiple(() =>
             {
+                Assert.That(items["BELOW-LIMIT"].Status, Is.EqualTo(DownloadItemStatus.Completed));
+                Assert.That(items["AT-LIMIT"].Status, Is.EqualTo(DownloadItemStatus.Completed));
                 Assert.That(items["BELOW-LIMIT"].CanMoveFiles, Is.False);
                 Assert.That(items["BELOW-LIMIT"].CanBeRemoved, Is.False);
                 Assert.That(items["AT-LIMIT"].CanMoveFiles, Is.True);
