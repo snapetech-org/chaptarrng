@@ -460,6 +460,21 @@ function nunitFailureFrame(body) {
   return method && /^[A-Za-z0-9_.$+`<>-]+$/.test(method) ? method : null;
 }
 
+function nunitFailureSourceLine(body) {
+  const failure = body.match(/<failure\b[^>]*>([\s\S]*?)<\/failure>/i);
+  if (!failure) return null;
+  const stackTrace = failure[1].match(/<stack-trace\b[^>]*>([\s\S]*?)<\/stack-trace>/i)?.[1];
+  if (!stackTrace) return null;
+  const stackLines = decodeNUnitXmlText(stackTrace).split(/\r?\n/).map((line) => line.trim());
+  const frames = stackLines.filter((line) => /^at\s+/.test(line) && /:line\s+\d+\s*$/.test(line));
+  const frame = frames.find((line) => line.match(/^at\s+([^ (]+)\s*\(/)?.[1]?.startsWith('NzbDrone.')) ?? frames[0];
+  const sourceLine = frame?.match(/:line\s+(\d+)\s*$/)?.[1];
+  const parsedLine = sourceLine === undefined ? null : Number(sourceLine);
+  return Number.isSafeInteger(parsedLine) && parsedLine > 0 && parsedLine <= 1_000_000
+    ? parsedLine
+    : null;
+}
+
 function nunitFailureSqliteErrorCode(body) {
   const failure = body.match(/<failure\b[^>]*>([\s\S]*?)<\/failure>/i);
   if (!failure) return null;
@@ -500,6 +515,8 @@ export function parseNUnitSummary(xml) {
     const bodyEnd = xml.indexOf('</test-case>', bodyStart);
     const body = tag.endsWith('/>') || bodyEnd < 0 ? '' : xml.slice(bodyStart, bodyEnd);
     const detail = { name, exceptionType: nunitFailureType(body), stackFrame: nunitFailureFrame(body) };
+    const sourceLine = nunitFailureSourceLine(body);
+    if (sourceLine !== null) detail.sourceLine = sourceLine;
     const sqliteErrorCode = nunitFailureSqliteErrorCode(body);
     if (sqliteErrorCode !== null) detail.sqliteErrorCode = sqliteErrorCode;
     const sqliteErrorKind = nunitFailureSqliteErrorKind(body);
@@ -557,6 +574,9 @@ export function parseNUnitSummaryMarker(output) {
       const stackFrame = safeIdentifier(detail.stackFrame);
       if (exceptionType) result.exceptionType = exceptionType;
       if (stackFrame) result.stackFrame = stackFrame;
+      if (Number.isSafeInteger(detail.sourceLine) && detail.sourceLine > 0 && detail.sourceLine <= 1_000_000) {
+        result.sourceLine = detail.sourceLine;
+      }
       if (Number.isSafeInteger(detail.sqliteErrorCode) && detail.sqliteErrorCode > 0 && detail.sqliteErrorCode < 10000) {
         result.sqliteErrorCode = detail.sqliteErrorCode;
       }

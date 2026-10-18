@@ -317,9 +317,10 @@ test('NUnit receipt extracts a safe exception type and method from the failure b
       name: 'Fixture.sqlite_failure',
       exceptionType: 'Microsoft.Data.Sqlite.SqliteException',
       stackFrame: 'Chaptarr.Core.Datastore.BookshelfDatabaseConverter.Convert',
+      sourceLine: 42,
     },
   ]);
-  assert.doesNotMatch(JSON.stringify(summary), /secret database path|C:\\\\private|Converter.cs|line 42/);
+  assert.doesNotMatch(JSON.stringify(summary), /secret database path|C:\\\\private|Converter.cs/);
 });
 
 test('NUnit SQLite receipt prefers an application frame and exports only safe SQLite diagnostics', () => {
@@ -333,11 +334,12 @@ test('NUnit SQLite receipt prefers an application frame and exports only safe SQ
       name: 'Fixture.sqlite_open_failure',
       exceptionType: 'Microsoft.Data.Sqlite.SqliteException',
       stackFrame: 'NzbDrone.Core.Datastore.BookshelfDatabaseConverter.Convert',
+      sourceLine: 42,
       sqliteErrorCode: 1,
       sqliteErrorKind: 'missing-column',
     },
   ]);
-  assert.doesNotMatch(JSON.stringify(summary), /SecretData|no such column|C:\\\\private|Converter.cs|line 42/);
+  assert.doesNotMatch(JSON.stringify(summary), /SecretData|no such column|C:\\\\private|Converter.cs/);
 });
 
 test('NUnit JSON marker keeps only bounded diagnostic fields in PostgreSQL receipts', () => {
@@ -354,6 +356,7 @@ test('NUnit JSON marker keeps only bounded diagnostic fields in PostgreSQL recei
       name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
       exceptionType: 'System.InvalidOperationException',
       stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+      sourceLine: 74,
       message: 'private database error',
       path: 'C:\\private\\source.db',
     }],
@@ -374,6 +377,7 @@ test('NUnit JSON marker keeps only bounded diagnostic fields in PostgreSQL recei
       name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
       exceptionType: 'System.InvalidOperationException',
       stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+      sourceLine: 74,
     }],
     failedTestDetailsTruncated: false,
   });
@@ -401,6 +405,20 @@ test('NUnit JSON marker rejects malformed totals and drops path-bearing test nam
   })}`);
   assert.deepEqual(summary.failedTestNames, []);
   assert.deepEqual(summary.failedTestDetails, []);
+});
+
+test('NUnit JSON marker accepts only a bounded positive source line number', () => {
+  for (const sourceLine of [0, -1, 1.5, 1_000_001, '42', '/private/source.cs:line 42']) {
+    const summary = parseNUnitSummaryMarker(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify({
+      total: 1,
+      passed: 0,
+      failed: 1,
+      skipped: 0,
+      inconclusive: 0,
+      failedTestDetails: [{ name: 'Fixture.should_fail', sourceLine }],
+    })}`);
+    assert.deepEqual(summary.failedTestDetails, [{ name: 'Fixture.should_fail' }]);
+  }
 });
 
 test('smoke diagnostic marker keeps only whitelisted result metadata', () => {

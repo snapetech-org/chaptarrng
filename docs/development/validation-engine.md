@@ -126,10 +126,11 @@ stage, reason, readiness timeout, process exit state, and up to eight exception
 type names and stack-frame identifiers. It omits exception messages, method
 arguments, and filesystem paths. Frame order and repeats are retained so a
 recursive startup path remains visible.
-NUnit receipts also include at most 100 failed test-case names and exception
-types. They omit test stdout, assertion messages, and test values, so platform
-failures can be narrowed down from the short-lived CI artifact without exposing
-failure payloads.
+NUnit receipts also include at most 100 failed test-case names, exception
+types, allowlisted method names, and (when available) the positive integer
+source line number. They omit test stdout, assertion messages, test values, and
+source file paths, so platform failures can be narrowed down from the short-lived
+CI artifact without exposing failure payloads.
 
 The source fingerprint binds the commit, tree, working diff, configured build
 inputs, and test-source inventory. Text inputs and inventory files use Git's
@@ -139,9 +140,10 @@ assembly byte-for-byte; platform binaries are allowed to differ. Before and
 after each concurrent task batch the engine checks that the source fingerprint
 has not moved and blocks successful receipts if it changes. Logs stay private
 under the system temporary directory; the exported receipt carries counts,
-bounded failing test names, exception types, and allowlisted method names. For
-SQLite failures it also records only the numeric primary error code. Exception
-messages, paths, source values, and assertion contents stay out of receipts.
+bounded failing test names, exception types, allowlisted method names, and safe
+source line numbers. For SQLite failures it also records only the numeric
+primary error code. Exception messages, paths, source values, and assertion
+contents stay out of receipts.
 Overlapping runs in one
 checkout are rejected.
 Runtime probes and task child processes
