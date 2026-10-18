@@ -7,9 +7,11 @@ using FluentMigrator.Runner.Conventions;
 using FluentMigrator.Runner.Generators;
 using FluentMigrator.Runner.Initialization;
 using FluentMigrator.Runner.Processors;
+using FluentMigrator.Runner.VersionTableInfo;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Options;
 using NLog;
 using NLog.Extensions.Logging;
 using NzbDrone.Common.EnvironmentInfo;
@@ -264,6 +266,11 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             {
                 var defaultSchema = GetPostgresCurrentSchema(connectionString);
                 migrationServices.AddSingleton<IConventionSet>(new DefaultConventionSet(defaultSchema, null));
+                migrationServices.AddScoped<IVersionTableMetaData>(serviceProvider =>
+                    new SchemaScopedVersionTableMetaData(
+                        serviceProvider.GetRequiredService<IConventionSet>(),
+                        serviceProvider.GetRequiredService<IOptions<RunnerOptions>>(),
+                        defaultSchema));
             }
 
             serviceProvider = migrationServices.BuildServiceProvider();
@@ -316,6 +323,18 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             {
                 _logger.Error(ex, "Schema checksum validation failed");
                 throw;
+            }
+        }
+
+        private sealed class SchemaScopedVersionTableMetaData : DefaultVersionTableMetaData
+        {
+            public SchemaScopedVersionTableMetaData(
+                IConventionSet conventionSet,
+                IOptions<RunnerOptions> runnerOptions,
+                string schemaName)
+                : base(conventionSet, runnerOptions)
+            {
+                SchemaName = schemaName;
             }
         }
     }

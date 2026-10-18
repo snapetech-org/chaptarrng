@@ -31,6 +31,7 @@ namespace Chaptarr.Core.Test.Datastore
         private NpgsqlConnection _testLockConnection;
         private string _previousHardcoverMode;
         private string _previousHardcoverNativeMode;
+        private bool _foreignVersionInfoCreated;
         private readonly List<string> _knownBackupSchemas = new();
 
         [SetUp]
@@ -75,6 +76,11 @@ namespace Chaptarr.Core.Test.Datastore
 
             try
             {
+                if (_foreignVersionInfoCreated)
+                {
+                    DropForeignVersionInfo(_baseConnectionString);
+                }
+
                 var generatedSchemas = _knownBackupSchemas
                     .Append(_sourceSchema)
                     .Distinct(StringComparer.Ordinal)
@@ -118,6 +124,7 @@ namespace Chaptarr.Core.Test.Datastore
             MigrateBookshelfSourceToLatest(sourceConnectionString);
             SeedMatchingThreshold(sourceConnectionString);
             SeedCurrentBookshelfSourceWithLibrary(sourceConnectionString);
+            SeedForeignVersionInfo(_baseConnectionString);
 
             var controller = new MigrationController(
                 LogManager.GetLogger(nameof(BookshelfPostgresDatabaseConverterFixture)),
@@ -401,6 +408,41 @@ namespace Chaptarr.Core.Test.Datastore
                 Enlist = false
             };
             return builder.ConnectionString;
+        }
+
+        private void SeedForeignVersionInfo(string connectionString)
+        {
+            using var connection = new NpgsqlConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT to_regclass('public.\"VersionInfo\"') IS NOT NULL;";
+            if (Convert.ToBoolean(command.ExecuteScalar()))
+            {
+                // Use an existing public history table as the unrelated schema fixture without changing it.
+                return;
+            }
+
+            command.CommandText = @"
+                CREATE TABLE public.""VersionInfo"" (
+                    ""Version"" bigint NOT NULL PRIMARY KEY,
+                    ""AppliedOn"" timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    ""Description"" varchar(1024) NULL);";
+            command.ExecuteNonQuery();
+            _foreignVersionInfoCreated = true;
+
+            command.CommandText = @"
+                INSERT INTO public.""VersionInfo"" (""Version"", ""Description"")
+                VALUES (10, 'unrelated schema history');";
+            command.ExecuteNonQuery();
+        }
+
+        private static void DropForeignVersionInfo(string connectionString)
+        {
+            using var connection = new NpgsqlConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DROP TABLE IF EXISTS public.\"VersionInfo\";";
+            command.ExecuteNonQuery();
         }
 
         private static HashSet<string> GetSchemaNames(string connectionString)
