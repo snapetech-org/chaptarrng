@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using NLog;
 using NUnit.Framework;
@@ -34,6 +35,9 @@ namespace Chaptarr.Core.Test.Download
             public List<(string Hash, string Label)> Labels { get; } = new();
             public List<string> AddedMagnetLinks { get; } = new();
             public List<string> AddedTorrentFiles { get; } = new();
+            public List<QBittorrentTorrent> Torrents { get; } = new();
+            public Dictionary<string, List<QBittorrentTorrent>> TorrentsByCategory { get; } = new(StringComparer.OrdinalIgnoreCase);
+            public QBittorrentPreferences Preferences { get; set; } = new() { DhtEnabled = true };
 
             public bool IsApiSupported(QBittorrentSettings settings) => true;
 
@@ -41,13 +45,23 @@ namespace Chaptarr.Core.Test.Download
 
             public string GetVersion(QBittorrentSettings settings) => "5.0.0";
 
-            public QBittorrentPreferences GetConfig(QBittorrentSettings settings) => new QBittorrentPreferences { DhtEnabled = true };
+            public QBittorrentPreferences GetConfig(QBittorrentSettings settings) => Preferences;
 
             public Dictionary<string, List<string>> HashesByCategory { get; } = new(StringComparer.OrdinalIgnoreCase);
             public bool TorrentLoaded { get; set; }
 
             public List<QBittorrentTorrent> GetTorrents(QBittorrentSettings settings, string category = null)
             {
+                if (category == null)
+                {
+                    return Torrents;
+                }
+
+                if (TorrentsByCategory.TryGetValue(category, out var categoryTorrents))
+                {
+                    return categoryTorrents;
+                }
+
                 var hashes = category != null && HashesByCategory.TryGetValue(category, out var found) ? found : new List<string>();
                 return hashes.ConvertAll(hash => new QBittorrentTorrent { Hash = hash });
             }
@@ -298,6 +312,92 @@ namespace Chaptarr.Core.Test.Download
             {
                 Assert.That(exception.Message, Is.EqualTo("qBittorrent already has this torrent outside Chaptarr's categories"));
                 Assert.That(proxy.Labels, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_keep_an_actively_seeding_torrent_completed_but_not_movable_or_removable()
+        {
+            var proxy = new TestProxy
+            {
+                Preferences = new QBittorrentPreferences { DhtEnabled = true, MaxRatioEnabled = true, MaxRatio = 2.0f }
+            };
+            proxy.TorrentsByCategory["ebooks"] = new List<QBittorrentTorrent>
+            {
+                new QBittorrentTorrent
+                {
+                    Hash = "abcdef1234",
+                    Name = "Seeding ebook",
+                    Category = "ebooks",
+                    State = "uploading",
+                    Progress = 1.0,
+                    Ratio = 2.0f,
+                    RatioLimit = -2
+                }
+            };
+            var client = CreateClient(proxy);
+            client.Definition = new DownloadClientDefinition
+            {
+                Id = 7,
+                Name = "qBittorrent",
+                RemoveCompletedDownloads = true,
+                Settings = new QBittorrentSettings { EbookCategory = "ebooks" }
+            };
+
+            var item = client.GetItems().Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(item.Status, Is.EqualTo(DownloadItemStatus.Completed));
+                Assert.That(item.CanMoveFiles, Is.False);
+                Assert.That(item.CanBeRemoved, Is.False);
+            });
+        }
+
+        [Test]
+        public void should_only_allow_moving_a_paused_completed_torrent_after_its_seed_limit()
+        {
+            var proxy = new TestProxy();
+            proxy.TorrentsByCategory["ebooks"] = new List<QBittorrentTorrent>
+            {
+                new QBittorrentTorrent
+                {
+                    Hash = "below-limit",
+                    Name = "Below seed limit",
+                    Category = "ebooks",
+                    State = "pausedUP",
+                    Progress = 1.0,
+                    Ratio = 1.99f,
+                    RatioLimit = 2.0f
+                },
+                new QBittorrentTorrent
+                {
+                    Hash = "at-limit",
+                    Name = "At seed limit",
+                    Category = "ebooks",
+                    State = "pausedUP",
+                    Progress = 1.0,
+                    Ratio = 2.0f,
+                    RatioLimit = 2.0f
+                }
+            };
+            var client = CreateClient(proxy);
+            client.Definition = new DownloadClientDefinition
+            {
+                Id = 7,
+                Name = "qBittorrent",
+                RemoveCompletedDownloads = true,
+                Settings = new QBittorrentSettings { EbookCategory = "ebooks" }
+            };
+
+            var items = client.GetItems().ToDictionary(item => item.DownloadId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(items["BELOW-LIMIT"].CanMoveFiles, Is.False);
+                Assert.That(items["BELOW-LIMIT"].CanBeRemoved, Is.False);
+                Assert.That(items["AT-LIMIT"].CanMoveFiles, Is.True);
+                Assert.That(items["AT-LIMIT"].CanBeRemoved, Is.True);
             });
         }
 
