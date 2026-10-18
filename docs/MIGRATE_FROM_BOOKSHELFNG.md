@@ -17,7 +17,7 @@
 > `0.4.21.71` release first. A later source-only fix passed hosted checks on
 > `main`, but is not in `.977` and is not available to operators during the
 > release freeze.
-> The PostgreSQL smoke run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup before the 300-second readiness limit (DryIoc exception, no NUnit totals). This does not establish a converter assertion failure. Follow PR #131 for current diagnostics. PostgreSQL remains unsupported for operators.
+> The PostgreSQL smoke run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup before the 300-second readiness limit (DryIoc method token in the receipt but no confirmed exception class or cause, no NUnit totals). This does not establish a converter assertion failure. Follow PR #131 for current diagnostics. PostgreSQL remains unsupported for operators.
 > Pinned images,
 > native packages, and updater channels need separate upgrade steps; database
 > conversion alone does not update an installation channel.
@@ -50,7 +50,7 @@ accepts. For databases earlier than migration 14 that cannot be upgraded with
 BookshelfNG, do not switch to ChaptarrNG `.977`; the source fix is unreleased
 while the retirement freeze is active. Stop the service after it reaches an
 idle state, then run ChaptarrNG preview. The published `.977` converter does
-not support PostgreSQL BookshelfNG databases. This work branch contains an unreleased candidate for one PostgreSQL migration-158 schema. The PostgreSQL smoke run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup before the 300-second readiness limit (DryIoc exception, no NUnit totals). This does not establish a converter assertion failure. Follow PR #131 for current diagnostics. Do not use the candidate for operator data; the published migration path remains SQLite-only. See the
+not support PostgreSQL BookshelfNG databases. This work branch contains an unreleased candidate for one PostgreSQL migration-158 schema. The PostgreSQL smoke run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup before the 300-second readiness limit (DryIoc method token in the receipt but no confirmed exception class or cause, no NUnit totals). This does not establish a converter assertion failure. Follow PR #131 for current diagnostics. Do not use the candidate for operator data; the published migration path remains SQLite-only. See the
 [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
 Environment variables are outside the database conversion. Preserve the
@@ -75,7 +75,7 @@ database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
 precedence, and the original BookshelfNG database remains available in the
 rollback backup. That native provider and token mapping are not in published
 `v0.9.977` and have not cleared exact-head hosted or converted-data acceptance.
-The exact-head run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup: the process exited before the 300-second readiness limit with a DryIoc dependency-resolution exception and no NUnit totals. That does not establish a converter assertion failure; follow ChaptarrNG PR #131 for the diagnostic follow-up and current checks, and converted-data acceptance remains open.
+The exact-head run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup: the process exited before the 300-second readiness limit with a DryIoc method token in the receipt, not an identified exception class or cause and no NUnit totals. That does not establish a converter assertion failure; follow ChaptarrNG PR #131 for the diagnostic follow-up and current checks, and converted-data acceptance remains open.
 Do not treat this as supported migration behavior during the release
 freeze.
 
@@ -425,7 +425,7 @@ to `Blocklist`. PR #126 merged the version-aware fix into `main`, with hosted
 migration checks passing, but the fix is not in the published release.
 Populated synthetic v22 coverage exercises conversion, rollback, and
 non-mutating preview. This does not establish older-schema behavior on real
-operator data or PostgreSQL source conversion. The PostgreSQL smoke run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup before the 300-second readiness limit (DryIoc exception, no NUnit totals). This does not establish a converter assertion failure. Follow PR #131 for current diagnostics. The candidate remains unavailable to operators and in any release.
+operator data or PostgreSQL source conversion. The PostgreSQL smoke run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup before the 300-second readiness limit (DryIoc method token in the receipt but no confirmed exception class or cause, no NUnit totals). This does not establish a converter assertion failure. Follow PR #131 for current diagnostics. The candidate remains unavailable to operators and in any release.
 Supported SQLite databases can be migrated by normal ChaptarrNG startup or
 with the explicit preview/apply commands above. Both paths retain the
 untouched BookshelfNG source backup; rollback is available while the original

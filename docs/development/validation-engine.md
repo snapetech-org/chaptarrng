@@ -123,7 +123,8 @@ the standard TAP summary with the same zero-case and accounting checks. The
 migration smoke emits one case only after the app starts against the workflow's ephemeral PostgreSQL service and `/ping` responds.
 If startup fails, the receipt instead records a bounded diagnostic with the
 stage, reason, readiness timeout, process exit state, and up to eight exception
-type names. It omits exception messages and filesystem paths.
+type names and stack-frame identifiers. It omits exception messages, method
+arguments, and filesystem paths.
 NUnit receipts also include at most 100 failed test-case names and exception
 types. They omit test stdout, assertion messages, and test values, so platform
 failures can be narrowed down from the short-lived CI artifact without exposing
