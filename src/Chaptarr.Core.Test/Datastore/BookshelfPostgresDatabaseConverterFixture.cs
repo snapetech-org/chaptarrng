@@ -162,7 +162,7 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(ReadConfigValue(sourceConnectionString, "bookimportminimummatchpercent"), Is.EqualTo("70"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverApiToken"), Is.EqualTo("pg-fixture-token"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
-            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 1} AND \"Key\" = 'BookMatchingStrictness';"), Is.EqualTo(1));
+            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 1} AND \"Key\" = 'bookmatchingstrictness';"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 2} AND \"Key\" = 'HardcoverApiToken';"), Is.EqualTo(1));
             Assert.That(ReadScalarLong(sourceConnectionString, "SELECT nextval(pg_get_serial_sequence('\"Config\"', 'Id'));"), Is.GreaterThan(maxSourceConfigId + 2));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Authors\" WHERE \"Id\" = 20 AND \"HardcoverAuthorId\" = 'hc:10';"), Is.EqualTo(1));
