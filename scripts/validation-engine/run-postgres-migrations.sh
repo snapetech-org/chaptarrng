@@ -39,13 +39,15 @@ if [[ "$ready" != "yes" ]]; then
   if ! kill -0 "$app_pid" >/dev/null 2>&1; then
     app_exited=true
   fi
-  exception_type="$(grep -Eo '[A-Za-z_][A-Za-z0-9_.+]*Exception' "$app_log" | head -n 1 || true)"
+  exception_types="$(grep -Eo '[A-Za-z_][A-Za-z0-9_.+]*Exception' "$app_log" | awk '!seen[$0]++ && count < 8 { print; count++ }' || true)"
+  exception_type="${exception_types%%$'\n'*}"
   exception_json="null"
   if [[ "$exception_type" =~ ^[A-Za-z_][A-Za-z0-9_.+]*Exception$ ]]; then
     exception_json="$(node -e 'process.stdout.write(JSON.stringify(process.argv[1]))' "$exception_type")"
   fi
-  printf 'VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":%s,"processExited":%s,"exceptionType":%s}\n' \
-    "$readiness_timeout_seconds" "$app_exited" "$exception_json"
+  exception_types_json="$(node -e 'const raw = process.argv[1] ?? ""; process.stdout.write(JSON.stringify(raw.split(/\r?\n/).filter(Boolean)))' "$exception_types")"
+  printf 'VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":%s,"processExited":%s,"exceptionType":%s,"exceptionTypes":%s}\n' \
+    "$readiness_timeout_seconds" "$app_exited" "$exception_json" "$exception_types_json"
   tail -n 400 "$app_log" || true
   exit 1
 fi

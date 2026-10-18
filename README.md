@@ -49,23 +49,7 @@ rejects pre-migration-14 databases because their `Blacklist` table must first
 be renamed by the embedded chain. The version-aware fix and authentic
 migration-1 fixture passed the hosted Linux, macOS, Windows, and PostgreSQL
 migration checks in PR #126 and are on `main`, but are not in public `.977`.
-This is not real-data evidence or proof for every historical release. The
-retirement branch adds a PostgreSQL converter candidate for one migration-158
-source schema. The exact hosted run on `e67f28ed` failed because migration 10
-checked `public.Editions` instead of the active staging schema and skipped the
-staging `Subtitle` column. Commit `8f0bbc29` adds the PostgreSQL column
-through the active search path and checks the runner's version-table schema.
-The exact run on `8f0bbc29` then failed to compile because `IMigrationRunner`
-has no `VersionLoader` property. Commit `50f58223` reads the registered
-`IVersionTableMetaData` service instead; its PostgreSQL fixture then failed at
-migration 23 because an unqualified schema check inspected `public.NamingConfig`
-and skipped `EbookRenameBooks` in staging. The working tree now routes
-unqualified PostgreSQL schema checks to the active schema and adds a focused
-regression test; exact-head CI is still required. PostgreSQL and
-multiple-source-database migration remain unsupported for operators until the
-candidate passes and the remaining acceptance gates close. The release and
-distribution workflows require `CHAPTARRNG_RELEASE_READY=true`; it is unset,
-and no release or legacy bridge may be published during the freeze. See the
+This is not real-data evidence or proof for every historical release. The retirement branch adds a PostgreSQL converter candidate for one migration-158 source schema. The PostgreSQL smoke run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup before the 300-second readiness limit (DryIoc exception, no NUnit totals). This does not establish a converter assertion failure. Follow PR #131 for current diagnostics. PostgreSQL and multiple-source-database migration remain unsupported for operators until the candidate passes and the remaining acceptance gates close. The release and distribution workflows require `CHAPTARRNG_RELEASE_READY=true`; it is unset, and no release or legacy bridge may be published during the freeze. See the
 [PostgreSQL migration candidate notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 Books with no recorded format remain in both ChaptarrNG catalogs, unmonitored,
 with a private review file so the operator can classify them after startup.
@@ -99,11 +83,7 @@ also uses that mode to interpret bare numeric source IDs as Hardcover IDs;
 otherwise bare numeric IDs retain the Goodreads interpretation. Keep
 `HARDCOVER=true` (and do not set `HARDCOVER_NATIVE=false`) in the preview and
 migration environment when the BookshelfNG source used native Hardcover mode.
-This is source-only: it has not passed hosted tests or converted-operator-data
-review, is not in `.977`, and is not ready for use during the release freeze.
-The exact hosted run on `50f58223` failed its PostgreSQL migration fixture;
-the schema-query correction is now in the working tree and awaits exact-head
-CI. Converted-data checks remain open.
+This is source-only and is not in `.977`. The exact-head run [39127070836](https://github.com/snapetech-org/chaptarrng/actions/runs/39127070836) on code head `21c41ad5` failed during application startup: the process exited before the 300-second readiness limit with a DryIoc dependency-resolution exception and no NUnit totals. That does not establish a converter assertion failure; follow ChaptarrNG PR #131 for the diagnostic follow-up and current checks, and converted-data checks remain open. Do not use the candidate during the release freeze.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 

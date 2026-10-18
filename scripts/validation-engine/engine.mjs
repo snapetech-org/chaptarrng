@@ -583,7 +583,7 @@ export function parseNUnitSummaryMarker(output) {
 
 export function parseSmokeDiagnosticMarker(output) {
   const marker = [...output.matchAll(/^VALIDATION_SMOKE_DIAGNOSTIC=([^\r\n]+)$/gm)].at(-1)?.[1];
-  if (!marker || marker.length > 1024) throw new Error('Smoke diagnostic marker is missing or too large');
+  if (!marker || marker.length > 2048) throw new Error('Smoke diagnostic marker is missing or too large');
 
   let value;
   try { value = JSON.parse(marker); } catch { throw new Error('Smoke diagnostic marker is invalid JSON'); }
@@ -612,6 +612,13 @@ export function parseSmokeDiagnosticMarker(output) {
   if (typeof value.exceptionType === 'string' && value.exceptionType.length <= 160 &&
       /^[A-Za-z_][A-Za-z0-9_.+]*Exception$/.test(value.exceptionType)) {
     diagnostic.exceptionType = value.exceptionType;
+  }
+  if (Array.isArray(value.exceptionTypes)) {
+    if (value.exceptionTypes.length > 8 || value.exceptionTypes.some((item) =>
+      typeof item !== 'string' || item.length > 160 || !/^[A-Za-z_][A-Za-z0-9_.+]*Exception$/.test(item))) {
+      throw new Error('Smoke diagnostic exception types are invalid');
+    }
+    diagnostic.exceptionTypes = [...new Set(value.exceptionTypes)];
   }
   if ((diagnostic.reason === 'application-not-ready') !== (diagnostic.stage === 'application-startup')) {
     throw new Error('Smoke diagnostic marker has an invalid stage and reason');

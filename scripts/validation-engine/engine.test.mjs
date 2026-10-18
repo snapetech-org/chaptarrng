@@ -415,21 +415,30 @@ test('smoke diagnostic marker keeps only whitelisted result metadata', () => {
     reason: 'invalid-result-xml',
     resultFileCount: 1,
   });
-  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":false,"exceptionType":"Npgsql.NpgsqlException"}'), {
+  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":false,"exceptionType":"DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException","exceptionTypes":["DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException","System.InvalidOperationException"]}'), {
     stage: 'application-startup',
     reason: 'application-not-ready',
     resultFileCount: 0,
     readinessTimeoutSeconds: 300,
     processExited: false,
-    exceptionType: 'Npgsql.NpgsqlException',
+    exceptionType: 'DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException',
+    exceptionTypes: ['DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException', 'System.InvalidOperationException'],
   });
+  assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"exceptionTypes":["/private/path"]}'), /exception types are invalid/);
+  const oversizedMarker = `VALIDATION_SMOKE_DIAGNOSTIC=${JSON.stringify({
+    stage: 'application-startup',
+    reason: 'application-not-ready',
+    resultFileCount: 0,
+    padding: 'x'.repeat(2049),
+  })}`;
+  assert.throws(() => parseSmokeDiagnosticMarker(oversizedMarker), /too large/);
   assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"application-not-ready","resultFileCount":0}'), /stage and reason/);
 });
 
 test('task receipts retain safe PostgreSQL smoke startup diagnostics', async (t) => {
   const runRoot = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-postgres-diagnostic-'));
   t.after(() => rmSync(runRoot, { recursive: true, force: true }));
-  const marker = 'VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":false,"exceptionType":"Npgsql.NpgsqlException"}\n';
+  const marker = 'VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":true,"exceptionType":"DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException","exceptionTypes":["DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException","System.InvalidOperationException"]}\n';
   const spec = {
     id: 'postgres-migrations-smoke',
     resultFormat: 'nunit-summary-json',
@@ -445,8 +454,9 @@ test('task receipts retain safe PostgreSQL smoke startup diagnostics', async (t)
     reason: 'application-not-ready',
     resultFileCount: 0,
     readinessTimeoutSeconds: 300,
-    processExited: false,
-    exceptionType: 'Npgsql.NpgsqlException',
+    processExited: true,
+    exceptionType: 'DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException',
+    exceptionTypes: ['DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException', 'System.InvalidOperationException'],
   });
   assert.doesNotMatch(JSON.stringify(receipt), /private\/path/);
 });
