@@ -15,6 +15,17 @@ jobs:
   preflight:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: main
+        persist-credentials: false
+
+    - name: Require retirement readiness approval
+      env:
+        CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+      shell: bash
+      run: bash packaging/scripts/require-release-readiness.sh
+
     - name: Require a releasable branch
       shell: bash
       run: |

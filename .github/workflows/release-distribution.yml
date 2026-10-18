@@ -50,9 +50,15 @@ jobs:
       version: ${{ steps.target.outputs.version }}
       legacy_bridge_enabled: ${{ steps.target.outputs.legacy_bridge_enabled }}
     steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: main
+        persist-credentials: false
+
     - id: target
       env:
         GH_TOKEN: ${{ github.token }}
+        CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
         TAG: ${{ inputs.tag }}
         VERSION: ${{ inputs.version }}
         EVENT_NAME: ${{ github.event_name }}
@@ -61,6 +67,7 @@ jobs:
         MIGRATION_BRIDGE_GATE: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED || 'false' }}
       run: |
         set -euo pipefail
+        bash packaging/scripts/require-release-readiness.sh
         [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]
         [[ "$TAG" == "v${VERSION}" ]]
         [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
