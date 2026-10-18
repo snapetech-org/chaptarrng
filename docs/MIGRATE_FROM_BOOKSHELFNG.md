@@ -334,6 +334,12 @@ migration, rollback, and automatic startup paths against the synthetic fixture.
 It does not establish behavior for older schemas, PostgreSQL, live operator
 data, every BookshelfNG feature, or every package and update channel.
 
+## Published image smoke test (2026-10-18)
+
+On an isolated Linux/amd64 Docker host, the published BookshelfNG `main` image reported version `0.4.21.71` and created an empty migration-158 SQLite database with 39 tables. After stopping it, ChaptarrNG `v0.9.977` started against the same `/config`, `/data`, and `/download` mounts. Its normal startup converted the database to Chaptarr migration 120, retained the untouched BookshelfNG backup, and listened on the saved port 8787. The converted database and source backup both passed SQLite integrity checks.
+
+Rollback preview and apply passed. The restored BookshelfNG database remained at migration 158 with 39 tables, and the previous BookshelfNG image started against it on port 8787. A test-only setting written after conversion remained in the retained ChaptarrNG backup. This was an empty-database Docker rehearsal; it does not validate populated operator data or the Unraid Community Apps template update flow.
+
 ## Limits and update channels
 
 The published `v0.9.977` converter accepts SQLite databases at BookshelfNG

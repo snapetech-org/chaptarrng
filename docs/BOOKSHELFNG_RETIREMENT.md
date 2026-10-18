@@ -55,7 +55,11 @@ edition of each format is preserved on its corresponding ChaptarrNG record;
 multiple monitored editions of the same format still fail closed. The
 populated-library rehearsal accounted for all 127,177 rows across 39 source
 tables; 81 book classifications still required human review, and the test
-choices were not reviewed as correct library decisions.
+choices were not reviewed as correct library decisions. A separate 2026-10-18
+Docker image-switch smoke used an empty database created by BookshelfNG `.71`:
+ChaptarrNG `.977` converted it on normal startup, retained the original database,
+and restored it through rollback; the BookshelfNG image started again on port
+8787. This does not validate real user data or the Unraid Community Apps flow.
 
 For a source earlier than migration 14, first update BookshelfNG to its final
 `0.4.21.71` release so it can bring the database to migration 158, or wait for
