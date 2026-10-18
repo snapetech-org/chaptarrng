@@ -6,4 +6,4 @@ action: Enable supplemental catalogs and choose a source for selected metadata f
 breaking: false
 ---
 
-ChaptarrNG can search Open Library, Google Books, Library of Congress, Gutendex, Internet Archive, NDL Search, Europeana, and a Goodreads-compatible Apify actor as optional catalogs. Provider identities remain source-qualified, API credentials stay write-only in settings, and per-field preferences use exact edition ISBN matches for edition-specific data. The feature remains unpublished while the BookshelfNG retirement release freeze is active.
+ChaptarrNG can search eight optional catalogs alongside its primary source. Provider IDs remain catalog-qualified, API keys are write-only, and field preferences use matching evidence. This feature remains unpublished during the BookshelfNG retirement freeze.
