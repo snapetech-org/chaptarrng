@@ -5,4 +5,4 @@ area: bookshelf
 action: none
 breaking: false
 ---
-Unreleased source candidate: ChaptarrNG can honor BookshelfNG's opt-in `BOOKSHELF_M4B_MERGE` setting for eligible tracked audiobook downloads, preserve disc/track ordering and track-title chapters, use the legacy AAC settings, and import the original parts if an optional merge fails. After a successful import, move mode removes only the consumed source tracks; copy mode retains them. This candidate is not included in `v0.9.977` and remains subject to hosted and representative-media acceptance.
+Adds opt-in support for BookshelfNG's M4B merge settings on eligible tracked audiobook downloads. ChaptarrNG preserves disc and track order and chapter titles, and falls back to the original parts if merging fails. Move mode removes consumed tracks only after a successful import; copy mode retains them. The candidate is not in `v0.9.977` and still needs hosted and representative-media validation.
