@@ -6,6 +6,7 @@ using System.Net;
 using NLog;
 using NUnit.Framework;
 using NzbDrone.Common.Cache;
+using NzbDrone.Common.Disk;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Download;
@@ -14,6 +15,7 @@ using NzbDrone.Core.Download.Clients.QBittorrent;
 using NzbDrone.Core.Exceptions;
 using NzbDrone.Core.MediaFiles.TorrentInfo;
 using NzbDrone.Core.Parser.Model;
+using NzbDrone.Core.RemotePathMappings;
 
 namespace Chaptarr.Core.Test.Download
 {
@@ -131,6 +133,20 @@ namespace Chaptarr.Core.Test.Download
             public Version GetApiVersion(QBittorrentSettings settings, bool force = false) => _apiVersion;
         }
 
+        private class PassthroughRemotePathMappingService : IRemotePathMappingService
+        {
+            public List<RemotePathMapping> All() => throw new NotImplementedException();
+            public RemotePathMapping Add(RemotePathMapping mapping) => throw new NotImplementedException();
+            public void Remove(int id) => throw new NotImplementedException();
+            public RemotePathMapping Get(int id) => throw new NotImplementedException();
+            public RemotePathMapping Update(RemotePathMapping mapping) => throw new NotImplementedException();
+            public OsPath RemapRemoteToLocal(string host, OsPath remotePath) => remotePath;
+            public OsPath RemapLocalToRemote(string host, OsPath localPath) => localPath;
+            public OsPath RemapRemoteToLocal(int downloadClientId, string host, OsPath remotePath) => remotePath;
+            public OsPath RemapLocalToRemote(int downloadClientId, string host, OsPath localPath) => localPath;
+            public RemotePathMappingTestResult Test(RemotePathMapping mapping) => throw new NotImplementedException();
+        }
+
         private class TestQBittorrent : QBittorrent
         {
             public TestQBittorrent(IQBittorrentProxySelector proxySelector, ICacheManager cacheManager, Logger logger)
@@ -139,7 +155,7 @@ namespace Chaptarr.Core.Test.Download
                     httpClient: null,
                     configService: null,
                     diskProvider: null,
-                    remotePathMappingService: null,
+                    remotePathMappingService: new PassthroughRemotePathMappingService(),
                     cacheManager: cacheManager,
                     blocklistService: null,
                     logger: logger)
