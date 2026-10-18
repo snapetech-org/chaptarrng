@@ -311,7 +311,7 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(exception.Message, Does.Contain("BookshelfNG schema version 159 is not supported"));
+                Assert.That(exception.Message, Does.Contain("outside the bundled migration chain (1-158)"));
                 Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelf-migrate-*.db"), Is.Empty);
