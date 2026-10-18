@@ -321,7 +321,7 @@ namespace Chaptarr.Core.Test.Download
         [Test]
         public void should_move_existing_torrent_back_from_post_import_category()
         {
-            var proxy = new TestProxy { AddException = new DownloadClientException("qBittorrent rejected the torrent add request (response: Fails.).") };
+            var proxy = new TestProxy { AddException = ConflictException() };
             proxy.HashesByCategory["ebooks-imported"] = new List<string> { "abcdef1234" };
             var client = CreateClient(proxy);
 
