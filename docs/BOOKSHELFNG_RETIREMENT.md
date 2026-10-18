@@ -108,6 +108,27 @@ scheduled BookshelfNG bridge workflow confirmed that it found a stable
 ChaptarrNG release but skipped publishing because the gate is off. Do not turn
 the gate on until the feature and channel acceptance items below are closed.
 
+### Audiobook merge compatibility candidate
+
+The current ChaptarrNG source branch contains an unpublished compatibility
+candidate for BookshelfNG's opt-in `BOOKSHELF_M4B_MERGE` behavior. It is limited
+to tracked audiobook downloads with at least two approved, non-M4B tracks for
+the same local book and edition, and it keeps the feature disabled unless that
+environment variable is explicitly `true`. The candidate preserves disc/track
+tag ordering and track-title chapters, uses the legacy 128 kbps AAC stereo
+44.1 kHz defaults (with the existing bitrate override), honors a configured
+FFmpeg path when the executable is named `ffmpeg` (`ffmpeg.exe` on Windows),
+and falls back to importing the original tracks if merging fails. After a
+successful import it removes only the consumed source tracks in move mode and
+keeps them in copy mode.
+
+This is source-only and is not in `v0.9.977`. The candidate still needs hosted
+validation and representative-media checks for tags, chapters, conversion
+failure, source retention, and restart/resume behavior. It does not close the
+Audiobook processing and tags row in [the feature matrix](FORK_FEATURES.md).
+Keep the legacy merge setting unset until a build containing the accepted
+implementation is installed.
+
 BookshelfNG's in-app updater checks the Readarr-owned update service, which
 Snapetech cannot redirect. No single server-side change can move every pinned,
 offline, third-party, or manually installed copy automatically.

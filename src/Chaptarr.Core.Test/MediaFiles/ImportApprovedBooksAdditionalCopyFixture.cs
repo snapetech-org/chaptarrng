@@ -251,8 +251,10 @@ namespace Chaptarr.Core.Test.MediaFiles
         {
             public int ConvertCalls { get; private set; }
             public string[] LastInputFiles { get; private set; }
+            public string[] LastFallbackChapterTitles { get; private set; }
             public string LastOutputFile { get; private set; }
             public ConversionOptions LastOptions { get; private set; }
+            public bool HasCompleteMergeDurations { get; set; } = true;
 
             public bool CanConvert(string[] inputFiles) => true;
 
@@ -265,6 +267,12 @@ namespace Chaptarr.Core.Test.MediaFiles
             };
 
             public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles) => new();
+
+            public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles, string[] fallbackChapterTitles)
+            {
+                LastFallbackChapterTitles = fallbackChapterTitles;
+                return new M4bMergeSourceInfo { HasCompleteDurations = HasCompleteMergeDurations };
+            }
 
             public ConversionResult ConvertToM4b(string[] inputFiles, string outputFile, ConversionOptions options = null)
             {
@@ -300,6 +308,9 @@ namespace Chaptarr.Core.Test.MediaFiles
             public M4bMergeSourceInfo MergeSources { get; set; } = new();
 
             public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles) => MergeSources;
+
+            public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles, string[] fallbackChapterTitles) =>
+                new M4bMergeSourceInfo { HasCompleteDurations = true };
 
             public ConversionResult ConvertToM4b(string[] inputFiles, string outputFile, ConversionOptions options = null)
             {
@@ -3678,6 +3689,217 @@ namespace Chaptarr.Core.Test.MediaFiles
                 if (Directory.Exists(tempDir))
                 {
                     Directory.Delete(tempDir, recursive: true);
+                }
+
+                if (Directory.Exists(destinationDir))
+                {
+                    Directory.Delete(destinationDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        [NonParallelizable]
+        public void legacy_bookshelf_m4b_opt_in_should_keep_tag_order_and_fall_back_to_original_tracks()
+        {
+            var previousMerge = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable);
+            var previousBitrate = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.BitrateEnvironmentVariable);
+            Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, "true");
+            Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.BitrateEnvironmentVariable, null);
+
+            var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-compat-{Guid.NewGuid():N}");
+            try
+            {
+                var downloadDir = Path.Combine(tempDir, "downloads");
+                var destinationDir = Path.Combine(tempDir, "library");
+                Directory.CreateDirectory(downloadDir);
+                Directory.CreateDirectory(destinationDir);
+
+                var sourcePaths = new[]
+                {
+                    Path.Combine(downloadDir, "part-3.mp3"),
+                    Path.Combine(downloadDir, "part-1.mp3"),
+                    Path.Combine(downloadDir, "part-2.mp3")
+                };
+                var destinationPaths = sourcePaths.Select(path => Path.Combine(destinationDir, Path.GetFileName(path))).ToArray();
+                foreach (var sourcePath in sourcePaths)
+                {
+                    File.WriteAllText(sourcePath, "synthetic audiobook track");
+                }
+
+                var (qualityProfile, author, book, edition) = CreateAudiobookConversionGraph(231);
+                qualityProfile.ConvertToQualityId = null;
+                qualityProfile.MergeMultiPartFiles = false;
+                qualityProfile.Items = new List<QualityProfileQualityItem>
+                {
+                    new() { Allowed = true, Quality = Quality.MP3 }
+                };
+
+                var tracks = new[]
+                {
+                    (Path: sourcePaths[0], Disc: "2", Track: "1", Title: "Last disc"),
+                    (Path: sourcePaths[1], Disc: "1", Track: "2", Title: "Second track"),
+                    (Path: sourcePaths[2], Disc: "1", Track: "1", Title: "First track")
+                };
+                var decisions = tracks.Select(track => new ImportDecision<LocalBook>(new LocalBook
+                {
+                    Path = track.Path,
+                    Book = book,
+                    Author = author,
+                    Edition = edition,
+                    DurationSeconds = 60,
+                    Quality = new QualityModel(Quality.MP3),
+                    RawTags = new RawFileTags
+                    {
+                        AllTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["ID3v2:TPOS"] = new List<string> { track.Disc },
+                            ["ID3v2:TRCK"] = new List<string> { track.Track },
+                            ["ID3v2:TIT2"] = new List<string> { track.Title }
+                        }
+                    }
+                })).ToList();
+
+                var mover = new StubMoveBookFiles { TransferFilesOnDisk = true };
+                for (var index = 0; index < sourcePaths.Length; index++)
+                {
+                    mover.DestinationsBySource[sourcePaths[index]] = destinationPaths[index];
+                }
+
+                var conversion = new FailingM4bConversionService();
+                var service = new ImportApprovedBooks(
+                    new StubMediaFileService(),
+                    new StubMetadataTagService(),
+                    Proxy<IMediaInfoExtractor>(),
+                    Proxy<IAuthorService>(),
+                    Proxy<IBookService>(),
+                    CreateEditionService(new List<Edition> { edition }),
+                    Proxy<IRecycleBinProvider>(),
+                    Proxy<IExtraService>(),
+                    mover,
+                    Proxy<IHistoryService>(),
+                    Proxy<NzbDrone.Core.Download.History.IDownloadHistoryService>(),
+                    new NoOpEventAggregator(),
+                    Proxy<IManageCommandQueue>(),
+                    Proxy<ISeriesBookLinkService>(),
+                    Proxy<ISeriesService>(),
+                    Proxy<IQualityProfileService>(),
+                    conversion,
+                    LogManager.GetLogger("ImportApprovedBooksAdditionalCopyFixture"));
+
+                var results = service.Import(
+                    decisions,
+                    replaceExisting: false,
+                    downloadClientItem: new DownloadClientItem { DownloadId = "bookshelf-m4b-compat" },
+                    importMode: ImportMode.Copy,
+                    cancellationToken: CancellationToken.None);
+
+                Assert.That(conversion.ConvertCalls, Is.EqualTo(1));
+                Assert.That(conversion.LastInputFiles, Is.EqualTo(new[] { sourcePaths[2], sourcePaths[1], sourcePaths[0] }));
+                Assert.That(conversion.LastFallbackChapterTitles, Is.EqualTo(new[] { "First track", "Second track", "Last disc" }));
+                Assert.That(conversion.LastOptions.AudioBitrate, Is.EqualTo(128));
+                Assert.That(conversion.LastOptions.AudioSampleRate, Is.EqualTo(44100));
+                Assert.That(conversion.LastOptions.AudioChannels, Is.EqualTo(2));
+                Assert.That(conversion.LastOptions.NoConversion, Is.False);
+                Assert.That(results.Select(result => result.Result), Is.All.EqualTo(ImportResultType.Imported));
+                Assert.That(destinationPaths.All(File.Exists), Is.True, "the failed optional merge must still import every original track");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, previousMerge);
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.BitrateEnvironmentVariable, previousBitrate);
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        [TestCase(ImportMode.Move, false)]
+        [TestCase(ImportMode.Copy, true)]
+        [NonParallelizable]
+        public void successful_legacy_m4b_merge_should_remove_sources_only_in_move_mode(ImportMode importMode, bool shouldKeepSources)
+        {
+            var previousMerge = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable);
+            Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, "true");
+
+            var sourceDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-success-{Guid.NewGuid():N}");
+            var destinationDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-library-{Guid.NewGuid():N}");
+
+            try
+            {
+                Directory.CreateDirectory(sourceDir);
+                Directory.CreateDirectory(destinationDir);
+                var (qualityProfile, author, book, edition) = CreateAudiobookConversionGraph(232);
+                qualityProfile.ConvertToQualityId = null;
+                qualityProfile.MergeMultiPartFiles = false;
+                var decisions = MultiPartDecisions(sourceDir, author, book, edition, partCount: 3);
+                var sourcePaths = decisions.Select(decision => decision.Item.Path).ToArray();
+                var conversion = new SuccessfulM4bConversionService();
+                var service = CreateServiceForPartNaming(edition, conversion, destinationDir);
+
+                var results = service.Import(
+                    decisions,
+                    replaceExisting: false,
+                    downloadClientItem: new DownloadClientItem { DownloadId = "bookshelf-m4b-success", CanMoveFiles = true },
+                    importMode: importMode,
+                    cancellationToken: CancellationToken.None);
+
+                Assert.That(conversion.ConvertCalls, Is.EqualTo(1));
+                Assert.That(results.Any(result => result.Result == ImportResultType.Imported), Is.True);
+                Assert.That(sourcePaths.All(File.Exists), Is.EqualTo(shouldKeepSources));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, previousMerge);
+                if (Directory.Exists(sourceDir))
+                {
+                    Directory.Delete(sourceDir, recursive: true);
+                }
+
+                if (Directory.Exists(destinationDir))
+                {
+                    Directory.Delete(destinationDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        [NonParallelizable]
+        public void legacy_m4b_merge_should_fall_back_when_a_track_duration_cannot_be_read()
+        {
+            var previousMerge = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable);
+            Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, "true");
+
+            var sourceDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-no-duration-{Guid.NewGuid():N}");
+            var destinationDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-no-duration-library-{Guid.NewGuid():N}");
+
+            try
+            {
+                Directory.CreateDirectory(sourceDir);
+                Directory.CreateDirectory(destinationDir);
+                var (_, author, book, edition) = CreateAudiobookConversionGraph(233);
+                var decisions = MultiPartDecisions(sourceDir, author, book, edition, partCount: 2);
+                var conversion = new FailingM4bConversionService { HasCompleteMergeDurations = false };
+                var service = CreateServiceForPartNaming(edition, conversion, destinationDir);
+
+                var results = service.Import(
+                    decisions,
+                    replaceExisting: false,
+                    downloadClientItem: new DownloadClientItem { DownloadId = "bookshelf-m4b-no-duration" },
+                    importMode: ImportMode.Copy,
+                    cancellationToken: CancellationToken.None);
+
+                Assert.That(conversion.ConvertCalls, Is.Zero);
+                Assert.That(results.Select(result => result.Result), Is.All.EqualTo(ImportResultType.Imported));
+                Assert.That(decisions.All(decision => File.Exists(decision.Item.Path)), Is.True);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, previousMerge);
+                if (Directory.Exists(sourceDir))
+                {
+                    Directory.Delete(sourceDir, recursive: true);
                 }
 
                 if (Directory.Exists(destinationDir))

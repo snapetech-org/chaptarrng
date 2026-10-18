@@ -462,6 +462,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-job-lone-tokens-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDir);
             var request = CreateRequest(tempDir, "lone-token-download");
+            request.AudioSampleRate = 44100;
             var repository = CreateRepository(Path.Combine(tempDir, "jobs.db"));
             var converter = new TokenRecordingConversionService();
             var service = CreateService(repository, converter, concurrentConversions: 2, maxCpuThreads: 8);
@@ -477,6 +478,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 var options = converter.OptionsByDownloadId[request.DownloadId];
                 Assert.That(options.Jobs, Is.EqualTo(1));
                 Assert.That(options.FfmpegThreads, Is.EqualTo(8));
+                Assert.That(options.AudioSampleRate, Is.EqualTo(44100));
 
                 converter.Release.Set();
                 Assert.That(
@@ -491,6 +493,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Assert.That(roundTrip.OutputPath, Is.EqualTo(request.OutputPath));
                 Assert.That(roundTrip.Sources.Single().Path, Is.EqualTo(request.Sources.Single().Path));
                 Assert.That(roundTrip.TagSignature, Is.EqualTo(request.TagSignature));
+                Assert.That(roundTrip.AudioSampleRate, Is.EqualTo(44100));
             }
             finally
             {

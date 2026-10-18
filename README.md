@@ -59,13 +59,16 @@ format are retained in both ChaptarrNG catalogs, unmonitored, with a private
 review file so the operator can classify them after startup. The helper does
 not copy external media/download folders, translate every external setting,
 or update pinned images and package channels. The legacy bridge remains
-disabled. This parity branch also carries unpublished candidates for
-BookshelfNG's selectable supplemental catalogs, per-field metadata preferences,
-and exact identifier/name catalog recovery for unmapped files. None is in public
-`v0.9.977` or closes the parity gate. The converter preserves
-`BookImportMinimumMatchPercent`, but ChaptarrNG's different
-`BookMatchingStrictness` setting does not yet map that legacy threshold. Full
-feature parity and several package-channel upgrades remain unverified.
+disabled. ChaptarrNG PR #127 merged to `main` as `b3089a39`, adding selectable
+supplemental catalogs, per-field metadata preferences, and exact-identity
+recovery for unmapped files. It is not in public `v0.9.977`; provider/settings
+behavior on converted operator data still needs acceptance. The converter
+preserves `BookImportMinimumMatchPercent`, but ChaptarrNG's different
+`BookMatchingStrictness` setting does not yet map that legacy threshold. PR
+#129 is an unpublished source candidate for BookshelfNG's opt-in M4B merge
+settings; its corrected test fixtures are under hosted revalidation, and
+representative-media acceptance remains open. Full feature parity and several
+package-channel upgrades remain unverified.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 

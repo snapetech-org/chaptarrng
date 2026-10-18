@@ -494,6 +494,7 @@ namespace NzbDrone.Core.MediaFiles
                         {
                             TempDirectory = request.WorkFolder,
                             AudioBitrate = request.AudioBitrate,
+                            AudioSampleRate = request.AudioSampleRate,
                             AudioChannels = request.AudioChannels,
                             NoConversion = request.NoConversion,
                             ExpectedSourceDuration = TimeSpan.FromTicks(request.ExpectedSourceDurationTicks),
@@ -807,6 +808,7 @@ namespace NzbDrone.Core.MediaFiles
                 return manifest != null &&
                        manifest.TargetQualityId == request.TargetQualityId &&
                        manifest.AudioBitrate == request.AudioBitrate &&
+                       manifest.AudioSampleRate == request.AudioSampleRate &&
                        manifest.AudioChannels == request.AudioChannels &&
                        manifest.NoConversion == request.NoConversion &&
                        string.Equals(manifest.TagSignature, request.TagSignature, StringComparison.Ordinal) &&
@@ -837,6 +839,7 @@ namespace NzbDrone.Core.MediaFiles
                 TargetQualityId = request.TargetQualityId,
                 TargetQualityName = request.TargetQualityName,
                 AudioBitrate = request.AudioBitrate,
+                AudioSampleRate = request.AudioSampleRate,
                 AudioChannels = request.AudioChannels,
                 NoConversion = request.NoConversion,
                 TagMode = request.TagOptions?.Mode,

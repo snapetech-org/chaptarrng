@@ -20,6 +20,10 @@ namespace NzbDrone.Core.MediaFiles
         bool CanConvert(string[] inputFiles);
         ConversionEstimate EstimateConversion(string[] inputFiles);
         M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles);
+        M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles, string[] fallbackChapterTitles)
+        {
+            return ProbeMergeSources(inputFiles);
+        }
     }
 
     public enum ConversionFailureCategory
@@ -261,6 +265,11 @@ namespace NzbDrone.Core.MediaFiles
 
         public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles)
         {
+            return ProbeMergeSources(inputFiles, null);
+        }
+
+        public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles, string[] fallbackChapterTitles)
+        {
             var info = new M4bMergeSourceInfo();
             if (inputFiles == null || inputFiles.Length < 2)
             {
@@ -272,8 +281,9 @@ namespace NzbDrone.Core.MediaFiles
             var offset = TimeSpan.Zero;
             var embeddedChapterCount = 0;
 
-            foreach (var inputFile in inputFiles)
+            for (var inputIndex = 0; inputIndex < inputFiles.Length; inputIndex++)
             {
+                var inputFile = inputFiles[inputIndex];
                 var source = ProbeMergeSource(inputFile);
                 if (source == null || source.Duration <= TimeSpan.Zero)
                 {
@@ -291,15 +301,17 @@ namespace NzbDrone.Core.MediaFiles
                 }
                 else
                 {
-                    chapters.Add((offset, Path.GetFileNameWithoutExtension(inputFile)));
+                    var fallbackTitle = fallbackChapterTitles?.ElementAtOrDefault(inputIndex);
+                    chapters.Add((offset, fallbackTitle.IsNotNullOrWhiteSpace() ? fallbackTitle : Path.GetFileNameWithoutExtension(inputFile)));
                 }
 
                 offset += source.Duration;
             }
 
             info.CanCopyAudio = formats.Count == 1 && formats.Single().IsNotNullOrWhiteSpace();
+            info.HasCompleteDurations = true;
 
-            if (embeddedChapterCount > 0)
+            if (embeddedChapterCount > 0 || fallbackChapterTitles != null)
             {
                 info.EmbeddedChapterCount = embeddedChapterCount;
                 info.ChaptersTxtContent = BuildChaptersTxt(chapters, offset);
@@ -1439,6 +1451,7 @@ namespace NzbDrone.Core.MediaFiles
     public class M4bMergeSourceInfo
     {
         public bool CanCopyAudio { get; set; }
+        public bool HasCompleteDurations { get; set; }
         public string ChaptersTxtContent { get; set; }
         public int EmbeddedChapterCount { get; set; }
     }
