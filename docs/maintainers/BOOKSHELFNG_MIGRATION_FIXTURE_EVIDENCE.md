@@ -21,6 +21,11 @@ maintainer evidence, not approval to cut over operator data.
   CodeQL, dependency/security, NuGet, and runner-receipt checks. It did not
   change application code. PR #131 remains draft; these checks do not authorize
   operator cutover.
+- Documentation-only checkpoint `ddec3e81` passed exact-head hosted run
+  [39199730309](https://github.com/snapetech-org/chaptarrng/actions/runs/39199730309),
+  including Linux, macOS, and Windows builds/tests, PostgreSQL, CodeQL,
+  security/dependency, NuGet, release-note, and receipt checks. Disposable-fork
+  validation was skipped by its gate. It did not change application code.
 - The Linux artifact reports ChaptarrNG `0.9.978.0`. Its `Chaptarr` apphost
   SHA-256 is
   `dfdaae95b9cbd6a4cfe44cfe042f7e6ef87ca60402be00fa8376dc1d9fea1194`; the
@@ -87,6 +92,13 @@ Linux artifact from run `39169786430`:
   exposed both the audiobook and ebook records. This did not exercise
   end-to-end SeerrNG request creation, history, pending-import retries, or
   existing operator settings.
+- **Current source-candidate smoke:** on 2026-10-18, the same harness passed
+  against PR #131 source head `ddec3e8104f02fe15e1885c617cdb621e2f71fc5`
+  (application-code snapshot `2c0401fc`) and SeerrNG source commit
+  `10f06eab9`. Its isolated Compose run verified capability discovery, the
+  empty paged library, and denial of administrative and unrelated command
+  routes to the restricted service key. It does not establish populated
+  migration acceptance or complete SeerrNG workflows.
 - **Restore:** preview did not change the target or source backup. Explicit
   restore returned the database to schema 158 with the original author/book
   rows, passed integrity and foreign-key checks, and retained the schema-121

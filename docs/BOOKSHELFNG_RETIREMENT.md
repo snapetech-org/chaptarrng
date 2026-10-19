@@ -52,6 +52,12 @@ detailed feature inventory remains in the
   [39182438062](https://github.com/snapetech-org/chaptarrng/actions/runs/39182438062)
   passed on PR head `bdd7518`; it validated the candidate before the
   populated-data importer fixes and edition-catalog addition described below.
+  Code snapshot `2c0401fc` passed exact-head run
+  [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646),
+  and docs-only checkpoint `ddec3e81` passed run
+  [39199730309](https://github.com/snapetech-org/chaptarrng/actions/runs/39199730309).
+  These checks do not close operator-data, feature-parity, installed-rollback,
+  or channel acceptance.
   The earlier synthetic provider-mode, startup, and rollback evidence is in the
   [detailed fixture report](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
   This is not operator-data or channel acceptance.
@@ -85,6 +91,10 @@ detailed feature inventory remains in the
   capability, with focused tests and updated integration docs. It remains
   source-only; exact-head hosted validation passed in run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
+  The current source candidate also passed the isolated SeerrNG Compose smoke
+  against PR #131 head `ddec3e81` and SeerrNG `10f06eab9`: capability discovery,
+  empty paged-library access, and restricted-key denials passed. This does not
+  establish populated-data acceptance or end-to-end SeerrNG workflows.
   Unchanged SeerrNG edition-card, request, polling, availability, pending-work,
   and authorization acceptance remains open.
 - This work branch also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs now require an explicit mode: `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) selects Hardcover, and `HARDCOVER=false` selects Goodreads. An unset or invalid mode fails closed. The Docker candidate builds separate softcover and Hardcover compatibility targets so legacy aliases can retain that mode; `latest`, `main`, and `hardcover` must use the Hardcover target, while `softcover` must use the Goodreads target. These source changes are not in `.977`, PR #131 remains draft, and converted-data acceptance remains open.

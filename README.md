@@ -95,6 +95,10 @@ preceding run [39195460843](https://github.com/snapetech-org/chaptarrng/actions/
 found four Windows media-move fixtures using POSIX-only paths; 2c0401fc
 switches those fixtures to native temporary paths, and the exact-head rerun
 passes. This is candidate validation, not production cutover approval.
+Docs-only checkpoint `ddec3e81` passed exact-head run
+[39199730309](https://github.com/snapetech-org/chaptarrng/actions/runs/39199730309),
+including all three platform builds, PostgreSQL, CodeQL, security/dependency,
+NuGet, release-note, and receipt checks. It did not change application code.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 contains older SQLite and one-schema PostgreSQL migration support, native
 Hardcover identity handling, BookOrbit Book Dock, SeerrNG edition-catalog
@@ -102,6 +106,12 @@ compatibility, and previewable media moves. The copy-only populated SQLite
 rehearsal, synthetic provider-mode and startup checks, and rollback evidence
 are recorded in the
 [migration fixture report](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
+An isolated SeerrNG Compose smoke also passed against source head `ddec3e81`
+(code snapshot `2c0401fc`) and SeerrNG `10f06eab9`: capability discovery and
+empty paged-library access worked with the restricted key, and administrative
+and unrelated commands were denied. This checks the API and key boundary; it
+does not establish populated migration acceptance or complete SeerrNG
+workflows. See the [SeerrNG integration guide](docs/SEERRNG_INTEGRATION.md).
 Keep the release freeze in place. See the [PostgreSQL migration candidate
 notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
