@@ -350,12 +350,14 @@ namespace Chaptarr.Core.Test.ImportLists.Goodreads
         [Test]
         public void should_fetch_existing_private_goodreads_shelves_with_oauth_credentials()
         {
-            const string reviewListXml = """<?xml version="1.0" encoding="UTF-8"?>
-<GoodreadsResponse>
-  <reviews start="1" end="1" total="1">
-    <review><book><id>456</id><title>Test Book</title><title_without_series>Test Book</title_without_series><work><id>123</id></work><authors><author><id>789</id><name>Test Author</name></author></authors></book></review>
-  </reviews>
-</GoodreadsResponse>""";
+            const string reviewListXml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <GoodreadsResponse>
+                  <reviews start="1" end="1" total="1">
+                    <review><book><id>456</id><title>Test Book</title><title_without_series>Test Book</title_without_series><work><id>123</id></work><authors><author><id>789</id><name>Test Author</name></author></authors></book></review>
+                  </reviews>
+                </GoodreadsResponse>
+                """;
 
             var transport = new DirectDownloadTestHttp();
             var requests = new List<HttpRequest>();
