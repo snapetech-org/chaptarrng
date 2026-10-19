@@ -29,13 +29,13 @@ namespace NzbDrone.Core.ImportLists.Goodreads
         public string OAuthRequestTokenUrl => "https://www.goodreads.com/oauth/request_token";
         public string OAuthAccessTokenUrl => "https://www.goodreads.com/oauth/access_token";
 
-        [FieldDefinition(0, Label = "Access Token", Type = FieldType.Textbox, Hidden = HiddenType.Hidden)]
+        [FieldDefinition(0, Label = "Access Token", Type = FieldType.Textbox, Hidden = HiddenType.Hidden, Privacy = PrivacyLevel.ApiKey)]
         public string AccessToken { get; set; }
 
-        [FieldDefinition(0, Label = "Access Token Secret", Type = FieldType.Textbox, Hidden = HiddenType.Hidden)]
+        [FieldDefinition(0, Label = "Access Token Secret", Type = FieldType.Textbox, Hidden = HiddenType.Hidden, Privacy = PrivacyLevel.ApiKey)]
         public string AccessTokenSecret { get; set; }
 
-        [FieldDefinition(0, Label = "Request Token Secret", Type = FieldType.Textbox, Hidden = HiddenType.Hidden)]
+        [FieldDefinition(0, Label = "Request Token Secret", Type = FieldType.Textbox, Hidden = HiddenType.Hidden, Privacy = PrivacyLevel.ApiKey)]
         public string RequestTokenSecret { get; set; }
 
         [FieldDefinition(0, Label = "Goodreads User ID", HelpText = "Numeric ID or profile URL. Leave blank to use the authenticated Goodreads user when OAuth credentials are available.", Type = FieldType.Textbox, Advanced = true)]
