@@ -1341,7 +1341,7 @@ namespace NzbDrone.Core.Datastore
             var hasCompatibleImplementation = compatibleContracts.TryGetValue(implementation, out var expectedContract) &&
                 string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase);
             var unsupportedSettings = hasCompatibleImplementation
-                ? FindUnsupportedSettingsFields(GetString(sourceRow, "Settings"), expectedContract)
+                ? FindUnsupportedSettingsFields(GetString(sourceRow, "Settings"), expectedContract, implementation)
                 : Array.Empty<string>();
 
             if (hasCompatibleImplementation && unsupportedSettings.Length == 0)
@@ -1356,9 +1356,9 @@ namespace NzbDrone.Core.Datastore
             unsupported.Add($"row {GetInt(sourceRow, "Id")}: {implementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}{settingsDisposition}");
         }
 
-        private static string[] FindUnsupportedSettingsFields(string settingsJson, string configContract)
+        private static string[] FindUnsupportedSettingsFields(string settingsJson, string configContract, string implementation)
         {
-            if (settingsJson.IsNullOrWhiteSpace())
+            if (string.IsNullOrWhiteSpace(settingsJson))
             {
                 return Array.Empty<string>();
             }
