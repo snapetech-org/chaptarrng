@@ -107,7 +107,7 @@ conversion and rollback, but it is not a real-data rehearsal or proof for every
 historical BookshelfNG release. Unknown or newer schemas fail closed without
 changing the source.
 
-**Current PR #131 application-code validation, 2026-10-19:** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These are source and client checks; representative operator data, full semantic feature disposition, complete SeerrNG workflows, installed rollback, and update-channel acceptance remain open. PR #131 stays draft and no release or final handoff is authorized.
+**Prior PR #131 application-code validation (2026-10-19):** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. The Linux artifact also passed the earlier empty-library API and authorization smoke. The populated source-build check on later code is recorded below.
 
 **SeerrNG pending-request lifecycle probe (2026-10-19):** On the isolated Linux candidate from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), SeerrNG's real `ReadarrAPI` (`b810153c`) submitted an ebook request for a synthetic work whose author was unavailable. `addBook` received a pending ID, `getPendingAuthorImport` read it, `cancelPendingAuthorImport` cancelled it, and a second poll observed the expected terminal cancellation state: `OverallStatus=Failed` with `LastError=Cancelled by user`. The cancelled record remains queryable rather than being removed. This proves request creation, polling, and cancellation across the adapter/API boundary. It used a disposable database and synthetic IDs; provider-success behavior, retries, availability, history, migrated records, production settings, full SeerrNG operator workflow, and operator acceptance remain open. The tested app artifact is code snapshot `0612cb4c`; PR commit `d9713604` added the repeatable helper and docs, and the intervening app change is Calibre selector tie-breaking rather than a SeerrNG API change. The probe is now repeatable through `integration/seerrng-request-lifecycle.mjs` and is wired after the authorization smoke in `integration/seerrng-smoke.compose.yml`. On 2026-10-19, both scripts passed when run against the isolated artifact from Build 39239940373 and SeerrNG source `b810153c`; `node --check`, Prettier, and Compose configuration validation also passed. The earlier Compose invocation used a temporary runtime image with `--no-build`. A follow-up source-build run on 2026-10-19 built the candidate through the checked-in `Dockerfile.build` from PR head `7cfb5d87` and passed both scripts after the harness prepared its disposable `/books` volume as UID/GID `99:100`. Successful fulfillment, retries, availability/history, converted records, saved operator settings, and acceptance remain open.
 
@@ -197,6 +197,15 @@ reports the selected interpretation for authors, books, editions, and series.
 Changing the mode during conversion can associate every bare numeric ID with
 the wrong provider.
 
+PR #131 candidate commit `12f290bd` now also writes ChaptarrNG's persisted
+`HardcoverEnabled=true` setting when migration runs with native Hardcover mode
+and the source has no explicit saved mode. This keeps the target in the same
+provider mode after startup conversion; an existing saved target setting is
+preserved, and `HARDCOVER=false` does not enable Hardcover. The importer suite
+and a disposable schema-158 startup-conversion smoke cover both cases. This is
+unreleased candidate behavior and does not authorize applying the migration to
+operator data while the freeze remains active.
+
 The current ChaptarrNG work-branch candidate also maps a saved `HardcoverAuth`
 database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
 precedence, and the original BookshelfNG database remains available in the
@@ -216,14 +225,15 @@ honor them. ChaptarrNG PR #129 merged the compatibility implementation to
 until a build with that support is available and the remaining acceptance
 gates close. The current retirement candidate's
 `real_m4b_tool_should_merge_and_import_legacy_multipart_audiobook_when_installed`
-test passes in a tool-enabled Linux container with `m4b-tool` 0.5.2, `mp4v2`
-2.1.1, and FFmpeg/FFprobe 6.1.1. It generates two MP3 tracks and imports them
-through the real converter, verifying tag-based track order, chapter titles
-and offsets, output metadata, library registration, Move-mode source cleanup,
-and Copy-mode source retention. Four failure cases verify fallback to
-separate original-track imports in Move and Copy modes: two make the second
-source unreadable to FFprobe, while two use a controlled FFmpeg error to make
-the real `m4b-tool` process fail. Representative files, embedded-chapter
+test passed 6/6 on candidate `12f290bd` in an isolated Linux tool image with
+`m4b-tool` 0.5.2, `mp4v2` 2.1.1, and Debian Bookworm FFmpeg. It generates two
+MP3 tracks and imports them through the real converter, verifying tag-based
+track order, chapter titles and offsets, output metadata, library registration,
+Move-mode source cleanup, and Copy-mode source retention. Failure cases verify
+fallback to separate original-track imports in both modes when FFprobe cannot
+read a source and when a controlled FFmpeg error makes the real `m4b-tool`
+process fail. The Linux build workflow runs these six cases in the checked-in
+`integration/Dockerfile.m4b-test` image. Representative files, embedded-chapter
 compatibility, and restart/resume behavior remain open.
 The implementation requires the FFmpeg executable to be named `ffmpeg`
 (`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.

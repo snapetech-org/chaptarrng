@@ -244,6 +244,21 @@ jobs:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore -p:UseSharedCompilation=false
 
+    - name: Build tool-enabled M4B test image
+      if: matrix.os == 'ubuntu-latest'
+      run: docker build -f integration/Dockerfile.m4b-test -t chaptarrng-m4b-test:ci integration
+
+    - name: Test real M4B merge and fallback
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        docker run --rm --network none \
+          --volume "$GITHUB_WORKSPACE:/workspace" \
+          --workdir /workspace/_tests/net10.0 \
+          chaptarrng-m4b-test:ci \
+          dotnet vstest Chaptarr.Core.Test.dll \
+            --TestCaseFilter:"FullyQualifiedName~real_m4b_tool_should_merge_and_import_legacy_multipart_audiobook_when_installed" \
+            --Logger:"console;verbosity=normal"
+
     - name: Configure Chromium cache for direct-download browser tests
       if: runner.os == 'Linux'
       env:

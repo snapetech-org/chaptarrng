@@ -49,7 +49,7 @@ submission also passed. The UI is source-only in public `v0.9.977`, and the
 candidate remains draft while operator-data, full SeerrNG workflow, rollback,
 and channel acceptance remain open.
 
-**Current PR #131 application-code validation (2026-10-19):** snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed [Build 39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract. [CodeQL 39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), [security 39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), [NuGet 39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and [dependency review 39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. The SeerrNG adapter and request-route unit suite at source commit `b810153c` passed 4 files / 283 tests. The built Linux artifact also passed the API smoke below; it verifies an empty paged library and the service-key boundary, not populated migration data or full SeerrNG workflows.
+**Prior PR #131 application-code validation (2026-10-19):** snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed [Build 39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract. [CodeQL 39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), [security 39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), [NuGet 39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and [dependency review 39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. The SeerrNG adapter and request-route unit suite at source commit `b810153c` passed 4 files / 283 tests. The built Linux artifact also passed the earlier empty-library API and service-key smoke. The populated source-build check for later code is recorded below.
 
 **SeerrNG pending-request lifecycle probe (2026-10-19):** On the isolated Linux candidate from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), SeerrNG's real `ReadarrAPI` (`b810153c`) submitted an ebook request for a synthetic work whose author was unavailable. `addBook` received a pending ID, `getPendingAuthorImport` read it, `cancelPendingAuthorImport` cancelled it, and a second poll observed the expected terminal cancellation state: `OverallStatus=Failed` with `LastError=Cancelled by user`. The cancelled record remains queryable rather than being removed. This proves request creation, polling, and cancellation across the adapter/API boundary. It used a disposable database and synthetic IDs; provider-success behavior, retries, availability, history, migrated records, production settings, full SeerrNG operator workflow, and operator acceptance remain open. The tested app artifact is code snapshot `0612cb4c`; PR commit `d9713604` added the repeatable helper and docs, and the intervening app change is Calibre selector tie-breaking rather than a SeerrNG API change. The probe is now repeatable through `integration/seerrng-request-lifecycle.mjs` and is wired after the authorization smoke in `integration/seerrng-smoke.compose.yml`. On 2026-10-19, both scripts passed against the isolated artifact from Build 39239940373 and SeerrNG source `b810153c`; `node --check`, Prettier, and Compose configuration validation also passed. The earlier Compose invocation used a temporary runtime image with `--no-build`. A follow-up source-build run on 2026-10-19 built the candidate through the checked-in `Dockerfile.build` from PR head `7cfb5d87` and passed both scripts after the harness prepared its disposable `/books` volume as UID/GID `99:100`. Successful fulfillment, retries, availability/history, converted records, saved operator settings, and acceptance remain open.
 
@@ -81,36 +81,65 @@ key is an additive option and does not change existing authentication.
 
 The SeerrNG repository includes `scripts/chaptarrng-integration-smoke.mjs`.
 Build its server first with `pnpm build:server`, then run the integration
-Compose file from the ChaptarrNG repository with `SEERRNG_SOURCE` set to the
-absolute SeerrNG checkout path and distinct random values for
-`CHAPTARR_GLOBAL_API_KEY` and `CHAPTARR_SEERR_API_KEY`:
+Compose file from the ChaptarrNG repository. It uses named disposable volumes;
+the fixture seeds a BookshelfNG migration-158 SQLite database before
+ChaptarrNG starts, so normal startup performs the conversion. Set the absolute
+SeerrNG checkout and `node_modules` paths, the Six Labors license-file path,
+and distinct random values for `CHAPTARR_GLOBAL_API_KEY` and
+`CHAPTARR_SEERR_API_KEY`:
 
 ```sh
-SEERRNG_SOURCE=/path/to/seerrng \
-SEERRNG_NODE_MODULES=/path/to/seerrng/node_modules \
-SIXLABORS_LICENSE_FILE=/path/to/sixlabors.lic \
-CHAPTARR_GLOBAL_API_KEY='use-a-separate-long-random-key' \
-CHAPTARR_SEERR_API_KEY='use-another-long-random-key' \
+export SEERRNG_SOURCE=/path/to/seerrng
+export SEERRNG_NODE_MODULES=/path/to/seerrng/node_modules
+export SIXLABORS_LICENSE_FILE=/path/to/sixlabors.lic
+export CHAPTARR_GLOBAL_API_KEY='use-a-separate-long-random-key'
+export CHAPTARR_SEERR_API_KEY='use-another-long-random-key'
+
 docker compose -p chaptarrng-seerrng-smoke \
-  -f integration/seerrng-smoke.compose.yml \
-  up --build --no-attach chaptarrng \
-  --abort-on-container-exit --exit-code-from smoke
+  -f integration/seerrng-smoke.compose.yml down -v
+docker compose -p chaptarrng-seerrng-smoke \
+  -f integration/seerrng-smoke.compose.yml up --build -d chaptarrng
+docker compose -p chaptarrng-seerrng-smoke \
+  -f integration/seerrng-smoke.compose.yml run --rm --no-deps smoke
+docker compose -p chaptarrng-seerrng-smoke \
+  -f integration/seerrng-smoke.compose.yml down -v
 ```
 
-The smoke stack connects from a separate container, confirms SeerrNG can read
-ChaptarrNG status and the paged book library through its format-scoped API,
-confirms the service key is rejected for administrative and unrelated
-command routes, and runs the compiled SeerrNG adapter through an ebook add,
-pending-import poll, and cancellation. The lifecycle request uses a disposable
-`/books` volume and synthetic provider IDs. `SEERRNG_NODE_MODULES` must point to
-the installed dependency directory so the separate smoke container can
-resolve SeerrNG's runtime packages. Remove the test stack afterward with
-`docker compose -p chaptarrng-seerrng-smoke -f
-integration/seerrng-smoke.compose.yml down -v`.
+The fixture refuses non-empty config and library volumes. It contains one
+author, one mixed-format book, audiobook and ebook editions, and tiny synthetic
+`.m4b`/`.epub` placeholder files; they are not valid media and do not exercise
+M4B decoding or merge behavior. A separate real-tool importer check passed six
+synthetic multipart M4B cases; representative media and embedded chapters
+remain unverified. The smoke checks that SeerrNG reads both
+converted formats and their Hardcover identities, confirms status and
+capability discovery, rejects the service key for administrative and
+unrelated command routes, and runs the compiled SeerrNG adapter through an
+ebook add, pending-import poll, and cancellation. `SEERRNG_NODE_MODULES` must
+point to the installed dependency directory so the separate smoke container
+can resolve SeerrNG's runtime packages. Use `down -v` afterward to delete the
+named test volumes; do not point this harness at operator appdata.
 
 ## Recorded smoke evidence
 
 On 2026-10-19, `scripts/chaptarrng-integration-smoke.mjs` passed against the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), reporting ChaptarrNG `0.9.978.0`. It discovered the SeerrNG capability contract and read the empty paged library using the restricted key; `/config/host` and an unrelated `/command` were denied, and the global key was accepted by `/config/host`. The smoke used a disposable SQLite database and synthetic keys. It establishes the empty-library API and authorization contract only. The separate lifecycle probe below covers one unavailable-author add/poll/cancel path; availability statistics, history, successful provider lookup, converted records, unchanged production settings, and a real BookshelfNG library remain unvalidated.
+
+**Current source-built populated conversion smoke (2026-10-19):** ChaptarrNG
+candidate commit `12f290bd` built through the checked-in `Dockerfile.build`
+and started with a disposable BookshelfNG migration-158 SQLite fixture. The
+fixture was seeded in named volumes, and normal startup converted it to schema
+121 while retaining the schema-158 source backup. With `HARDCOVER=true`, the
+candidate persisted `HardcoverEnabled=true`. SeerrNG's real `ReadarrAPI` at
+commit `fdc439aa9` read both the migrated audiobook and ebook and verified
+their provider identities. The restricted service key boundary and the
+pending add/poll/cancel lifecycle also passed. The audiobook and ebook files
+were synthetic placeholders, not valid media. Importer tests passed 43/43;
+Compose configuration, `node --check`, and Prettier checks passed. This local
+source-build smoke closes the earlier empty-library-only check for this
+synthetic conversion path. It does not verify operator records, older source
+schemas, PostgreSQL operator data, live provider behavior, representative M4B
+media or embedded chapters, successful request fulfillment, installed rollback,
+or deployment channels.
+No release or bridge was published.
 
 On 2026-10-18, `scripts/chaptarrng-integration-smoke.mjs` passed against
 ChaptarrNG candidate `0.9.978.0` from PR #131 source head

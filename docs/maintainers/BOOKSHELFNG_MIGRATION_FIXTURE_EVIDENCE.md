@@ -4,7 +4,7 @@
 populated migration-158 snapshot tested on a disposable copy. This is
 maintainer evidence, not approval to cut over operator data.
 
-**Current PR #131 application-code validation, 2026-10-19:** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These are source and client checks; representative operator data, full semantic feature disposition, complete SeerrNG workflows, installed rollback, and update-channel acceptance remain open. PR #131 stays draft and no release or final handoff is authorized.
+**Prior PR #131 application-code validation (2026-10-19):** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. The Linux artifact also passed the earlier empty-library API and authorization smoke. The populated source-build check on later code is recorded below.
 
 **SeerrNG pending-request lifecycle probe (2026-10-19):** On the isolated Linux candidate from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), SeerrNG's real `ReadarrAPI` (`b810153c`) submitted an ebook request for a synthetic work whose author was unavailable. `addBook` received a pending ID, `getPendingAuthorImport` read it, `cancelPendingAuthorImport` cancelled it, and a second poll observed the expected terminal cancellation state: `OverallStatus=Failed` with `LastError=Cancelled by user`. The cancelled record remains queryable rather than being removed. This proves request creation, polling, and cancellation across the adapter/API boundary. It used a disposable database and synthetic IDs; provider-success behavior, retries, availability, history, migrated records, production settings, full SeerrNG operator workflow, and operator acceptance remain open. The tested app artifact is code snapshot `0612cb4c`; PR commit `d9713604` added the repeatable helper and docs, and the intervening app change is Calibre selector tie-breaking rather than a SeerrNG API change. The probe is now repeatable through `integration/seerrng-request-lifecycle.mjs` and is wired after the authorization smoke in `integration/seerrng-smoke.compose.yml`. On 2026-10-19, both scripts passed when run against the isolated artifact from Build 39239940373 and SeerrNG source `b810153c`; `node --check`, Prettier, and Compose configuration validation also passed. The earlier Compose invocation used a temporary runtime image with `--no-build`. A follow-up source-build run on 2026-10-19 built the candidate through the checked-in `Dockerfile.build` from PR head `7cfb5d87` and passed both scripts after the harness prepared its disposable `/books` volume as UID/GID `99:100`. Successful fulfillment, retries, availability/history, converted records, saved operator settings, and acceptance remain open.
 
@@ -294,3 +294,36 @@ PostgreSQL CI in run [39205452341](https://github.com/snapetech-org/chaptarrng/a
 but the private populated fixture was not rerun in that workflow. The source
 changes remain unpublished, and operator-data, feature-parity,
 SeerrNG workflow, and installation-channel acceptance remain open.
+
+## Populated migration-to-SeerrNG source build (2026-10-19)
+
+ChaptarrNG candidate commit `12f290bd` was built from source with the checked-in
+`Dockerfile.build`. The Compose harness seeded a disposable named config volume
+with the shared populated BookshelfNG migration-158 fixture used by
+`BookshelfDatabaseImporterFixture`, plus synthetic `.m4b` and `.epub`
+placeholder files in a disposable named library volume. It then started
+ChaptarrNG normally, exercising startup conversion rather than a direct test
+helper. The target reached schema 121 and the original schema-158 database was
+retained as the migration backup. Both databases passed integrity and foreign
+key checks. With `HARDCOVER=true`, the target config included
+`HardcoverEnabled=true`.
+
+SeerrNG's `ReadarrAPI` at commit `fdc439aa9` read the converted audiobook
+`Fixture Audiobook` and ebook `Fixture Book` through the format-specific
+facades and checked their Hardcover book identities. The same run exercised
+capability discovery, the restricted-key boundary, and the pending ebook
+add/poll/cancel lifecycle. It reported ChaptarrNG `0.9.978.0`. The importer
+suite passed 43/43; Compose config validation, `node --check`, and Prettier
+checks passed. The shared fixture avoids separate, drifting seed data between
+the unit tests and integration smoke.
+
+The media files are deliberately tiny placeholders and are not valid M4B or
+EPUB samples. Separately, the six-case real-tool importer smoke passed on
+candidate `12f290bd` with generated MP3 input and the pinned `m4b-tool` 0.5.2 /
+`mp4v2` 2.1.1 toolchain; it checks M4B creation and fallback but does not
+represent operator media or embedded source chapters. That test is now run by
+the Linux build workflow. Real provider responses, operator records, pre-14
+schemas, PostgreSQL operator data, successful SeerrNG fulfillment, installed
+rollback, and update channels remain unvalidated. It is local synthetic
+evidence; no public image, release, package, or channel alias was published.
+PR #131 remains draft and the release freeze remains active.
