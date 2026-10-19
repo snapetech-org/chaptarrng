@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Linq;
 using NUnit.Framework;
 using NzbDrone.Core.Books;
@@ -42,7 +43,15 @@ namespace Chaptarr.Core.Test.Extras.Metadata
                 Title = "Fixture Book",
                 BaseBookId = "hc:fixture-book",
                 Genres = new List<string> { "Fantasy" },
-                ReleaseDate = new DateTime(2024, 5, 6)
+                ReleaseDate = new DateTime(2024, 5, 6),
+                SeriesLinks = new List<SeriesBookLink>
+                {
+                    new SeriesBookLink
+                    {
+                        Series = new Series { Id = 13, Title = "Fixture Series" },
+                        SeriesPosition = 3
+                    }
+                }
             };
             var edition = new Edition
             {
@@ -81,6 +90,10 @@ namespace Chaptarr.Core.Test.Extras.Metadata
                 Assert.That((string)document.Root.Element(opf + "metadata").Element(dc + "description"), Is.EqualTo("Fixture overview"));
                 Assert.That((string)document.Root.Element(opf + "metadata").Element(dc + "publisher"), Is.EqualTo("Fixture Press"));
                 Assert.That(document.Root.Element(opf + "metadata").Element(dc + "subject"), Is.Not.Null);
+                Assert.That(document.Root.Element(opf + "metadata").Elements(opf + "meta")
+                    .Single(element => (string)element.Attribute("name") == "calibre:series").Attribute("content").Value, Is.EqualTo("Fixture Series"));
+                Assert.That(document.Root.Element(opf + "metadata").Elements(opf + "meta")
+                    .Single(element => (string)element.Attribute("name") == "calibre:series_index").Attribute("content").Value, Is.EqualTo("3"));
             });
 
             edition.Isbn13 = null;

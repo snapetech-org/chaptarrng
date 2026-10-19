@@ -182,8 +182,8 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers
 
         private static void WriteSeries(XmlWriter writer, Book book)
         {
-            var preferredSeries = book.Author?.MetadataProfile?.Value?.PreferredSeries;
-            var seriesLink = book.SeriesLinks?.GetPreferredSeriesLink(preferredSeries);
+            var preferredSeries = book.Author?.GetMetadataProfileFor(book.MediaType)?.PreferredSeries;
+            var seriesLink = BookSeriesLabel.SelectDisplayLink(book.SeriesLinks, preferredSeries);
 
             var seriesTitle = seriesLink?.Series?.Value?.Title;
             if (string.IsNullOrWhiteSpace(seriesTitle))
