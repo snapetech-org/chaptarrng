@@ -133,6 +133,11 @@ namespace NzbDrone.Host
                             Console.WriteLine($"{table.Key}: {row.SourceRows} | {row.PreservedRows} | {row.TransformedRows} | {row.RebuiltRows} | {row.ResetRows} — {row.TargetMapping}");
                         }
 
+                        foreach (var issue in result.ImportReport.BlockingIssues)
+                        {
+                            Console.WriteLine("BLOCKED: " + issue);
+                        }
+
                         break;
                     }
 

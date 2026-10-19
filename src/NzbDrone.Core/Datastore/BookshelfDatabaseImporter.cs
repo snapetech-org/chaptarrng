@@ -10,7 +10,6 @@ using NpgsqlTypes;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NzbDrone.Core.Configuration;
-using NzbDrone.Core.Indexers.DirectDownload;
 using NzbDrone.Core.MetadataSource.BookInfo;
 
 namespace NzbDrone.Core.Datastore
@@ -22,6 +21,21 @@ namespace NzbDrone.Core.Datastore
     public static class BookshelfDatabaseImporter
     {
         private const int SupportedSourceMigration = 158;
+
+        private static readonly IReadOnlyDictionary<string, string> CompatibleIndexerContracts =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["DirectDownloadIndexer"] = "DirectDownloadSettings",
+                ["FileList"] = "FileListSettings",
+                ["Gazelle"] = "GazelleSettings",
+                ["IPTorrents"] = "IPTorrentsSettings",
+                ["MyAnonaMouse"] = "MyAnonaMouseSettings",
+                ["Newznab"] = "NewznabSettings",
+                ["Nyaa"] = "NyaaSettings",
+                ["TorrentRssIndexer"] = "TorrentRssIndexerSettings",
+                ["Torrentleech"] = "TorrentleechSettings",
+                ["Torznab"] = "TorznabSettings"
+            };
 
         private static readonly HashSet<string> SupportedSourceTables = new(StringComparer.Ordinal)
         {
@@ -93,23 +107,7 @@ namespace NzbDrone.Core.Datastore
             ImportHistory(source, target, transaction, authors, books, files, report);
             CopyTable(source, target, transaction, report, "ImportListExclusions");
             ImportLists(source, target, transaction, qualityProfiles, metadataProfiles, report);
-            CopyTable(source, target, transaction, report, "Indexers", row =>
-            {
-                // This provider's settings contract is compatible, including the legacy JSON-array
-                // form of Urls. Preserve it so migrated direct-download indexers keep their ordered
-                // sources, key, and browser-fallback choice. Other provider contracts remain blank
-                // until their setting compatibility is explicitly mapped and tested.
-                if (!string.Equals(GetString(row, "Implementation"), nameof(DirectDownloadIndexer), StringComparison.OrdinalIgnoreCase) ||
-                    !string.Equals(GetString(row, "ConfigContract"), nameof(DirectDownloadSettings), StringComparison.OrdinalIgnoreCase))
-                {
-                    SetIfPresent(row, "ConfigContract", "");
-                }
-
-                // These are implementation capabilities, not user preferences. The runtime
-                // provider factory recalculates them from the installed Chaptarr provider.
-                SetIfPresent(row, "SupportsRss", false);
-                SetIfPresent(row, "SupportsSearch", false);
-            });
+            ImportIndexers(source, target, transaction, report);
             CopyTable(source, target, transaction, report, "Metadata");
             CopyTable(source, target, transaction, report, "QualityDefinitions");
             CopyTable(source, target, transaction, report, "ReleaseProfiles");
@@ -1233,6 +1231,50 @@ namespace NzbDrone.Core.Datastore
 
             report.RecordTable("ImportLists", sourceCount, 0, sourceCount, 0, 0,
                 "list settings, credentials, monitoring, profile IDs, and root paths are retained with the target quality-profile mapping");
+        }
+
+        private static void ImportIndexers(
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
+            BookshelfDatabaseImportReport report)
+        {
+            var rows = ReadRows(source, "Indexers").ToList();
+            var targetColumns = GetColumns(target, "Indexers");
+            var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var row in rows)
+            {
+                var implementation = GetString(row, "Implementation") ?? "(missing implementation)";
+                var configContract = GetString(row, "ConfigContract") ?? "";
+                var values = Intersect(row, targetColumns);
+
+                if (!CompatibleIndexerContracts.TryGetValue(implementation, out var expectedContract) ||
+                    !string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase))
+                {
+                    SetIfPresent(values, "ConfigContract", "");
+                    unsupported.Add($"row {GetInt(row, "Id")}: {implementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}");
+                }
+
+                // These are implementation capabilities, not user preferences. The runtime
+                // provider factory recalculates them from the installed Chaptarr provider.
+                SetIfPresent(values, "SupportsRss", false);
+                SetIfPresent(values, "SupportsSearch", false);
+                InsertRow(target, transaction, "Indexers", targetColumns, values);
+            }
+
+            var mapping = "known BookshelfNG indexer settings contracts are retained; provider capability flags are recalculated by Chaptarr";
+            if (unsupported.Count > 0)
+            {
+                mapping += "; unsupported implementation/configuration pairs are disabled in the staged copy and block apply: " +
+                           string.Join(", ", unsupported);
+                foreach (var provider in unsupported)
+                {
+                    report.AddBlockingIssue("Indexer settings need an explicit Chaptarr mapping for " + provider);
+                }
+            }
+
+            report.RecordTable("Indexers", rows.Count, 0, rows.Count, 0, 0, mapping);
         }
 
         private static void ImportNamingConfig(

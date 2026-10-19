@@ -90,6 +90,8 @@ namespace NzbDrone.Core.Datastore
                     return new BookshelfDatabaseConversionResult(null, importReport, previewOnly: true);
                 }
 
+                importReport.ThrowIfBlockingIssues();
+
                 DropSchemaIfExists(sourceConnection, snapshotSchema);
                 snapshotSchema = null;
                 Promote(
