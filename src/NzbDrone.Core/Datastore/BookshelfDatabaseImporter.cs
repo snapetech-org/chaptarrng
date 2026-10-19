@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Download;
+using NzbDrone.Core.Extras.Metadata;
 using NzbDrone.Core.ImportLists;
 using NzbDrone.Core.ImportLists.Goodreads;
 using NzbDrone.Core.Indexers;
@@ -47,6 +48,13 @@ namespace NzbDrone.Core.Datastore
             BuildProviderContractMap(typeof(IDownloadClient), typeof(DownloadClientBase<>));
         private static readonly IReadOnlyDictionary<string, string> ImportListContracts =
             BuildProviderContractMap(typeof(IImportList), typeof(ImportListBase<>));
+        private static readonly IReadOnlyDictionary<string, string> MetadataContracts =
+            BuildProviderContractMap(typeof(IMetadata), typeof(MetadataBase<>));
+        private static readonly IReadOnlyDictionary<string, string> MetadataFileConsumerAliases =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["AudioBookShelf"] = "AudiobookshelfMetadata"
+            };
         private static readonly IReadOnlyDictionary<string, string> NotificationContracts =
             BuildProviderContractMap(typeof(INotification), typeof(NotificationBase<>));
 
@@ -126,7 +134,7 @@ namespace NzbDrone.Core.Datastore
             CopyTable(source, target, transaction, report, "ImportListExclusions");
             ImportLists(source, target, transaction, qualityProfiles, metadataProfiles, report);
             ImportIndexers(source, target, transaction, report);
-            CopyTable(source, target, transaction, report, "Metadata");
+            ImportProviderTable(source, target, transaction, report, "Metadata", MetadataContracts, "metadata-consumer");
             CopyTable(source, target, transaction, report, "QualityDefinitions");
             CopyTable(source, target, transaction, report, "ReleaseProfiles");
             CopyTable(source, target, transaction, report, "RemotePathMappings");
@@ -803,9 +811,27 @@ namespace NzbDrone.Core.Datastore
         {
             var sourceCount = CountRows(source, "MetadataFiles");
             var targetColumns = GetColumns(target, "MetadataFiles");
+            var unsupportedConsumers = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in ReadRows(source, "MetadataFiles"))
             {
                 var values = Intersect(row, targetColumns);
+                var sourceConsumer = GetString(row, "Consumer") ?? "(missing consumer)";
+                var mappedConsumer = MetadataContracts.Keys.FirstOrDefault(consumer =>
+                    consumer.Equals(sourceConsumer, StringComparison.OrdinalIgnoreCase));
+                if (mappedConsumer == null && MetadataFileConsumerAliases.TryGetValue(sourceConsumer, out var alias))
+                {
+                    mappedConsumer = alias;
+                }
+
+                if (mappedConsumer == null)
+                {
+                    unsupportedConsumers.Add(sourceConsumer);
+                }
+                else
+                {
+                    values["Consumer"] = mappedConsumer;
+                }
+
                 var sourceBookId = GetNullableInt(row, "BookId");
                 var sourceFileId = GetNullableInt(row, "BookFileId");
                 if (sourceFileId.HasValue && files.TryGetValue(sourceFileId.Value, out var file))
@@ -846,8 +872,14 @@ namespace NzbDrone.Core.Datastore
                 InsertRow(target, transaction, "MetadataFiles", targetColumns, values);
             }
 
+            foreach (var consumer in unsupportedConsumers)
+            {
+                report.AddBlockingIssue($"MetadataFiles contains sidecars for metadata consumer {consumer}, which has no Chaptarr mapping");
+            }
+
             report.RecordTable("MetadataFiles", sourceCount, 0, sourceCount, 0, 0,
-                "sidecar records are retained and book/file references are remapped without inventing relationships");
+                "sidecar records are retained and book/file references are remapped without inventing relationships; known provider IDs are canonicalized; unsupported consumers block apply: " +
+                (unsupportedConsumers.Count == 0 ? "none" : string.Join(", ", unsupportedConsumers)));
         }
 
         private static void ReserveOrphanBookFileIds(DbConnection source, DbConnection target, DbTransaction transaction)
@@ -1354,6 +1386,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             SetIfPresent(targetRow, "ConfigContract", "");
+            SetIfPresent(targetRow, "Enable", false);
             var settingsDisposition = unsupportedSettings.Length == 0
                 ? ""
                 : " (unsupported settings fields: " + string.Join(", ", unsupportedSettings) + ")";

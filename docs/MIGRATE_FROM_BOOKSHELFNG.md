@@ -222,6 +222,14 @@ providers. A public Goodreads shelf can keep working without OAuth when it has
 a valid numeric user ID. Migration reports identify the row and missing field
 names without printing settings or credentials.
 
+The candidate also ports BookshelfNG's `AudiobookshelfMetadata` OPF consumer.
+It keeps that exact implementation and `NullConfig` contract, rediscovers
+`.opf` files, and canonicalizes the legacy `AudioBookShelf` sidecar consumer
+ID to `AudiobookshelfMetadata` while retaining metadata-file IDs and remapped
+book/file links. Unknown metadata providers or sidecar consumers appear in the
+preview and block apply. ChaptarrNG's AudioBookShelf JSON and cover writer is a
+separate provider.
+
 This source code does not restore Goodreads developer-key issuance or prove
 that an existing token remains accepted. Goodreads stopped issuing new
 developer keys and announced API retirement, so existing credentials and live
@@ -230,12 +238,12 @@ compatibility port is not in published `v0.9.977`; do not use it for operator
 data while the release freeze is active. Keep the original appdata backup and
 see Goodreads' [API deprecation notice](https://www.goodreads.com/topic/show/21788520-api-deprecation).
 
-Unknown or plugin download clients, import lists, notifications, and indexers
-are handled the same way: preview identifies the unsupported mapping and apply
-stops before promotion. A source backup preserves the original configuration,
-but it does not make an unsupported provider active in ChaptarrNG. These
-candidate changes are not in published `v0.9.977` while the release freeze
-remains active.
+Unknown or plugin download clients, import lists, notifications, indexers,
+metadata providers, and sidecar consumers are handled the same way: preview
+identifies the unsupported mapping and apply stops before promotion. A source
+backup preserves the original configuration, but it does not make an
+unsupported provider active in ChaptarrNG. These candidate changes are not in
+published `v0.9.977` while the release freeze remains active.
 
 Preserve `HARDCOVER=true`, `HARDCOVER_AUTH`, `HARDCOVER_API_KEY`, and any
 custom `HARDCOVER_API_URL` environment value used by the BookshelfNG install.

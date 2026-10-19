@@ -136,7 +136,13 @@ namespace Chaptarr.Core.Test.Datastore
                     INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
                     VALUES (132, 'Legacy Goodreads partial OAuth shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""read""],""accessToken"":""fixture-partial-goodreads-token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
                     INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
-                    VALUES (133, 'Legacy Goodreads shelf without an account', 'GoodreadsBookshelf', '{""bookshelfIds"":[""read""]}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');";
+                    VALUES (133, 'Legacy Goodreads shelf without an account', 'GoodreadsBookshelf', '{""bookshelfIds"":[""read""]}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO Metadata (Id, Enable, Name, Implementation, Settings, ConfigContract)
+                    VALUES (134, 1, 'Legacy OPF sidecar', 'AudiobookshelfMetadata', '{}', 'NullConfig');
+                    INSERT INTO Metadata (Id, Enable, Name, Implementation, Settings, ConfigContract)
+                    VALUES (135, 1, 'Unmapped metadata plugin', 'FixturePluginMetadata', '{""apiKey"":""fixture-metadata-secret""}', 'FixturePluginMetadataSettings');
+                    INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
+                    VALUES (66, 20, 'FixturePluginMetadata', 0, 'plugin.sidecar', '2026-01-05', 30, NULL, 'sidecar');";
                 command.ExecuteNonQuery();
             }
 
@@ -150,7 +156,7 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(8));
+                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(10));
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginIndexer/FixturePluginSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
                     issue.Contains("Torznab/TorznabSettings", StringComparison.Ordinal) &&
@@ -158,6 +164,17 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-indexer-secret", StringComparison.Ordinal)), Is.False,
                     "provider settings and credentials must not be included in the report");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginDownload/FixturePluginDownloadSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("AudiobookshelfMetadata/NullConfig", StringComparison.Ordinal)), Is.False,
+                    "the legacy OPF metadata provider is mapped by its exact implementation and contract");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("FixturePluginMetadata/FixturePluginMetadataSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("FixturePluginMetadata", StringComparison.Ordinal) &&
+                    issue.Contains("metadata consumer", StringComparison.OrdinalIgnoreCase)), Is.True,
+                    "unmapped sidecar consumers must block apply");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-metadata-secret", StringComparison.Ordinal)), Is.False,
+                    "metadata provider settings and credentials must not be included in the report");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("HardcoverImport/HardcoverImportSettings", StringComparison.Ordinal)), Is.False,
                     "the migrated Hardcover public-list provider is available in Chaptarr");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsOwnedBooks/GoodreadsOwnedBooksNotificationSettings", StringComparison.Ordinal)), Is.True);
@@ -183,6 +200,8 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(preview.ImportReport.Tables["ImportLists"].TargetMapping, Does.Contain("block apply"));
                 Assert.That(preview.ImportReport.Tables["Notifications"].TargetMapping, Does.Contain("block apply"));
                 Assert.That(preview.ImportReport.Tables["Indexers"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(preview.ImportReport.Tables["Metadata"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(preview.ImportReport.Tables["MetadataFiles"].TargetMapping, Does.Contain("block apply"));
                 Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBefore), "preview must leave source bytes unchanged");
             });
 
@@ -1206,6 +1225,8 @@ namespace Chaptarr.Core.Test.Datastore
                     VALUES (62, 20, 30, 50, 'linked-cover.jpg', 'jpg', '2026-01-05', '2026-01-05');
                     INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
                     VALUES (63, 20, 'AudioBookShelf', 0, 'unmapped.opf', '2026-01-05', 30, 50, 'opf');
+                    INSERT INTO Metadata (Id, Enable, Name, Implementation, Settings, ConfigContract)
+                    VALUES (101, 1, 'Legacy OPF sidecars', 'AudiobookshelfMetadata', '{}', 'NullConfig');
                     INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
                     VALUES (94, 'book.m4b', '2026-01-05', '{}', '{""FileId"":""50"",""ImportedPath"":""/library/Fixture Author/book.m4b""}', 3, 'download-94', 20, 30);";
                 command.ExecuteNonQuery();
@@ -1222,6 +1243,8 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Path FROM BookFiles WHERE Id = 50;"), Is.EqualTo("/library/Fixture Author/book.m4b"));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM ExtraFiles WHERE Id = 62 AND BookId = 30 AND BookFileId = 50;"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM MetadataFiles WHERE Id = 63 AND BookId = 30 AND BookFileId = 50;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 63;"), Is.EqualTo("AudiobookshelfMetadata"));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Metadata WHERE Id = 101 AND Enable = 1 AND Implementation = 'AudiobookshelfMetadata' AND ConfigContract = 'NullConfig';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 94 AND BookId = 30 AND EditionId IS NULL AND Data LIKE '%\"FileId\":\"50\"%';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
