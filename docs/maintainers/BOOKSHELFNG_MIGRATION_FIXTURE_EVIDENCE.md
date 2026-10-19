@@ -6,7 +6,7 @@ maintainer evidence, not approval to cut over operator data.
 
 ## Candidate and fixture
 
-- ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131), current head 2c0401fc.
+- ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131). The last application-code commit validated here is `2c0401fc`.
 - Exact-head Build run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
   passed Linux, macOS, and Windows builds/tests, PostgreSQL migration fixtures,
@@ -14,8 +14,13 @@ maintainer evidence, not approval to cut over operator data.
   dependency review, dependency/secret scans, and NuGet submission passed on
   the same head. Four Windows media-move fixtures failed in the preceding run
   because they used POSIX-only paths; the current fixtures use native temporary
-  paths and pass. Disposable-fork validation was skipped by its gate. PR #131
-  remains draft; these checks do not authorize operator cutover.
+  paths and pass. Disposable-fork validation was skipped by its gate.
+- Documentation-only checkpoint `898b72fd` passed exact-head hosted run
+  [39198708193](https://github.com/snapetech-org/chaptarrng/actions/runs/39198708193),
+  including Linux, macOS, and Windows, PostgreSQL fixtures, release-note,
+  CodeQL, dependency/security, NuGet, and runner-receipt checks. It did not
+  change application code. PR #131 remains draft; these checks do not authorize
+  operator cutover.
 - The Linux artifact reports ChaptarrNG `0.9.978.0`. Its `Chaptarr` apphost
   SHA-256 is
   `dfdaae95b9cbd6a4cfe44cfe042f7e6ef87ca60402be00fa8376dc1d9fea1194`; the
