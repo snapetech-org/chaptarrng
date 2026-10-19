@@ -148,6 +148,15 @@ conversion error. Representative-media acceptance remains open, and neither
 source change is in public `.977`. Full feature parity and several
 package-channel upgrades remain unverified.
 
+The same release-frozen retirement candidate adds format-aware media moves
+through `/api/v1/author/media-move`: preview and confirm a single author or a
+bulk selection, review registered sidecars and destination conflicts, then
+queue the move. Only files registered in ChaptarrNG move; untracked files and
+author-wide extras stay in place. The candidate includes a regression fixture
+for format isolation, untracked-file safety, conflicts, and stale sources;
+exact-head hosted validation is pending, and this is not part of public
+`v0.9.977`.
+
 The current retirement work branch also ports BookshelfNG's native Hardcover
 metadata client and maps a saved `HardcoverAuth` setting to
 `HardcoverApiToken`. It preserves the existing `HARDCOVER_AUTH` and

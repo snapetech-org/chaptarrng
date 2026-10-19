@@ -208,6 +208,13 @@ to a canonical author folder is opt-in. The [API identity and lifecycle
 contract](./API_IDENTITY_AND_LIFECYCLE.md) documents identity, match evidence,
 pending imports, and organize-preview fields.
 
+The release-frozen BookshelfNG retirement candidate adds a separate
+format-aware author media-move workflow. It previews single-author and bulk
+moves, includes registered book sidecars, checks collisions and copy space,
+and leaves untracked files and author-wide extras in place. It is candidate
+work in ChaptarrNG PR #131; hosted validation and operator acceptance are still
+required before it is available in a release.
+
 Operators can download a book file from its file actions. The API restricts
 the response to files under configured root folders. The API's
 `POST /api/v1/author/editor/backfill-roots` endpoint can fill a missing
