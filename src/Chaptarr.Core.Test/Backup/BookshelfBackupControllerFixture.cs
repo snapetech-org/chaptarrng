@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Chaptarr.Api.V1.System.Backup;
 using Chaptarr.Http.REST;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Moq;
@@ -73,7 +74,8 @@ namespace Chaptarr.Core.Test.Backup
             File.WriteAllBytes(backupPath, original);
             _backupService.Setup(service => service.CreateTemporaryBackup()).Returns(backupPath);
 
-            var controller = CreateController();
+            var responseCompletedCallbacks = new List<Func<Task>>();
+            var controller = CreateController(responseCompletedCallbacks);
             controller.HttpContext.Request.Headers[BookshelfEncryptedBackupService.PassphraseHeader] = Passphrase;
 
             var result = (FileStreamResult)controller.CreateEncryptedBackup();
@@ -91,8 +93,13 @@ namespace Chaptarr.Core.Test.Backup
             Assert.That(result.FileDownloadName, Does.EndWith(".enc"));
             Assert.That(controller.Response.Headers.CacheControl.ToString(), Does.Contain("no-store"));
 
-            await controller.Response.CompleteAsync();
+            foreach (var callback in responseCompletedCallbacks)
+            {
+                await callback();
+            }
+
             Assert.That(File.Exists(backupPath), Is.False);
+            Assert.That(Directory.GetFiles(Path.Combine(_tempFolder, "chaptarr_backup_transfer")), Is.Empty);
         }
 
         [Test]
@@ -146,15 +153,27 @@ namespace Chaptarr.Core.Test.Backup
             _backupService.Verify(service => service.Restore(It.Is<string>(path => path.EndsWith(".zip.enc", StringComparison.OrdinalIgnoreCase))), Times.Once);
         }
 
-        private BackupController CreateController()
+        private BackupController CreateController(List<Func<Task>> responseCompletedCallbacks = null)
         {
             var appFolderInfo = new Mock<IAppFolderInfo>();
             appFolderInfo.Setup(info => info.TempFolder).Returns(_tempFolder);
 
             var controller = new BackupController(_backupService.Object, _encryptedBackupService, appFolderInfo.Object, _diskProvider.Object);
+            var httpContext = new DefaultHttpContext();
+
+            if (responseCompletedCallbacks != null)
+            {
+                var responseFeature = new Mock<IHttpResponseFeature>();
+                responseFeature.SetupProperty(feature => feature.Headers, new HeaderDictionary());
+                responseFeature.Setup(feature => feature.HasStarted).Returns(false);
+                responseFeature.Setup(feature => feature.OnCompleted(It.IsAny<Func<object, Task>>(), It.IsAny<object>()))
+                    .Callback<Func<object, Task>, object>((callback, state) => responseCompletedCallbacks.Add(() => callback(state)));
+                httpContext.Features.Set(responseFeature.Object);
+            }
+
             controller.ControllerContext = new ControllerContext
             {
-                HttpContext = new DefaultHttpContext()
+                HttpContext = httpContext
             };
 
             return controller;
