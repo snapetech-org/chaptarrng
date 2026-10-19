@@ -20,13 +20,14 @@ The installer requires administrator privileges and performs this sequence:
 
 1. Detect the BookshelfNG `Readarr` service and its configured `-data` directory.
 2. Ask whether bare numeric provider IDs represent native Hardcover or Goodreads.
-3. Stop BookshelfNG and copy its `bin`, config, SQLite database and sidecar files,
+3. Stop BookshelfNG and copy its `bin`, config, SQLite database, WAL and journal,
    and existing user backups into a timestamped sibling backup directory.
 4. Run SQLite `PRAGMA integrity_check` against the copied database. The backup
    is retained permanently; the installer does not rotate older backups.
 5. Stage the ChaptarrNG payload outside `bin` and run the non-mutating migration
-   preview with the chosen provider mode. The installer hashes the database and
-   all SQLite sidecars before and after preview.
+   preview with the chosen provider mode. The installer hashes the database,
+   WAL, and rollback journal before and after preview. SQLite rebuilds its
+   transient `-shm` index when the database is reopened, so it is not backed up.
 6. Show the preview output in the installer log and require a separate apply
    confirmation.
 7. Apply the migration, replace `bin`, remove the `Readarr` service, and register

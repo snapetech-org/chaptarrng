@@ -45,10 +45,10 @@ continues to install its own `Readarr` service. Draft PR #131 now includes a
 ChaptarrNG-owned, migration-only WPF installer candidate for one SQLite
 database using the standard `NT AUTHORITY\LocalService` account. It detects the
 legacy data path, asks for provider mode, makes a retained integrity-checked
-backup, checks preview immutability across SQLite sidecars, previews before
-apply, switches to the `Chaptarr` service, and verifies its data path and local
-health. Custom service accounts, PostgreSQL, and multiple databases fail
-closed. Its Windows CI build and exact-head checks are pending; representative
+backup, checks preview immutability for the database, WAL, and rollback
+journal, previews before apply, switches to the `Chaptarr` service, and verifies
+its data path and local health. Custom service accounts, PostgreSQL, and
+multiple databases fail closed. Its Windows CI build and exact-head checks are pending; representative
 Windows data and real installed rollback remain unaccepted. Keep the release
 freeze in place.
 

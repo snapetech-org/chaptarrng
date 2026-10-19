@@ -47,11 +47,11 @@ it keeps the existing `Readarr` data directory, asks for provider mode, retains
 a verified backup, previews before apply, then switches to the `Chaptarr`
 service and checks local health. The installer is unpublished, supports one
 SQLite database under the standard `NT AUTHORITY\LocalService` account. It
-checks preview immutability across the SQLite sidecars and fails closed on
-custom service accounts, PostgreSQL, or multiple databases. It still needs
-hosted exact-head validation plus a populated Windows upgrade and rollback
-rehearsal. Do not use it for production cutover while the release freeze
-remains.
+checks preview immutability for the database, WAL, and rollback journal, then
+fails closed on custom service accounts, PostgreSQL, or multiple databases. It
+still needs hosted exact-head validation plus a populated Windows upgrade and
+rollback rehearsal. Do not use it for production cutover while the release
+freeze remains.
 
 Draft retirement PR #131 carries application code at `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727) passed on Linux, macOS, and Windows, including PostgreSQL migration and the Linux pinned-tool M4B check; CodeQL, dependency/security, dependency-review, NuGet, release-note, and Helm identity checks passed. The candidate artifact also passed an isolated populated migration-to-SeerrNG smoke. These source checks do not approve production cutover; see the [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) for evidence and remaining acceptance gates.
 

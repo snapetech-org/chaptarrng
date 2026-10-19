@@ -147,7 +147,8 @@ public static class BackupService
     public static string GetDatabaseFingerprint(string dataDirectory)
     {
         using var fingerprint = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        foreach (var name in new[] { "readarr.db", "readarr.db-journal", "readarr.db-wal", "readarr.db-shm" })
+        // SQLite may rewrite its disposable -shm index while opening a WAL database read-only.
+        foreach (var name in new[] { "readarr.db", "readarr.db-journal", "readarr.db-wal" })
         {
             fingerprint.AppendData(Encoding.UTF8.GetBytes(name));
             fingerprint.AppendData(new byte[] { 0 });
@@ -224,10 +225,10 @@ public static class BackupService
 
     private static void CopySqliteSet(string dataDirectory, string target, IProgress<LogLine> log)
     {
-        var names = new[] { "readarr.db", "readarr.db-journal", "readarr.db-wal", "readarr.db-shm" };
+        var names = new[] { "readarr.db", "readarr.db-journal", "readarr.db-wal" };
         var primary = Path.Combine(dataDirectory, "readarr.db");
         var dbMb = Math.Round(new FileInfo(primary).Length / 1024.0 / 1024.0);
-        log.Report(new LogLine(LogStream.Stdout, $"[backup] Copying SQLite database and sidecar files ({dbMb:F0} MB)..."));
+        log.Report(new LogLine(LogStream.Stdout, $"[backup] Copying SQLite database, WAL, and rollback journal ({dbMb:F0} MB)..."));
 
         foreach (var name in names)
         {

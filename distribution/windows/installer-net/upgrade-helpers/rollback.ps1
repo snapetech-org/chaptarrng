@@ -67,7 +67,7 @@ if (Test-Path -LiteralPath $currentBin) {
 }
 Copy-Item -LiteralPath $backupBin -Destination $currentBin -Recurse -Force
 
-foreach ($name in @('config.xml', 'readarr.db', 'readarr.db-journal', 'readarr.db-wal', 'readarr.db-shm')) {
+foreach ($name in @('config.xml', 'readarr.db', 'readarr.db-journal', 'readarr.db-wal')) {
     $current = Join-Path $DataDirectory $name
     $source = Join-Path $BackupPath $name
     if (Test-Path -LiteralPath $current) {

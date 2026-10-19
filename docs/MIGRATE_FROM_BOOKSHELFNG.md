@@ -436,7 +436,8 @@ service/data path, requires the standard `NT AUTHORITY\LocalService` service
 account, asks which provider owns bare numeric IDs, verifies a permanent
 binary/config/database backup, previews before asking for apply, switches the
 service to `Chaptarr`, and checks its data path and local health. It hashes the
-SQLite database and sidecars to verify that preview left them unchanged. The
+SQLite database, WAL, and rollback journal to verify that preview left durable
+source data unchanged; SQLite rebuilds its transient `-shm` index. The
 initial path supports one SQLite database only; PostgreSQL, custom service
 accounts, multiple databases, unsupported schemas, and real operator-data
 rollback still require manual handling and maintainer acceptance. Keep the
