@@ -1139,11 +1139,17 @@ namespace Chaptarr.Api.V1.Books
         }
 
         /// <summary>
-        /// Lists known editions in a compact shape for clients that let a person choose an edition.
+        /// Every known edition of a book with its narration details, for clients that let a person
+        /// choose a performance. Unknown details stay unknown.
         /// </summary>
         [HttpGet("{id:int}/editions/catalog")]
-        public List<EditionCatalogResource> GetEditionCatalog(int id)
+        public ActionResult<List<EditionCatalogResource>> GetEditionCatalog(int id)
         {
+            if (_bookService.GetBook(id) == null)
+            {
+                return NotFound();
+            }
+
             var editions = _editionService.GetEditionsByBook(id);
             _mediaCoverProxy.ProxyRemoteUrls(editions.SelectMany(edition => edition.Images ?? new List<MediaCover>()));
 
@@ -1152,11 +1158,12 @@ namespace Chaptarr.Api.V1.Books
                 .ToHashSet();
             var facadeContext = HttpContext?.GetReadarrFacadeContext();
 
-            return editions
+            var catalog = editions
                 .OrderByDescending(edition => edition.Monitored)
                 .ThenBy(edition => edition.Title)
                 .Select(edition => edition.ToCatalogResource(ownedEditionIds.Contains(edition.Id), facadeContext))
                 .ToList();
+            return catalog;
         }
 
         [HttpGet("buckets")]

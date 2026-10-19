@@ -18,6 +18,19 @@ namespace Chaptarr.Core.Test.Api
     [TestFixture]
     public class EditionCatalogResourceFixture
     {
+        private class BookServiceProxy : DispatchProxy
+        {
+            protected override object Invoke(MethodInfo targetMethod, object[] args)
+            {
+                if (targetMethod?.Name == nameof(IBookService.GetBook) && args[0] is int id)
+                {
+                    return new Book { Id = id };
+                }
+
+                throw new NotImplementedException(targetMethod?.Name);
+            }
+        }
+
         private class EditionServiceProxy : DispatchProxy
         {
             public List<Edition> Editions { get; set; }
@@ -109,9 +122,10 @@ namespace Chaptarr.Core.Test.Api
             var mediaFileService = DispatchProxy.Create<IMediaFileService, MediaFileServiceProxy>();
             ((MediaFileServiceProxy)(object)mediaFileService).Files = new List<BookFile> { new BookFile { EditionId = 11 } };
             var coverProxy = DispatchProxy.Create<IMediaCoverProxy, MediaCoverProxy>();
+            var bookService = DispatchProxy.Create<IBookService, BookServiceProxy>();
 
             var controller = new BookController(
-                null, null, null, editionService, null, null, null, mediaFileService, null, coverProxy,
+                null, bookService, null, editionService, null, null, null, mediaFileService, null, coverProxy,
                 null, null, null, null, null, null, null, null, null, null)
             {
                 ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
@@ -119,7 +133,7 @@ namespace Chaptarr.Core.Test.Api
             controller.ControllerContext.HttpContext.Items[ReadarrFacadeContext.ItemKey] =
                 new ReadarrFacadeContext("hc", "audiobook", "/readarr/hc/audiobook");
 
-            var catalog = controller.GetEditionCatalog(10);
+            var catalog = controller.GetEditionCatalog(10).Value;
 
             Assert.That(catalog.Select(edition => edition.EditionId), Is.EqualTo(new[] { 12, 13, 11 }));
             Assert.That(catalog[0].ForeignEditionId, Is.EqualTo("30643037"));

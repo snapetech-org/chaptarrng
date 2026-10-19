@@ -25,11 +25,12 @@ monitoring state, and whether a local file is owned. `production` and
 multiple narrator names alone do not imply a full-cast production. Facade
 requests receive the edition ID for the selected provider dialect.
 
-**Availability:** this route and the `editionCatalog` capability are in the
-unpublished ChaptarrNG PR #131 candidate. They match the edition-catalog
-behavior added to BookshelfNG `main` in commit `9a04c2eb2`. Public ChaptarrNG
-`v0.9.977` does not include them, and release publication remains frozen
-pending the full BookshelfNG retirement acceptance gate.
+**Availability:** current ChaptarrNG source includes the edition catalog,
+series narrator matrix, and wanted-edition variant capability. The migration
+candidate also returns provider IDs in the selected facade dialect, proxies
+remote cover URLs, and derives ownership from the media-file service. Public
+ChaptarrNG `v0.9.977` predates these endpoints. PR #131 remains a draft, and
+release publication stays frozen until the BookshelfNG retirement gates pass.
 
 ## Configure a dedicated service key
 
@@ -118,3 +119,25 @@ history, pending-import retry/cancel operations, unchanged production
 settings, or a real BookshelfNG library. The earlier populated fixture used
 candidate head `1a0a1cf78b404fe86d7b266facd8e843e435d9b4`; the current-head
 smoke does not establish converted-data acceptance.
+
+## Narration and edition choices
+
+These read endpoints and the existing wanted-edition endpoint let SeerrNG show
+narration choices before a request. A client should read `features` from
+`GET /api/v1/system/capabilities` first and hide a control when its flag is
+absent, so older ChaptarrNG versions keep working.
+
+| Capability flag | Endpoint | Purpose |
+| --- | --- | --- |
+| `editionCatalog` | `GET /api/v1/book/{id}/editions/catalog` | Every known edition with narrators, production, abridgement, length, language, publisher, release date, cover, whether it is the monitored selection, and whether a file exists |
+| `seriesNarratorMatrix` | `GET /api/v1/series/narrators/matrix?title=…&authorId=…` | For each narrator: the volumes they cover, the volumes missing, and the volumes already owned; for each volume: the narrators known across all editions |
+| `wantedEditionVariants` | `POST /api/v1/book/{id}/editions/wanted` with `asNewVariant: true` | Track the chosen narration alongside the current selection instead of replacing it |
+
+Fields the metadata does not state are reported as `unknown` (`production`,
+`abridged`) or left empty; they are never inferred from a file name. A narrator
+is `full-cast` when the edition is flagged GraphicAudio or its own text says
+full cast or dramatized, `solo` for exactly one narrator, and otherwise
+`unknown`.
+
+`PUT /api/v1/series/{seriesId}/narrators/preferred` (already available) makes one
+narrator the series preference; SeerrNG uses it for **Collect With**.

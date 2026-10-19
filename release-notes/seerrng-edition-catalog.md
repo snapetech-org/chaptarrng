@@ -5,4 +5,4 @@ area: seerrng
 action: none
 breaking: false
 ---
-ChaptarrNG now exposes `GET /api/v1/book/{id}/editions/catalog` and advertises the capability to SeerrNG clients. The catalog includes narrator and ownership details, with production and abridgement reported as unknown when the edition data does not support a clear classification.
+ChaptarrNG lists every known edition of a book with narrator, ownership, production, abridgement, and length details, reporting unknown classifications when edition metadata is inconclusive. It also compares narrators across a whole series and advertises the catalog, narrator matrix, and wanted-edition variant capabilities so SeerrNG can offer narration choices and a second performance alongside the first.
