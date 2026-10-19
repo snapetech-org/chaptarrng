@@ -125,6 +125,7 @@ mirror_dockerhub_image() {
 if [[ "$publish_legacy_aliases" == "true" && "$publish_ghcr_aliases" == "true" ]]; then
   publish_alias "ghcr.io/snapetech/bookshelfng:latest" "$BOOKSHELF_HARDCOVER_IMAGE" "$BOOKSHELF_HARDCOVER_DIGEST"
   publish_alias "ghcr.io/snapetech/bookshelfng:main" "$BOOKSHELF_HARDCOVER_IMAGE" "$BOOKSHELF_HARDCOVER_DIGEST"
+  publish_alias "ghcr.io/snapetech/bookshelfng:master" "$BOOKSHELF_HARDCOVER_IMAGE" "$BOOKSHELF_HARDCOVER_DIGEST"
   publish_alias "ghcr.io/snapetech/bookshelfng:hardcover" "$BOOKSHELF_HARDCOVER_IMAGE" "$BOOKSHELF_HARDCOVER_DIGEST"
   publish_alias "ghcr.io/snapetech/bookshelfng:softcover" "$BOOKSHELF_SOFTCOVER_IMAGE" "$BOOKSHELF_SOFTCOVER_DIGEST"
 else
@@ -142,6 +143,7 @@ if [[ "${DOCKERHUB_CONFIGURED:-false}" == "true" ]]; then
     standard_ok=true
     publish_alias "docker.io/snapetech/chaptarrng:latest" "$dockerhub_source" "$EXPECTED_DIGEST"
     publish_alias "docker.io/snapetech/chaptarrng:main" "$dockerhub_source" "$EXPECTED_DIGEST"
+    publish_alias "docker.io/snapetech/chaptarrng:master" "$dockerhub_source" "$EXPECTED_DIGEST"
   fi
 
   if [[ "$publish_legacy_aliases" == "true" ]]; then
@@ -159,6 +161,7 @@ if [[ "${DOCKERHUB_CONFIGURED:-false}" == "true" ]]; then
     if [[ "$hardcover_ok" == "true" ]]; then
       publish_alias "docker.io/snapetech/bookshelfng:latest" "$dockerhub_hardcover" "$BOOKSHELF_HARDCOVER_DIGEST"
       publish_alias "docker.io/snapetech/bookshelfng:main" "$dockerhub_hardcover" "$BOOKSHELF_HARDCOVER_DIGEST"
+      publish_alias "docker.io/snapetech/bookshelfng:master" "$dockerhub_hardcover" "$BOOKSHELF_HARDCOVER_DIGEST"
       publish_alias "docker.io/snapetech/bookshelfng:hardcover" "$dockerhub_hardcover" "$BOOKSHELF_HARDCOVER_DIGEST"
     fi
     if [[ "$softcover_ok" == "true" ]]; then

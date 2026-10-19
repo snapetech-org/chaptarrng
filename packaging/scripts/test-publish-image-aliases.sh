@@ -126,6 +126,7 @@ run_aliases false true true
 printf '%s\t%s\n' \
   ghcr.io/snapetech/bookshelfng:latest "$hardcover_source" \
   ghcr.io/snapetech/bookshelfng:main "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:master "$hardcover_source" \
   ghcr.io/snapetech/bookshelfng:hardcover "$hardcover_source" \
   ghcr.io/snapetech/bookshelfng:softcover "$softcover_source" > "$work/expected-ghcr.log"
 cmp "$work/expected-ghcr.log" "$work/publish.log"
@@ -138,12 +139,15 @@ dockerhub_softcover="docker.io/snapetech/chaptarrng:bookshelf-softcover"
 printf '%s\t%s\n' \
   ghcr.io/snapetech/bookshelfng:latest "$hardcover_source" \
   ghcr.io/snapetech/bookshelfng:main "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:master "$hardcover_source" \
   ghcr.io/snapetech/bookshelfng:hardcover "$hardcover_source" \
   ghcr.io/snapetech/bookshelfng:softcover "$softcover_source" \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:master "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:latest "$dockerhub_hardcover" \
   docker.io/snapetech/bookshelfng:main "$dockerhub_hardcover" \
+  docker.io/snapetech/bookshelfng:master "$dockerhub_hardcover" \
   docker.io/snapetech/bookshelfng:hardcover "$dockerhub_hardcover" \
   docker.io/snapetech/bookshelfng:softcover "$dockerhub_softcover" > "$work/expected-both.log"
 cmp "$work/expected-both.log" "$work/publish.log"
@@ -155,7 +159,8 @@ grep -Fq "mirrored at $hardcover_digest" "$work/summary.md"
 run_aliases true false false
 printf '%s\t%s\n' \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
-  docker.io/snapetech/chaptarrng:main "$dockerhub_source" > "$work/expected-standard-only.log"
+  docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:master "$dockerhub_source" > "$work/expected-standard-only.log"
 cmp "$work/expected-standard-only.log" "$work/publish.log"
 grep -Fq 'Docker Hub BookshelfNG aliases: skipped because the migration bridge is disabled.' "$work/summary.md"
 [[ "$(wc -l < "$work/skopeo.log")" -eq 2 ]]
