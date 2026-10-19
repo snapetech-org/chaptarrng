@@ -88,7 +88,10 @@ detailed feature inventory remains in the
 - BookshelfNG `main` at `9a04c2eb2` now exposes
   `GET /api/v1/book/{id}/editions/catalog` and advertises `editionCatalog` for
   SeerrNG edition cards. The ChaptarrNG candidate adds the matching route and
-  capability, with focused tests and updated integration docs. It remains
+  capability, plus an **Editions and Narrations** tab on book details for
+  reading known edition metadata, including duration. Unstated details remain
+  visibly unprovided.
+  It remains
   source-only; exact-head hosted validation passed in run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
   The current source candidate also passed the isolated SeerrNG Compose smoke

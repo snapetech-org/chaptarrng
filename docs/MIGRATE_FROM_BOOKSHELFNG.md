@@ -41,7 +41,8 @@
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 > contains older SQLite and one-schema PostgreSQL migration support, native
 > Hardcover identity handling, BookOrbit Book Dock, SeerrNG edition-catalog
-> compatibility, and previewable media moves. Exact-head run
+> compatibility with an Editions and Narrations book-details tab, and
+> previewable media moves. Exact-head run
 > [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
 > passed on head 2c0401fc: Linux, macOS, and Windows build/tests, PostgreSQL
 > migration fixtures, release-note validation, CodeQL, dependency/secret

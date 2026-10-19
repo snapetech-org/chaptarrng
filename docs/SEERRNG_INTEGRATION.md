@@ -32,6 +32,13 @@ remote cover URLs, and derives ownership from the media-file service. Public
 ChaptarrNG `v0.9.977` predates these endpoints. PR #131 remains a draft, and
 release publication stays frozen until the BookshelfNG retirement gates pass.
 
+The PR #131 candidate also adds an **Editions and Narrations** tab to the book
+details page. It lists known editions with narrators, production, duration,
+abridgement, language, publisher, and selected/file-owned status. Metadata
+that does not state a value is shown as not provided rather than inferred.
+The tab and its catalog route are source-only and are not available in public
+`v0.9.977`.
+
 ## Configure a dedicated service key
 
 ChaptarrNG `0.9.941` and later can use a dedicated credential for SeerrNG.

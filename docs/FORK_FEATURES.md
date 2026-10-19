@@ -180,6 +180,12 @@ client show recognizable edition cards and let a person keep a second narration
 of a book next to the one already selected. Details are in the
 [SeerrNG integration guide](./SEERRNG_INTEGRATION.md#narration-and-edition-choices).
 
+The Bookshelf retirement candidate also adds an **Editions and Narrations**
+tab to ChaptarrNG book details. It reads the edition catalog and shows known
+narration metadata, selection, and file ownership without inferring unstated
+values. This user-facing tab is source-only in draft PR #131 and is not in
+public `v0.9.977`.
+
 Setup and behavior:
 
 - [SeerrNG integration guide](./SEERRNG_INTEGRATION.md)

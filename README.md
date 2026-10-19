@@ -102,7 +102,8 @@ NuGet, release-note, and receipt checks. It did not change application code.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 contains older SQLite and one-schema PostgreSQL migration support, native
 Hardcover identity handling, BookOrbit Book Dock, SeerrNG edition-catalog
-compatibility, and previewable media moves. The copy-only populated SQLite
+compatibility with the new Editions and Narrations book-details tab, and
+previewable media moves. The copy-only populated SQLite
 rehearsal, synthetic provider-mode and startup checks, and rollback evidence
 are recorded in the
 [migration fixture report](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
