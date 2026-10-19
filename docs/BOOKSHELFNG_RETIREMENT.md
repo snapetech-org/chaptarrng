@@ -40,6 +40,14 @@ operator data, semantic parity, real media/M4B acceptance, installed rollback,
 installer/channel handoff, or operator sign-off. No release or bridge was
 published.
 
+The Windows standalone handoff is still open. BookshelfNG's WPF installer
+continues to install its own `Readarr` service. The ChaptarrNG source candidate
+now preserves an explicit `-data` path when registering a Windows service, and
+the migration guide documents a manual preview/apply/install/restore sequence.
+The focused StartupContext and service-command-line tests pass locally (7/7);
+there is no native Windows service upgrade and rollback rehearsal yet, so this
+procedure remains blocked by the release freeze.
+
 **Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19):** The
 Linux app files from Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)
 were run with the checked-in Compose fixture against disposable config and

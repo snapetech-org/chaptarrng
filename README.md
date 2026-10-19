@@ -41,6 +41,11 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+The BookshelfNG Windows WPF installer still installs BookshelfNG. A ChaptarrNG
+Windows service handoff procedure is documented, but its service change is
+source-only and has not passed a native Windows upgrade and rollback rehearsal;
+the current release is not approved for that cutover.
+
 Draft retirement PR #131 carries application code at `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727) passed on Linux, macOS, and Windows, including PostgreSQL migration and the Linux pinned-tool M4B check; CodeQL, dependency/security, dependency-review, NuGet, release-note, and Helm identity checks passed. The candidate artifact also passed an isolated populated migration-to-SeerrNG smoke. These source checks do not approve production cutover; see the [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) for evidence and remaining acceptance gates.
 
 Helm has a source-only, fail-closed handoff chart at

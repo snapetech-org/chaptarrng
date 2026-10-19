@@ -149,12 +149,20 @@ are source-only, have not been published, and remain gated. Pinned versions and
 image digests still need an operator change. A repointed tag does not change a
 running container.
 
+The BookshelfNG Windows WPF installer still installs the old application and
+does not hand off its `Readarr` service. ChaptarrNG's Windows archive has a
+source-only manual migration procedure that previews and converts the existing
+appdata, unregisters `Readarr`, and registers ChaptarrNG while preserving the
+explicit data path. The service argument change has focused source tests; the
+installer path has not passed a native Windows upgrade and rollback rehearsal.
+It is not approved for operator use while the release freeze is active. See the
+[Windows migration procedure](../docs/MIGRATE_FROM_BOOKSHELFNG.md#windows-standalone-service-migration).
+
 BookshelfNG's in-app updater still checks its existing upstream update service,
 which ChaptarrNG cannot redirect. Automatic migration must therefore use a
 validated image/package identity bridge, or operators must change their install
-source. Debian/PPA, Flatpak/AppImage, standalone installer definitions, Helm,
-third-party catalogs, and pinned/offline installs need an explicit handoff or
-retirement decision.
+source. Debian/PPA, Flatpak/AppImage, Helm, third-party catalogs, and
+pinned/offline installs need an explicit handoff or retirement decision.
 
 ## Work required before enabling the legacy bridge
 

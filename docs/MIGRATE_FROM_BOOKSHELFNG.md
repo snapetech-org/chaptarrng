@@ -426,6 +426,82 @@ library, root paths, profiles, indexers, download clients, notifications, and
 SeerrNG connection. The explicit stopped-service flag makes the required
 quiescent data directory an operator-confirmed precondition.
 
+### Windows standalone service migration
+
+The BookshelfNG WPF installer still installs and upgrades BookshelfNG. It does
+not hand the service over to ChaptarrNG. The following manual path is a source
+candidate only; the published `v0.9.977` Windows binary does not preserve
+`-data` when registering a service. Do not use it for a Windows cutover while
+the retirement freeze is active. The future approved handoff must use a
+ChaptarrNG release containing the service-argument fix and pass native Windows
+upgrade and rollback acceptance.
+
+For the default WPF install, the BookshelfNG service uses
+`C:\ProgramData\Readarr`. Stop `Readarr`, make an independent copy of that
+entire directory, then preview with the ChaptarrNG Windows archive extracted
+to a separate directory. Keep the archive version and data path identical for
+preview, apply, and service install:
+
+```powershell
+$data = Join-Path $env:ProgramData 'Readarr'
+$legacyConsole = Join-Path $data 'bin\Readarr.Console.exe'
+$chaptarrConsole = 'C:\Program Files\ChaptarrNG\Chaptarr.Console.exe'
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+
+Stop-Service -Name Readarr -Force
+(Get-Service -Name Readarr).WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+Copy-Item -LiteralPath $data -Destination "$data.pre-chaptarr-$stamp" -Recurse
+
+& $chaptarrConsole -preview-bookshelf-migration "-data=$data"
+if ($LASTEXITCODE -ne 0) { throw 'Migration preview failed; leave BookshelfNG stopped and review the report.' }
+```
+
+After the retirement gates close and apply is approved, run the explicit
+conversion while `Readarr` remains stopped. Keep the printed BookshelfNG
+backup path. Then unregister the old service and register ChaptarrNG against
+the same data directory:
+
+```powershell
+& $chaptarrConsole -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=$data"
+if ($LASTEXITCODE -ne 0) { throw 'Migration apply failed; do not start either service.' }
+
+& $legacyConsole /u /exitimmediately
+if ($LASTEXITCODE -ne 0) { throw 'Could not remove the stopped BookshelfNG service.' }
+
+& $chaptarrConsole /i "-data=$data" /nobrowser
+if ($LASTEXITCODE -ne 0) { throw 'Could not install the ChaptarrNG service.' }
+```
+
+ChaptarrNG registers its own `Chaptarr` Windows service. The service installer
+now carries the quoted `-data` path into the Windows service command line, so
+the service continues to use `C:\ProgramData\Readarr` instead of creating a
+second, empty Chaptarr data directory. Confirm the service is running and
+`http://127.0.0.1:8787/ping` responds before retiring the independent backup.
+For custom BookshelfNG data paths or ports, substitute the values from the
+existing service configuration and `config.xml`.
+
+To roll back after conversion, stop `Chaptarr`, set `$backup` to the exact
+BookshelfNG backup path printed by apply, then preview and restore it before
+reinstalling the old service:
+
+```powershell
+$backup = Join-Path $data 'readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-ID.db'
+Stop-Service -Name Chaptarr -Force
+(Get-Service -Name Chaptarr).WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+
+& $chaptarrConsole -preview-bookshelf-restore "-bookshelf-backup=$backup" "-data=$data"
+if ($LASTEXITCODE -ne 0) { throw 'Restore preview failed; leave both services stopped.' }
+& $chaptarrConsole -restore-bookshelf -confirm-bookshelf-service-stopped "-bookshelf-backup=$backup" "-data=$data"
+if ($LASTEXITCODE -ne 0) { throw 'Restore failed; leave both services stopped and retain all backups.' }
+
+& $legacyConsole /i /exitimmediately
+if ($LASTEXITCODE -ne 0) { throw 'Could not reinstall the restored BookshelfNG service.' }
+```
+
+Start BookshelfNG only after restore succeeds. Preserve the ChaptarrNG database
+backup created by restore and the independent directory copy so post-migration
+writes remain available for recovery.
+
 ## Update the local MCP connection
 
 If `snapetech-mcp` is configured for BookshelfNG, change the MCP host to use
