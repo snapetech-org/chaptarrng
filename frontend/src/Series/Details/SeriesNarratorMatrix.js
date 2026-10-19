@@ -55,7 +55,7 @@ function SeriesNarratorMatrix({ title, authorId }) {
           <li key={narrator.name} className={styles.narrator}>
             <p className={styles.name}>
               {narrator.name}{' '}
-              {narrator.production === 'full-cast' && <Label kind="info">{translate('EditionFullCast')}</Label>}
+              {narrator.production === 'full-cast' && <Label kind="primary">{translate('EditionFullCast')}</Label>}
               {!narrator.missingBookIds.length && <Label kind="success">{translate('NarratorComplete')}</Label>}
             </p>
             <div className={styles.row}>
