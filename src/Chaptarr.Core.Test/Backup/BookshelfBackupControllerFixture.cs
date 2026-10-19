@@ -36,7 +36,7 @@ namespace Chaptarr.Core.Test.Backup
             _encryptedBackupService = new BookshelfEncryptedBackupService();
 
             _diskProvider.Setup(provider => provider.EnsureFolder(It.IsAny<string>()))
-                .Callback<string>(Directory.CreateDirectory);
+                .Callback<string>(path => Directory.CreateDirectory(path));
             _diskProvider.Setup(provider => provider.SaveStream(It.IsAny<Stream>(), It.IsAny<string>()))
                 .Callback<Stream, string>((stream, path) =>
                 {
