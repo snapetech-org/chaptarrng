@@ -9,6 +9,8 @@ handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
+**Current PR #131 validation, 2026-10-19:** Draft code head 50e4cc14cf9cf87bbfeebbbb114cadbbeab6b5a3 merges current ChaptarrNG main at 95f112e7 and includes the stable master image alias. Exact-head Build [39219378504](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378504) passed: Linux 4,412/0 failed, macOS 4,407/0, Windows 4,373/0, PostgreSQL migration fixtures 53/0, and all four validation receipts reconciled. CodeQL [39219375419](https://github.com/snapetech-org/chaptarrng/actions/runs/39219375419), security [39219378250](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378250), NuGet [39219376642](https://github.com/snapetech-org/chaptarrng/actions/runs/39219376642), and dependency review [39219378382](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378382) passed. This validates source code only; release, data, parity, installed rollback, and channel acceptance remain open.
+
 ## Current releases
 
 - ChaptarrNG `v0.9.977` is published with the standard image, migration tools,
@@ -34,7 +36,7 @@ detailed feature inventory remains in the
   M4B merge settings, tagged track ordering and chapter titles, original-track
   fallback, and safe move/copy source handling. Hosted Linux, macOS, Windows,
   PostgreSQL migration, CodeQL, dependency/security, and release-note checks
-  passed on its clean head. The current retirement candidate passes a
+  passed on its clean head. The retirement candidate passed a
   tool-enabled synthetic two-track importer smoke using the real converter; it
   verifies track order, chapter titles and offsets, metadata, one registered
   file, Move-mode source cleanup, and Copy-mode source retention. Focused
@@ -88,7 +90,7 @@ detailed feature inventory remains in the
   edition. Focused importer, edition-catalog, and capability tests pass 52/52
   locally. Exact-head run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
-  passed on PR #131 head 2c0401fc: Linux, macOS, and Windows build/tests,
+  passed on earlier PR #131 head 2c0401fc: Linux, macOS, and Windows build/tests,
   PostgreSQL migrations, release-note validation, CodeQL, dependency and
   secret checks, NuGet submission, and runner-receipt reconciliation. The
   preceding run [39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843)
@@ -106,7 +108,7 @@ detailed feature inventory remains in the
   BookshelfNG source commit `6e1a62e12` passed hosted CI, release-note
   validation, and CodeQL; the manual run skipped release and image-publication
   jobs. The source change is not a new release.
-  Candidate code snapshot `8b4c6e23` integrates current ChaptarrNG `main`,
+  Earlier candidate code snapshot `8b4c6e23` integrated then-current ChaptarrNG `main`,
   including its Editions tab and series narrator comparison, and retains the
   edition labels for unknown and not-applicable metadata. Local translation,
   type, targeted ESLint, and Stylelint checks pass. Exact-head Build run
@@ -121,7 +123,7 @@ detailed feature inventory remains in the
   package. The route and catalog implementation at code snapshot `2c0401fc`
   passed run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
-  The current source candidate also passed the isolated SeerrNG Compose smoke
+  An earlier source candidate also passed the isolated SeerrNG Compose smoke
   against PR #131 head `ddec3e81` and SeerrNG `10f06eab9`: capability discovery,
   empty paged-library access, and restricted-key denials passed. This does not
   establish populated-data acceptance or end-to-end SeerrNG workflows.
@@ -141,7 +143,7 @@ detailed feature inventory remains in the
   shared-root and format-root sidecars, path traversal, untracked files,
   conflicts, stale sources, and bulk preview. Run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
-  passes on head 2c0401fc, including Windows tests after replacing the
+  passed on earlier head 2c0401fc, including Windows tests after replacing the
   POSIX-only fixture paths identified by run
   [39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843).
   This implementation is not on main or in .977; representative library,

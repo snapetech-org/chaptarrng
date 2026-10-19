@@ -58,22 +58,7 @@ the current complete path count. Upstream PR [#114](https://github.com/Chaptarr/
 which preserves media type during scoped book lookup, remains open. The broader
 upstream issue/PR audit remains incomplete.
 
-The BookshelfNG consolidation is in ChaptarrNG `main`; its standard image uses
-the same executable for fresh and migrated installs. BookshelfNG `main` is
-`6e1a62e12`, and its audit and guarded release-bridge PRs #128 and #130 are
-merged. BookshelfNG's Editions and Narrations detail tab is backed by
-`GET /api/v1/book/{id}/editions/catalog` and the `editionCatalog` capability.
-ChaptarrNG `main` now includes the book-details tab and series narrator
-comparison. Retirement candidate code snapshot `8b4c6e23` integrates those
-changes and retains explicit unknown and not-applicable edition labels. Local
-translation, type, targeted ESLint, and Stylelint checks pass. Exact-head Build
-run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
-passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-
-receipt checks; CodeQL, dependency review, security scan, and NuGet submission
-also pass. Disposable-fork validation was skipped by its gate. These are source
-checks, not operator-data or channel acceptance. BookshelfNG issue #114
-(new-author paths) is closed and already covered by ChaptarrNG `v0.9.974+`;
-issue #144 (retirement) remains open.
+The BookshelfNG consolidation is in ChaptarrNG main; the standard image uses the same executable for fresh and migrated installs. The Editions and Narrations API first landed in BookshelfNG commit 6e1a62e12, and current BookshelfNG main is 53763d49749bc36d76314c2e75bb81f1eeebc41b. ChaptarrNG main includes the matching book-details tab, series narrator comparison, and editionCatalog capability. Earlier candidate code snapshot 8b4c6e23 integrated those features and passed its own cross-platform and security checks. The current PR #131 code head 50e4cc14cf9cf87bbfeebbbb114cadbbeab6b5a3 passed exact-head Build 39219378504: Linux 4,412/0 failed, macOS 4,407/0, Windows 4,373/0, PostgreSQL migration fixtures 53/0, with all four receipts reconciled. CodeQL, security, NuGet, and dependency review passed on the same head. These are source checks, not operator-data or channel acceptance. BookshelfNG issue #114 (new-author paths) is closed and already covered by ChaptarrNG v0.9.974+; issue #144 (retirement) remains open.
 ChaptarrNG's upstream PR #114 is a separate issue
 and remains open. ChaptarrNG's own
 repository has no open issues or pull requests. The converter,

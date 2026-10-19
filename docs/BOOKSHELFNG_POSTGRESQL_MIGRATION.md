@@ -7,7 +7,7 @@
 > acceptance are complete and a release explicitly supports it. Earlier code
 > snapshot `2c0401fc` passed exact-head run
 > [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
-> Integrated candidate code snapshot `8b4c6e23` passed Linux, macOS, Windows,
+> Earlier integrated candidate code snapshot `8b4c6e23` passed Linux, macOS, Windows,
 > PostgreSQL migration, release-note, and runner-receipt checks in exact-head
 > Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341);
 > CodeQL, dependency review, security scan, and NuGet submission also passed.
@@ -15,6 +15,8 @@
 > validation was skipped by its gate. This validates one synthetic
 > migration-158 schema only; PostgreSQL operator-data acceptance and
 > independent backup/restore validation remain open.
+
+**Current PR #131 validation, 2026-10-19:** Draft code head 50e4cc14cf9cf87bbfeebbbb114cadbbeab6b5a3 merges current ChaptarrNG main at 95f112e7 and includes the stable master image alias. Exact-head Build [39219378504](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378504) passed: Linux 4,412/0 failed, macOS 4,407/0, Windows 4,373/0, PostgreSQL migration fixtures 53/0, and all four validation receipts reconciled. CodeQL [39219375419](https://github.com/snapetech-org/chaptarrng/actions/runs/39219375419), security [39219378250](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378250), NuGet [39219376642](https://github.com/snapetech-org/chaptarrng/actions/runs/39219376642), and dependency review [39219378382](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378382) passed. This validates source code only; release, data, parity, installed rollback, and channel acceptance remain open.
 
 ## Candidate behavior
 

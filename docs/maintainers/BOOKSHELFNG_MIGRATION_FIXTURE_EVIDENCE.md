@@ -4,10 +4,11 @@
 populated migration-158 snapshot tested on a disposable copy. This is
 maintainer evidence, not approval to cut over operator data.
 
+**Current PR #131 validation, 2026-10-19:** Draft code head 50e4cc14cf9cf87bbfeebbbb114cadbbeab6b5a3 merges current ChaptarrNG main at 95f112e7 and includes the stable master image alias. Exact-head Build [39219378504](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378504) passed: Linux 4,412/0 failed, macOS 4,407/0, Windows 4,373/0, PostgreSQL migration fixtures 53/0, and all four validation receipts reconciled. CodeQL [39219375419](https://github.com/snapetech-org/chaptarrng/actions/runs/39219375419), security [39219378250](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378250), NuGet [39219376642](https://github.com/snapetech-org/chaptarrng/actions/runs/39219376642), and dependency review [39219378382](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378382) passed. This validates source code only; release, data, parity, installed rollback, and channel acceptance remain open.
 ## Candidate and fixture
 
 - ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131). The populated rehearsal below is one fixture run; it does not stand in for representative-data acceptance.
-- Later integrated code snapshot `8b4c6e23` passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-receipt checks in Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341). CodeQL, dependency review, security scan, and NuGet submission also passed. Those hosted checks do not rerun the private populated-data rehearsal or expand its scope.
+- Earlier integrated code snapshot `8b4c6e23` passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-receipt checks in Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341). CodeQL, dependency review, security scan, and NuGet submission also passed. Those hosted checks do not rerun the private populated-data rehearsal or expand its scope.
 - Earlier exact-head Build run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
   passed Linux, macOS, and Windows builds/tests, PostgreSQL migration fixtures,
@@ -269,7 +270,7 @@ still requires operator classification. Older real schemas, PostgreSQL
 operator data, complete settings/provider and client continuity, feature
 parity, and installer/update-channel acceptance remain open. The earlier populated fixture validation used code snapshot `2c0401fc` and passed
 exact-head hosted run [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
-The later integrated code snapshot `8b4c6e23` passed cross-platform and
+An earlier integrated code snapshot `8b4c6e23` passed cross-platform and
 PostgreSQL CI in run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341),
 but the private populated fixture was not rerun in that workflow. The source
 changes remain unpublished, and operator-data, feature-parity,

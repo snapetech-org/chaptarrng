@@ -47,9 +47,9 @@ the validated conversion and retains the BookshelfNG source database for
 rollback. If conversion fails, startup restores the previous ChaptarrNG
 database; after success, it removes that temporary `.pre-restore` copy. This
 source candidate is not in `v0.9.977` and does not authorize cutover.
-PR #131 code head `6f57d355` passed exact-head Build run
-[39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613)
-on Linux, macOS, Windows, PostgreSQL migration, and release-note validation.
+Earlier PR #131 code head 6f57d355 passed exact-head Build run [39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613) on Linux, macOS, Windows, PostgreSQL migration, and release-note validation.
+
+**Current PR #131 validation, 2026-10-19:** Draft code head 50e4cc14cf9cf87bbfeebbbb114cadbbeab6b5a3 merges current ChaptarrNG main at 95f112e7 and includes the stable master image alias. Exact-head Build [39219378504](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378504) passed: Linux 4,412/0 failed, macOS 4,407/0, Windows 4,373/0, PostgreSQL migration fixtures 53/0, and all four validation receipts reconciled. CodeQL [39219375419](https://github.com/snapetech-org/chaptarrng/actions/runs/39219375419), security [39219378250](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378250), NuGet [39219376642](https://github.com/snapetech-org/chaptarrng/actions/runs/39219376642), and dependency review [39219378382](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378382) passed. This validates source code only; release, data, parity, installed rollback, and channel acceptance remain open.
 
 Until those gates close, the published converter is for read-only preview
 only. Do not apply a conversion or start ChaptarrNG against BookshelfNG's
@@ -99,7 +99,7 @@ locally. The earlier Windows run [39195460843](https://github.com/snapetech-org/
 found four media-move fixtures using POSIX-only paths; code snapshot
 `2c0401fc` changed those fixtures to native temporary paths and passed exact-
 head run [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
-The integrated candidate code snapshot `8b4c6e23` includes current ChaptarrNG
+Earlier integrated candidate code snapshot `8b4c6e23` includes current ChaptarrNG
 `main`, the Editions and Narrations tab, and the series narrator comparison.
 Exact-head Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
 passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-
@@ -183,7 +183,7 @@ author-wide extras stay in place. The candidate includes regression coverage
 for format isolation, shared-root and format-root sidecars, traversal,
 untracked-file safety, conflicts, and stale sources. Exact-head run
 [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
-passed on head 2c0401fc, including Windows tests after its native-path fixture
+passed on earlier head 2c0401fc, including Windows tests after its native-path fixture
 fix. The feature remains unpublished and representative-library, cross-device,
 partial-failure rollback, and channel acceptance remain open.
 
@@ -200,8 +200,8 @@ and migration handling are source-only and are not in `.977`; the published
 `.977` importer maps bare numeric IDs to Goodreads even if `HARDCOVER=true` is
 present. Exact-head run
 [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
-passed on the earlier PR #131 code snapshot 2c0401fc. The later code snapshot
-8b4c6e23 also passed platform and PostgreSQL validation in run
+passed on the earlier PR #131 code snapshot 2c0401fc. An earlier integrated code snapshot
+8b4c6e23 passed platform and PostgreSQL validation in run
 [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341),
 but the candidate remains unsupported for operator data until semantic review,
 representative conversion and rollback,

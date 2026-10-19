@@ -29,7 +29,7 @@
 > The draft candidate also accepts supported BookshelfNG ZIP backups through
 > ChaptarrNG's normal restore path; it validates and stages the legacy database
 > before normal startup converts it. This restore change is not in `.977`, and
-> its exact-head validation is pending. Keep the original archive and a separate
+> Current exact-head validation is recorded below; it still does not approve production cutover. Keep the original archive and a separate
 > appdata backup. It does not make cutover approved.
 > On 2026-10-19, candidate build `0.9.978.0` passed preview, apply, rollback
 > preview, and explicit rollback on a disposable copy of populated
@@ -49,7 +49,7 @@
 > compatibility with the Editions and Narrations tab, and previewable media
 > moves. Earlier code snapshot `2c0401fc` passed exact-head run
 > [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
-> Integrated candidate code snapshot `8b4c6e23` includes current ChaptarrNG
+> Earlier integrated candidate code snapshot `8b4c6e23` includes current ChaptarrNG
 > `main`, the Editions and Narrations tab, and the series narrator comparison.
 > Exact-head Build run
 > [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
@@ -106,6 +106,8 @@ That source fix is not in `.977`. Populated synthetic v22 coverage exercises
 conversion and rollback, but it is not a real-data rehearsal or proof for every
 historical BookshelfNG release. Unknown or newer schemas fail closed without
 changing the source.
+
+**Current PR #131 validation, 2026-10-19:** Draft code head 50e4cc14cf9cf87bbfeebbbb114cadbbeab6b5a3 merges current ChaptarrNG main at 95f112e7 and includes the stable master image alias. Exact-head Build [39219378504](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378504) passed: Linux 4,412/0 failed, macOS 4,407/0, Windows 4,373/0, PostgreSQL migration fixtures 53/0, and all four validation receipts reconciled. CodeQL [39219375419](https://github.com/snapetech-org/chaptarrng/actions/runs/39219375419), security [39219378250](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378250), NuGet [39219376642](https://github.com/snapetech-org/chaptarrng/actions/runs/39219376642), and dependency review [39219378382](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378382) passed. This validates source code only; release, data, parity, installed rollback, and channel acceptance remain open.
 
 ## Restore a BookshelfNG backup archive
 
@@ -176,7 +178,7 @@ The current ChaptarrNG work-branch candidate also maps a saved `HardcoverAuth`
 database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
 precedence, and the original BookshelfNG database remains available in the
 rollback backup. That native provider and token mapping are not in published
-`v0.9.977`. The integrated code snapshot `8b4c6e23` passed cross-platform
+`v0.9.977`. The earlier integrated code snapshot `8b4c6e23` passed cross-platform
 and PostgreSQL migration checks in exact-head run
 [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341).
 Representative converted-data acceptance remains open; see the [PostgreSQL

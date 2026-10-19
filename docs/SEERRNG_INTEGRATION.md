@@ -38,7 +38,7 @@ abridgement, language, publisher, and selected/file-owned status. Metadata
 that does not state a value is shown as not provided rather than inferred.
 The tab and its catalog route are source-only and are not available in public
 `v0.9.977`.
-Integrated candidate code snapshot `8b4c6e23` incorporates current ChaptarrNG
+Earlier integrated candidate code snapshot `8b4c6e23` incorporates current ChaptarrNG
 `main`, including the Editions tab and series narrator comparison, and retains
 explicit labels for unknown and not-applicable edition metadata. Local
 translation, type, targeted ESLint, and Stylelint checks pass. Exact-head Build
@@ -48,6 +48,9 @@ runner-receipt checks; CodeQL, dependency review, security scan, and NuGet
 submission also passed. The UI is source-only in public `v0.9.977`, and the
 candidate remains draft while operator-data, full SeerrNG workflow, rollback,
 and channel acceptance remain open.
+
+**Current PR #131 validation:** code head 50e4cc14cf9cf87bbfeebbbb114cadbbeab6b5a3 passed Build 39219378504, CodeQL, security, NuGet, and dependency review.
+The SeerrNG smoke evidence below is from earlier candidate snapshots and still does not cover end-to-end workflows or populated converted data.
 
 ## Configure a dedicated service key
 
@@ -129,7 +132,7 @@ adapter read status, discovered the capability contract, and received the
 empty paged book library. The restricted key was denied `/config/host` and
 unrelated `/command`; the global key was accepted by `/config/host`.
 
-This current-head smoke validates API and key behavior with an empty library;
+That earlier-head smoke validates API and key behavior with an empty library;
 it does not replace the earlier populated-fixture smoke above. Neither run
 exercises end-to-end SeerrNG request creation, availability statistics,
 history, pending-import retry/cancel operations, unchanged production
@@ -137,13 +140,13 @@ settings, or a real BookshelfNG library. The earlier populated fixture used
 candidate head `1a0a1cf78b404fe86d7b266facd8e843e435d9b4`; the current-head
 smoke does not establish converted-data acceptance.
 
-On 2026-10-18, the local Compose smoke passed against the current PR #131
+On 2026-10-18, the local Compose smoke passed against the earlier PR #131
 source head `ddec3e8104f02fe15e1885c617cdb621e2f71fc5`, whose application-code
 snapshot is `2c0401fc`, and SeerrNG source commit `10f06eab9`. It built the
 candidate from source and used a disposable config volume. SeerrNG discovered
 the capability contract and read the empty paged library with its restricted
 key; administrative and unrelated command routes were denied. This confirms
-the current source candidate's API and key boundary. The empty-library run
+the earlier source candidate's API and key boundary. The empty-library run
 does not establish populated migration acceptance or end-to-end SeerrNG
 request, history, availability, or pending-import behavior.
 
