@@ -5203,7 +5203,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                     Assert.Ignore("This opt-in smoke requires FFmpeg, FFprobe, PHP, m4b-tool, and mp4v2 tools.");
                 }
 
-                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, "true");
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, null);
                 Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable, null);
 
                 var partOne = Path.Combine(sourceDir, "01 Opening.m4b");
