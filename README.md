@@ -174,12 +174,12 @@ trip for the candidate. Older schemas, PostgreSQL operator data, full feature
 parity, and install channels remain open.
 
 The retirement candidate now also carries BookshelfNG's legacy
-`AudiobookshelfMetadata` OPF writer. It rediscovers `.opf` sidecars under the
-target consumer ID and maps the legacy `AudioBookShelf` sidecar ID during
-conversion, while preserving provider rows only for an exact implementation
-and settings-contract match. Unknown metadata providers and sidecar consumers
-block apply. Source-level importer and metadata fixtures cover this mapping;
-representative operator libraries and release readiness remain unverified.
+`AudiobookshelfMetadata` OPF writer as Chaptarr's distinct
+`LegacyAudiobookshelfMetadata` provider. It maps both legacy provider and
+sidecar IDs while preserving rows only for an exact `NullConfig` contract.
+Unknown metadata providers and sidecar consumers block apply. Source-level
+importer and metadata fixtures cover this mapping; representative operator
+libraries and release readiness remain unverified.
 
 A fresh copy of the restored database also opened in the BookshelfNG
 `hardcover` image on a Docker network with no external access; its configured

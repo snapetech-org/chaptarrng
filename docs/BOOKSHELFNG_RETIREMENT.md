@@ -120,12 +120,12 @@ feature-parity and migration-readiness gate. See the
 [migration guide](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers)
 and [Goodreads API deprecation notice](https://www.goodreads.com/topic/show/21788520-api-deprecation).
 
-The candidate also ports BookshelfNG's legacy `AudiobookshelfMetadata` OPF
-consumer. Its provider row is preserved only with the exact `NullConfig`
-contract; legacy `AudioBookShelf` sidecar IDs are canonicalized while file and
-book references remain linked. Unknown metadata providers or sidecar consumers
-block apply. Representative OPF libraries and live migration acceptance remain
-open.
+The candidate ports BookshelfNG's legacy `AudiobookshelfMetadata` OPF
+consumer as ChaptarrNG's distinct `LegacyAudiobookshelfMetadata` provider.
+Provider and sidecar IDs are mapped while preserving the exact `NullConfig`
+contract and file/book references. Unknown metadata providers or sidecar
+consumers block apply. Representative OPF libraries and live migration
+acceptance remain open.
 
 - ChaptarrNG `v0.9.977` is published with the standard image, migration tools,
   the embedded BookshelfNG SQLite migration chain, and standalone release

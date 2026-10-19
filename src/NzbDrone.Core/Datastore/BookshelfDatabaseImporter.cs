@@ -50,10 +50,16 @@ namespace NzbDrone.Core.Datastore
             BuildProviderContractMap(typeof(IImportList), typeof(ImportListBase<>));
         private static readonly IReadOnlyDictionary<string, string> MetadataContracts =
             BuildProviderContractMap(typeof(IMetadata), typeof(MetadataBase<>));
+        private static readonly IReadOnlyDictionary<string, string> MetadataImplementationAliases =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["AudiobookshelfMetadata"] = "LegacyAudiobookshelfMetadata"
+            };
         private static readonly IReadOnlyDictionary<string, string> MetadataFileConsumerAliases =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["AudioBookShelf"] = "AudiobookshelfMetadata"
+                ["AudioBookShelf"] = "LegacyAudiobookshelfMetadata",
+                ["AudiobookshelfMetadata"] = "LegacyAudiobookshelfMetadata"
             };
         private static readonly IReadOnlyDictionary<string, string> NotificationContracts =
             BuildProviderContractMap(typeof(INotification), typeof(NotificationBase<>));
@@ -134,7 +140,7 @@ namespace NzbDrone.Core.Datastore
             CopyTable(source, target, transaction, report, "ImportListExclusions");
             ImportLists(source, target, transaction, qualityProfiles, metadataProfiles, report);
             ImportIndexers(source, target, transaction, report);
-            ImportProviderTable(source, target, transaction, report, "Metadata", MetadataContracts, "metadata-consumer");
+            ImportProviderTable(source, target, transaction, report, "Metadata", MetadataContracts, "metadata-consumer", MetadataImplementationAliases);
             CopyTable(source, target, transaction, report, "QualityDefinitions");
             CopyTable(source, target, transaction, report, "ReleaseProfiles");
             CopyTable(source, target, transaction, report, "RemotePathMappings");
@@ -1332,7 +1338,8 @@ namespace NzbDrone.Core.Datastore
             BookshelfDatabaseImportReport report,
             string table,
             IReadOnlyDictionary<string, string> compatibleContracts,
-            string providerKind)
+            string providerKind,
+            IReadOnlyDictionary<string, string> implementationAliases = null)
         {
             var rows = ReadRows(source, table).ToList();
             var targetColumns = GetColumns(target, table);
@@ -1351,7 +1358,7 @@ namespace NzbDrone.Core.Datastore
                 }
 
                 var values = Intersect(row, targetColumns);
-                CheckProviderSettingsCompatibility(row, values, compatibleContracts, unsupported);
+                CheckProviderSettingsCompatibility(row, values, compatibleContracts, unsupported, implementationAliases);
                 InsertRow(target, transaction, table, targetColumns, values);
             }
 
@@ -1367,9 +1374,18 @@ namespace NzbDrone.Core.Datastore
             IReadOnlyDictionary<string, object> sourceRow,
             IDictionary<string, object> targetRow,
             IReadOnlyDictionary<string, string> compatibleContracts,
-            ISet<string> unsupported)
+            ISet<string> unsupported,
+            IReadOnlyDictionary<string, string> implementationAliases = null)
         {
-            var implementation = GetString(sourceRow, "Implementation") ?? "(missing implementation)";
+            var sourceImplementation = GetString(sourceRow, "Implementation") ?? "(missing implementation)";
+            var implementation = implementationAliases != null && implementationAliases.TryGetValue(sourceImplementation, out var alias)
+                ? alias
+                : sourceImplementation;
+            if (!implementation.Equals(sourceImplementation, StringComparison.OrdinalIgnoreCase))
+            {
+                SetIfPresent(targetRow, "Implementation", implementation);
+            }
+
             var configContract = GetString(sourceRow, "ConfigContract") ?? "";
             var hasCompatibleImplementation = compatibleContracts.TryGetValue(implementation, out var expectedContract) &&
                 string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase);
@@ -1395,7 +1411,7 @@ namespace NzbDrone.Core.Datastore
                 settingsDisposition += " (missing Goodreads OAuth settings: " + string.Join(", ", missingOAuthSettings) + ")";
             }
 
-            unsupported.Add($"row {GetInt(sourceRow, "Id")}: {implementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}{settingsDisposition}");
+            unsupported.Add($"row {GetInt(sourceRow, "Id")}: {sourceImplementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}{settingsDisposition}");
         }
 
         private static string[] FindMissingGoodreadsOAuthSettings(string settingsJson, string implementation, string configContract)

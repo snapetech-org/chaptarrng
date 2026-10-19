@@ -165,7 +165,7 @@ namespace Chaptarr.Core.Test.Datastore
                     "provider settings and credentials must not be included in the report");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginDownload/FixturePluginDownloadSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
-                    issue.Contains("AudiobookshelfMetadata/NullConfig", StringComparison.Ordinal)), Is.False,
+                    issue.Contains("LegacyAudiobookshelfMetadata/NullConfig", StringComparison.Ordinal)), Is.False,
                     "the legacy OPF metadata provider is mapped by its exact implementation and contract");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
                     issue.Contains("FixturePluginMetadata/FixturePluginMetadataSettings", StringComparison.Ordinal)), Is.True);
@@ -1243,8 +1243,8 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Path FROM BookFiles WHERE Id = 50;"), Is.EqualTo("/library/Fixture Author/book.m4b"));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM ExtraFiles WHERE Id = 62 AND BookId = 30 AND BookFileId = 50;"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM MetadataFiles WHERE Id = 63 AND BookId = 30 AND BookFileId = 50;"), Is.EqualTo(1));
-                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 63;"), Is.EqualTo("AudiobookshelfMetadata"));
-                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Metadata WHERE Id = 101 AND Enable = 1 AND Implementation = 'AudiobookshelfMetadata' AND ConfigContract = 'NullConfig';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 63;"), Is.EqualTo("LegacyAudiobookshelfMetadata"));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Metadata WHERE Id = 101 AND Enable = 1 AND Implementation = 'LegacyAudiobookshelfMetadata' AND ConfigContract = 'NullConfig';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 94 AND BookId = 30 AND EditionId IS NULL AND Data LIKE '%\"FileId\":\"50\"%';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);

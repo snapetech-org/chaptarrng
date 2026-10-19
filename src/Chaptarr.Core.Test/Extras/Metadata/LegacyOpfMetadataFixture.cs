@@ -16,7 +16,7 @@ namespace Chaptarr.Core.Test.Extras.Metadata
         [Test]
         public void should_discover_legacy_opf_sidecars_with_the_current_consumer_identity()
         {
-            var subject = new AudiobookshelfMetadata();
+            var subject = new LegacyAudiobookshelfMetadata();
             var author = new Author { Id = 7, Path = "/library/Fixture Author" };
 
             var result = subject.FindMetadataFile(author, "/library/Fixture Author/Fixture Book/metadata.OPF");
@@ -24,7 +24,7 @@ namespace Chaptarr.Core.Test.Extras.Metadata
             Assert.Multiple(() =>
             {
                 Assert.That(result.AuthorId, Is.EqualTo(7));
-                Assert.That(result.Consumer, Is.EqualTo("AudiobookshelfMetadata"));
+                Assert.That(result.Consumer, Is.EqualTo("LegacyAudiobookshelfMetadata"));
                 Assert.That(result.RelativePath, Is.EqualTo("Fixture Book/metadata.OPF"));
                 Assert.That(result.Extension, Is.EqualTo(".OPF"));
                 Assert.That(result.Type, Is.EqualTo(MetadataType.BookMetadata));
@@ -35,7 +35,7 @@ namespace Chaptarr.Core.Test.Extras.Metadata
         [Test]
         public void should_write_legacy_opf_metadata_for_the_first_audio_part()
         {
-            var subject = new AudiobookshelfMetadata();
+            var subject = new LegacyAudiobookshelfMetadata();
             var author = new Author { Id = 7, Name = "Fixture Author", Path = "/library/Fixture Author" };
             var book = new Book
             {

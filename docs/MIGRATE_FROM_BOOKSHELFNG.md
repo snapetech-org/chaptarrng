@@ -222,13 +222,13 @@ providers. A public Goodreads shelf can keep working without OAuth when it has
 a valid numeric user ID. Migration reports identify the row and missing field
 names without printing settings or credentials.
 
-The candidate also ports BookshelfNG's `AudiobookshelfMetadata` OPF consumer.
-It keeps that exact implementation and `NullConfig` contract, rediscovers
-`.opf` files, and canonicalizes the legacy `AudioBookShelf` sidecar consumer
-ID to `AudiobookshelfMetadata` while retaining metadata-file IDs and remapped
-book/file links. Unknown metadata providers or sidecar consumers appear in the
-preview and block apply. ChaptarrNG's AudioBookShelf JSON and cover writer is a
-separate provider.
+The candidate ports BookshelfNG's `AudiobookshelfMetadata` OPF consumer as
+ChaptarrNG's distinct `LegacyAudiobookshelfMetadata` provider. The importer
+maps the old provider implementation and both legacy sidecar IDs to that name,
+preserving the `NullConfig` contract, metadata-file IDs, and remapped book/file
+links. Unknown metadata providers or sidecar consumers appear in the preview
+and block apply. ChaptarrNG's `AudioBookShelfMetadata` JSON and cover writer
+remains a separate provider.
 
 This source code does not restore Goodreads developer-key issuance or prove
 that an existing token remains accepted. Goodreads stopped issuing new

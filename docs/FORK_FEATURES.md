@@ -462,9 +462,10 @@ credentials, and never includes credential values in its report. Public
 Goodreads shelves remain available without OAuth when a valid user ID is saved.
 Goodreads' API availability with existing credentials is unverified, and new
 developer keys are no longer issued, so live account acceptance remains open.
-The migration candidate also preserves BookshelfNG's legacy OPF metadata
-consumer and sidecar references; unknown metadata providers or consumer IDs
-block apply. See the [migration provider notes](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers).
+The migration candidate maps BookshelfNG's legacy OPF metadata provider and
+sidecar IDs to ChaptarrNG's `LegacyAudiobookshelfMetadata` consumer while
+preserving file references; unknown metadata providers or consumer IDs block
+apply. See the [migration provider notes](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers).
 
 | Capability or change | Current ChaptarrNG scope | Evidence required before upstream retirement |
 | --- | --- | --- |

@@ -11,7 +11,7 @@ using NzbDrone.Core.ThingiProvider;
 
 namespace NzbDrone.Core.Extras.Metadata.Consumers
 {
-    public class AudiobookshelfMetadata : MetadataBase<NullConfig>
+    public class LegacyAudiobookshelfMetadata : MetadataBase<NullConfig>
     {
         private const string OpfNamespace = "http://www.idpf.org/2007/opf";
         private const string DcNamespace = "http://purl.org/dc/elements/1.1/";
