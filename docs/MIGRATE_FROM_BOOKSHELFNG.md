@@ -116,13 +116,26 @@ changing the source.
 
 **Prior candidate code CI (2026-10-19):** ChaptarrNG PR #131 head `38be9422a0390c0b3d4d1c453ec14b25d3aa99a4` includes portable BookshelfNG BKSENC01 `.enc` backup export and restore. After two compile fixes and a cleanup-callback test-fixture correction, exact-head Build [39267876585](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876585) passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks. CodeQL [118112421054](https://github.com/snapetech-org/chaptarrng/runs/118112421054), security analysis [39267876503](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876503), and dependency review [39267876754](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876754) passed. Disposable-fork validation was skipped by its external-fork gate. This is code validation only; migration, parity, installed rollback, update-channel, and operator-acceptance gates remain open.
 
-**Latest exact-head tests (2026-10-19):** PR #131 head
-`e45b2310cfc7455f53500c4cf16b01edc1159e15` adds synthetic embedded-chapter
-M4B Move/Copy cases and verifies chapter retention after a TagLib write. Build
-[39275841754](https://github.com/snapetech-org/chaptarrng/actions/runs/39275841754)
-has passed macOS and Windows; the Linux tool-enabled M4B job, PostgreSQL
-migration, and release-note checks are still queued. No release or bridge was
-published.
+**M4B fix and latest candidate validation (2026-10-19):** PR #131 commit
+`c4fa8125095f583ad9eee534f70328e8eef1b44c` fixes a Move-mode defect found by
+embedded-chapter tests: after a profile-based multipart M4B merge succeeded,
+the importer kept its source tracks. Fixture isolation alone did not fix it;
+Builds [39275841754](https://github.com/snapetech-org/chaptarrng/actions/runs/39275841754)
+and [39287179772](https://github.com/snapetech-org/chaptarrng/actions/runs/39287179772)
+still failed the Move cleanup check. Exact-head Build
+[39288736177](https://github.com/snapetech-org/chaptarrng/actions/runs/39288736177)
+passed Linux's full suite and pinned-tool M4B checks, PostgreSQL migration
+smoke, and release-note contract. Windows build and full test steps passed. The macOS job was cancelled before a runner started, so the cross-platform matrix is incomplete. CodeQL
+[39288728262](https://github.com/snapetech-org/chaptarrng/actions/runs/39288728262),
+security analysis
+[39288735208](https://github.com/snapetech-org/chaptarrng/actions/runs/39288735208),
+dependency review
+[39288734998](https://github.com/snapetech-org/chaptarrng/actions/runs/39288734998),
+and NuGet submission
+[39288748702](https://github.com/snapetech-org/chaptarrng/actions/runs/39288748702)
+passed; disposable-fork validation was skipped by its gate. Representative
+M4B media, restart/resume, and operator acceptance remain open. No release or
+bridge was published.
 
 **SeerrNG pending-request lifecycle probe (2026-10-19):** On the isolated Linux candidate from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), SeerrNG's real `ReadarrAPI` (`b810153c`) submitted an ebook request for a synthetic work whose author was unavailable. `addBook` received a pending ID, `getPendingAuthorImport` read it, `cancelPendingAuthorImport` cancelled it, and a second poll observed the expected terminal cancellation state: `OverallStatus=Failed` with `LastError=Cancelled by user`. The cancelled record remains queryable rather than being removed. This proves request creation, polling, and cancellation across the adapter/API boundary. It used a disposable database and synthetic IDs; provider-success behavior, retries, availability, history, migrated records, production settings, full SeerrNG operator workflow, and operator acceptance remain open. The tested app artifact is code snapshot `0612cb4c`; PR commit `d9713604` added the repeatable helper and docs, and the intervening app change is Calibre selector tie-breaking rather than a SeerrNG API change. The probe is now repeatable through `integration/seerrng-request-lifecycle.mjs` and is wired after the authorization smoke in `integration/seerrng-smoke.compose.yml`. On 2026-10-19, both scripts passed when run against the isolated artifact from Build 39239940373 and SeerrNG source `b810153c`; `node --check`, Prettier, and Compose configuration validation also passed. The earlier Compose invocation used a temporary runtime image with `--no-build`. A follow-up source-build run on 2026-10-19 built the candidate through the checked-in `Dockerfile.build` from PR head `7cfb5d87` and passed both scripts after the harness prepared its disposable `/books` volume as UID/GID `99:100`. Successful fulfillment, retries, availability/history, converted records, saved operator settings, and acceptance remain open.
 
@@ -261,8 +274,7 @@ Move-mode source cleanup, and Copy-mode source retention. Failure cases verify
 fallback to separate original-track imports in both modes when FFprobe cannot
 read a source and when a controlled FFmpeg error makes the real `m4b-tool`
 process fail. The Linux build workflow runs these six cases in the checked-in
-`integration/Dockerfile.m4b-test` image. Representative files, embedded-chapter
-compatibility, and restart/resume behavior remain open.
+`integration/Dockerfile.m4b-test` image. Synthetic embedded-chapter Move/Copy and TagLib-write cases pass on c4fa; representative M4B files and restart/resume remain open.
 The implementation requires the FFmpeg executable to be named `ffmpeg`
 (`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.
 

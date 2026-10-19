@@ -109,8 +109,7 @@ The fixture refuses non-empty config and library volumes. It contains one
 author, one mixed-format book, audiobook and ebook editions, and tiny synthetic
 `.m4b`/`.epub` placeholder files; they are not valid media and do not exercise
 M4B decoding or merge behavior. A separate real-tool importer check passed six
-synthetic multipart M4B cases; representative media and embedded chapters
-remain unverified. The smoke checks that SeerrNG reads both
+synthetic multipart M4B cases; representative M4B media and restart/resume remain unverified; synthetic embedded-chapter preservation is covered on c4fa. The smoke checks that SeerrNG reads both
 converted formats and their Hardcover identities, confirms status and
 capability discovery, rejects the service key for administrative and
 unrelated command routes, and runs the compiled SeerrNG adapter through an
@@ -136,8 +135,7 @@ were synthetic placeholders, not valid media. Importer tests passed 43/43;
 Compose configuration, `node --check`, and Prettier checks passed. This local
 source-build smoke closes the earlier empty-library-only check for this
 synthetic conversion path. It does not verify operator records, older source
-schemas, PostgreSQL operator data, live provider behavior, representative M4B
-media or embedded chapters, successful request fulfillment, installed rollback,
+schemas, PostgreSQL operator data, live provider behavior, representative chaptered M4B media, successful request fulfillment, installed rollback,
 or deployment channels.
 No release or bridge was published.
 
