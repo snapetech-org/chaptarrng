@@ -209,7 +209,13 @@ namespace Chaptarr.Core.Test.Backup
             using var command = connection.CreateCommand();
             command.CommandText = reader.ReadToEnd();
             command.ExecuteNonQuery();
-            command.CommandText = "INSERT INTO VersionInfo (Version, AppliedOn, Description) VALUES (158, CURRENT_TIMESTAMP, 'restore fixture');";
+            command.CommandText = @"
+                WITH RECURSIVE migrations(version) AS
+                (
+                    SELECT 1 UNION ALL SELECT version + 1 FROM migrations WHERE version < 158
+                )
+                INSERT INTO VersionInfo (Version, AppliedOn, Description)
+                SELECT version, CURRENT_TIMESTAMP, 'restore fixture' FROM migrations;";
             command.ExecuteNonQuery();
         }
     }

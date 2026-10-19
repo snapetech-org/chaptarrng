@@ -198,7 +198,13 @@ namespace Chaptarr.Core.Test.Datastore
             using var reader = new StreamReader(schema);
             using var connection = Open(path);
             Execute(connection, reader.ReadToEnd());
-            Execute(connection, "INSERT INTO VersionInfo (Version, AppliedOn, Description) VALUES (158, CURRENT_TIMESTAMP, 'restore fixture');");
+            Execute(connection, @"
+                WITH RECURSIVE migrations(version) AS
+                (
+                    SELECT 1 UNION ALL SELECT version + 1 FROM migrations WHERE version < 158
+                )
+                INSERT INTO VersionInfo (Version, AppliedOn, Description)
+                SELECT version, CURRENT_TIMESTAMP, 'restore fixture' FROM migrations;");
         }
 
         private static SqliteConnection Open(string path)
