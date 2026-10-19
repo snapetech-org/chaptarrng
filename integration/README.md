@@ -47,5 +47,6 @@ candidate from Build run
 [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373)
 and SeerrNG source commit `b810153c`. The run verified the empty paged library,
 the restricted-key boundary, and SeerrNG adapter add/poll/cancel behavior. The
-Compose file passed configuration validation; this run used the prebuilt
-artifact directly and did not launch the Compose-built image.
+Both scripts then passed through the isolated Compose stack using a temporary
+runtime image assembled from that prebuilt artifact. The run used `--no-build`,
+so it did not validate the checked-in `Dockerfile.build` path.
