@@ -26,6 +26,11 @@
 > its read-only preview cannot validate provider identity either. The
 > unpublished candidate requires an explicit source mode, but remains
 > unsupported for operator cutover during the release freeze.
+> The draft candidate also accepts supported BookshelfNG ZIP backups through
+> ChaptarrNG's normal restore path; it validates and stages the legacy database
+> before normal startup converts it. This restore change is not in `.977`, and
+> its exact-head validation is pending. Keep the original archive and a separate
+> appdata backup. It does not make cutover approved.
 > On 2026-10-19, candidate build `0.9.978.0` passed preview, apply, rollback
 > preview, and explicit rollback on a disposable copy of populated
 > migration-158 SQLite data with `HARDCOVER=true` and network access disabled.
@@ -101,6 +106,21 @@ That source fix is not in `.977`. Populated synthetic v22 coverage exercises
 conversion and rollback, but it is not a real-data rehearsal or proof for every
 historical BookshelfNG release. Unknown or newer schemas fail closed without
 changing the source.
+
+## Restore a BookshelfNG backup archive
+
+The published `.977` restore service accepts Chaptarr/Readarr-format ZIP
+archives but rejects a BookshelfNG database inside them. Draft PR #131 adds
+support for a recognized BookshelfNG database in a standard
+`readarr_backup_*.zip` archive: ChaptarrNG checks SQLite integrity, BookshelfNG
+lineage, the source migration-version range, and the legacy table-name boundary,
+then stages the database for restore. On normal startup, the existing converter
+upgrades a disposable source copy, builds and validates a ChaptarrNG database,
+and retains the original BookshelfNG database for rollback. The archive itself
+remains untouched. A regression fixture covers restore followed by automatic
+conversion; hosted exact-head validation is pending. This source-candidate path
+is not available in `.977` and must not be used for production cutover while the
+retirement gates remain open.
 
 If BookshelfNG is older than `0.4.21.71`, update it to that final release and
 let BookshelfNG finish its own database upgrade before switching applications.

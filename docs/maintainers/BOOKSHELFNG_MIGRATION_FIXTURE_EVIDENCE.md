@@ -157,6 +157,18 @@ See [retirement status](../BOOKSHELFNG_RETIREMENT.md), the
 [PostgreSQL candidate notes](../BOOKSHELFNG_POSTGRESQL_MIGRATION.md) for the
 remaining acceptance gates.
 
+## Legacy BookshelfNG backup ZIP restore candidate
+
+Draft PR #131 adds source-lineage validation that allows the standard restore
+flow to stage a recognized BookshelfNG database extracted from a legacy
+`readarr_backup_*.zip`. Normal startup then upgrades a disposable copy and
+converts it through the existing row-accounted workflow; the archive and
+pre-restore database are retained. A regression fixture covers restore staging
+and automatic conversion from an authentic schema-158 fixture. The local test
+run is blocked before compilation by the machine's missing ImageSharp license;
+hosted exact-head validation is pending. This is not operator-data acceptance,
+and the published `.977` restore path remains unchanged.
+
 ## Exact-head provider-mode validation (2026-10-18)
 
 ChaptarrNG PR #131 head `e4db2d461773ea59cc57440d1226fcfcf24ccb58` passed

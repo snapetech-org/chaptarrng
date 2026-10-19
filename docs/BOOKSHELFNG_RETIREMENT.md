@@ -58,6 +58,13 @@ detailed feature inventory remains in the
   [39199730309](https://github.com/snapetech-org/chaptarrng/actions/runs/39199730309).
   These checks do not close operator-data, feature-parity, installed-rollback,
   or channel acceptance.
+  The candidate now also validates and stages recognized BookshelfNG ZIP
+  backup databases for normal-startup conversion, retaining the archive and
+  database rollback copies. A fixture covers restore followed by automatic
+  conversion. Its local test run is blocked before compilation by the
+  workstation's ImageSharp license requirement; exact-head hosted validation is
+  pending. This change is source-only, and public `.977` restore still rejects
+  BookshelfNG schemas.
   The earlier synthetic provider-mode, startup, and rollback evidence is in the
   [detailed fixture report](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
   This is not operator-data or channel acceptance.

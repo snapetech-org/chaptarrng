@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Reflection;
+using Microsoft.Data.Sqlite;
 using NLog;
 using NUnit.Framework;
 using NzbDrone.Common;
@@ -51,10 +53,19 @@ namespace Chaptarr.Core.Test.Backup
 
         private sealed class TestArchiveService : IArchiveService
         {
+            public Action<string> ExtractContents { get; set; }
+
             public void Extract(string compressedFile, string destination)
             {
                 File.WriteAllText(Path.Combine(destination, "Config.xml"), "replacement");
-                File.WriteAllText(Path.Combine(destination, "readarr.db"), "invalid");
+                if (ExtractContents != null)
+                {
+                    ExtractContents(destination);
+                }
+                else
+                {
+                    File.WriteAllText(Path.Combine(destination, "readarr.db"), "invalid");
+                }
             }
 
             public void CreateZip(string path, IEnumerable<string> files) => throw new NotImplementedException();
@@ -85,6 +96,7 @@ namespace Chaptarr.Core.Test.Backup
 
         private string _tempFolder;
         private TestAppFolderInfo _appFolderInfo;
+        private TestArchiveService _archiveService;
         private RejectingRestoreDatabase _restoreDatabase;
         private BackupService _subject;
 
@@ -94,17 +106,24 @@ namespace Chaptarr.Core.Test.Backup
             _tempFolder = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"backup_restore_{Guid.NewGuid():N}");
             Directory.CreateDirectory(_tempFolder);
             _appFolderInfo = new TestAppFolderInfo(_tempFolder);
+            _archiveService = new TestArchiveService();
             _restoreDatabase = new RejectingRestoreDatabase();
+            _subject = CreateSubject(_restoreDatabase);
+        }
+
+        private BackupService CreateSubject(IRestoreDatabase restoreDatabase)
+        {
             _subject = new BackupService(
                 new MainDatabase(null),
                 DispatchProxy.Create<IMakeDatabaseBackup, ThrowingProxy<IMakeDatabaseBackup>>(),
                 DispatchProxy.Create<IDiskTransferService, ThrowingProxy<IDiskTransferService>>(),
                 new TestDiskProvider(new FileSystem()),
                 _appFolderInfo,
-                new TestArchiveService(),
+                _archiveService,
                 DispatchProxy.Create<IConfigService, ThrowingProxy<IConfigService>>(),
-                _restoreDatabase,
+                restoreDatabase,
                 LogManager.GetCurrentClassLogger());
+            return _subject;
         }
 
         [TearDown]
@@ -146,6 +165,52 @@ namespace Chaptarr.Core.Test.Backup
                 Assert.That(File.Exists(_appFolderInfo.GetDatabaseRestore()), Is.False);
                 Assert.That(_restoreDatabase.ValidatedPaths, Is.EqualTo(new[] { uploadPath }));
             });
+        }
+
+        [Test]
+        public void should_stage_a_supported_bookshelf_database_from_a_legacy_zip_backup()
+        {
+            var archivePath = Path.Combine(_tempFolder, "readarr_backup_v0.4.21.71_2026.10.19_12.00.00.zip");
+            File.WriteAllText(archivePath, "fixture archive");
+            _archiveService.ExtractContents = destination => CreateBookshelfDatabase(Path.Combine(destination, "readarr.db"));
+            _subject = CreateSubject(new DatabaseRestorationService(new TestDiskProvider(new FileSystem()), _appFolderInfo));
+
+            Assert.That(BackupService.BackupFileRegex.IsMatch(Path.GetFileName(archivePath)), Is.True);
+            _subject.Restore(archivePath);
+
+            var restoredConnectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = _appFolderInfo.GetDatabaseRestore(),
+                Mode = SqliteOpenMode.ReadOnly,
+                Pooling = false
+            }.ToString();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(File.ReadAllText(_appFolderInfo.GetConfigPath()), Is.EqualTo("replacement"));
+                Assert.That(DatabaseLineageGuard.Detect(restoredConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(File.Exists(archivePath), Is.True);
+            });
+        }
+
+        private static void CreateBookshelfDatabase(string path)
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var resourceName = assembly.GetManifestResourceNames().Single(name => name.EndsWith("BookshelfNG.Schema.158.sql", StringComparison.Ordinal));
+            using var schema = assembly.GetManifestResourceStream(resourceName);
+            using var reader = new StreamReader(schema);
+            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = path,
+                Mode = SqliteOpenMode.ReadWriteCreate,
+                Pooling = false
+            }.ToString());
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = reader.ReadToEnd();
+            command.ExecuteNonQuery();
+            command.CommandText = "INSERT INTO VersionInfo (Version, AppliedOn, Description) VALUES (158, CURRENT_TIMESTAMP, 'restore fixture');";
+            command.ExecuteNonQuery();
         }
     }
 }

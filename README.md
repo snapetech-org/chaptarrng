@@ -41,6 +41,11 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+Draft PR #131 also adds restore support for supported BookshelfNG backup ZIPs:
+the archive database is staged, then normal startup runs the validated
+conversion and retains rollback copies. This source candidate is not in
+`v0.9.977` and does not authorize cutover.
+
 Until those gates close, the published converter is for read-only preview
 only. Do not apply a conversion or start ChaptarrNG against BookshelfNG's
 appdata: normal ChaptarrNG startup automatically converts a supported source
