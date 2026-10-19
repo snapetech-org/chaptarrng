@@ -25,6 +25,7 @@ import RetagPreviewModalConnector from 'Retag/RetagPreviewModalConnector';
 import translate from 'Utilities/String/translate';
 import BookDetailsHeaderConnector from './BookDetailsHeaderConnector';
 import BookChaptersTable from './Chapters/BookChaptersTable';
+import BookEditionCatalog from './Editions/BookEditionCatalog';
 import BookMatchProvenanceTable from './Matching/BookMatchProvenanceTable';
 import styles from './BookDetails.css';
 
@@ -55,7 +56,7 @@ class BookDetails extends Component {
     if (
       prevProps.chapters.length &&
       !chapters.length &&
-      selectedTabIndex > 3
+      selectedTabIndex > 4
     ) {
       this.setState({ selectedTabIndex: 0 });
     }
@@ -392,6 +393,13 @@ class BookDetails extends Component {
                   {translate('FilesTotal', [bookFileCount])}
                 </Tab>
 
+                <Tab
+                  className={styles.tab}
+                  selectedClassName={styles.selectedTab}
+                >
+                  {translate('EditionCatalog')}
+                </Tab>
+
                 {
                   chapters.length ?
                     <Tab
@@ -438,6 +446,10 @@ class BookDetails extends Component {
                   authorId={author.id}
                   bookId={id}
                 />
+              </TabPanel>
+
+              <TabPanel>
+                <BookEditionCatalog bookId={id} />
               </TabPanel>
 
               {

@@ -154,6 +154,13 @@ client show recognizable edition cards and let a person keep a second narration
 of a book next to the one already selected. Details are in the
 [SeerrNG integration guide](./SEERRNG_INTEGRATION.md#narration-and-edition-choices).
 
+In ChaptarrNG itself, a book's details page has an **Editions and Narrations** tab
+that lists every known edition with narrators, production, abridgement,
+duration, language, publisher, and whether it is the selected edition or has a
+file. The series page shows a **Narrator Comparison** with the volumes each
+narrator covers and the volumes still missing. Details the metadata does not
+state read "Not provided".
+
 Setup and behavior:
 
 - [SeerrNG integration guide](./SEERRNG_INTEGRATION.md)
