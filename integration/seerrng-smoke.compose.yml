@@ -1,6 +1,16 @@
 services:
+  prepare-books-root:
+    image: busybox:1.37.0
+    user: "0:0"
+    volumes:
+      - chaptarrng-smoke-books:/books
+    command: ["sh", "-ec", "chown 99:100 /books && chmod 0775 /books"]
+
   chaptarrng:
     image: chaptarrng-seerrng-smoke:local
+    depends_on:
+      prepare-books-root:
+        condition: service_completed_successfully
     build:
       context: ..
       dockerfile: Dockerfile.build
@@ -9,6 +19,8 @@ services:
     environment:
       CHAPTARR__AUTH__APIKEY: ${CHAPTARR_GLOBAL_API_KEY:?Set CHAPTARR_GLOBAL_API_KEY}
       CHAPTARR__AUTH__SEERRAPIKEY: ${CHAPTARR_SEERR_API_KEY:?Set CHAPTARR_SEERR_API_KEY}
+      PUID: "99"
+      PGID: "100"
     volumes:
       - chaptarrng-smoke-config:/config
       - chaptarrng-smoke-books:/books

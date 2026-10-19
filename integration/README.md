@@ -13,7 +13,9 @@ read-only so it can run SeerrNG's integration script with the same dependencies.
 It also mounts this integration directory read-only; its second script imports
 the compiled SeerrNG `ReadarrAPI` adapter from `/seerrng/dist` and sends an
 isolated pending-request lifecycle through ChaptarrNG's HTTP API. The ChaptarrNG
-container receives a disposable `/books` volume for its ebook root folder.
+container receives a disposable `/books` volume for its ebook root folder. A
+one-shot BusyBox service prepares that named volume with UID/GID `99:100`,
+matching the container's default runtime user.
 
 ```sh
 export SIXLABORS_LICENSE_FILE="$HOME/Downloads/sixlabors.lic"
@@ -39,14 +41,39 @@ and can cancel it; cancellation remains queryable as a terminal `Failed` state
 with `LastError` set to `Cancelled by user`. The ChaptarrNG configuration and
 book volumes are disposable; remove them with the `down -v` command above.
 
-## Recorded run (2026-10-19)
+## Source-build run (2026-10-19)
+
+The checked-in Compose command was run with `--build` on ChaptarrNG PR #131
+head `7cfb5d877fd2a49ea92840693ca8e57457e4dfc2` (application snapshot
+`0612cb4c90b75818e5349eb868cc0638825de02a`) and SeerrNG source
+`b810153c7d180a1d50388c9db6ae72195d1ab56e`. Compose built the application
+through the checked-in `Dockerfile.build`, including frontend typecheck/build,
+.NET restore/publish, runtime dependencies, and final image assembly. The
+initial smoke attempt exposed that a fresh named `/books` volume is root-owned
+while ChaptarrNG runs as UID 99. The Compose file now runs a one-shot BusyBox
+initializer to set the disposable volume to `99:100`; the rerun passed.
+
+The source-built container started from an empty disposable database. The
+smoke script verified restricted-key capability and paged-library reads,
+denied administrative and unrelated command routes to that key, and verified
+that the global key still reached its administrative route. SeerrNG's real
+`ReadarrAPI` then created, polled, and cancelled a synthetic unavailable-author
+request; ChaptarrNG returned the queryable terminal state `Failed` with
+`Cancelled by user`. The Compose stack and named volumes were removed after the
+run. This validates the checked-in Docker build path and synthetic request
+cancellation. Successful provider fulfillment, retries, availability/history,
+converted records, saved operator settings, and operator acceptance remain
+open.
+
+## Earlier artifact-based run (2026-10-19)
 
 Both `scripts/chaptarrng-integration-smoke.mjs` and
 `integration/seerrng-request-lifecycle.mjs` passed against the isolated Linux
 candidate from Build run
 [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373)
 and SeerrNG source commit `b810153c`. The run verified the empty paged library,
-the restricted-key boundary, and SeerrNG adapter add/poll/cancel behavior. The
-Both scripts then passed through the isolated Compose stack using a temporary
-runtime image assembled from that prebuilt artifact. The run used `--no-build`,
-so it did not validate the checked-in `Dockerfile.build` path.
+the restricted-key boundary, and SeerrNG adapter add/poll/cancel behavior. Both
+scripts also passed through the isolated Compose stack using a temporary
+runtime image assembled from that prebuilt artifact with `--no-build`. That
+earlier run did not validate the checked-in `Dockerfile.build` path; the later
+source-build run above does.
