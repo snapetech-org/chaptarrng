@@ -73,12 +73,16 @@ while changes to SQLite's rebuildable `-shm` index must not.
 Windows CI also runs the real installer upgrade and restore actions against a
 disposable service installation. The smoke downloads BookshelfNG **0.4.21.71**
 from its pinned public release asset and verifies the published SHA-256 before
-use. It seeds the shared populated migration-158 fixture, disables provider
-sync, runs both service handoff and health checks, then invokes the installer’s
-embedded rollback script and verifies BookshelfNG is running again with its
-original database lineage and LocalService account. All services, registry
-state, and temporary data are removed after the run; cleanup preserves the
-scratch directory if a test service cannot be safely removed.
+use. It seeds the shared populated migration-158 fixture and disables provider
+sync. First, it occupies the configured local HTTP port to make Chaptarr fail
+its `/ping` check, then verifies the installer automatically restores the
+BookshelfNG service and database. It retries without the conflict, verifies
+the successful Chaptarr handoff and health check, then invokes the installer’s
+explicit restore action and embedded rollback script. The test checks restored
+BookshelfNG lineage, populated records, data directory, and LocalService
+account. All services, registry state, and temporary data are removed after
+the run; cleanup preserves the scratch directory if a test service cannot be
+safely removed.
 
 To run the round-trip locally from an elevated Windows PowerShell session after
 building the ChaptarrNG payload, use:
@@ -102,10 +106,8 @@ validate:
   of real deployments.
 - Acceptance against representative operator data. The hosted round-trip uses
   a synthetic fixture and does not establish real-install parity.
-- Preview immutability, apply accounting, service handoff, health check, and
-  automatic rollback after injected failures. The hosted service round-trip
-  exercises the explicit restore action; it does not inject a failure into the
-  automatic rollback branch.
+- Failure injection beyond the local `/ping` port conflict, and additional
+  failure points in backup, preview, apply, and service registration.
 - Manual restore after Chaptarr has written to the migrated database.
 - Installer behavior on each supported Windows BookshelfNG version and any
   supported legacy data-directory layout.

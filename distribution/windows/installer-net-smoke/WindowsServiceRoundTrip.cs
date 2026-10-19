@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.ServiceProcess;
+using System.Net.Sockets;
 using System.Xml.Linq;
 using ChaptarrNG.Installer.Pipeline;
 using Microsoft.Data.Sqlite;
@@ -93,6 +94,44 @@ internal static class WindowsServiceRoundTrip
             AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "BookshelfNG source startup");
             AssertRowCount(sourceDatabase, "Books", expectedAtLeast: 1, "BookshelfNG source data");
             await StopServiceAsync(ServiceLifecycle.BookshelfServiceName).ConfigureAwait(false);
+
+            Console.WriteLine("[smoke] Injecting an HTTP port conflict to exercise automatic installer rollback...");
+            using (var blocker = new TcpListener(IPAddress.Loopback, GetConfiguredHttpPort(dataDirectory)))
+            using (var releaseCancellation = new CancellationTokenSource())
+            {
+                blocker.Start();
+                var releaseBlocker = ReleasePortBlockerAfterBookshelfReturnsAsync(blocker, releaseCancellation.Token);
+                InstallOutcome failedUpgrade;
+                try
+                {
+                    failedUpgrade = await InstallPipeline.RunUpgradeAsync(new SmokeUiReporter()).ConfigureAwait(false);
+                }
+                finally
+                {
+                    blocker.Stop();
+                    releaseCancellation.Cancel();
+                    try { await releaseBlocker.ConfigureAwait(false); }
+                    catch (OperationCanceledException) { }
+                }
+
+                if (failedUpgrade.Success ||
+                    string.IsNullOrWhiteSpace(failedUpgrade.BackupPath) ||
+                    string.IsNullOrWhiteSpace(RegistryService.Read()?.LastRollbackTime))
+                {
+                    throw new InvalidOperationException(
+                        "The injected Chaptarr health-check failure did not complete automatic BookshelfNG rollback.");
+                }
+
+                var automaticRollbackBackup = Path.Combine(failedUpgrade.BackupPath, "readarr.db");
+                AssertLineage(automaticRollbackBackup, DatabaseLineageKind.BookshelfNG, "automatic rollback backup");
+                await WaitForServiceAsync(ServiceLifecycle.BookshelfServiceName, ServiceControllerStatus.Running, TimeSpan.FromSeconds(30))
+                    .ConfigureAwait(false);
+                await WaitForHealthAsync(dataDirectory, TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+                AssertServicePath(ServiceLifecycle.BookshelfServiceName, dataDirectory);
+                AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "automatic rollback database");
+                AssertRowCount(sourceDatabase, "Books", expectedAtLeast: 1, "automatically restored BookshelfNG books");
+                AssertDatabaseIntegrity(sourceDatabase, "automatically restored BookshelfNG database");
+            }
 
             Console.WriteLine("[smoke] Running the real installer upgrade pipeline with synthetic populated migration data...");
             var ui = new SmokeUiReporter();
@@ -335,6 +374,38 @@ internal static class WindowsServiceRoundTrip
         }
 
         throw new System.TimeoutException($"The service in {dataDirectory} did not pass its local /ping check.");
+    }
+
+    private static int GetConfiguredHttpPort(string dataDirectory)
+    {
+        var config = XDocument.Load(Path.Combine(dataDirectory, "config.xml"));
+        var portText = config.Descendants().FirstOrDefault(e => e.Name.LocalName == "Port")?.Value;
+        return int.TryParse(portText, out var port) && port is > 0 and <= 65535 ? port : 8787;
+    }
+
+    private static async Task ReleasePortBlockerAfterBookshelfReturnsAsync(
+        TcpListener blocker,
+        CancellationToken cancellationToken)
+    {
+        var sawBookshelfServiceRemoval = false;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var bookshelfInstalled = ServiceLifecycle.IsInstalled(ServiceLifecycle.BookshelfServiceName);
+            if (!bookshelfInstalled)
+            {
+                sawBookshelfServiceRemoval = true;
+            }
+
+            if (sawBookshelfServiceRemoval &&
+                bookshelfInstalled &&
+                !ServiceLifecycle.IsInstalled(ServiceLifecycle.ChaptarrServiceName))
+            {
+                blocker.Stop();
+                return;
+            }
+
+            await Task.Delay(250, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private static void AssertLineage(string databasePath, DatabaseLineageKind expected, string label)
