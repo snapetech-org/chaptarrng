@@ -59,3 +59,26 @@ ChaptarrNG status and the paged book library through its format-scoped API,
 and confirms the service key is rejected for administrative and unrelated
 command routes. Remove the test stack afterward with `docker compose -f
 integration/seerrng-smoke.compose.yml down -v`.
+
+## Narration and edition choices
+
+These read endpoints and the existing wanted-edition endpoint let SeerrNG show
+narration choices before a request. A client should read `features` from
+`GET /api/v1/system/capabilities` first and hide a control when its flag is
+absent, so older ChaptarrNG versions keep working.
+
+| Capability flag | Endpoint | Purpose |
+| --- | --- | --- |
+| `editionCatalog` | `GET /api/v1/book/{id}/editions/catalog` | Every known edition with narrators, production, abridgement, length, language, publisher, release date, cover, whether it is the monitored selection, and whether a file exists |
+| `seriesNarratorMatrix` | `GET /api/v1/series/narrators/matrix?title=…&authorId=…` | For each narrator: the volumes they cover, the volumes missing, and the volumes already owned; for each volume: the narrators known across all editions |
+| `wantedEditionVariants` | `POST /api/v1/book/{id}/editions/wanted` with `asNewVariant: true` | Track the chosen narration alongside the current selection instead of replacing it |
+
+Fields the metadata does not state are reported as `unknown` (`production`,
+`abridged`) or left empty; they are never inferred from a file name. A narrator
+is `full-cast` when the edition is flagged GraphicAudio or its own text says
+full cast or dramatized, `solo` for exactly one narrator, and otherwise
+`unknown`.
+
+`PUT /api/v1/series/{seriesId}/narrators/preferred` (already available) makes one
+narrator the series preference; SeerrNG uses it for **Collect With**.
+

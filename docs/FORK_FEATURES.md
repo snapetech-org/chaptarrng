@@ -146,6 +146,14 @@ integration's book, library, search, and pending-import operations without
 granting global settings, deletes, file removal, or unrelated commands. Keep
 the regular API key for administration and older clients.
 
+### Narration and edition choices
+
+ChaptarrNG advertises three additional capabilities in `GET /api/v1/system/capabilities`:
+`editionCatalog`, `seriesNarratorMatrix`, and `wantedEditionVariants`. They let a
+client show recognizable edition cards and let a person keep a second narration
+of a book next to the one already selected. Details are in the
+[SeerrNG integration guide](./SEERRNG_INTEGRATION.md#narration-and-edition-choices).
+
 Setup and behavior:
 
 - [SeerrNG integration guide](./SEERRNG_INTEGRATION.md)
