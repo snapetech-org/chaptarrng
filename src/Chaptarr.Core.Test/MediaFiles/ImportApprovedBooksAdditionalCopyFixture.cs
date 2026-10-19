@@ -4914,12 +4914,15 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
-        [TestCase(ImportMode.Move, false)]
-        [TestCase(ImportMode.Copy, true)]
+        [TestCase(ImportMode.Move, false, false)]
+        [TestCase(ImportMode.Copy, true, false)]
+        [TestCase(ImportMode.Move, false, true)]
+        [TestCase(ImportMode.Copy, true, true)]
         [NonParallelizable]
         public void real_m4b_tool_should_merge_and_import_legacy_multipart_audiobook_when_installed(
             ImportMode importMode,
-            bool shouldKeepSourceTracks)
+            bool shouldKeepSourceTracks,
+            bool shouldFallBackWhenPartCannotBeProbed)
         {
             var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-real-import-{Guid.NewGuid():N}");
             var sourceDir = Path.Combine(tempDir, "incoming");
@@ -4953,7 +4956,14 @@ namespace Chaptarr.Core.Test.MediaFiles
                 var partOne = Path.Combine(sourceDir, "01 Opening.mp3");
                 var partTwo = Path.Combine(sourceDir, "02 The Middle.mp3");
                 CreateSyntheticMp3(partOne, frequency: 330, title: "Opening", track: 1);
-                CreateSyntheticMp3(partTwo, frequency: 440, title: "The Middle", track: 2);
+                if (shouldFallBackWhenPartCannotBeProbed)
+                {
+                    File.WriteAllText(partTwo, "not a readable audio stream");
+                }
+                else
+                {
+                    CreateSyntheticMp3(partTwo, frequency: 440, title: "The Middle", track: 2);
+                }
                 Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, "true");
 
                 var (qualityProfile, author, book, edition) = CreateAudiobookConversionGraph(919);
@@ -4963,6 +4973,9 @@ namespace Chaptarr.Core.Test.MediaFiles
                 var mover = new StubMoveBookFiles
                 {
                     DestinationPath = destinationPath,
+                    DestinationFor = file => Path.GetExtension(file.Path).Equals(".m4b", StringComparison.OrdinalIgnoreCase)
+                        ? destinationPath
+                        : Path.Combine(destinationDir, Path.GetFileName(file.Path)),
                     TransferFilesOnDisk = true
                 };
                 var conversion = new M4bConversionService(
@@ -5027,37 +5040,50 @@ namespace Chaptarr.Core.Test.MediaFiles
                     importMode: importMode,
                     cancellationToken: CancellationToken.None);
 
-                Assert.That(results, Has.Count.EqualTo(1));
-                Assert.That(results[0].Errors, Is.Empty);
-                Assert.That(results[0].Result, Is.EqualTo(ImportResultType.Imported));
-                Assert.That(File.Exists(destinationPath), Is.True);
-                Assert.That(mediaFileService.FilesByBook, Has.Count.EqualTo(1));
                 Assert.That(File.Exists(partOne), Is.EqualTo(shouldKeepSourceTracks), "Source tracks should remain only in copy mode.");
                 Assert.That(File.Exists(partTwo), Is.EqualTo(shouldKeepSourceTracks), "Source tracks should remain only in copy mode.");
 
-                var chapterJson = externalTools.ExecuteFFprobe(new[]
-                {
-                    "-v", "error", "-show_chapters", "-of", "json", destinationPath
-                });
-                using var document = JsonDocument.Parse(chapterJson);
-                var chapters = document.RootElement.GetProperty("chapters").EnumerateArray().ToArray();
-                var chapterTitles = chapters
-                    .Select(chapter => chapter.GetProperty("tags").GetProperty("title").GetString())
-                    .ToArray();
-                Assert.That(chapterTitles, Is.EqualTo(new[] { "Opening", "The Middle" }));
-                var secondChapterStart = double.Parse(
-                    chapters[1].GetProperty("start_time").GetString(),
-                    System.Globalization.CultureInfo.InvariantCulture);
-                Assert.That(secondChapterStart, Is.InRange(10d, 15d));
+                Assert.That(results.Select(result => result.Errors), Has.All.Empty);
+                Assert.That(results.Select(result => result.Result), Has.All.EqualTo(ImportResultType.Imported));
 
-                var metadataJson = externalTools.ExecuteFFprobe(new[]
+                if (shouldFallBackWhenPartCannotBeProbed)
                 {
-                    "-v", "error", "-show_entries", "format_tags=title,album", "-of", "json", destinationPath
-                });
-                using var metadata = JsonDocument.Parse(metadataJson);
-                var tags = metadata.RootElement.GetProperty("format").GetProperty("tags");
-                Assert.That(tags.GetProperty("title").GetString(), Is.EqualTo("Black Sheep"));
-                Assert.That(tags.GetProperty("album").GetString(), Is.EqualTo("Black Sheep"));
+                    Assert.That(results, Has.Count.EqualTo(2));
+                    Assert.That(File.Exists(destinationPath), Is.False, "a failed optional merge should import the original tracks unmerged");
+                    Assert.That(mediaFileService.FilesByBook, Has.Count.EqualTo(2));
+                    Assert.That(File.Exists(Path.Combine(destinationDir, Path.GetFileName(partOne))), Is.True);
+                    Assert.That(File.Exists(Path.Combine(destinationDir, Path.GetFileName(partTwo))), Is.True);
+                }
+                else
+                {
+                    Assert.That(results, Has.Count.EqualTo(1));
+                    Assert.That(File.Exists(destinationPath), Is.True);
+                    Assert.That(mediaFileService.FilesByBook, Has.Count.EqualTo(1));
+
+                    var chapterJson = externalTools.ExecuteFFprobe(new[]
+                    {
+                        "-v", "error", "-show_chapters", "-of", "json", destinationPath
+                    });
+                    using var document = JsonDocument.Parse(chapterJson);
+                    var chapters = document.RootElement.GetProperty("chapters").EnumerateArray().ToArray();
+                    var chapterTitles = chapters
+                        .Select(chapter => chapter.GetProperty("tags").GetProperty("title").GetString())
+                        .ToArray();
+                    Assert.That(chapterTitles, Is.EqualTo(new[] { "Opening", "The Middle" }));
+                    var secondChapterStart = double.Parse(
+                        chapters[1].GetProperty("start_time").GetString(),
+                        System.Globalization.CultureInfo.InvariantCulture);
+                    Assert.That(secondChapterStart, Is.InRange(10d, 15d));
+
+                    var metadataJson = externalTools.ExecuteFFprobe(new[]
+                    {
+                        "-v", "error", "-show_entries", "format_tags=title,album", "-of", "json", destinationPath
+                    });
+                    using var metadata = JsonDocument.Parse(metadataJson);
+                    var tags = metadata.RootElement.GetProperty("format").GetProperty("tags");
+                    Assert.That(tags.GetProperty("title").GetString(), Is.EqualTo("Black Sheep"));
+                    Assert.That(tags.GetProperty("album").GetString(), Is.EqualTo("Black Sheep"));
+                }
             }
             finally
             {

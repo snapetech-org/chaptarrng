@@ -141,8 +141,11 @@ test passes in a tool-enabled Linux container with `m4b-tool` 0.5.2, `mp4v2`
 2.1.1, and FFmpeg/FFprobe 6.1.1. It generates two MP3 tracks and imports them
 through the real converter, verifying tag-based track order, chapter titles
 and offsets, output metadata, library registration, Move-mode source cleanup,
-and Copy-mode source retention. Representative files, embedded-chapter
-compatibility, real-tool failure recovery, and restart/resume behavior remain
+and Copy-mode source retention. Two more cases supply an unreadable second
+track; source probing rejects the merge and the importer keeps both original
+tracks as separate library files in Move and Copy modes. That fallback occurs
+before `m4b-tool` runs. Representative files, embedded-chapter compatibility,
+recovery from a `m4b-tool` process failure, and restart/resume behavior remain
 open.
 The implementation requires the FFmpeg executable to be named `ffmpeg`
 (`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.

@@ -36,9 +36,11 @@ detailed feature inventory remains in the
   verifies track order, chapter titles and offsets, metadata, one registered
   file, Move-mode source cleanup, and Copy-mode source retention. Focused
   importer tests also cover merge selection and fallback with a mocked
-  converter. Representative media, embedded-chapter compatibility, real-tool
-  failure recovery, and restart or resume behavior remain open. This source is
-  not in `.977`.
+  converter. The real-tool smoke also verifies fallback to separate original
+  track imports in Move and Copy modes when one source cannot be probed; this
+  stops before invoking `m4b-tool`. Representative media, embedded-chapter
+  compatibility, recovery from a `m4b-tool` process failure, and restart or
+  resume behavior remain open. This source is not in `.977`.
 - The current retirement candidate is draft ChaptarrNG
   [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131). It adds
   older SQLite support, one migration-158 PostgreSQL source schema, native
@@ -202,12 +204,15 @@ successful import it removes only the consumed source tracks in move mode and
 keeps them in copy mode.
 
 This is source-only and is not in `v0.9.977`. The current retirement candidate
-passes a tool-enabled importer smoke with generated two-track input and the
-real converter. It checks track ordering, chapter titles and offsets, album
-and title metadata, library registration, source deletion in Move mode, and
-source retention in Copy mode. Representative files, embedded-chapter
-compatibility, real-tool failure recovery, and restart/resume behavior remain
-open. It does not close the Audiobook processing and tags row in
+passes a four-case tool-enabled importer smoke with generated two-track input
+and the real converter. The successful cases check track ordering, chapter
+titles and offsets, album and title metadata, library registration, source
+deletion in Move mode, and source retention in Copy mode. When a source cannot
+be probed, the optional merge falls back to importing both original tracks
+separately in Move and Copy modes; that path stops before invoking
+`m4b-tool`. Representative files, embedded-chapter compatibility, recovery
+from a `m4b-tool` process failure, and restart/resume behavior remain open. It
+does not close the Audiobook processing and tags row in
 [the feature matrix](FORK_FEATURES.md). Keep the legacy merge setting unset
 until a build containing the accepted implementation is installed.
 
