@@ -5168,12 +5168,15 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
+        [NonParallelizable]
         [TestCase(ImportMode.Move, false)]
         [TestCase(ImportMode.Copy, true)]
         public void real_m4b_tool_should_preserve_embedded_chapters_when_merging_m4b_parts_when_installed(
             ImportMode importMode,
             bool shouldKeepSourceTracks)
         {
+            var originalMerge = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable);
+            var originalFfmpeg = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable);
             var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-embedded-import-{Guid.NewGuid():N}");
             var sourceDir = Path.Combine(tempDir, "incoming");
             var destinationDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-embedded-destination-{Guid.NewGuid():N}");
@@ -5199,6 +5202,9 @@ namespace Chaptarr.Core.Test.MediaFiles
                 {
                     Assert.Ignore("This opt-in smoke requires FFmpeg, FFprobe, PHP, m4b-tool, and mp4v2 tools.");
                 }
+
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, "true");
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable, null);
 
                 var partOne = Path.Combine(sourceDir, "01 Opening.m4b");
                 var partTwo = Path.Combine(sourceDir, "02 The Middle.m4b");
@@ -5290,6 +5296,8 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
             finally
             {
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable, originalMerge);
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable, originalFfmpeg);
                 if (Directory.Exists(tempDir))
                 {
                     Directory.Delete(tempDir, recursive: true);
