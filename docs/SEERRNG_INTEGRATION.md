@@ -38,6 +38,9 @@ abridgement, language, publisher, and selected/file-owned status. Metadata
 that does not state a value is shown as not provided rather than inferred.
 The tab and its catalog route are source-only and are not available in public
 `v0.9.977`.
+Candidate head `5f3dc007` includes the tab and a quiet missing-fragment check
+in release-note preview. Local translation, type, targeted lint/style, and
+release-note preview checks pass; exact-head hosted validation is pending.
 
 ## Configure a dedicated service key
 

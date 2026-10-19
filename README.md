@@ -94,7 +94,11 @@ reconciliation. Disposable-fork validation was skipped by its gate. The
 preceding run [39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843)
 found four Windows media-move fixtures using POSIX-only paths; 2c0401fc
 switches those fixtures to native temporary paths, and the exact-head rerun
-passes. This is candidate validation, not production cutover approval.
+passes. Current PR #131 head `5f3dc007` adds the Editions and Narrations tab
+and quiets the expected missing-fragment diagnostic in release-note preview.
+Translation, type, targeted lint/style, and release-note preview checks pass
+locally; exact-head hosted validation is pending. This is candidate validation,
+not production cutover approval.
 Docs-only checkpoint `ddec3e81` passed exact-head run
 [39199730309](https://github.com/snapetech-org/chaptarrng/actions/runs/39199730309),
 including all three platform builds, PostgreSQL, CodeQL, security/dependency,

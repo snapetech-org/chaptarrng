@@ -85,14 +85,16 @@ detailed feature inventory remains in the
   Ambiguous format review, PostgreSQL operator data, other source shapes,
   complete feature parity, installed rollback, and channel acceptance remain
   open.
-- BookshelfNG `main` at `9a04c2eb2` now exposes
+- BookshelfNG `main` at `10696c8e` now exposes
   `GET /api/v1/book/{id}/editions/catalog` and advertises `editionCatalog` for
   SeerrNG edition cards. The ChaptarrNG candidate adds the matching route and
   capability, plus an **Editions and Narrations** tab on book details for
   reading known edition metadata, including duration. Unstated details remain
   visibly unprovided.
-  It remains
-  source-only; exact-head hosted validation passed in run
+  Candidate head `5f3dc007` includes the UI port and the release-note preview
+  fix. Local translation, type, targeted lint/style, and release-note preview
+  checks pass; exact-head hosted validation is pending. The route and catalog
+  implementation at code snapshot `2c0401fc` passed run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
   The current source candidate also passed the isolated SeerrNG Compose smoke
   against PR #131 head `ddec3e81` and SeerrNG `10f06eab9`: capability discovery,
