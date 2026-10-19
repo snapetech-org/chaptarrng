@@ -111,7 +111,7 @@ namespace Chaptarr.Api.V1.System.Backup
                 backupPath = _backupService.CreateTemporaryBackup();
                 _bookshelfEncryptedBackupService.Encrypt(backupPath, encryptedPath, passphrase);
 
-                var stream = System.IO.File.OpenRead(encryptedPath);
+                var stream = global::System.IO.File.OpenRead(encryptedPath);
                 Response.Headers.CacheControl = "no-store, no-cache";
                 Response.Headers.Pragma = "no-cache";
                 Response.OnCompleted(() =>
@@ -219,7 +219,7 @@ namespace Chaptarr.Api.V1.System.Backup
             {
                 var ownerOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
                 Directory.CreateDirectory(path, ownerOnly);
-                File.SetUnixFileMode(path, ownerOnly);
+                global::System.IO.File.SetUnixFileMode(path, ownerOnly);
             }
 
             return path;
