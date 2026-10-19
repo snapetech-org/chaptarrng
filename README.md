@@ -41,14 +41,16 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
-The unpublished migration candidate now includes BookshelfNG's Hardcover
-public-list and reading-status import provider. Settings are preserved only
-when the implementation, contract, and saved fields match. Legacy Goodreads
-bookshelf rows use an OAuth contract that differs from ChaptarrNG's public
-shelf provider; owned-book lists and Goodreads write notifications also remain
-unsupported. Preview reports those rows and blocks apply until they are
-reconfigured or removed. This is one of the open parity gates, so keep
-BookshelfNG in service.
+The unpublished migration candidate includes BookshelfNG's Hardcover
+public-list and reading-status provider, plus compatibility ports for its
+OAuth-backed Goodreads bookshelf and owned-book lists and shelf/owned-book
+notifications. Complete saved credentials and settings are carried forward;
+preview blocks missing or partial credentials for providers that require
+OAuth, while a public shelf can still use its numeric Goodreads user ID. This
+does not prove Goodreads will accept an existing credential. Goodreads stopped
+issuing new developer keys and has announced API retirement, so live provider
+behavior remains an acceptance gate. These changes are not in published
+`v0.9.977`; keep BookshelfNG in service while the release freeze remains.
 
 Draft PR #131 also adds restore support for supported BookshelfNG backup ZIPs:
 the database is staged and the archive remains unchanged. Normal startup runs
@@ -58,7 +60,7 @@ database; after success, it removes that temporary `.pre-restore` copy. This
 source candidate is not in `v0.9.977` and does not authorize cutover.
 Earlier PR #131 code head 6f57d355 passed exact-head Build run [39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613) on Linux, macOS, Windows, PostgreSQL migration, and release-note validation.
 
-**Current PR #131 validation, 2026-10-19:** Draft code head a111b5754421cccaafc756abcf4efe226f86d7eb passed exact-head Build [39230899323](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899323), including Linux, macOS, and Windows tests, PostgreSQL migration smoke, and native receipt reconciliation. CodeQL [39230892934](https://github.com/snapetech-org/chaptarrng/actions/runs/39230892934), security [39230899375](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899375), NuGet [39230915422](https://github.com/snapetech-org/chaptarrng/actions/runs/39230915422), dependency review [39230899544](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899544), and the release-note contract passed. Disposable-fork validation [39230899435](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899435) was skipped by its external-fork gate. These are source checks only; representative operator data, full feature parity, installed rollback, and channel acceptance remain open. No release or final handoff is authorized.
+**Current PR #131 application-code validation, 2026-10-19:** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These are source and client checks; representative operator data, full semantic feature disposition, complete SeerrNG workflows, installed rollback, and update-channel acceptance remain open. PR #131 stays draft and no release or final handoff is authorized.
 
 Until those gates close, the published converter is for read-only preview
 only. Do not apply a conversion or start ChaptarrNG against BookshelfNG's

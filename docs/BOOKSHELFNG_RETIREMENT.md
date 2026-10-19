@@ -9,24 +9,24 @@ handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
-**Current PR #131 validation, 2026-10-19:** Draft code head a111b5754421cccaafc756abcf4efe226f86d7eb passed exact-head Build [39230899323](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899323), including Linux, macOS, and Windows tests, PostgreSQL migration smoke, and native receipt reconciliation. CodeQL [39230892934](https://github.com/snapetech-org/chaptarrng/actions/runs/39230892934), security [39230899375](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899375), NuGet [39230915422](https://github.com/snapetech-org/chaptarrng/actions/runs/39230915422), dependency review [39230899544](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899544), and the release-note contract passed. Disposable-fork validation [39230899435](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899435) was skipped by its external-fork gate. These are source checks only; representative operator data, full feature parity, installed rollback, and channel acceptance remain open. No release or final handoff is authorized.
+**Current PR #131 application-code validation, 2026-10-19:** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These are source and client checks; representative operator data, full semantic feature disposition, complete SeerrNG workflows, installed rollback, and update-channel acceptance remain open. PR #131 stays draft and no release or final handoff is authorized.
 
 ## Current releases
 
 ### Provider configuration blockers
 
 The migration candidate preserves provider settings only when a matching
-ChaptarrNG implementation, settings contract, and populated saved fields exist. It
-includes the legacy Hardcover public-list and reading-status provider. Legacy
-Goodreads bookshelf rows carry OAuth fields that the current public-shelf
-provider does not support; Goodreads owned-book import lists and
-bookshelf/owned-book write notifications are also unavailable. The legacy API
-dependency is documented in the
-[migration guide](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers).
-Preview identifies unsupported rows without printing credentials and blocks
-apply before promotion. Plugin or otherwise unsupported providers follow the
-same fail-closed rule. These are still feature-parity and migration-readiness
-blockers.
+ChaptarrNG implementation, settings contract, and populated saved fields exist.
+It includes the legacy Hardcover public-list and reading-status provider and
+now ports BookshelfNG's OAuth-backed Goodreads bookshelf and owned-book lists
+and bookshelf/owned-book write notifications. The importer preserves complete
+saved credentials and blocks missing or partial OAuth settings without showing
+their values. Public Goodreads shelves remain available without OAuth when a
+valid user ID is saved. Goodreads API acceptance with existing credentials is
+still unverified, and no new developer keys are available; this remains a
+feature-parity and migration-readiness gate. See the
+[migration guide](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers)
+and [Goodreads API deprecation notice](https://www.goodreads.com/topic/show/21788520-api-deprecation).
 
 - ChaptarrNG `v0.9.977` is published with the standard image, migration tools,
   the embedded BookshelfNG SQLite migration chain, and standalone release

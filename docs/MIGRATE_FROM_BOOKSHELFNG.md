@@ -107,7 +107,7 @@ conversion and rollback, but it is not a real-data rehearsal or proof for every
 historical BookshelfNG release. Unknown or newer schemas fail closed without
 changing the source.
 
-**Current PR #131 validation, 2026-10-19:** Draft code head a111b5754421cccaafc756abcf4efe226f86d7eb passed exact-head Build [39230899323](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899323), including Linux, macOS, and Windows tests, PostgreSQL migration smoke, and native receipt reconciliation. CodeQL [39230892934](https://github.com/snapetech-org/chaptarrng/actions/runs/39230892934), security [39230899375](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899375), NuGet [39230915422](https://github.com/snapetech-org/chaptarrng/actions/runs/39230915422), dependency review [39230899544](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899544), and the release-note contract passed. Disposable-fork validation [39230899435](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899435) was skipped by its external-fork gate. These are source checks only; representative operator data, full feature parity, installed rollback, and channel acceptance remain open. No release or final handoff is authorized.
+**Current PR #131 application-code validation, 2026-10-19:** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These are source and client checks; representative operator data, full semantic feature disposition, complete SeerrNG workflows, installed rollback, and update-channel acceptance remain open. PR #131 stays draft and no release or final handoff is authorized.
 
 ## Restore a BookshelfNG backup archive
 
@@ -158,22 +158,22 @@ a separate Book Dock destination. Configure and test that separate connection
 in **Settings > Connect** after an approved migration.
 
 Provider configuration is preserved only when the implementation, contract,
-and every populated saved settings field match the target provider. In
-particular, legacy `GoodreadsBookshelf` import lists use OAuth settings while
-ChaptarrNG's same-named provider reads public shelves without those OAuth
-fields. Credentialed rows are disabled in the staged copy and reported as
-blockers; reconfigure them for public shelves after migration or remove them in
-BookshelfNG before previewing again.
+and every populated saved settings field match the target provider. The
+unreleased PR #131 candidate now includes compatibility ports for
+BookshelfNG's OAuth-backed Goodreads bookshelf and owned-book lists and its
+bookshelf/owned-book write notifications. Complete saved OAuth settings are
+preserved; the preview blocks missing or partial credentials for OAuth-only
+providers. A public Goodreads shelf can keep working without OAuth when it has
+a valid numeric user ID. Migration reports identify the row and missing field
+names without printing settings or credentials.
 
-Goodreads owned-book import lists and Goodreads bookshelf/owned-book write
-notifications also depend on Goodreads OAuth API operations. Goodreads
-announced that it would stop issuing developer keys and retire those API
-tools, so ChaptarrNG does not silently enable them. Preview reports each
-affected row and, where a matching target contract has incompatible fields,
-their names. It never prints saved values or credentials, then blocks apply.
-Reconfigure or remove each affected provider in BookshelfNG and preview again;
-keep the original appdata backup. See Goodreads'
-[API deprecation notice](https://www.goodreads.com/topic/show/21788520-api-deprecation).
+This source code does not restore Goodreads developer-key issuance or prove
+that an existing token remains accepted. Goodreads stopped issuing new
+developer keys and announced API retirement, so existing credentials and live
+API behavior must be tested with representative accounts before cutover. The
+compatibility port is not in published `v0.9.977`; do not use it for operator
+data while the release freeze is active. Keep the original appdata backup and
+see Goodreads' [API deprecation notice](https://www.goodreads.com/topic/show/21788520-api-deprecation).
 
 Unknown or plugin download clients, import lists, notifications, and indexers
 are handled the same way: preview identifies the unsupported mapping and apply

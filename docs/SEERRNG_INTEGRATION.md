@@ -49,8 +49,7 @@ submission also passed. The UI is source-only in public `v0.9.977`, and the
 candidate remains draft while operator-data, full SeerrNG workflow, rollback,
 and channel acceptance remain open.
 
-**Current PR #131 validation:** code head `a111b5754421cccaafc756abcf4efe226f86d7eb` passed [Build 39230899323](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899323), [CodeQL 39230892934](https://github.com/snapetech-org/chaptarrng/actions/runs/39230892934), [security 39230899375](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899375), [NuGet 39230915422](https://github.com/snapetech-org/chaptarrng/actions/runs/39230915422), and [dependency review 39230899544](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899544). The release-note contract passed; disposable-fork validation was skipped by its external-fork gate.
-The SeerrNG smoke evidence below is from earlier candidate snapshots and still does not cover end-to-end workflows or populated converted data.
+**Current PR #131 application-code validation (2026-10-19):** snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed [Build 39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract. [CodeQL 39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), [security 39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), [NuGet 39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and [dependency review 39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. The SeerrNG adapter and request-route unit suite at source commit `b810153c` passed 4 files / 283 tests. The built Linux artifact also passed the API smoke below; it verifies an empty paged library and the service-key boundary, not populated migration data or full SeerrNG workflows.
 
 ## Configure a dedicated service key
 
@@ -103,6 +102,8 @@ packages. Remove the test stack afterward with `docker compose -f
 integration/seerrng-smoke.compose.yml down -v`.
 
 ## Recorded smoke evidence
+
+On 2026-10-19, `scripts/chaptarrng-integration-smoke.mjs` passed against the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), reporting ChaptarrNG `0.9.978.0`. It discovered the SeerrNG capability contract and read the empty paged library using the restricted key; `/config/host` and an unrelated `/command` were denied, and the global key was accepted by `/config/host`. The smoke used a disposable SQLite database and synthetic keys. It establishes the empty-library API and authorization contract only; request creation, availability statistics, history, pending imports, converted records, unchanged production settings, and a real BookshelfNG library remain unvalidated.
 
 On 2026-10-18, `scripts/chaptarrng-integration-smoke.mjs` passed against
 ChaptarrNG candidate `0.9.978.0` from PR #131 source head

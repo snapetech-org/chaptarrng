@@ -4,17 +4,24 @@
 populated migration-158 snapshot tested on a disposable copy. This is
 maintainer evidence, not approval to cut over operator data.
 
-**Current PR #131 validation, 2026-10-19:** Draft code head a111b5754421cccaafc756abcf4efe226f86d7eb passed exact-head Build [39230899323](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899323), including Linux, macOS, and Windows tests, PostgreSQL migration smoke, and native receipt reconciliation. CodeQL [39230892934](https://github.com/snapetech-org/chaptarrng/actions/runs/39230892934), security [39230899375](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899375), NuGet [39230915422](https://github.com/snapetech-org/chaptarrng/actions/runs/39230915422), dependency review [39230899544](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899544), and the release-note contract passed. Disposable-fork validation [39230899435](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899435) was skipped by its external-fork gate. These are source checks only; representative operator data, full feature parity, installed rollback, and channel acceptance remain open. No release or final handoff is authorized.
+**Current PR #131 application-code validation, 2026-10-19:** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These are source and client checks; representative operator data, full semantic feature disposition, complete SeerrNG workflows, installed rollback, and update-channel acceptance remain open. PR #131 stays draft and no release or final handoff is authorized.
 ## Candidate and fixture
 
-The migration fixture also exercises provider settings disposition. A matching
-Hardcover public-list provider is accepted; a Torznab row with an unknown
-settings field, unsupported plugin providers, legacy Goodreads OAuth bookshelf
-settings, owned-book import lists, and Goodreads bookshelf/owned-book
-notifications are reported as blockers. Preview leaves source bytes
-unchanged, and apply refuses the staged conversion before promotion. Reports
-contain row IDs, implementation/contract names, and unsupported field names,
-never saved values or credentials.
+The original populated fixture checkpoint also exercised provider settings
+disposition. A matching Hardcover public-list provider was accepted; a Torznab
+row with an unknown settings field and unsupported plugin providers were
+reported as blockers. At that checkpoint, Goodreads OAuth bookshelf settings,
+owned-book import lists, and Goodreads bookshelf/owned-book notifications were
+also blockers. The later PR #131 candidate adds those Goodreads compatibility
+providers. Importer tests verify complete saved settings are carried forward,
+missing or partial OAuth credentials block migration, and reports never
+include credential values. Runtime HTTP fixtures cover private-shelf and
+owned-book reads plus Goodreads writes; existing-account API acceptance is
+still unverified. The populated SQLite snapshot itself contains no real
+Goodreads credentials or live provider response. Preview leaves source bytes
+unchanged, and apply refuses any remaining unsupported provider before
+promotion. Reports contain row IDs, implementation/contract names, and
+unsupported field names, never saved values or credentials.
 
 - ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131). The populated rehearsal below is one fixture run; it does not stand in for representative-data acceptance.
 - Earlier integrated code snapshot `8b4c6e23` passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-receipt checks in Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341). CodeQL, dependency review, security scan, and NuGet submission also passed. Those hosted checks do not rerun the private populated-data rehearsal or expand its scope.
