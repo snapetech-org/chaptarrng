@@ -220,7 +220,7 @@ of aborting conversion. Focused regression cases cover these paths.
 
 The focused `BookshelfDatabaseImporterFixture`,
 `EditionCatalogResourceFixture`, and
-`SystemIntegrationCapabilitiesResourceFixture` suites pass 44/44 locally.
+`SystemIntegrationCapabilitiesResourceFixture` suites pass 52/52 locally.
 The private library's contents, counts, identifiers, and hashes are omitted.
 This validates one populated SQLite candidate path and its rollback, not
 semantic correctness for every record. The ambiguous-media review artifact

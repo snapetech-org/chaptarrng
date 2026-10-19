@@ -35,8 +35,13 @@ restore preview, and rollback on a disposable migration-158 SQLite copy with
 schema-158 backup and preserved the schema-121 converted database; integrity
 and foreign-key checks passed, and the original snapshot remained unchanged.
 Missing-edition files and cross-book history references found in that data
-are now preserved conservatively and covered by regression tests. Local
-focused migration and edition-catalog tests pass 44/44; ambiguous media review,
+are now preserved conservatively and covered by regression tests. Focused
+importer, edition-catalog, and capability tests pass 52/52 locally. On current
+PR #131 head `f5f57644`, Linux and macOS builds, PostgreSQL migration,
+release-note, CodeQL, dependency, secret-scan, and NuGet checks passed in
+[run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072);
+Windows passed and native runner receipts reconciled. The separate
+disposable-fork validation was skipped by its gate. Ambiguous media review,
 older real schemas, PostgreSQL operator data, full feature parity, and
 installation-channel acceptance remain open.
 

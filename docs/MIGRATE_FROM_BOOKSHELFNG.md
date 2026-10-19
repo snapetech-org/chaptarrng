@@ -41,9 +41,14 @@
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 > contains this candidate. Previous exact-head run
 > [39182438062](https://github.com/snapetech-org/chaptarrng/actions/runs/39182438062)
-> passed on PR head `bdd7518`; the current importer and edition-catalog
-> follow-up still needs exact-head hosted validation. Local focused importer
-> and edition-catalog tests pass 44/44. See the
+> passed on PR head `bdd7518`. Current PR #131 head `f5f57644` passed Linux and
+> macOS builds, the PostgreSQL migration check, release-note contract, CodeQL,
+> dependency review, dependency and secret scan, and NuGet submission in
+> [run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072);
+> Windows passed and native runner receipts reconciled. The separate
+> disposable-fork validation was skipped by its gate.
+> Focused importer, edition-catalog, and capability tests pass 52/52 locally.
+> See the
 > [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 > PostgreSQL source conversion remains unsupported in published releases.
 > Pinned images,

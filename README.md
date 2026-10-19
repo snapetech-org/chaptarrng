@@ -84,16 +84,21 @@ channels remain open.
 
 The candidate importer now preserves files that reference a missing edition
 as unmapped and keeps conflicting history rows attached to their source book
-without an unsafe file or edition link. Focused importer and edition-catalog
-API tests pass 44/44 locally. The current source changes still require a new
-exact-head hosted run and are not approved for operator cutover.
+without an unsafe file or edition link. Focused importer, edition-catalog,
+and capability tests pass 52/52 locally. On current PR #131 head `f5f57644`,
+Linux and macOS builds, PostgreSQL migration, release-note, CodeQL, dependency,
+secret-scan, and NuGet checks passed in
+[run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072);
+Windows passed and the native runner receipts reconciled successfully. The
+separate disposable-fork validation was skipped by its gate. The candidate is
+not approved for operator cutover.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 contains the older SQLite and one-schema PostgreSQL migration candidate,
 native Hardcover identity handling, and the separate BookOrbit Book Dock
 destination. Previous exact-head run
 [39182438062](https://github.com/snapetech-org/chaptarrng/actions/runs/39182438062)
-passed on PR head `bdd7518`; these importer and edition-catalog follow-ups
-still need exact-head hosted validation. The synthetic provider-mode,
+passed on PR head `bdd7518`; the later `f5f57644` exact-head run is linked
+above. The synthetic provider-mode,
 automatic-startup, and rollback evidence is recorded in the
 [migration fixture report](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 Keep the release freeze in place. See the [PostgreSQL migration candidate

@@ -66,11 +66,16 @@ detailed feature inventory remains in the
   original private snapshot remained unchanged. The importer fixes prompted
   by this rehearsal preserve missing-edition files as unmapped and retain
   conflicting history on its source book without attaching an unsafe file or
-  edition. Local focused importer and edition-catalog tests pass 44/44. This
-  is one populated SQLite candidate round trip; ambiguous format review,
+  edition. Focused importer, edition-catalog, and capability tests pass 52/52
+  locally. On PR #131 head `f5f57644`, Linux and macOS builds, PostgreSQL
+  migration, release-note, CodeQL, dependency, secret-scan, and NuGet checks
+  passed in [run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072);
+  Windows passed and native runner receipts reconciled. The separate
+  disposable-fork validation was skipped by its gate. This is one populated
+  SQLite candidate round trip; ambiguous format review,
   PostgreSQL operator data, other source shapes, feature parity, and install
-  channel acceptance remain open. The exact-head hosted run for these
-  follow-up changes is pending.
+  channel acceptance remain open. Hosted source validation does not establish
+  operator-data or installation-channel acceptance.
 - BookshelfNG `main` at `9a04c2eb2` now exposes
   `GET /api/v1/book/{id}/editions/catalog` and advertises `editionCatalog` for
   SeerrNG edition cards. The ChaptarrNG candidate adds the matching route and
