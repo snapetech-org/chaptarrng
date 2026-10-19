@@ -47,7 +47,7 @@
 > does not close ambiguous
 > media review, older-schema or PostgreSQL operator-data acceptance, feature
 > parity, or installer/channel handoff.
-> Draft PR #131 application-code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`
+> Prior PR #131 application-code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`
 > then passed exact-head Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)
 > on Linux, macOS, and Windows, plus PostgreSQL migration, release-note,
 > CodeQL, security/dependency, dependency-review, NuGet, and Helm identity
@@ -71,6 +71,11 @@
 > Local translation, type, targeted ESLint/Stylelint, and release-note preview
 > pass. These candidate checks do not approve cutover; operator-data, parity,
 > installed rollback, and channel acceptance remain open.
+> The current [draft PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
+> adds a Windows service handoff installer and a regression smoke for its
+> SQLite preview fingerprint. The smoke passes locally; hosted checks are
+> rerunning on the current candidate. This remains unpublished and is not
+> approved for production migration.
 > Focused importer, edition-catalog, and capability tests pass 52/52 locally.
 > The populated SQLite rehearsal and synthetic provider-mode, startup, and
 > rollback evidence are in the

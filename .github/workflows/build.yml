@@ -334,6 +334,11 @@ jobs:
       shell: pwsh
       run: ./packaging/scripts/build-windows-bookshelf-migration-installer.ps1
 
+    - name: Test Windows migration installer SQLite fingerprint
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: dotnet run --configuration Release --project ./distribution/windows/installer-net-smoke/ChaptarrNG.Installer.Smoke.csproj
+
     - name: Test Windows service preserves its selected data directory
       if: matrix.os == 'windows-latest'
       shell: pwsh

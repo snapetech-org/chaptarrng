@@ -66,6 +66,10 @@ The candidate executable is written to
 to overwrite an existing payload or output directory and removes the temporary
 embedded zip after publishing.
 
+Windows CI also runs a focused fingerprint regression smoke: changes to the
+database, WAL, or rollback journal must invalidate the preview fingerprint,
+while changes to SQLite's rebuildable `-shm` index must not.
+
 ## Remaining acceptance
 
 The code and hosted build do not replace migration rehearsal on representative

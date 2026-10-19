@@ -9,7 +9,14 @@ handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
-**Latest application-code validation (2026-10-19):** ChaptarrNG draft PR #131
+**Current candidate (2026-10-19):** ChaptarrNG draft PR #131 contains the
+unpublished Windows BookshelfNG service handoff installer and the SQLite
+fingerprint regression smoke. The shared fingerprint helper passed locally,
+and the installer cross-target publish succeeded. The hosted exact-head run is
+linked from the [live PR checks](https://github.com/snapetech-org/chaptarrng/pull/131).
+These checks do not authorize a migration or release.
+
+**Prior application-code validation (2026-10-19):** ChaptarrNG draft PR #131
 contains code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build
 [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)
 passed Linux (4,460 passed, 0 failed, 13 skipped, 2 inconclusive), macOS
@@ -48,9 +55,10 @@ legacy data path, asks for provider mode, makes a retained integrity-checked
 backup, checks preview immutability for the database, WAL, and rollback
 journal, previews before apply, switches to the `Chaptarr` service, and verifies
 its data path and local health. Custom service accounts, PostgreSQL, and
-multiple databases fail closed. Its Windows CI build and exact-head checks are pending; representative
-Windows data and real installed rollback remain unaccepted. Keep the release
-freeze in place.
+multiple databases fail closed. Windows CI also exercises the shared
+fingerprint helper against changed SQLite durable files and a rebuilt `-shm`
+index. Representative Windows data and real installed rollback remain
+unaccepted. Keep the release freeze in place.
 
 **Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19):** The
 Linux app files from Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)
