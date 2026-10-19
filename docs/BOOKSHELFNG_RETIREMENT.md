@@ -59,12 +59,18 @@ detailed feature inventory remains in the
   These checks do not close operator-data, feature-parity, installed-rollback,
   or channel acceptance.
   The candidate now also validates and stages recognized BookshelfNG ZIP
-  backup databases for normal-startup conversion, retaining the archive and
-  database rollback copies. A fixture covers restore followed by automatic
-  conversion. Its local test run is blocked before compilation by the
-  workstation's ImageSharp license requirement; exact-head hosted validation is
-  pending. This change is source-only, and public `.977` restore still rejects
-  BookshelfNG schemas.
+  backup databases for normal-startup conversion, retaining the untouched
+  archive and original BookshelfNG database for rollback. The previous
+  ChaptarrNG database is restored if conversion fails; its temporary
+  `.pre-restore` copy is removed after success. The first hosted run exposed an
+  incomplete migration history in the synthetic fixture; the corrected
+  fixture matches schema 158. Exact-head Build run
+  [39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613)
+  passed on code head `6f57d355`: Linux, macOS, Windows, PostgreSQL migration,
+  and release-note checks passed. CodeQL, dependency review, dependency/secret
+  scan, and NuGet checks also passed. Local tests remain blocked before
+  compilation by the workstation's ImageSharp license requirement. This
+  source change is not in public `.977`, which still rejects BookshelfNG ZIPs.
   The earlier synthetic provider-mode, startup, and rollback evidence is in the
   [detailed fixture report](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
   This is not operator-data or channel acceptance.

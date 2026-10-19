@@ -42,9 +42,14 @@ remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
 Draft PR #131 also adds restore support for supported BookshelfNG backup ZIPs:
-the archive database is staged, then normal startup runs the validated
-conversion and retains rollback copies. This source candidate is not in
-`v0.9.977` and does not authorize cutover.
+the database is staged and the archive remains unchanged. Normal startup runs
+the validated conversion and retains the BookshelfNG source database for
+rollback. If conversion fails, startup restores the previous ChaptarrNG
+database; after success, it removes that temporary `.pre-restore` copy. This
+source candidate is not in `v0.9.977` and does not authorize cutover.
+PR #131 code head `6f57d355` passed exact-head Build run
+[39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613)
+on Linux, macOS, Windows, PostgreSQL migration, and release-note validation.
 
 Until those gates close, the published converter is for read-only preview
 only. Do not apply a conversion or start ChaptarrNG against BookshelfNG's

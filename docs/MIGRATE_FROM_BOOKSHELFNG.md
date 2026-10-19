@@ -117,10 +117,16 @@ lineage, the source migration-version range, and the legacy table-name boundary,
 then stages the database for restore. On normal startup, the existing converter
 upgrades a disposable source copy, builds and validates a ChaptarrNG database,
 and retains the original BookshelfNG database for rollback. The archive itself
-remains untouched. A regression fixture covers restore followed by automatic
-conversion; hosted exact-head validation is pending. This source-candidate path
-is not available in `.977` and must not be used for production cutover while the
-retirement gates remain open.
+remains untouched. The previous ChaptarrNG database is restored if conversion
+fails and its temporary `.pre-restore` copy is removed after success. A
+regression fixture covers restore followed by automatic conversion. ChaptarrNG
+PR #131 code head `6f57d355` passed exact-head Build run
+[39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613)
+on Linux, macOS, Windows, PostgreSQL migration, and release-note validation.
+The fixture uses the complete migration history expected in a BookshelfNG
+schema-158 database. This is hosted synthetic validation, not operator-data
+acceptance. The source-candidate path is not available in `.977` and must not
+be used for production cutover while the retirement gates remain open.
 
 If BookshelfNG is older than `0.4.21.71`, update it to that final release and
 let BookshelfNG finish its own database upgrade before switching applications.
