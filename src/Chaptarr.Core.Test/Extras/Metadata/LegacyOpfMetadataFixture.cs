@@ -40,6 +40,7 @@ namespace Chaptarr.Core.Test.Extras.Metadata
             {
                 Id = 10,
                 Title = "Fixture Book",
+                BaseBookId = "hc:fixture-book",
                 Genres = new List<string> { "Fantasy" },
                 ReleaseDate = new DateTime(2024, 5, 6)
             };
@@ -81,6 +82,13 @@ namespace Chaptarr.Core.Test.Extras.Metadata
                 Assert.That((string)document.Root.Element(opf + "metadata").Element(dc + "publisher"), Is.EqualTo("Fixture Press"));
                 Assert.That(document.Root.Element(opf + "metadata").Element(dc + "subject"), Is.Not.Null);
             });
+
+            edition.Isbn13 = null;
+            edition.Asin = null;
+            var fallbackDocument = XDocument.Parse(subject.BookMetadata(author, bookFile).Contents);
+            Assert.That(
+                (string)fallbackDocument.Root.Element(opf + "metadata").Element(dc + "identifier"),
+                Is.EqualTo("urn:bookshelfng:book:hc:fixture-book"));
 
             bookFile.Part = 2;
             Assert.That(subject.BookMetadata(author, bookFile), Is.Null);

@@ -49,17 +49,17 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers
                 return null;
             }
 
-            var edition = bookFile.Edition?.Value;
-            var book = edition?.Book?.Value;
+            var edition = bookFile.Edition;
+            var book = edition?.Book;
             if (edition == null || book == null)
             {
                 return null;
             }
 
-            var authorName = bookFile.Author?.Value?.Name;
+            var authorName = bookFile.Author?.Name;
             if (string.IsNullOrWhiteSpace(authorName))
             {
-                authorName = book.Author?.Value?.Name;
+                authorName = book.Author?.Name;
             }
 
             var relativePath = Path.GetRelativePath(author.Path, Path.ChangeExtension(bookFile.Path, ".opf"));
@@ -103,11 +103,16 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers
                 var primaryScheme = !string.IsNullOrWhiteSpace(isbn)
                     ? "ISBN"
                     : (!string.IsNullOrWhiteSpace(asin) ? "ASIN" : "URI");
+                var bookId = book.BaseBookId ??
+                    book.HardcoverBookId ??
+                    book.GoodreadsWorkId ??
+                    book.OpenLibraryWorkId ??
+                    book.Id.ToString(CultureInfo.InvariantCulture);
                 var primaryIdentifier = !string.IsNullOrWhiteSpace(isbn)
                     ? isbn
                     : (!string.IsNullOrWhiteSpace(asin)
                         ? asin
-                        : $"urn:bookshelfng:book:{book.ForeignBookId ?? book.Id.ToString(CultureInfo.InvariantCulture)}");
+                        : $"urn:bookshelfng:book:{bookId}");
 
                 WriteIdentifier(writer, primaryIdentifier, primaryScheme, true);
                 if (!string.IsNullOrWhiteSpace(isbn) && !string.IsNullOrWhiteSpace(asin))
@@ -177,8 +182,8 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers
 
         private static void WriteSeries(XmlWriter writer, Book book)
         {
-            var preferredSeries = book.Author?.Value?.MetadataProfile?.Value?.PreferredSeries;
-            var seriesLink = book.SeriesLinks?.Value.GetPreferredSeriesLink(preferredSeries);
+            var preferredSeries = book.Author?.MetadataProfile?.Value?.PreferredSeries;
+            var seriesLink = book.SeriesLinks?.GetPreferredSeriesLink(preferredSeries);
 
             var seriesTitle = seriesLink?.Series?.Value?.Title;
             if (string.IsNullOrWhiteSpace(seriesTitle))
