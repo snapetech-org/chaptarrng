@@ -11,6 +11,7 @@ using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation.Extensions;
 using NzbDrone.Core.Books.Commands;
+using NzbDrone.Core.Extras;
 using NzbDrone.Core.Extras.Metadata.Files;
 using NzbDrone.Core.Extras.Others;
 using NzbDrone.Core.MediaFiles;
@@ -98,12 +99,12 @@ namespace NzbDrone.Core.Books
 
                 foreach (var metadataFile in metadataFiles[bookFile.Id])
                 {
-                    AddExtraFile(preview, bookFile, metadataFile.Id, "metadata", Path.Combine(author.Path, metadataFile.RelativePath), destination);
+                    AddExtraFile(preview, author, bookFile, metadataFile.Id, "metadata", metadataFile.RelativePath, destination);
                 }
 
                 foreach (var extraFile in otherExtraFiles[bookFile.Id])
                 {
-                    AddExtraFile(preview, bookFile, extraFile.Id, "extra", Path.Combine(author.Path, extraFile.RelativePath), destination);
+                    AddExtraFile(preview, author, bookFile, extraFile.Id, "extra", extraFile.RelativePath, destination);
                 }
             }
 
@@ -194,12 +195,19 @@ namespace NzbDrone.Core.Books
             return preview;
         }
 
-        private void AddExtraFile(AuthorMediaMovePreview preview, BookFile bookFile, int extraFileId, string type, string sourcePath, string destinationMediaPath)
+        private void AddExtraFile(AuthorMediaMovePreview preview, Author author, BookFile bookFile, int extraFileId, string type, string relativePath, string destinationMediaPath)
         {
+            var sourcePath = ResolveSidecarPath(author, bookFile, relativePath);
+            preview.SidecarFileCount++;
+
+            if (sourcePath == null)
+            {
+                preview.Conflicts.Add("A registered book sidecar has an invalid path outside the author's library folders.");
+                return;
+            }
+
             var destinationPath = Path.Combine(Path.GetDirectoryName(destinationMediaPath), Path.GetFileName(sourcePath));
             var sourceExists = _diskProvider.FileExists(sourcePath);
-
-            preview.SidecarFileCount++;
 
             AddFile(preview, new AuthorMediaMoveFile
             {
@@ -212,6 +220,63 @@ namespace NzbDrone.Core.Books
                 Size = sourceExists ? _diskProvider.GetFileSize(sourcePath) : 0,
                 Modified = sourceExists ? _diskProvider.FileGetLastWrite(sourcePath) : DateTime.MinValue
             });
+        }
+
+        private string ResolveSidecarPath(Author author, BookFile bookFile, string relativePath)
+        {
+            var normalizedRelativePath = (relativePath ?? string.Empty).Replace('\\', '/');
+
+            if (string.IsNullOrWhiteSpace(normalizedRelativePath) ||
+                Path.IsPathRooted(normalizedRelativePath) ||
+                normalizedRelativePath.StartsWith("/", StringComparison.Ordinal) ||
+                (normalizedRelativePath.Length >= 2 && char.IsLetter(normalizedRelativePath[0]) && normalizedRelativePath[1] == ':') ||
+                normalizedRelativePath.Split('/').Any(segment => segment == ".."))
+            {
+                return null;
+            }
+
+            var localRelativePath = normalizedRelativePath.Replace('/', Path.DirectorySeparatorChar);
+            var preferredBasePath = ExtraFilePathHelper.GetPreferredBasePath(author, bookFile);
+            var basePaths = new[] { preferredBasePath, author.Path }
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct(PathEqualityComparer.Instance);
+
+            foreach (var basePath in basePaths)
+            {
+                var candidate = Path.GetFullPath(Path.Combine(basePath, localRelativePath));
+                if (!IsWithinPath(basePath, candidate))
+                {
+                    return null;
+                }
+
+                if (_diskProvider.FileExists(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            var fallbackBasePath = preferredBasePath.IsNotNullOrWhiteSpace() ? preferredBasePath : author.Path;
+            return fallbackBasePath.IsNullOrWhiteSpace()
+                ? null
+                : Path.GetFullPath(Path.Combine(fallbackBasePath, localRelativePath));
+        }
+
+        private static bool IsWithinPath(string basePath, string candidatePath)
+        {
+            var fullBasePath = Path.GetFullPath(basePath);
+            var fullCandidatePath = Path.GetFullPath(candidatePath);
+            var comparison = Path.DirectorySeparatorChar == '\\' ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+            if (fullBasePath.Equals(fullCandidatePath, comparison))
+            {
+                return true;
+            }
+
+            var baseWithSeparator = fullBasePath.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                ? fullBasePath
+                : fullBasePath + Path.DirectorySeparatorChar;
+
+            return fullCandidatePath.StartsWith(baseWithSeparator, comparison);
         }
 
         private void AddFile(AuthorMediaMovePreview preview, AuthorMediaMoveFile file)
@@ -428,7 +493,7 @@ namespace NzbDrone.Core.Books
             return author.Path;
         }
 
-        private HashSet<string> GetExtensions(string format)
+        private IReadOnlySet<string> GetExtensions(string format)
         {
             return format == "ebook" ? MediaFileExtensions.TextExtensions : MediaFileExtensions.AudioExtensions;
         }
@@ -457,7 +522,7 @@ namespace NzbDrone.Core.Books
             {
                 var file = files[index];
                 _logger.ProgressInfo("Moving {0} {1} files ({2}/{3})", author.Name, message.Format, index + 1, files.Count);
-                MoveFile(author, file);
+                MoveFile(author, file, message.Format);
             }
 
             _logger.ProgressInfo("Finished moving {0} {1} files to {2}", author.Name, message.Format, message.DestinationPath);
@@ -478,7 +543,7 @@ namespace NzbDrone.Core.Books
                 {
                     processedFiles++;
                     _logger.ProgressInfo("Moving {0} {1} files ({2}/{3})", author.Name, message.Format, processedFiles, totalFiles);
-                    MoveFile(author, file);
+                    MoveFile(author, file, message.Format);
                 }
 
                 _logger.ProgressInfo("Finished moving {0} {1} files to {2}", author.Name, message.Format, authorMove.DestinationPath);
@@ -487,7 +552,7 @@ namespace NzbDrone.Core.Books
             _logger.ProgressInfo("Finished bulk move of {0} {1} files to {2}", totalFiles, message.Format, message.DestinationRootPath);
         }
 
-        private void MoveFile(Author author, AuthorMediaMoveFile file)
+        private void MoveFile(Author author, AuthorMediaMoveFile file, string format)
         {
             if (file.Status == "missing")
             {
@@ -531,7 +596,7 @@ namespace NzbDrone.Core.Books
                 }
             }
 
-            UpdateFileRecord(author, file);
+            UpdateFileRecord(author, file, format);
         }
 
         private bool IsExpectedFile(AuthorMediaMoveFile file)
@@ -544,7 +609,7 @@ namespace NzbDrone.Core.Books
             return _diskProvider.FileGetLastWrite(file.DestinationPath) == file.Modified;
         }
 
-        private void UpdateFileRecord(Author author, AuthorMediaMoveFile file)
+        private void UpdateFileRecord(Author author, AuthorMediaMoveFile file, string format)
         {
             if (file.FileType == "media")
             {
@@ -559,7 +624,7 @@ namespace NzbDrone.Core.Books
                 var metadataFile = _metadataFileService.GetFilesByBookFile(file.BookFileId).FirstOrDefault(extra => extra.Id == file.ExtraFileId);
                 if (metadataFile != null)
                 {
-                    metadataFile.RelativePath = author.Path.GetRelativePath(file.DestinationPath);
+                    metadataFile.RelativePath = ExtraFilePathHelper.NormalizePathSeparators(GetFormatPath(author, NormalizeFormat(format)).GetRelativePath(file.DestinationPath));
                     _metadataFileService.Upsert(metadataFile);
                 }
 
@@ -569,7 +634,7 @@ namespace NzbDrone.Core.Books
             var otherExtraFile = _otherExtraFileService.GetFilesByBookFile(file.BookFileId).FirstOrDefault(extra => extra.Id == file.ExtraFileId);
             if (otherExtraFile != null)
             {
-                otherExtraFile.RelativePath = author.Path.GetRelativePath(file.DestinationPath);
+                otherExtraFile.RelativePath = ExtraFilePathHelper.NormalizePathSeparators(GetFormatPath(author, NormalizeFormat(format)).GetRelativePath(file.DestinationPath));
                 _otherExtraFileService.Upsert(otherExtraFile);
             }
         }

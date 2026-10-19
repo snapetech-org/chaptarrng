@@ -90,7 +90,7 @@ namespace Chaptarr.Core.Test.Books
             AddDiskFile(_ebook.Path, _ebook.Size);
             AddDiskFile(_audiobook.Path, _audiobook.Size);
             AddDiskFile("/library/author/metadata/cover.jpg", 5);
-            AddDiskFile("/library/author/extras/preview.jpg", 6);
+            AddDiskFile("/library/author/ebooks/extras/preview.jpg", 6);
             AddDiskFile("/library/author/notes.txt", 7);
 
             _authorService = new Mock<IAuthorService>();
@@ -168,7 +168,7 @@ namespace Chaptarr.Core.Test.Books
                 {
                     _ebook.Path,
                     "/library/author/metadata/cover.jpg",
-                    "/library/author/extras/preview.jpg"
+                    "/library/author/ebooks/extras/preview.jpg"
                 }));
                 Assert.That(preview.Files.Any(file => file.SourcePath.Contains("notes.txt", StringComparison.Ordinal)), Is.False);
                 Assert.That(preview.Files.Any(file => file.SourcePath.EndsWith(".m4b", StringComparison.OrdinalIgnoreCase)), Is.False);
@@ -212,6 +212,7 @@ namespace Chaptarr.Core.Test.Books
         public void should_move_only_previewed_files_and_update_their_catalog_paths()
         {
             var preview = _service.Preview(_author.Id, "ebook", "/archive/author");
+            _author.EbookPath = preview.DestinationPath;
             _service.Execute(new MoveAuthorMediaCommand
             {
                 AuthorId = _author.Id,
@@ -225,8 +226,8 @@ namespace Chaptarr.Core.Test.Books
             Assert.Multiple(() =>
             {
                 Assert.That(_ebook.Path, Is.EqualTo("/archive/author/book.epub"));
-                Assert.That(_metadata.RelativePath, Is.EqualTo(Path.GetRelativePath(_author.Path, "/archive/author/cover.jpg")));
-                Assert.That(_otherExtra.RelativePath, Is.EqualTo(Path.GetRelativePath(_author.Path, "/archive/author/preview.jpg")));
+                Assert.That(_metadata.RelativePath, Is.EqualTo("cover.jpg"));
+                Assert.That(_otherExtra.RelativePath, Is.EqualTo("preview.jpg"));
                 Assert.That(_diskFiles.ContainsKey("/library/author/notes.txt"), Is.True, "untracked files stay in place");
                 Assert.That(_diskFiles.ContainsKey(_audiobook.Path), Is.True, "the other format stays in place");
                 Assert.That(_diskTransferService.Invocations.Count, Is.EqualTo(3));
@@ -235,6 +236,19 @@ namespace Chaptarr.Core.Test.Books
             _mediaFileService.Verify(service => service.Update(_ebook), Times.Once);
             _metadataFileService.Verify(service => service.Upsert(_metadata), Times.Once);
             _otherExtraFileService.Verify(service => service.Upsert(_otherExtra), Times.Once);
+        }
+
+        [Test]
+        public void should_block_a_registered_sidecar_path_that_escapes_the_author_folders()
+        {
+            _otherExtra.RelativePath = "../outside.jpg";
+            AddDiskFile("/library/author/outside.jpg", 6);
+
+            var preview = _service.Preview(_author.Id, "ebook", "/archive/author");
+
+            Assert.That(preview.CanMove, Is.False);
+            Assert.That(preview.Conflicts, Has.Some.Contains("invalid path"));
+            Assert.That(preview.Files.Any(file => file.SourcePath == "/library/author/outside.jpg"), Is.False);
         }
 
         [Test]
