@@ -5,4 +5,4 @@ area: migration
 action: none
 breaking: false
 ---
-BookshelfNG indexer settings now keep their provider configuration when the matching Chaptarr indexer is supported. Legacy MyAnonAMouse search filters and language choices remain effective after migration; an unknown provider mapping is reported in preview and blocks apply.
+BookshelfNG provider settings now keep their configuration when the implementation and contract match a supported Chaptarr provider. Legacy MyAnonAMouse filters remain effective; unknown download clients, import lists, notifications, or indexers are reported in preview and block apply.

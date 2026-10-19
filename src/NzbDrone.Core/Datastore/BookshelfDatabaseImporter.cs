@@ -10,7 +10,11 @@ using NpgsqlTypes;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Download;
+using NzbDrone.Core.ImportLists;
+using NzbDrone.Core.Indexers;
 using NzbDrone.Core.MetadataSource.BookInfo;
+using NzbDrone.Core.Notifications;
 
 namespace NzbDrone.Core.Datastore
 {
@@ -36,6 +40,13 @@ namespace NzbDrone.Core.Datastore
                 ["Torrentleech"] = "TorrentleechSettings",
                 ["Torznab"] = "TorznabSettings"
             };
+
+        private static readonly IReadOnlyDictionary<string, string> DownloadClientContracts =
+            BuildProviderContractMap(typeof(IDownloadClient), typeof(DownloadClientBase<>));
+        private static readonly IReadOnlyDictionary<string, string> ImportListContracts =
+            BuildProviderContractMap(typeof(IImportList), typeof(ImportListBase<>));
+        private static readonly IReadOnlyDictionary<string, string> NotificationContracts =
+            BuildProviderContractMap(typeof(INotification), typeof(NotificationBase<>));
 
         private static readonly HashSet<string> SupportedSourceTables = new(StringComparer.Ordinal)
         {
@@ -103,7 +114,7 @@ namespace NzbDrone.Core.Datastore
             CopyTable(source, target, transaction, report, "CustomFilters");
             CopyTable(source, target, transaction, report, "CustomFormats");
             CopyTable(source, target, transaction, report, "DelayProfiles");
-            CopyTable(source, target, transaction, report, "DownloadClients");
+            ImportProviderTable(source, target, transaction, report, "DownloadClients", DownloadClientContracts, "download-client");
             ImportHistory(source, target, transaction, authors, books, files, report);
             CopyTable(source, target, transaction, report, "ImportListExclusions");
             ImportLists(source, target, transaction, qualityProfiles, metadataProfiles, report);
@@ -1211,6 +1222,7 @@ namespace NzbDrone.Core.Datastore
         {
             var sourceCount = CountRows(source, "ImportLists");
             var targetColumns = GetColumns(target, "ImportLists");
+            var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in ReadRows(source, "ImportLists"))
             {
                 var values = Intersect(row, targetColumns);
@@ -1225,12 +1237,17 @@ namespace NzbDrone.Core.Datastore
                 values["ShouldMonitor"] = RemapMonitorType(GetInt(row, "ShouldMonitor"));
                 SetIfPresent(values, "EnableAutomaticAdd", GetBoolean(row, "EnableAutomaticAdd"));
                 SetIfPresent(values, "ConfigContract", GetString(row, "ConfigContract") ?? "");
+                CheckProviderSettingsCompatibility(row, values, ImportListContracts, unsupported);
                 SetIfPresent(values, "MonitorNewItems", GetValue(row, "MonitorNewItems") ?? 0);
                 InsertRow(target, transaction, "ImportLists", targetColumns, values);
             }
 
             report.RecordTable("ImportLists", sourceCount, 0, sourceCount, 0, 0,
-                "list settings, credentials, monitoring, profile IDs, and root paths are retained with the target quality-profile mapping");
+                AddUnsupportedProviderDisposition(
+                    "list settings, credentials, monitoring, profile IDs, and root paths are retained with the target quality-profile mapping",
+                    "ImportLists",
+                    unsupported,
+                    report));
         }
 
         private static void ImportIndexers(
@@ -1275,6 +1292,128 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Indexers", rows.Count, 0, rows.Count, 0, 0, mapping);
+        }
+
+        private static void ImportProviderTable(
+            DbConnection source,
+            DbConnection target,
+            DbTransaction transaction,
+            BookshelfDatabaseImportReport report,
+            string table,
+            IReadOnlyDictionary<string, string> compatibleContracts,
+            string providerKind)
+        {
+            var rows = ReadRows(source, table).ToList();
+            var targetColumns = GetColumns(target, table);
+            var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var row in rows)
+            {
+                var unmapped = row.Where(x => x.Value != null && !targetColumns.ContainsKey(x.Key))
+                    .Select(x => x.Key)
+                    .OrderBy(x => x, StringComparer.Ordinal)
+                    .ToArray();
+                if (unmapped.Length > 0)
+                {
+                    throw new InvalidDataException(
+                        $"BookshelfNG {table} row {GetInt(row, "Id")} has non-empty fields with no Chaptarr mapping: " +
+                        string.Join(", ", unmapped.Select(x => table + "." + x)) + ". Conversion stopped before promotion.");
+                }
+
+                var values = Intersect(row, targetColumns);
+                CheckProviderSettingsCompatibility(row, values, compatibleContracts, unsupported);
+                InsertRow(target, transaction, table, targetColumns, values);
+            }
+
+            report.RecordTable(table, rows.Count, 0, rows.Count, 0, 0,
+                AddUnsupportedProviderDisposition(
+                    $"{providerKind} settings are retained when their implementation and configuration contract match a Chaptarr provider",
+                    table,
+                    unsupported,
+                    report));
+        }
+
+        private static void CheckProviderSettingsCompatibility(
+            IReadOnlyDictionary<string, object> sourceRow,
+            IDictionary<string, object> targetRow,
+            IReadOnlyDictionary<string, string> compatibleContracts,
+            ISet<string> unsupported)
+        {
+            var implementation = GetString(sourceRow, "Implementation") ?? "(missing implementation)";
+            var configContract = GetString(sourceRow, "ConfigContract") ?? "";
+            if (compatibleContracts.TryGetValue(implementation, out var expectedContract) &&
+                string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            SetIfPresent(targetRow, "ConfigContract", "");
+            unsupported.Add($"row {GetInt(sourceRow, "Id")}: {implementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}");
+        }
+
+        private static string AddUnsupportedProviderDisposition(
+            string mapping,
+            string table,
+            IEnumerable<string> unsupported,
+            BookshelfDatabaseImportReport report)
+        {
+            var providers = unsupported.OrderBy(item => item, StringComparer.OrdinalIgnoreCase).ToArray();
+            if (providers.Length == 0)
+            {
+                return mapping;
+            }
+
+            foreach (var provider in providers)
+            {
+                report.AddBlockingIssue($"{table} provider settings need an explicit Chaptarr mapping for {provider}");
+            }
+
+            return mapping + "; unsupported implementation/configuration pairs are disabled in the staged copy and block apply: " +
+                   string.Join(", ", providers);
+        }
+
+        private static IReadOnlyDictionary<string, string> BuildProviderContractMap(Type providerInterface, Type genericProviderBase)
+        {
+            var contracts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var ambiguousNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var providerType in providerInterface.Assembly.GetTypes())
+            {
+                if (providerType.IsAbstract || providerType.IsInterface || !providerInterface.IsAssignableFrom(providerType))
+                {
+                    continue;
+                }
+
+                var settingsContract = FindSettingsContract(providerType, genericProviderBase);
+                if (settingsContract == null)
+                {
+                    continue;
+                }
+
+                if (!contracts.TryAdd(providerType.Name, settingsContract.Name))
+                {
+                    ambiguousNames.Add(providerType.Name);
+                }
+            }
+
+            foreach (var ambiguousName in ambiguousNames)
+            {
+                contracts.Remove(ambiguousName);
+            }
+
+            return contracts;
+        }
+
+        private static Type FindSettingsContract(Type providerType, Type genericProviderBase)
+        {
+            for (var type = providerType; type != null; type = type.BaseType)
+            {
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == genericProviderBase)
+                {
+                    return type.GetGenericArguments()[0];
+                }
+            }
+
+            return null;
         }
 
         private static void ImportNamingConfig(
@@ -1468,9 +1607,11 @@ namespace NzbDrone.Core.Datastore
         {
             var sourceCount = CountRows(source, "Notifications");
             var targetColumns = GetColumns(target, "Notifications");
+            var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in ReadRows(source, "Notifications"))
             {
                 var values = Intersect(row, targetColumns);
+                CheckProviderSettingsCompatibility(row, values, NotificationContracts, unsupported);
                 if (!row.ContainsKey("OnBookRetag"))
                 {
                     SetIfPresent(values, "OnBookRetag", GetValue(row, "OnTrackRetag") ?? false);
@@ -1481,7 +1622,11 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Notifications", sourceCount, 0, sourceCount, 0, 0,
-                "notification settings and triggers are preserved; the legacy track-retag trigger maps to book retag");
+                AddUnsupportedProviderDisposition(
+                    "notification settings and triggers are preserved; the legacy track-retag trigger maps to book retag",
+                    "Notifications",
+                    unsupported,
+                    report));
         }
 
         private static void CopyTable(

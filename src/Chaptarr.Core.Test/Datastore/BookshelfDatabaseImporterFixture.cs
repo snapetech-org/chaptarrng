@@ -14,6 +14,7 @@ using NLog.Extensions.Logging;
 using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
+using NzbDrone.Core.Download.Clients.QBittorrent;
 using NzbDrone.Core.Indexers.DirectDownload;
 using NzbDrone.Core.Indexers.MyAnonaMouse;
 using NzbDrone.Core.MetadataSource.BookInfo;
@@ -103,7 +104,7 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        public void should_report_unmapped_indexer_settings_in_preview_and_refuse_to_apply_them()
+        public void should_report_unmapped_provider_settings_in_preview_and_refuse_to_apply_them()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))
             {
@@ -111,7 +112,13 @@ namespace Chaptarr.Core.Test.Datastore
                 using var command = source.CreateCommand();
                 command.CommandText = @"
                     INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
-                    VALUES (123, 'Plugin fixture', 'FixturePluginIndexer', '{}', 'FixturePluginSettings', 1, 1, 1, 25, '[]', 0);";
+                    VALUES (123, 'Plugin fixture', 'FixturePluginIndexer', '{}', 'FixturePluginSettings', 1, 1, 1, 25, '[]', 0);
+                    INSERT INTO DownloadClients (Id, Enable, Name, Implementation, Settings, ConfigContract)
+                    VALUES (124, 1, 'Plugin download fixture', 'FixturePluginDownload', '{}', 'FixturePluginDownloadSettings');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (125, 'Legacy Hardcover fixture', 'HardcoverImport', '{}', 'HardcoverImportSettings', 0, '/library', 0, 1, 1, '[]');
+                    INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                    VALUES (126, 'Legacy Goodreads fixture', 1, '{}', 'GoodreadsOwnedBooks', 'GoodreadsOwnedBooksNotificationSettings', 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);";
                 command.ExecuteNonQuery();
             }
 
@@ -125,8 +132,14 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(1));
-                Assert.That(preview.ImportReport.BlockingIssues[0], Does.Contain("FixturePluginIndexer/FixturePluginSettings"));
+                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(4));
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginIndexer/FixturePluginSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginDownload/FixturePluginDownloadSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("HardcoverImport/HardcoverImportSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsOwnedBooks/GoodreadsOwnedBooksNotificationSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.Tables["DownloadClients"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(preview.ImportReport.Tables["ImportLists"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(preview.ImportReport.Tables["Notifications"].TargetMapping, Does.Contain("block apply"));
                 Assert.That(preview.ImportReport.Tables["Indexers"].TargetMapping, Does.Contain("block apply"));
                 Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBefore), "preview must leave source bytes unchanged");
             });
@@ -235,7 +248,14 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT PreferredSeries FROM MetadataProfiles WHERE Id = 2;"), Is.EqualTo("Fixture Ebooks"));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'FixtureSetting';"), Is.EqualTo("preserved"));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT QualityProfileId FROM ImportLists WHERE Id = 110;"), Is.EqualTo(1));
-            Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 110;"), Does.Contain("fixture-list-setting"));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM ImportLists WHERE Id = 110;"), Is.EqualTo("GoodreadsBookshelfImportListSettings"));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 110;"), Does.Contain("12345678"));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM Notifications WHERE Id = 111;"), Is.EqualTo(nameof(BookLoreSettings)));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM DownloadClients WHERE Id = 109;"), Is.EqualTo(nameof(QBittorrentSettings)));
+            var qBittorrentSettings = NzbDrone.Common.Serializer.STJson.Deserialize<QBittorrentSettings>(
+                QueryScalar<string>(_sourcePath, "SELECT Settings FROM DownloadClients WHERE Id = 109;"));
+            Assert.That(qBittorrentSettings.AudiobookCategory, Is.EqualTo("legacy-audio"));
+            Assert.That(qBittorrentSettings.EbookCategory, Is.EqualTo("legacy-ebooks"));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Indexers WHERE Id = 120 AND EnableRss = 1 AND SupportsRss = 0 AND SupportsSearch = 0;"), Is.EqualTo(1));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM Indexers WHERE Id = 120;"), Is.EqualTo(nameof(MyAnonaMouseSettings)));
             var mamSettings = NzbDrone.Common.Serializer.STJson.Deserialize<MyAnonaMouseSettings>(
@@ -1332,8 +1352,10 @@ namespace Chaptarr.Core.Test.Datastore
                 INSERT INTO RootFolders (Id, Path, Name, DefaultMetadataProfileId, DefaultQualityProfileId, DefaultMonitorOption, DefaultTags, IsCalibreLibrary, CalibreSettings, DefaultNewItemMonitorOption)
                 VALUES (1, '/library', 'Library', 1, 1, 0, '[]', 0, NULL, 2);
                 INSERT INTO Config (Id, Key, Value) VALUES (1, 'FixtureSetting', 'preserved');
+                INSERT INTO DownloadClients (Id, Enable, Name, Implementation, Settings, ConfigContract, Priority, Tags, RemoveCompletedDownloads, RemoveFailedDownloads)
+                VALUES (109, 1, 'qBittorrent fixture', 'QBittorrent', '{""host"":""localhost"",""port"":8080,""audiobookCategory"":""legacy-audio"",""ebookCategory"":""legacy-ebooks""}', 'QBittorrentSettings', 1, '[]', 1, 1);
                 INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
-                VALUES (110, 'Fixture list', 'FixtureList', '{""Value"":""fixture-list-setting""}', '{}', 1, '/library', 0, 1, 1, '[]');
+                VALUES (110, 'Fixture list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""1""]}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 0, 1, 1, '[]');
                 INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
                 VALUES (120, 'Fixture indexer', 'MyAnonaMouse', '{""baseUrl"":""https://www.myanonamouse.net"",""mamId"":""fixture-token"",""searchType"":2,""searchInDescription"":true,""searchInSeries"":false,""searchInFilenames"":true,""searchLanguages"":[4,1],""useFreeleechWedge"":2}', 'MyAnonaMouseSettings', 1, 1, 1, 25, '[]', 0);
                 INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
@@ -1341,7 +1363,7 @@ namespace Chaptarr.Core.Test.Datastore
                 INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
                 VALUES (122, 'Newznab fixture', 'Newznab', '{""baseUrl"":""https://indexer.example"",""apiKey"":""fixture-key""}', 'NewznabSettings', 0, 1, 1, 25, '[]', 0);
                 INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
-                VALUES (111, 'Fixture notification', 1, '{}', 'FixtureNotification', '{}', 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);
+                VALUES (111, 'Fixture notification', 1, '{""baseUrl"":""http://booklore.example"",""username"":""fixture"",""password"":""fixture-password""}', 'BookLore', 'BookLoreSettings', 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);
                 INSERT INTO Users (Id, Identifier, Username, Password)
                 VALUES (112, '00000000-0000-0000-0000-000000000020', 'fixture-user', 'legacy-sha256-hash');
                 INSERT INTO AuthorMetadata (Id, ForeignAuthorId, TitleSlug, Name, Overview, Status, Images, Aliases, SortName, NameLastFirst, SortNameLastFirst)
