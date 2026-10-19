@@ -12,7 +12,17 @@ detailed feature inventory remains in the
 **Prior PR #131 application-code validation (2026-10-19):** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. The Linux artifact also passed the earlier empty-library API and authorization smoke. The populated source-build check on later code is recorded below.
 
 
-**Current candidate code CI (2026-10-19):** ChaptarrNG PR #131 head `38be9422a0390c0b3d4d1c453ec14b25d3aa99a4` includes portable BookshelfNG BKSENC01 `.enc` backup export and restore. After two compile fixes and a cleanup-callback test-fixture correction, exact-head Build [39267876585](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876585) passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks. CodeQL [118112421054](https://github.com/snapetech-org/chaptarrng/runs/118112421054), security analysis [39267876503](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876503), and dependency review [39267876754](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876754) passed. Disposable-fork validation was skipped by its external-fork gate. This is code validation only; migration, parity, installed rollback, update-channel, and operator-acceptance gates remain open.
+**Prior candidate code CI (2026-10-19):** ChaptarrNG PR #131 head `38be9422a0390c0b3d4d1c453ec14b25d3aa99a4` includes portable BookshelfNG BKSENC01 `.enc` backup export and restore. After two compile fixes and a cleanup-callback test-fixture correction, exact-head Build [39267876585](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876585) passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks. CodeQL [118112421054](https://github.com/snapetech-org/chaptarrng/runs/118112421054), security analysis [39267876503](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876503), and dependency review [39267876754](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876754) passed. Disposable-fork validation was skipped by its external-fork gate. This is code validation only; migration, parity, installed rollback, update-channel, and operator-acceptance gates remain open.
+
+**M4B chapter-preservation tests (2026-10-19):** PR #131 head
+`e45b2310cfc7455f53500c4cf16b01edc1159e15` adds synthetic M4B inputs with
+embedded chapters to Move and Copy importer tests, plus a TagLib write-and-
+reprobe check for merged chapter titles and offsets. On exact-head Build
+[39275841754](https://github.com/snapetech-org/chaptarrng/actions/runs/39275841754),
+macOS and Windows passed; the Linux job that runs the pinned tool-enabled M4B
+tests, PostgreSQL migration, and release-note checks remain pending. This is
+source validation only; representative media, installation handoff, and
+retirement acceptance remain open.
 
 **Candidate code CI (2026-10-19):** ChaptarrNG PR #131 code commit `12f290bd` passed [Build 39256254892](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254892): Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks passed. CodeQL, [security scan 39256254713](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254713), [dependency review 39256254710](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254710), and [NuGet submission 39256277391](https://github.com/snapetech-org/chaptarrng/actions/runs/39256277391) passed. Disposable-fork validation was skipped by its external-fork gate. This is source validation, not migration or release acceptance.
 
@@ -123,14 +133,32 @@ and [Goodreads API deprecation notice](https://www.goodreads.com/topic/show/2178
   This is not operator-data or channel acceptance.
 - On 2026-10-19, the unpublished PR #131 candidate (build version
   `0.9.978.0`) passed preview, explicit apply, rollback preview, and explicit
-  rollback on a disposable copy of populated migration-158 SQLite data with
-  `HARDCOVER=true` and network access disabled. Migration preview left the
-  source unchanged; apply produced schema 121 and retained the source. Restore
-  preview left the converted database and source backup unchanged; rollback
-  restored a byte-identical schema-158 backup and preserved the converted
-  database separately. Integrity and foreign-key checks passed, and the
-  original private snapshot remained unchanged. The importer fixes prompted
-  by this rehearsal preserve missing-edition files as unmapped and retain
+  rollback against a task-scoped copy of populated migration-158 operator data
+  with `HARDCOVER=true`. The live BookshelfNG service remained running, and
+  candidate commands targeted only the separate copy; this did not test an
+  installed service handoff. Migration preview left the source copy unchanged;
+  apply produced schema 121 and retained the source. Restore preview left the
+  converted database and source backup unchanged; rollback restored a
+  byte-identical schema-158 backup and preserved the converted database
+  separately. Integrity and foreign-key checks passed, and the original
+  private snapshot remained unchanged. Unresolved books were retained in both
+  catalogs as unmonitored and recorded in the review sidecar; their media types
+  still need human review. Configured provider rows in the snapshot passed
+  migration compatibility checks without blockers; this does not test live
+  provider calls. With native Hardcover mode enabled, every migrated author,
+  book, and edition retained its Hardcover identity; none were assigned
+  Goodreads IDs. A fresh copy of the restored database also opened in the
+  BookshelfNG `hardcover` image on Docker's isolated `none` network, and its
+  configured `/ping` endpoint returned HTTP 200. This checks database reopen
+  and startup health only, not complete library behavior or an installed image
+  switch. The `.978` Linux app artifact from Build
+  [39267876585](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876585)
+  also returned HTTP 200 from `/ping` against a fresh converted schema-121 copy,
+  running on the published `.977` runtime image with empty scratch mounts for
+  configured roots and an internal-only network. This checks candidate app
+  startup, not candidate image packaging or live image switching. The importer
+  fixes prompted by this rehearsal preserve
+  missing-edition files as unmapped and retain
   conflicting history on its source book without attaching an unsafe file or
   edition. Focused importer, edition-catalog, and capability tests pass 52/52
   locally. Exact-head run
