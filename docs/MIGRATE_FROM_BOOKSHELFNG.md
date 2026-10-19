@@ -41,19 +41,19 @@
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 > contains older SQLite and one-schema PostgreSQL migration support, native
 > Hardcover identity handling, BookOrbit Book Dock, SeerrNG edition-catalog
-> compatibility with an Editions and Narrations book-details tab, and
-> previewable media moves. Exact-head run
-> [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
-> passed on head 2c0401fc: Linux, macOS, and Windows build/tests, PostgreSQL
-> migration fixtures, release-note validation, CodeQL, dependency/secret
-> checks, NuGet submission, and runner-receipt reconciliation. The previous
-> run found four Windows fixtures with POSIX-only paths; native temporary
-> paths fixed them. Disposable-fork validation was skipped by its gate.
-> Retirement candidate code commit `6a6b7d1f` integrates current ChaptarrNG
-> `main`, including the Editions tab and series narrator comparison, while
-> retaining explicit unknown and not-applicable edition labels. Local
-> translation, type, targeted ESLint, and Stylelint checks pass; exact-head
-> hosted validation is pending.
+> compatibility with the Editions and Narrations tab, and previewable media
+> moves. Earlier code snapshot `2c0401fc` passed exact-head run
+> [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
+> Integrated candidate code snapshot `8b4c6e23` includes current ChaptarrNG
+> `main`, the Editions and Narrations tab, and the series narrator comparison.
+> Exact-head Build run
+> [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
+> passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
+> runner-receipt checks. CodeQL, dependency review, security scan, and NuGet
+> submission also passed. Disposable-fork validation was skipped by its gate.
+> Local translation, type, targeted ESLint/Stylelint, and release-note preview
+> pass. These candidate checks do not approve cutover; operator-data, parity,
+> installed rollback, and channel acceptance remain open.
 > Focused importer, edition-catalog, and capability tests pass 52/52 locally.
 > The populated SQLite rehearsal and synthetic provider-mode, startup, and
 > rollback evidence are in the
@@ -150,9 +150,9 @@ The current ChaptarrNG work-branch candidate also maps a saved `HardcoverAuth`
 database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
 precedence, and the original BookshelfNG database remains available in the
 rollback backup. That native provider and token mapping are not in published
-`v0.9.977`. Exact-head run
-[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
-passed on PR #131 head 2c0401fc, including the PostgreSQL migration fixtures.
+`v0.9.977`. The integrated code snapshot `8b4c6e23` passed cross-platform
+and PostgreSQL migration checks in exact-head run
+[39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341).
 Representative converted-data acceptance remains open; see the [PostgreSQL
 candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). Do not treat this as
 supported migration behavior during the release freeze.

@@ -84,23 +84,25 @@ channels remain open.
 
 The candidate importer preserves files that reference a missing edition as
 unmapped and keeps conflicting history rows attached to their source book
-without an unsafe file or edition link. Focused importer, edition-catalog, and
-capability tests pass 52/52 locally. Exact-head run
-[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
-passed on PR #131 head 2c0401fc: Linux, macOS, and Windows build/tests,
-PostgreSQL migration fixtures, release-note validation, CodeQL, dependency
-review, dependency/secret scans, NuGet submission, and runner-receipt
-reconciliation. Disposable-fork validation was skipped by its gate. The
-preceding run [39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843)
-found four Windows media-move fixtures using POSIX-only paths; 2c0401fc
-switches those fixtures to native temporary paths, and the exact-head rerun
-passes. Retirement candidate commit `6a6b7d1f` integrates current ChaptarrNG
-`main`, including the series narrator comparison and Editions tab, while
-retaining the candidate's unknown and not-applicable edition labels. Local
-translation, type, targeted ESLint and Stylelint checks, and the release-notes
-preview pass locally; hosted validation of the integrated candidate is
-pending. This is candidate validation, not production cutover approval.
-Docs-only checkpoint `ddec3e81` passed exact-head run
+without an unsafe file or edition link. Focused importer, edition-catalog, and capability tests pass 52/52
+locally. The earlier Windows run [39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843)
+found four media-move fixtures using POSIX-only paths; code snapshot
+`2c0401fc` changed those fixtures to native temporary paths and passed exact-
+head run [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
+The integrated candidate code snapshot `8b4c6e23` includes current ChaptarrNG
+`main`, the Editions and Narrations tab, and the series narrator comparison.
+Exact-head Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-
+runner receipt checks. CodeQL [39205449712](https://github.com/snapetech-org/chaptarrng/actions/runs/39205449712),
+dependency review [39205452346](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452346),
+security scan [39205452337](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452337),
+and NuGet submission [39205449409](https://github.com/snapetech-org/chaptarrng/actions/runs/39205449409)
+also passed. Disposable-fork validation was skipped by its gate. Local
+translation, type, targeted ESLint and Stylelint checks, and release-note
+preview pass. These are candidate checks, not production cutover approval;
+operator-data and channel acceptance remain open. The workflow uploaded
+validation artifacts only and published no release. Docs-only checkpoint
+`ddec3e81` passed exact-head run
 [39199730309](https://github.com/snapetech-org/chaptarrng/actions/runs/39199730309),
 including all three platform builds, PostgreSQL, CodeQL, security/dependency,
 NuGet, release-note, and receipt checks. It did not change application code.
@@ -188,8 +190,11 @@ and migration handling are source-only and are not in `.977`; the published
 `.977` importer maps bare numeric IDs to Goodreads even if `HARDCOVER=true` is
 present. Exact-head run
 [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
-passed on PR #131 head 2c0401fc, but the candidate remains unsupported for
-operator data until semantic review, representative conversion and rollback,
+passed on the earlier PR #131 code snapshot 2c0401fc. The later code snapshot
+8b4c6e23 also passed platform and PostgreSQL validation in run
+[39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341),
+but the candidate remains unsupported for operator data until semantic review,
+representative conversion and rollback,
 feature parity, and channel acceptance are complete. PR #131 remains draft.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.

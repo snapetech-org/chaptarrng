@@ -4,12 +4,14 @@
 > convert a PostgreSQL BookshelfNG database. The converter in this work branch
 > is a candidate for one BookshelfNG schema at migration 158. Do not use it for
 > operator data until representative populated-data review and rollback
-> acceptance are complete and a release explicitly supports it. Exact-head run
-> [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
-> passed on PR #131 head 2c0401fc: Linux, macOS, and Windows build/tests,
-> PostgreSQL migration fixtures, release-note validation, CodeQL, dependency
-> and secret checks, NuGet submission, and runner-receipt reconciliation. The
-> PostgreSQL fixture passed all four candidate cases. Disposable-fork
+> acceptance are complete and a release explicitly supports it. Earlier code
+> snapshot `2c0401fc` passed exact-head run
+> [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
+> Integrated candidate code snapshot `8b4c6e23` passed Linux, macOS, Windows,
+> PostgreSQL migration, release-note, and runner-receipt checks in exact-head
+> Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341);
+> CodeQL, dependency review, security scan, and NuGet submission also passed.
+> PostgreSQL fixtures passed all four candidate cases. Disposable-fork
 > validation was skipped by its gate. This validates one synthetic
 > migration-158 schema only; PostgreSQL operator-data acceptance and
 > independent backup/restore validation remain open.

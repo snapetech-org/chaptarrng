@@ -38,11 +38,16 @@ abridgement, language, publisher, and selected/file-owned status. Metadata
 that does not state a value is shown as not provided rather than inferred.
 The tab and its catalog route are source-only and are not available in public
 `v0.9.977`.
-Retirement candidate code commit `6a6b7d1f` integrates current ChaptarrNG
-`main`, including the Editions tab and series narrator comparison. The tab
-retains explicit labels for unknown and not-applicable edition metadata.
-Local translation, type, targeted ESLint, and Stylelint checks pass;
-exact-head hosted validation is pending.
+Integrated candidate code snapshot `8b4c6e23` incorporates current ChaptarrNG
+`main`, including the Editions tab and series narrator comparison, and retains
+explicit labels for unknown and not-applicable edition metadata. Local
+translation, type, targeted ESLint, and Stylelint checks pass. Exact-head Build
+run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
+runner-receipt checks; CodeQL, dependency review, security scan, and NuGet
+submission also passed. The UI is source-only in public `v0.9.977`, and the
+candidate remains draft while operator-data, full SeerrNG workflow, rollback,
+and channel acceptance remain open.
 
 ## Configure a dedicated service key
 

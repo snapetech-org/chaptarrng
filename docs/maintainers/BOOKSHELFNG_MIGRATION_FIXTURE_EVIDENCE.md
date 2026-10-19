@@ -6,8 +6,9 @@ maintainer evidence, not approval to cut over operator data.
 
 ## Candidate and fixture
 
-- ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131). The last application-code commit validated here is `2c0401fc`.
-- Exact-head Build run
+- ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131). The populated rehearsal below is one fixture run; it does not stand in for representative-data acceptance.
+- Later integrated code snapshot `8b4c6e23` passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-receipt checks in Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341). CodeQL, dependency review, security scan, and NuGet submission also passed. Those hosted checks do not rerun the private populated-data rehearsal or expand its scope.
+- Earlier exact-head Build run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
   passed Linux, macOS, and Windows builds/tests, PostgreSQL migration fixtures,
   release-note validation, and runner-receipt reconciliation. CodeQL,
@@ -244,7 +245,10 @@ This validates one populated SQLite candidate path and its rollback, not
 semantic correctness for every record. The ambiguous-media review artifact
 still requires operator classification. Older real schemas, PostgreSQL
 operator data, complete settings/provider and client continuity, feature
-parity, and installer/update-channel acceptance remain open. Exact-head hosted validation passed in run
-[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
-The source changes remain unpublished, and operator-data, feature-parity,
+parity, and installer/update-channel acceptance remain open. The earlier populated fixture validation used code snapshot `2c0401fc` and passed
+exact-head hosted run [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
+The later integrated code snapshot `8b4c6e23` passed cross-platform and
+PostgreSQL CI in run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341),
+but the private populated fixture was not rerun in that workflow. The source
+changes remain unpublished, and operator-data, feature-parity,
 SeerrNG workflow, and installation-channel acceptance remain open.
