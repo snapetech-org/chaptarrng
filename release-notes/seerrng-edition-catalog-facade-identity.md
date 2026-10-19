@@ -1,5 +1,5 @@
 ---
-category: improved
+category: changed
 audience: operators
 area: seerrng
 action: none
