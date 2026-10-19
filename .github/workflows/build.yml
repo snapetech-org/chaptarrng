@@ -256,7 +256,7 @@ jobs:
           --workdir /workspace/_tests/net10.0 \
           chaptarrng-m4b-test:ci \
           dotnet vstest Chaptarr.Core.Test.dll \
-            --TestCaseFilter:"FullyQualifiedName~real_m4b_tool_should_merge_and_import_legacy_multipart_audiobook_when_installed" \
+            --TestCaseFilter:"FullyQualifiedName~real_m4b_tool_should_" \
             --Logger:"console;verbosity=normal"
 
     - name: Configure Chromium cache for direct-download browser tests

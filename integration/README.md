@@ -31,10 +31,11 @@ against the built test assembly. The image pins `m4b-tool` 0.5.2 and MP4v2
 2.1.1 and supplies FFmpeg, PHP, and the MP4v2 utilities. The test generates
 two synthetic MP3 tracks and covers merge ordering, chapter titles and offsets,
 metadata, registration, Move/Copy source handling, and fallback when a source
-is unreadable or FFmpeg fails. On successful merges it also rewrites the
-generated M4B title with TagLibSharp and verifies that chapter titles and
-offsets survive the tag write. The six cases passed locally on 2026-10-19; the
-added tag-write assertion is pending hosted validation.
+is unreadable or FFmpeg fails. It also merges two synthetic M4B inputs carrying
+embedded chapters in both Move and Copy modes. Successful merges rewrite the
+generated M4B title with TagLibSharp and verify that chapter titles and offsets
+survive the tag write. The original six MP3 cases passed locally on 2026-10-19;
+the new tag-write and embedded-chapter cases are pending hosted validation.
 
 After building the test assembly as in `.github/workflows/build.yml`, run it
 locally with:
@@ -47,12 +48,12 @@ docker run --rm --network none \
   --workdir /workspace/_tests/net10.0 \
   chaptarrng-m4b-test:local \
   dotnet vstest Chaptarr.Core.Test.dll \
-    --TestCaseFilter:"FullyQualifiedName~real_m4b_tool_should_merge_and_import_legacy_multipart_audiobook_when_installed"
+    --TestCaseFilter:"FullyQualifiedName~real_m4b_tool_should_"
 ```
 
-This validates synthetic conversion, output chapter preservation, and recovery
-behavior only. It does not close representative M4B, ingestion of embedded
-chapters from source media, or restart/resume acceptance.
+This validates synthetic conversion, input and output chapter handling, and
+recovery behavior only. It does not close representative M4B or restart/resume
+acceptance.
 
 ```sh
 export SIXLABORS_LICENSE_FILE="$HOME/Downloads/sixlabors.lic"

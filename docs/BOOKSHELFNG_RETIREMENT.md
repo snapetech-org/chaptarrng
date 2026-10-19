@@ -29,12 +29,13 @@ service-key authorization, and pending add/poll/cancel also passed. The
 focused importer suite passed 43/43. This is populated synthetic integration
 evidence, not a private operator-data rehearsal. The `.m4b`/`.epub` files in
 this migration fixture are placeholders. A separate real-tool importer check
-passed all six synthetic multipart M4B cases, including merge metadata, chapter
-ordering, Move/Copy handling, and failure fallback. The candidate also retags
-an `m4b-tool` output with TagLibSharp and checks that chapter titles and offsets
-survive; that assertion is pending hosted validation. Representative audiobooks,
-embedded chapters from source media, and restart/resume remain unvalidated. The
-older empty-library check is superseded only for this synthetic conversion path;
+passed six synthetic multipart M4B cases, including merge metadata, chapter
+ordering, Move/Copy handling, and failure fallback. The candidate adds two
+synthetic input M4B cases with embedded chapters and retags generated merge
+outputs with TagLibSharp to check chapter-title and offset preservation; those
+assertions are pending hosted validation. Representative audiobooks and
+restart/resume remain unvalidated. The older empty-library check is superseded
+only for this synthetic conversion path;
 provider success, older schemas, PostgreSQL operator data, full fulfillment,
 installed rollback, operator sign-off, feature parity, and channel handoff
 remain open. See the [maintainer fixture report](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md)
@@ -349,11 +350,12 @@ and offsets, album and title metadata, library registration, source deletion
 in Move mode, and source retention in Copy mode. Failure cases verify fallback
 to separate original-track imports in both modes when a source cannot be probed
 and when `m4b-tool` fails after a controlled FFmpeg conversion error. The Linux
-build workflow now runs these six cases in a pinned tool-enabled container.
-The candidate also retags the generated output with TagLibSharp and verifies
-chapter titles and offsets survive; hosted validation is pending. Representative
-files, input embedded-chapter compatibility, and restart/resume behavior remain
-open. It does not close the Audiobook processing and tags row in
+build workflow runs the real-tool merge checks in a pinned tool-enabled
+container, including synthetic inputs with embedded chapters in Move and Copy
+modes. The candidate also retags generated output with TagLibSharp and verifies
+chapter titles and offsets survive; these added cases are pending hosted
+validation. Representative files and restart/resume behavior remain open. It
+does not close the Audiobook processing and tags row in
 [the feature matrix](FORK_FEATURES.md). Keep the legacy merge setting unset
 until a build containing the accepted implementation is installed.
 

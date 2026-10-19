@@ -5168,6 +5168,181 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
+        [TestCase(ImportMode.Move, false)]
+        [TestCase(ImportMode.Copy, true)]
+        public void real_m4b_tool_should_preserve_embedded_chapters_when_merging_m4b_parts_when_installed(
+            ImportMode importMode,
+            bool shouldKeepSourceTracks)
+        {
+            var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-embedded-import-{Guid.NewGuid():N}");
+            var sourceDir = Path.Combine(tempDir, "incoming");
+            var destinationDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-embedded-destination-{Guid.NewGuid():N}");
+            var destinationPath = Path.Combine(destinationDir, "Black Sheep.m4b");
+            Directory.CreateDirectory(sourceDir);
+            Directory.CreateDirectory(destinationDir);
+
+            try
+            {
+                var diskProvider = CreateDiskProviderProxy();
+                var configService = CreateConfigService();
+                var externalTools = new ExternalToolsService(
+                    configService,
+                    diskProvider,
+                    new StubAppFolderInfo
+                    {
+                        AppDataFolder = tempDir,
+                        StartUpFolder = TestContext.CurrentContext.TestDirectory
+                    },
+                    LogManager.GetLogger("BookshelfM4bEmbeddedRealImportFixture"));
+
+                if (!externalTools.IsFFmpegAvailable() || !externalTools.IsFFprobeAvailable() || !externalTools.IsM4bToolAvailable())
+                {
+                    Assert.Ignore("This opt-in smoke requires FFmpeg, FFprobe, PHP, m4b-tool, and mp4v2 tools.");
+                }
+
+                var partOne = Path.Combine(sourceDir, "01 Opening.m4b");
+                var partTwo = Path.Combine(sourceDir, "02 The Middle.m4b");
+                CreateSyntheticM4bWithChapter(partOne, frequency: 330, title: "Embedded Opening");
+                CreateSyntheticM4bWithChapter(partTwo, frequency: 440, title: "Embedded Middle");
+
+                var (qualityProfile, author, book, edition) = CreateAudiobookConversionGraph(920);
+                qualityProfile.MergeMultiPartFiles = true;
+                var bookService = CreateBookService(new List<Book> { book }).Service;
+                var mediaFileService = new StubMediaFileService();
+                var mover = new StubMoveBookFiles
+                {
+                    DestinationPath = destinationPath,
+                    DestinationFor = file => Path.GetExtension(file.Path).Equals(".m4b", StringComparison.OrdinalIgnoreCase)
+                        ? destinationPath
+                        : Path.Combine(destinationDir, Path.GetFileName(file.Path)),
+                    TransferFilesOnDisk = true
+                };
+                var conversion = new M4bConversionService(
+                    externalTools,
+                    diskProvider,
+                    configService,
+                    LogManager.GetLogger("BookshelfM4bEmbeddedRealImportFixture"));
+                var service = new ImportApprovedBooks(
+                    mediaFileService,
+                    new StubMetadataTagService(),
+                    new StubMediaInfoExtractor(),
+                    Proxy<IAuthorService>(),
+                    bookService,
+                    CreateEditionService(new List<Edition> { edition }),
+                    Proxy<IRecycleBinProvider>(),
+                    Proxy<IExtraService>(),
+                    mover,
+                    Proxy<IHistoryService>(),
+                    Proxy<NzbDrone.Core.Download.History.IDownloadHistoryService>(),
+                    new NoOpEventAggregator(),
+                    Proxy<IManageCommandQueue>(),
+                    Proxy<ISeriesBookLinkService>(),
+                    Proxy<ISeriesService>(),
+                    Proxy<IQualityProfileService>(),
+                    conversion,
+                    LogManager.GetLogger("BookshelfM4bEmbeddedRealImportFixture"),
+                    diskProvider: diskProvider,
+                    configService: configService);
+
+                LocalBook LocalPart(string path)
+                {
+                    return new LocalBook
+                    {
+                        Path = path,
+                        Book = book,
+                        Author = author,
+                        Edition = edition,
+                        Quality = new QualityModel { Quality = Quality.M4B, Revision = new Revision() }
+                    };
+                }
+
+                var results = service.Import(
+                    new List<ImportDecision<LocalBook>>
+                    {
+                        new(LocalPart(partTwo)),
+                        new(LocalPart(partOne))
+                    },
+                    replaceExisting: false,
+                    downloadClientItem: new DownloadClientItem { DownloadId = "bookshelf-real-m4b-embedded-import" },
+                    importMode: importMode,
+                    cancellationToken: CancellationToken.None);
+
+                Assert.That(File.Exists(partOne), Is.EqualTo(shouldKeepSourceTracks));
+                Assert.That(File.Exists(partTwo), Is.EqualTo(shouldKeepSourceTracks));
+                Assert.That(results.Select(result => result.Errors), Has.All.Empty);
+                Assert.That(results.Select(result => result.Result), Has.All.EqualTo(ImportResultType.Imported));
+                Assert.That(results, Has.Count.EqualTo(1));
+                Assert.That(File.Exists(destinationPath), Is.True);
+                Assert.That(mediaFileService.FilesByBook, Has.Count.EqualTo(1));
+
+                var chapterJson = externalTools.ExecuteFFprobe(new[]
+                {
+                    "-v", "error", "-show_chapters", "-of", "json", destinationPath
+                });
+                using var document = JsonDocument.Parse(chapterJson);
+                var chapters = document.RootElement.GetProperty("chapters").EnumerateArray().ToArray();
+                Assert.That(chapters.Select(chapter => chapter.GetProperty("tags").GetProperty("title").GetString()),
+                    Is.EqualTo(new[] { "Embedded Opening", "Embedded Middle" }));
+                var secondChapterStart = double.Parse(
+                    chapters[1].GetProperty("start_time").GetString(),
+                    System.Globalization.CultureInfo.InvariantCulture);
+                Assert.That(secondChapterStart, Is.InRange(10d, 15d));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+
+                if (Directory.Exists(destinationDir))
+                {
+                    Directory.Delete(destinationDir, recursive: true);
+                }
+            }
+        }
+
+        private static void CreateSyntheticM4bWithChapter(string path, int frequency, string title)
+        {
+            var chapterMetadataPath = path + ".ffmetadata";
+            File.WriteAllText(chapterMetadataPath,
+                ";FFMETADATA1\n" +
+                "[CHAPTER]\n" +
+                "TIMEBASE=1/1000\n" +
+                "START=0\n" +
+                "END=12000\n" +
+                $"title={title}\n");
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "ffmpeg",
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            };
+            foreach (var argument in new[]
+            {
+                "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
+                $"sine=frequency={frequency}:duration=12:sample_rate=44100",
+                "-i", chapterMetadataPath,
+                "-map", "0:a:0", "-map_metadata", "1", "-map_chapters", "1",
+                "-codec:a", "aac", "-b:a", "96k",
+                "-metadata", "title=Black Sheep",
+                "-metadata", "album=Black Sheep",
+                "-y", path
+            })
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
+
+            using var process = Process.Start(startInfo);
+            var standardOutput = process.StandardOutput.ReadToEnd();
+            var standardError = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            Assert.That(process.ExitCode, Is.Zero, $"FFmpeg failed to create an embedded-chapter M4B. {standardOutput} {standardError}");
+            Assert.That(new FileInfo(path).Length, Is.GreaterThan(0));
+        }
+
         private static void CreateSyntheticMp3(string path, int frequency, string title, int track)
         {
             var startInfo = new ProcessStartInfo
