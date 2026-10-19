@@ -44,20 +44,27 @@ try {
     throw 'The registered Windows service command does not contain the selected data directory.'
   }
 
+  $configPath = Join-Path $dataDirectory 'config.xml'
+  if (-not (Test-Path -LiteralPath $configPath)) {
+    throw 'Chaptarr did not create config.xml in the selected data directory.'
+  }
+  [xml] $config = Get-Content -LiteralPath $configPath
+  $port = 8789
+  if ($config.Config.Port -and [int]::TryParse($config.Config.Port, [ref] $port) -eq $false) {
+    throw "Chaptarr wrote an invalid HTTP port to config.xml: $($config.Config.Port)"
+  }
+
   $ready = $false
   $deadline = [DateTime]::UtcNow.AddSeconds(90)
   while (-not $ready -and [DateTime]::UtcNow -lt $deadline) {
     try {
-      $response = Invoke-WebRequest -Uri 'http://127.0.0.1:8787/ping' -TimeoutSec 3
+      $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/ping" -TimeoutSec 3
       $ready = $response.StatusCode -eq 200
     } catch {
       Start-Sleep -Seconds 2
     }
   }
   if (-not $ready) { throw 'The Chaptarr service did not pass its local health check.' }
-  if (-not (Test-Path -LiteralPath (Join-Path $dataDirectory 'config.xml'))) {
-    throw 'Chaptarr started without creating config.xml in the selected data directory.'
-  }
 
   Write-Host 'Windows service install preserved the selected data directory and passed the local health check.'
 } finally {

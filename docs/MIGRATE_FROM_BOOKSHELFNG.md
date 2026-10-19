@@ -428,13 +428,24 @@ quiescent data directory an operator-confirmed precondition.
 
 ### Windows standalone service migration
 
-The BookshelfNG WPF installer still installs and upgrades BookshelfNG. It does
-not hand the service over to ChaptarrNG. The following manual path is a source
-candidate only; the published `v0.9.977` Windows binary does not preserve
-`-data` when registering a service. Do not use it for a Windows cutover while
-the retirement freeze is active. The future approved handoff must use a
-ChaptarrNG release containing the service-argument fix and pass native Windows
-upgrade and rollback acceptance.
+The existing BookshelfNG WPF installer still installs and upgrades BookshelfNG.
+ChaptarrNG now has a candidate-only WPF migration installer at
+`distribution/windows/installer-net`. It builds as an internal Windows CI
+artifact, and it has not been published. It detects the legacy `Readarr`
+service/data path, requires the standard `NT AUTHORITY\LocalService` service
+account, asks which provider owns bare numeric IDs, verifies a permanent
+binary/config/database backup, previews before asking for apply, switches the
+service to `Chaptarr`, and checks its data path and local health. It hashes the
+SQLite database and sidecars to verify that preview left them unchanged. The
+initial path supports one SQLite database only; PostgreSQL, custom service
+accounts, multiple databases, unsupported schemas, and real operator-data
+rollback still require manual handling and maintainer acceptance. Keep the
+release freeze in place.
+
+The manual path below is also a source candidate only. The published
+`v0.9.977` Windows binary does not preserve `-data` when registering a
+service, so it cannot safely hand an existing Windows service over. Do not use
+it for a Windows cutover while the retirement freeze is active.
 
 For the default WPF install, the BookshelfNG service uses
 `C:\ProgramData\Readarr`. Stop `Readarr`, make an independent copy of that
@@ -452,6 +463,10 @@ Stop-Service -Name Readarr -Force
 (Get-Service -Name Readarr).WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
 Copy-Item -LiteralPath $data -Destination "$data.pre-chaptarr-$stamp" -Recurse
 
+# Set this to the primary BookshelfNG provider mode. Use true for native
+# Hardcover IDs or false for Goodreads IDs. Stop if the setting is unknown.
+$env:HARDCOVER = 'true' # Use 'false' when BookshelfNG uses Goodreads IDs.
+Remove-Item Env:HARDCOVER_NATIVE -ErrorAction SilentlyContinue
 & $chaptarrConsole -preview-bookshelf-migration "-data=$data"
 if ($LASTEXITCODE -ne 0) { throw 'Migration preview failed; leave BookshelfNG stopped and review the report.' }
 ```
@@ -472,11 +487,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not remove the stopped BookshelfNG servi
 if ($LASTEXITCODE -ne 0) { throw 'Could not install the ChaptarrNG service.' }
 ```
 
-ChaptarrNG registers its own `Chaptarr` Windows service. The service installer
-now carries the quoted `-data` path into the Windows service command line, so
-the service continues to use `C:\ProgramData\Readarr` instead of creating a
-second, empty Chaptarr data directory. Confirm the service is running and
-`http://127.0.0.1:8787/ping` responds before retiring the independent backup.
+ChaptarrNG registers its own `Chaptarr` Windows service. The current source
+candidate carries the quoted `-data` path into the Windows service command
+line, so the service continues to use `C:\ProgramData\Readarr` instead of
+creating a second, empty Chaptarr data directory. The default HTTP port is
+`8789`; confirm the port in `config.xml` and check
+`http://127.0.0.1:<port>/ping` before retiring the independent backup.
 For custom BookshelfNG data paths or ports, substitute the values from the
 existing service configuration and `config.xml`.
 

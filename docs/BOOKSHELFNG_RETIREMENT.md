@@ -41,12 +41,16 @@ installer/channel handoff, or operator sign-off. No release or bridge was
 published.
 
 The Windows standalone handoff is still open. BookshelfNG's WPF installer
-continues to install its own `Readarr` service. The ChaptarrNG source candidate
-now preserves an explicit `-data` path when registering a Windows service, and
-the migration guide documents a manual preview/apply/install/restore sequence.
-The focused StartupContext and service-command-line tests pass locally (7/7);
-there is no native Windows service upgrade and rollback rehearsal yet, so this
-procedure remains blocked by the release freeze.
+continues to install its own `Readarr` service. Draft PR #131 now includes a
+ChaptarrNG-owned, migration-only WPF installer candidate for one SQLite
+database using the standard `NT AUTHORITY\LocalService` account. It detects the
+legacy data path, asks for provider mode, makes a retained integrity-checked
+backup, checks preview immutability across SQLite sidecars, previews before
+apply, switches to the `Chaptarr` service, and verifies its data path and local
+health. Custom service accounts, PostgreSQL, and multiple databases fail
+closed. Its Windows CI build and exact-head checks are pending; representative
+Windows data and real installed rollback remain unaccepted. Keep the release
+freeze in place.
 
 **Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19):** The
 Linux app files from Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)

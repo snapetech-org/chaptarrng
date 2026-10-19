@@ -150,13 +150,15 @@ image digests still need an operator change. A repointed tag does not change a
 running container.
 
 The BookshelfNG Windows WPF installer still installs the old application and
-does not hand off its `Readarr` service. ChaptarrNG's Windows archive has a
-source-only manual migration procedure that previews and converts the existing
-appdata, unregisters `Readarr`, and registers ChaptarrNG while preserving the
-explicit data path. The service argument change has focused source tests; the
-installer path has not passed a native Windows upgrade and rollback rehearsal.
-It is not approved for operator use while the release freeze is active. See the
-[Windows migration procedure](../docs/MIGRATE_FROM_BOOKSHELFNG.md#windows-standalone-service-migration).
+does not hand off its `Readarr` service. ChaptarrNG now contains a source-only
+WPF migration-installer candidate in `distribution/windows/installer-net`.
+Windows CI builds it as an internal artifact; it is not published. It supports
+one SQLite database, asks for provider mode, creates a verified retained
+backup, previews before apply, then switches to the `Chaptarr` service and
+checks the saved data path and health endpoint. PostgreSQL and multi-database
+installations are rejected. Native Windows migration/rollback, representative
+data, and channel acceptance remain open, so it is not approved for operator
+use. See the [Windows migration procedure](../docs/MIGRATE_FROM_BOOKSHELFNG.md#windows-standalone-service-migration).
 
 BookshelfNG's in-app updater still checks its existing upstream update service,
 which ChaptarrNG cannot redirect. Automatic migration must therefore use a
