@@ -139,7 +139,7 @@ namespace NzbDrone.Core.Download.Clients.Direct
                     progressStream.ResetProgress();
 
                     var location = response.Headers.GetSingleValue("Location");
-                    if (location.IsNullOrWhiteSpace())
+                    if (string.IsNullOrWhiteSpace(location))
                     {
                         throw new DownloadClientException("Direct download redirect is missing a destination.");
                     }

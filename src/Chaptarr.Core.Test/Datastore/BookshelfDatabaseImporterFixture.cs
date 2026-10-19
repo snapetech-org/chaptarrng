@@ -14,6 +14,7 @@ using NLog.Extensions.Logging;
 using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
+using NzbDrone.Core.Indexers.DirectDownload;
 using NzbDrone.Core.MetadataSource.BookInfo;
 using NzbDrone.Core.Notifications.BookLore;
 
@@ -193,6 +194,12 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT QualityProfileId FROM ImportLists WHERE Id = 110;"), Is.EqualTo(1));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 110;"), Does.Contain("fixture-list-setting"));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Indexers WHERE Id = 120 AND EnableRss = 1 AND SupportsRss = 0 AND SupportsSearch = 0;"), Is.EqualTo(1));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM Indexers WHERE Id = 121;"), Is.EqualTo(nameof(DirectDownloadSettings)));
+            var directDownloadSettings = NzbDrone.Common.Serializer.STJson.Deserialize<DirectDownloadSettings>(
+                QueryScalar<string>(_sourcePath, "SELECT Settings FROM Indexers WHERE Id = 121;"));
+            Assert.That(directDownloadSettings.Urls, Is.EqualTo("https://primary.example\nhttps://secondary.example"));
+            Assert.That(directDownloadSettings.ApiKey, Is.EqualTo("fixture-key"));
+            Assert.That(directDownloadSettings.EnableSlowFallback, Is.True);
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT OnBookRetag FROM Notifications WHERE Id = 111;"), Is.EqualTo(1));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Password FROM Users WHERE Id = 112;"), Is.EqualTo("legacy-sha256-hash"));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Users WHERE Id = 112 AND Salt IS NULL AND Iterations IS NULL;"), Is.EqualTo(1));
@@ -1271,6 +1278,8 @@ namespace Chaptarr.Core.Test.Datastore
                 VALUES (110, 'Fixture list', 'FixtureList', '{""Value"":""fixture-list-setting""}', '{}', 1, '/library', 0, 1, 1, '[]');
                 INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
                 VALUES (120, 'Fixture indexer', 'MyAnonaMouse', '{}', '{}', 1, 1, 1, 25, '[]', 0);
+                INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
+                VALUES (121, 'Direct fixture', 'DirectDownloadIndexer', '{""urls"": [""https://primary.example/"", ""https://secondary.example""], ""apiKey"": ""fixture-key"", ""enableSlowFallback"": true}', 'DirectDownloadSettings', 0, 1, 1, 25, '[]', 0);
                 INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
                 VALUES (111, 'Fixture notification', 1, '{}', 'FixtureNotification', '{}', 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);
                 INSERT INTO Users (Id, Identifier, Username, Password)

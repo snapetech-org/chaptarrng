@@ -10,6 +10,7 @@ using NpgsqlTypes;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Indexers.DirectDownload;
 using NzbDrone.Core.MetadataSource.BookInfo;
 
 namespace NzbDrone.Core.Datastore
@@ -94,7 +95,16 @@ namespace NzbDrone.Core.Datastore
             ImportLists(source, target, transaction, qualityProfiles, metadataProfiles, report);
             CopyTable(source, target, transaction, report, "Indexers", row =>
             {
-                SetIfPresent(row, "ConfigContract", "");
+                // This provider's settings contract is compatible, including the legacy JSON-array
+                // form of Urls. Preserve it so migrated direct-download indexers keep their ordered
+                // sources, key, and browser-fallback choice. Other provider contracts remain blank
+                // until their setting compatibility is explicitly mapped and tested.
+                if (!string.Equals(GetString(row, "Implementation"), nameof(DirectDownloadIndexer), StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(GetString(row, "ConfigContract"), nameof(DirectDownloadSettings), StringComparison.OrdinalIgnoreCase))
+                {
+                    SetIfPresent(row, "ConfigContract", "");
+                }
+
                 // These are implementation capabilities, not user preferences. The runtime
                 // provider factory recalculates them from the installed Chaptarr provider.
                 SetIfPresent(row, "SupportsRss", false);
