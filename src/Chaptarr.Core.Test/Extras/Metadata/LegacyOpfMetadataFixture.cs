@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using NUnit.Framework;
@@ -17,18 +18,19 @@ namespace Chaptarr.Core.Test.Extras.Metadata
         public void should_discover_legacy_opf_sidecars_with_the_current_consumer_identity()
         {
             var subject = new LegacyAudiobookshelfMetadata();
-            var author = new Author { Id = 7, Path = "/library/Fixture Author" };
+            var authorPath = Path.Combine(Path.GetTempPath(), "bookshelfng-opf-fixture", "Fixture Author");
+            var author = new Author { Id = 7, Path = authorPath };
 
-            var result = subject.FindMetadataFile(author, "/library/Fixture Author/Fixture Book/metadata.OPF");
+            var result = subject.FindMetadataFile(author, Path.Combine(authorPath, "Fixture Book", "metadata.OPF"));
 
             Assert.Multiple(() =>
             {
                 Assert.That(result.AuthorId, Is.EqualTo(7));
                 Assert.That(result.Consumer, Is.EqualTo("LegacyAudiobookshelfMetadata"));
-                Assert.That(result.RelativePath, Is.EqualTo("Fixture Book/metadata.OPF"));
+                Assert.That(result.RelativePath, Is.EqualTo(Path.Combine("Fixture Book", "metadata.OPF")));
                 Assert.That(result.Extension, Is.EqualTo(".OPF"));
                 Assert.That(result.Type, Is.EqualTo(MetadataType.BookMetadata));
-                Assert.That(subject.FindMetadataFile(author, "/library/Fixture Author/cover.jpg"), Is.Null);
+                Assert.That(subject.FindMetadataFile(author, Path.Combine(authorPath, "cover.jpg")), Is.Null);
             });
         }
 
@@ -36,7 +38,8 @@ namespace Chaptarr.Core.Test.Extras.Metadata
         public void should_write_legacy_opf_metadata_for_the_first_audio_part()
         {
             var subject = new LegacyAudiobookshelfMetadata();
-            var author = new Author { Id = 7, Name = "Fixture Author", Path = "/library/Fixture Author" };
+            var authorPath = Path.Combine(Path.GetTempPath(), "bookshelfng-opf-fixture", "Fixture Author");
+            var author = new Author { Id = 7, Name = "Fixture Author", Path = authorPath };
             var book = new Book
             {
                 Id = 10,
@@ -72,7 +75,7 @@ namespace Chaptarr.Core.Test.Extras.Metadata
                 EditionId = edition.Id,
                 Edition = edition,
                 MediaType = "audiobook",
-                Path = "/library/Fixture Author/Fixture Book/book.m4b",
+                Path = Path.Combine(authorPath, "Fixture Book", "book.m4b"),
                 Part = 1
             };
 
@@ -83,7 +86,7 @@ namespace Chaptarr.Core.Test.Extras.Metadata
 
             Assert.Multiple(() =>
             {
-                Assert.That(result.RelativePath, Is.EqualTo("Fixture Book/book.opf"));
+                Assert.That(result.RelativePath, Is.EqualTo(Path.Combine("Fixture Book", "book.opf")));
                 Assert.That((string)document.Root.Attribute("version"), Is.EqualTo("2.0"));
                 Assert.That((string)document.Root.Element(opf + "metadata").Element(dc + "title"), Is.EqualTo("Fixture Edition"));
                 Assert.That((string)document.Root.Element(opf + "metadata").Element(dc + "identifier"), Is.EqualTo("9780000000002"));
