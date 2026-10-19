@@ -120,9 +120,9 @@ original-track fallback, and move/copy source handling. Its clean head passed
 hosted platform and database checks. The current retirement candidate also
 passes a tool-enabled synthetic two-track importer smoke through the real
 converter: it checks track order, chapters, metadata, database registration,
-and Move-mode cleanup. Representative-media acceptance remains open, and
-neither source change is in public `.977`. Full feature parity and several
-package-channel upgrades remain unverified.
+Move-mode cleanup, and Copy-mode source retention. Representative-media
+acceptance remains open, and neither source change is in public `.977`. Full
+feature parity and several package-channel upgrades remain unverified.
 
 The current retirement work branch also ports BookshelfNG's native Hardcover
 metadata client and maps a saved `HardcoverAuth` setting to

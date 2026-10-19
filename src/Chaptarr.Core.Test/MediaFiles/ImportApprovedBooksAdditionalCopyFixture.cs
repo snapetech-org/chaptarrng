@@ -4914,9 +4914,12 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
-        [Test]
+        [TestCase(ImportMode.Move, false)]
+        [TestCase(ImportMode.Copy, true)]
         [NonParallelizable]
-        public void real_m4b_tool_should_merge_and_import_legacy_multipart_audiobook_when_installed()
+        public void real_m4b_tool_should_merge_and_import_legacy_multipart_audiobook_when_installed(
+            ImportMode importMode,
+            bool shouldKeepSourceTracks)
         {
             var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-real-import-{Guid.NewGuid():N}");
             var sourceDir = Path.Combine(tempDir, "incoming");
@@ -5021,7 +5024,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                     },
                     replaceExisting: false,
                     downloadClientItem: new DownloadClientItem { DownloadId = "bookshelf-real-m4b-import" },
-                    importMode: ImportMode.Move,
+                    importMode: importMode,
                     cancellationToken: CancellationToken.None);
 
                 Assert.That(results, Has.Count.EqualTo(1));
@@ -5029,8 +5032,8 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Assert.That(results[0].Result, Is.EqualTo(ImportResultType.Imported));
                 Assert.That(File.Exists(destinationPath), Is.True);
                 Assert.That(mediaFileService.FilesByBook, Has.Count.EqualTo(1));
-                Assert.That(File.Exists(partOne), Is.False, "Move mode should remove only successfully imported source tracks.");
-                Assert.That(File.Exists(partTwo), Is.False, "Move mode should remove only successfully imported source tracks.");
+                Assert.That(File.Exists(partOne), Is.EqualTo(shouldKeepSourceTracks), "Source tracks should remain only in copy mode.");
+                Assert.That(File.Exists(partTwo), Is.EqualTo(shouldKeepSourceTracks), "Source tracks should remain only in copy mode.");
 
                 var chapterJson = externalTools.ExecuteFFprobe(new[]
                 {
