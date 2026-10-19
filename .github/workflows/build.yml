@@ -328,6 +328,11 @@ jobs:
     - name: Verify optional diagnostics module in artifact
       shell: bash
       run: test -s ./publish/Chaptarr/Chaptarr.Diagnostics.dll
+
+    - name: Test Windows service preserves its selected data directory
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: ./packaging/scripts/test-windows-service-data-path.ps1 -AppDirectory ./publish/Chaptarr
     
     - name: Upload artifacts
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
