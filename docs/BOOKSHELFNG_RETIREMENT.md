@@ -9,6 +9,24 @@ handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
+**Latest exact-head validation (2026-10-19):** ChaptarrNG draft PR #131 is at
+`a3d9ec8dd3552d90ed527309658a9c4cfed8b7ec`. Build
+[39297761439](https://github.com/snapetech-org/chaptarrng/actions/runs/39297761439)
+passed Linux, macOS, Windows, PostgreSQL migration smoke, release-note
+contract, and native-runner receipt reconciliation. CodeQL
+[39297757961](https://github.com/snapetech-org/chaptarrng/actions/runs/39297757961),
+security/dependency scan
+[39297761173](https://github.com/snapetech-org/chaptarrng/actions/runs/39297761173),
+dependency review
+[39297761454](https://github.com/snapetech-org/chaptarrng/actions/runs/39297761454),
+and NuGet submission
+[39297754032](https://github.com/snapetech-org/chaptarrng/actions/runs/39297754032)
+passed. Disposable-fork validation was skipped by its external-fork gate.
+Hosted CI is green for this candidate head; representative operator-data
+conversion and rollback, parity decisions, provider and SeerrNG acceptance,
+real media/M4B acceptance, installed rollback, installer/channel handoff, and
+operator sign-off remain open. No release or bridge was published.
+
 **Prior PR #131 application-code validation (2026-10-19):** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. The Linux artifact also passed the earlier empty-library API and authorization smoke. The populated source-build check on later code is recorded below.
 
 
