@@ -441,6 +441,16 @@ initiative is paused and incomplete. The complete source-change inventory
 remains an additional blocker, so this feature list does not waive review of
 fixes, migrations, build changes, or deletions.
 
+The BookshelfNG retirement candidate now includes the legacy Hardcover
+public-list and reading-status import provider. Goodreads public bookshelf
+import remains available through ChaptarrNG's current provider, but the
+Goodreads owned-book import list and Goodreads bookshelf/owned-book write
+notifications are not equivalent and are not carried forward. Because those
+features depend on Goodreads OAuth API operations that Goodreads announced it
+would retire, migration preview reports the affected row and blocks apply
+until an operator reconfigures or removes it. See the
+[migration provider notes](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers).
+
 | Capability or change | Current ChaptarrNG scope | Evidence required before upstream retirement |
 | --- | --- | --- |
 | BookshelfNG conversion and rollback | Standard image preview, apply, automatic startup conversion, retained source backup, rollback, per-format monitored-edition preservation, and an unmonitored dual-catalog fallback with a private review file; current `main` also embeds the SQLite upgrade chain through migration 158 | Publish the older-schema support; validate recognized historical schemas on real data, review follow-up, source rows, identities, settings, populated rollback, and each installation channel. |

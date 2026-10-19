@@ -13,6 +13,19 @@ detailed feature inventory remains in the
 
 ## Current releases
 
+### Provider configuration blockers
+
+The migration candidate now preserves provider settings only when a matching
+ChaptarrNG implementation and settings contract exist. It includes the legacy
+Hardcover public-list and reading-status provider. Goodreads owned-book import
+lists and Goodreads bookshelf/owned-book write notifications are not available
+in ChaptarrNG; the retired API dependency is documented in the
+[migration guide](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers).
+Preview identifies unsupported rows without printing credentials and blocks
+apply before promotion. Plugin or otherwise unsupported providers follow the
+same fail-closed rule. These are still feature-parity and migration-readiness
+blockers.
+
 - ChaptarrNG `v0.9.977` is published with the standard image, migration tools,
   the embedded BookshelfNG SQLite migration chain, and standalone release
   archives.

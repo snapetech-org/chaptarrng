@@ -41,6 +41,13 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+The unpublished migration candidate now includes BookshelfNG's Hardcover
+public-list and reading-status import provider. Goodreads owned-book lists and
+Goodreads bookshelf/owned-book write notifications remain unsupported; their
+legacy API dependency is being retired by Goodreads. Preview identifies these
+provider rows and blocks apply until they are reconfigured or removed. This is
+one of the open parity gates, so keep BookshelfNG in service.
+
 Draft PR #131 also adds restore support for supported BookshelfNG backup ZIPs:
 the database is staged and the archive remains unchanged. Normal startup runs
 the validated conversion and retains the BookshelfNG source database for
