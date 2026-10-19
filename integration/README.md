@@ -34,8 +34,15 @@ metadata, registration, Move/Copy source handling, and fallback when a source
 is unreadable or FFmpeg fails. It also merges two synthetic M4B inputs carrying
 embedded chapters in both Move and Copy modes. Successful merges rewrite the
 generated M4B title with TagLibSharp and verify that chapter titles and offsets
-survive the tag write. The original six MP3 cases passed locally on 2026-10-19;
-the new tag-write and embedded-chapter cases are pending hosted validation.
+survive the tag write. The original six MP3 cases passed locally on 2026-10-19.
+The embedded-chapter Move/Copy cases and TagLib write/reprobe check passed in
+exact-head Linux Build [39288736177](https://github.com/snapetech-org/chaptarrng/actions/runs/39288736177)
+on candidate commit `c4fa8125`; that run also passed the full Linux suite.
+Windows build and test steps passed, while macOS was cancelled before runner
+acquisition. Representative audiobooks and restart/resume remain open. The
+later exact-head Build [39292223717](https://github.com/snapetech-org/chaptarrng/actions/runs/39292223717)
+on `b7e900d4` passed all three platform suites and the Linux pinned-tool M4B
+smoke, confirming these synthetic checks on the current candidate.
 
 After building the test assembly as in `.github/workflows/build.yml`, run it
 locally with:
