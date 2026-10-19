@@ -24,6 +24,9 @@ namespace Chaptarr.Core.Test.Api
             Assert.That(resource.Features.PendingImportCancellation, Is.True);
             Assert.That(resource.Features.RestrictedServiceApiKey, Is.True);
             Assert.That(resource.Features.FormatSpecificAvailabilityStatistics, Is.True);
+            Assert.That(resource.Features.WantedEditionVariants, Is.True);
+            Assert.That(resource.Features.SeriesNarratorMatrix, Is.True);
+            Assert.That(resource.Features.EditionCatalog, Is.True);
         }
     }
 }

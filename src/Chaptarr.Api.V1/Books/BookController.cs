@@ -2131,6 +2131,27 @@ namespace Chaptarr.Api.V1.Books
             return Accepted(MapToResource(_bookService.GetBooks(resource.BookIds), false));
         }
 
+        /// <summary>
+        /// Every known edition of a book with its narration details, for clients that let a person
+        /// choose a performance. Unknown details stay unknown.
+        /// </summary>
+        [HttpGet("{id}/editions/catalog")]
+        public ActionResult<List<EditionCatalogResource>> GetEditionCatalog(int id)
+        {
+            var book = _bookService.GetBook(id);
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            var editions = _editionService.GetEditionsByBook(id)
+                .OrderByDescending(e => e.Monitored)
+                .ThenBy(e => e.Title)
+                .Select(e => e.ToCatalogResource())
+                .ToList();
+            return Ok(editions);
+        }
+
         [HttpPost("{id}/editions/wanted")]
         public ActionResult<BookResource> AddWantedEdition(int id, [FromBody] AddWantedEditionRequest request)
         {

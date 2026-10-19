@@ -33,5 +33,14 @@ namespace Chaptarr.Api.V1.System
         public bool PendingImportCancellation { get; set; } = true;
         public bool RestrictedServiceApiKey { get; set; } = true;
         public bool FormatSpecificAvailabilityStatistics { get; set; } = true;
+
+        /// <summary>A wanted edition can be tracked alongside the current selection (POST /book/{id}/editions/wanted with asNewVariant).</summary>
+        public bool WantedEditionVariants { get; set; } = true;
+
+        /// <summary>GET /series/narrators/matrix compares narrators across every volume of a series.</summary>
+        public bool SeriesNarratorMatrix { get; set; } = true;
+
+        /// <summary>GET /book/{id}/editions/catalog lists every known edition with narration details.</summary>
+        public bool EditionCatalog { get; set; } = true;
     }
 }
