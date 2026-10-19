@@ -30,9 +30,11 @@ focused importer suite passed 43/43. This is populated synthetic integration
 evidence, not a private operator-data rehearsal. The `.m4b`/`.epub` files in
 this migration fixture are placeholders. A separate real-tool importer check
 passed all six synthetic multipart M4B cases, including merge metadata, chapter
-ordering, Move/Copy handling, and failure fallback. Representative audiobooks,
-embedded chapters, and restart/resume remain unvalidated. The older empty-library
-check is superseded only for this synthetic conversion path;
+ordering, Move/Copy handling, and failure fallback. The candidate also retags
+an `m4b-tool` output with TagLibSharp and checks that chapter titles and offsets
+survive; that assertion is pending hosted validation. Representative audiobooks,
+embedded chapters from source media, and restart/resume remain unvalidated. The
+older empty-library check is superseded only for this synthetic conversion path;
 provider success, older schemas, PostgreSQL operator data, full fulfillment,
 installed rollback, operator sign-off, feature parity, and channel handoff
 remain open. See the [maintainer fixture report](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md)
@@ -348,8 +350,10 @@ in Move mode, and source retention in Copy mode. Failure cases verify fallback
 to separate original-track imports in both modes when a source cannot be probed
 and when `m4b-tool` fails after a controlled FFmpeg conversion error. The Linux
 build workflow now runs these six cases in a pinned tool-enabled container.
-Representative files, embedded-chapter compatibility, and restart/resume
-behavior remain open. It does not close the Audiobook processing and tags row in
+The candidate also retags the generated output with TagLibSharp and verifies
+chapter titles and offsets survive; hosted validation is pending. Representative
+files, input embedded-chapter compatibility, and restart/resume behavior remain
+open. It does not close the Audiobook processing and tags row in
 [the feature matrix](FORK_FEATURES.md). Keep the legacy merge setting unset
 until a build containing the accepted implementation is installed.
 

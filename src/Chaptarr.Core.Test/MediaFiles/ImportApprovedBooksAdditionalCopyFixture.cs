@@ -5122,6 +5122,34 @@ namespace Chaptarr.Core.Test.MediaFiles
                     var tags = metadata.RootElement.GetProperty("format").GetProperty("tags");
                     Assert.That(tags.GetProperty("title").GetString(), Is.EqualTo("Black Sheep"));
                     Assert.That(tags.GetProperty("album").GetString(), Is.EqualTo("Black Sheep"));
+
+                    var originalChapterStarts = chapters
+                        .Select(chapter => chapter.GetProperty("start_time").GetString())
+                        .ToArray();
+
+                    // Exercise the patched TagLibSharp writer on an M4B produced by
+                    // m4b-tool, not only on the checked-in opaque-atom fixture.
+                    using (var taggedFile = TagLib.File.Create(destinationPath))
+                    {
+                        taggedFile.Tag.Title = "Black Sheep (retagged)";
+                        taggedFile.Save();
+                    }
+
+                    var retaggedChaptersJson = externalTools.ExecuteFFprobe(new[]
+                    {
+                        "-v", "error", "-show_chapters", "-of", "json", destinationPath
+                    });
+                    using var retaggedDocument = JsonDocument.Parse(retaggedChaptersJson);
+                    var retaggedChapters = retaggedDocument.RootElement.GetProperty("chapters").EnumerateArray().ToArray();
+                    Assert.That(retaggedChapters.Select(chapter => chapter.GetProperty("tags").GetProperty("title").GetString()),
+                        Is.EqualTo(chapterTitles), "Writing tags must preserve the m4b-tool chapter titles.");
+                    Assert.That(retaggedChapters.Select(chapter => chapter.GetProperty("start_time").GetString()),
+                        Is.EqualTo(originalChapterStarts), "Writing tags must preserve chapter offsets.");
+
+                    using (var taggedFile = TagLib.File.Create(destinationPath))
+                    {
+                        Assert.That(taggedFile.Tag.Title, Is.EqualTo("Black Sheep (retagged)"));
+                    }
                 }
             }
             finally
