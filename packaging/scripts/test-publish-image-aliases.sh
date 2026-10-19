@@ -137,6 +137,7 @@ run_aliases false "$digest" "$manifest" true true
 printf '%s\t%s\n' \
   ghcr.io/snapetech/bookshelfng:latest "$source" \
   ghcr.io/snapetech/bookshelfng:main "$source" \
+  ghcr.io/snapetech/bookshelfng:master "$source" \
   ghcr.io/snapetech/bookshelfng:hardcover "$source" \
   ghcr.io/snapetech/bookshelfng:softcover "$source" > "$work/expected-ghcr.log"
 cmp "$work/expected-ghcr.log" "$work/publish.log"
@@ -148,12 +149,15 @@ dockerhub_source="docker.io/snapetech/chaptarrng:1.2.3"
 printf '%s\t%s\n' \
   ghcr.io/snapetech/bookshelfng:latest "$source" \
   ghcr.io/snapetech/bookshelfng:main "$source" \
+  ghcr.io/snapetech/bookshelfng:master "$source" \
   ghcr.io/snapetech/bookshelfng:hardcover "$source" \
   ghcr.io/snapetech/bookshelfng:softcover "$source" \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:master "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:latest "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:main "$dockerhub_source" \
+  docker.io/snapetech/bookshelfng:master "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:hardcover "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:softcover "$dockerhub_source" > "$work/expected-both.log"
 cmp "$work/expected-both.log" "$work/publish.log"
@@ -165,8 +169,10 @@ dockerhub_source="docker.io/snapetech/chaptarrng:1.2.3"
 printf '%s\t%s\n' \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:master "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:latest "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:main "$dockerhub_source" \
+  docker.io/snapetech/bookshelfng:master "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:hardcover "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:softcover "$dockerhub_source" > "$work/expected-dockerhub-only.log"
 cmp "$work/expected-dockerhub-only.log" "$work/publish.log"
@@ -177,7 +183,8 @@ run_aliases true "$digest" "$manifest" false false
 dockerhub_source="docker.io/snapetech/chaptarrng:1.2.3"
 printf '%s\t%s\n' \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
-  docker.io/snapetech/chaptarrng:main "$dockerhub_source" > "$work/expected-standard-dockerhub.log"
+  docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:master "$dockerhub_source" > "$work/expected-standard-dockerhub.log"
 cmp "$work/expected-standard-dockerhub.log" "$work/publish.log"
 grep -Fq 'Docker Hub BookshelfNG aliases: skipped because the migration bridge is disabled.' "$work/summary.md"
 [[ "$(wc -l < "$work/skopeo.log")" -eq 2 ]]

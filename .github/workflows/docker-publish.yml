@@ -133,6 +133,7 @@ jobs:
 
         if [[ "$branch" == "main" ]]; then
           tags+=("$image:$branch")
+          tags+=("$image:master")
           tags+=("$image:latest")
         fi
 
