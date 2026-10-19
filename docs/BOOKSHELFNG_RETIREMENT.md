@@ -9,12 +9,28 @@ handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
-**Current candidate (2026-10-19):** ChaptarrNG draft PR #131 contains the
-unpublished Windows BookshelfNG service handoff installer and the SQLite
-fingerprint regression smoke. The shared fingerprint helper passed locally,
-and the installer cross-target publish succeeded. The hosted exact-head run is
-linked from the [live PR checks](https://github.com/snapetech-org/chaptarrng/pull/131).
-These checks do not authorize a migration or release.
+**Current candidate (2026-10-19, code head `7b4c66e3`):** ChaptarrNG draft
+PR #131 contains the unpublished Windows BookshelfNG service handoff installer
+and the SQLite fingerprint regression smoke. The shared fingerprint helper
+passed locally, and the installer cross-target publish succeeded. Exact-head
+Build [39332160991](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160991)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native
+runner receipt checks; the Windows job built the installer and passed the
+fingerprint and selected data-directory service smokes. CodeQL
+[39332156121](https://github.com/snapetech-org/chaptarrng/actions/runs/39332156121),
+security scan
+[39332161129](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161129),
+dependency review
+[39332160785](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160785),
+Helm identity
+[39332161144](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161144),
+and NuGet submission
+[39332162427](https://github.com/snapetech-org/chaptarrng/actions/runs/39332162427)
+checks passed. Disposable-fork validation
+[39332161256](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161256)
+was skipped by its external-fork gate. This validates the code paths and build,
+not a populated Windows service upgrade or real installed rollback. These
+checks do not authorize a migration or release.
 
 **Prior application-code validation (2026-10-19):** ChaptarrNG draft PR #131
 contains code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build

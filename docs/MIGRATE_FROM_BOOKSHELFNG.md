@@ -73,9 +73,15 @@
 > installed rollback, and channel acceptance remain open.
 > The current [draft PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 > adds a Windows service handoff installer and a regression smoke for its
-> SQLite preview fingerprint. The smoke passes locally; hosted checks are
-> rerunning on the current candidate. This remains unpublished and is not
-> approved for production migration.
+> SQLite preview fingerprint. Exact-head Build
+> [39332160991](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160991)
+> and the associated CodeQL, security, dependency-review, Helm identity, and
+> NuGet checks passed on code head `7b4c66e3`; disposable-fork validation was
+> skipped by its external-fork gate. The Windows job built the installer and
+> passed its fingerprint and selected data-directory service smokes. A
+> populated Windows upgrade, real installed rollback, and channel acceptance
+> remain open. This remains unpublished and is not approved for production
+> migration.
 > Focused importer, edition-catalog, and capability tests pass 52/52 locally.
 > The populated SQLite rehearsal and synthetic provider-mode, startup, and
 > rollback evidence are in the

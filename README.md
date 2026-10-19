@@ -48,19 +48,34 @@ a verified backup, previews before apply, then switches to the `Chaptarr`
 service and checks local health. The installer is unpublished, supports one
 SQLite database under the standard `NT AUTHORITY\LocalService` account. It
 checks preview immutability for the database, WAL, and rollback journal, then
-fails closed on custom service accounts, PostgreSQL, or multiple databases. It
-still needs hosted exact-head validation plus a populated Windows upgrade and
-rollback rehearsal. Do not use it for production cutover while the release
-freeze remains.
+fails closed on custom service accounts, PostgreSQL, or multiple databases.
+Exact-head Build [39332160991](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160991)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native
+runner receipt checks. The Windows job built the installer and passed the
+fingerprint and selected data-directory service smokes. CodeQL
+[39332156121](https://github.com/snapetech-org/chaptarrng/actions/runs/39332156121),
+security scan
+[39332161129](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161129),
+dependency review
+[39332160785](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160785),
+Helm identity
+[39332161144](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161144),
+and NuGet submission
+[39332162427](https://github.com/snapetech-org/chaptarrng/actions/runs/39332162427)
+checks passed. Disposable-fork validation
+[39332161256](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161256)
+was skipped by its external-fork gate. A populated Windows upgrade and real
+installed rollback rehearsal remain open. Do not use it for production cutover
+while the release freeze remains.
 
 Prior exact-head application validation at `0e881d921dd55aa89e12747557ccaadbb2352a21` passed Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727) on Linux, macOS, and Windows, including PostgreSQL migration and the Linux pinned-tool M4B check; CodeQL, dependency/security, dependency-review, NuGet, release-note, and Helm identity checks passed. Its artifact also passed an isolated populated migration-to-SeerrNG smoke. These source checks do not approve production cutover.
 
 The current [draft PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 adds an unpublished Windows service handoff installer and a focused regression
 smoke for SQLite preview fingerprints. The smoke verifies that `-shm` rebuilds
-do not invalidate preview while database, WAL, and journal changes do. Its
-local run and the cross-target installer publish pass; hosted exact-head checks
-must pass before merge. Representative Windows migration, installed rollback,
+do not invalidate preview while database, WAL, and journal changes do. The
+local run, cross-target installer publish, and hosted exact-head checks passed
+on code head `7b4c66e3`. Representative Windows migration, installed rollback,
 semantic parity, and every update-channel handoff still need acceptance.
 
 Helm has a source-only, fail-closed handoff chart at
