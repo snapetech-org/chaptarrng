@@ -61,27 +61,41 @@ rejects pre-migration-14 databases because their `Blacklist` table must first
 be renamed by the embedded chain. The version-aware fix and authentic
 migration-1 fixture passed the hosted Linux, macOS, Windows, and PostgreSQL
 migration checks in PR #126 and are on `main`, but are not in public `.977`.
-The synthetic v22 fixture does not establish real-data behavior or every historical release. A separate private populated
-migration-158 SQLite snapshot was tested against public `.977` on 2026-10-18:
-preview left its database bytes unchanged, and apply plus rollback passed
-integrity and foreign-key checks while retaining both source and converted
-backups. Ambiguous format choices remain for human review; this does not
-validate older schemas, PostgreSQL, installers, or full feature parity.
+The synthetic v22 fixture does not establish real-data behavior or every
+historical release. A private populated migration-158 SQLite snapshot was
+also tested against public `.977` on 2026-10-18. That structural round trip
+did not validate provider identity: `.977` maps bare numeric IDs to Goodreads
+even when the source uses native Hardcover mode. Do not apply `.977` to a
+native Hardcover BookshelfNG database.
+
+On 2026-10-19, the unpublished PR #131 candidate (build version `0.9.978.0`)
+passed preview, explicit apply, rollback preview, and explicit rollback on a
+disposable copy of populated migration-158 data with `HARDCOVER=true` and no
+network access. Migration preview left the source unchanged. Apply produced a
+schema-121 ChaptarrNG database and retained the schema-158 source backup;
+rollback preview also left the converted database and source backup unchanged.
+Explicit rollback restored a byte-identical copy of the source backup and
+preserved the converted database separately. Integrity and foreign-key checks
+passed on the converted database, source backup, and restored source. The private
+baseline snapshot remained unchanged. This confirms one populated SQLite
+round trip for the candidate; ambiguous format choices still need review, and
+older schemas, PostgreSQL operator data, full feature parity, and install
+channels remain open.
+
+The candidate importer now preserves files that reference a missing edition
+as unmapped and keeps conflicting history rows attached to their source book
+without an unsafe file or edition link. Focused importer and edition-catalog
+API tests pass 44/44 locally. The current source changes still require a new
+exact-head hosted run and are not approved for operator cutover.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
-contains older SQLite and one-schema PostgreSQL migration support, native
-Hardcover identity handling, and a separately configured BookOrbit Book Dock
-destination. Exact-head run [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100)
-passed on PR head `e4db2d46` (CI merge candidate `724029a2`): Linux, macOS,
-Windows, PostgreSQL migration, release-note validation, and receipt
-reconciliation passed; CodeQL, dependency review, and security scans passed
-too. The final Linux artifact refused migration when provider mode was absent
-without changing the source, preserved Goodreads IDs with `HARDCOVER=false`,
-and preserved Hardcover IDs with `HARDCOVER=true`. Automatic startup converted
-the synthetic library and served its author and both format records; explicit
-rollback restored the retained BookshelfNG database byte-for-byte and kept the
-ChaptarrNG backup. This is synthetic evidence, not operator-data or
-installation-channel acceptance. Details are in the
-[migration fixture evidence](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
+contains the older SQLite and one-schema PostgreSQL migration candidate,
+native Hardcover identity handling, and the separate BookOrbit Book Dock
+destination. Previous exact-head run
+[39182438062](https://github.com/snapetech-org/chaptarrng/actions/runs/39182438062)
+passed on PR head `bdd7518`; these importer and edition-catalog follow-ups
+still need exact-head hosted validation. The synthetic provider-mode,
+automatic-startup, and rollback evidence is recorded in the
+[migration fixture report](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 Keep the release freeze in place. See the [PostgreSQL migration candidate
 notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
@@ -136,10 +150,11 @@ bare numeric source IDs require an explicit `HARDCOVER=true` or `HARDCOVER=false
 mode; an unset or invalid value now fails closed instead of guessing Goodreads.
 Keep `HARDCOVER=true` (and do not set `HARDCOVER_NATIVE=false`) in preview and
 migration when the BookshelfNG source used native Hardcover mode. This provider
-and migration handling are source-only and are not in `.977`. PR #131 remains
-draft; see its current exact-head checks and keep the candidate unsupported for
-operator data until representative conversion and rollback acceptance are
-complete.
+and migration handling are source-only and are not in `.977`; the published
+`.977` importer maps bare numeric IDs to Goodreads even if `HARDCOVER=true` is
+present. PR #131 remains draft; see its current exact-head checks and keep the
+candidate unsupported for operator data until representative conversion and
+rollback acceptance are complete.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 
@@ -150,7 +165,7 @@ runtime, while source builds require the .NET 10 SDK.
 
 ### What makes this fork different
 
-- **SeerrNG contract:** SeerrNG can discover provider IDs, format routes, paged library scans, and pending-import operations through `GET /api/v1/system/capabilities`. Both format services can use one ChaptarrNG instance while requests retain the selected format and provider identity.
+- **SeerrNG contract:** The current candidate advertises provider IDs, format routes, paged library scans, pending-import operations, and `editionCatalog` through `GET /api/v1/system/capabilities`. Its `GET /api/v1/book/{id}/editions/catalog` route returns narrator, monitoring, ownership, and conservative audiobook-description fields for edition cards, matching the new BookshelfNG SeerrNG catalog behavior. This edition-catalog addition is not in public `v0.9.977`; release and migration gates remain closed. Both format services can use one ChaptarrNG instance while requests retain the selected format and provider identity.
 - **Pending-import integration:** Chaptarr's current development branch also has pending author imports. ChaptarrNG exposes that asynchronous work through the SeerrNG capability contract and keeps retry/cancel behavior safe when multiple requests share an import.
 - **Restricted service access:** ChaptarrNG `0.9.941` and later can use a SeerrNG-only API key for supported book requests, searches, library status, and pending imports without granting global administration or destructive access.
 - **Standalone additions maintained here:** An optional built-in indexer and download client can search configured ebook sources, use API-key downloads, and optionally fall back to browser-assisted links. Full backup archives can use passphrase-based authenticated encryption; the direct Chaptarr project separately offers encryption for quick-start settings backups.

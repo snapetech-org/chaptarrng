@@ -1138,6 +1138,27 @@ namespace Chaptarr.Api.V1.Books
             return MapToResource(book, true);
         }
 
+        /// <summary>
+        /// Lists known editions in a compact shape for clients that let a person choose an edition.
+        /// </summary>
+        [HttpGet("{id:int}/editions/catalog")]
+        public List<EditionCatalogResource> GetEditionCatalog(int id)
+        {
+            var editions = _editionService.GetEditionsByBook(id);
+            _mediaCoverProxy.ProxyRemoteUrls(editions.SelectMany(edition => edition.Images ?? new List<MediaCover>()));
+
+            var ownedEditionIds = (_mediaFileService.GetFilesByBook(id) ?? new List<NzbDrone.Core.MediaFiles.BookFile>())
+                .Select(file => file.EditionId)
+                .ToHashSet();
+            var facadeContext = HttpContext?.GetReadarrFacadeContext();
+
+            return editions
+                .OrderByDescending(edition => edition.Monitored)
+                .ThenBy(edition => edition.Title)
+                .Select(edition => edition.ToCatalogResource(ownedEditionIds.Contains(edition.Id), facadeContext))
+                .ToList();
+        }
+
         [HttpGet("buckets")]
         public ActionResult<NzbDrone.Core.Books.BookBucketResource> GetBookBuckets(
             [FromQuery] bool includeUnmonitored = true,

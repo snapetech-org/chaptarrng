@@ -1,6 +1,6 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Release status (2026-10-18).** ChaptarrNG `v0.9.977` is still the latest
+> **Release status (2026-10-19).** ChaptarrNG `v0.9.977` is still the latest
 > published release. Releases are frozen until the full BookshelfNG retirement
 > acceptance gates close; a source change or version bump is not a release.
 > The published `.977` converter supports read-only preview for BookshelfNG
@@ -19,17 +19,31 @@
 > `0.4.21.71` release first. A later source-only fix passed hosted checks on
 > `main`, but is not in `.977` and is not available to operators during the
 > release freeze.
+> **Provider identity warning:** `.977` maps bare numeric source IDs to
+> Goodreads regardless of `HARDCOVER`. A database from the native Hardcover
+> BookshelfNG mode can therefore pass integrity checks while acquiring the
+> wrong provider identity. Do not apply `.977` to a native Hardcover database;
+> its read-only preview cannot validate provider identity either. The
+> unpublished candidate requires an explicit source mode, but remains
+> unsupported for operator cutover during the release freeze.
+> On 2026-10-19, candidate build `0.9.978.0` passed preview, apply, rollback
+> preview, and explicit rollback on a disposable copy of populated
+> migration-158 SQLite data with `HARDCOVER=true` and network access disabled.
+> Migration preview left the source unchanged. Apply produced a schema-121
+> ChaptarrNG database and retained the schema-158 source backup. Rollback
+> preview left the converted database and source backup unchanged; explicit
+> rollback restored a byte-identical source backup and preserved the converted
+> database separately. Integrity and foreign-key checks passed, and the
+> original private snapshot remained unchanged. This is one candidate round
+> trip; it does not close ambiguous
+> media review, older-schema or PostgreSQL operator-data acceptance, feature
+> parity, or installer/channel handoff.
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
-> contains the migration candidate. Exact-head run
-> [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100)
-> passed on PR head `e4db2d46` (CI merge candidate `724029a2`): Linux, macOS,
-> Windows, PostgreSQL migration, release-note validation, and receipt
-> reconciliation passed. CodeQL, dependency review, secret scan, and NuGet
-> submission checks also passed. The final Linux artifact passed synthetic
-> preview/apply/rollback in Goodreads and Hardcover modes, fail-closed behavior
-> when provider mode is missing, and automatic-startup conversion with a
-> populated API. This remains candidate evidence, not operator-data or
-> install-channel acceptance; see the
+> contains this candidate. Previous exact-head run
+> [39182438062](https://github.com/snapetech-org/chaptarrng/actions/runs/39182438062)
+> passed on PR head `bdd7518`; the current importer and edition-catalog
+> follow-up still needs exact-head hosted validation. Local focused importer
+> and edition-catalog tests pass 44/44. See the
 > [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 > PostgreSQL source conversion remains unsupported in published releases.
 > Pinned images,
@@ -392,11 +406,36 @@ published ChaptarrNG image still defaults to `8789` for fresh installs. If the
 old instance used a different port, preserve that port in both its container
 configuration and host mapping.
 
+## Unpublished candidate populated SQLite round trip (2026-10-19)
+
+The unpublished ChaptarrNG PR #131 candidate (build version `0.9.978.0`)
+completed a full preview/apply/restore rehearsal on a disposable copy of a
+private populated BookshelfNG migration-158 SQLite database. The BookshelfNG
+service was not changed, the source snapshot stayed byte-identical, and the
+candidate ran with `HARDCOVER=true` and network access disabled.
+
+- Migration preview passed without changing the source database.
+- Explicit apply passed after the stopped-service confirmation. The converted
+  database reached ChaptarrNG schema 121 and passed SQLite integrity and
+  foreign-key checks; the original schema-158 backup remained retained.
+- Rollback preview passed without changing either the converted database or
+  the source backup.
+- Explicit rollback restored a byte-identical copy of the retained schema-158
+  source backup and preserved the converted schema-121 database as a separate
+  ChaptarrNG backup.
+
+The private library contents, counts, identifiers, and hashes are omitted.
+This validates one populated SQLite migration and restore path. It does not
+classify ambiguous formats, prove every data mapping or client behavior, or
+close older-schema, PostgreSQL, full feature-parity, or installation-channel
+acceptance. Keep the release freeze and production cutover restrictions in
+place; the candidate is not a published migration tool.
+
 ## Historical populated-database rehearsal (2026-10-14)
 
 The ordinary Linux/amd64 ChaptarrNG image was exercised against an isolated
 copy of a real BookshelfNG migration-158 SQLite database. Preview accounted
-for all 39 source tables and their rows and left the source database hash
+for all source tables and rows and left the source database hash
 unchanged. At the time, that earlier candidate required a complete per-book
 media map before preview could pass. The same standard image then completed
 explicit apply on one copy and normal first-start conversion on another. No
@@ -404,7 +443,7 @@ compatibility image or build was used, and the live BookshelfNG service was
 not changed.
 
 The applied database reached native migration v119. Its retained backup
-matched all 39 source table definitions and rows exactly; both databases
+matched the source table definitions and rows exactly; both databases
 passed SQLite integrity and foreign-key checks. The importer retained source
 file rows with `EditionId=0`, BookshelfNG's intentional unmapped-file
 sentinel, without inferring an edition, book, or media type. A focused fixture
@@ -419,8 +458,8 @@ existing port's ping and UI routes, and returned all four configured indexers
 with their runtime-derived RSS and search capabilities. The conversion logs
 and database copies were kept in a private VM scratch directory.
 
-The real database exposed 81 books whose media choice could not be derived
-from source relationships. Earlier test maps used explicit technical choices
+The real database exposed books whose media choice could not be derived from
+source relationships. Earlier test maps used explicit technical choices
 only; those choices were not reviewed as correct library classification. The
 published `v0.9.977` release keeps unresolved records in both catalogs
 without monitoring and retains a private review file. Operators still need to

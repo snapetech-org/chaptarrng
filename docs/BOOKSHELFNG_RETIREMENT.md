@@ -1,7 +1,10 @@
 # BookshelfNG retirement status
 
-**Reviewed:** 2026-10-18 after ChaptarrNG `v0.9.977` was published and PR #128
-merged the fail-closed release and distribution gates. This page is the current
+**Reviewed:** 2026-10-19 after BookshelfNG `main` added the SeerrNG edition
+catalog endpoint and the ChaptarrNG candidate passed a populated SQLite
+preview/apply/restore rehearsal. ChaptarrNG `v0.9.977` remains the latest
+published release; PR #128 merged the fail-closed release and distribution
+gates. This page is the current
 handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
@@ -45,18 +48,34 @@ detailed feature inventory remains in the
   [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131). It adds
   older SQLite support, one migration-158 PostgreSQL source schema, native
   Hardcover identity handling, and BookOrbit Book Dock as a separate
-  destination. Exact-head run [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100)
-  passed on PR head `e4db2d46` (CI merge candidate `724029a2`): Linux, macOS,
-  Windows, PostgreSQL migration, release-note validation, and receipt
-  reconciliation passed; C#, JavaScript/TypeScript, Python, and Actions
-  CodeQL, dependency review, secret scan, and NuGet submission checks passed.
-  Platform receipts reported zero failed tests. The PostgreSQL fixture passed
-  all 4 cases, including normal-startup conversion and backup retention. The
-  final Linux artifact passed fail-closed, explicit Goodreads and Hardcover
-  mode, normal-startup conversion, populated API, and rollback checks on
-  synthetic data built by the released BookshelfNG `.71` binary. This is not
-  operator-data or channel acceptance; see the
+  destination. Previous exact-head run
+  [39182438062](https://github.com/snapetech-org/chaptarrng/actions/runs/39182438062)
+  passed on PR head `bdd7518`; it validated the candidate before the
+  populated-data importer fixes and edition-catalog addition described below.
+  The earlier synthetic provider-mode, startup, and rollback evidence is in the
   [detailed fixture report](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
+  This is not operator-data or channel acceptance.
+- On 2026-10-19, the unpublished PR #131 candidate (build version
+  `0.9.978.0`) passed preview, explicit apply, rollback preview, and explicit
+  rollback on a disposable copy of populated migration-158 SQLite data with
+  `HARDCOVER=true` and network access disabled. Migration preview left the
+  source unchanged; apply produced schema 121 and retained the source. Restore
+  preview left the converted database and source backup unchanged; rollback
+  restored a byte-identical schema-158 backup and preserved the converted
+  database separately. Integrity and foreign-key checks passed, and the
+  original private snapshot remained unchanged. The importer fixes prompted
+  by this rehearsal preserve missing-edition files as unmapped and retain
+  conflicting history on its source book without attaching an unsafe file or
+  edition. Local focused importer and edition-catalog tests pass 44/44. This
+  is one populated SQLite candidate round trip; ambiguous format review,
+  PostgreSQL operator data, other source shapes, feature parity, and install
+  channel acceptance remain open. The exact-head hosted run for these
+  follow-up changes is pending.
+- BookshelfNG `main` at `9a04c2eb2` now exposes
+  `GET /api/v1/book/{id}/editions/catalog` and advertises `editionCatalog` for
+  SeerrNG edition cards. The ChaptarrNG candidate adds the matching route and
+  capability, with focused tests and updated integration docs. It is source
+  only and requires exact-head hosted validation and SeerrNG client acceptance.
 - This work branch also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs now require an explicit mode: `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) selects Hardcover, and `HARDCOVER=false` selects Goodreads. An unset or invalid mode fails closed. The Docker candidate builds separate softcover and Hardcover compatibility targets so legacy aliases can retain that mode; `latest`, `main`, and `hardcover` must use the Hardcover target, while `softcover` must use the Goodreads target. These source changes are not in `.977`, PR #131 remains draft, and converted-data acceptance remains open.
 - BookshelfNG's BookLore notification settings and `OnReleaseImport` trigger are copied unchanged into ChaptarrNG, and remain in the retained source backup. A separate BookOrbit Book Dock destination is candidate work in this branch; it does not rewrite BookLore URLs or credentials. Mock tests cover login, Book Dock permission, streamed uploads, redirects, rejected credentials/files, and partial-batch failure. An isolated BookOrbit v3.2.0 live API check passed setup, login, permission check, EPUB upload/listing, and unsupported-file rejection. That does not verify downstream processing of a production book or a real-user handoff. The integration is not in `.977`, and the broader retirement gate remains open.
 - BookshelfNG `0.4.21.71` is published as the final source release.
@@ -80,7 +99,11 @@ appdata yet.
 The published ChaptarrNG `v0.9.977` converter accepts the BookshelfNG
 migration-158 SQLite database and bundles the BookshelfNG SQLite migration
 chain. It upgrades a disposable copy before import and retains the untouched
-snapshot as the rollback source. The `.977` converter still rejects versions
+snapshot as the rollback source. **Do not use `.977` for native Hardcover
+source databases:** its importer maps bare numeric IDs to Goodreads even when
+the source used `HARDCOVER=true`; integrity checks and read-only preview do not
+detect that identity error. The unpublished candidate requires explicit
+provider mode. The `.977` converter still rejects versions
 1–13 at its pre-upgrade table check; those versions retain `Blacklist` until
 the embedded chain renames it. PR #126 merged the version-aware guard and
 synthetic migration-1 rollback coverage into `main`, and its hosted migration
@@ -95,7 +118,7 @@ can be migrated one at a time with separate appdata directories; co-located
 databases need their ownership and settings resolved before separate copies can
 be migrated. A PostgreSQL
 migration-158 candidate is under review in this work branch; it does not
-support older PostgreSQL schemas. The candidate remains unaccepted for operator data; see the [PostgreSQL migration notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). A separate private populated migration-158 SQLite snapshot completed preview, apply, and rollback with the public .977 image on Linux/amd64; the source and converted backups passed logical-content, integrity, and foreign-key checks. This covers one populated SQLite round trip, not older schemas, PostgreSQL, human review of ambiguous formats, or installation-channel handoff; details are in the [operator guide](MIGRATE_FROM_BOOKSHELFNG.md).
+support older PostgreSQL schemas. The candidate remains unaccepted for operator data; see the [PostgreSQL migration notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). A private populated migration-158 SQLite snapshot completed preview, apply, and rollback with public `.977` on Linux/amd64 on 2026-10-18. That proved structural conversion and rollback only; it did not validate native Hardcover identity. The separate 2026-10-19 candidate rehearsal with explicit Hardcover mode passed the same four-step path on a disposable copy and restored the source database byte-for-byte from its retained backup. Neither run resolves ambiguous media classifications, PostgreSQL acceptance, feature parity, or installation-channel handoff; details are in the [operator guide](MIGRATE_FROM_BOOKSHELFNG.md).
 The SQLite path stages a native database, accounts for source rows, checks
 SQLite integrity and foreign keys, and promotes only after validation. Preview
 does not modify the source. Apply and rollback are explicit operations, and
@@ -118,9 +141,9 @@ speculative searches and keeps conversion moving, but does not infer a work's
 true format. A single monitored
 edition of each format is preserved on its corresponding ChaptarrNG record;
 multiple monitored editions of the same format still fail closed. The
-populated-library rehearsal accounted for all 127,177 rows across 39 source
-tables; 81 book classifications still required human review, and the test
-choices were not reviewed as correct library decisions. A separate 2026-10-18
+populated-library rehearsal accounted for every source row; some book
+classifications still required human review, and test choices were not
+reviewed as correct library decisions. A separate 2026-10-18
 Docker image-switch smoke used an empty database created by BookshelfNG `.71`:
 ChaptarrNG `.977` converted it on normal startup, retained the original database,
 and restored it through rollback; the BookshelfNG image started again on port

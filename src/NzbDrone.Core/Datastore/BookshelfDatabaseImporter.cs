@@ -658,12 +658,23 @@ namespace NzbDrone.Core.Datastore
             var sourceCount = CountRows(source, "BookFiles");
             var targetColumns = GetColumns(target, "BookFiles");
             var result = new Dictionary<int, BookFileMap>();
+            var filesWithoutEditionId = 0;
+            var filesWithMissingEdition = 0;
 
             foreach (var row in ReadRows(source, "BookFiles"))
             {
                 var sourceEditionId = GetInt(row, "EditionId");
-                if (sourceEditionId == 0)
+                if (sourceEditionId == 0 || !editions.TryGetValue(sourceEditionId, out var edition))
                 {
+                    if (sourceEditionId == 0)
+                    {
+                        filesWithoutEditionId++;
+                    }
+                    else
+                    {
+                        filesWithMissingEdition++;
+                    }
+
                     var orphanModified = GetValue(row, "Modified") ?? GetValue(row, "DateAdded") ?? DateTime.UnixEpoch;
                     var orphanValues = Intersect(row, targetColumns);
                     orphanValues["EditionId"] = 0;
@@ -671,7 +682,9 @@ namespace NzbDrone.Core.Datastore
                     orphanValues["DateAdded"] = GetValue(row, "DateAdded") ?? orphanModified;
                     orphanValues["MediaInfo"] = GetValue(row, "MediaInfo") ?? "{}";
                     SetIfPresent(orphanValues, "MediaType", string.Empty);
-                    SetIfPresent(orphanValues, "UnmappedReason", "Source file had no linked edition; its media type and book relationship were not inferred.");
+                    SetIfPresent(orphanValues, "UnmappedReason", sourceEditionId == 0
+                        ? "Source file had no linked edition; its media type and book relationship were not inferred."
+                        : "Source file referenced a missing edition; its media type and book relationship were not inferred.");
                     SetIfPresent(orphanValues, "Part", GetValue(row, "Part") ?? 0);
                     SetIfPresent(orphanValues, "IndexerFlags", GetValue(row, "IndexerFlags") ?? 0);
                     InsertRow(target, transaction, "BookFiles", targetColumns, orphanValues);
@@ -683,11 +696,6 @@ namespace NzbDrone.Core.Datastore
                         0,
                         GetString(row, "Path"));
                     continue;
-                }
-
-                if (!editions.TryGetValue(sourceEditionId, out var edition))
-                {
-                    throw new InvalidDataException($"BookshelfNG book file {GetInt(row, "Id")} references missing edition {sourceEditionId}.");
                 }
 
                 var modified = GetValue(row, "Modified") ?? GetValue(row, "DateAdded") ?? DateTime.UnixEpoch;
@@ -711,7 +719,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("BookFiles", sourceCount, 0, sourceCount, 0, 0,
-                "book-file IDs and paths are preserved; linked files retain their edition-derived media type, and EditionId=0 files remain unmapped with no inferred media type");
+                $"book-file IDs and paths are preserved; linked files retain their edition-derived media type; unmapped file counts by cause: EditionId=0 {filesWithoutEditionId}, missing edition {filesWithMissingEdition}");
             return result;
         }
 
@@ -1082,6 +1090,8 @@ namespace NzbDrone.Core.Datastore
         {
             var sourceCount = CountRows(source, "History");
             var targetColumns = GetColumns(target, "History");
+            var conflictingFileReferences = 0;
+            var ambiguousFileReferences = 0;
             foreach (var row in ReadRows(source, "History"))
             {
                 var sourceAuthorId = GetNullableInt(row, "AuthorId");
@@ -1092,6 +1102,12 @@ namespace NzbDrone.Core.Datastore
 
                 var sourceBookId = GetNullableInt(row, "BookId");
                 var targetBookId = sourceBookId.GetValueOrDefault();
+                var historyFile = FindHistoryFile(row, files, out var ambiguousFileMatch);
+                if (ambiguousFileMatch)
+                {
+                    ambiguousFileReferences++;
+                }
+
                 if (sourceBookId.GetValueOrDefault() != 0)
                 {
                     if (!books.TryGetValue(sourceBookId.Value, out var book))
@@ -1106,36 +1122,37 @@ namespace NzbDrone.Core.Datastore
                         ? audiobookId
                         : book.TargetIds.Values.OrderBy(x => x).First();
 
-                    var file = FindHistoryFile(row, files);
-                    if (file != null)
+                    if (historyFile != null && historyFile.SourceBookId != 0 && historyFile.SourceBookId != sourceBookId.Value)
                     {
-                        if (file.SourceBookId != 0 && file.SourceBookId != sourceBookId.Value)
-                        {
-                            throw new InvalidDataException($"BookshelfNG history row {GetInt(row, "Id")} identifies a file from another book.");
-                        }
+                        // The source event's book identity and file identity disagree.
+                        // Keep the event attached to its source book and retain its
+                        // original payload, but do not invent a file or edition link.
+                        conflictingFileReferences++;
+                        historyFile = null;
+                    }
 
-                        if (file.TargetBookId > 0)
-                        {
-                            targetBookId = file.TargetBookId;
-                        }
+                    if (historyFile?.TargetBookId > 0)
+                    {
+                        targetBookId = historyFile.TargetBookId;
                     }
                 }
 
                 var values = Intersect(row, targetColumns);
                 values["BookId"] = targetBookId;
-                var historyFile = FindHistoryFile(row, files);
                 SetIfPresent(values, "EditionId", historyFile?.TargetEditionId > 0 ? historyFile.TargetEditionId : null);
                 InsertRow(target, transaction, "History", targetColumns, values);
             }
 
             report.RecordTable("History", sourceCount, 0, sourceCount, 0, 0,
-                "history rows and IDs are retained; file-specific events follow their source file to the correct media row and edition");
+                $"history rows and IDs are retained; cross-book file references: {conflictingFileReferences}; ambiguous file matches: {ambiguousFileReferences}; inconsistent references remain unlinked, while consistent file-specific events follow their source file to the correct media row and edition");
         }
 
         private static BookFileMap FindHistoryFile(
             IReadOnlyDictionary<string, object> row,
-            IReadOnlyDictionary<int, BookFileMap> files)
+            IReadOnlyDictionary<int, BookFileMap> files,
+            out bool ambiguousFileMatch)
         {
+            ambiguousFileMatch = false;
             var dataText = GetString(row, "Data");
             JObject data = null;
             if (!string.IsNullOrWhiteSpace(dataText))
@@ -1169,7 +1186,8 @@ namespace NzbDrone.Core.Datastore
             var matches = files.Values.Where(x => candidatePaths.Contains(NormalizePath(x.Path))).ToArray();
             if (matches.Length > 1)
             {
-                throw new InvalidDataException($"BookshelfNG history row {GetInt(row, "Id")} matches multiple source files.");
+                ambiguousFileMatch = true;
+                return null;
             }
 
             return matches.SingleOrDefault();

@@ -1,8 +1,8 @@
 # BookshelfNG migration fixture evidence
 
-**Reviewed:** 2026-10-18. **Scope:** synthetic data created by the published
-BookshelfNG `0.4.21.71` Linux binary and tested with an unpublished ChaptarrNG
-candidate. This is maintainer evidence, not approval to cut over operator data.
+**Reviewed:** 2026-10-19. This file covers synthetic fixtures and one private
+populated migration-158 snapshot tested on a disposable copy. This is
+maintainer evidence, not approval to cut over operator data.
 
 ## Candidate and fixture
 
@@ -188,3 +188,43 @@ choices, provider API parity, PostgreSQL operator-data rollback, or installer
 and update-channel acceptance. ChaptarrNG `v0.9.977` and BookshelfNG `0.4.21.71`
 remain the latest public releases; no image, package, release, or compatibility
 alias was published or advanced during these checks.
+
+## Populated private SQLite preview, apply, and restore rehearsal (2026-10-19)
+
+An unpublished PR #131 candidate build reporting ChaptarrNG `0.9.978.0` was
+tested against a disposable copy of a private populated BookshelfNG
+migration-158 SQLite snapshot. The test ran with `HARDCOVER=true`, no network
+access, a writable isolated config copy, and a read-only candidate app mount.
+The live BookshelfNG service and the original snapshot were not changed.
+
+- **Preview:** migration preview passed; the source snapshot remained
+  byte-identical.
+- **Apply:** explicit apply passed with stopped-service confirmation. The
+  converted ChaptarrNG database reached schema 121 and passed SQLite
+  `integrity_check` with zero foreign-key errors. The retained BookshelfNG
+  backup remained schema 158 and also passed integrity and foreign-key checks.
+- **Restore preview:** passed without changing either the converted database
+  or the source backup.
+- **Restore:** explicit rollback restored a byte-identical copy of the
+  retained BookshelfNG backup and preserved the converted schema-121 database
+  as a separate ChaptarrNG backup. The restored source reached schema 158; the
+  independent original snapshot hash was unchanged.
+
+The populated source exposed two inconsistent relationship shapes. Files
+whose positive `EditionId` did not exist are now preserved as unmapped, with
+no guessed book or media type. History rows whose source book disagrees with
+the referenced file remain attached to the source book, preserving their
+payload while leaving the unsafe file and edition association empty. Ambiguous
+multiple-file history matches also remain unlinked and are reported instead
+of aborting conversion. Focused regression cases cover these paths.
+
+The focused `BookshelfDatabaseImporterFixture`,
+`EditionCatalogResourceFixture`, and
+`SystemIntegrationCapabilitiesResourceFixture` suites pass 44/44 locally.
+The private library's contents, counts, identifiers, and hashes are omitted.
+This validates one populated SQLite candidate path and its rollback, not
+semantic correctness for every record. The ambiguous-media review artifact
+still requires operator classification. Older real schemas, PostgreSQL
+operator data, complete settings/provider and client continuity, feature
+parity, and installer/update-channel acceptance remain open. The new source
+changes require exact-head hosted validation and remain unpublished.

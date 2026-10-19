@@ -33,5 +33,6 @@ namespace Chaptarr.Api.V1.System
         public bool PendingImportCancellation { get; set; } = true;
         public bool RestrictedServiceApiKey { get; set; } = true;
         public bool FormatSpecificAvailabilityStatistics { get; set; } = true;
+        public bool EditionCatalog { get; set; } = true;
     }
 }

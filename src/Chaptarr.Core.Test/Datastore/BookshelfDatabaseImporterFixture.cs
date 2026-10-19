@@ -1021,6 +1021,76 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_preserve_book_files_that_reference_a_missing_edition_as_unmapped()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO BookFiles (Id, EditionId, CalibreId, Quality, Size, DateAdded, MediaInfo, Modified, Path, Part)
+                    VALUES (52, 9999, 0, '{}', 300, '2026-01-04', '{}', '2026-01-04', '/library/Fixture Author/unmapped.m4b', 0);
+                    INSERT INTO ExtraFiles (Id, AuthorId, BookId, BookFileId, RelativePath, Extension, Added, LastUpdated)
+                    VALUES (64, 20, 30, 52, 'unmapped-cover.jpg', 'jpg', '2026-01-06', '2026-01-06');
+                    INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
+                    VALUES (65, 20, 'AudioBookShelf', 0, 'unmapped.opf', '2026-01-06', 30, 52, 'opf');
+                    INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
+                    VALUES (95, 'unmapped.m4b', '2026-01-06', '{}', '{""FileId"":""52"",""ImportedPath"":""/library/Fixture Author/unmapped.m4b""}', 3, 'download-95', 20, 30);";
+                command.ExecuteNonQuery();
+            }
+
+            var result = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 52 AND EditionId = 0 AND MediaType = '' AND UnmappedReason LIKE '%missing edition%' AND Path = '/library/Fixture Author/unmapped.m4b';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM ExtraFiles WHERE Id = 64 AND BookId = 30 AND BookFileId = 52;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM MetadataFiles WHERE Id = 65 AND BookId = 30 AND BookFileId = 52;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 95 AND BookId = 30 AND EditionId IS NULL AND Data LIKE '%\"FileId\":\"52\"%';"), Is.EqualTo(1));
+                Assert.That(result.ImportReport.Tables["BookFiles"].TargetMapping, Does.Contain("missing edition 1"));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_preserve_history_with_a_cross_book_file_reference_without_relinking_it()
+        {
+            InsertBookWithoutEdition(32, monitored: true);
+            const string historyData = "{\"FileId\":\"50\",\"ImportedPath\":\"/library/Fixture Author/book.m4b\"}";
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
+                    VALUES (96, 'book.m4b', '2026-01-07', '{}', $data, 3, 'download-96', 20, 32);";
+                command.Parameters.AddWithValue("$data", historyData);
+                command.ExecuteNonQuery();
+            }
+
+            var result = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND BookId = 32 AND EditionId IS NULL;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Data FROM History WHERE Id = 96;"), Is.EqualTo(historyData));
+                Assert.That(result.ImportReport.Tables["History"].TargetMapping, Does.Contain("cross-book file references: 1"));
+                Assert.That(result.ImportReport.Tables["History"].TargetMapping, Does.Contain("remain unlinked"));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+        }
+
+        [Test]
         public void should_refuse_an_incomplete_media_map_without_changing_the_source()
         {
             InsertBookWithoutEdition(32, monitored: true);

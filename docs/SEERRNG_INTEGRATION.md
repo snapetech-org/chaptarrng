@@ -5,13 +5,31 @@ API shape. The integration capability contract is available at
 `GET /api/v1/system/capabilities`; SeerrNG uses it to select the provider-ID
 dialect, format-scoped routes, paged library endpoint, edition identity rules,
 pending author-import support, restricted-key support, and format-specific
-availability statistics.
+availability statistics. It also advertises `editionCatalog` for clients that
+show a person the known editions and audiobook performances available for a
+book.
 
 For a broader overview of maintained behavior beyond the shared Chaptarr base,
 see [ChaptarrNG fork changes and upstream replacement criteria](./FORK_FEATURES.md).
 Chaptarr's current development branch has its own pending-import subsystem;
 this guide focuses on the format, identity, capability, and service-key
 contract SeerrNG uses.
+
+## Edition catalog for edition cards
+
+Clients can request `GET /api/v1/book/{id}/editions/catalog` to list the known
+editions for one book. The response includes provider identity, title,
+language and format, narrator names, publisher, release date, duration, cover,
+monitoring state, and whether a local file is owned. `production` and
+`abridged` use `unknown` unless the edition metadata gives clear evidence;
+multiple narrator names alone do not imply a full-cast production. Facade
+requests receive the edition ID for the selected provider dialect.
+
+**Availability:** this route and the `editionCatalog` capability are in the
+unpublished ChaptarrNG PR #131 candidate. They match the edition-catalog
+behavior added to BookshelfNG `main` in commit `9a04c2eb2`. Public ChaptarrNG
+`v0.9.977` does not include them, and release publication remains frozen
+pending the full BookshelfNG retirement acceptance gate.
 
 ## Configure a dedicated service key
 
