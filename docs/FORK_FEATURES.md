@@ -60,14 +60,18 @@ upstream issue/PR audit remains incomplete.
 
 The BookshelfNG consolidation is in ChaptarrNG `main`; its standard image uses
 the same executable for fresh and migrated installs. BookshelfNG `main` is
-`5e7cda41`, and its audit and guarded release-bridge PRs #128 and #130 are
+`6e1a62e12`, and its audit and guarded release-bridge PRs #128 and #130 are
 merged. BookshelfNG's Editions and Narrations detail tab is backed by
 `GET /api/v1/book/{id}/editions/catalog` and the `editionCatalog` capability.
 ChaptarrNG `main` now includes the book-details tab and series narrator
-comparison. Retirement candidate code commit `6a6b7d1f` integrates those
+comparison. Retirement candidate code snapshot `8b4c6e23` integrates those
 changes and retains explicit unknown and not-applicable edition labels. Local
-translation, type, targeted ESLint, and Stylelint checks pass; hosted
-validation of the integrated candidate is pending. BookshelfNG issue #114
+translation, type, targeted ESLint, and Stylelint checks pass. Exact-head Build
+run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-
+receipt checks; CodeQL, dependency review, security scan, and NuGet submission
+also pass. Disposable-fork validation was skipped by its gate. These are source
+checks, not operator-data or channel acceptance. BookshelfNG issue #114
 (new-author paths) is closed and already covered by ChaptarrNG `v0.9.974+`;
 issue #144 (retirement) remains open.
 ChaptarrNG's upstream PR #114 is a separate issue

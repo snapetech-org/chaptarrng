@@ -85,18 +85,28 @@ detailed feature inventory remains in the
   Ambiguous format review, PostgreSQL operator data, other source shapes,
   complete feature parity, installed rollback, and channel acceptance remain
   open.
-- BookshelfNG `main` at `5e7cda41` now exposes
+- BookshelfNG `main` at `6e1a62e12` now exposes
   `GET /api/v1/book/{id}/editions/catalog` and advertises `editionCatalog` for
-  SeerrNG edition cards. The ChaptarrNG candidate adds the matching route and
-  capability, plus an **Editions and Narrations** tab on book details for
-  reading known edition metadata, including duration. Unstated details remain
-  visibly unprovided.
-  Candidate code commit `6a6b7d1f` integrates current ChaptarrNG `main`,
+  SeerrNG edition cards. ChaptarrNG `main` now includes the matching route and
+  capability, an **Editions and Narrations** book-details tab, and a series
+  narrator comparison. Unstated details remain visibly unprovided.
+  BookshelfNG source commit `6e1a62e12` passed hosted CI, release-note
+  validation, and CodeQL; the manual run skipped release and image-publication
+  jobs. The source change is not a new release.
+  Candidate code snapshot `8b4c6e23` integrates current ChaptarrNG `main`,
   including its Editions tab and series narrator comparison, and retains the
   edition labels for unknown and not-applicable metadata. Local translation,
-  type, targeted ESLint, and Stylelint checks pass; exact-head hosted
-  validation is pending. The route and catalog implementation at code
-  snapshot `2c0401fc` passed run
+  type, targeted ESLint, and Stylelint checks pass. Exact-head Build run
+  [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
+  passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-
+  receipt checks. CodeQL [39205449712](https://github.com/snapetech-org/chaptarrng/actions/runs/39205449712),
+  dependency review [39205452346](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452346),
+  security scan [39205452337](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452337),
+  and NuGet submission [39205449409](https://github.com/snapetech-org/chaptarrng/actions/runs/39205449409)
+  also passed. Disposable-fork validation was skipped by its gate. The workflow
+  produced Actions validation artifacts only; it did not publish a release or
+  package. The route and catalog implementation at code snapshot `2c0401fc`
+  passed run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
   The current source candidate also passed the isolated SeerrNG Compose smoke
   against PR #131 head `ddec3e81` and SeerrNG `10f06eab9`: capability discovery,
