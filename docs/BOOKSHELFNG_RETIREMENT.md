@@ -67,10 +67,10 @@ detailed feature inventory remains in the
   by this rehearsal preserve missing-edition files as unmapped and retain
   conflicting history on its source book without attaching an unsafe file or
   edition. Focused importer, edition-catalog, and capability tests pass 52/52
-  locally. On PR #131 head `f5f57644`, Linux and macOS builds, PostgreSQL
-  migration, release-note, CodeQL, dependency, secret-scan, and NuGet checks
-  passed in [run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072);
-  Windows passed and native runner receipts reconciled. The separate
+  locally. Implementation commit `f5f57644` passed exact-head checks in
+  [run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072).
+  The later docs-only PR head `12a089a3` also passed exact-head checks in
+  [run 39192164390](https://github.com/snapetech-org/chaptarrng/actions/runs/39192164390);
   disposable-fork validation was skipped by its gate. This is one populated
   SQLite candidate round trip; ambiguous format review,
   PostgreSQL operator data, other source shapes, feature parity, and install
