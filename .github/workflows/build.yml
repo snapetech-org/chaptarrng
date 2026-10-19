@@ -332,12 +332,31 @@ jobs:
     - name: Build Windows BookshelfNG migration installer
       if: matrix.os == 'windows-latest'
       shell: pwsh
-      run: ./packaging/scripts/build-windows-bookshelf-migration-installer.ps1
+      run: ./packaging/scripts/build-windows-bookshelf-migration-installer.ps1 -KeepPayload
 
     - name: Test Windows migration installer SQLite fingerprint
       if: matrix.os == 'windows-latest'
       shell: pwsh
       run: dotnet run --configuration Release --project ./distribution/windows/installer-net-smoke/ChaptarrNG.Installer.Smoke.csproj
+
+    - name: Test Windows BookshelfNG installer upgrade and rollback services
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: dotnet run --configuration Release --project ./distribution/windows/installer-net-smoke/ChaptarrNG.Installer.Smoke.csproj -- --windows-service-round-trip
+
+    - name: Remove temporary Windows installer payload
+      if: always() && matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        $payload = Join-Path $PWD 'distribution/windows/installer-net/Payload/Chaptarr.payload.zip'
+        if (Test-Path -LiteralPath $payload) {
+          Remove-Item -LiteralPath $payload -Force
+        }
+        $payloadDirectory = Split-Path -Parent $payload
+        if ((Test-Path -LiteralPath $payloadDirectory) -and
+            -not (Get-ChildItem -LiteralPath $payloadDirectory -Force | Select-Object -First 1)) {
+          Remove-Item -LiteralPath $payloadDirectory -Force
+        }
 
     - name: Test Windows service preserves its selected data directory
       if: matrix.os == 'windows-latest'

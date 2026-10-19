@@ -1,4 +1,10 @@
+using System.IO;
 using ChaptarrNG.Installer.Pipeline;
+
+if (args.Contains("--windows-service-round-trip", StringComparer.OrdinalIgnoreCase))
+{
+    return await WindowsServiceRoundTrip.RunAsync();
+}
 
 var dataDirectory = Path.Combine(Path.GetTempPath(), $"chaptarr-installer-smoke-{Guid.NewGuid():N}");
 Directory.CreateDirectory(dataDirectory);

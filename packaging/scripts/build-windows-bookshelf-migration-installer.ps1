@@ -1,6 +1,7 @@
 param(
     [string] $AppDirectory = (Join-Path $PSScriptRoot '..\..\publish\Chaptarr'),
-    [string] $InstallerOutput = (Join-Path $PSScriptRoot '..\..\publish\ChaptarrNGInstaller')
+    [string] $InstallerOutput = (Join-Path $PSScriptRoot '..\..\publish\ChaptarrNGInstaller'),
+    [switch] $KeepPayload
 )
 
 $ErrorActionPreference = 'Stop'
@@ -59,7 +60,7 @@ try {
     Write-Host "Built candidate installer: $installer"
 }
 finally {
-    if (Test-Path -LiteralPath $payload) {
+    if (-not $KeepPayload -and (Test-Path -LiteralPath $payload)) {
         Remove-Item -LiteralPath $payload -Force
     }
     if ($createdPayloadDirectory -and

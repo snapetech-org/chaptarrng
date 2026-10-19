@@ -70,6 +70,28 @@ Windows CI also runs a focused fingerprint regression smoke: changes to the
 database, WAL, or rollback journal must invalidate the preview fingerprint,
 while changes to SQLite's rebuildable `-shm` index must not.
 
+Windows CI also runs the real installer upgrade and restore actions against a
+disposable service installation. The smoke downloads BookshelfNG **0.4.21.71**
+from its pinned public release asset and verifies the published SHA-256 before
+use. It seeds the shared populated migration-158 fixture, disables provider
+sync, runs both service handoff and health checks, then invokes the installer’s
+embedded rollback script and verifies BookshelfNG is running again with its
+original database lineage and LocalService account. All services, registry
+state, and temporary data are removed after the run; cleanup preserves the
+scratch directory if a test service cannot be safely removed.
+
+To run the round-trip locally from an elevated Windows PowerShell session after
+building the ChaptarrNG payload, use:
+
+```powershell
+dotnet run --configuration Release --project ./distribution/windows/installer-net-smoke/ChaptarrNG.Installer.Smoke.csproj -- --windows-service-round-trip
+```
+
+The packaging script accepts `-KeepPayload` for this test build so the smoke
+project can embed the same installer resources. CI removes that temporary zip
+after the smoke. The script’s default behavior still removes it immediately
+after publishing the candidate installer.
+
 ## Remaining acceptance
 
 The code and hosted build do not replace migration rehearsal on representative
@@ -78,8 +100,12 @@ validate:
 
 - A populated Windows SQLite install with provider IDs and paths representative
   of real deployments.
+- Acceptance against representative operator data. The hosted round-trip uses
+  a synthetic fixture and does not establish real-install parity.
 - Preview immutability, apply accounting, service handoff, health check, and
-  automatic rollback after injected failures.
+  automatic rollback after injected failures. The hosted service round-trip
+  exercises the explicit restore action; it does not inject a failure into the
+  automatic rollback branch.
 - Manual restore after Chaptarr has written to the migrated database.
 - Installer behavior on each supported Windows BookshelfNG version and any
   supported legacy data-directory layout.
