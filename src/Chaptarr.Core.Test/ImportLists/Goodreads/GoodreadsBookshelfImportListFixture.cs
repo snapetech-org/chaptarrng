@@ -416,12 +416,14 @@ namespace Chaptarr.Core.Test.ImportLists.Goodreads
         [Test]
         public void should_fetch_existing_goodreads_owned_books_with_oauth_credentials()
         {
-            const string ownedBooksXml = """<?xml version="1.0" encoding="UTF-8"?>
-<GoodreadsResponse>
-  <owned_books start="1" end="1" total="1">
-    <owned_book><id>900</id><book><id>456</id><title>Test Book</title><title_without_series>Test Book</title_without_series><work><id>123</id></work><authors><author><id>789</id><name>Test Author</name></author></authors></book></owned_book>
-  </owned_books>
-</GoodreadsResponse>""";
+            const string ownedBooksXml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <GoodreadsResponse>
+                  <owned_books start="1" end="1" total="1">
+                    <owned_book><id>900</id><book><id>456</id><title>Test Book</title><title_without_series>Test Book</title_without_series><work><id>123</id></work><authors><author><id>789</id><name>Test Author</name></author></authors></book></owned_book>
+                  </owned_books>
+                </GoodreadsResponse>
+                """;
 
             var transport = new DirectDownloadTestHttp();
             var requests = new List<HttpRequest>();
