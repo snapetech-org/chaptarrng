@@ -49,7 +49,7 @@ submission also passed. The UI is source-only in public `v0.9.977`, and the
 candidate remains draft while operator-data, full SeerrNG workflow, rollback,
 and channel acceptance remain open.
 
-**Current PR #131 validation:** code head 50e4cc14cf9cf87bbfeebbbb114cadbbeab6b5a3 passed Build 39219378504, CodeQL, security, NuGet, and dependency review.
+**Current PR #131 validation:** code head `a111b5754421cccaafc756abcf4efe226f86d7eb` passed [Build 39230899323](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899323), [CodeQL 39230892934](https://github.com/snapetech-org/chaptarrng/actions/runs/39230892934), [security 39230899375](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899375), [NuGet 39230915422](https://github.com/snapetech-org/chaptarrng/actions/runs/39230915422), and [dependency review 39230899544](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899544). The release-note contract passed; disposable-fork validation was skipped by its external-fork gate.
 The SeerrNG smoke evidence below is from earlier candidate snapshots and still does not cover end-to-end workflows or populated converted data.
 
 ## Configure a dedicated service key
