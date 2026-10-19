@@ -51,31 +51,15 @@ custom service accounts, PostgreSQL, or multiple databases. Preview
 fingerprinting covers the database, WAL, and rollback journal while ignoring
 the rebuildable `-shm` index.
 
-The docs-only candidate head `8912b7b3629248348c51daa0f1c39a6357e20ed7` passed
-exact-head Build
-[39334414682](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414682)
-on Linux, macOS, and Windows, PostgreSQL migration, release-note contract, and
-the Windows installer build, fingerprint smoke, and selected data-directory
-smoke. CodeQL
-[39334411350](https://github.com/snapetech-org/chaptarrng/actions/runs/39334411350),
-security [39334414694](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414694),
-dependency review [39334414922](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414922),
-Helm identity [39334414735](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414735),
-and NuGet [39334412894](https://github.com/snapetech-org/chaptarrng/actions/runs/39334412894)
-passed; disposable-fork validation was skipped by its external-fork gate.
-The installer remains unpublished. A populated Windows upgrade and real
-installed rollback remain open. Do not use it for production cutover while
-the release freeze remains.
-
-Prior exact-head application validation at `0e881d921dd55aa89e12747557ccaadbb2352a21` passed Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727) on Linux, macOS, and Windows, including PostgreSQL migration and the Linux pinned-tool M4B check; CodeQL, dependency/security, dependency-review, NuGet, release-note, and Helm identity checks passed. Its artifact also passed an isolated populated migration-to-SeerrNG smoke. These source checks do not approve production cutover.
-
-The current [draft PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
-adds an unpublished Windows service handoff installer and a focused regression
-smoke for SQLite preview fingerprints. The smoke verifies that `-shm` rebuilds
-do not invalidate preview while database, WAL, and journal changes do. The
-local run, cross-target installer publish, and hosted exact-head checks passed
-on code head `7b4c66e3`. Representative Windows migration, installed rollback,
-semantic parity, and every update-channel handoff still need acceptance.
+The Windows handoff candidate in draft ChaptarrNG PR #131 uses the actual
+installer to preserve the BookshelfNG service identity, data directory, and
+verified backup. Its hosted service round-trip tests injected-health-failure
+rollback, a successful retry, and explicit restore. The first hosted attempt
+found a harness ordering issue: it kept the test port occupied while restoring
+BookshelfNG. The harness now releases that port after Chaptarr stops and before
+Readarr is registered. The current exact-head result and remaining acceptance
+gates are tracked in the [retirement status](docs/BOOKSHELFNG_RETIREMENT.md).
+The installer remains unpublished; do not use it for production cutover.
 
 Helm has a source-only, fail-closed handoff chart at
 [`charts/bookshelfng`](charts/bookshelfng/README.md). It keeps the existing

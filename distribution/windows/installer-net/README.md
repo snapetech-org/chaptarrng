@@ -75,8 +75,10 @@ disposable service installation. The smoke downloads BookshelfNG **0.4.21.71**
 from its pinned public release asset and verifies the published SHA-256 before
 use. It seeds the shared populated migration-158 fixture and disables provider
 sync. First, it occupies the configured local HTTP port to make Chaptarr fail
-its `/ping` check, then verifies the installer automatically restores the
-BookshelfNG service and database. It retries without the conflict, verifies
+its `/ping` check. The harness releases that port as soon as Chaptarr stops,
+before rollback reinstalls the BookshelfNG service, then verifies automatic
+restoration of the BookshelfNG service and database. It retries without the
+conflict, verifies
 the successful Chaptarr handoff and health check, then invokes the installer’s
 explicit restore action and embedded rollback script. The test checks restored
 BookshelfNG lineage, populated records, data directory, and LocalService

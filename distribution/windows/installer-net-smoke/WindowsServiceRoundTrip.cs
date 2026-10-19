@@ -100,7 +100,7 @@ internal static class WindowsServiceRoundTrip
             using (var releaseCancellation = new CancellationTokenSource())
             {
                 blocker.Start();
-                var releaseBlocker = ReleasePortBlockerAfterBookshelfReturnsAsync(blocker, releaseCancellation.Token);
+                var releaseBlocker = ReleasePortBlockerAfterChaptarrStopsAsync(blocker, releaseCancellation.Token);
                 InstallOutcome failedUpgrade;
                 try
                 {
@@ -383,23 +383,23 @@ internal static class WindowsServiceRoundTrip
         return int.TryParse(portText, out var port) && port is > 0 and <= 65535 ? port : 8787;
     }
 
-    private static async Task ReleasePortBlockerAfterBookshelfReturnsAsync(
+    private static async Task ReleasePortBlockerAfterChaptarrStopsAsync(
         TcpListener blocker,
         CancellationToken cancellationToken)
     {
-        var sawBookshelfServiceRemoval = false;
+        var sawChaptarrRunning = false;
         while (!cancellationToken.IsCancellationRequested)
         {
-            var bookshelfInstalled = ServiceLifecycle.IsInstalled(ServiceLifecycle.BookshelfServiceName);
-            if (!bookshelfInstalled)
+            var chaptarrStatus = ServiceLifecycle.TryGetStatus(ServiceLifecycle.ChaptarrServiceName);
+            if (chaptarrStatus == ServiceControllerStatus.Running)
             {
-                sawBookshelfServiceRemoval = true;
+                sawChaptarrRunning = true;
             }
 
-            if (sawBookshelfServiceRemoval &&
-                bookshelfInstalled &&
-                !ServiceLifecycle.IsInstalled(ServiceLifecycle.ChaptarrServiceName))
+            if (sawChaptarrRunning &&
+                (chaptarrStatus is null || chaptarrStatus == ServiceControllerStatus.Stopped))
             {
+                Console.WriteLine("[smoke] Chaptarr has stopped; releasing the injected port conflict before BookshelfNG restore.");
                 blocker.Stop();
                 return;
             }
@@ -662,7 +662,7 @@ internal static class WindowsServiceRoundTrip
 
             if (Directory.Exists(scratchRoot))
             {
-                Directory.Delete(scratchRoot, recursive: true);
+                await DeleteDirectoryWithRetryAsync(scratchRoot).ConfigureAwait(false);
             }
 
             return true;
@@ -672,6 +672,29 @@ internal static class WindowsServiceRoundTrip
             Console.Error.WriteLine($"Could not remove smoke-test directory {scratchRoot}: {exception.Message}");
             return false;
         }
+    }
+
+    private static async Task DeleteDirectoryWithRetryAsync(string path)
+    {
+        const int attempts = 12;
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt + 1 < attempts)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false);
+            }
+            catch (UnauthorizedAccessException) when (attempt + 1 < attempts)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false);
+            }
+        }
+
+        Directory.Delete(path, recursive: true);
     }
 
     private sealed class SmokeUiReporter : IUiReporter

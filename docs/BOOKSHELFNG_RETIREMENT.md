@@ -9,30 +9,7 @@ handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
-**Current candidate (2026-10-19, docs-only head
-`8912b7b3629248348c51daa0f1c39a6357e20ed7`; code parent
-`7b4c66e39f344b71b7f85f4ea478d5d2c9d3fd9f`):** ChaptarrNG draft PR #131
-contains the unpublished Windows BookshelfNG service handoff installer and
-SQLite fingerprint regression smoke. The shared fingerprint helper passed
-locally and the installer cross-target publish succeeded. Exact-head Build
-[39334414682](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414682)
-passed Linux, macOS, Windows, PostgreSQL migration, release-note contract,
-native-runner receipt reconciliation, and the Windows installer build,
-fingerprint smoke, and selected data-directory service smoke. CodeQL
-[39334411350](https://github.com/snapetech-org/chaptarrng/actions/runs/39334411350),
-security scan
-[39334414694](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414694),
-dependency review
-[39334414922](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414922),
-Helm identity
-[39334414735](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414735),
-and NuGet submission
-[39334412894](https://github.com/snapetech-org/chaptarrng/actions/runs/39334412894)
-passed. Disposable-fork validation
-[39334414734](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414734)
-was skipped by its external-fork gate. The build validates code paths and
-synthetic safety checks, not a populated Windows service upgrade or real
-installed rollback. These checks do not authorize migration or release.
+**Current candidate (2026-10-19):** Draft ChaptarrNG PR #131 adds the Windows service round-trip through the actual installer, using a pinned BookshelfNG `.71` executable and a populated synthetic migration-158 database. On code head `ebe838dd7a74780692350c9d02826f219919582b`, Linux, macOS, PostgreSQL migration, release-note, CodeQL, dependency/security, NuGet, and Helm checks passed; the Windows full test suite and installer build also passed. The new service round-trip then failed during automatic rollback because the smoke held its injected HTTP port conflict until after it had registered Readarr. The rollback helper restored files and tried to start Readarr, but the service did not reach `RUNNING` while the test port was still occupied. The harness now releases the port after Chaptarr has stopped and before BookshelfNG is re-registered; its cross-target Windows build passes locally with zero warnings and errors. Corrected hosted service validation is still required. No production migration or release is approved.
 
 **Prior application-code validation (2026-10-19):** ChaptarrNG draft PR #131
 contains code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build
