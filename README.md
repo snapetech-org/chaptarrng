@@ -120,13 +120,12 @@ original-track fallback, and move/copy source handling. Its clean head passed
 hosted platform and database checks. The current retirement candidate also
 passes a tool-enabled synthetic two-track importer smoke through the real
 converter: it checks track order, chapters, metadata, database registration,
-Move-mode cleanup, and Copy-mode source retention. The same real-tool test now
-also verifies that when a source track cannot be probed, the optional merge
-falls back to importing both original tracks separately in Move and Copy modes.
-That failure is caught during source probing, before `m4b-tool` runs; tool
-process failure recovery remains open. Representative-media acceptance remains
-open, and neither source change is in public `.977`. Full feature parity and
-several package-channel upgrades remain unverified.
+Move-mode cleanup, and Copy-mode source retention. The six-case real-tool test
+also verifies fallback to separate original-track imports in both modes when a
+source cannot be probed, and when `m4b-tool` fails after a controlled FFmpeg
+conversion error. Representative-media acceptance remains open, and neither
+source change is in public `.977`. Full feature parity and several
+package-channel upgrades remain unverified.
 
 The current retirement work branch also ports BookshelfNG's native Hardcover
 metadata client and maps a saved `HardcoverAuth` setting to

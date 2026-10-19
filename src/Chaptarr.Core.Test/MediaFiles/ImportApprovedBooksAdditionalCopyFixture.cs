@@ -4914,15 +4914,18 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
-        [TestCase(ImportMode.Move, false, false)]
-        [TestCase(ImportMode.Copy, true, false)]
-        [TestCase(ImportMode.Move, false, true)]
-        [TestCase(ImportMode.Copy, true, true)]
+        [TestCase(ImportMode.Move, false, false, false)]
+        [TestCase(ImportMode.Copy, true, false, false)]
+        [TestCase(ImportMode.Move, false, true, false)]
+        [TestCase(ImportMode.Copy, true, true, false)]
+        [TestCase(ImportMode.Move, false, false, true)]
+        [TestCase(ImportMode.Copy, true, false, true)]
         [NonParallelizable]
         public void real_m4b_tool_should_merge_and_import_legacy_multipart_audiobook_when_installed(
             ImportMode importMode,
             bool shouldKeepSourceTracks,
-            bool shouldFallBackWhenPartCannotBeProbed)
+            bool shouldFallBackWhenPartCannotBeProbed,
+            bool shouldFallBackWhenM4bToolFails)
         {
             var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"bookshelf-m4b-real-import-{Guid.NewGuid():N}");
             var sourceDir = Path.Combine(tempDir, "incoming");
@@ -4930,12 +4933,43 @@ namespace Chaptarr.Core.Test.MediaFiles
             var destinationPath = Path.Combine(destinationDir, "Black Sheep.m4b");
             var originalMerge = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.MergeEnvironmentVariable);
             var originalFfmpeg = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable);
+            string ffmpegWrapperInvocationPath = null;
             Directory.CreateDirectory(sourceDir);
             Directory.CreateDirectory(destinationDir);
 
             try
             {
-                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable, null);
+                if (shouldFallBackWhenM4bToolFails && OperatingSystem.IsWindows())
+                {
+                    Assert.Ignore("The real-tool failure injection requires a Unix ffmpeg wrapper.");
+                }
+
+                if (shouldFallBackWhenM4bToolFails)
+                {
+                    var ffmpegWrapperDirectory = Path.Combine(tempDir, "ffmpeg-wrapper");
+                    Directory.CreateDirectory(ffmpegWrapperDirectory);
+                    var ffmpegWrapperPath = Path.Combine(ffmpegWrapperDirectory, "ffmpeg");
+                    ffmpegWrapperInvocationPath = Path.Combine(ffmpegWrapperDirectory, "invoked");
+                    File.WriteAllText(ffmpegWrapperPath,
+                        "#!/bin/sh\n" +
+                        "if [ \"$1\" = \"-version\" ]; then\n" +
+                        "  printf '%s\\n' 'ffmpeg test wrapper'\n" +
+                        "  exit 0\n" +
+                        "fi\n" +
+                        "printf '%s\\n' invoked > \"$(dirname \"$0\")/invoked\"\n" +
+                        "printf '%s\\n' 'simulated ffmpeg conversion failure' >&2\n" +
+                        "exit 1\n");
+                    File.SetUnixFileMode(ffmpegWrapperPath,
+                        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                        UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                        UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+                    Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable, ffmpegWrapperPath);
+                }
+                else
+                {
+                    Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable, null);
+                }
+
                 var diskProvider = CreateDiskProviderProxy();
                 var configService = CreateConfigService();
                 var externalTools = new ExternalToolsService(
@@ -5046,13 +5080,18 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Assert.That(results.Select(result => result.Errors), Has.All.Empty);
                 Assert.That(results.Select(result => result.Result), Has.All.EqualTo(ImportResultType.Imported));
 
-                if (shouldFallBackWhenPartCannotBeProbed)
+                if (shouldFallBackWhenPartCannotBeProbed || shouldFallBackWhenM4bToolFails)
                 {
                     Assert.That(results, Has.Count.EqualTo(2));
                     Assert.That(File.Exists(destinationPath), Is.False, "a failed optional merge should import the original tracks unmerged");
                     Assert.That(mediaFileService.FilesByBook, Has.Count.EqualTo(2));
                     Assert.That(File.Exists(Path.Combine(destinationDir, Path.GetFileName(partOne))), Is.True);
                     Assert.That(File.Exists(Path.Combine(destinationDir, Path.GetFileName(partTwo))), Is.True);
+                    if (shouldFallBackWhenM4bToolFails)
+                    {
+                        Assert.That(File.Exists(ffmpegWrapperInvocationPath), Is.True,
+                            "m4b-tool should invoke the configured FFmpeg wrapper before the importer falls back");
+                    }
                 }
                 else
                 {
