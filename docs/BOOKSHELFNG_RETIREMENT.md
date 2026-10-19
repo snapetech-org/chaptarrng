@@ -27,6 +27,13 @@ conversion and rollback, parity decisions, provider and SeerrNG acceptance,
 real media/M4B acceptance, installed rollback, installer/channel handoff, and
 operator sign-off remain open. No release or bridge was published.
 
+The diagnostics handoff now has startup-path fixtures for default-off behavior,
+legacy opt-in only with the archived `Bookshelf.Diagnostics.dll` marker,
+explicit ChaptarrNG enable/disable precedence, and a missing replacement module.
+Existing reporter fixtures cover the aggregate event payload and legacy
+endpoint/token fallback. These tests verify source-level selection; installed
+package environment transfer remains open.
+
 **Prior PR #131 application-code validation (2026-10-19):** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. The Linux artifact also passed the earlier empty-library API and authorization smoke. The populated source-build check on later code is recorded below.
 
 
@@ -391,7 +398,8 @@ and follow the
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |
 | Chocolatey | The `.977` package built and the hosted BookshelfNG-to-ChaptarrNG upgrade smoke passed, but Chocolatey returned HTTP 403 on publish; the live feed has no `chaptarrng` entry. | BookshelfNG `0.4.21.70` remains public. Its identity was not submitted because the bridge is disabled. |
 | Unraid | The ChaptarrNG template is maintained separately. | The legacy-template handoff is in [BookshelfNG Unraid PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5); its XML and settings-preservation check passed, but the Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
-| Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, Flatpak, AppImage, Helm, standalone installers, third-party catalogs, pinned/offline installs, and manually managed services do not all have a tested identity-preserving bridge. |
+| Helm | A same-name compatibility chart is under review in PR #131. It requires explicit migration approval, source provider mode, and an immutable image digest. Local lint and resource-identity checks pass. | The chart keeps the existing release, StatefulSet, Service, selectors, port, `/config` mount, and PVC name. No chart is published, the legacy OCI chart is unchanged, and no installed PVC upgrade or rollback has been tested. Existing installs will need a chart-source change after the gates close. |
+| Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, Flatpak, AppImage, standalone installers, third-party catalogs, pinned/offline installs, and manually managed services do not all have a tested identity-preserving bridge. |
 
 The compatibility package and image publishers are implemented behind the
 `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` gate, which is `false`. The

@@ -41,6 +41,13 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+Helm has a source-only, fail-closed handoff chart at
+[`charts/bookshelfng`](charts/bookshelfng/README.md). It keeps the existing
+release, StatefulSet, Service, selector, PVC, and `/config` identities, but no
+chart or migration image has been published for cutover. Existing Helm users
+will need to change chart source after the retirement gates close; the legacy
+BookshelfNG OCI chart has not been redirected.
+
 The unpublished migration candidate includes BookshelfNG's Hardcover
 public-list and reading-status provider, plus compatibility ports for its
 OAuth-backed Goodreads bookshelf and owned-book lists and shelf/owned-book

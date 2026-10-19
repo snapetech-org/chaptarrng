@@ -1,6 +1,6 @@
 # Native package channels
 
-Status checked 2026-10-18. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
+Status checked 2026-10-19. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 is the latest published release. GitHub Release archives are the payload for
 native packages; the standard ChaptarrNG container is built separately from
 the same application source and migration code. Package recipes add service
@@ -24,6 +24,7 @@ For current BookshelfNG migration and legacy-channel acceptance status, see
 | Fedora COPR | `slskdn/chaptarrng` | `slskdn/bookshelfng` | `/var/lib/bookshelfng` |
 | Chocolatey | `chaptarrng` | `bookshelfng` | `%ProgramData%\BookshelfNG\data` |
 | Docker | `ghcr.io/snapetech-org/chaptarrng` | Legacy image aliases | Existing `/config` mount |
+| Helm | ChaptarrNG `charts/bookshelfng` (source candidate; unpublished) | `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` | Same Helm release, namespace, `/config` PVC, and volume name |
 
 Legacy package recipes keep the old package identity, service name, and data
 path so a package upgrade can start the normal ChaptarrNG database migration.
@@ -38,6 +39,7 @@ upgraded safely.
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
 | Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode. | Validate all three manifests and old-alias digest routing on exact-head CI before enabling the bridge |
+| Helm | A same-name chart candidate keeps existing resource and PVC identities and requires explicit approval, provider mode, and image digest. Local render checks pass. | The BookshelfNG OCI chart remains unchanged; no ChaptarrNG chart is published. | Test a real PVC/GitOps upgrade and rollback, then publish only after retirement gates close; current users need a chart-source change |
 
 Core release validation passed on Linux, macOS, Windows, and PostgreSQL. The
 Windows Chocolatey build and package-transition smoke also passed: it
