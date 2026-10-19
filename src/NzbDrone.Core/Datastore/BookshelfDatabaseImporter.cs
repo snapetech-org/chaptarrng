@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Microsoft.Data.Sqlite;
 using Npgsql;
 using NpgsqlTypes;
@@ -57,6 +58,11 @@ namespace NzbDrone.Core.Datastore
             "MetadataProfiles", "NamingConfig", "NotificationStatus", "Notifications", "PendingReleases",
             "QualityDefinitions", "QualityProfiles", "ReleaseProfiles", "RemotePathMappings", "RootFolders",
             "ScheduledTasks", "Series", "SeriesBookLink", "Tags", "Users", "VersionInfo"
+        };
+
+        private static readonly HashSet<string> GoodreadsShelfRuntimeSettings = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "signIn", "signingUrl", "oauthUrl", "oauthRequestTokenUrl", "oauthAccessTokenUrl"
         };
 
         private static readonly HashSet<string> HistoricalSourceTableAliases = new(StringComparer.Ordinal)
@@ -1262,16 +1268,8 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in rows)
             {
-                var implementation = GetString(row, "Implementation") ?? "(missing implementation)";
-                var configContract = GetString(row, "ConfigContract") ?? "";
                 var values = Intersect(row, targetColumns);
-
-                if (!CompatibleIndexerContracts.TryGetValue(implementation, out var expectedContract) ||
-                    !string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase))
-                {
-                    SetIfPresent(values, "ConfigContract", "");
-                    unsupported.Add($"row {GetInt(row, "Id")}: {implementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}");
-                }
+                CheckProviderSettingsCompatibility(row, values, CompatibleIndexerContracts, unsupported);
 
                 // These are implementation capabilities, not user preferences. The runtime
                 // provider factory recalculates them from the installed Chaptarr provider.
@@ -1280,10 +1278,10 @@ namespace NzbDrone.Core.Datastore
                 InsertRow(target, transaction, "Indexers", targetColumns, values);
             }
 
-            var mapping = "known BookshelfNG indexer settings contracts are retained; provider capability flags are recalculated by Chaptarr";
+            var mapping = "matching BookshelfNG indexer implementations, contracts, and settings fields are retained; provider capability flags are recalculated by Chaptarr";
             if (unsupported.Count > 0)
             {
-                mapping += "; unsupported implementation/configuration pairs are disabled in the staged copy and block apply: " +
+                mapping += "; unsupported implementation/configuration/settings are disabled in the staged copy and block apply: " +
                            string.Join(", ", unsupported);
                 foreach (var provider in unsupported)
                 {
@@ -1340,14 +1338,175 @@ namespace NzbDrone.Core.Datastore
         {
             var implementation = GetString(sourceRow, "Implementation") ?? "(missing implementation)";
             var configContract = GetString(sourceRow, "ConfigContract") ?? "";
-            if (compatibleContracts.TryGetValue(implementation, out var expectedContract) &&
-                string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase))
+            var hasCompatibleImplementation = compatibleContracts.TryGetValue(implementation, out var expectedContract) &&
+                string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase);
+            var unsupportedSettings = hasCompatibleImplementation
+                ? FindUnsupportedSettingsFields(GetString(sourceRow, "Settings"), expectedContract)
+                : Array.Empty<string>();
+
+            if (hasCompatibleImplementation && unsupportedSettings.Length == 0)
             {
                 return;
             }
 
             SetIfPresent(targetRow, "ConfigContract", "");
-            unsupported.Add($"row {GetInt(sourceRow, "Id")}: {implementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}");
+            var settingsDisposition = unsupportedSettings.Length == 0
+                ? ""
+                : " (unsupported settings fields: " + string.Join(", ", unsupportedSettings) + ")";
+            unsupported.Add($"row {GetInt(sourceRow, "Id")}: {implementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}{settingsDisposition}");
+        }
+
+        private static string[] FindUnsupportedSettingsFields(string settingsJson, string configContract)
+        {
+            if (settingsJson.IsNullOrWhiteSpace())
+            {
+                return Array.Empty<string>();
+            }
+
+            var settingsTypes = typeof(BookshelfDatabaseImporter).Assembly.GetTypes()
+                .Where(type => type.Name.Equals(configContract, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (settingsTypes.Length != 1)
+            {
+                return new[] { "(unresolved settings contract)" };
+            }
+
+            JObject settings;
+            try
+            {
+                settings = JObject.Parse(settingsJson);
+            }
+            catch (JsonException)
+            {
+                return new[] { "(invalid settings JSON)" };
+            }
+
+            var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            FindUnsupportedSettingsFields(settings, settingsTypes[0], implementation, "", unsupported);
+            return unsupported.ToArray();
+        }
+
+        private static void FindUnsupportedSettingsFields(
+            JObject settings,
+            Type settingsType,
+            string implementation,
+            string path,
+            ISet<string> unsupported)
+        {
+            var properties = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
+            var acceptsExtensionData = false;
+            foreach (var property in settingsType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (property.GetCustomAttribute<JsonIgnoreAttribute>() != null ||
+                    property.GetCustomAttribute<System.Text.Json.Serialization.JsonIgnoreAttribute>() != null)
+                {
+                    continue;
+                }
+
+                if (property.GetCustomAttribute<JsonExtensionDataAttribute>() != null ||
+                    property.GetCustomAttribute<System.Text.Json.Serialization.JsonExtensionDataAttribute>() != null)
+                {
+                    acceptsExtensionData = true;
+                    continue;
+                }
+
+                properties[property.Name] = property;
+                var jsonName = property.GetCustomAttribute<JsonPropertyAttribute>()?.PropertyName ??
+                    property.GetCustomAttribute<System.Text.Json.Serialization.JsonPropertyNameAttribute>()?.Name;
+                if (!string.IsNullOrWhiteSpace(jsonName))
+                {
+                    properties[jsonName] = property;
+                }
+            }
+
+            foreach (var setting in settings.Properties())
+            {
+                var settingPath = string.IsNullOrWhiteSpace(path) ? setting.Name : path + "." + setting.Name;
+                if (string.IsNullOrWhiteSpace(path) &&
+                    implementation.Equals("GoodreadsBookshelf", StringComparison.OrdinalIgnoreCase) &&
+                    GoodreadsShelfRuntimeSettings.Contains(setting.Name))
+                {
+                    // BookshelfNG serializes these getter-only OAuth endpoints and the sign-in
+                    // command as part of its legacy settings shape. They are fixed runtime
+                    // metadata, not user configuration.
+                    continue;
+                }
+
+                if (!properties.TryGetValue(setting.Name, out var property))
+                {
+                    if (!acceptsExtensionData && IsMeaningfulSettingValue(setting.Value))
+                    {
+                        unsupported.Add(settingPath);
+                    }
+
+                    continue;
+                }
+
+                var nestedType = GetNestedSettingsType(property.PropertyType);
+                if (nestedType == null)
+                {
+                    continue;
+                }
+
+                if (setting.Value is JObject nestedSettings)
+                {
+                    FindUnsupportedSettingsFields(nestedSettings, nestedType, implementation, settingPath, unsupported);
+                }
+                else if (setting.Value is JArray nestedArray)
+                {
+                    for (var index = 0; index < nestedArray.Count; index++)
+                    {
+                        if (nestedArray[index] is JObject nestedItem)
+                        {
+                            FindUnsupportedSettingsFields(nestedItem, nestedType, implementation, settingPath + "[" + index + "]", unsupported);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static bool IsMeaningfulSettingValue(JToken value)
+        {
+            return value.Type != JTokenType.Null &&
+                !(value.Type == JTokenType.String && string.IsNullOrWhiteSpace(value.Value<string>()));
+        }
+
+        private static Type GetNestedSettingsType(Type propertyType)
+        {
+            if (propertyType == null)
+            {
+                return null;
+            }
+
+            var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+            if (type == typeof(string) || type == typeof(object) || typeof(JToken).IsAssignableFrom(type) ||
+                typeof(System.Collections.IDictionary).IsAssignableFrom(type) || type.IsPrimitive || type.IsEnum ||
+                type == typeof(decimal) || type == typeof(DateTime) || type == typeof(DateTimeOffset) || type == typeof(Guid))
+            {
+                return null;
+            }
+
+            if (type.IsArray)
+            {
+                return GetNestedSettingsType(type.GetElementType());
+            }
+
+            if (type.IsGenericType)
+            {
+                var genericType = type.GetGenericTypeDefinition();
+                if (genericType == typeof(IDictionary<,>) || genericType == typeof(IReadOnlyDictionary<,>))
+                {
+                    return null;
+                }
+
+                var elementType = type.GetGenericArguments().LastOrDefault();
+                if (elementType != null && typeof(System.Collections.IEnumerable).IsAssignableFrom(type))
+                {
+                    return GetNestedSettingsType(elementType);
+                }
+            }
+
+            return type.IsClass ? type : null;
         }
 
         private static string AddUnsupportedProviderDisposition(

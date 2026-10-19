@@ -113,6 +113,8 @@ namespace Chaptarr.Core.Test.Datastore
                 command.CommandText = @"
                     INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
                     VALUES (123, 'Plugin fixture', 'FixturePluginIndexer', '{}', 'FixturePluginSettings', 1, 1, 1, 25, '[]', 0);
+                    INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
+                    VALUES (130, 'Legacy Torznab fixture', 'Torznab', '{""baseUrl"":""https://indexer.example"",""apiKey"":""fixture-indexer-key"",""legacyIndexerSecret"":""fixture-indexer-secret""}', 'TorznabSettings', 1, 1, 1, 25, '[]', 0);
                     INSERT INTO DownloadClients (Id, Enable, Name, Implementation, Settings, ConfigContract)
                     VALUES (124, 1, 'Plugin download fixture', 'FixturePluginDownload', '{}', 'FixturePluginDownloadSettings');
                     INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
@@ -122,7 +124,11 @@ namespace Chaptarr.Core.Test.Datastore
                     INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
                     VALUES (127, 'Legacy Goodreads owned list', 'GoodreadsOwnedBooks', '{}', 'GoodreadsOwnedBooksImportListSettings', 0, '/library', 0, 1, 1, '[]');
                     INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
-                    VALUES (128, 'Legacy Goodreads bookshelf notification', 1, '{}', 'GoodreadsBookshelf', 'GoodreadsBookshelfNotificationSettings', 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);";
+                    VALUES (128, 'Legacy Goodreads bookshelf notification', 1, '{}', 'GoodreadsBookshelf', 'GoodreadsBookshelfNotificationSettings', 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (129, 'Legacy Goodreads shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""to-read""],""accessToken"":""fixture-goodreads-access-secret"",""accessTokenSecret"":""fixture-goodreads-secret"",""requestTokenSecret"":""fixture-request-secret"",""userName"":""fixture-user"",""signIn"":""startOAuth"",""signingUrl"":""https://auth.servarr.com/v1/goodreads/sign"",""oauthUrl"":""https://www.goodreads.com/oauth/authorize"",""oauthRequestTokenUrl"":""https://www.goodreads.com/oauth/request_token"",""oauthAccessTokenUrl"":""https://www.goodreads.com/oauth/access_token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (131, 'Legacy public Goodreads shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""to-read""],""accessToken"":"""",""accessTokenSecret"":"""",""requestTokenSecret"":"""",""userName"":"""",""signIn"":""startOAuth"",""signingUrl"":""https://auth.servarr.com/v1/goodreads/sign"",""oauthUrl"":""https://www.goodreads.com/oauth/authorize"",""oauthRequestTokenUrl"":""https://www.goodreads.com/oauth/request_token"",""oauthAccessTokenUrl"":""https://www.goodreads.com/oauth/access_token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');";
                 command.ExecuteNonQuery();
             }
 
@@ -136,14 +142,26 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(5));
+                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(7));
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginIndexer/FixturePluginSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("Torznab/TorznabSettings", StringComparison.Ordinal) &&
+                    issue.Contains("legacyIndexerSecret", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-indexer-secret", StringComparison.Ordinal)), Is.False,
+                    "provider settings and credentials must not be included in the report");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginDownload/FixturePluginDownloadSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("HardcoverImport/HardcoverImportSettings", StringComparison.Ordinal)), Is.False,
                     "the migrated Hardcover public-list provider is available in Chaptarr");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsOwnedBooks/GoodreadsOwnedBooksNotificationSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsBookshelf/GoodreadsBookshelfNotificationSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsOwnedBooks/GoodreadsOwnedBooksImportListSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("GoodreadsBookshelf/GoodreadsBookshelfImportListSettings", StringComparison.Ordinal) &&
+                    issue.Contains("accessToken", StringComparison.OrdinalIgnoreCase)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("row 131:", StringComparison.Ordinal)), Is.False,
+                    "empty OAuth fields and fixed Goodreads runtime settings do not block public-shelf migration");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-goodreads-access-secret", StringComparison.Ordinal)), Is.False,
+                    "provider settings and credentials must not be included in the report");
                 Assert.That(preview.ImportReport.Tables["DownloadClients"].TargetMapping, Does.Contain("block apply"));
                 Assert.That(preview.ImportReport.Tables["ImportLists"].TargetMapping, Does.Contain("block apply"));
                 Assert.That(preview.ImportReport.Tables["Notifications"].TargetMapping, Does.Contain("block apply"));

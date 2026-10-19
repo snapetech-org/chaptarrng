@@ -157,15 +157,21 @@ migration does not treat BookLore as BookOrbit. The candidate adds BookOrbit as
 a separate Book Dock destination. Configure and test that separate connection
 in **Settings > Connect** after an approved migration.
 
-Two Goodreads provider families cannot be carried over as working features:
-Goodreads owned-book import lists and the Goodreads bookshelf/owned-book write
-notifications depend on Goodreads OAuth API operations. Goodreads announced
-that it would stop issuing developer keys and retire those API tools, so
-ChaptarrNG does not silently enable these integrations. If a source database
-contains them, preview reports the provider row ID, implementation, and
-settings contract, then blocks apply. Replace or remove each affected provider
-in BookshelfNG and preview again; keep the original appdata backup. The report
-does not print provider credentials or settings. See Goodreads'
+Provider configuration is preserved only when the implementation, contract,
+and every populated saved settings field match the target provider. In
+particular, legacy `GoodreadsBookshelf` import lists use OAuth settings while
+ChaptarrNG's same-named provider reads public shelves without those OAuth
+credentialed rows are disabled in the staged copy and reported as blockers;
+reconfigure them for public shelves after migration or remove them in
+BookshelfNG before previewing again.
+
+Goodreads owned-book import lists and Goodreads bookshelf/owned-book write
+notifications also depend on Goodreads OAuth API operations. Goodreads
+announced that it would stop issuing developer keys and retire those API
+tools, so ChaptarrNG does not silently enable them. Preview reports each
+affected row and unsupported field names, never the saved values or
+credentials, then blocks apply. Reconfigure or remove each affected provider
+in BookshelfNG and preview again; keep the original appdata backup. See Goodreads'
 [API deprecation notice](https://www.goodreads.com/topic/show/21788520-api-deprecation).
 
 Unknown or plugin download clients, import lists, notifications, and indexers

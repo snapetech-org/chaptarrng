@@ -442,13 +442,15 @@ remains an additional blocker, so this feature list does not waive review of
 fixes, migrations, build changes, or deletions.
 
 The BookshelfNG retirement candidate now includes the legacy Hardcover
-public-list and reading-status import provider. Goodreads public bookshelf
-import remains available through ChaptarrNG's current provider, but the
-Goodreads owned-book import list and Goodreads bookshelf/owned-book write
-notifications are not equivalent and are not carried forward. Because those
-features depend on Goodreads OAuth API operations that Goodreads announced it
-would retire, migration preview reports the affected row and blocks apply
-until an operator reconfigures or removes it. See the
+public-list and reading-status import provider. Provider settings are retained
+only when the implementation, contract, and populated saved fields match. Legacy
+Goodreads bookshelf import rows contain OAuth settings that ChaptarrNG's public
+shelf provider does not support; the Goodreads owned-book import list and
+Goodreads bookshelf/owned-book write notifications are also not equivalent and
+are not carried forward. Because those features depend on Goodreads OAuth API
+operations that Goodreads announced it would retire, migration preview reports
+the affected row and field names and blocks apply without exposing values until
+an operator reconfigures or removes it. See the
 [migration provider notes](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers).
 
 | Capability or change | Current ChaptarrNG scope | Evidence required before upstream retirement |

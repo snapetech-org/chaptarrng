@@ -15,11 +15,13 @@ detailed feature inventory remains in the
 
 ### Provider configuration blockers
 
-The migration candidate now preserves provider settings only when a matching
-ChaptarrNG implementation and settings contract exist. It includes the legacy
-Hardcover public-list and reading-status provider. Goodreads owned-book import
-lists and Goodreads bookshelf/owned-book write notifications are not available
-in ChaptarrNG; the retired API dependency is documented in the
+The migration candidate preserves provider settings only when a matching
+ChaptarrNG implementation, settings contract, and populated saved fields exist. It
+includes the legacy Hardcover public-list and reading-status provider. Legacy
+Goodreads bookshelf rows carry OAuth fields that the current public-shelf
+provider does not support; Goodreads owned-book import lists and
+bookshelf/owned-book write notifications are also unavailable. The legacy API
+dependency is documented in the
 [migration guide](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers).
 Preview identifies unsupported rows without printing credentials and blocks
 apply before promotion. Plugin or otherwise unsupported providers follow the

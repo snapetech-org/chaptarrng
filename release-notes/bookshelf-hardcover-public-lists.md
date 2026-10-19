@@ -1,6 +1,9 @@
 ---
-type: Fixed
-category: Migration
+category: added
+audience: operators
+area: migration
+action: none
+breaking: false
 ---
 
-ChaptarrNG now includes BookshelfNG's Hardcover public-list and reading-status import provider. Migration can preserve its API token, list owner, selected lists, and import settings when the provider contract matches. Goodreads owned-book lists and Goodreads write notifications remain unsupported; migration preview reports those configurations and blocks apply until they are reconfigured or removed.
+ChaptarrNG adds BookshelfNG's Hardcover public-list and reading-status import provider. Migration preserves settings only when implementation, contract, and fields match. Legacy Goodreads OAuth bookshelf rows and unsupported Goodreads lists or notifications block apply for reconfiguration or removal.

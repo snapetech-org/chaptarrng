@@ -7,13 +7,14 @@ maintainer evidence, not approval to cut over operator data.
 **Current PR #131 validation, 2026-10-19:** Draft code head 50e4cc14cf9cf87bbfeebbbb114cadbbeab6b5a3 merges current ChaptarrNG main at 95f112e7 and includes the stable master image alias. Exact-head Build [39219378504](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378504) passed: Linux 4,412/0 failed, macOS 4,407/0, Windows 4,373/0, PostgreSQL migration fixtures 53/0, and all four validation receipts reconciled. CodeQL [39219375419](https://github.com/snapetech-org/chaptarrng/actions/runs/39219375419), security [39219378250](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378250), NuGet [39219376642](https://github.com/snapetech-org/chaptarrng/actions/runs/39219376642), and dependency review [39219378382](https://github.com/snapetech-org/chaptarrng/actions/runs/39219378382) passed. This validates source code only; release, data, parity, installed rollback, and channel acceptance remain open.
 ## Candidate and fixture
 
-The migration fixture also exercises provider-contract disposition. A matching
-Hardcover public-list provider is accepted; unsupported plugin indexer and
-download-client rows, the Goodreads owned-book import list, and the Goodreads
-bookshelf/owned-book notification providers are reported as blockers. Preview
-leaves the source bytes unchanged, and apply refuses the staged conversion
-before promotion. The report contains row IDs and implementation/contract
-names, not settings or credentials.
+The migration fixture also exercises provider settings disposition. A matching
+Hardcover public-list provider is accepted; a Torznab row with an unknown
+settings field, unsupported plugin providers, legacy Goodreads OAuth bookshelf
+settings, owned-book import lists, and Goodreads bookshelf/owned-book
+notifications are reported as blockers. Preview leaves source bytes
+unchanged, and apply refuses the staged conversion before promotion. Reports
+contain row IDs, implementation/contract names, and unsupported field names,
+never saved values or credentials.
 
 - ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131). The populated rehearsal below is one fixture run; it does not stand in for representative-data acceptance.
 - Earlier integrated code snapshot `8b4c6e23` passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-receipt checks in Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341). CodeQL, dependency review, security scan, and NuGet submission also passed. Those hosted checks do not rerun the private populated-data rehearsal or expand its scope.

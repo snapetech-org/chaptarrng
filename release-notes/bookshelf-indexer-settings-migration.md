@@ -5,4 +5,4 @@ area: migration
 action: none
 breaking: false
 ---
-Matching BookshelfNG provider contracts now retain their settings, including legacy MyAnonAMouse filters and Hardcover public lists/statuses. Unknown clients, indexers, import lists, or notifications block apply with a preview issue. Goodreads owned-book imports and write notifications require manual reconfiguration or removal.
+Matching BookshelfNG provider contracts and settings fields are retained, including MyAnonAMouse filters and Hardcover lists/statuses. Unknown fields and providers block apply with a preview issue. Legacy Goodreads OAuth bookshelf rows, owned-book imports, and write notifications require reconfiguration or removal.
