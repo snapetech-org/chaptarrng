@@ -822,12 +822,10 @@ namespace NzbDrone.Core.Datastore
             {
                 var values = Intersect(row, targetColumns);
                 var sourceConsumer = GetString(row, "Consumer") ?? "(missing consumer)";
-                var mappedConsumer = MetadataContracts.Keys.FirstOrDefault(consumer =>
-                    consumer.Equals(sourceConsumer, StringComparison.OrdinalIgnoreCase));
-                if (mappedConsumer == null && MetadataFileConsumerAliases.TryGetValue(sourceConsumer, out var alias))
-                {
-                    mappedConsumer = alias;
-                }
+                var mappedConsumer = MetadataFileConsumerAliases.TryGetValue(sourceConsumer, out var alias)
+                    ? alias
+                    : MetadataContracts.Keys.FirstOrDefault(consumer =>
+                        consumer.Equals(sourceConsumer, StringComparison.OrdinalIgnoreCase));
 
                 if (mappedConsumer == null)
                 {
