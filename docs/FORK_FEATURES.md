@@ -29,27 +29,28 @@ The public `.977` converter supports migration-158 SQLite, but maps bare
 numeric IDs to Goodreads even when the source used native Hardcover mode.
 Do not apply `.977` to native Hardcover data; its preview cannot detect that
 identity error. The unpublished PR #131 candidate requires explicit provider
-mode. On 2026-10-19, build `0.9.978.0` passed populated-data preview, apply,
-restore preview, and rollback on a disposable migration-158 SQLite copy with
-`HARDCOVER=true` and network access disabled. It restored a byte-identical
-schema-158 backup and preserved the schema-121 converted database; integrity
-and foreign-key checks passed, and the original snapshot remained unchanged.
-Missing-edition files and cross-book history references found in that data
-are now preserved conservatively and covered by regression tests. Focused
-importer, edition-catalog, and capability tests pass 52/52 locally.
-Implementation commit `f5f57644` passed exact-head checks in
-[run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072),
-and the later docs-only PR head `12a089a3` passed in
-[run 39192164390](https://github.com/snapetech-org/chaptarrng/actions/runs/39192164390).
-Disposable-fork validation was skipped by its gate. Ambiguous media review,
-older real schemas, PostgreSQL operator data, full feature parity, and
-installation-channel acceptance remain open.
+mode. On 2026-10-19, candidate build 0.9.978.0 passed preview, apply, restore
+preview, and rollback on a disposable copy of populated migration-158 SQLite
+data with HARDCOVER=true and network access disabled. Rollback restored a
+byte-identical schema-158 backup while preserving the converted schema-121
+database; integrity and foreign-key checks passed, and the original snapshot
+was unchanged. Missing-edition files and cross-book history references are
+preserved conservatively and covered by regression tests. Focused importer,
+edition-catalog, and capability tests pass 52/52 locally. Exact-head run
+[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
+passed on PR #131 head 2c0401fc: Linux, macOS, and Windows build/tests,
+PostgreSQL fixtures, release-note validation, CodeQL, dependency and secret
+checks, NuGet submission, and runner-receipt reconciliation. Disposable-fork
+validation was skipped by its gate. Ambiguous media review, older real
+schemas, PostgreSQL operator data, full feature parity, and installation-
+channel acceptance remain open.
 
-The previous exact-head run
-[39182438062](https://github.com/snapetech-org/chaptarrng/actions/runs/39182438062)
-passed on PR #131 head `bdd7518`; these follow-up code and documentation
-changes still need an exact-head hosted run. The final ChaptarrNG version
-remains source-only, and the PR remains draft. See the detailed
+The prior exact-head run
+[39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843)
+passed every listed check except four Windows media-move fixtures that used
+POSIX-only paths. Head 2c0401fc replaces them with native temporary paths and
+passes the exact-head rerun. The final ChaptarrNG version remains source-only,
+and PR #131 remains draft. See the detailed
 [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md),
 [operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md),
 [retirement status page](BOOKSHELFNG_RETIREMENT.md), and
@@ -558,7 +559,13 @@ upstream release must pass behavioral, data, security, and packaging checks.
 
 | Combined capability family | ChaptarrNG features to retain | BookshelfNG contribution to the consolidated product | Upstream Chaptarr retirement gate |
 | --- | --- | --- | --- |
-| SeerrNG API and request lifecycle | Capability discovery; format/provider identity; format-scoped routes; paged library scans; pending-import status/retry/cancel; restricted SeerrNG key; candidate edition-catalog route and `editionCatalog` capability for narrator-aware cards; scoped lookup media-type fix in Chaptarr upstream PR #114 | Readarr-compatible format routes, edition catalog and format-specific availability, plus existing client settings and identities | The candidate now matches BookshelfNG's new edition-catalog route, resource fields, and capability advertisement; local controller/capability tests pass. It remains unpublished. Release the stable contract only after exact-head hosted validation, then run unchanged SeerrNG edition-card, request, polling, availability, pending-work, and authorization probes. The upstream scoped-lookup PR #114 is a separate open item; its pending-import engine alone is not the contract. |
+| SeerrNG API and request lifecycle | Capability discovery; format/provider identity; format-scoped routes; paged library scans; pending-import status/retry/cancel; restricted SeerrNG key; candidate edition-catalog route and `editionCatalog` capability for narrator-aware cards; scoped lookup media-type fix in Chaptarr upstream PR #114 | Readarr-compatible format routes, edition catalog and format-specific availability, plus existing client settings and identities | The candidate matches BookshelfNG's edition-catalog route, resource fields,
+and capability advertisement; focused controller and capability tests pass.
+Exact-head hosted validation passed in run
+[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
+It remains unpublished. Run unchanged SeerrNG edition-card, request, polling,
+availability, pending-work, and authorization probes before accepting the
+client contract. The upstream scoped-lookup PR #114 is a separate open item; its pending-import engine alone is not the contract. |
 | Metadata providers and identity | Chaptarr's resolver, V5 pipeline, and provider-specific identities; RanobeDB light-novel provider and Audible marketplace selection; work-branch native Hardcover proxy and `HardcoverAuth` setting translation | Native Hardcover client and controls; selectable supplemental catalogs; per-field source choices; Goodreads/Readarr continuity and qualified IDs | The native provider routes Hardcover work, author, and edition IDs and maps saved `HardcoverAuth` to `HardcoverApiToken`. Bare numeric source IDs follow the active BookshelfNG mode (`HARDCOVER=true` selects Hardcover unless `HARDCOVER_NATIVE=false`; otherwise they remain Goodreads). Hosted candidate checks passed, including provider-mode and identity checks; representative converted-data acceptance remains open. See the [retirement status](BOOKSHELFNG_RETIREMENT.md). Preserve provider choice, credentials, caches, rate-limit handling, refresh policy, and compatibility fallback. |
 | Matching, recovery, and edition preferences | Narrator/publisher-aware matching; metadata-profile filters, weighted edition terms, preferred series, and language-change refresh; alternate-edition fallback, manual-match provenance, and import recovery | Cross-catalog unmapped recovery; normalized title/identifier search; configurable thresholds; weighted edition terms; preferred series; narrator tags and evidence | Preserve candidate ranking, identity constraints, missing-data neutrality, ambiguity handling, manual review, and no-false-match/no-delete behavior with the original edge cases. |
 | Format records, profiles, and storage | ChaptarrNG's media-specific models, roots, and standalone ebook/audiobook workflows | Multiple compatible formats on a book; format-specific folders and profile overrides; previewable moves and extra-file handling | Preserve file-to-book relationships, profile fallback, paths, move previews, collisions, and sibling-format isolation; convert existing data without moving media unexpectedly. |

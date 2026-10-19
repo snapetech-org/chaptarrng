@@ -39,20 +39,22 @@
 > media review, older-schema or PostgreSQL operator-data acceptance, feature
 > parity, or installer/channel handoff.
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
-> contains this candidate. Previous exact-head run
-> [39182438062](https://github.com/snapetech-org/chaptarrng/actions/runs/39182438062)
-> passed on PR head `bdd7518`. Implementation commit `f5f57644` passed
-> exact-head checks in [run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072).
-> The later docs-only PR head `12a089a3` passed exact-head checks in
-> [run 39192164390](https://github.com/snapetech-org/chaptarrng/actions/runs/39192164390);
-> disposable-fork validation was skipped by its gate.
+> contains older SQLite and one-schema PostgreSQL migration support, native
+> Hardcover identity handling, BookOrbit Book Dock, SeerrNG edition-catalog
+> compatibility, and previewable media moves. Exact-head run
+> [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
+> passed on head 2c0401fc: Linux, macOS, and Windows build/tests, PostgreSQL
+> migration fixtures, release-note validation, CodeQL, dependency/secret
+> checks, NuGet submission, and runner-receipt reconciliation. The previous
+> run found four Windows fixtures with POSIX-only paths; native temporary
+> paths fixed them. Disposable-fork validation was skipped by its gate.
 > Focused importer, edition-catalog, and capability tests pass 52/52 locally.
-> See the
+> The populated SQLite rehearsal and synthetic provider-mode, startup, and
+> rollback evidence are in the
 > [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 > PostgreSQL source conversion remains unsupported in published releases.
-> Pinned images,
-> native packages, and updater channels need separate upgrade steps; database
-> conversion alone does not update an installation channel.
+> Pinned images, native packages, and updater channels need separate upgrade
+> steps; database conversion alone does not update an installation channel.
 > See [BookshelfNG retirement status](BOOKSHELFNG_RETIREMENT.md) for live
 > package/channel state and the remaining acceptance gates.
 
@@ -142,10 +144,12 @@ The current ChaptarrNG work-branch candidate also maps a saved `HardcoverAuth`
 database value to `HardcoverApiToken`; a saved ChaptarrNG token takes
 precedence, and the original BookshelfNG database remains available in the
 rollback backup. That native provider and token mapping are not in published
-`v0.9.977`. PR #131 remains draft; check its current exact-head results. Representative
-converted-data acceptance remains open; see the [PostgreSQL candidate
-notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
-Do not treat this as supported migration behavior during the release freeze.
+`v0.9.977`. Exact-head run
+[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
+passed on PR #131 head 2c0401fc, including the PostgreSQL migration fixtures.
+Representative converted-data acceptance remains open; see the [PostgreSQL
+candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). Do not treat this as
+supported migration behavior during the release freeze.
 
 BookshelfNG's `BOOKSHELF_M4B_MERGE`,
 `BOOKSHELF_M4B_AAC_BITRATE_KBPS`, and `BOOKSHELF_FFMPEG_PATH` variables are

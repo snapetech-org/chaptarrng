@@ -82,26 +82,25 @@ round trip for the candidate; ambiguous format choices still need review, and
 older schemas, PostgreSQL operator data, full feature parity, and install
 channels remain open.
 
-The candidate importer now preserves files that reference a missing edition
-as unmapped and keeps conflicting history rows attached to their source book
-without an unsafe file or edition link. Focused importer, edition-catalog,
-and capability tests pass 52/52 locally. Implementation commit `f5f57644`
-passed exact-head checks in
-[run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072).
-The later docs-only PR head `12a089a3` also passed exact-head validation in
-[run 39192164390](https://github.com/snapetech-org/chaptarrng/actions/runs/39192164390),
-including Linux, macOS, Windows, PostgreSQL migration, release-note, CodeQL,
-dependency review, secret scan, NuGet, and runner-receipt checks. Disposable-
-fork validation was skipped by its gate. The candidate is not approved for
-operator cutover.
+The candidate importer preserves files that reference a missing edition as
+unmapped and keeps conflicting history rows attached to their source book
+without an unsafe file or edition link. Focused importer, edition-catalog, and
+capability tests pass 52/52 locally. Exact-head run
+[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
+passed on PR #131 head 2c0401fc: Linux, macOS, and Windows build/tests,
+PostgreSQL migration fixtures, release-note validation, CodeQL, dependency
+review, dependency/secret scans, NuGet submission, and runner-receipt
+reconciliation. Disposable-fork validation was skipped by its gate. The
+preceding run [39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843)
+found four Windows media-move fixtures using POSIX-only paths; 2c0401fc
+switches those fixtures to native temporary paths, and the exact-head rerun
+passes. This is candidate validation, not production cutover approval.
 Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
-contains the older SQLite and one-schema PostgreSQL migration candidate,
-native Hardcover identity handling, and the separate BookOrbit Book Dock
-destination. Previous exact-head run
-[39182438062](https://github.com/snapetech-org/chaptarrng/actions/runs/39182438062)
-passed on PR head `bdd7518`; the later `f5f57644` exact-head run is linked
-above. The synthetic provider-mode,
-automatic-startup, and rollback evidence is recorded in the
+contains older SQLite and one-schema PostgreSQL migration support, native
+Hardcover identity handling, BookOrbit Book Dock, SeerrNG edition-catalog
+compatibility, and previewable media moves. The copy-only populated SQLite
+rehearsal, synthetic provider-mode and startup checks, and rollback evidence
+are recorded in the
 [migration fixture report](docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 Keep the release freeze in place. See the [PostgreSQL migration candidate
 notes](docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
@@ -152,10 +151,13 @@ The same release-frozen retirement candidate adds format-aware media moves
 through `/api/v1/author/media-move`: preview and confirm a single author or a
 bulk selection, review registered sidecars and destination conflicts, then
 queue the move. Only files registered in ChaptarrNG move; untracked files and
-author-wide extras stay in place. The candidate includes a regression fixture
-for format isolation, untracked-file safety, conflicts, and stale sources;
-exact-head hosted validation is pending, and this is not part of public
-`v0.9.977`.
+author-wide extras stay in place. The candidate includes regression coverage
+for format isolation, shared-root and format-root sidecars, traversal,
+untracked-file safety, conflicts, and stale sources. Exact-head run
+[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
+passed on head 2c0401fc, including Windows tests after its native-path fixture
+fix. The feature remains unpublished and representative-library, cross-device,
+partial-failure rollback, and channel acceptance remain open.
 
 The current retirement work branch also ports BookshelfNG's native Hardcover
 metadata client and maps a saved `HardcoverAuth` setting to
@@ -168,9 +170,11 @@ Keep `HARDCOVER=true` (and do not set `HARDCOVER_NATIVE=false`) in preview and
 migration when the BookshelfNG source used native Hardcover mode. This provider
 and migration handling are source-only and are not in `.977`; the published
 `.977` importer maps bare numeric IDs to Goodreads even if `HARDCOVER=true` is
-present. PR #131 remains draft; see its current exact-head checks and keep the
-candidate unsupported for operator data until representative conversion and
-rollback acceptance are complete.
+present. Exact-head run
+[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
+passed on PR #131 head 2c0401fc, but the candidate remains unsupported for
+operator data until semantic review, representative conversion and rollback,
+feature parity, and channel acceptance are complete. PR #131 remains draft.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 

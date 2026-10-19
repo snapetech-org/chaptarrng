@@ -6,15 +6,16 @@ maintainer evidence, not approval to cut over operator data.
 
 ## Candidate and fixture
 
-- ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131),
-  commit `1a0a1cf78b404fe86d7b266facd8e843e435d9b4`.
-- Exact-head Build run:
-  [39169786430](https://github.com/snapetech-org/chaptarrng/actions/runs/39169786430).
-  Linux, macOS, and Windows builds/tests, PostgreSQL target migrations and
-  BookshelfNG converter fixtures, release-note validation, and validation
-  receipt reconciliation passed. CodeQL, dependency review, and
-  dependency/secret scan checks passed on the same head. PR #131 remains
-  draft.
+- ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131), current head 2c0401fc.
+- Exact-head Build run
+  [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
+  passed Linux, macOS, and Windows builds/tests, PostgreSQL migration fixtures,
+  release-note validation, and runner-receipt reconciliation. CodeQL,
+  dependency review, dependency/secret scans, and NuGet submission passed on
+  the same head. Four Windows media-move fixtures failed in the preceding run
+  because they used POSIX-only paths; the current fixtures use native temporary
+  paths and pass. Disposable-fork validation was skipped by its gate. PR #131
+  remains draft; these checks do not authorize operator cutover.
 - The Linux artifact reports ChaptarrNG `0.9.978.0`. Its `Chaptarr` apphost
   SHA-256 is
   `dfdaae95b9cbd6a4cfe44cfe042f7e6ef87ca60402be00fa8376dc1d9fea1194`; the
@@ -226,5 +227,7 @@ This validates one populated SQLite candidate path and its rollback, not
 semantic correctness for every record. The ambiguous-media review artifact
 still requires operator classification. Older real schemas, PostgreSQL
 operator data, complete settings/provider and client continuity, feature
-parity, and installer/update-channel acceptance remain open. The new source
-changes require exact-head hosted validation and remain unpublished.
+parity, and installer/update-channel acceptance remain open. Exact-head hosted validation passed in run
+[39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
+The source changes remain unpublished, and operator-data, feature-parity,
+SeerrNG workflow, and installation-channel acceptance remain open.

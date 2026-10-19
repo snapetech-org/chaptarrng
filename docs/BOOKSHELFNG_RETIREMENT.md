@@ -67,23 +67,45 @@ detailed feature inventory remains in the
   by this rehearsal preserve missing-edition files as unmapped and retain
   conflicting history on its source book without attaching an unsafe file or
   edition. Focused importer, edition-catalog, and capability tests pass 52/52
-  locally. Implementation commit `f5f57644` passed exact-head checks in
-  [run 39190896072](https://github.com/snapetech-org/chaptarrng/actions/runs/39190896072).
-  The later docs-only PR head `12a089a3` also passed exact-head checks in
-  [run 39192164390](https://github.com/snapetech-org/chaptarrng/actions/runs/39192164390);
-  disposable-fork validation was skipped by its gate. This is one populated
-  SQLite candidate round trip; ambiguous format review,
-  PostgreSQL operator data, other source shapes, feature parity, and install
-  channel acceptance remain open. Hosted source validation does not establish
-  operator-data or installation-channel acceptance.
+  locally. Exact-head run
+  [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
+  passed on PR #131 head 2c0401fc: Linux, macOS, and Windows build/tests,
+  PostgreSQL migrations, release-note validation, CodeQL, dependency and
+  secret checks, NuGet submission, and runner-receipt reconciliation. The
+  preceding run [39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843)
+  exposed four Windows fixtures using POSIX-only paths; the follow-up uses
+  native temporary paths and passes. Disposable-fork validation was skipped
+  by its gate. This validates hosted candidate code, not operator cutover.
+  Ambiguous format review, PostgreSQL operator data, other source shapes,
+  complete feature parity, installed rollback, and channel acceptance remain
+  open.
 - BookshelfNG `main` at `9a04c2eb2` now exposes
   `GET /api/v1/book/{id}/editions/catalog` and advertises `editionCatalog` for
   SeerrNG edition cards. The ChaptarrNG candidate adds the matching route and
-  capability, with focused tests and updated integration docs. It is source
-  only and requires exact-head hosted validation and SeerrNG client acceptance.
+  capability, with focused tests and updated integration docs. It remains
+  source-only; exact-head hosted validation passed in run
+  [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
+  Unchanged SeerrNG edition-card, request, polling, availability, pending-work,
+  and authorization acceptance remains open.
 - This work branch also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs now require an explicit mode: `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) selects Hardcover, and `HARDCOVER=false` selects Goodreads. An unset or invalid mode fails closed. The Docker candidate builds separate softcover and Hardcover compatibility targets so legacy aliases can retain that mode; `latest`, `main`, and `hardcover` must use the Hardcover target, while `softcover` must use the Goodreads target. These source changes are not in `.977`, PR #131 remains draft, and converted-data acceptance remains open.
 - BookshelfNG's BookLore notification settings and `OnReleaseImport` trigger are copied unchanged into ChaptarrNG, and remain in the retained source backup. A separate BookOrbit Book Dock destination is candidate work in this branch; it does not rewrite BookLore URLs or credentials. Mock tests cover login, Book Dock permission, streamed uploads, redirects, rejected credentials/files, and partial-batch failure. An isolated BookOrbit v3.2.0 live API check passed setup, login, permission check, EPUB upload/listing, and unsupported-file rejection. That does not verify downstream processing of a production book or a real-user handoff. The integration is not in `.977`, and the broader retirement gate remains open.
-- Draft PR #131 now adds ChaptarrNG's format-aware author-media move workflow: preview and confirm a single-author or bulk move, move only registered media and linked book sidecars, check destination conflicts and copy space, and leave unknown files and author-wide extras in place. The UI requires a reviewed preview token before queueing, the generic command endpoint rejects direct move commands, and the worker stops if a source changes after preview. Sidecars resolve against the linked book's format root, retain paths relative to the destination format root, and fail closed when a registered relative path escapes the author folders. Focused tests cover format isolation, shared-root and format-root sidecars, path traversal, untracked files, conflicts, stale sources, and bulk preview. Hosted exact-head validation for the original candidate found a shared `IReadOnlySet`/`HashSet` return-type error; the follow-up fixes it, with exact-head validation pending. This implementation is not on `main` or in `.977`, and representative library, cross-device, and rollback acceptance remain open.
+- Draft PR #131 adds ChaptarrNG's format-aware author-media move workflow:
+  preview and confirm a single-author or bulk move, move only registered media
+  and linked book sidecars, check destination conflicts and copy space, and
+  leave unknown files and author-wide extras in place. The UI requires a
+  reviewed preview token before queueing, the generic command endpoint rejects
+  direct move commands, and the worker stops if a source changes after preview.
+  Sidecars resolve against the linked book's format root, retain paths relative
+  to the destination format root, and fail closed when a registered relative
+  path escapes the author folders. Focused tests cover format isolation,
+  shared-root and format-root sidecars, path traversal, untracked files,
+  conflicts, stale sources, and bulk preview. Run
+  [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
+  passes on head 2c0401fc, including Windows tests after replacing the
+  POSIX-only fixture paths identified by run
+  [39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843).
+  This implementation is not on main or in .977; representative library,
+  cross-device, partial-failure rollback, and channel acceptance remain open.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
   setting. ChaptarrNG has equivalent new-author path initialization in
