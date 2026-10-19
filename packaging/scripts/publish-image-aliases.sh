@@ -71,6 +71,7 @@ PY
 
 if [[ "$publish_legacy_aliases" == "true" && "$publish_ghcr_aliases" == "true" ]]; then
   publish_alias "ghcr.io/snapetech/bookshelfng:latest" "$SOURCE_IMAGE"
+  publish_alias "ghcr.io/snapetech/bookshelfng:main" "$SOURCE_IMAGE"
   publish_alias "ghcr.io/snapetech/bookshelfng:hardcover" "$SOURCE_IMAGE"
   publish_alias "ghcr.io/snapetech/bookshelfng:softcover" "$SOURCE_IMAGE"
 else
@@ -90,8 +91,10 @@ if [[ "${DOCKERHUB_CONFIGURED:-false}" == "true" ]]; then
       if [[ "sha256:$dockerhub_digest" == "$EXPECTED_DIGEST" ]]; then
         echo "- docker.io/snapetech/chaptarrng:$VERSION: mirrored with the standard image digest $EXPECTED_DIGEST." >> "$summary"
         publish_alias "docker.io/snapetech/chaptarrng:latest" "$dockerhub_source"
+        publish_alias "docker.io/snapetech/chaptarrng:main" "$dockerhub_source"
         if [[ "$publish_legacy_aliases" == "true" ]]; then
           publish_alias "docker.io/snapetech/bookshelfng:latest" "$dockerhub_source"
+          publish_alias "docker.io/snapetech/bookshelfng:main" "$dockerhub_source"
           publish_alias "docker.io/snapetech/bookshelfng:hardcover" "$dockerhub_source"
           publish_alias "docker.io/snapetech/bookshelfng:softcover" "$dockerhub_source"
         else
