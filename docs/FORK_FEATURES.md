@@ -64,9 +64,12 @@ the same executable for fresh and migrated installs. BookshelfNG `main` is
 merged. BookshelfNG's Editions and Narrations detail tab is backed by
 `GET /api/v1/book/{id}/editions/catalog` and the `editionCatalog` capability.
 ChaptarrNG `main` now includes the book-details tab and series narrator
-comparison; the retirement candidate continues to carry the UI refinements and
-migration work. BookshelfNG issue #114 (new-author paths) is closed and already
-covered by ChaptarrNG `v0.9.974+`; issue #144 (retirement) remains open.
+comparison. Retirement candidate code commit `6a6b7d1f` integrates those
+changes and retains explicit unknown and not-applicable edition labels. Local
+translation, type, targeted ESLint, and Stylelint checks pass; hosted
+validation of the integrated candidate is pending. BookshelfNG issue #114
+(new-author paths) is closed and already covered by ChaptarrNG `v0.9.974+`;
+issue #144 (retirement) remains open.
 ChaptarrNG's upstream PR #114 is a separate issue
 and remains open. ChaptarrNG's own
 repository has no open issues or pull requests. The converter,

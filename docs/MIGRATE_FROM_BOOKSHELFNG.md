@@ -49,10 +49,11 @@
 > checks, NuGet submission, and runner-receipt reconciliation. The previous
 > run found four Windows fixtures with POSIX-only paths; native temporary
 > paths fixed them. Disposable-fork validation was skipped by its gate.
-> The current PR #131 head `5f3dc007` adds the Editions and Narrations UI tab
-> and suppresses the expected missing-fragment diagnostic in release-note
-> preview. Local translation, type, targeted lint/style, and release-note
-> preview checks pass; exact-head hosted validation is pending.
+> Retirement candidate code commit `6a6b7d1f` integrates current ChaptarrNG
+> `main`, including the Editions tab and series narrator comparison, while
+> retaining explicit unknown and not-applicable edition labels. Local
+> translation, type, targeted ESLint, and Stylelint checks pass; exact-head
+> hosted validation is pending.
 > Focused importer, edition-catalog, and capability tests pass 52/52 locally.
 > The populated SQLite rehearsal and synthetic provider-mode, startup, and
 > rollback evidence are in the
