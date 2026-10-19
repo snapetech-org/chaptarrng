@@ -42,31 +42,30 @@ remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
 The BookshelfNG Windows WPF installer still installs BookshelfNG. ChaptarrNG's
-draft migration candidate now includes a transactional WPF handoff installer:
-it keeps the existing `Readarr` data directory, asks for provider mode, retains
-a verified backup, previews before apply, then switches to the `Chaptarr`
-service and checks local health. The installer is unpublished, supports one
-SQLite database under the standard `NT AUTHORITY\LocalService` account. It
-checks preview immutability for the database, WAL, and rollback journal, then
-fails closed on custom service accounts, PostgreSQL, or multiple databases.
-Exact-head Build [39332160991](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160991)
-passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native
-runner receipt checks. The Windows job built the installer and passed the
-fingerprint and selected data-directory service smokes. CodeQL
-[39332156121](https://github.com/snapetech-org/chaptarrng/actions/runs/39332156121),
-security scan
-[39332161129](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161129),
-dependency review
-[39332160785](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160785),
-Helm identity
-[39332161144](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161144),
-and NuGet submission
-[39332162427](https://github.com/snapetech-org/chaptarrng/actions/runs/39332162427)
-checks passed. Disposable-fork validation
-[39332161256](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161256)
-was skipped by its external-fork gate. A populated Windows upgrade and real
-installed rollback rehearsal remain open. Do not use it for production cutover
-while the release freeze remains.
+draft migration candidate includes an unpublished transactional WPF handoff
+installer. It keeps the existing `Readarr` data directory, asks for provider
+mode, retains a verified backup, previews before apply, then switches to the
+`Chaptarr` service and checks local health. It supports one SQLite database
+under the standard `NT AUTHORITY\LocalService` account and fails closed on
+custom service accounts, PostgreSQL, or multiple databases. Preview
+fingerprinting covers the database, WAL, and rollback journal while ignoring
+the rebuildable `-shm` index.
+
+The docs-only candidate head `8912b7b3629248348c51daa0f1c39a6357e20ed7` passed
+exact-head Build
+[39334414682](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414682)
+on Linux, macOS, and Windows, PostgreSQL migration, release-note contract, and
+the Windows installer build, fingerprint smoke, and selected data-directory
+smoke. CodeQL
+[39334411350](https://github.com/snapetech-org/chaptarrng/actions/runs/39334411350),
+security [39334414694](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414694),
+dependency review [39334414922](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414922),
+Helm identity [39334414735](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414735),
+and NuGet [39334412894](https://github.com/snapetech-org/chaptarrng/actions/runs/39334412894)
+passed; disposable-fork validation was skipped by its external-fork gate.
+The installer remains unpublished. A populated Windows upgrade and real
+installed rollback remain open. Do not use it for production cutover while
+the release freeze remains.
 
 Prior exact-head application validation at `0e881d921dd55aa89e12747557ccaadbb2352a21` passed Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727) on Linux, macOS, and Windows, including PostgreSQL migration and the Linux pinned-tool M4B check; CodeQL, dependency/security, dependency-review, NuGet, release-note, and Helm identity checks passed. Its artifact also passed an isolated populated migration-to-SeerrNG smoke. These source checks do not approve production cutover.
 

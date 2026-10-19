@@ -9,28 +9,30 @@ handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
-**Current candidate (2026-10-19, code head `7b4c66e3`):** ChaptarrNG draft
-PR #131 contains the unpublished Windows BookshelfNG service handoff installer
-and the SQLite fingerprint regression smoke. The shared fingerprint helper
-passed locally, and the installer cross-target publish succeeded. Exact-head
-Build [39332160991](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160991)
-passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native
-runner receipt checks; the Windows job built the installer and passed the
-fingerprint and selected data-directory service smokes. CodeQL
-[39332156121](https://github.com/snapetech-org/chaptarrng/actions/runs/39332156121),
+**Current candidate (2026-10-19, docs-only head
+`8912b7b3629248348c51daa0f1c39a6357e20ed7`; code parent
+`7b4c66e39f344b71b7f85f4ea478d5d2c9d3fd9f`):** ChaptarrNG draft PR #131
+contains the unpublished Windows BookshelfNG service handoff installer and
+SQLite fingerprint regression smoke. The shared fingerprint helper passed
+locally and the installer cross-target publish succeeded. Exact-head Build
+[39334414682](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414682)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note contract,
+native-runner receipt reconciliation, and the Windows installer build,
+fingerprint smoke, and selected data-directory service smoke. CodeQL
+[39334411350](https://github.com/snapetech-org/chaptarrng/actions/runs/39334411350),
 security scan
-[39332161129](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161129),
+[39334414694](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414694),
 dependency review
-[39332160785](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160785),
+[39334414922](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414922),
 Helm identity
-[39332161144](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161144),
+[39334414735](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414735),
 and NuGet submission
-[39332162427](https://github.com/snapetech-org/chaptarrng/actions/runs/39332162427)
-checks passed. Disposable-fork validation
-[39332161256](https://github.com/snapetech-org/chaptarrng/actions/runs/39332161256)
-was skipped by its external-fork gate. This validates the code paths and build,
-not a populated Windows service upgrade or real installed rollback. These
-checks do not authorize a migration or release.
+[39334412894](https://github.com/snapetech-org/chaptarrng/actions/runs/39334412894)
+passed. Disposable-fork validation
+[39334414734](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414734)
+was skipped by its external-fork gate. The build validates code paths and
+synthetic safety checks, not a populated Windows service upgrade or real
+installed rollback. These checks do not authorize migration or release.
 
 **Prior application-code validation (2026-10-19):** ChaptarrNG draft PR #131
 contains code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build

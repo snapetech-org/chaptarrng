@@ -72,25 +72,23 @@
 > pass. These candidate checks do not approve cutover; operator-data, parity,
 > installed rollback, and channel acceptance remain open.
 > The current [draft PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
-> adds a Windows service handoff installer and a regression smoke for its
-> SQLite preview fingerprint. Exact-head Build
-> [39332160991](https://github.com/snapetech-org/chaptarrng/actions/runs/39332160991)
-> and the associated CodeQL, security, dependency-review, Helm identity, and
-> NuGet checks passed on code head `7b4c66e3`; disposable-fork validation was
-> skipped by its external-fork gate. The Windows job built the installer and
-> passed its fingerprint and selected data-directory service smokes. A
-> populated Windows upgrade, real installed rollback, and channel acceptance
-> remain open. This remains unpublished and is not approved for production
-> migration.
-> Focused importer, edition-catalog, and capability tests pass 52/52 locally.
-> The populated SQLite rehearsal and synthetic provider-mode, startup, and
-> rollback evidence are in the
-> [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
-> PostgreSQL source conversion remains unsupported in published releases.
-> Pinned images, native packages, and updater channels need separate upgrade
-> steps; database conversion alone does not update an installation channel.
-> See [BookshelfNG retirement status](BOOKSHELFNG_RETIREMENT.md) for live
-> package/channel state and the remaining acceptance gates.
+> adds a Windows service handoff installer and SQLite preview-fingerprint
+> regression smoke. The current docs-only candidate head
+> `8912b7b3629248348c51daa0f1c39a6357e20ed7` passed exact-head Build
+> [39334414682](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414682)
+> on Linux, macOS, and Windows, PostgreSQL migration, release-note contract,
+> native-runner receipt reconciliation, and the Windows installer build,
+> fingerprint smoke, and selected data-directory service smoke. CodeQL
+> [39334411350](https://github.com/snapetech-org/chaptarrng/actions/runs/39334411350),
+> security [39334414694](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414694),
+> dependency review
+> [39334414922](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414922),
+> Helm identity
+> [39334414735](https://github.com/snapetech-org/chaptarrng/actions/runs/39334414735),
+> and NuGet [39334412894](https://github.com/snapetech-org/chaptarrng/actions/runs/39334412894)
+> passed. Disposable-fork validation was skipped by its external-fork gate.
+> A populated Windows upgrade, real installed rollback, and channel acceptance
+> remain open. This is unpublished and is not approved for production migration.
 
 An approved future migration will use the standard ChaptarrNG application and
 container build. The `Chaptarr` executable provides explicit preview and apply
