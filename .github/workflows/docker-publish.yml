@@ -28,9 +28,9 @@ on:
       SIXLABORS_LICENSE_KEY:
         required: true
       DOCKERHUB_USERNAME:
-        required: false
+        required: true
       DOCKERHUB_TOKEN:
-        required: false
+        required: true
 
 env:
   # The standard image is published under the organization that owns the
@@ -96,7 +96,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ github.token }}
 
-    - name: Check optional Docker Hub publisher credentials
+    - name: Require Docker Hub publisher credentials
       id: dockerhub-credentials
       shell: bash
       env:
@@ -107,17 +107,12 @@ jobs:
         if [[ -n "$DOCKERHUB_USERNAME" && -n "$DOCKERHUB_TOKEN" ]]; then
           echo 'configured=true' >> "$GITHUB_OUTPUT"
           echo '- Docker Hub image publication: credentials configured; tags will mirror the standard GHCR image digest after the build.' >> "$GITHUB_STEP_SUMMARY"
-        elif [[ -z "$DOCKERHUB_USERNAME" && -z "$DOCKERHUB_TOKEN" ]]; then
-          echo 'configured=false' >> "$GITHUB_OUTPUT"
-          echo '- Docker Hub image publication: skipped because credentials are not configured.' >> "$GITHUB_STEP_SUMMARY"
         else
-          echo 'configured=false' >> "$GITHUB_OUTPUT"
-          echo '- Docker Hub image publication: skipped because only one of the required credentials is configured.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Docker Hub publisher credentials are required for stable image publication.' >&2
+          exit 1
         fi
 
     - name: Log in to Docker Hub
-      if: steps.dockerhub-credentials.outputs.configured == 'true'
-      continue-on-error: true
       uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
       with:
         registry: docker.io

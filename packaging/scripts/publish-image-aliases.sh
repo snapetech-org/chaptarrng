@@ -141,6 +141,7 @@ if [[ "${DOCKERHUB_CONFIGURED:-false}" == "true" ]]; then
   if mirror_dockerhub_image "$SOURCE_IMAGE" "$dockerhub_source" "$EXPECTED_DIGEST" "docker.io/snapetech/chaptarrng:$VERSION"; then
     standard_ok=true
     publish_alias "docker.io/snapetech/chaptarrng:latest" "$dockerhub_source" "$EXPECTED_DIGEST"
+    publish_alias "docker.io/snapetech/chaptarrng:main" "$dockerhub_source" "$EXPECTED_DIGEST"
   fi
 
   if [[ "$publish_legacy_aliases" == "true" ]]; then

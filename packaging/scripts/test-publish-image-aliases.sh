@@ -141,6 +141,7 @@ printf '%s\t%s\n' \
   ghcr.io/snapetech/bookshelfng:hardcover "$hardcover_source" \
   ghcr.io/snapetech/bookshelfng:softcover "$softcover_source" \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:latest "$dockerhub_hardcover" \
   docker.io/snapetech/bookshelfng:main "$dockerhub_hardcover" \
   docker.io/snapetech/bookshelfng:hardcover "$dockerhub_hardcover" \
@@ -152,7 +153,9 @@ grep -Fq "mirrored at $hardcover_digest" "$work/summary.md"
 [[ "$(wc -l < "$work/skopeo.log")" -eq 6 ]]
 
 run_aliases true false false
-printf '%s\t%s\n' docker.io/snapetech/chaptarrng:latest "$dockerhub_source" > "$work/expected-standard-only.log"
+printf '%s\t%s\n' \
+  docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:main "$dockerhub_source" > "$work/expected-standard-only.log"
 cmp "$work/expected-standard-only.log" "$work/publish.log"
 grep -Fq 'Docker Hub BookshelfNG aliases: skipped because the migration bridge is disabled.' "$work/summary.md"
 [[ "$(wc -l < "$work/skopeo.log")" -eq 2 ]]

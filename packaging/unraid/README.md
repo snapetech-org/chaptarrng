@@ -26,8 +26,8 @@ mirror; it is not the Community Apps submission target.
 ## Manual installation
 
 Use the main repository's [ChaptarrNG template XML](../../templates/chaptarrng.xml) with
-Unraid's Docker template workflow. It installs `ghcr.io/snapetech-org/chaptarrng:main`,
-which tracks the latest validated main image, and configures persistent
+Unraid's Docker template workflow. It installs `ghcr.io/snapetech-org/chaptarrng:latest`,
+which stable releases keep in sync with `:main`, and configures persistent
 appdata, audiobook, ebook, and download paths.
 
 - Web UI: port `8789`
