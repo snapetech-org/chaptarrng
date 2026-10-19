@@ -35,31 +35,44 @@ namespace Chaptarr.Core.Test.Books
         private BookFile _audiobook;
         private MetadataFile _metadata;
         private OtherExtraFile _otherExtra;
+        private string _authorPath;
+        private string _ebookPath;
+        private string _audiobookPath;
+        private string _archivePath;
+        private string _archiveAuthorPath;
 
         [SetUp]
         public void Setup()
         {
             _diskFiles.Clear();
             _folders.Clear();
-            _folders.Add("/library");
-            _folders.Add("/library/author");
-            _folders.Add("/library/author/ebooks");
-            _folders.Add("/library/author/audiobooks");
-            _folders.Add("/archive");
+            var rootPath = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "chaptarr-author-media-move-" + Guid.NewGuid().ToString("N")));
+            var libraryPath = Path.Combine(rootPath, "library");
+            _authorPath = Path.Combine(libraryPath, "author");
+            _ebookPath = Path.Combine(_authorPath, "ebooks");
+            _audiobookPath = Path.Combine(_authorPath, "audiobooks");
+            _archivePath = Path.Combine(rootPath, "archive");
+            _archiveAuthorPath = Path.Combine(_archivePath, "author");
+            _folders.Add(rootPath);
+            _folders.Add(libraryPath);
+            _folders.Add(_authorPath);
+            _folders.Add(_ebookPath);
+            _folders.Add(_audiobookPath);
+            _folders.Add(_archivePath);
 
             _author = new Author
             {
                 Id = 7,
                 Name = "Example Author",
-                Path = "/library/author",
-                EbookPath = "/library/author/ebooks",
-                AudiobookPath = "/library/author/audiobooks"
+                Path = _authorPath,
+                EbookPath = _ebookPath,
+                AudiobookPath = _audiobookPath
             };
 
             _ebook = new BookFile
             {
                 Id = 101,
-                Path = "/library/author/ebooks/book.epub",
+                Path = Path.Combine(_ebookPath, "book.epub"),
                 Size = 12,
                 Modified = _modified,
                 MediaType = "ebook"
@@ -67,7 +80,7 @@ namespace Chaptarr.Core.Test.Books
             _audiobook = new BookFile
             {
                 Id = 102,
-                Path = "/library/author/audiobooks/book.m4b",
+                Path = Path.Combine(_audiobookPath, "book.m4b"),
                 Size = 24,
                 Modified = _modified,
                 MediaType = "audiobook"
@@ -89,9 +102,9 @@ namespace Chaptarr.Core.Test.Books
 
             AddDiskFile(_ebook.Path, _ebook.Size);
             AddDiskFile(_audiobook.Path, _audiobook.Size);
-            AddDiskFile("/library/author/metadata/cover.jpg", 5);
-            AddDiskFile("/library/author/ebooks/extras/preview.jpg", 6);
-            AddDiskFile("/library/author/notes.txt", 7);
+            AddDiskFile(Path.Combine(_authorPath, "metadata", "cover.jpg"), 5);
+            AddDiskFile(Path.Combine(_ebookPath, "extras", "preview.jpg"), 6);
+            AddDiskFile(Path.Combine(_authorPath, "notes.txt"), 7);
 
             _authorService = new Mock<IAuthorService>();
             _authorService.Setup(service => service.GetAuthor(_author.Id)).Returns(_author);
@@ -156,7 +169,7 @@ namespace Chaptarr.Core.Test.Books
         [Test]
         public void should_preview_only_registered_files_for_the_selected_format_and_linked_sidecars()
         {
-            var preview = _service.Preview(_author.Id, "ebook", "/archive/author");
+            var preview = _service.Preview(_author.Id, "ebook", _archiveAuthorPath);
 
             Assert.Multiple(() =>
             {
@@ -167,13 +180,13 @@ namespace Chaptarr.Core.Test.Books
                 Assert.That(preview.Files.Select(file => file.SourcePath), Is.EquivalentTo(new[]
                 {
                     _ebook.Path,
-                    "/library/author/metadata/cover.jpg",
-                    "/library/author/ebooks/extras/preview.jpg"
+                    Path.Combine(_authorPath, "metadata", "cover.jpg"),
+                    Path.Combine(_ebookPath, "extras", "preview.jpg")
                 }));
                 Assert.That(preview.Files.Any(file => file.SourcePath.Contains("notes.txt", StringComparison.Ordinal)), Is.False);
                 Assert.That(preview.Files.Any(file => file.SourcePath.EndsWith(".m4b", StringComparison.OrdinalIgnoreCase)), Is.False);
                 Assert.That(preview.PreviewToken, Is.Not.Empty);
-                Assert.That(_author.EbookPath, Is.EqualTo("/library/author/ebooks"), "preview must not change the configured path");
+                Assert.That(_author.EbookPath, Is.EqualTo(_ebookPath), "preview must not change the configured path");
             });
 
             _mediaFileService.Verify(service => service.Update(It.IsAny<BookFile>()), Times.Never);
@@ -183,9 +196,9 @@ namespace Chaptarr.Core.Test.Books
         [Test]
         public void should_block_the_move_if_any_destination_file_already_exists()
         {
-            AddDiskFile("/archive/author/book.epub", _ebook.Size);
+            AddDiskFile(Path.Combine(_archiveAuthorPath, "book.epub"), _ebook.Size);
 
-            var preview = _service.Preview(_author.Id, "ebook", "/archive/author");
+            var preview = _service.Preview(_author.Id, "ebook", _archiveAuthorPath);
 
             Assert.That(preview.CanMove, Is.False);
             Assert.That(preview.Conflicts, Is.Not.Empty);
@@ -194,24 +207,24 @@ namespace Chaptarr.Core.Test.Books
         [Test]
         public void should_build_a_bulk_preview_with_a_stable_batch_token()
         {
-            var preview = _service.PreviewBatch(new[] { _author.Id }, "ebook", "/archive");
+            var preview = _service.PreviewBatch(new[] { _author.Id }, "ebook", _archivePath);
 
             Assert.Multiple(() =>
             {
                 Assert.That(preview.CanMove, Is.True);
                 Assert.That(preview.AuthorCount, Is.EqualTo(1));
                 Assert.That(preview.MediaFileCount, Is.EqualTo(1));
-                Assert.That(preview.DestinationRootPath, Is.EqualTo("/archive"));
-                Assert.That(preview.Authors.Single().DestinationPath, Is.EqualTo("/archive/author"));
+                Assert.That(preview.DestinationRootPath, Is.EqualTo(_archivePath));
+                Assert.That(preview.Authors.Single().DestinationPath, Is.EqualTo(_archiveAuthorPath));
                 Assert.That(preview.PreviewToken, Is.Not.Empty);
-                Assert.That(_author.EbookPath, Is.EqualTo("/library/author/ebooks"), "preview must not change the configured path");
+                Assert.That(_author.EbookPath, Is.EqualTo(_ebookPath), "preview must not change the configured path");
             });
         }
 
         [Test]
         public void should_move_only_previewed_files_and_update_their_catalog_paths()
         {
-            var preview = _service.Preview(_author.Id, "ebook", "/archive/author");
+            var preview = _service.Preview(_author.Id, "ebook", _archiveAuthorPath);
             _author.EbookPath = preview.DestinationPath;
             _service.Execute(new MoveAuthorMediaCommand
             {
@@ -225,10 +238,10 @@ namespace Chaptarr.Core.Test.Books
 
             Assert.Multiple(() =>
             {
-                Assert.That(_ebook.Path, Is.EqualTo("/archive/author/book.epub"));
+                Assert.That(_ebook.Path, Is.EqualTo(Path.Combine(_archiveAuthorPath, "book.epub")));
                 Assert.That(_metadata.RelativePath, Is.EqualTo("cover.jpg"));
                 Assert.That(_otherExtra.RelativePath, Is.EqualTo("preview.jpg"));
-                Assert.That(_diskFiles.ContainsKey("/library/author/notes.txt"), Is.True, "untracked files stay in place");
+                Assert.That(_diskFiles.ContainsKey(Path.Combine(_authorPath, "notes.txt")), Is.True, "untracked files stay in place");
                 Assert.That(_diskFiles.ContainsKey(_audiobook.Path), Is.True, "the other format stays in place");
                 Assert.That(_diskTransferService.Invocations.Count, Is.EqualTo(3));
             });
@@ -242,19 +255,20 @@ namespace Chaptarr.Core.Test.Books
         public void should_block_a_registered_sidecar_path_that_escapes_the_author_folders()
         {
             _otherExtra.RelativePath = "../outside.jpg";
-            AddDiskFile("/library/author/outside.jpg", 6);
+            var outsidePath = Path.Combine(_authorPath, "outside.jpg");
+            AddDiskFile(outsidePath, 6);
 
-            var preview = _service.Preview(_author.Id, "ebook", "/archive/author");
+            var preview = _service.Preview(_author.Id, "ebook", _archiveAuthorPath);
 
             Assert.That(preview.CanMove, Is.False);
             Assert.That(preview.Conflicts, Has.Some.Contains("invalid path"));
-            Assert.That(preview.Files.Any(file => file.SourcePath == "/library/author/outside.jpg"), Is.False);
+            Assert.That(preview.Files.Any(file => file.SourcePath == outsidePath), Is.False);
         }
 
         [Test]
         public void should_stop_before_moving_a_source_that_changed_after_preview()
         {
-            var preview = _service.Preview(_author.Id, "ebook", "/archive/author");
+            var preview = _service.Preview(_author.Id, "ebook", _archiveAuthorPath);
             _diskFiles[_ebook.Path] = (_ebook.Size + 1, _modified);
 
             Assert.Throws<IOException>(() => _service.Execute(new MoveAuthorMediaCommand
