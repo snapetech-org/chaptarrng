@@ -6,7 +6,17 @@ that file through **System → Backup → Restore Backup**. This code is not in 
 published ChaptarrNG `v0.9.977` release; BookshelfNG remains in service while
 the retirement freeze is active.
 
-The current PR #131 candidate is `b7e900d49648269d5118bbfba44289c0200b095b`; it includes this portable format, introduced and cross-checked against BookshelfNG source earlier in the branch. Current exact-head Build [39292223717](https://github.com/snapetech-org/chaptarrng/actions/runs/39292223717) passed Linux, macOS, Windows, PostgreSQL migration, release-note, and receipt checks. Historical Build [39267876585](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876585) passed on candidate `38be9422`. The format remains unreleased. Keep using BookshelfNG or the published release until the migration and retirement gates close.
+The portable backup format is included in PR #131 application-code commit
+`b7e900d49648269d5118bbfba44289c0200b095b`, introduced and cross-checked
+against BookshelfNG source earlier in the branch. Exact-head Build
+[39292223717](https://github.com/snapetech-org/chaptarrng/actions/runs/39292223717)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and receipt
+checks on that code commit. Historical Build
+[39267876585](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876585)
+passed on candidate `38be9422`. PR #131 remains draft; see its
+[live checks](https://github.com/snapetech-org/chaptarrng/pull/131) for the
+current head. The format remains unreleased. Keep using BookshelfNG or the
+published release until the migration and retirement gates close.
 
 ## Export and restore
 

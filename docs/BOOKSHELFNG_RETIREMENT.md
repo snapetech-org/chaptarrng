@@ -35,7 +35,7 @@ passed; disposable-fork validation was skipped by its gate. Representative
 M4B media, restart/resume, and operator acceptance remain open. No release or
 bridge was published.
 
-**Current exact-head PR #131 validation (2026-10-19):** Candidate commit
+**Latest passed PR #131 application-code validation (2026-10-19):** Code commit
 `b7e900d49648269d5118bbfba44289c0200b095b` passed Build
 [39292223717](https://github.com/snapetech-org/chaptarrng/actions/runs/39292223717):
 Linux, macOS, and Windows suites, PostgreSQL migration smoke, release-note
@@ -49,8 +49,10 @@ dependency review
 and NuGet submission
 [39292213603](https://github.com/snapetech-org/chaptarrng/actions/runs/39292213603)
 passed. Disposable-fork validation was skipped by its external-fork gate.
-This is source validation, not retirement acceptance; representative data,
-semantic parity, installed rollback, and channel handoff remain open.
+This validates application code only. PR #131 remains draft; see its
+[live checks](https://github.com/snapetech-org/chaptarrng/pull/131) for the
+current head. It does not establish retirement acceptance; representative
+data, semantic parity, installed rollback, and channel handoff remain open.
 
 **Candidate code CI (2026-10-19):** ChaptarrNG PR #131 code commit `12f290bd` passed [Build 39256254892](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254892): Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks passed. CodeQL, [security scan 39256254713](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254713), [dependency review 39256254710](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254710), and [NuGet submission 39256277391](https://github.com/snapetech-org/chaptarrng/actions/runs/39256277391) passed. Disposable-fork validation was skipped by its external-fork gate. This is source validation, not migration or release acceptance.
 

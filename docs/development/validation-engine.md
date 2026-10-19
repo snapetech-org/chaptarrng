@@ -13,8 +13,10 @@ Every platform matrix leg runs on GitHub-hosted runners. The Linux leg uses
 
 ## Local use
 
-Use Node.js `26.10.0` and .NET SDK `10.0.401`, matching the CI toolchain. Build
-the existing CI outputs first:
+Use Node.js `26.10.0` and .NET SDK `10.0.401`, matching the CI toolchain. The
+root `global.json` pins that exact SDK with roll-forward disabled, so a newer
+SDK already present on a hosted runner cannot silently change the compiler or
+validation runtime. Build the existing CI outputs first:
 
 ImageSharp 4.1.3 requires the complete Six Labors license at build time. Store
 it as a single shell-quoted `SIXLABORS_LICENSE_KEY` assignment in the ignored

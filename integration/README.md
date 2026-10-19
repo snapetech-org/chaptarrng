@@ -41,8 +41,11 @@ on candidate commit `c4fa8125`; that run also passed the full Linux suite.
 Windows build and test steps passed, while macOS was cancelled before runner
 acquisition. Representative audiobooks and restart/resume remain open. The
 later exact-head Build [39292223717](https://github.com/snapetech-org/chaptarrng/actions/runs/39292223717)
-on `b7e900d4` passed all three platform suites and the Linux pinned-tool M4B
-smoke, confirming these synthetic checks on the current candidate.
+on application-code commit `b7e900d4` passed all three platform suites and the
+Linux pinned-tool M4B smoke, confirming these synthetic checks on that code
+snapshot. PR #131 remains draft; see its
+[live checks](https://github.com/snapetech-org/chaptarrng/pull/131) for the
+current head.
 
 After building the test assembly as in `.github/workflows/build.yml`, run it
 locally with:
