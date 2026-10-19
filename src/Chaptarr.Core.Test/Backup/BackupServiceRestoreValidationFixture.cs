@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Data.Sqlite;
@@ -68,7 +69,36 @@ namespace Chaptarr.Core.Test.Backup
                 }
             }
 
-            public void CreateZip(string path, IEnumerable<string> files) => throw new NotImplementedException();
+            public void CreateZip(string path, IEnumerable<string> files)
+            {
+                using var archive = ZipFile.Open(path, ZipArchiveMode.Create);
+
+                foreach (var file in files)
+                {
+                    archive.CreateEntryFromFile(file, Path.GetFileName(file));
+                }
+            }
+        }
+
+        private sealed class TestMakeDatabaseBackup : IMakeDatabaseBackup
+        {
+            public void BackupDatabase(IDatabase database, string targetDirectory)
+            {
+                File.WriteAllText(Path.Combine(targetDirectory, "chaptarr.db"), "database backup");
+            }
+        }
+
+        private sealed class TestDiskTransferService : IDiskTransferService
+        {
+            public TransferMode TransferFolder(string sourcePath, string targetPath, TransferMode mode) => throw new NotImplementedException();
+
+            public TransferMode TransferFile(string sourcePath, string targetPath, TransferMode mode, bool overwrite = false)
+            {
+                File.Copy(sourcePath, targetPath, overwrite);
+                return TransferMode.Copy;
+            }
+
+            public int MirrorFolder(string sourcePath, string targetPath) => throw new NotImplementedException();
         }
 
         private sealed class RejectingRestoreDatabase : IRestoreDatabase
@@ -164,6 +194,35 @@ namespace Chaptarr.Core.Test.Backup
                 Assert.That(File.ReadAllText(uploadPath), Is.EqualTo("invalid"));
                 Assert.That(File.Exists(_appFolderInfo.GetDatabaseRestore()), Is.False);
                 Assert.That(_restoreDatabase.ValidatedPaths, Is.EqualTo(new[] { uploadPath }));
+            });
+        }
+
+        [Test]
+        public void should_create_a_temporary_backup_with_private_staging()
+        {
+            var configPath = _appFolderInfo.GetConfigPath();
+            File.WriteAllText(configPath, "config backup");
+
+            var service = new BackupService(
+                new MainDatabase(null),
+                new TestMakeDatabaseBackup(),
+                new TestDiskTransferService(),
+                new TestDiskProvider(new FileSystem()),
+                _appFolderInfo,
+                new TestArchiveService(),
+                DispatchProxy.Create<IConfigService, ThrowingProxy<IConfigService>>(),
+                _restoreDatabase,
+                LogManager.GetCurrentClassLogger());
+
+            var archivePath = service.CreateTemporaryBackup();
+
+            using var archive = ZipFile.OpenRead(archivePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(archive.GetEntry(Path.GetFileName(configPath)), Is.Not.Null);
+                Assert.That(archive.GetEntry("chaptarr.db"), Is.Not.Null);
+                Assert.That(archive.GetEntry("INFO"), Is.Not.Null);
+                Assert.That(Directory.GetDirectories(Path.GetDirectoryName(archivePath)), Is.Empty);
             });
         }
 

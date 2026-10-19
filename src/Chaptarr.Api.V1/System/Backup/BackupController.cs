@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System;
+using System.Threading.Tasks;
 using Chaptarr.Http;
 using Chaptarr.Http.REST;
 using Microsoft.AspNetCore.Mvc;
@@ -21,16 +22,19 @@ namespace Chaptarr.Api.V1.System.Backup
         private const long RestoreUploadLimitBytes = 1L * 1024 * 1024 * 1024; // 1 GiB
 
         private readonly IBackupService _backupService;
+        private readonly IBookshelfEncryptedBackupService _bookshelfEncryptedBackupService;
         private readonly IAppFolderInfo _appFolderInfo;
         private readonly IDiskProvider _diskProvider;
 
-        private static readonly HashSet<string> ValidExtensions = new(StringComparer.OrdinalIgnoreCase) { ".zip" };
+        private static readonly HashSet<string> ValidExtensions = new(StringComparer.OrdinalIgnoreCase) { ".zip", ".enc" };
 
         public BackupController(IBackupService backupService,
+                            IBookshelfEncryptedBackupService bookshelfEncryptedBackupService,
                             IAppFolderInfo appFolderInfo,
                             IDiskProvider diskProvider)
         {
             _backupService = backupService;
+            _bookshelfEncryptedBackupService = bookshelfEncryptedBackupService;
             _appFolderInfo = appFolderInfo;
             _diskProvider = diskProvider;
         }
@@ -95,6 +99,38 @@ namespace Chaptarr.Api.V1.System.Backup
             };
         }
 
+        [HttpPost("encrypted")]
+        public IActionResult CreateEncryptedBackup()
+        {
+            var passphrase = GetPassphrase();
+            var encryptedPath = Path.Combine(GetPrivateTempFolder(), $"chaptarr_backup_{Guid.NewGuid():N}.enc");
+            string backupPath = null;
+
+            try
+            {
+                backupPath = _backupService.CreateTemporaryBackup();
+                _bookshelfEncryptedBackupService.Encrypt(backupPath, encryptedPath, passphrase);
+
+                var stream = System.IO.File.OpenRead(encryptedPath);
+                Response.Headers.CacheControl = "no-store, no-cache";
+                Response.Headers.Pragma = "no-cache";
+                Response.OnCompleted(() =>
+                {
+                    DeleteTemporaryFile(backupPath);
+                    DeleteTemporaryFile(encryptedPath);
+                    return Task.CompletedTask;
+                });
+
+                return File(stream, "application/octet-stream", $"chaptarrng_backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.enc");
+            }
+            catch
+            {
+                DeleteTemporaryFile(backupPath);
+                DeleteTemporaryFile(encryptedPath);
+                throw;
+            }
+        }
+
         [HttpPost("restore/upload")]
         [RequestSizeLimit(RestoreUploadLimitBytes)]
         [RequestFormLimits(MultipartBodyLengthLimit = RestoreUploadLimitBytes)]
@@ -108,35 +144,93 @@ namespace Chaptarr.Api.V1.System.Backup
             }
 
             var file = files.First();
-            var extension = Path.GetExtension(file.FileName);
-            var isEncryptedFullBackup = file.FileName.EndsWith(".zip.enc", StringComparison.OrdinalIgnoreCase);
+            var filename = file.FileName ?? string.Empty;
+            var extension = Path.GetExtension(filename);
+            var isEncryptedFullBackup = filename.EndsWith(".zip.enc", StringComparison.OrdinalIgnoreCase);
+            var isBookshelfEncryptedBackup = extension.Equals(".enc", StringComparison.OrdinalIgnoreCase) && !isEncryptedFullBackup;
 
             if (!ValidExtensions.Contains(extension) && !isEncryptedFullBackup)
             {
-                throw new UnsupportedMediaTypeException($"Invalid extension, must be .zip or .zip.enc");
+                throw new UnsupportedMediaTypeException($"Invalid extension, must be .zip, .enc or .zip.enc");
             }
 
             var restoreExtension = isEncryptedFullBackup ? ".zip.enc" : extension;
-            var path = Path.Combine(_appFolderInfo.TempFolder, $"chaptarr_backup_restore_{Guid.NewGuid():N}{restoreExtension}");
+            var restoreFolder = GetPrivateTempFolder();
+            var path = Path.Combine(restoreFolder, $"restore_upload_{Guid.NewGuid():N}{restoreExtension}");
+            var decryptedPath = Path.Combine(restoreFolder, $"restore_decrypted_{Guid.NewGuid():N}.zip");
+            var passphrase = isBookshelfEncryptedBackup ? GetPassphrase() : null;
 
             try
             {
                 _diskProvider.SaveStream(file.OpenReadStream(), path);
-                _backupService.Restore(path);
+
+                if (isBookshelfEncryptedBackup)
+                {
+                    try
+                    {
+                        _bookshelfEncryptedBackupService.Decrypt(path, decryptedPath, passphrase);
+                    }
+                    catch (InvalidDataException exception)
+                    {
+                        throw new BadRequestException(exception.Message);
+                    }
+
+                    _backupService.Restore(decryptedPath);
+                }
+                else
+                {
+                    _backupService.Restore(path);
+                }
             }
             finally
             {
                 // Cleanup restored file (it may have been moved by restore)
-                if (_diskProvider.FileExists(path))
-                {
-                    _diskProvider.DeleteFile(path);
-                }
+                DeleteTemporaryFile(path);
+                DeleteTemporaryFile(decryptedPath);
             }
 
             return new
             {
                 RestartRequired = true
             };
+        }
+
+        private string GetPassphrase()
+        {
+            var passphrase = Request.Headers[BookshelfEncryptedBackupService.PassphraseHeader].ToString();
+
+            if (!BookshelfEncryptedBackupService.IsValidPassphrase(passphrase))
+            {
+                throw new BadRequestException($"A passphrase with at least {BookshelfEncryptedBackupService.MinimumPassphraseLength} characters and no more than {BookshelfEncryptedBackupService.MaximumPassphraseBytes} UTF-8 bytes is required.");
+            }
+
+            return passphrase;
+        }
+
+        private string GetPrivateTempFolder()
+        {
+            var path = Path.Combine(_appFolderInfo.TempFolder, "chaptarr_backup_transfer");
+
+            if (OperatingSystem.IsWindows())
+            {
+                _diskProvider.EnsureFolder(path);
+            }
+            else
+            {
+                var ownerOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+                Directory.CreateDirectory(path, ownerOnly);
+                File.SetUnixFileMode(path, ownerOnly);
+            }
+
+            return path;
+        }
+
+        private void DeleteTemporaryFile(string path)
+        {
+            if (!string.IsNullOrEmpty(path) && _diskProvider.FileExists(path))
+            {
+                _diskProvider.DeleteFile(path);
+            }
         }
 
         private string GetBackupPath(NzbDrone.Core.Backup.Backup backup)

@@ -60,6 +60,13 @@ database; after success, it removes that temporary `.pre-restore` copy. This
 source candidate is not in `v0.9.977` and does not authorize cutover.
 Earlier PR #131 code head 6f57d355 passed exact-head Build run [39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613) on Linux, macOS, Windows, PostgreSQL migration, and release-note validation.
 
+The retirement candidate also adds portable encrypted `.enc` export and
+restore compatible with BookshelfNG's BKSENC01 format. ChaptarrNG's existing
+scheduled `.zip.enc` format remains separate. See the
+[encrypted backup guide](docs/BOOKSHELFNG_ENCRYPTED_BACKUPS.md); this support
+is not in the published release and does not close the migration, parity, or
+installation-channel gates.
+
 **Prior PR #131 application-code validation (2026-10-19):** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. The Linux artifact also passed the authorization smoke with an empty paged library. The newer populated source-build smoke is recorded below; neither smoke establishes full workflow or operator-data acceptance.
 
 **Candidate code CI (2026-10-19):** ChaptarrNG PR #131 code commit `12f290bd` passed [Build 39256254892](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254892): Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks passed. CodeQL, [security scan 39256254713](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254713), [dependency review 39256254710](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254710), and [NuGet submission 39256277391](https://github.com/snapetech-org/chaptarrng/actions/runs/39256277391) passed. Disposable-fork validation was skipped by its external-fork gate. This is source validation, not migration or release acceptance.

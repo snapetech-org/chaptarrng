@@ -111,6 +111,19 @@ changing the source.
 
 **SeerrNG pending-request lifecycle probe (2026-10-19):** On the isolated Linux candidate from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), SeerrNG's real `ReadarrAPI` (`b810153c`) submitted an ebook request for a synthetic work whose author was unavailable. `addBook` received a pending ID, `getPendingAuthorImport` read it, `cancelPendingAuthorImport` cancelled it, and a second poll observed the expected terminal cancellation state: `OverallStatus=Failed` with `LastError=Cancelled by user`. The cancelled record remains queryable rather than being removed. This proves request creation, polling, and cancellation across the adapter/API boundary. It used a disposable database and synthetic IDs; provider-success behavior, retries, availability, history, migrated records, production settings, full SeerrNG operator workflow, and operator acceptance remain open. The tested app artifact is code snapshot `0612cb4c`; PR commit `d9713604` added the repeatable helper and docs, and the intervening app change is Calibre selector tie-breaking rather than a SeerrNG API change. The probe is now repeatable through `integration/seerrng-request-lifecycle.mjs` and is wired after the authorization smoke in `integration/seerrng-smoke.compose.yml`. On 2026-10-19, both scripts passed when run against the isolated artifact from Build 39239940373 and SeerrNG source `b810153c`; `node --check`, Prettier, and Compose configuration validation also passed. The earlier Compose invocation used a temporary runtime image with `--no-build`. A follow-up source-build run on 2026-10-19 built the candidate through the checked-in `Dockerfile.build` from PR head `7cfb5d87` and passed both scripts after the harness prepared its disposable `/books` volume as UID/GID `99:100`. Successful fulfillment, retries, availability/history, converted records, saved operator settings, and acceptance remain open.
 
+## Encrypted BookshelfNG portable backups
+
+The retirement candidate adds passphrase-based `.enc` backup export and
+restore using BookshelfNG's BKSENC01 format. This allows a BookshelfNG
+encrypted portable backup to be selected directly in ChaptarrNG's restore
+dialog, and lets ChaptarrNG create backups that BookshelfNG can read. The
+passphrase is entered through the UI or sent in the
+`X-Bookshelf-Backup-Passphrase` API header. ChaptarrNG's scheduled `.zip.enc`
+files use a separate format and secret-file setting. Details and limits are in
+the [encrypted backup guide](BOOKSHELFNG_ENCRYPTED_BACKUPS.md). This candidate
+change is not in published `v0.9.977` and does not replace independent
+appdata/database backups or close the release gates.
+
 ## Restore a BookshelfNG backup archive
 
 The published `.977` restore service accepts Chaptarr/Readarr-format ZIP

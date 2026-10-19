@@ -987,6 +987,43 @@
         }
       }
     },
+    "/api/v1/system/backup/encrypted": {
+      "post": {
+        "tags": [
+          "Backup"
+        ],
+        "parameters": [
+          {
+            "name": "X-Bookshelf-Backup-Passphrase",
+            "in": "header",
+            "required": true,
+            "description": "Passphrase used to encrypt the portable backup. It must contain at least 16 characters and no more than 4096 UTF-8 bytes.",
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 4096,
+              "format": "password"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "BookshelfNG-compatible encrypted backup archive",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid passphrase"
+          }
+        }
+      }
+    },
     "/api/v1/system/backup/{id}": {
       "delete": {
         "tags": [
@@ -1038,6 +1075,39 @@
         "tags": [
           "Backup"
         ],
+        "parameters": [
+          {
+            "name": "X-Bookshelf-Backup-Passphrase",
+            "in": "header",
+            "required": false,
+            "description": "Required when restoring a BookshelfNG-compatible .enc backup.",
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 4096,
+              "format": "password"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "restore"
+                ],
+                "properties": {
+                  "restore": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
