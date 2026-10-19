@@ -1680,6 +1680,7 @@ namespace NzbDrone.Core.Datastore
             const string chaptarrStrictnessKey = "bookmatchingstrictness";
             const string legacyHardcoverTokenKey = "hardcoverauth";
             const string chaptarrHardcoverTokenKey = "hardcoverapitoken";
+            const string chaptarrHardcoverEnabledKey = "hardcoverenabled";
 
             var configRows = ReadRows(source, "Config").ToList();
             var sourceCount = configRows.Count;
@@ -1692,6 +1693,7 @@ namespace NzbDrone.Core.Datastore
             var strictnessRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrStrictnessKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var legacyHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var chaptarrHardcoverEnabledRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverEnabledKey, StringComparison.OrdinalIgnoreCase)).ToList();
 
             if (legacyRows.Count > 1 || strictnessRows.Count > 1)
             {
@@ -1701,6 +1703,11 @@ namespace NzbDrone.Core.Datastore
             if (legacyHardcoverTokenRows.Count > 1 || chaptarrHardcoverTokenRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate Hardcover token settings; conversion stopped before promotion.");
+            }
+
+            if (chaptarrHardcoverEnabledRows.Count > 1)
+            {
+                throw new InvalidDataException("BookshelfNG config contains duplicate Hardcover mode settings; conversion stopped before promotion.");
             }
 
             var matchSettingDisposition = "no BookshelfNG numeric match threshold was present; ChaptarrNG's default matching mode applies";
@@ -1799,6 +1806,26 @@ namespace NzbDrone.Core.Datastore
                 }
             }
 
+            var hardcoverModeDisposition = "no saved Hardcover mode was present; ChaptarrNG's Goodreads default applies";
+            if (chaptarrHardcoverEnabledRows.Count == 1)
+            {
+                hardcoverModeDisposition = "a saved ChaptarrNG HardcoverEnabled setting was preserved";
+            }
+            else if (ConfiguredNativeHardcoverPrimaryMode() == true)
+            {
+                var mappedHardcoverMode = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["Key"] = "HardcoverEnabled",
+                    ["Value"] = "true"
+                };
+                if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+                {
+                    mappedHardcoverMode["Id"] = checked(++nextGeneratedConfigId);
+                }
+                configRows.Add(mappedHardcoverMode);
+                hardcoverModeDisposition = "BookshelfNG's native Hardcover runtime mode was copied to ChaptarrNG HardcoverEnabled";
+            }
+
             foreach (var row in configRows)
             {
                 var unmapped = row.Where(x => x.Value != null && !targetColumns.ContainsKey(x.Key))
@@ -1816,7 +1843,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Config", sourceCount, 0, sourceCount, 0, 0,
-                "saved configuration is copied with compatible fields; " + matchSettingDisposition + "; " + hardcoverTokenDisposition);
+                "saved configuration is copied with compatible fields; " + matchSettingDisposition + "; " + hardcoverTokenDisposition + "; " + hardcoverModeDisposition);
         }
 
         private static void ImportNotifications(

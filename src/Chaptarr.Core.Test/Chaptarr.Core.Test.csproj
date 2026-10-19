@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Datastore/Fixtures/BookshelfNG.Schema.158.sql" />
+    <EmbeddedResource Include="Datastore/Fixtures/BookshelfNG.PopulatedMigration158.sql" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,12 +4,37 @@ services:
     user: "0:0"
     volumes:
       - chaptarrng-smoke-books:/books
-    command: ["sh", "-ec", "chown 99:100 /books && chmod 0775 /books"]
+      - chaptarrng-smoke-books:/library
+    command: ["sh", "-ec", "chown 99:100 /books /library && chmod 0775 /books /library"]
+
+  prepare-bookshelf-source:
+    image: python:3.13-slim
+    depends_on:
+      prepare-books-root:
+        condition: service_completed_successfully
+    volumes:
+      - chaptarrng-smoke-config:/config
+      - chaptarrng-smoke-books:/library
+      - type: bind
+        source: ../src/Chaptarr.Core.Test/Datastore/Fixtures/BookshelfNG.Schema.158.sql
+        target: /fixture/schema.sql
+        read_only: true
+      - type: bind
+        source: ../src/Chaptarr.Core.Test/Datastore/Fixtures/BookshelfNG.PopulatedMigration158.sql
+        target: /fixture/seed.sql
+        read_only: true
+      - type: bind
+        source: ./prepare-bookshelfng-smoke.py
+        target: /fixture/prepare.py
+        read_only: true
+    command: ["python", "/fixture/prepare.py"]
 
   chaptarrng:
     image: chaptarrng-seerrng-smoke:local
     depends_on:
       prepare-books-root:
+        condition: service_completed_successfully
+      prepare-bookshelf-source:
         condition: service_completed_successfully
     build:
       context: ..
@@ -19,11 +44,13 @@ services:
     environment:
       CHAPTARR__AUTH__APIKEY: ${CHAPTARR_GLOBAL_API_KEY:?Set CHAPTARR_GLOBAL_API_KEY}
       CHAPTARR__AUTH__SEERRAPIKEY: ${CHAPTARR_SEERR_API_KEY:?Set CHAPTARR_SEERR_API_KEY}
+      HARDCOVER: "true"
       PUID: "99"
       PGID: "100"
     volumes:
       - chaptarrng-smoke-config:/config
       - chaptarrng-smoke-books:/books
+      - chaptarrng-smoke-books:/library
 
   smoke:
     image: node:24.15.0-bookworm-slim
