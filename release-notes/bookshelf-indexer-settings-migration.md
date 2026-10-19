@@ -5,4 +5,4 @@ area: migration
 action: none
 breaking: false
 ---
-Matching BookshelfNG provider contracts and settings fields are retained, including MyAnonAMouse filters and Hardcover lists/statuses. Unknown fields and providers block apply with a preview issue. Legacy Goodreads OAuth bookshelf rows, owned-book imports, and write notifications require reconfiguration or removal.
+Matching BookshelfNG provider contracts and settings fields are retained, including MyAnonAMouse filters, Hardcover lists/statuses, and Goodreads OAuth lists and notifications. Unknown fields, providers, or missing/partial OAuth credentials block apply with a preview issue that omits values. Existing Goodreads credentials still require live API acceptance.

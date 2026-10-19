@@ -13,6 +13,7 @@ using Newtonsoft.Json.Linq;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.ImportLists;
+using NzbDrone.Core.ImportLists.Goodreads;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.MetadataSource.BookInfo;
 using NzbDrone.Core.Notifications;
@@ -1343,8 +1344,11 @@ namespace NzbDrone.Core.Datastore
             var unsupportedSettings = hasCompatibleImplementation
                 ? FindUnsupportedSettingsFields(GetString(sourceRow, "Settings"), expectedContract, implementation)
                 : Array.Empty<string>();
+            var missingOAuthSettings = hasCompatibleImplementation
+                ? FindMissingGoodreadsOAuthSettings(GetString(sourceRow, "Settings"), implementation, configContract)
+                : Array.Empty<string>();
 
-            if (hasCompatibleImplementation && unsupportedSettings.Length == 0)
+            if (hasCompatibleImplementation && unsupportedSettings.Length == 0 && missingOAuthSettings.Length == 0)
             {
                 return;
             }
@@ -1353,7 +1357,64 @@ namespace NzbDrone.Core.Datastore
             var settingsDisposition = unsupportedSettings.Length == 0
                 ? ""
                 : " (unsupported settings fields: " + string.Join(", ", unsupportedSettings) + ")";
+            if (missingOAuthSettings.Length > 0)
+            {
+                settingsDisposition += " (missing Goodreads OAuth settings: " + string.Join(", ", missingOAuthSettings) + ")";
+            }
+
             unsupported.Add($"row {GetInt(sourceRow, "Id")}: {implementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}{settingsDisposition}");
+        }
+
+        private static string[] FindMissingGoodreadsOAuthSettings(string settingsJson, string implementation, string configContract)
+        {
+            var isGoodreadsBookshelfImportList =
+                implementation.Equals("GoodreadsBookshelf", StringComparison.OrdinalIgnoreCase) &&
+                configContract.Equals("GoodreadsBookshelfImportListSettings", StringComparison.OrdinalIgnoreCase);
+            var requiresOAuth =
+                implementation.Equals("GoodreadsOwnedBooks", StringComparison.OrdinalIgnoreCase) ||
+                ((implementation.Equals("GoodreadsBookshelf", StringComparison.OrdinalIgnoreCase) ||
+                  implementation.Equals("GoodreadsOwnedBooks", StringComparison.OrdinalIgnoreCase)) &&
+                 configContract.EndsWith("NotificationSettings", StringComparison.OrdinalIgnoreCase));
+
+            if (!isGoodreadsBookshelfImportList && !requiresOAuth)
+            {
+                return Array.Empty<string>();
+            }
+
+            JObject settings;
+            try
+            {
+                settings = JObject.Parse(string.IsNullOrWhiteSpace(settingsJson) ? "{}" : settingsJson);
+            }
+            catch (JsonException)
+            {
+                // The invalid JSON issue is already reported by the settings-contract check.
+                return Array.Empty<string>();
+            }
+
+            var accessToken = settings.GetValue("accessToken", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+            var accessTokenSecret = settings.GetValue("accessTokenSecret", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+            var hasAccessToken = !string.IsNullOrWhiteSpace(accessToken);
+            var hasAccessTokenSecret = !string.IsNullOrWhiteSpace(accessTokenSecret);
+
+            if (!requiresOAuth && !hasAccessToken && !hasAccessTokenSecret)
+            {
+                var userId = settings.GetValue("userId", StringComparison.OrdinalIgnoreCase)?.Value<string>();
+                return GoodreadsUserIdParser.TryParse(userId, out _) ? Array.Empty<string>() : new[] { "userId or OAuth credentials" };
+            }
+
+            var missing = new List<string>();
+            if (!hasAccessToken)
+            {
+                missing.Add("accessToken");
+            }
+
+            if (!hasAccessTokenSecret)
+            {
+                missing.Add("accessTokenSecret");
+            }
+
+            return missing.ToArray();
         }
 
         private static string[] FindUnsupportedSettingsFields(string settingsJson, string configContract, string implementation)

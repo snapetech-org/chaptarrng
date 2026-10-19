@@ -128,7 +128,11 @@ namespace Chaptarr.Core.Test.Datastore
                     INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
                     VALUES (129, 'Legacy Goodreads shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""to-read""],""accessToken"":""fixture-goodreads-access-secret"",""accessTokenSecret"":""fixture-goodreads-secret"",""requestTokenSecret"":""fixture-request-secret"",""userName"":""fixture-user"",""signIn"":""startOAuth"",""signingUrl"":""https://auth.servarr.com/v1/goodreads/sign"",""oauthUrl"":""https://www.goodreads.com/oauth/authorize"",""oauthRequestTokenUrl"":""https://www.goodreads.com/oauth/request_token"",""oauthAccessTokenUrl"":""https://www.goodreads.com/oauth/access_token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
                     INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
-                    VALUES (131, 'Legacy public Goodreads shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""to-read""],""accessToken"":"""",""accessTokenSecret"":"""",""requestTokenSecret"":"""",""userName"":"""",""signIn"":""startOAuth"",""signingUrl"":""https://auth.servarr.com/v1/goodreads/sign"",""oauthUrl"":""https://www.goodreads.com/oauth/authorize"",""oauthRequestTokenUrl"":""https://www.goodreads.com/oauth/request_token"",""oauthAccessTokenUrl"":""https://www.goodreads.com/oauth/access_token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');";
+                    VALUES (131, 'Legacy public Goodreads shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""to-read""],""accessToken"":"""",""accessTokenSecret"":"""",""requestTokenSecret"":"""",""userName"":"""",""signIn"":""startOAuth"",""signingUrl"":""https://auth.servarr.com/v1/goodreads/sign"",""oauthUrl"":""https://www.goodreads.com/oauth/authorize"",""oauthRequestTokenUrl"":""https://www.goodreads.com/oauth/request_token"",""oauthAccessTokenUrl"":""https://www.goodreads.com/oauth/access_token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (132, 'Legacy Goodreads partial OAuth shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""read""],""accessToken"":""fixture-partial-goodreads-token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (133, 'Legacy Goodreads shelf without an account', 'GoodreadsBookshelf', '{""bookshelfIds"":[""read""]}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');";
                 command.ExecuteNonQuery();
             }
 
@@ -142,7 +146,7 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(7));
+                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(8));
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginIndexer/FixturePluginSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
                     issue.Contains("Torznab/TorznabSettings", StringComparison.Ordinal) &&
@@ -156,11 +160,20 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsBookshelf/GoodreadsBookshelfNotificationSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsOwnedBooks/GoodreadsOwnedBooksImportListSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
-                    issue.Contains("GoodreadsBookshelf/GoodreadsBookshelfImportListSettings", StringComparison.Ordinal) &&
-                    issue.Contains("accessToken", StringComparison.OrdinalIgnoreCase)), Is.True);
+                    issue.Contains("GoodreadsBookshelf/GoodreadsBookshelfImportListSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("row 129:", StringComparison.Ordinal)), Is.False,
+                    "complete legacy OAuth settings are supported by the migration candidate");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("row 132:", StringComparison.Ordinal) &&
+                    issue.Contains("accessTokenSecret", StringComparison.Ordinal)), Is.True,
+                    "partial OAuth credentials must block migration without exposing their values");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("row 133:", StringComparison.Ordinal) &&
+                    issue.Contains("userId or OAuth credentials", StringComparison.Ordinal)), Is.True,
+                    "public shelves without an account ID or complete OAuth credentials must block migration");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("row 131:", StringComparison.Ordinal)), Is.False,
                     "empty OAuth fields and fixed Goodreads runtime settings do not block public-shelf migration");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-goodreads-access-secret", StringComparison.Ordinal)), Is.False,
+                    "provider settings and credentials must not be included in the report");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-partial-goodreads-token", StringComparison.Ordinal)), Is.False,
                     "provider settings and credentials must not be included in the report");
                 Assert.That(preview.ImportReport.Tables["DownloadClients"].TargetMapping, Does.Contain("block apply"));
                 Assert.That(preview.ImportReport.Tables["ImportLists"].TargetMapping, Does.Contain("block apply"));
@@ -179,6 +192,60 @@ namespace Chaptarr.Core.Test.Datastore
             {
                 Assert.That(exception.Message, Does.Contain("cannot be applied"));
                 Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBefore), "a blocked apply must leave source bytes unchanged");
+            });
+        }
+
+        [Test]
+        public void should_preserve_goodreads_oauth_provider_settings_during_bookshelf_conversion()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = """
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (201, 'Legacy Goodreads OAuth shelf', 'GoodreadsBookshelf', '{"userId":"12345678","bookshelfIds":["to-read"],"accessToken":"fixture-access-token","accessTokenSecret":"fixture-access-secret","requestTokenSecret":"fixture-request-secret","userName":"fixture-user","signIn":"startOAuth","signingUrl":"https://auth.servarr.com/v1/goodreads/sign","oauthUrl":"https://www.goodreads.com/oauth/authorize","oauthRequestTokenUrl":"https://www.goodreads.com/oauth/request_token","oauthAccessTokenUrl":"https://www.goodreads.com/oauth/access_token"}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (202, 'Legacy Goodreads public shelf', 'GoodreadsBookshelf', '{"userId":"12345678","bookshelfIds":["to-read"],"accessToken":"","accessTokenSecret":"","requestTokenSecret":"","userName":"","signIn":"startOAuth","signingUrl":"https://auth.servarr.com/v1/goodreads/sign","oauthUrl":"https://www.goodreads.com/oauth/authorize","oauthRequestTokenUrl":"https://www.goodreads.com/oauth/request_token","oauthAccessTokenUrl":"https://www.goodreads.com/oauth/access_token"}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (203, 'Legacy Goodreads owned list', 'GoodreadsOwnedBooks', '{"userId":"12345678","accessToken":"fixture-owned-access-token","accessTokenSecret":"fixture-owned-access-secret","requestTokenSecret":"fixture-owned-request-secret","userName":"fixture-owned-user","signIn":"startOAuth"}', 'GoodreadsOwnedBooksImportListSettings', 0, '/library', 0, 1, 1, '[]');
+                    INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                    VALUES (204, 'Legacy Goodreads bookshelf notification', 0, '{"accessToken":"fixture-notify-access-token","accessTokenSecret":"fixture-notify-access-secret","requestTokenSecret":"fixture-notify-request-secret","userId":"12345678","userName":"fixture-notify-user","addIds":["read"],"removeIds":["to-read"],"signIn":"startOAuth"}', 'GoodreadsBookshelf', 'GoodreadsBookshelfNotificationSettings', 0, '[]', 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                    VALUES (205, 'Legacy Goodreads owned notification', 0, '{"accessToken":"fixture-owned-notify-token","accessTokenSecret":"fixture-owned-notify-secret","requestTokenSecret":"fixture-owned-notify-request","userId":"12345678","userName":"fixture-owned-notify-user","condition":10,"description":"","location":"","signIn":"startOAuth"}', 'GoodreadsOwnedBooks', 'GoodreadsOwnedBooksNotificationSettings', 0, '[]', 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    """;
+                command.ExecuteNonQuery();
+            }
+
+            var sourceBeforePreview = File.ReadAllBytes(_sourcePath);
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(preview.ImportReport.BlockingIssues, Is.Empty);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-access-secret", StringComparison.Ordinal)), Is.False);
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBeforePreview));
+            });
+
+            migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessToken') FROM ImportLists WHERE Id = 201;"), Is.EqualTo("fixture-access-token"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM ImportLists WHERE Id = 201;"), Is.EqualTo("fixture-access-secret"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM ImportLists WHERE Id = 203;"), Is.EqualTo("fixture-owned-access-secret"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM Notifications WHERE Id = 204;"), Is.EqualTo("fixture-notify-access-secret"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM Notifications WHERE Id = 205;"), Is.EqualTo("fixture-owned-notify-secret"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM ImportLists WHERE Id = 202;"), Is.EqualTo(string.Empty));
             });
         }
 
