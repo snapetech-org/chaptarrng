@@ -9,23 +9,50 @@ handoff summary for moving BookshelfNG users to ChaptarrNG. The
 detailed feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
-**Latest exact-head validation (2026-10-19):** ChaptarrNG draft PR #131 is at
-`a3d9ec8dd3552d90ed527309658a9c4cfed8b7ec`. Build
-[39297761439](https://github.com/snapetech-org/chaptarrng/actions/runs/39297761439)
-passed Linux, macOS, Windows, PostgreSQL migration smoke, release-note
-contract, and native-runner receipt reconciliation. CodeQL
-[39297757961](https://github.com/snapetech-org/chaptarrng/actions/runs/39297757961),
+**Latest application-code validation (2026-10-19):** ChaptarrNG draft PR #131
+contains code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build
+[39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)
+passed Linux (4,460 passed, 0 failed, 13 skipped, 2 inconclusive), macOS
+(4,455 passed, 0 failed, 18 skipped, 2 inconclusive), and Windows (4,421
+passed, 0 failed, 21 skipped, 33 inconclusive) suites. PostgreSQL migration,
+release-note, native-runner receipt, and Linux pinned-tool M4B checks passed.
+CodeQL [118269449163](https://github.com/snapetech-org/chaptarrng/runs/118269449163),
 security/dependency scan
-[39297761173](https://github.com/snapetech-org/chaptarrng/actions/runs/39297761173),
+[39313569305](https://github.com/snapetech-org/chaptarrng/actions/runs/39313569305),
 dependency review
-[39297761454](https://github.com/snapetech-org/chaptarrng/actions/runs/39297761454),
-and NuGet submission
-[39297754032](https://github.com/snapetech-org/chaptarrng/actions/runs/39297754032)
-passed. Disposable-fork validation was skipped by its external-fork gate.
-Hosted CI is green for this candidate head; representative operator-data
-conversion and rollback, parity decisions, provider and SeerrNG acceptance,
-real media/M4B acceptance, installed rollback, installer/channel handoff, and
-operator sign-off remain open. No release or bridge was published.
+[39313568981](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568981),
+NuGet submission
+[39313556294](https://github.com/snapetech-org/chaptarrng/actions/runs/39313556294),
+and Helm resource-identity validation
+[39313569136](https://github.com/snapetech-org/chaptarrng/actions/runs/39313569136)
+passed. Disposable-fork validation
+[39313569934](https://github.com/snapetech-org/chaptarrng/actions/runs/39313569934)
+was skipped by its external-fork gate.
+
+The exact-head Linux artifact also passed a populated synthetic migration and
+SeerrNG smoke against SeerrNG `86c6908e53777fd6cdab525bab56abf27176e3b4`:
+normal startup converted the migration-158 fixture; SeerrNG read both migrated
+formats and their Hardcover identities; the restricted key was denied
+administrative and unrelated command routes; and the real `ReadarrAPI` created,
+polled, and cancelled a synthetic pending request. See the detailed evidence
+below. This does not close successful provider fulfillment, representative
+operator data, semantic parity, real media/M4B acceptance, installed rollback,
+installer/channel handoff, or operator sign-off. No release or bridge was
+published.
+
+**Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19):** The
+Linux app files from Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)
+were run with the checked-in Compose fixture against disposable config and
+library volumes. SeerrNG `ReadarrAPI` at `86c6908e53777fd6cdab525bab56abf27176e3b4`
+read the migrated synthetic audiobook and ebook; the restricted key accessed
+capabilities and both libraries while requests to `/config/host` and
+`/command` were denied. The SeerrNG adapter created a synthetic unavailable-
+author request, polled it, cancelled it, and observed the terminal
+`Failed` / `Cancelled by user` state. The ChaptarrNG candidate reported
+`0.9.978.0`. The test used disposable synthetic records and did not exercise
+successful provider fulfillment, representative user data, full SeerrNG
+history/availability workflows, or installed rollback. Test containers,
+images, and volumes were removed after the run.
 
 The diagnostics handoff now has startup-path fixtures for default-off behavior,
 legacy opt-in only with the archived `Bookshelf.Diagnostics.dll` marker,

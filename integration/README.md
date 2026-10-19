@@ -7,6 +7,23 @@ checks both migrated formats through SeerrNG, capability discovery, the
 restricted service key, and a real SeerrNG adapter add/poll/cancel cycle for
 an unavailable synthetic author.
 
+## Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19)
+
+The Linux app artifact from ChaptarrNG application-code commit
+`0e881d921dd55aa89e12747557ccaadbb2352a21` passed Build
+[39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)
+and the checked-in populated migration/SeerrNG Compose smoke. The fixture
+converted synthetic BookshelfNG records; SeerrNG `ReadarrAPI` at
+`86c6908e53777fd6cdab525bab56abf27176e3b4` read both formats and their
+Hardcover identities. The restricted key accessed capabilities and both
+libraries while admin and unrelated command routes were denied. The pending
+request test created, polled, and cancelled an unavailable-author request and
+observed the terminal cancellation state. The test used only disposable
+records and volumes; successful provider fulfillment, history/availability
+workflows, representative operator data, installed rollback, and channel
+handoff remain unverified. The local test image, containers, and volumes were
+removed after the run.
+
 Set the inputs in the shell; the Compose file does not need a `.env` file:
 the SeerrNG checkout must have dependencies installed and its server built
 first (`pnpm install --frozen-lockfile && pnpm build:server` from that checkout).

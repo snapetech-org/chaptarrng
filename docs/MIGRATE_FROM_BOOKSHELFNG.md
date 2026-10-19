@@ -47,6 +47,14 @@
 > does not close ambiguous
 > media review, older-schema or PostgreSQL operator-data acceptance, feature
 > parity, or installer/channel handoff.
+> Draft PR #131 application-code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`
+> then passed exact-head Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)
+> on Linux, macOS, and Windows, plus PostgreSQL migration, release-note,
+> CodeQL, security/dependency, dependency-review, NuGet, and Helm identity
+> checks. Its Linux artifact passed an isolated populated migration-to-SeerrNG
+> smoke against synthetic data. These checks do not approve cutover; keep
+> BookshelfNG running until representative data, rollback, parity, and channel
+> acceptance gates close. See the [retirement status](docs/BOOKSHELFNG_RETIREMENT.md).
 > Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 > contains older SQLite and one-schema PostgreSQL migration support, native
 > Hardcover identity handling, BookOrbit Book Dock, SeerrNG edition-catalog
