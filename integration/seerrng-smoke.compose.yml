@@ -11,6 +11,7 @@ services:
       CHAPTARR__AUTH__SEERRAPIKEY: ${CHAPTARR_SEERR_API_KEY:?Set CHAPTARR_SEERR_API_KEY}
     volumes:
       - chaptarrng-smoke-config:/config
+      - chaptarrng-smoke-books:/books
 
   smoke:
     image: node:24.15.0-bookworm-slim
@@ -32,10 +33,18 @@ services:
         source: ${SEERRNG_NODE_MODULES:?Set SEERRNG_NODE_MODULES to the installed SeerrNG node_modules directory}
         target: /seerrng/node_modules
         read_only: true
-    command: [node, scripts/chaptarrng-integration-smoke.mjs]
+      - type: bind
+        source: .
+        target: /chaptarrng-integration
+        read_only: true
+    command:
+      - sh
+      - -lc
+      - node scripts/chaptarrng-integration-smoke.mjs && node /chaptarrng-integration/seerrng-request-lifecycle.mjs
 
 volumes:
   chaptarrng-smoke-config:
+  chaptarrng-smoke-books:
 
 secrets:
   SIXLABORS_LICENSE_KEY:

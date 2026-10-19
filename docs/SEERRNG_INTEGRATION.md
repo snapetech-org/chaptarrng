@@ -51,7 +51,7 @@ and channel acceptance remain open.
 
 **Current PR #131 application-code validation (2026-10-19):** snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed [Build 39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract. [CodeQL 39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), [security 39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), [NuGet 39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and [dependency review 39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. The SeerrNG adapter and request-route unit suite at source commit `b810153c` passed 4 files / 283 tests. The built Linux artifact also passed the API smoke below; it verifies an empty paged library and the service-key boundary, not populated migration data or full SeerrNG workflows.
 
-**SeerrNG pending-request lifecycle probe (2026-10-19):** On the isolated Linux candidate from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), SeerrNG's real `ReadarrAPI` (`b810153c`) submitted an ebook request for a synthetic work whose author was unavailable. `addBook` received a pending ID, `getPendingAuthorImport` read it, `cancelPendingAuthorImport` cancelled it, and a second poll observed the expected terminal cancellation state: `OverallStatus=Failed` with `LastError=Cancelled by user`. The cancelled record remains queryable rather than being removed. This proves request creation, polling, and cancellation across the adapter/API boundary. It used a disposable database and synthetic IDs; provider-success behavior, retries, availability, history, migrated records, production settings, full SeerrNG operator workflow, and operator acceptance remain open. The tested artifact predates current PR head `989f329f`; the two later commits changed Calibre tie-breaking and its tests, not the SeerrNG API contract.
+**SeerrNG pending-request lifecycle probe (2026-10-19):** On the isolated Linux candidate from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), SeerrNG's real `ReadarrAPI` (`b810153c`) submitted an ebook request for a synthetic work whose author was unavailable. `addBook` received a pending ID, `getPendingAuthorImport` read it, `cancelPendingAuthorImport` cancelled it, and a second poll observed the expected terminal cancellation state: `OverallStatus=Failed` with `LastError=Cancelled by user`. The cancelled record remains queryable rather than being removed. This proves request creation, polling, and cancellation across the adapter/API boundary. It used a disposable database and synthetic IDs; provider-success behavior, retries, availability, history, migrated records, production settings, full SeerrNG operator workflow, and operator acceptance remain open. The tested artifact predates current PR head `989f329f`; the two later commits changed Calibre tie-breaking and its tests, not the SeerrNG API contract. The probe is now repeatable through `integration/seerrng-request-lifecycle.mjs` and is wired after the authorization smoke in `integration/seerrng-smoke.compose.yml`. On 2026-10-19, both scripts passed against the isolated artifact from Build 39239940373 and SeerrNG source `b810153c`; `node --check`, Prettier, and Compose configuration validation also passed. The Compose-built image itself was not launched in this run.
 
 ## Configure a dedicated service key
 
@@ -88,24 +88,29 @@ absolute SeerrNG checkout path and distinct random values for
 ```sh
 SEERRNG_SOURCE=/path/to/seerrng \
 SEERRNG_NODE_MODULES=/path/to/seerrng/node_modules \
+SIXLABORS_LICENSE_FILE=/path/to/sixlabors.lic \
 CHAPTARR_GLOBAL_API_KEY='use-a-separate-long-random-key' \
 CHAPTARR_SEERR_API_KEY='use-another-long-random-key' \
-docker compose -f integration/seerrng-smoke.compose.yml \
+docker compose -p chaptarrng-seerrng-smoke \
+  -f integration/seerrng-smoke.compose.yml \
   up --build --no-attach chaptarrng \
   --abort-on-container-exit --exit-code-from smoke
 ```
 
-The smoke test connects from a separate container, confirms SeerrNG can read
+The smoke stack connects from a separate container, confirms SeerrNG can read
 ChaptarrNG status and the paged book library through its format-scoped API,
-and confirms the service key is rejected for administrative and unrelated
-command routes. `SEERRNG_NODE_MODULES` must point to the installed dependency
-directory so the separate smoke container can resolve SeerrNG's runtime
-packages. Remove the test stack afterward with `docker compose -f
+confirms the service key is rejected for administrative and unrelated
+command routes, and runs the compiled SeerrNG adapter through an ebook add,
+pending-import poll, and cancellation. The lifecycle request uses a disposable
+`/books` volume and synthetic provider IDs. `SEERRNG_NODE_MODULES` must point to
+the installed dependency directory so the separate smoke container can
+resolve SeerrNG's runtime packages. Remove the test stack afterward with
+`docker compose -p chaptarrng-seerrng-smoke -f
 integration/seerrng-smoke.compose.yml down -v`.
 
 ## Recorded smoke evidence
 
-On 2026-10-19, `scripts/chaptarrng-integration-smoke.mjs` passed against the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), reporting ChaptarrNG `0.9.978.0`. It discovered the SeerrNG capability contract and read the empty paged library using the restricted key; `/config/host` and an unrelated `/command` were denied, and the global key was accepted by `/config/host`. The smoke used a disposable SQLite database and synthetic keys. It establishes the empty-library API and authorization contract only; request creation, availability statistics, history, pending imports, converted records, unchanged production settings, and a real BookshelfNG library remain unvalidated.
+On 2026-10-19, `scripts/chaptarrng-integration-smoke.mjs` passed against the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), reporting ChaptarrNG `0.9.978.0`. It discovered the SeerrNG capability contract and read the empty paged library using the restricted key; `/config/host` and an unrelated `/command` were denied, and the global key was accepted by `/config/host`. The smoke used a disposable SQLite database and synthetic keys. It establishes the empty-library API and authorization contract only. The separate lifecycle probe below covers one unavailable-author add/poll/cancel path; availability statistics, history, successful provider lookup, converted records, unchanged production settings, and a real BookshelfNG library remain unvalidated.
 
 On 2026-10-18, `scripts/chaptarrng-integration-smoke.mjs` passed against
 ChaptarrNG candidate `0.9.978.0` from PR #131 source head
