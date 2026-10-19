@@ -477,7 +477,7 @@ namespace NzbDrone.Core.ImportLists.Goodreads
                         Author = author.Name.CleanSpaces(),
                         AuthorGoodreadsId = $"gr:{author.Id}",
                         Book = book.TitleWithoutSeries.CleanSpaces(),
-                        BookGoodreadsId = book.Work?.Id > 0 ? $"gr:{book.Work.Id}" : null,
+                        BookGoodreadsId = book.WorkId > 0 ? $"gr:{book.WorkId}" : null,
                         EditionGoodreadsId = $"gr:{book.Id}"
                     });
 
