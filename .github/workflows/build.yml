@@ -166,12 +166,15 @@ jobs:
 
     - name: Guard (version) - version-only commits stay pure
       shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.base_ref }}
       run: |
         set -euo pipefail
 
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          git fetch --no-tags origin "refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
-          COMPARE_REF="origin/${{ github.base_ref }}"
+        if [[ "$EVENT_NAME" == "pull_request" ]]; then
+          git fetch --no-tags origin "refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          COMPARE_REF="origin/${BASE_REF}"
         else
           COMPARE_REF="$(git describe --tags --match 'v*' --abbrev=0 HEAD 2>/dev/null || true)"
 
