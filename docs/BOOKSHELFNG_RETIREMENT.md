@@ -30,6 +30,21 @@ upgrade and rollback checks, plus PostgreSQL migration and native-runner
 receipt validation. The source remains unpublished and is not approved for
 operator cutover.
 
+Current ChaptarrNG `main` at `be304ff0` passed Build
+[39385113986](https://github.com/snapetech-org/chaptarrng/actions/runs/39385113986)
+on Linux, macOS, Windows, and PostgreSQL migration, including the Windows
+migration-installer rollback checks. BookshelfNG main commit `9fcc0aea` adds
+schema-v4 per-path disposition tracking; its local audit suite passes 23/23,
+but the pinned inventory still has 0/1,115 dispositions. BookshelfNG Build
+[39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595)
+and mirrored Unraid Build
+[39386647719](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39386647719)
+passed. Unraid transition PR [#5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5)
+at candidate head `e615e37e` passed its exact-head build, template, dependency,
+package-sync, release-note, Trivy, and Semgrep checks. It remains draft because
+representative data and Community Applications update/rollback acceptance are
+still open; its publication jobs were skipped.
+
 No release, package, image, or bridge was published. BookshelfNG remains in
 service until operator data, exhaustive semantic disposition, provider
 fulfillment, installer/channel handoff, and operator acceptance are complete.

@@ -49,6 +49,19 @@ receipt validation. This validates the merged source on the current main head;
 it does not close operator-data, feature-parity, rollback, or channel
 acceptance.
 
+Current ChaptarrNG `main` at `be304ff0` also passed Build
+[39385113986](https://github.com/snapetech-org/chaptarrng/actions/runs/39385113986)
+on Linux, macOS, Windows, and PostgreSQL migration, including the Windows
+migration-installer rollback checks. BookshelfNG's schema-v4 audit tooling at
+`9fcc0aea` passed Build
+[39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595);
+the mirrored Unraid `main` at `23bebe2a` passed Build
+[39386647719](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39386647719).
+The inventory still has 0/1,115 reviewed path dispositions. Unraid transition
+PR [#5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5) passed its
+exact-head checks at `e615e37e` but remains draft pending populated-data and
+Community Applications upgrade/rollback acceptance. No publishing jobs ran.
+
 The BookshelfNG Windows WPF installer still installs BookshelfNG. ChaptarrNG
 `main` contains an unpublished transactional WPF handoff installer. It keeps
 the existing `Readarr` data directory, asks for provider mode, retains a
