@@ -107,7 +107,7 @@ namespace Chaptarr.Core.Test.Api
             public void InvalidateAuthorCache(int authorId) => throw new NotImplementedException();
         }
 
-        private sealed class StubAuthorService : DispatchProxy
+        private class StubAuthorService : DispatchProxy
         {
             public List<Author> Authors { get; set; } = new List<Author>();
 
