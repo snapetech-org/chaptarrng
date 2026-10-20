@@ -437,6 +437,7 @@ namespace NzbDrone.Core.Books
             var mediaType = requestedBook.MediaType;
             var searchRequested = requestedBook.AddOptions?.SearchForNewBook == true;
             var requestedIds = new List<string> { workProviderId };
+            var requestedEditionProviderIds = GetRequestedEditionProviderIdsFromPayload(requestedBook.Editions);
 
             // An explicit add reverses a matching import-list exclusion before the
             // authoritative author blob is normalized. Waiting until after import
@@ -456,7 +457,7 @@ namespace NzbDrone.Core.Books
                 throw new InvalidOperationException($"Unable to import author {authorProviderId} for requested work {workProviderId}.");
             }
 
-            var localBook = ResolveLocalRequestedBook(author.Id, workProviderId, mediaType);
+            var localBook = ResolveLocalRequestedBook(author.Id, workProviderId, mediaType, requestedEditionProviderIds);
             if (localBook == null)
             {
                 // AddAuthorAsync queues this shape when the authoritative author blob does not yet
@@ -466,6 +467,7 @@ namespace NzbDrone.Core.Books
 
             author = EnsureMediaTypeMonitoringForRequestedBook(author, mediaType);
             localBook.Author = author;
+            ApplyRequestedEditionToCatalogBook(localBook, requestedEditionProviderIds);
             localBook.SetMonitored(true);
             localBook.Monitored = true;
             _bookService.UpdateBook(localBook);
@@ -556,7 +558,11 @@ namespace NzbDrone.Core.Books
             };
         }
 
-        private Book ResolveLocalRequestedBook(int authorId, string workProviderId, BookMediaType mediaType)
+        private Book ResolveLocalRequestedBook(
+            int authorId,
+            string workProviderId,
+            BookMediaType mediaType,
+            IReadOnlyCollection<string> requestedEditionProviderIds)
         {
             var separator = workProviderId.IndexOf(':');
             if (separator <= 0)
@@ -573,12 +579,131 @@ namespace NzbDrone.Core.Books
                 .Select(group => group.First())
                 .ToList();
 
-            if (matches.Count > 1)
+            if (matches.Count <= 1)
             {
-                throw new InvalidOperationException($"Requested work {workProviderId} resolves to multiple local {mediaType} books.");
+                return matches.SingleOrDefault();
             }
 
-            return matches.SingleOrDefault();
+            var selectedEditionMatches = matches
+                .Where(book => book.Editions?.Any(edition =>
+                    requestedEditionProviderIds?.Any(providerId =>
+                        BookEditionIdentity.EditionMatchesProviderId(edition, providerId)) == true) == true)
+                .ToList();
+
+            if (selectedEditionMatches.Count == 1)
+            {
+                return selectedEditionMatches[0];
+            }
+
+            if (selectedEditionMatches.Count > 1)
+            {
+                matches = selectedEditionMatches;
+            }
+
+            // A work can have more than one local row after older imports. Only collapse rows when
+            // their stable work identity, complete edition identity set, and copy-defining fields
+            // are identical. Different edition pockets remain separate and require an explicit choice.
+            var hydratedMatches = matches
+                .Select(book => _bookService.GetBook(book.Id) ?? book)
+                .ToList();
+
+            if (AreExactLocalBookCopies(hydratedMatches))
+            {
+                return hydratedMatches
+                    .OrderByDescending(book => book.HasFiles)
+                    .ThenByDescending(book => book.Editions?.Any(edition => edition?.Monitored == true && edition.ManualAdd) == true)
+                    .ThenByDescending(book => book.AddOptions?.AddType == BookAddType.Manual)
+                    .ThenByDescending(book => book.AudiobookMonitored || book.EbookMonitored)
+                    .ThenByDescending(GetLocalBookProviderScore)
+                    .ThenBy(book => book.Id)
+                    .First();
+            }
+
+            throw new AmbiguousLocalBookMatchException(workProviderId, mediaType, hydratedMatches);
+        }
+
+        private void ApplyRequestedEditionToCatalogBook(Book book, IReadOnlyCollection<string> requestedEditionProviderIds)
+        {
+            if (book == null || requestedEditionProviderIds == null || requestedEditionProviderIds.Count == 0)
+            {
+                return;
+            }
+
+            if (HasMissingOrEmptyEditionMetadata(book.Editions))
+            {
+                book.Editions = _editionService.GetEditionsByBook(book.Id) ?? new List<Edition>();
+            }
+
+            if (book.Editions == null || book.Editions.Count == 0)
+            {
+                return;
+            }
+
+            ApplyEditionRetentionForAdd(book, requestedEditionProviderIds);
+            var selectedEdition = book.Editions.FirstOrDefault(edition => edition?.Monitored == true);
+            if (selectedEdition == null || !requestedEditionProviderIds.Any(providerId =>
+                    BookEditionIdentity.EditionMatchesProviderId(selectedEdition, providerId)))
+            {
+                // The selected provider edition may not be available in this format or may have
+                // fallen outside the user's metadata profile. Keep the normal retained-edition
+                // selection in that case; only pin an edition that actually matches the request.
+                return;
+            }
+
+            var persistedEditions = _editionService.SetMonitored(selectedEdition, isManualSelection: true);
+            if (persistedEditions != null && persistedEditions.Count > 0)
+            {
+                book.Editions = persistedEditions;
+                selectedEdition = persistedEditions.FirstOrDefault(edition => edition?.Id == selectedEdition.Id)
+                                  ?? selectedEdition;
+            }
+
+            book.AnyEditionOk = false;
+            if (!string.IsNullOrWhiteSpace(selectedEdition.ForeignEditionId))
+            {
+                book.ForeignEditionId = selectedEdition.ForeignEditionId;
+            }
+        }
+
+        private static bool AreExactLocalBookCopies(IReadOnlyCollection<Book> books)
+        {
+            if (books == null || books.Count < 2)
+            {
+                return false;
+            }
+
+            var first = books.FirstOrDefault();
+            var workIds = BookIdentity.GetStableWorkProviderIdentityTokens(first);
+            var editionIds = BookIdentity.GetEditionProviderIdentityTokens(first);
+            if (workIds.Count == 0 || editionIds.Count == 0)
+            {
+                return false;
+            }
+
+            return books.All(book =>
+                book != null &&
+                book.AuthorId == first.AuthorId &&
+                book.MediaType == first.MediaType &&
+                workIds.SetEquals(BookIdentity.GetStableWorkProviderIdentityTokens(book)) &&
+                editionIds.SetEquals(BookIdentity.GetEditionProviderIdentityTokens(book)) &&
+                string.Equals(book.ForeignEditionId, first.ForeignEditionId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(book.BaseBookId, first.BaseBookId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(book.UnitKeyHash, first.UnitKeyHash, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(book.Title?.Trim(), first.Title?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(book.Subtitle?.Trim(), first.Subtitle?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(book.Narrator?.Trim(), first.Narrator?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(book.SeriesName?.Trim(), first.SeriesName?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(book.SeriesPosition?.Trim(), first.SeriesPosition?.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                book.SeriesId == first.SeriesId &&
+                book.AnyEditionOk == first.AnyEditionOk);
+        }
+
+        private static int GetLocalBookProviderScore(Book book)
+        {
+            if (!string.IsNullOrWhiteSpace(book?.HardcoverBookId)) return 90;
+            if (!string.IsNullOrWhiteSpace(book?.GoodreadsWorkId)) return 80;
+            if (!string.IsNullOrWhiteSpace(book?.OpenLibraryWorkId)) return 60;
+            return 0;
         }
 
         private string ResolveRequestedWorkProviderId(Book book)

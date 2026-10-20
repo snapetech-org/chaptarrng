@@ -4,6 +4,7 @@ import TextTruncate from 'react-text-truncate';
 import BookCover from 'Book/BookCover';
 import Alert from 'Components/Alert';
 import CheckInput from 'Components/Form/CheckInput';
+import Link from 'Components/Link/Link';
 import SpinnerButton from 'Components/Link/SpinnerButton';
 import ModalBody from 'Components/Modal/ModalBody';
 import ModalContent from 'Components/Modal/ModalContent';
@@ -37,6 +38,17 @@ function hasAddedMediaType(props, mediaType) {
 function getMissingMediaTypes(props) {
   return MEDIA_TYPES.filter(
     (mediaType) => !hasAddedMediaType(props, mediaType)
+  );
+}
+
+function getAmbiguousLocalBookCandidates(error) {
+  const response = error?.responseJSON;
+  if (response?.entityType !== 'book' || !Array.isArray(response.candidates)) {
+    return [];
+  }
+
+  return response.candidates.filter(
+    (candidate) => Number.isInteger(candidate?.id) && candidate.id > 0
   );
 }
 
@@ -265,6 +277,7 @@ class AddNewBookModalContent extends Component {
     const addErrorMessage = addError ?
       getErrorMessage(addError, addError.message || addErrorFallback) :
       null;
+    const ambiguousLocalBookCandidates = getAmbiguousLocalBookCandidates(addError);
     const missingAddSetup = getMissingSetupForMediaType(
       this.props,
       this.state.selectedMediaType
@@ -339,6 +352,31 @@ class AddNewBookModalContent extends Component {
               {addErrorMessage ? (
                 <Alert className={styles.addError} kind={kinds.DANGER}>
                   {addErrorMessage}
+                  {ambiguousLocalBookCandidates.length ? (
+                    <ul className={styles.ambiguousCandidates}>
+                      {ambiguousLocalBookCandidates.map((candidate) => {
+                        const details = [candidate.disambiguation, candidate.narrator]
+                          .filter(Boolean)
+                          .join(' — ');
+                        const title = details ? `${candidate.title} (${details})` : candidate.title;
+                        const format = translate(
+                          candidate.mediaType === 'ebook' ? 'EbookLabel' : 'AudiobookLabel'
+                        );
+
+                        return (
+                          <li key={candidate.id}>
+                            <Link
+                              className={styles.ambiguousCandidateLink}
+                              to={`/book/${candidate.id}`}
+                              aria-label={translate('OpenFormatOfTitle', { format, title })}
+                            >
+                              {title}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
                 </Alert>
               ) : null}
             </div>

@@ -1586,6 +1586,17 @@ namespace Chaptarr.Api.V1.Books
 			                    Message = PendingBookRequestException.UserMessage
 			                });
 			            }
+			            catch (AmbiguousLocalBookMatchException ex)
+			            {
+			                var ambiguity = ProviderAmbiguityHelper.GetBookAmbiguity(
+			                    ex.Candidates,
+			                    ex.WorkProviderId,
+			                    ex.MediaType,
+			                    "workProviderId",
+			                    _logger,
+			                    "adding book");
+			                return StatusCode(ProviderAmbiguityHelper.StatusCode, ambiguity);
+			            }
 			            catch (ValidationException ex)
 	            {
 	                _logger.Error(ex, "[AddBook] Validation error");
