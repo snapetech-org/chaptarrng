@@ -1,5 +1,5 @@
 .item {
-  margin: 3px 8px;
+  margin: 3px 15px;
   color: var(--sidebarColor);
 }
 
@@ -10,12 +10,12 @@
 .link {
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 8px;
   min-height: 42px;
   border-radius: 8px;
   color: var(--sidebarColor);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
   transition: background-color 150ms ease, color 150ms ease;
 
   &:hover,
@@ -30,7 +30,7 @@
   composes: link;
 
   margin: 0;
-  padding: 0 12px;
+  padding: 0 8px;
   min-height: 36px;
   color: var(--helpTextColor);
   font-weight: 500;
@@ -43,17 +43,17 @@
 }
 
 .isActiveLink {
-  color: #c4b5fd;
+  color: var(--themeRed);
   font-weight: 600;
 }
 
 .isActiveParentLink {
-  background: linear-gradient(105deg, #6d36dc 0%, #8235e8 100%);
+  background: linear-gradient(105deg, var(--themeAlternateRed) 0%, var(--themeRed) 100%);
   color: var(--white);
 
   &:hover,
   &:focus {
-    background: linear-gradient(105deg, #6d36dc 0%, #8235e8 100%);
+    background: linear-gradient(105deg, var(--themeAlternateRed) 0%, var(--themeRed) 100%);
     color: var(--white);
   }
 }

@@ -24,12 +24,18 @@
   align-items: center;
   gap: 10px;
 
+  text-decoration: none;
   line-height: 1;
+
+  &:hover {
+    color: var(--white);
+    text-decoration: none;
+  }
 }
 
 .logo {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
 }
 
 .brandName {
@@ -38,11 +44,11 @@
   letter-spacing: -0.04em;
   font-weight: 700;
 
-  font-size: 20px;
+  font-size: 26px;
 }
 
 .brandMark {
-  color: #c4b5fd;
+  color: var(--themeRed);
   letter-spacing: -0.02em;
   font-size: 0.78em;
 }

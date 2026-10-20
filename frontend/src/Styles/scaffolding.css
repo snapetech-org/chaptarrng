@@ -21,7 +21,7 @@
 html,
 body {
   color: var(--textColor);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--defaultFontFamily);
 }
 
 body {

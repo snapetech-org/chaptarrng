@@ -9,6 +9,7 @@ const pink = '#ff69b4';
 const lightGray = '#ddd';
 
 module.exports = {
+  defaultFontFamily: 'Inter, Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
   textColor: '#515253',
   defaultColor: '#333',
   disabledColor: '#999',
@@ -58,6 +59,7 @@ module.exports = {
 
   // Header
   pageHeaderBackgroundColor: chaptarrRed,
+  focusColor: '#2563eb',
 
   // Sidebar
 

@@ -9,6 +9,7 @@ const pink = '#ff69b4';
 const lightGray = '#94a3b8';
 
 module.exports = {
+  defaultFontFamily: 'Inter, Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
   textColor: '#dbe4f0',
   defaultColor: '#cbd5e1',
   disabledColor: '#94a3b8',
