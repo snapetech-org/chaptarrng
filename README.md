@@ -160,6 +160,12 @@ database; after success, it removes that temporary `.pre-restore` copy. This
 source candidate is not in `v0.9.977` and does not authorize cutover.
 Earlier PR #131 code head 6f57d355 passed exact-head Build run [39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613) on Linux, macOS, Windows, PostgreSQL migration, and release-note validation.
 
+Current `main` also accepts raw `.db` and `.xml` legacy backup uploads. The
+`.xml` suffix is a legacy filename; uploaded content still has to be SQLite.
+ChaptarrNG validates SQLite integrity and supported database lineage before
+staging the file. This compatibility change is unreleased and is not in
+`v0.9.977`.
+
 The retirement candidate also adds portable encrypted `.enc` export and
 restore compatible with BookshelfNG's BKSENC01 format. ChaptarrNG's existing
 scheduled `.zip.enc` format remains separate. See the

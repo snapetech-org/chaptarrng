@@ -25,6 +25,14 @@ is not in the public `.977` release; the release freeze and production
 acceptance gates remain in force. See the
 [HTTP security settings](HTTP_SECURITY.md).
 
+Current ChaptarrNG `main` also accepts raw `.db` and `.xml` BookshelfNG backup
+uploads. The `.xml` suffix is a legacy filename; the contents must still be a
+SQLite database. Before staging, ChaptarrNG checks SQLite integrity and
+database lineage, then applies the BookshelfNG source-version and table
+boundary checks. This closes the upload-extension gap in the current source;
+the raw formats are not supported by published `v0.9.977`, and the retirement
+release freeze remains active.
+
 The regression fixture first failed on exact-head commit `36623faf` because
 of missing imports and an incorrect attribute property. Follow-up `aac32822`
 fixed the imports but exposed the explicit request-size metadata interface;

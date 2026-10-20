@@ -180,6 +180,14 @@ schema-158 database. This is hosted synthetic validation, not operator-data
 acceptance. The source-candidate path is not available in `.977` and must not
 be used for production cutover while the retirement gates remain open.
 
+Current `main` also accepts raw `.db` and `.xml` backup uploads through the
+same restore endpoint. The `.xml` suffix is a legacy filename; the uploaded
+content must still be a SQLite database. ChaptarrNG checks SQLite integrity
+and database lineage before staging it, and applies BookshelfNG source-version
+and table-boundary validation when the database is BookshelfNG. Normal startup
+then converts the staged database and retains the source for rollback. These
+raw upload extensions are not accepted by published `v0.9.977`.
+
 If BookshelfNG is older than `0.4.21.71`, update it to that final release and
 let BookshelfNG finish its own database upgrade before switching applications.
 This brings the source to migration 158, which the published `.977` converter

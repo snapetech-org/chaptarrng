@@ -153,6 +153,48 @@ namespace Chaptarr.Core.Test.Backup
             _backupService.Verify(service => service.Restore(It.Is<string>(path => path.EndsWith(".zip.enc", StringComparison.OrdinalIgnoreCase))), Times.Once);
         }
 
+        [TestCase(".db")]
+        [TestCase(".xml")]
+        public void should_accept_legacy_raw_backup_upload_extensions(string extension)
+        {
+            var uploadPath = Path.Combine(_tempFolder, $"bookshelf_backup{extension}");
+            var bytes = RandomNumberGenerator.GetBytes(1024);
+            File.WriteAllBytes(uploadPath, bytes);
+
+            string restoredPath = null;
+            _backupService.Setup(service => service.Restore(It.IsAny<string>()))
+                .Callback<string>(path =>
+                {
+                    restoredPath = path;
+                    Assert.That(File.ReadAllBytes(path), Is.EqualTo(bytes));
+                });
+
+            var controller = CreateController();
+            SetUpload(controller, uploadPath, Path.GetFileName(uploadPath));
+
+            controller.UploadAndRestore();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(restoredPath, Does.EndWith(extension));
+                Assert.That(File.Exists(restoredPath), Is.False);
+            });
+            _backupService.Verify(service => service.Restore(It.IsAny<string>()), Times.Once);
+        }
+
+        [Test]
+        public void should_reject_unsupported_restore_upload_extensions()
+        {
+            var uploadPath = Path.Combine(_tempFolder, "bookshelf_backup.7z");
+            File.WriteAllBytes(uploadPath, RandomNumberGenerator.GetBytes(1024));
+
+            var controller = CreateController();
+            SetUpload(controller, uploadPath, Path.GetFileName(uploadPath));
+
+            Assert.Throws<UnsupportedMediaTypeException>(() => controller.UploadAndRestore());
+            _backupService.Verify(service => service.Restore(It.IsAny<string>()), Times.Never);
+        }
+
         private BackupController CreateController(List<Func<Task>> responseCompletedCallbacks = null)
         {
             var appFolderInfo = new Mock<IAppFolderInfo>();

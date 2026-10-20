@@ -26,7 +26,7 @@ namespace Chaptarr.Api.V1.System.Backup
         private readonly IAppFolderInfo _appFolderInfo;
         private readonly IDiskProvider _diskProvider;
 
-        private static readonly HashSet<string> ValidExtensions = new(StringComparer.OrdinalIgnoreCase) { ".zip", ".enc" };
+        private static readonly HashSet<string> ValidExtensions = new(StringComparer.OrdinalIgnoreCase) { ".zip", ".db", ".xml", ".enc" };
 
         public BackupController(IBackupService backupService,
                             IBookshelfEncryptedBackupService bookshelfEncryptedBackupService,
@@ -151,7 +151,7 @@ namespace Chaptarr.Api.V1.System.Backup
 
             if (!ValidExtensions.Contains(extension) && !isEncryptedFullBackup)
             {
-                throw new UnsupportedMediaTypeException($"Invalid extension, must be .zip, .enc or .zip.enc");
+                throw new UnsupportedMediaTypeException($"Invalid extension, must be .zip, .db, .xml, .enc or .zip.enc");
             }
 
             var restoreExtension = isEncryptedFullBackup ? ".zip.enc" : extension;
