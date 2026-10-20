@@ -1,15 +1,33 @@
 # BookshelfNG retirement status
 
-**Reviewed:** 2026-10-19 after BookshelfNG `main` added the SeerrNG edition
-catalog endpoint and the ChaptarrNG candidate passed a populated SQLite
-preview/apply/restore rehearsal. ChaptarrNG `v0.9.977` remains the latest
-published release; PR #128 merged the fail-closed release and distribution
-gates. This page is the current
-handoff summary for moving BookshelfNG users to ChaptarrNG. The
-detailed feature inventory remains in the
+**Reviewed:** 2026-10-19. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977`
+remain the latest published releases. The source and distribution publishers
+are fail-closed and their readiness variables remain unset. This is the current
+handoff summary for moving BookshelfNG users to ChaptarrNG. The detailed
+feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
-**Current candidate (2026-10-19):** Draft ChaptarrNG PR #131 adds the Windows service round-trip through the actual installer, using a pinned BookshelfNG `.71` executable and a populated synthetic migration-158 database. On code head `ebe838dd7a74780692350c9d02826f219919582b`, Linux, macOS, PostgreSQL migration, release-note, CodeQL, dependency/security, NuGet, and Helm checks passed; the Windows full test suite and installer build also passed. The new service round-trip then failed during automatic rollback because the smoke held its injected HTTP port conflict until after it had registered Readarr. The rollback helper restored files and tried to start Readarr, but the service did not reach `RUNNING` while the test port was still occupied. The harness now releases the port after Chaptarr has stopped and before BookshelfNG is re-registered; its cross-target Windows build passes locally with zero warnings and errors. Corrected hosted service validation is still required. No production migration or release is approved.
+**Current candidate (2026-10-19)**
+
+Draft ChaptarrNG PR #131 is at code head
+7ff38a58530814d73da280b297eb3ed215bd2c83. Exact-head Build
+[39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
+passed Linux, macOS, Windows, and PostgreSQL migration jobs. The Windows
+installer service round-trip, deferred service cleanup, and selected
+data-directory check passed. Linux tests, the pinned-tool M4B smoke, and CI
+artifact build passed. Native-runner receipt reconciliation is still queued.
+Security Analysis
+[39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
+Trivy, Python, JavaScript/TypeScript, and Actions CodeQL analyses plus NuGet submission passed;
+C# CodeQL remains pending. PR #131 is still draft. These are
+synthetic and CI-artifact checks only; representative operator data, semantic
+parity, installed rollback, and installer/update-channel acceptance remain
+open. The public release is still v0.9.977; do not use the candidate for
+production cutover.
+
+No release, package, image, or bridge was published. BookshelfNG remains in
+service until operator data, exhaustive semantic disposition, provider
+fulfillment, installer/channel handoff, and operator acceptance are complete.
 
 **Prior application-code validation (2026-10-19):** ChaptarrNG draft PR #131
 contains code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build
@@ -42,18 +60,18 @@ operator data, semantic parity, real media/M4B acceptance, installed rollback,
 installer/channel handoff, or operator sign-off. No release or bridge was
 published.
 
-The Windows standalone handoff is still open. BookshelfNG's WPF installer
-continues to install its own `Readarr` service. Draft PR #131 now includes a
-ChaptarrNG-owned, migration-only WPF installer candidate for one SQLite
-database using the standard `NT AUTHORITY\LocalService` account. It detects the
-legacy data path, asks for provider mode, makes a retained integrity-checked
-backup, checks preview immutability for the database, WAL, and rollback
-journal, previews before apply, switches to the `Chaptarr` service, and verifies
-its data path and local health. Custom service accounts, PostgreSQL, and
-multiple databases fail closed. Windows CI also exercises the shared
-fingerprint helper against changed SQLite durable files and a rebuilt `-shm`
-index. Representative Windows data and real installed rollback remain
-unaccepted. Keep the release freeze in place.
+The Windows standalone handoff remains candidate-only. BookshelfNG's WPF
+installer still installs its own Readarr service. Draft PR #131 contains a
+ChaptarrNG migration installer for one SQLite database under the standard
+NT AUTHORITY\LocalService account. The exact-head Windows service round-trip
+on Build 39365402673 passed injected-health-failure rollback, retry, explicit
+restore, deferred service cleanup, and selected data-directory preservation.
+The installer takes a retained integrity-checked backup, previews before
+apply, and holds a read-only SQLite PRAGMA data_version guard through preview
+review. Raw database/WAL/journal fingerprints remain diagnostic. Custom
+service accounts, PostgreSQL, and multiple databases fail closed.
+Representative Windows data and real operator rollback remain unaccepted.
+Keep the release freeze in place.
 
 **Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19):** The
 Linux app files from Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)

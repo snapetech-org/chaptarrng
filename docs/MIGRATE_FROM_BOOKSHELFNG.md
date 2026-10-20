@@ -55,23 +55,21 @@
 > smoke against synthetic data. These checks do not approve cutover; keep
 > BookshelfNG running until representative data, rollback, parity, and channel
 > acceptance gates close. See the [retirement status](docs/BOOKSHELFNG_RETIREMENT.md).
-> Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
-> contains older SQLite and one-schema PostgreSQL migration support, native
-> Hardcover identity handling, BookOrbit Book Dock, SeerrNG edition-catalog
-> compatibility with the Editions and Narrations tab, and previewable media
-> moves. Earlier code snapshot `2c0401fc` passed exact-head run
-> [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
-> Earlier integrated candidate code snapshot `8b4c6e23` includes current ChaptarrNG
-> `main`, the Editions and Narrations tab, and the series narrator comparison.
-> Exact-head Build run
-> [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
-> passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
-> runner-receipt checks. CodeQL, dependency review, security scan, and NuGet
-> submission also passed. Disposable-fork validation was skipped by its gate.
-> Local translation, type, targeted ESLint/Stylelint, and release-note preview
-> pass. These candidate checks do not approve cutover; operator-data, parity,
-> installed rollback, and channel acceptance remain open.
-> Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131) contains the unpublished Windows service handoff installer and its upgrade/rollback smoke. The first hosted service round-trip exposed a harness ordering issue: the injected HTTP port conflict was held while BookshelfNG was restored. The harness now releases the port after Chaptarr stops and before Readarr is registered. The [retirement status report](docs/BOOKSHELFNG_RETIREMENT.md) tracks exact-head CI and open acceptance. Keep BookshelfNG in service; do not use the candidate for production migration.
+> Draft ChaptarrNG PR #131 is at code head
+> 7ff38a58530814d73da280b297eb3ed215bd2c83. Exact-head Build
+> [39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
+> passed Linux, macOS, Windows, and PostgreSQL migration jobs. The Windows
+> installer service round-trip, deferred service cleanup, and selected
+> data-directory check passed. Linux tests, the pinned-tool M4B smoke, and CI
+> artifact build passed. Native-runner receipt reconciliation is still queued.
+> Security Analysis
+> [39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
+> Trivy, Python, JavaScript/TypeScript, and Actions CodeQL analyses plus NuGet submission passed;
+> C# CodeQL remains pending. PR #131 is still draft. These are
+> synthetic and CI-artifact checks only; representative operator data, semantic
+> parity, installed rollback, and installer/update-channel acceptance remain
+> open. The public release is still v0.9.977; do not use the candidate for
+> production cutover.
 
 An approved future migration will use the standard ChaptarrNG application and
 container build. The `Chaptarr` executable provides explicit preview and apply
@@ -427,10 +425,26 @@ artifact, and it has not been published. It detects the legacy `Readarr`
 service/data path, requires the standard `NT AUTHORITY\LocalService` service
 account, asks which provider owns bare numeric IDs, verifies a permanent
 binary/config/database backup, previews before asking for apply, switches the
-service to `Chaptarr`, and checks its data path and local health. It hashes the
-SQLite database, WAL, and rollback journal to verify that preview left durable
-source data unchanged; SQLite rebuilds its transient `-shm` index. The
-initial path supports one SQLite database only; PostgreSQL, custom service
+service to `Chaptarr`, and checks its data path and local health. It holds a read-only SQLite `PRAGMA data_version` guard through preview
+review and blocks committed changes from another connection immediately before
+apply. Raw database, WAL, and rollback-journal fingerprints remain diagnostic;
+WAL representation changes without a committed database update are logged but
+do not fail preview. The previous service round-trip received HTTP 403 while
+downloading the pinned BookshelfNG test archive; its retry exposed a raw WAL
+read while the SQLite guard held it open. Build [39357519729](https://github.com/snapetech-org/chaptarrng/actions/runs/39357519729)
+passed migration, health checks, and explicit restore, but cleanup did not
+confirm service removal within 20 seconds after `sc.exe delete` succeeded.
+Exact-head Build [39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
+passed Linux, macOS, Windows, and PostgreSQL migration jobs. The Windows
+installer service round-trip, deferred service cleanup, and selected
+data-directory check passed. Linux tests, the pinned-tool M4B smoke, and CI
+artifact build passed. Native-runner receipt reconciliation remains queued.
+Security Analysis [39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
+Trivy, Python, JavaScript/TypeScript, and Actions CodeQL analyses plus NuGet
+submission passed; C# CodeQL remains pending. The
+separate cleanup step runs after the smoke process exits and verifies service
+registry removal.
+The initial path supports one SQLite database only; PostgreSQL, custom service
 accounts, multiple databases, unsupported schemas, and real operator-data
 rollback still require manual handling and maintainer acceptance. Keep the
 release freeze in place.

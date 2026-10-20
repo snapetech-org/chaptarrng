@@ -47,18 +47,32 @@ installer. It keeps the existing `Readarr` data directory, asks for provider
 mode, retains a verified backup, previews before apply, then switches to the
 `Chaptarr` service and checks local health. It supports one SQLite database
 under the standard `NT AUTHORITY\LocalService` account and fails closed on
-custom service accounts, PostgreSQL, or multiple databases. Preview
-fingerprinting covers the database, WAL, and rollback journal while ignoring
-the rebuildable `-shm` index.
+custom service accounts, PostgreSQL, or multiple databases. A read-only
+`PRAGMA data_version` guard stays open through preview review and rejects any
+committed source change before apply. Raw database, WAL, and rollback-journal
+fingerprints remain diagnostics because SQLite may change WAL bytes without a
+committed database update; the rebuildable `-shm` index is ignored.
 
 The Windows handoff candidate in draft ChaptarrNG PR #131 uses the actual
 installer to preserve the BookshelfNG service identity, data directory, and
-verified backup. Its hosted service round-trip tests injected-health-failure
-rollback, a successful retry, and explicit restore. The first hosted attempt
-found a harness ordering issue: it kept the test port occupied while restoring
-BookshelfNG. The harness now releases that port after Chaptarr stops and before
-Readarr is registered. The current exact-head result and remaining acceptance
-gates are tracked in the [retirement status](docs/BOOKSHELFNG_RETIREMENT.md).
+verified backup. It uses a read-only SQLite `PRAGMA data_version` guard
+through preview review and rejects committed source changes before apply.
+Raw file fingerprints are diagnostic and are captured outside the guard
+lifetime. Draft ChaptarrNG PR #131 is at code head
+7ff38a58530814d73da280b297eb3ed215bd2c83. Exact-head Build
+[39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
+passed Linux, macOS, Windows, and PostgreSQL migration jobs. The Windows
+installer service round-trip, deferred service cleanup, and selected
+data-directory check passed. Linux tests, the pinned-tool M4B smoke, and CI
+artifact build passed. Native-runner receipt reconciliation is still queued.
+Security Analysis
+[39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
+Trivy, Python, JavaScript/TypeScript, and Actions CodeQL analyses plus NuGet submission passed;
+C# CodeQL remains pending. PR #131 is still draft. These are
+synthetic and CI-artifact checks only; representative operator data, semantic
+parity, installed rollback, and installer/update-channel acceptance remain
+open. The public release is still v0.9.977; do not use the candidate for
+production cutover.
 The installer remains unpublished; do not use it for production cutover.
 
 Helm has a source-only, fail-closed handoff chart at
@@ -751,3 +765,7 @@ ChaptarrNG is developed and maintained with the assistance of AI tools.
 - Portions copyright © 2010–2026 the Servarr team and contributors
 
 See the [LICENSE](LICENSE) file for the full license text and [COPYRIGHT.md](COPYRIGHT.md) for attribution details.
+
+## Security scanning
+
+Run scripts/security-scan-local.sh for local Semgrep Community Edition and applicable Trivy scans. Public GitHub Actions workflows run these scans on changes and weekly, alongside any existing CodeQL workflow. See docs/security-scanning.md for offline setup and updates. Run scripts/install-security-hooks.sh once to enable the staged Semgrep pre-commit hook.

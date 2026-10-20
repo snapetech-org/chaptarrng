@@ -120,6 +120,25 @@ named test volumes; do not point this harness at operator appdata.
 
 ## Recorded smoke evidence
 
+**Exact-head artifact-based populated migration and lifecycle smoke
+(2026-10-19):** The Linux application artifact from ChaptarrNG PR #131 code
+head `969fb20bdc21b876d71d844f40606b27e20dc8ec`, Build
+[39353846035](https://github.com/snapetech-org/chaptarrng/actions/runs/39353846035),
+passed both checked-in SeerrNG smoke scripts against SeerrNG source
+`a2ae3cb234fb7b694e19e380e398b7dec141c4d2`. The temporary runtime image
+started ChaptarrNG `0.9.978.0` with a disposable populated BookshelfNG
+migration-158 database; normal startup converted it, and SeerrNG read one
+audiobook and one ebook with their migrated Hardcover identities. The
+restricted service key read capabilities and the converted format libraries
+while administrative and unrelated command routes remained denied. SeerrNG's
+compiled `ReadarrAPI` then created, polled, and cancelled a synthetic pending
+author import and read its terminal cancellation state. The smoke used
+synthetic records and keys, not operator data or live providers. The disposable
+containers, network, volumes, image, and downloaded artifact were removed.
+Successful provider fulfillment, retries, availability and history, real
+operator records, representative M4B media, installer rollback, and channel
+handoff remain unvalidated.
+
 On 2026-10-19, `scripts/chaptarrng-integration-smoke.mjs` passed against the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), reporting ChaptarrNG `0.9.978.0`. It discovered the SeerrNG capability contract and read the empty paged library using the restricted key; `/config/host` and an unrelated `/command` were denied, and the global key was accepted by `/config/host`. The smoke used a disposable SQLite database and synthetic keys. It establishes the empty-library API and authorization contract only. The separate lifecycle probe below covers one unavailable-author add/poll/cancel path; availability statistics, history, successful provider lookup, converted records, unchanged production settings, and a real BookshelfNG library remain unvalidated.
 
 **Current source-built populated conversion smoke (2026-10-19):** ChaptarrNG
