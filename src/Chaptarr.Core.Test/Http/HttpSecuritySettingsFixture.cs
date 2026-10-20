@@ -25,9 +25,8 @@ namespace Chaptarr.Core.Test.Http
         [Test]
         public void should_only_process_forwarded_for_and_proto_from_explicitly_trusted_proxies()
         {
-            var options = new ForwardedHeadersOptions();
-
-            HttpSecuritySettings.ConfigureForwardedHeaders(options, CreateConfiguration());
+            using var provider = CreateServices(CreateConfiguration()).BuildServiceProvider();
+            var options = provider.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
 
             Assert.That(options.ForwardedHeaders, Is.EqualTo(ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto));
             Assert.That(options.ForwardLimit, Is.EqualTo(1));
@@ -45,9 +44,8 @@ namespace Chaptarr.Core.Test.Http
                 ["Readarr:Server:TrustedProxies"] = "10.0.0.0/8;192.0.2.10",
                 ["Chaptarr:Server:TrustedProxies"] = "192.168.0.0/16, 2001:db8::5"
             });
-            var options = new ForwardedHeadersOptions();
-
-            HttpSecuritySettings.ConfigureForwardedHeaders(options, configuration);
+            using var provider = CreateServices(configuration).BuildServiceProvider();
+            var options = provider.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
 
             Assert.That(options.KnownIPNetworks.Any(network => network.Contains(IPAddress.Parse("192.168.4.5"))), Is.True);
             Assert.That(options.KnownIPNetworks.Any(network => network.Contains(IPAddress.Parse("10.20.30.40"))), Is.False);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Threading.RateLimiting;
 using Chaptarr.Api.V1.System;
 using Chaptarr.Http;
@@ -35,6 +36,7 @@ using NzbDrone.Host.AccessControl;
 using NzbDrone.Http.Authentication;
 using NzbDrone.SignalR;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
+using IPNetwork = System.Net.IPNetwork;
 
 namespace NzbDrone.Host
 {
@@ -61,7 +63,21 @@ namespace NzbDrone.Host
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
-                HttpSecuritySettings.ConfigureForwardedHeaders(options, Configuration);
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.ForwardLimit = 1;
+                options.RequireHeaderSymmetry = true;
+
+                foreach (var proxy in HttpSecuritySettings.GetTrustedProxies(Configuration))
+                {
+                    if (proxy.Contains('/'))
+                    {
+                        options.KnownIPNetworks.Add(IPNetwork.Parse(proxy));
+                    }
+                    else
+                    {
+                        options.KnownProxies.Add(IPAddress.Parse(proxy));
+                    }
+                }
             });
 
             services.AddRouting(options => options.LowercaseUrls = true);

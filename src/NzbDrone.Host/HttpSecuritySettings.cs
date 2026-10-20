@@ -1,10 +1,6 @@
 using System;
 using System.Linq;
-using System.Net;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
-using ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders;
-using IPNetwork = System.Net.IPNetwork;
 
 namespace NzbDrone.Host
 {
@@ -17,28 +13,14 @@ namespace NzbDrone.Host
         public const long MinimumMaxRequestBodySize = 1024 * 1024;
         public const long MaximumMaxRequestBodySize = 128 * 1024 * 1024;
 
-        public static void ConfigureForwardedHeaders(ForwardedHeadersOptions options, IConfiguration configuration)
-        {
-            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-            options.ForwardLimit = 1;
-            options.RequireHeaderSymmetry = true;
-
-            foreach (var proxy in GetListValue(configuration, "TrustedProxies"))
-            {
-                if (proxy.Contains('/'))
-                {
-                    options.KnownIPNetworks.Add(IPNetwork.Parse(proxy));
-                }
-                else
-                {
-                    options.KnownProxies.Add(IPAddress.Parse(proxy));
-                }
-            }
-        }
-
         public static string[] GetAllowedOrigins(IConfiguration configuration)
         {
             return GetListValue(configuration, "AllowedOrigins");
+        }
+
+        public static string[] GetTrustedProxies(IConfiguration configuration)
+        {
+            return GetListValue(configuration, "TrustedProxies");
         }
 
         public static int GetRequestsPerMinute(IConfiguration configuration)
