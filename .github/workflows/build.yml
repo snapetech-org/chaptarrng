@@ -76,13 +76,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-15-intel]
         include:
           - os: ubuntu-latest
             platform: linux
           - os: windows-latest
             platform: win
-          - os: macos-latest
+          - os: macos-15-intel
             platform: osx
 
     steps:
@@ -211,6 +211,9 @@ jobs:
 
     - name: Test Books list both-format filtering
       run: node --test frontend/src/Book/Index/getBookIndexQuery.test.cjs
+
+    - name: Test client-side collection equality
+      run: node --test frontend/src/Utilities/Object/clientSideCollectionEqual.test.cjs
 
     - name: Check React Router context
       run: yarn check-react-router-context
