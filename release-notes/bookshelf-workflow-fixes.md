@@ -5,4 +5,4 @@ area: library
 action: none
 breaking: false
 ---
-Author profile resets apply the current defaults from the selected root folder. Bookshelf shows monitoring errors and keeps selections for retry. Desktop book cards can retry failed overviews; small screens skip hidden requests. Edition, narrator, and delete views discard stale responses. Setup explains BookLore and BookOrbit each need their own URL and login.
+Author profile controls mark missing root-folder defaults and disable reset, protecting explicit profiles. Bookshelf reports monitoring failures and keeps selections for retry. Desktop book cards retry failed overviews; small screens skip hidden requests. Edition, narrator, and delete views ignore stale responses. Setup clarifies BookLore and BookOrbit use separate URLs and logins.

@@ -103,7 +103,8 @@ class MetadataProfileSelectInputConnector extends Component {
       includeMixed,
       includeNone,
       includeRootFolderDefault,
-      rootFolderDefaultLabel
+      rootFolderDefaultLabel,
+      rootFolderDefaultDisabled = false
     } = this.props;
 
     const { profiles } = this.state;
@@ -122,7 +123,8 @@ class MetadataProfileSelectInputConnector extends Component {
     if (includeRootFolderDefault) {
       values.unshift({
         key: 'rootFolderDefault',
-        value: rootFolderDefaultLabel || translate('UseRootFolderDefaults')
+        value: rootFolderDefaultLabel || translate('UseRootFolderDefaults'),
+        isDisabled: rootFolderDefaultDisabled
       });
     }
 
@@ -203,6 +205,7 @@ MetadataProfileSelectInputConnector.propTypes = {
   includeNone: PropTypes.bool.isRequired,
   includeRootFolderDefault: PropTypes.bool,
   rootFolderDefaultLabel: PropTypes.string,
+  rootFolderDefaultDisabled: PropTypes.bool,
   profileType: PropTypes.string,
   onChange: PropTypes.func.isRequired
 };

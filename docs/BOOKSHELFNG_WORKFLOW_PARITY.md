@@ -13,7 +13,7 @@ representative library, or installed build.
 | --- | --- | --- |
 | Get a new instance ready | System > Quickstart checks format roots, profiles, indexers, clients, and optional integrations. It has direct setup flows for MyAnonamouse and Hardcover and shows Calibre and AudioBookShelf when relevant. Settings now groups destinations by Library, Search, Connect, General, and System, with Quickstart linked from both Settings and System. | Walk through a clean setup on desktop and mobile, including missing roots, an empty indexer list, and a failed provider test. |
 | Choose the default format for new items | Add New dialogs share a saved default format. Users can change it in Settings > UI or with **Set as default** in an add dialog; individual items can still override it. | Verify persistence after reload and confirm author, book, and series dialogs all start with the saved value. |
-| Add an author, book, or series | All three flows support audiobook, ebook, or both where relevant; root folders and quality profiles are visible first, with monitoring, metadata, and tags under **More options**. Missing setup links to Quickstart. Root-folder loading failures show a retry. Author profile editors can reset either format's quality and metadata profiles to the selected root folder's current defaults. | Exercise each format, both formats, saved defaults, one-item overrides, profile reset for one format while preserving the other, missing roots/profiles, existing-author book adds, and add failures. |
+| Add an author, book, or series | All three flows support audiobook, ebook, or both where relevant; root folders and quality profiles are visible first, with monitoring, metadata, and tags under **More options**. Missing setup links to Quickstart. Root-folder loading failures show a retry. Author profile editors can reset each format's quality and metadata profiles to the selected root folder's current defaults; a missing default is identified and its reset is unavailable. | Exercise each format, both formats, saved defaults, one-item overrides, profile reset for one format while preserving the other, missing roots/profiles/defaults, existing-author book adds, and add failures. |
 | Find a title in the catalog | Add New has provider selection, result filtering, and submit-to-search by default; Search as you type is optional. Query changes and clearing cancel stale requests. | Check first search, Enter, repeated same-query search, preference persistence, provider errors, and clearing during a slow request. |
 | Browse and understand the library | Authors, Books, Bookshelf, Calendar, and Unmapped Files are reachable from Library. The Books index has a saved **Both** filter with a format label on each record; editing an author from a book row opens the matching format tab. Bookshelf groups recognized same-work records. Book details include edition and narration information; series details compare narrators and volumes. Failed bookshelf loads and desktop book-overview cards have a retry action; small screens skip hidden overview requests. Edition lists and narrator comparisons discard responses from a previous title; delete confirmation only uses sibling-format details for the selected book. | Browse a representative mixed-format library on narrow and wide screens; check empty, loading, retry after a failed request, partial-metadata, and no-file states. |
 | See ebooks and audiobooks together in Books | The Books index **Both** filter lists every audiobook and ebook as its own record and shows its format label. Monitoring, status, narrator controls, and quality profiles use that record's format. | Verify paging, custom filters, sort order, per-format profiles, monitoring labels, selected-row edits, and reload persistence across both formats. |
@@ -39,7 +39,7 @@ and keeps source presence separate from end-user acceptance.
 
 | User-facing capability | ChaptarrNG path | End-user acceptance still needed |
 | --- | --- | --- |
-| Set up audiobook and ebook libraries independently | System > Quickstart, Settings > Media Management, and the per-format author editor configure roots, quality profiles, metadata profiles, and defaults. Edit Author actions from Overview, Posters, and Table rows open with that row's media type. Author profile editors can reset one format to its selected root folder's current defaults. ChaptarrNG stores formats as separate records; Bookshelf > Formats brings recognized same-work records together. | Walk through ebook-only, audiobook-only, and mixed setups. Open Edit Author from audiobook and ebook rows in each view and verify the correct format is selected and its roots/profiles stay independent. Confirm default-root/profile inheritance, explicit per-author overrides, reset one format while preserving the other, and that one format's settings never change the other. |
+| Set up audiobook and ebook libraries independently | System > Quickstart, Settings > Media Management, and the per-format author editor configure roots, quality profiles, metadata profiles, and defaults. Edit Author actions from Overview, Posters, and Table rows open with that row's media type. Author profile editors can reset one format to its selected root folder's current defaults; unavailable defaults are identified and cannot clear an explicit profile. ChaptarrNG stores formats as separate records; Bookshelf > Formats brings recognized same-work records together. | Walk through ebook-only, audiobook-only, and mixed setups. Open Edit Author from audiobook and ebook rows in each view and verify the correct format is selected and its roots/profiles stay independent. Confirm default-root/profile behavior, explicit per-author overrides, reset one format while preserving the other, missing individual defaults, and that one format's settings never change the other. |
 | Choose catalog sources and edition-matching preferences | Settings > Metadata and Settings > Profiles > Metadata configure enabled catalogs, field preferences, language filters, weighted edition terms, and preferred series. | Save and reload choices, then compare real catalog results for language, preferred series, narrator/publisher evidence, and missing metadata. |
 | Search by title or identifier | Add New supports provider selection, submit-to-search, optional search-as-you-type, and ISBN/ASIN/provider-ID matching. Existing work and edition IDs retain their provider namespace. | Exercise first and repeated searches, clearing a slow query, same-query resubmission, identifier collisions, provider errors, and preference persistence in a browser. |
 | Review editions and narrators before choosing | Book details expose Editions and Narrations; series details compare narrators across volumes. Edition cards retain language, format, narrator, ownership, and monitoring context when the provider supplies them. | Use real provider records with incomplete and conflicting metadata. Confirm unknown details remain unknown and retries recover after an endpoint failure. |
@@ -76,11 +76,12 @@ returned the canonical `hc:2459845` identity.
 
 On the `c0aabe44` source snapshot, the full Chaptarr Core suite passed with
 4,496 tests passed, 15 skipped, and no failures; focused book-lookup and
-edition-selection tests passed 11/11. On this worktree, the frontend CJS suite
-passed 44/44, including regressions for nullable profile reset to root defaults,
-visible monitoring failures and retries, paged book IDs, release notes, and
-stale responses in book overviews, editions, narrator comparisons, and
-delete-confirmation details. Small-screen book cards skip hidden summary
+edition-selection tests passed 11/11. On the current source worktree, the
+frontend CJS suite passed 52/52, including per-format profile resets,
+missing-default protection, row-format author editing, visible monitoring
+failures and retries, paged book IDs, release notes, and stale responses in
+book overviews, editions, narrator comparisons, and delete-confirmation details.
+Small-screen book cards skip hidden summary
 requests and fetch them again when returning to desktop. Typecheck and
 translation-key checks passed. The production frontend build completed with 22
 CSS-order warnings. Focused ESLint and Stylelint passed for changed UI, action,
@@ -91,7 +92,8 @@ pins .NET SDK 10.0.402, only 10.0.401 is installed, and the local build-license
 configuration is absent.
 
 A production UI was checked in Chromium 154 against the disposable migrated
-fixture before the latest profile-reset and failure-feedback changes. In Books,
+fixture before the latest profile-reset, missing-default, and failure-feedback
+changes. In Books,
 **Both** showed separate audiobook and ebook cards.
 Opening **Edit Author** from either record selected that format's settings in
 Posters, Table, and Overview (all six cases passed). In Bookshelf, **Both**

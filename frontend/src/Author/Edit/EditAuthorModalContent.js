@@ -20,6 +20,10 @@ import ModalHeader from 'Components/Modal/ModalHeader';
 import Popover from 'Components/Tooltip/Popover';
 import { icons, inputTypes, kinds, tooltipPositions } from 'Helpers/Props';
 import { coerceFolderType, FolderType } from 'Helpers/Props/folderTypes';
+import {
+  cleanRootFolderPath,
+  hasRootFolderProfileDefault
+} from 'Settings/MediaManagement/RootFolder/rootFolderDefaultUtils';
 import monitorNewItemsOptions, {
   normalizeMonitorNewItemsOption
 } from 'Utilities/Author/monitorNewItemsOptions';
@@ -148,6 +152,48 @@ class EditAuthorModalContent extends Component {
       supportsMediaType(audiobookRootFolderPath?.value, 'audiobook') &&
       supportsMediaType(ebookRootFolderPath?.value, 'ebook');
 
+    const getSelectedRootFolder = (rootFolderPath) => {
+      const selectedPath = cleanRootFolderPath(rootFolderPath);
+
+      if (!selectedPath) {
+        return null;
+      }
+
+      return (rootFolders || []).find((rootFolder) => {
+        return cleanRootFolderPath(rootFolder.path) === selectedPath;
+      }) || null;
+    };
+
+    const audiobookRootFolder = getSelectedRootFolder(audiobookRootFolderPath?.value);
+    const ebookRootFolder = getSelectedRootFolder(ebookRootFolderPath?.value);
+    const hasAudiobookQualityProfileDefault = hasRootFolderProfileDefault(
+      audiobookRootFolder,
+      'audiobook',
+      'quality'
+    );
+    const hasAudiobookMetadataProfileDefault = hasRootFolderProfileDefault(
+      audiobookRootFolder,
+      'audiobook',
+      'metadata'
+    );
+    const hasEbookQualityProfileDefault = hasRootFolderProfileDefault(
+      ebookRootFolder,
+      'ebook',
+      'quality'
+    );
+    const hasEbookMetadataProfileDefault = hasRootFolderProfileDefault(
+      ebookRootFolder,
+      'ebook',
+      'metadata'
+    );
+
+    const getProfileDefaultLabel = (hasDefault) => translate(
+      hasDefault ? 'UseRootFolderDefaults' : 'NoRootFolderProfileDefault'
+    );
+    const getProfileDefaultHelpText = (hasDefault) => translate(
+      hasDefault ? 'EditAuthorRootFolderDefaultsHelpText' : 'RootFolderProfileDefaultMissingHelpText'
+    );
+
     const isSyncMonitoredAcrossFormatsChecked = syncMonitoredAcrossFormats?.value === true;
     const syncMonitoredAcrossFormatsDisabled = !canSyncMonitoredAcrossFormats && !isSyncMonitoredAcrossFormatsChecked;
 
@@ -268,10 +314,11 @@ class EditAuthorModalContent extends Component {
                   <FormInputGroup
                     type={inputTypes.QUALITY_PROFILE_SELECT}
                     name="audiobookQualityProfileId"
-                    helpText={translate('EditAuthorRootFolderDefaultsHelpText')}
+                    helpText={getProfileDefaultHelpText(hasAudiobookQualityProfileDefault)}
                     includeNone={true}
-                    noneLabel={translate('UseRootFolderDefaults')}
+                    noneLabel={getProfileDefaultLabel(hasAudiobookQualityProfileDefault)}
                     noneValue={null}
+                    noneDisabled={!hasAudiobookQualityProfileDefault}
                     profileType="audiobook"
                     {...audiobookQualityProfileId}
                     onChange={onInputChange}
@@ -297,10 +344,11 @@ class EditAuthorModalContent extends Component {
                   <FormInputGroup
                     type={inputTypes.METADATA_PROFILE_SELECT}
                     name="audiobookMetadataProfileId"
-                    helpText={translate('EditAuthorRootFolderDefaultsHelpText')}
+                    helpText={getProfileDefaultHelpText(hasAudiobookMetadataProfileDefault)}
                     includeNone={true}
                     includeRootFolderDefault={true}
-                    rootFolderDefaultLabel={translate('UseRootFolderDefaults')}
+                    rootFolderDefaultLabel={getProfileDefaultLabel(hasAudiobookMetadataProfileDefault)}
+                    rootFolderDefaultDisabled={!hasAudiobookMetadataProfileDefault}
                     profileType="audiobook"
                     {...audiobookMetadataProfileId}
                     onChange={onInputChange}
@@ -415,10 +463,11 @@ class EditAuthorModalContent extends Component {
                   <FormInputGroup
                     type={inputTypes.QUALITY_PROFILE_SELECT}
                     name="ebookQualityProfileId"
-                    helpText={translate('EditAuthorRootFolderDefaultsHelpText')}
+                    helpText={getProfileDefaultHelpText(hasEbookQualityProfileDefault)}
                     includeNone={true}
-                    noneLabel={translate('UseRootFolderDefaults')}
+                    noneLabel={getProfileDefaultLabel(hasEbookQualityProfileDefault)}
                     noneValue={null}
+                    noneDisabled={!hasEbookQualityProfileDefault}
                     profileType="ebook"
                     {...ebookQualityProfileId}
                     onChange={onInputChange}
@@ -444,10 +493,11 @@ class EditAuthorModalContent extends Component {
                   <FormInputGroup
                     type={inputTypes.METADATA_PROFILE_SELECT}
                     name="ebookMetadataProfileId"
-                    helpText={translate('EditAuthorRootFolderDefaultsHelpText')}
+                    helpText={getProfileDefaultHelpText(hasEbookMetadataProfileDefault)}
                     includeNone={true}
                     includeRootFolderDefault={true}
-                    rootFolderDefaultLabel={translate('UseRootFolderDefaults')}
+                    rootFolderDefaultLabel={getProfileDefaultLabel(hasEbookMetadataProfileDefault)}
+                    rootFolderDefaultDisabled={!hasEbookMetadataProfileDefault}
                     profileType="ebook"
                     {...ebookMetadataProfileId}
                     onChange={onInputChange}

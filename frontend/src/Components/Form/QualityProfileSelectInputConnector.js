@@ -102,7 +102,8 @@ class QualityProfileSelectInputConnector extends Component {
       includeNoChangeDisabled = true,
       includeMixed,
       includeNone,
-      noneLabel
+      noneLabel,
+      noneDisabled = false
     } = this.props;
 
     const { profiles } = this.state;
@@ -117,7 +118,8 @@ class QualityProfileSelectInputConnector extends Component {
     if (includeNone) {
       values.unshift({
         key: 'none',
-        value: noneLabel || translate('None')
+        value: noneLabel || translate('None'),
+        isDisabled: noneDisabled
       });
     }
 
@@ -186,6 +188,7 @@ QualityProfileSelectInputConnector.propTypes = {
   includeMixed: PropTypes.bool.isRequired,
   includeNone: PropTypes.bool.isRequired,
   noneLabel: PropTypes.string,
+  noneDisabled: PropTypes.bool,
   noneValue: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   profileType: PropTypes.string,
   onChange: PropTypes.func.isRequired
