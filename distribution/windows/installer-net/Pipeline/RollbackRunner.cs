@@ -14,15 +14,33 @@ public static class RollbackRunner
         string backupPath,
         string dataDirectory,
         IProgress<LogLine> log,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        int? bookshelfServiceStartType = null,
+        bool? bookshelfServiceWasRunning = null)
     {
         var scriptPath = ExtractToTemp();
         try
         {
             log.Report(new LogLine(LogStream.Stdout, $"[rollback] Restoring BookshelfNG from {backupPath}..."));
+            var arguments = new System.Collections.Generic.List<string>
+            {
+                "-BackupPath", backupPath,
+                "-DataDirectory", dataDirectory
+            };
+            if (bookshelfServiceStartType.HasValue)
+            {
+                arguments.Add("-BookshelfServiceStartType");
+                arguments.Add(bookshelfServiceStartType.Value.ToString());
+            }
+            if (bookshelfServiceWasRunning.HasValue)
+            {
+                arguments.Add("-BookshelfServiceWasRunning");
+                arguments.Add(bookshelfServiceWasRunning.Value ? "1" : "0");
+            }
+
             var exit = await PowerShellRunner.RunScriptAsync(
                 scriptPath,
-                new[] { "-BackupPath", backupPath, "-DataDirectory", dataDirectory },
+                arguments,
                 log,
                 ct).ConfigureAwait(false);
             log.Report(new LogLine(LogStream.Stdout, $"[rollback] rollback.ps1 exited {exit}."));

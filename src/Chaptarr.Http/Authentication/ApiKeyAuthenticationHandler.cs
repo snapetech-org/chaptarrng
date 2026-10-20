@@ -41,7 +41,9 @@ namespace Chaptarr.Http.Authentication
         {
             _apiKey = config.ApiKey;
             _apiKeyBytes = Encoding.UTF8.GetBytes(_apiKey ?? string.Empty);
-            _seerrApiKeyBytes = Encoding.UTF8.GetBytes(config.SeerrApiKey ?? string.Empty);
+            var seerrApiKey = config.SeerrApiKey ??
+                              Environment.GetEnvironmentVariable("BOOKSHELF_SEERRNG_API_KEY");
+            _seerrApiKeyBytes = Encoding.UTF8.GetBytes(seerrApiKey ?? string.Empty);
             _allowApiKeyQuery = authOptions.Value.AllowApiKeyQuery ??
                                 !string.Equals(Environment.GetEnvironmentVariable("BOOKSHELF_ALLOW_API_KEY_QUERY"), "false", StringComparison.OrdinalIgnoreCase);
         }

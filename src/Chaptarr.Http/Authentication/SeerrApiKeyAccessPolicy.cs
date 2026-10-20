@@ -47,7 +47,7 @@ namespace Chaptarr.Http.Authentication
             var method = request.Method;
             if (string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase))
             {
-                return IsReadPathAllowed(suffix);
+                return IsReadPathAllowed(suffix, request);
             }
 
             if (string.Equals(method, "POST", StringComparison.OrdinalIgnoreCase))
@@ -85,15 +85,17 @@ namespace Chaptarr.Http.Authentication
             return facade.Success ? facade.Groups["suffix"].Value : null;
         }
 
-        private static bool IsReadPathAllowed(string path)
+        private static bool IsReadPathAllowed(string path, HttpRequest request)
         {
+            if (IsExactPath(path, "/history") || IsExactPath(path, "/bookfile"))
+            {
+                return HasSinglePositiveIdQuery(request, "bookId");
+            }
+
             switch (path.ToLowerInvariant())
             {
                 case "/system/status":
                 case "/system/capabilities":
-                case "/system/health":
-                case "/config/hardcover":
-                case "/config/development":
                 case "/rootfolder":
                 case "/qualityprofile":
                 case "/metadataprofile":
@@ -104,8 +106,6 @@ namespace Chaptarr.Http.Authentication
                 case "/author":
                 case "/author/lookup":
                 case "/edition":
-                case "/bookfile":
-                case "/history":
                 case "/queue":
                 case "/pendingauthorimport":
                     return true;
@@ -116,6 +116,14 @@ namespace Chaptarr.Http.Authentication
                    IsNumericItemPath(path, "/pendingauthorimport") ||
                    IsNumericItemPath(path, "/command") ||
                    IsMediaCoverPath(path);
+        }
+
+        private static bool HasSinglePositiveIdQuery(HttpRequest request, string name)
+        {
+            var values = request.Query[name];
+            return values.Count == 1 &&
+                   int.TryParse(values[0], NumberStyles.None, CultureInfo.InvariantCulture, out var id) &&
+                   id > 0;
         }
 
         private static bool IsExactPath(string actual, string expected)

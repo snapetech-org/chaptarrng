@@ -9,6 +9,15 @@ availability statistics. It also advertises `editionCatalog` for clients that
 show a person the known editions and audiobook performances available for a
 book.
 
+One ChaptarrNG instance can serve both ebook and audiobook entries. Configure
+the SeerrNG services to use the same ChaptarrNG URL and dedicated service key,
+then select the correct media type and root folder for each entry. ChaptarrNG
+keeps format-specific library paths, monitoring, and profiles separate. Do not
+point two ChaptarrNG instances at one SQLite database; separate BookshelfNG
+databases require separate migrations because the migration tool does not
+merge histories, profiles, or settings. See the
+[BookshelfNG migration guide](MIGRATE_FROM_BOOKSHELFNG.md).
+
 For a broader overview of maintained behavior beyond the shared Chaptarr base,
 see [ChaptarrNG fork changes and upstream replacement criteria](./FORK_FEATURES.md).
 Chaptarr's current development branch has its own pending-import subsystem;
@@ -62,18 +71,34 @@ manager, then use its value as the API key in SeerrNG under **Settings →
 Services → Bookshelf**. Keep the regular ChaptarrNG API key separate; it keeps
 its full administrative access.
 
+`CHAPTARR__AUTH__SEERRAPIKEY` takes precedence. If it is unset, ChaptarrNG
+also accepts the legacy `BOOKSHELF_SEERRNG_API_KEY`, so existing container
+environment settings can survive a drop-in migration. Remove the old variable
+to revoke that fallback; set the new value explicitly to rotate the key.
+
 The SeerrNG credential can inspect book libraries, profiles, queue and history,
-look up books and authors, add books, update an individual book, run a single
-book search, read pending author imports, and cancel a pending author import.
+root folders, book files, editions, and command status; look up books and
+authors; add books; update an individual book; run a single book search; and
+read or cancel pending author imports.
 It can access the native `/api/v1` routes and the advertised
 `/readarr/{dialect}/{mediaType}/api/v1` compatibility routes. Media covers are
 available so the SeerrNG UI can display book artwork.
 
-The credential cannot change global settings, delete books or authors, delete
-files, run other commands, or use author media-move operations. Those routes
-remain available only through the regular API key or an administrator session.
+The credential cannot read or change global settings or API-key endpoints,
+delete books or authors, delete files, run other commands, or use author
+media-move operations. This includes `/config/host`, `/config/hardcover`,
+`/config/development`, and `/system/health`. Book-file and history reads must
+include one positive `bookId`. Those routes remain available only through the
+regular API key or an administrator session.
 SeerrNG's standard request, search, status, and pending-import workflows use
 the restricted route set.
+
+Both credentials can use the `X-Api-Key` or `Authorization: Bearer` header.
+For Readarr-compatible clients, `?apikey=` remains enabled by default. Set
+`CHAPTARR__AUTH__ALLOWAPIKEYQUERY=false` to reject it; if that setting is
+unset, `BOOKSHELF_ALLOW_API_KEY_QUERY=false` remains honored during migration.
+SignalR's `access_token` query parameter is unaffected. Prefer a header over a
+URL when possible; see [HTTP security settings](HTTP_SECURITY.md).
 
 For older ChaptarrNG releases, use the regular API key. The separate service
 key is an additive option and does not change existing authentication.

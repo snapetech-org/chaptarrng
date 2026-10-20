@@ -33,6 +33,13 @@ query parameter; SignalR's `access_token` query remains supported. Query-string
 credentials can persist in browser history and proxy logs, so use a header and
 HTTPS when possible.
 
+The optional `CHAPTARR__AUTH__SEERRAPIKEY` credential has a separate
+route allowlist, cannot read global configuration or health endpoints, and
+must scope book-file and history reads to one book ID. The legacy
+`BOOKSHELF_SEERRNG_API_KEY` remains a fallback when the ChaptarrNG key is
+unset. See the [SeerrNG integration guide](SEERRNG_INTEGRATION.md) for its
+allowed routes and migration behavior.
+
 ## Trusted proxies
 
 `TRUSTEDPROXIES` is empty by default. Each entry must be an IP address or CIDR

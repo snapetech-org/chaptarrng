@@ -38,8 +38,8 @@ left alone. The next version bump is not a release: publication is frozen
 until the BookshelfNG migration, rollback, feature-parity, and install-channel
 acceptance gates are closed. The merged release and distribution workflows
 fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
-remains unset. Read the
-[migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
+remains unset. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)
+and [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) before switching.
 
 The current migration candidate accepts raw SQLite backup uploads with `.db`
 and legacy `.xml` filename suffixes; `.xml` is not an XML database format.
@@ -52,9 +52,16 @@ dependency submission, and push checks passed. The release-note check was
 skipped because no release was prepared.
 
 Current `main` also has explicit trusted-proxy and CORS allowlists, per-client
-API rate limiting, and a bounded general request-body setting. The backup
-restore route retains its separate 1 GiB upload limit. These controls are
-source-only and are not in the published `.977` release; see the
+API rate limiting, a bounded general request-body setting, and an option to
+disable `?apikey=` authentication. The new setting is
+`CHAPTARR__AUTH__ALLOWAPIKEYQUERY=false`; when it is unset,
+`BOOKSHELF_ALLOW_API_KEY_QUERY=false` remains honored. Existing
+`BOOKSHELF_SEERRNG_API_KEY` values are also accepted when
+`CHAPTARR__AUTH__SEERRAPIKEY` is unset. The SeerrNG service key cannot read
+global configuration or health endpoints, and file/history reads must target
+one book. The backup restore route retains its separate 1 GiB upload limit.
+These controls are source-only and are not in the published
+`.977` release; see the
 [HTTP security settings](docs/HTTP_SECURITY.md).
 
 ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
@@ -87,7 +94,7 @@ files are placeholders, so this does not establish media processing or
 operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM_BOOKSHELFNG.md#exact-head-artifact-migration-and-seerrng-smoke-2026-10-20).
 
 The refreshed BookshelfNG source inventory pins source snapshot `c63eb848` to
-ChaptarrNG application snapshot `00cf7b1a`. It records 1,116 changed paths, 25 reviewed path mappings, and
+ChaptarrNG application snapshot `ac3da942`. It records 1,116 changed paths, 25 reviewed path mappings, and
 469 file dispositions (176 retained, 129 equivalent, 6 ported, and 158 retired: 145 historical
 release-note fragments, 12 BookshelfNG logo assets, and one obsolete Readarr Azure Pipelines definition); 647 paths remain undispositioned. No runtime
 feature has been approved for retirement. Exact file retention and project reference comparison do not establish

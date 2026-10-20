@@ -11,6 +11,7 @@ namespace Chaptarr.Core.Test.Http
     public class SeerrApiKeyAccessPolicyFixture
     {
         [TestCase("GET", "/api/v1/system/capabilities", true)]
+        [TestCase("GET", "/api/v1/system/health", false)]
         [TestCase("GET", "/api/v1/book/paged", true)]
         [TestCase("GET", "/api/v1/book/21", true)]
         [TestCase("GET", "/api/v1/command/21", true)]
@@ -28,6 +29,11 @@ namespace Chaptarr.Core.Test.Http
         [TestCase("DELETE", "/readarr/hc/audiobook/api/v1/pendingauthorimport/21", true)]
         [TestCase("GET", "/api/v1/config/host", false)]
         [TestCase("GET", "/readarr/hc/ebook/api/v1/config/host", false)]
+        [TestCase("GET", "/api/v1/config/hardcover", false)]
+        [TestCase("GET", "/api/v1/config/development", false)]
+        [TestCase("GET", "/readarr/gr/audiobook/api/v1/config/development", false)]
+        [TestCase("GET", "/api/v1/history", false)]
+        [TestCase("GET", "/api/v1/bookfile", false)]
         [TestCase("POST", "/api/v1/command", false)]
         [TestCase("PUT", "/api/v1/author/21", false)]
         [TestCase("DELETE", "/api/v1/book/21", false)]
@@ -42,6 +48,29 @@ namespace Chaptarr.Core.Test.Http
             var context = new DefaultHttpContext();
             context.Request.Method = method;
             context.Request.Path = path;
+
+            var allowed = await SeerrApiKeyAccessPolicy.IsAllowedAsync(context.Request);
+
+            Assert.That(allowed, Is.EqualTo(expected));
+        }
+
+        [TestCase("/history", "?bookId=21", true)]
+        [TestCase("/bookfile", "?bookId=21", true)]
+        [TestCase("/history", "?bookId=0", false)]
+        [TestCase("/bookfile", "?bookId=invalid", false)]
+        [TestCase("/history", "?bookId=21&bookId=22", false)]
+        [TestCase("/readarr/hc/ebook/api/v1/bookfile", "?bookId=21", true)]
+        public async Task should_scope_book_files_and_history_to_one_positive_book_id(
+            string route,
+            string queryString,
+            bool expected)
+        {
+            var context = new DefaultHttpContext();
+            context.Request.Method = "GET";
+            context.Request.Path = route.StartsWith("/readarr/", System.StringComparison.OrdinalIgnoreCase)
+                ? route
+                : "/api/v1" + route;
+            context.Request.QueryString = new QueryString(queryString);
 
             var allowed = await SeerrApiKeyAccessPolicy.IsAllowedAsync(context.Request);
 

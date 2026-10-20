@@ -168,6 +168,8 @@ internal static class WindowsServiceRoundTrip
                     .ConfigureAwait(false);
                 await WaitForHealthAsync(dataDirectory, TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 AssertServicePath(ServiceLifecycle.BookshelfServiceName, dataDirectory);
+                AssertServiceStartType(ServiceLifecycle.BookshelfServiceName, expected: 2, "automatic rollback");
+                AssertBookshelfWasRunningAtUpgrade(expected: true, "automatic rollback");
                 AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "automatic rollback database");
                 AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "automatically restored BookshelfNG books");
                 AssertDatabaseIntegrity(sourceDatabase, "automatically restored BookshelfNG database");
@@ -193,6 +195,19 @@ internal static class WindowsServiceRoundTrip
             AssertServicePath(ServiceLifecycle.ChaptarrServiceName, dataDirectory);
             await WaitForServiceAsync(ServiceLifecycle.ChaptarrServiceName, ServiceControllerStatus.Running, TimeSpan.FromSeconds(30))
                 .ConfigureAwait(false);
+            if (!ServiceLifecycle.IsInstalled(ServiceLifecycle.BookshelfServiceName) ||
+                ServiceLifecycle.TryGetStatus(ServiceLifecycle.BookshelfServiceName) != ServiceControllerStatus.Stopped)
+            {
+                throw new InvalidOperationException("Readarr must remain registered and stopped until the installer exits.");
+            }
+            AssertServiceStartType(ServiceLifecycle.BookshelfServiceName, expected: 4, "successful migration handoff");
+
+            Console.WriteLine("[smoke] Running deferred handoff cleanup against the healthy Chaptarr service...");
+            await ExerciseDeferredHandoffCleanupAsync(dataDirectory, scratchRoot).ConfigureAwait(false);
+            if (ServiceLifecycle.IsInstalled(ServiceLifecycle.BookshelfServiceName))
+            {
+                throw new InvalidOperationException("Deferred handoff cleanup did not remove the disabled Readarr service.");
+            }
 
             Console.WriteLine("[smoke] Running the installer restore action and its embedded rollback script...");
             var restore = await InstallPipeline.RunRestoreAsync(ui).ConfigureAwait(false);
@@ -217,6 +232,7 @@ internal static class WindowsServiceRoundTrip
             {
                 throw new InvalidOperationException("The restored Readarr service did not preserve the supported LocalService account.");
             }
+            AssertServiceStartType(ServiceLifecycle.BookshelfServiceName, expected: 2, "manual restore after handoff cleanup");
             AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "restored BookshelfNG database");
             AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "restored BookshelfNG books");
             AssertRowCount(sourceDatabase, FixtureTable.BookFiles, expectedAtLeast: 2, "restored BookshelfNG files");
@@ -639,6 +655,59 @@ internal static class WindowsServiceRoundTrip
             throw new InvalidOperationException(
                 $"The {serviceName} service command must start with its quoted executable path {expectedExecutable}.");
         }
+    }
+
+    private static void AssertServiceStartType(string serviceName, int expected, string label)
+    {
+        using var key = Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\{serviceName}", writable: false);
+        var actual = key?.GetValue("Start") is int startType ? startType : -1;
+        if (actual != expected)
+        {
+            throw new InvalidOperationException($"The {serviceName} service had startup type {actual} after {label}; expected {expected}.");
+        }
+    }
+
+    private static void AssertBookshelfWasRunningAtUpgrade(bool expected, string label)
+    {
+        var actual = RegistryService.Read()?.BookshelfServiceWasRunning;
+        if (actual != expected)
+        {
+            throw new InvalidOperationException($"The installer recorded BookshelfNG running state '{actual}' after {label}; expected '{expected}'.");
+        }
+    }
+
+    private static async Task ExerciseDeferredHandoffCleanupAsync(string dataDirectory, string scratchRoot)
+    {
+        var scriptPath = Path.Combine(scratchRoot, "finalize-service-handoff-smoke.ps1");
+        await using (var source = typeof(ServiceCleanupRunner).Assembly.GetManifestResourceStream("finalize-service-handoff.ps1")
+            ?? throw new InvalidOperationException("The installer is missing its deferred service handoff script."))
+        await using (var destination = File.Create(scriptPath))
+        {
+            await source.CopyToAsync(destination).ConfigureAwait(false);
+        }
+
+        await RunProcessAsync("powershell.exe", new[]
+        {
+            "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", scriptPath,
+            "-ParentProcessId", Environment.ProcessId.ToString(),
+            "-ParentProcessStartTicks", "0",
+            "-DataDirectory", Path.GetFullPath(dataDirectory)
+        }).ConfigureAwait(false);
+
+        var serviceKey = $@"SYSTEM\CurrentControlSet\Services\{ServiceLifecycle.BookshelfServiceName}";
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        while (DateTime.UtcNow < deadline)
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(serviceKey, writable: false);
+            if (key is null)
+            {
+                return;
+            }
+
+            await Task.Delay(250).ConfigureAwait(false);
+        }
+
+        throw new InvalidOperationException("The deferred cleanup script left the Readarr service registration behind.");
     }
 
     private static async Task RunProcessAsync(string fileName, IReadOnlyList<string> arguments)

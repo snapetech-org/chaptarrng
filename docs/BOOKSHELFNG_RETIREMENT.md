@@ -23,7 +23,12 @@ authentication. `CHAPTARR__AUTH__ALLOWAPIKEYQUERY=false` rejects `?apikey=`;
 when unset, `BOOKSHELF_ALLOW_API_KEY_QUERY=false` remains supported. ChaptarrNG
 settings take precedence while the legacy `Readarr:Server` keys remain
 accepted. The backup restore endpoint keeps its separate 1 GiB upload
-allowance. This source change is not in the public `.977` release; the release
+allowance. The restricted SeerrNG key cannot read `/config/host`,
+`/config/hardcover`, `/config/development`, or `/system/health`; history and
+book-file reads require one positive book ID. The ChaptarrNG service key takes
+precedence over `BOOKSHELF_SEERRNG_API_KEY`, which stays supported as a
+fallback when the new key is unset. This source change is not in the public
+`.977` release; the release
 freeze and production acceptance gates remain in force. See the
 [HTTP security settings](HTTP_SECURITY.md).
 

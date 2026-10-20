@@ -10,6 +10,8 @@ public sealed record UpgradeRecord(
     string? DataDirectory,
     string? ProviderMode,
     string? PreviousVersion,
+    int? BookshelfServiceStartType,
+    bool? BookshelfServiceWasRunning,
     string? CurrentVersion,
     string? LastRollbackTime);
 
@@ -32,6 +34,10 @@ public static class RegistryService
             DataDirectory: key.GetValue("DataDirectory") as string,
             ProviderMode: key.GetValue("ProviderMode") as string,
             PreviousVersion: key.GetValue("PreviousVersion") as string,
+            BookshelfServiceStartType: key.GetValue("BookshelfServiceStartType") is int startType ? startType : null,
+            BookshelfServiceWasRunning: key.GetValue("BookshelfServiceWasRunning") is int wasRunning
+                ? wasRunning != 0
+                : null,
             CurrentVersion: key.GetValue("CurrentVersion") as string,
             LastRollbackTime: key.GetValue("LastRollbackTime") as string);
     }
@@ -48,7 +54,9 @@ public static class RegistryService
         string backupPath,
         string dataDirectory,
         string providerMode,
-        string? previousVersion)
+        string? previousVersion,
+        int bookshelfServiceStartType,
+        bool bookshelfServiceWasRunning)
     {
         using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
         using var key = baseKey.CreateSubKey(UpgradeSubKey, writable: true);
@@ -61,6 +69,8 @@ public static class RegistryService
         key.SetValue("BackupPath", backupPath);
         key.SetValue("DataDirectory", dataDirectory);
         key.SetValue("ProviderMode", providerMode);
+        key.SetValue("BookshelfServiceStartType", bookshelfServiceStartType, RegistryValueKind.DWord);
+        key.SetValue("BookshelfServiceWasRunning", bookshelfServiceWasRunning ? 1 : 0, RegistryValueKind.DWord);
         if (!string.IsNullOrWhiteSpace(previousVersion))
         {
             key.SetValue("PreviousVersion", previousVersion);

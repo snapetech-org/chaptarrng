@@ -19,18 +19,22 @@ namespace Chaptarr.Core.Test.Http.Authentication
     {
         private const string ApiKey = "fixture-api-key";
         private string _previousBookshelfApiKeyQuery;
+        private string _previousBookshelfSeerrKey;
 
         [SetUp]
         public void Setup()
         {
             _previousBookshelfApiKeyQuery = Environment.GetEnvironmentVariable("BOOKSHELF_ALLOW_API_KEY_QUERY");
+            _previousBookshelfSeerrKey = Environment.GetEnvironmentVariable("BOOKSHELF_SEERRNG_API_KEY");
             Environment.SetEnvironmentVariable("BOOKSHELF_ALLOW_API_KEY_QUERY", null);
+            Environment.SetEnvironmentVariable("BOOKSHELF_SEERRNG_API_KEY", null);
         }
 
         [TearDown]
         public void TearDown()
         {
             Environment.SetEnvironmentVariable("BOOKSHELF_ALLOW_API_KEY_QUERY", _previousBookshelfApiKeyQuery);
+            Environment.SetEnvironmentVariable("BOOKSHELF_SEERRNG_API_KEY", _previousBookshelfSeerrKey);
         }
 
         [Test]
@@ -72,6 +76,41 @@ namespace Chaptarr.Core.Test.Http.Authentication
         }
 
         [Test]
+        public async Task should_accept_legacy_bookshelf_seerr_key_when_chaptarr_key_is_unset()
+        {
+            Environment.SetEnvironmentVariable("BOOKSHELF_SEERRNG_API_KEY", "legacy-seerr-key");
+
+            var result = await Authenticate("API", "apikey", "?apikey=legacy-seerr-key", new AuthOptions());
+
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(result.Principal.FindFirst("ApiKeyScope").Value, Is.EqualTo("seerrng"));
+        }
+
+        [Test]
+        public async Task should_prefer_chaptarr_seerr_key_over_legacy_environment_key()
+        {
+            Environment.SetEnvironmentVariable("BOOKSHELF_SEERRNG_API_KEY", "legacy-seerr-key");
+
+            var chaptarrKey = await Authenticate("API", "apikey", "?apikey=chaptarr-seerr-key", new AuthOptions(), "chaptarr-seerr-key");
+            var legacyKey = await Authenticate("API", "apikey", "?apikey=legacy-seerr-key", new AuthOptions(), "chaptarr-seerr-key");
+
+            Assert.That(chaptarrKey.Succeeded, Is.True);
+            Assert.That(chaptarrKey.Principal.FindFirst("ApiKeyScope").Value, Is.EqualTo("seerrng"));
+            Assert.That(legacyKey.Succeeded, Is.False);
+        }
+
+        [Test]
+        public async Task should_not_fall_back_to_legacy_seerr_key_when_chaptarr_key_is_explicitly_empty()
+        {
+            Environment.SetEnvironmentVariable("BOOKSHELF_SEERRNG_API_KEY", "legacy-seerr-key");
+
+            var result = await Authenticate("API", "apikey", "?apikey=legacy-seerr-key", new AuthOptions(), string.Empty);
+
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(result.Failure, Is.Null);
+        }
+
+        [Test]
         public async Task should_continue_to_accept_header_api_keys_when_query_keys_are_disabled()
         {
             var context = new DefaultHttpContext();
@@ -99,18 +138,29 @@ namespace Chaptarr.Core.Test.Http.Authentication
             Assert.That(result.Succeeded, Is.True);
         }
 
-        private static async Task<AuthenticateResult> Authenticate(string schemeName, string queryName, string queryString, AuthOptions authOptions)
+        private static async Task<AuthenticateResult> Authenticate(
+            string schemeName,
+            string queryName,
+            string queryString,
+            AuthOptions authOptions,
+            string seerrApiKey = null)
         {
             var context = new DefaultHttpContext();
+            context.Request.Path = "/api/v1/system/status";
             context.Request.QueryString = new QueryString(queryString);
-            return await Authenticate(context, schemeName, queryName, authOptions);
+            return await Authenticate(context, schemeName, queryName, authOptions, seerrApiKey);
         }
 
-        private static async Task<AuthenticateResult> Authenticate(HttpContext context, string schemeName, string queryName, AuthOptions authOptions)
+        private static async Task<AuthenticateResult> Authenticate(
+            HttpContext context,
+            string schemeName,
+            string queryName,
+            AuthOptions authOptions,
+            string seerrApiKey = null)
         {
             var config = new Mock<IConfigFileProvider>();
             config.SetupGet(x => x.ApiKey).Returns(ApiKey);
-            config.SetupGet(x => x.SeerrApiKey).Returns(string.Empty);
+            config.SetupGet(x => x.SeerrApiKey).Returns(seerrApiKey);
 
             var options = new ApiKeyAuthenticationOptions
             {

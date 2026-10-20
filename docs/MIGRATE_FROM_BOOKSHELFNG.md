@@ -198,10 +198,19 @@ idle state, then run ChaptarrNG preview. The published `.977` converter does
 not support PostgreSQL BookshelfNG databases. Merged PR #131 contains an unreleased candidate for one PostgreSQL migration-158 schema. PostgreSQL remains unsupported for operators; see the [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). Do not use the candidate for operator data; the published migration path remains SQLite-only. See the
 [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
-Environment variables are outside the database conversion. Preserve the
-BookshelfNG diagnostics variables if that optional module was explicitly
+Environment variables are outside the database conversion. If BookshelfNG
+used `BOOKSHELF_ALLOW_API_KEY_QUERY=false`, ChaptarrNG honors it while
+`CHAPTARR__AUTH__ALLOWAPIKEYQUERY` is unset. Prefer the ChaptarrNG setting for
+new deployments; query-key authentication remains enabled by default. The
+legacy `BOOKSHELF_SEERRNG_API_KEY` also remains active when
+`CHAPTARR__AUTH__SEERRAPIKEY` is unset, so existing SeerrNG credentials keep
+working when the container environment is carried forward. Remove the legacy
+value to revoke it or set the ChaptarrNG key explicitly to rotate it. Preserve
+the BookshelfNG diagnostics variables if that optional module was explicitly
 enabled; ChaptarrNG honors that choice only when the archived appdata also
 contains the old diagnostics module marker. See the
+[HTTP security settings](HTTP_SECURITY.md),
+[SeerrNG integration guide](SEERRNG_INTEGRATION.md), and
 [optional diagnostics guide](OPTIONAL_DIAGNOSTICS.md).
 
 ### Provider configuration blockers
@@ -424,119 +433,41 @@ quiescent data directory an operator-confirmed precondition.
 ### Windows standalone service migration
 
 The existing BookshelfNG WPF installer still installs and upgrades BookshelfNG.
-ChaptarrNG now has a candidate-only WPF migration installer at
-`distribution/windows/installer-net`. It builds as an internal Windows CI
-artifact, and it has not been published. It detects the legacy `Readarr`
-service/data path, requires the standard `NT AUTHORITY\LocalService` service
-account, asks which provider owns bare numeric IDs, verifies a permanent
-binary/config/database backup, previews before asking for apply, switches the
-service to `Chaptarr`, and checks its data path and local health. It holds a read-only SQLite `PRAGMA data_version` guard through preview
+ChaptarrNG has a candidate-only WPF migration installer at
+`distribution/windows/installer-net`; it is built for internal Windows CI and
+has not been published. The installer supports one SQLite database and the
+standard `NT AUTHORITY\LocalService` service account. It requires a provider
+identity choice, makes and verifies a full rollback backup, previews before
+apply, and checks the migrated database and ChaptarrNG's local health. A
+read-only SQLite `PRAGMA data_version` guard remains active through preview
 review and blocks committed changes from another connection immediately before
-apply. Raw database, WAL, and rollback-journal fingerprints remain diagnostic;
-WAL representation changes without a committed database update are logged but
-do not fail preview. **Earlier Windows candidate checks (2026-10-19):** One
-service round-trip received HTTP 403 while downloading the pinned BookshelfNG
-test archive; its retry exposed a raw WAL read while the SQLite guard held it
-open. Build [39357519729](https://github.com/snapetech-org/chaptarrng/actions/runs/39357519729)
-passed migration, health checks, and explicit restore, but cleanup did not
-confirm service removal within 20 seconds after `sc.exe delete` succeeded.
-Exact-head Build
-[39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
-passed Linux, macOS, Windows, and PostgreSQL migration jobs. Its Windows
-installer service round-trip, deferred service cleanup, and selected
-data-directory check passed; Linux tests, the pinned-tool M4B smoke, and CI
-artifact build passed. At that checkpoint native-runner receipt reconciliation
-and C# CodeQL were pending. The separate cleanup step runs after the smoke
-process exits and verifies service registry removal.
+apply. WAL representation changes are diagnostic and do not count as committed
+database changes.
 
-**Merged source validation (2026-10-20):** PR #131 merged to ChaptarrNG
-`main`. Exact-head Build
-[39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961)
-passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
-native-runner receipt checks. CodeQL passed; the separate GHAS Semgrep OSS
-check remains failed with reviewed SQL-format findings and fixture-path
-warnings. This establishes hosted source checks, not representative Windows
-data or accepted operator rollback.
-The initial path supports one SQLite database only; PostgreSQL, custom service
-accounts, multiple databases, unsupported schemas, and real operator-data
-rollback still require manual handling and maintainer acceptance. Keep the
-release freeze in place.
+The service handoff keeps the existing `Readarr` registration until ChaptarrNG
+has passed its health check. After the verified backup, the installer records
+Readarr's original startup mode and whether it was running, then disables it
+so it cannot start beside ChaptarrNG. A helper waits for the installer to
+close, confirms both services target the same data directory and ChaptarrNG is
+running, then removes the disabled Readarr registration. If cleanup cannot be
+scheduled, Readarr stays disabled and the installer reports that state.
 
-The manual path below is also a source candidate only. The published
-`v0.9.977` Windows binary does not preserve `-data` when registering a
-service, so it cannot safely hand an existing Windows service over. Do not use
-it for a Windows cutover while the retirement freeze is active.
+Automatic rollback stops ChaptarrNG, restores the verified files and database,
+and reuses the existing Readarr registration when it is still present. It
+restores Readarr's startup mode and starts it only if it was running before the
+migration. If post-exit cleanup already removed the service, rollback recreates
+it with the saved startup mode and supported LocalService identity. The
+installer's **Restore BookshelfNG** action remains available while the retained
+backup exists.
 
-For the default WPF install, the BookshelfNG service uses
-`C:\ProgramData\Readarr`. Stop `Readarr`, make an independent copy of that
-entire directory, then preview with the ChaptarrNG Windows archive extracted
-to a separate directory. Keep the archive version and data path identical for
-preview, apply, and service install:
-
-```powershell
-$data = Join-Path $env:ProgramData 'Readarr'
-$legacyConsole = Join-Path $data 'bin\Readarr.Console.exe'
-$chaptarrConsole = 'C:\Program Files\ChaptarrNG\Chaptarr.Console.exe'
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-
-Stop-Service -Name Readarr -Force
-(Get-Service -Name Readarr).WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
-Copy-Item -LiteralPath $data -Destination "$data.pre-chaptarr-$stamp" -Recurse
-
-# Set this to the primary BookshelfNG provider mode. Use true for native
-# Hardcover IDs or false for Goodreads IDs. Stop if the setting is unknown.
-$env:HARDCOVER = 'true' # Use 'false' when BookshelfNG uses Goodreads IDs.
-Remove-Item Env:HARDCOVER_NATIVE -ErrorAction SilentlyContinue
-& $chaptarrConsole -preview-bookshelf-migration "-data=$data"
-if ($LASTEXITCODE -ne 0) { throw 'Migration preview failed; leave BookshelfNG stopped and review the report.' }
-```
-
-After the retirement gates close and apply is approved, run the explicit
-conversion while `Readarr` remains stopped. Keep the printed BookshelfNG
-backup path. Then unregister the old service and register ChaptarrNG against
-the same data directory:
-
-```powershell
-& $chaptarrConsole -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=$data"
-if ($LASTEXITCODE -ne 0) { throw 'Migration apply failed; do not start either service.' }
-
-& $legacyConsole /u /exitimmediately
-if ($LASTEXITCODE -ne 0) { throw 'Could not remove the stopped BookshelfNG service.' }
-
-& $chaptarrConsole /i "-data=$data" /nobrowser
-if ($LASTEXITCODE -ne 0) { throw 'Could not install the ChaptarrNG service.' }
-```
-
-ChaptarrNG registers its own `Chaptarr` Windows service. The current source
-candidate carries the quoted `-data` path into the Windows service command
-line, so the service continues to use `C:\ProgramData\Readarr` instead of
-creating a second, empty Chaptarr data directory. The default HTTP port is
-`8789`; confirm the port in `config.xml` and check
-`http://127.0.0.1:<port>/ping` before retiring the independent backup.
-For custom BookshelfNG data paths or ports, substitute the values from the
-existing service configuration and `config.xml`.
-
-To roll back after conversion, stop `Chaptarr`, set `$backup` to the exact
-BookshelfNG backup path printed by apply, then preview and restore it before
-reinstalling the old service:
-
-```powershell
-$backup = Join-Path $data 'readarr.db.bookshelfng-backup-YYYYMMDDTHHMMSSfffZ-ID.db'
-Stop-Service -Name Chaptarr -Force
-(Get-Service -Name Chaptarr).WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
-
-& $chaptarrConsole -preview-bookshelf-restore "-bookshelf-backup=$backup" "-data=$data"
-if ($LASTEXITCODE -ne 0) { throw 'Restore preview failed; leave both services stopped.' }
-& $chaptarrConsole -restore-bookshelf -confirm-bookshelf-service-stopped "-bookshelf-backup=$backup" "-data=$data"
-if ($LASTEXITCODE -ne 0) { throw 'Restore failed; leave both services stopped and retain all backups.' }
-
-& $legacyConsole /i /exitimmediately
-if ($LASTEXITCODE -ne 0) { throw 'Could not reinstall the restored BookshelfNG service.' }
-```
-
-Start BookshelfNG only after restore succeeds. Preserve the ChaptarrNG database
-backup created by restore and the independent directory copy so post-migration
-writes remain available for recovery.
+This is still source-only migration tooling. The published `v0.9.977` Windows
+binary does not preserve `-data` when registering its service, and the manual
+service-registration commands from earlier drafts are not a supported
+handoff. Do not change the service or apply the migration during the release
+freeze. PostgreSQL, custom service accounts, multiple databases, unsupported
+schemas, and representative operator-data rollback are not covered by this
+installer. Keep BookshelfNG available until the installer and all retirement
+acceptance gates have passed.
 
 ## Update the local MCP connection
 
