@@ -41,6 +41,12 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+Current `main` also has explicit trusted-proxy and CORS allowlists, per-client
+API rate limiting, and a bounded general request-body setting. The backup
+restore route retains its separate 1 GiB upload limit. These controls are
+source-only and are not in the published `.977` release; see the
+[HTTP security settings](docs/HTTP_SECURITY.md).
+
 ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
 passed exact-head Build
 [39387591772](https://github.com/snapetech-org/chaptarrng/actions/runs/39387591772)

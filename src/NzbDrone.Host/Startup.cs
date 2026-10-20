@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
+using System.Threading.RateLimiting;
 using Chaptarr.Api.V1.System;
 using Chaptarr.Http;
 using Chaptarr.Http.Authentication;
@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -34,7 +35,6 @@ using NzbDrone.Host.AccessControl;
 using NzbDrone.Http.Authentication;
 using NzbDrone.SignalR;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
-using IPNetwork = System.Net.IPNetwork;
 
 namespace NzbDrone.Host
 {
@@ -61,33 +61,63 @@ namespace NzbDrone.Host
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
-                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
-                options.KnownIPNetworks.Add(new IPNetwork(IPAddress.Parse("10.0.0.0"), 8));
-                options.KnownIPNetworks.Add(new IPNetwork(IPAddress.Parse("172.16.0.0"), 12));
-                options.KnownIPNetworks.Add(new IPNetwork(IPAddress.Parse("192.168.0.0"), 16));
-                // CGNAT range (100.64.0.0/10) is commonly used by VPN overlays like Tailscale.
-                options.KnownIPNetworks.Add(new IPNetwork(IPAddress.Parse("100.64.0.0"), 10));
-                options.KnownIPNetworks.Add(new IPNetwork(IPAddress.Parse("fc00::"), 7));
-                options.KnownIPNetworks.Add(new IPNetwork(IPAddress.Parse("fe80::"), 10));
+                HttpSecuritySettings.ConfigureForwardedHeaders(options, Configuration);
             });
 
             services.AddRouting(options => options.LowercaseUrls = true);
 
             services.AddResponseCompression();
 
+            var allowedOrigins = HttpSecuritySettings.GetAllowedOrigins(Configuration);
+
             services.AddCors(options =>
             {
                 options.AddPolicy(VersionedApiControllerAttribute.API_CORS_POLICY,
                     builder =>
-                    builder.AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader());
+                    {
+                        builder.AllowAnyMethod()
+                            .AllowAnyHeader()
+                            .WithExposedHeaders("X-Bookshelf-Request-Id");
+
+                        if (allowedOrigins.Length > 0)
+                        {
+                            builder.WithOrigins(allowedOrigins);
+                        }
+                    });
 
                 options.AddPolicy("AllowGet",
                     builder =>
-                    builder.AllowAnyOrigin()
-                    .WithMethods("GET", "OPTIONS")
-                    .AllowAnyHeader());
+                    {
+                        builder.WithMethods("GET", "OPTIONS")
+                            .AllowAnyHeader()
+                            .WithExposedHeaders("X-Bookshelf-Request-Id");
+
+                        if (allowedOrigins.Length > 0)
+                        {
+                            builder.WithOrigins(allowedOrigins);
+                        }
+                    });
+            });
+
+            services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                var requestsPerMinute = HttpSecuritySettings.GetRequestsPerMinute(Configuration);
+                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = requestsPerMinute,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0,
+                            AutoReplenishment = true
+                        }));
+                options.OnRejected = (context, _) =>
+                {
+                    context.HttpContext.Response.Headers["Retry-After"] = "60";
+                    return System.Threading.Tasks.ValueTask.CompletedTask;
+                };
             });
 
             services
@@ -292,6 +322,7 @@ namespace NzbDrone.Host
             }
 
             app.UseRouting();
+            app.UseRateLimiter();
             app.UseCors();
             app.UseAuthentication();
             app.UseAuthorization();

@@ -15,6 +15,16 @@ ChaptarrNG PR #131 merged to `main` as
 BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977`; no new release or bridge was
 published. The source is not approved for production cutover.
 
+The current ChaptarrNG `main` source also ports BookshelfNG's HTTP boundary
+controls: explicitly trusted proxy IPs/CIDRs, opt-in CORS origins, per-client
+fixed-window API rate limits, a configurable 16 MiB default request-body cap,
+and the request-correlation response header. ChaptarrNG settings take
+precedence while the legacy `Readarr:Server` keys remain accepted. The backup
+restore endpoint keeps its separate 1 GiB upload allowance. This source change
+is not in the public `.977` release; the release freeze and production
+acceptance gates remain in force. See the
+[HTTP security settings](HTTP_SECURITY.md).
+
 ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
 passed exact-head Build
 [39387591772](https://github.com/snapetech-org/chaptarrng/actions/runs/39387591772)
