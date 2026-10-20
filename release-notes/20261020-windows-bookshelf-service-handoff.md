@@ -1,5 +1,6 @@
 ---
-title: Safer Windows BookshelfNG service handoff
+category: fixed
+audience: users, operators
 area: migration
 action: none
 breaking: false
