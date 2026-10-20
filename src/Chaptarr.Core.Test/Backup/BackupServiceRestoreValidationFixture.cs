@@ -65,7 +65,7 @@ namespace Chaptarr.Core.Test.Backup
                 }
                 else
                 {
-                    File.WriteAllText(Path.Combine(destination, "readarr.db"), "invalid");
+                    File.WriteAllText(Path.Combine(destination, "readarr.db"), "invalid"); // nosemgrep: csharp.lang.security.filesystem.unsafe-path-combine.unsafe-path-combine -- destination is a test-owned extraction folder and the filename is fixed.
                 }
             }
 
