@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import Label from 'Components/Label';
+import Button from 'Components/Link/Button';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
@@ -8,6 +9,7 @@ import styles from './SeriesNarratorMatrix.css';
 
 function SeriesNarratorMatrix({ title, authorId }) {
   const [state, setState] = useState({ isFetching: true, error: false, matrix: null });
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const query = authorId ? `&authorId=${authorId}` : '';
@@ -28,7 +30,7 @@ function SeriesNarratorMatrix({ title, authorId }) {
     });
 
     return abortRequest;
-  }, [title, authorId]);
+  }, [title, authorId, retryCount]);
 
   const { isFetching, error, matrix } = state;
 
@@ -37,7 +39,14 @@ function SeriesNarratorMatrix({ title, authorId }) {
   }
 
   if (error) {
-    return <div className={styles.message} role="alert">{translate('NarratorComparisonFailed')}</div>;
+    return (
+      <div className={styles.message} role="alert">
+        <span>{translate('NarratorComparisonFailed')}</span>
+        <Button onPress={() => setRetryCount((count) => count + 1)}>
+          {translate('Retry')}
+        </Button>
+      </div>
+    );
   }
 
   if (!matrix || !matrix.narrators.length) {

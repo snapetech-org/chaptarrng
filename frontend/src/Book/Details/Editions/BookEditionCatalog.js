@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import Label from 'Components/Label';
+import Button from 'Components/Link/Button';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import Table from 'Components/Table/Table';
@@ -63,6 +64,7 @@ function abridgementLabel(abridged) {
 
 function BookEditionCatalog({ bookId }) {
   const [state, setState] = useState({ isFetching: true, error: false, items: [] });
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const { request, abortRequest } = createAjaxRequest({
@@ -81,7 +83,7 @@ function BookEditionCatalog({ bookId }) {
     });
 
     return abortRequest;
-  }, [bookId]);
+  }, [bookId, retryCount]);
 
   const { isFetching, error, items } = state;
 
@@ -90,7 +92,14 @@ function BookEditionCatalog({ bookId }) {
   }
 
   if (error) {
-    return <div className={styles.message} role="alert">{translate('EditionCatalogFailed')}</div>;
+    return (
+      <div className={styles.message} role="alert">
+        <span>{translate('EditionCatalogFailed')}</span>
+        <Button onPress={() => setRetryCount((count) => count + 1)}>
+          {translate('Retry')}
+        </Button>
+      </div>
+    );
   }
 
   if (!items.length) {
