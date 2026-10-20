@@ -127,6 +127,11 @@ class AddAuthorOptionsForm extends Component {
     const missingSetup = rootFoldersPopulated ?
       getMissingAddFormatSetup(this.props) :
       [];
+    const isLoadingRootFolders = !rootFoldersPopulated &&
+      (rootFoldersFetching || !rootFoldersError);
+    const showRootFoldersError = !rootFoldersPopulated &&
+      rootFoldersError &&
+      !rootFoldersFetching;
 
     return (
       <Form {...otherProps}>
@@ -149,14 +154,13 @@ class AddAuthorOptionsForm extends Component {
           ) : null}
         </MediaTypeToggle>
 
-        {!rootFoldersPopulated &&
-          (rootFoldersFetching || !rootFoldersError) && (
+        {isLoadingRootFolders && (
           <Alert kind={kinds.INFO}>
             {translate('LoadingRootFoldersForAdd')}
           </Alert>
-          )}
+        )}
 
-        {!rootFoldersPopulated && rootFoldersError && !rootFoldersFetching && (
+        {showRootFoldersError && (
           <Alert kind={kinds.DANGER}>
             {translate('UnableToLoadRootFolders')}{' '}
             {fetchRootFolders ? (

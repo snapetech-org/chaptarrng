@@ -386,14 +386,12 @@ class AddNewSeriesModalContent extends Component {
 
               {addError && <Alert kind={kinds.DANGER}>{addError}</Alert>}
 
-              {seriesDetails &&
-                seriesDetails.books &&
-                seriesDetails.books.length > 0 && (
+              {hasBooks && (
                 <div className={styles.booksSection}>
-                    <h3 className={styles.booksSectionTitle}>
+                  <h3 className={styles.booksSectionTitle}>
                     {translate('BooksInThisSeries')}
                   </h3>
-                    <div className={styles.booksList}>
+                  <div className={styles.booksList}>
                     {seriesDetails.books.map((book, index) => {
                       const authorName =
                           book.authorName || book.author?.authorName;
@@ -401,6 +399,11 @@ class AddNewSeriesModalContent extends Component {
                         stripHtml(book.overview) :
                         '';
                       const validYear = this.getValidYear(book.releaseDate);
+                      const hasReleaseDateAndRating = !!(
+                        validYear &&
+                        book.ratings &&
+                        book.ratings.value > 0
+                      );
 
                       return (
                         <div
@@ -456,13 +459,11 @@ class AddNewSeriesModalContent extends Component {
                                   {validYear}
                                 </span>
                               )}
-                              {validYear &&
-                                book.ratings &&
-                                book.ratings.value > 0 && (
-                                  <span className={styles.metadataSeparator}>
-                                    {' '}
-                                    •{' '}
-                                  </span>
+                              {hasReleaseDateAndRating && (
+                                <span className={styles.metadataSeparator}>
+                                  {' '}
+                                  •{' '}
+                                </span>
                               )}
                               {book.ratings && book.ratings.value > 0 && (
                                 <span className={styles.bookRating}>
@@ -484,13 +485,10 @@ class AddNewSeriesModalContent extends Component {
                       );
                     })}
                   </div>
-                  </div>
+                </div>
               )}
 
-              {(!seriesDetails ||
-                !seriesDetails.books ||
-                seriesDetails.books.length === 0) &&
-                !isFetching && (
+              {!hasBooks && !isFetching && (
                 <div className={styles.noBooksMessage}>
                   <p>{translate('NoBookDetailsForSeriesPreview')}</p>
                 </div>
