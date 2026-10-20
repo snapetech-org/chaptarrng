@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.ServiceProcess;
+using System.Text.Json;
 using System.Net.Sockets;
 using System.Xml.Linq;
 using ChaptarrNG.Installer.Pipeline;
@@ -51,6 +52,27 @@ internal static class WindowsServiceRoundTrip
         }
 
         var runnerTemp = Environment.GetEnvironmentVariable("RUNNER_TEMP");
+        var configuredCleanupManifest = Environment.GetEnvironmentVariable("CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST");
+        var cleanupManifestPath = string.IsNullOrWhiteSpace(configuredCleanupManifest)
+            ? null
+            : Path.GetFullPath(configuredCleanupManifest);
+        if (cleanupManifestPath is not null)
+        {
+            var runnerTempDirectory = Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(string.IsNullOrWhiteSpace(runnerTemp) ? Path.GetTempPath() : runnerTemp));
+            if (!string.Equals(Path.GetDirectoryName(cleanupManifestPath), runnerTempDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Error.WriteLine("FAIL: the deferred cleanup manifest must be a direct child of RUNNER_TEMP.");
+                return 1;
+            }
+
+            if (File.Exists(cleanupManifestPath))
+            {
+                Console.Error.WriteLine($"FAIL: refusing to replace an existing cleanup manifest at {cleanupManifestPath}.");
+                return 1;
+            }
+        }
+
         var scratchRoot = Path.Combine(
             string.IsNullOrWhiteSpace(runnerTemp) ? Path.GetTempPath() : runnerTemp,
             "chaptarr-bookshelf-service-roundtrip-" + Guid.NewGuid().ToString("N"));
@@ -64,6 +86,15 @@ internal static class WindowsServiceRoundTrip
 
         try
         {
+            if (cleanupManifestPath is not null)
+            {
+                using var manifestStream = new FileStream(cleanupManifestPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                JsonSerializer.Serialize(manifestStream, new CleanupManifest(
+                    scratchRoot,
+                    installerTempDirectory,
+                    RemoveInstallerTempDirectory: !installerTempDirectoryExisted));
+            }
+
             Directory.CreateDirectory(dataDirectory);
             Directory.CreateDirectory(extractionDirectory);
 
@@ -198,19 +229,26 @@ internal static class WindowsServiceRoundTrip
             Console.Error.WriteLine($"FAIL: {exception.GetType().Name}: {exception.Message}");
         }
 
-        var cleanupOk = await CleanupAsync(
-            scratchRoot,
-            installerTempDirectory,
-            removeInstallerTempDirectory: !installerTempDirectoryExisted).ConfigureAwait(false);
-        if (!cleanupOk)
+        if (cleanupManifestPath is not null)
         {
-            preserveScratch = true;
-            failed = true;
+            Console.WriteLine($"[smoke] Fixture cleanup is deferred until this process exits: {cleanupManifestPath}");
         }
-
-        if (preserveScratch)
+        else
         {
-            Console.Error.WriteLine($"Test services could not be removed safely. Keeping their files at {scratchRoot}.");
+            var cleanupOk = await CleanupAsync(
+                scratchRoot,
+                installerTempDirectory,
+                removeInstallerTempDirectory: !installerTempDirectoryExisted).ConfigureAwait(false);
+            if (!cleanupOk)
+            {
+                preserveScratch = true;
+                failed = true;
+            }
+
+            if (preserveScratch)
+            {
+                Console.Error.WriteLine($"Test services could not be removed safely. Keeping their files at {scratchRoot}.");
+            }
         }
 
         return failed ? 1 : 0;
@@ -788,4 +826,9 @@ internal static class WindowsServiceRoundTrip
         BookshelfNG,
         Chaptarr
     }
+
+    private sealed record CleanupManifest(
+        string ScratchRoot,
+        string InstallerTempDirectory,
+        bool RemoveInstallerTempDirectory);
 }

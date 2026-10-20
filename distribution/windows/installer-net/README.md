@@ -87,15 +87,24 @@ conflict, verifies
 the successful Chaptarr handoff and health check, then invokes the installer’s
 explicit restore action and embedded rollback script. The test checks restored
 BookshelfNG lineage, populated records, data directory, and LocalService
-account. All services, registry state, and temporary data are removed after
-the run; cleanup preserves the scratch directory if a test service cannot be
-safely removed.
+account. It writes a cleanup manifest, then CI exits the smoke process before
+a separate PowerShell step stops and deletes the test services. This releases
+all smoke-process handles before Windows finalizes service deletion. The
+cleanup step verifies each service registry entry is gone before removing test
+registry state and temporary data; a failed cleanup keeps the scratch
+directory for diagnosis.
 
 To run the round-trip locally from an elevated Windows PowerShell session after
-building the ChaptarrNG payload, use:
+building the ChaptarrNG payload, set `RUNNER_TEMP` to a temporary directory and
+run both the smoke and its post-exit cleanup step:
 
 ```powershell
+$env:RUNNER_TEMP = $env:TEMP
+$env:CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST = Join-Path $env:RUNNER_TEMP 'chaptarr-bookshelf-service-roundtrip-cleanup.json'
 dotnet run --configuration Release --project ./distribution/windows/installer-net-smoke/ChaptarrNG.Installer.Smoke.csproj -- --windows-service-round-trip
+$smokeExit = $LASTEXITCODE
+./distribution/windows/installer-net-smoke/CleanupServiceRoundTrip.ps1 -ManifestPath $env:CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST
+exit $smokeExit
 ```
 
 The packaging script accepts `-KeepPayload` for this test build so the smoke
