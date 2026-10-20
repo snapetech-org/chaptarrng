@@ -146,6 +146,7 @@ namespace Chaptarr.Core.Test.Http.Authentication
             string seerrApiKey = null)
         {
             var context = new DefaultHttpContext();
+            context.Request.Method = "GET";
             context.Request.Path = "/api/v1/system/status";
             context.Request.QueryString = new QueryString(queryString);
             return await Authenticate(context, schemeName, queryName, authOptions, seerrApiKey);
