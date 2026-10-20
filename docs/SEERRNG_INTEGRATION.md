@@ -77,12 +77,20 @@ environment settings can survive a drop-in migration. Remove the old variable
 to revoke that fallback; set the new value explicitly to rotate the key.
 
 The SeerrNG credential can inspect book libraries, profiles, queue and history,
-root folders, book files, editions, and command status; look up books and
-authors; add books; update an individual book; run a single book search; and
-read or cancel pending author imports.
+root folders, book files, edition catalogs, audiobook narrator comparisons,
+and command status; look up books and authors; add books; update an individual
+book; run a single book search; set a series narrator without overriding
+existing book values; and read or cancel pending author imports.
 It can access the native `/api/v1` routes and the advertised
 `/readarr/{dialect}/{mediaType}/api/v1` compatibility routes. Media covers are
 available so the SeerrNG UI can display book artwork.
+
+The narrator matrix requires the single `mediaType=audiobook` query value. The
+series narrator preference update also requires that media type and accepts
+only `narrator`, `applyToAllBooks=true`, and `overrideExisting=false`. This
+keeps the dedicated service credential from changing ebook-scoped narrator
+state or overwriting an existing preference. SeerrNG's format-scoped Chaptarr
+adapter supplies the audiobook query value for these requests.
 
 The credential cannot read or change global settings or API-key endpoints,
 delete books or authors, delete files, run other commands, or use author
@@ -240,7 +248,7 @@ absent, so older ChaptarrNG versions keep working.
 | Capability flag | Endpoint | Purpose |
 | --- | --- | --- |
 | `editionCatalog` | `GET /api/v1/book/{id}/editions/catalog` | Every known edition with narrators, production, abridgement, length, language, publisher, release date, cover, whether it is the monitored selection, and whether a file exists |
-| `seriesNarratorMatrix` | `GET /api/v1/series/narrators/matrix?title=…&authorId=…` | For each narrator: the volumes they cover, the volumes missing, and the volumes already owned; for each volume: the narrators known across all editions |
+| `seriesNarratorMatrix` | `GET /api/v1/series/narrators/matrix?title=…&authorId=…&mediaType=audiobook` | For each narrator: the volumes they cover, the volumes missing, and the volumes already owned; for each volume: the narrators known across all editions |
 | `wantedEditionVariants` | `POST /api/v1/book/{id}/editions/wanted` with `asNewVariant: true` | Track the chosen narration alongside the current selection instead of replacing it |
 
 Fields the metadata does not state are reported as `unknown` (`production`,
@@ -249,5 +257,7 @@ is `full-cast` when the edition is flagged GraphicAudio or its own text says
 full cast or dramatized, `solo` for exactly one narrator, and otherwise
 `unknown`.
 
-`PUT /api/v1/series/{seriesId}/narrators/preferred` (already available) makes one
-narrator the series preference; SeerrNG uses it for **Collect With**.
+`PUT /api/v1/series/{seriesId}/narrators/preferred?mediaType=audiobook`
+(already available) makes one narrator the series preference; SeerrNG uses it
+for **Collect With**. The dedicated service key allows only the request that
+leaves existing book narrator values unchanged.

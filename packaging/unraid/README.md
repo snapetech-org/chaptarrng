@@ -46,6 +46,29 @@ For builds that include the current main HTTP controls, see the
 [HTTP security settings](../../docs/HTTP_SECURITY.md). These controls are not
 available in the published `v0.9.977` image.
 
+## BookshelfNG migration status
+
+ChaptarrNG is the intended destination for BookshelfNG, but the migration and
+Unraid handoff are still release-frozen. BookshelfNG `0.4.21.71` and ChaptarrNG
+`v0.9.977` remain the latest public releases. Keep BookshelfNG running; do not
+point ChaptarrNG at its `/config` directory or apply the published `.977`
+converter to BookshelfNG appdata.
+
+The current ChaptarrNG source candidate is
+[`55f6ae1a`](https://github.com/snapetech-org/chaptarrng/commit/55f6ae1a2eac79e2af4ae9a7a2d92cd827ab5ad1).
+Exact-head Build
+[`39474807076`](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
+passed Linux, Windows, and PostgreSQL migration jobs; its macOS job was
+cancelled before runner setup on both attempts, so there is no macOS result.
+CodeQL, Security Analysis, Semgrep CE, Trivy, and dependency submission passed.
+This source work is not in the published image. BookshelfNG issue
+[#144](https://github.com/snapetech-org/bookshelfng/issues/144) remains open,
+and the legacy Unraid handoff [PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5)
+is still a draft. Community Applications update/rollback and
+representative-data migration/rollback acceptance remain outstanding. Follow
+the [migration guide](../../docs/MIGRATE_FROM_BOOKSHELFNG.md) for the supported
+schema, backup, preview, apply, and rollback limits.
+
 ## Source and support
 
 - [ChaptarrNG application source](https://github.com/snapetech-org/chaptarrng)

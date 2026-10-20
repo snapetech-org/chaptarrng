@@ -18,15 +18,23 @@ ChaptarrNG `main`'s history.
 ## BookshelfNG consolidation status — 2026-10-20
 
 ChaptarrNG PR #131 is merged to `main`. The current application code snapshot is
-`65c0400aa43588504b3788c9ec6898dc7e6881b5`; runtime application code includes
+`55f6ae1a2eac79e2af4ae9a7a2d92cd827ab5ad1`; runtime application code includes
 the related-format book actions and combined Bookshelf **Formats** view from
 `c75ecbb37c5708441219887f7180d5ab10ee194d`, plus a Books index **Both** filter
 that keeps status, monitoring, and quality profiles scoped to each record's
-format. Exact-head Build
-[39468166089](https://github.com/snapetech-org/chaptarrng/actions/runs/39468166089)
-is in progress; no result
-is claimed yet. Local focused tests, type-check, translations, lint, and the
-production frontend build pass.
+format. Edition-catalog and series-narrator panels expose retry actions after
+failed requests. The restricted SeerrNG key accepts audiobook-scoped narrator
+queries and only non-overriding narrator preference updates. Exact-head Build
+[39474807076](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
+passed Linux, Windows, and PostgreSQL migration jobs. Windows passed installer
+fingerprint, upgrade/rollback service, cleanup, and selected-data-directory
+checks. The macOS job was cancelled before runner setup on both attempts, so
+there is no macOS result. CodeQL, Security Analysis, Semgrep CE, Trivy, and
+dependency submission passed. The UI shell adds accessible ChaptarrNG branding,
+responsive search/sidebar styling, a slate-and-purple dark theme, and visible
+keyboard focus. Focused lint, type-check, translation checks, and the
+production frontend build pass; repository-wide lint remains red on findings
+outside the changed files.
 
 BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public
 releases. No release or compatibility bridge was published; release readiness

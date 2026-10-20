@@ -51,13 +51,25 @@ index's **Both** filter lists audiobook and ebook records as separate rows,
 with status, monitoring, and quality profiles scoped to each record's format.
 These additions are not in `v0.9.977`. The runtime feature commit is
 `c75ecbb37c5708441219887f7180d5ab10ee194d`; the source code candidate is at
-`65c0400aa43588504b3788c9ec6898dc7e6881b5`, including the loading-retry fix
-and Both-filter profile scoping.
+`55f6ae1a2eac79e2af4ae9a7a2d92cd827ab5ad1`, including the loading-retry fix
+and Both-filter profile scoping. The current UI pass adds accessible
+ChaptarrNG branding, a responsive search and sidebar, slate-and-purple dark
+colors, and visible keyboard focus. Source-only updates also add visible retry
+actions to the Editions and Narrations panels and tighten the SeerrNG service
+key: it can read audiobook-scoped narrator comparisons and set a preferred
+narrator only with the non-overriding payload. Ebook-scoped narrator access
+and unrelated or administrative routes stay denied.
 Exact-head Build
-[39468166089](https://github.com/snapetech-org/chaptarrng/actions/runs/39468166089)
-is in progress; no result
-is claimed yet. Local focused tests, type-check, translations, ESLint,
-Stylelint, and production webpack builds pass. The release freeze remains
+[39474807076](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
+passed Linux, Windows, and PostgreSQL migration jobs. Windows also passed the
+installer fingerprint, upgrade/rollback service, cleanup, and selected-data
+directory checks. The macOS job was cancelled before runner setup on both
+attempts, so there is no macOS result. CodeQL, Security Analysis, Semgrep CE,
+Trivy, and dependency submission passed. Focused ESLint and Stylelint checks
+for changed files, frontend type-check, translation check, and production
+webpack build pass. Repository-wide ESLint and Stylelint still report 833 and
+657 findings outside the changed files; the production build reports 22 CSS
+module ordering warnings. The release freeze remains
 active and this source does not approve production cutover.
 
 The HTTP security controls remain source-only: explicit trusted proxies and
@@ -65,7 +77,10 @@ CORS origins, per-client request limits, a bounded body size, query-key
 controls, and a restricted SeerrNG key with route-level authorization. Existing
 `BOOKSHELF_SEERRNG_API_KEY` values remain accepted only when
 `CHAPTARR__AUTH__SEERRAPIKEY` is unset. The restore route retains its separate
-1 GiB upload limit. See [HTTP security settings](docs/HTTP_SECURITY.md).
+1 GiB upload limit. The restricted key's narrator routes require
+`mediaType=audiobook`; the preference update also requires
+`overrideExisting=false`. See [HTTP security settings](docs/HTTP_SECURITY.md)
+and the [SeerrNG integration contract](docs/SEERRNG_INTEGRATION.md).
 
 ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
 passed exact-head Build

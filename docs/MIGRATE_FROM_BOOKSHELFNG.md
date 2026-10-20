@@ -17,12 +17,19 @@
 > exact migration-158 SQLite schema. Its pre-upgrade check rejects schemas
 > before migration 14; upgrade those installations to the final BookshelfNG
 > `0.4.21.71` release first. The current migration candidate code head is
-> `65c0400aa43588504b3788c9ec6898dc7e6881b5`, which contains the current migration,
-> installer, Books index Both filter, and combined Bookshelf Formats-view source.
+> `55f6ae1a2eac79e2af4ae9a7a2d92cd827ab5ad1`, which contains the current migration,
+> installer, Books index Both filter, combined Bookshelf Formats view, and
+> audiobook-scoped SeerrNG narrator operations, visible retry actions, and
+> the responsive ChaptarrNG UI shell/theme update.
 > Exact-head Build
-> [39468166089](https://github.com/snapetech-org/chaptarrng/actions/runs/39468166089)
-> is in progress; no result
-> is claimed yet. None of this source-only work is in `.977` or approved for
+> [39474807076](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
+> passed Linux, Windows, and PostgreSQL migration jobs. Windows also passed
+> installer fingerprint, upgrade/rollback service, cleanup, and selected-data
+> directory checks. The macOS job was cancelled before runner setup on both
+> attempts, so there is no macOS result. CodeQL, Security Analysis, Semgrep CE,
+> Trivy, and dependency submission passed. Focused lint, type-check,
+> translation checks, and production build pass; repository-wide lint findings
+> remain outside the changed files. None of this source-only work is in `.977` or approved for
 > operator cutover during the release freeze.
 > **Provider identity warning:** `.977` maps bare numeric source IDs to
 > Goodreads regardless of `HARDCOVER`. A database from the native Hardcover
@@ -681,6 +688,33 @@ passed Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
 reconciliation. The Windows job passed the installer fingerprint, service
 upgrade/rollback, cleanup, and selected-data-directory checks. No release or
 compatibility bridge was published.
+
+## Current candidate SeerrNG source-build smoke (2026-10-20)
+
+ChaptarrNG source snapshot `ef0a144da7a54f98cd5e13347a0ed06a89c15cfc` built
+through the checked-in `Dockerfile.build` with its pinned .NET 10.0.13 runtime.
+The local SeerrNG source at
+[`ce632a6e6834fe094eb24ceda9b8a388472cc23e`](https://github.com/snapetech-org/seerrng/commit/ce632a6e6834fe094eb24ceda9b8a388472cc23e)
+read the synthetic audiobook and ebook converted from the BookshelfNG
+migration-158 fixture. ChaptarrNG reached schema 121, retained its schema-158
+backup, and both databases passed SQLite integrity and foreign-key checks.
+SeerrNG's restricted key read capabilities and both formats while
+administrative and unrelated command routes were denied. The real `ReadarrAPI`
+created, polled, and cancelled a synthetic pending import.
+
+This run used placeholder `.m4b` and `.epub` files; it does not validate media
+processing, successful provider fulfillment, operator data, PostgreSQL
+operator data, or installed rollback. The later source commit
+`ad40d565` additionally requires the audiobook media scope and
+non-overriding narrator-preference payload for the restricted key. Focused
+ChaptarrNG NUnit tests cover both formats, allowed and denied narrator calls,
+and plus-encoded spaces; SeerrNG's focused adapter tests confirm that it sends
+`mediaType=audiobook`. This migration smoke predates the later narrator-scope
+and UI-shell changes. Exact-head Build
+[39474807076](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
+passed Linux, Windows, and PostgreSQL migration jobs for source commit
+`55f6ae1a`. The macOS job was cancelled before runner setup on both attempts,
+so there is no macOS result. No release or compatibility bridge was published.
 
 ## Historical populated-database rehearsal (2026-10-14)
 
