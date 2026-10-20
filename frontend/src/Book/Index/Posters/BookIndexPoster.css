@@ -24,6 +24,14 @@ $hoverScale: 1.05;
   overflow: hidden;
 }
 
+.mediaTypeBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  pointer-events: none;
+}
+
 .poster {
   position: absolute;
   top: 0;

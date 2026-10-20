@@ -122,6 +122,19 @@ namespace Chaptarr.Core.Test.Api
             }
         }
 
+        private class StubSeriesBookLinkService : DispatchProxy
+        {
+            protected override object Invoke(MethodInfo targetMethod, object[] args)
+            {
+                if (targetMethod.Name == nameof(ISeriesBookLinkService.GetLinksByBook))
+                {
+                    return new List<SeriesBookLink>();
+                }
+
+                throw new NotImplementedException($"Unexpected series book link service call: {targetMethod.Name}");
+            }
+        }
+
         private sealed class StubMediaFileService : IMediaFileService
         {
             private readonly List<BookFile> _files;
@@ -167,13 +180,15 @@ namespace Chaptarr.Core.Test.Api
                 IAuthorStatisticsService authorStatisticsService,
                 Logger logger,
                 IMediaFileService mediaFileService = null,
-                IAuthorService authorService = null)
+                IAuthorService authorService = null,
+                ISeriesBookLinkService seriesBookLinkService = null)
                 : base(authorService: authorService,
                     bookService: bookService,
                     addBookService: null,
                     editionService: null,
                     editionSelector: null,
-                    seriesBookLinkService: null,
+                    seriesBookLinkService: seriesBookLinkService ??
+                        DispatchProxy.Create<ISeriesBookLinkService, StubSeriesBookLinkService>(),
                     authorStatisticsService: authorStatisticsService,
                     mediaFileService: mediaFileService ?? new StubMediaFileService(),
                     coverMapper: null,

@@ -64,7 +64,7 @@ function getInfoRowProps(row, props) {
   const { name } = row;
 
   if (name === 'monitored') {
-    const isMonitored = props.audiobookMonitored || props.ebookMonitored;
+    const isMonitored = props.mediaType === 'ebook' ? props.ebookMonitored : props.audiobookMonitored;
     const monitoredText = translate(isMonitored ? 'Monitored' : 'Unmonitored');
 
     return {

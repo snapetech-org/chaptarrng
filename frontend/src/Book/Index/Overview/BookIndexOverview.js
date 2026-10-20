@@ -5,6 +5,8 @@ import TextTruncate from 'react-text-truncate';
 import DeleteAuthorModal from 'Author/Delete/DeleteAuthorModal';
 import EditAuthorModalConnector from 'Author/Edit/EditAuthorModalConnector';
 import BookCover from 'Book/BookCover';
+import BookMediaTypeBadge from 'Book/BookMediaTypeBadge';
+import getBookIndexItemMediaType from 'Book/Index/getBookIndexItemMediaType';
 import BookIndexProgressBar from 'Book/Index/ProgressBar/BookIndexProgressBar';
 import Icon from 'Components/Icon';
 import IconButton from 'Components/Link/IconButton';
@@ -133,6 +135,8 @@ class BookIndexOverview extends Component {
       id,
       authorId,
       title,
+      mediaType,
+      selectedMediaType,
       audiobookMonitored,
       ebookMonitored,
       titleSlug,
@@ -171,6 +175,9 @@ class BookIndexOverview extends Component {
       isEditAuthorModalOpen,
       isDeleteAuthorModalOpen
     } = this.state;
+
+    const rowMediaType = getBookIndexItemMediaType(selectedMediaType, mediaType);
+    const isMonitored = rowMediaType === 'ebook' ? ebookMonitored : audiobookMonitored;
 
     const link = `/book/${id}`;
     const containerClassName = classNames(
@@ -227,7 +234,7 @@ class BookIndexOverview extends Component {
             </Link>
 
             <BookIndexProgressBar
-              monitored={audiobookMonitored || ebookMonitored}
+              monitored={isMonitored}
               bookCount={bookCount}
               bookFileCount={bookFileCount}
               totalBookCount={totalBookCount}
@@ -245,6 +252,13 @@ class BookIndexOverview extends Component {
               >
                 {title}
               </Link>
+
+              {selectedMediaType === 'both' ? (
+                <BookMediaTypeBadge
+                  className={styles.mediaTypeBadge}
+                  mediaType={mediaType}
+                />
+              ) : null}
 
               <div
                 className={styles.actions}
@@ -291,8 +305,9 @@ class BookIndexOverview extends Component {
 
               <BookIndexOverviewInfo
                 height={overviewHeight}
-                audiobookMonitored={audiobookMonitored}
-                ebookMonitored={ebookMonitored}
+                audiobookMonitored={rowMediaType === 'audiobook' && isMonitored}
+                ebookMonitored={rowMediaType === 'ebook' && isMonitored}
+                mediaType={rowMediaType}
                 sizeOnDisk={sizeOnDisk}
                 qualityProfile={qualityProfile}
                 showRelativeDates={showRelativeDates}
@@ -327,6 +342,8 @@ BookIndexOverview.propTypes = {
   id: PropTypes.number.isRequired,
   authorId: PropTypes.number.isRequired,
   title: PropTypes.string.isRequired,
+  mediaType: PropTypes.oneOf(['audiobook', 'ebook']),
+  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook', 'both']),
   audiobookMonitored: PropTypes.bool,
   ebookMonitored: PropTypes.bool,
   titleSlug: PropTypes.string.isRequired,

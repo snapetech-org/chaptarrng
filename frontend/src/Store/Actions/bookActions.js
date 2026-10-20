@@ -165,7 +165,10 @@ export const sortPredicates = {
   },
 
   monitored: function(item, _direction, selectedMediaType) {
-    const mediaType = (selectedMediaType || item.mediaType || '').toString().toLowerCase() === 'ebook' ? 'ebook' : 'audiobook';
+    const selectedType = (selectedMediaType || '').toString().toLowerCase();
+    const mediaType = selectedType === 'ebook' || selectedType === 'audiobook' ?
+      selectedType :
+      item.mediaType;
     const isMonitored = mediaType === 'ebook' ? item.ebookMonitored : item.audiobookMonitored;
 
     return isMonitored ? 1 : 0;

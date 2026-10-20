@@ -351,11 +351,16 @@ class BookIndex extends Component {
   };
 
   onSaveSelected = (changes) => {
-    this.props.onSaveSelected({
+    const payload = {
       bookIds: this.getSelectedIds(),
-      mediaType: this.props.selectedMediaType,
       ...changes
-    });
+    };
+
+    if (this.props.selectedMediaType !== 'both') {
+      payload.mediaType = this.props.selectedMediaType;
+    }
+
+    this.props.onSaveSelected(payload);
   };
 
   onSearchPress = () => {
@@ -487,6 +492,7 @@ class BookIndex extends Component {
           <PageToolbarSection>
             <MediaTypeToggle
               selectedMediaType={selectedMediaType}
+              includeBoth={true}
               onMediaTypeChange={onMediaTypeChange}
             />
 
@@ -754,7 +760,7 @@ BookIndex.propTypes = {
   onScroll: PropTypes.func.isRequired,
   onSaveSelected: PropTypes.func.isRequired,
   onFetchBookIds: PropTypes.func.isRequired,
-  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook']).isRequired,
+  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook', 'both']).isRequired,
   bookQueryKey: PropTypes.string.isRequired,
   bookQueryParams: PropTypes.object.isRequired,
   bookBuckets: PropTypes.shape({

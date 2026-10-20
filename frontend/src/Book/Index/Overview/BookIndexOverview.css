@@ -107,6 +107,10 @@ $hoverScale: 1.05;
   font-size: 30px;
 }
 
+.mediaTypeBadge {
+  margin: 0 8px;
+}
+
 .actions {
   white-space: nowrap;
 }

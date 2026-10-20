@@ -9,6 +9,7 @@ interface CssExports {
   'ended': string;
   'info': string;
   'link': string;
+  'mediaTypeBadge': string;
   'overview': string;
   'poster': string;
   'posterContainer': string;
