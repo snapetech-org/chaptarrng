@@ -55,11 +55,14 @@ function Stop-And-DeleteService([string] $Name) {
         throw "sc.exe delete $Name failed with exit code $LASTEXITCODE."
     }
 
+    $serviceKeyPath = "HKLM:\SYSTEM\CurrentControlSet\Services\$Name"
     $deadline = [DateTime]::UtcNow.AddSeconds(20)
-    while ((Get-Service -Name $Name -ErrorAction SilentlyContinue) -and [DateTime]::UtcNow -lt $deadline) {
+    # Query the registry while deletion is pending. Get-Service opens an SCM
+    # handle, which can keep the marked-for-deletion registration alive.
+    while ((Test-Path -LiteralPath $serviceKeyPath) -and [DateTime]::UtcNow -lt $deadline) {
         Start-Sleep -Milliseconds 250
     }
-    if (Get-Service -Name $Name -ErrorAction SilentlyContinue) {
+    if (Test-Path -LiteralPath $serviceKeyPath) {
         throw "$Name is still registered after a delete request."
     }
 }

@@ -48,6 +48,14 @@ public static class ServiceLifecycle
         return key?.GetValue("ImagePath") as string;
     }
 
+    private static bool IsServiceRegistrationPresent(string serviceName)
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(
+            $@"SYSTEM\CurrentControlSet\Services\{serviceName}",
+            writable: false);
+        return key is not null;
+    }
+
     public static string GetBookshelfServiceAccount()
     {
         using var key = Registry.LocalMachine.OpenSubKey(
@@ -267,7 +275,10 @@ public static class ServiceLifecycle
         while (DateTime.UtcNow < deadline)
         {
             ct.ThrowIfCancellationRequested();
-            if (!IsInstalled(serviceName))
+            // Do not poll through ServiceController after DeleteService. Opening
+            // the service while it is marked for deletion can keep its SCM
+            // registration alive and delay the very removal we are waiting for.
+            if (!IsServiceRegistrationPresent(serviceName))
             {
                 return true;
             }
@@ -275,7 +286,7 @@ public static class ServiceLifecycle
             await Task.Delay(250, ct).ConfigureAwait(false);
         }
 
-        return !IsInstalled(serviceName);
+        return !IsServiceRegistrationPresent(serviceName);
     }
 
     public static async Task<bool> PollForRunningAsync(
