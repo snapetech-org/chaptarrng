@@ -22,11 +22,20 @@ function Stop-And-DeleteService([string] $Name) {
     $service = Get-Service -Name $Name -ErrorAction SilentlyContinue
     if (-not $service) { return }
 
+    $serviceProcessId = [int] (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$Name'" -ErrorAction Stop).ProcessId
+
     Write-Host "Stopping $Name service..."
     if ($service.Status -ne 'Stopped') {
         Stop-Service -Name $Name -Force
         $service = Get-Service -Name $Name -ErrorAction Stop
         $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+    }
+
+    if ($serviceProcessId -gt 0) {
+        $serviceProcess = Get-Process -Id $serviceProcessId -ErrorAction SilentlyContinue
+        if ($serviceProcess -and -not $serviceProcess.WaitForExit(15000)) {
+            throw "$Name service process $serviceProcessId did not exit after the service reported STOPPED."
+        }
     }
 
     Write-Host "Removing $Name service registration..."

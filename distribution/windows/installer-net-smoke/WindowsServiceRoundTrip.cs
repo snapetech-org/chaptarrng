@@ -326,15 +326,14 @@ internal static class WindowsServiceRoundTrip
 
     private static async Task StopServiceAsync(string serviceName)
     {
-        using var service = new ServiceController(serviceName);
-        service.Refresh();
-        if (service.Status == ServiceControllerStatus.Stopped)
+        var stopped = await ServiceLifecycle.StopAsync(
+            serviceName,
+            new Progress<LogLine>(line => Console.WriteLine(line.Text)),
+            TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+        if (!stopped)
         {
-            return;
+            throw new InvalidOperationException($"The {serviceName} service and its process did not stop cleanly.");
         }
-
-        service.Stop();
-        await Task.Run(() => service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30))).ConfigureAwait(false);
     }
 
     private static Task StartServiceIfStoppedAsync(string serviceName)

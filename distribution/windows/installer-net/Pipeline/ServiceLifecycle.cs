@@ -1,7 +1,10 @@
 using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 using System.ServiceProcess;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
@@ -13,6 +16,29 @@ public static class ServiceLifecycle
     public const string BookshelfServiceName = "Readarr";
     public const string ChaptarrServiceName = "Chaptarr";
     private const string DefaultBookshelfDataDirectory = @"C:\ProgramData\Readarr";
+    private static readonly TimeSpan ServiceProcessExitTimeout = TimeSpan.FromSeconds(15);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ServiceStatusProcess
+    {
+        public uint ServiceType;
+        public uint CurrentState;
+        public uint ControlsAccepted;
+        public uint Win32ExitCode;
+        public uint ServiceSpecificExitCode;
+        public uint CheckPoint;
+        public uint WaitHint;
+        public uint ProcessId;
+        public uint ServiceFlags;
+    }
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool QueryServiceStatusEx(
+        IntPtr serviceHandle,
+        int infoLevel,
+        out ServiceStatusProcess status,
+        uint bufferSize,
+        out uint bytesNeeded);
 
     public static string? GetImagePath(string serviceName)
     {
@@ -118,36 +144,49 @@ public static class ServiceLifecycle
         try
         {
             sc.Refresh();
+            var processId = GetServiceProcessId(sc);
             if (sc.Status == ServiceControllerStatus.Stopped)
             {
                 log.Report(new LogLine(LogStream.Stdout, $"[service] {serviceName} already stopped."));
-                return true;
             }
-
-            log.Report(new LogLine(LogStream.Stdout, $"[service] Stopping {serviceName}..."));
-            if (sc.Status != ServiceControllerStatus.StopPending)
+            else
             {
-                sc.Stop();
-            }
-
-            var deadline = DateTime.UtcNow + timeout;
-            while (DateTime.UtcNow < deadline)
-            {
-                ct.ThrowIfCancellationRequested();
-                sc.Refresh();
-                if (sc.Status == ServiceControllerStatus.Stopped)
+                log.Report(new LogLine(LogStream.Stdout, $"[service] Stopping {serviceName}..."));
+                if (sc.Status != ServiceControllerStatus.StopPending)
                 {
-                    log.Report(new LogLine(LogStream.Stdout, $"[service] {serviceName} stopped."));
-                    return true;
+                    sc.Stop();
                 }
 
-                await Task.Delay(500, ct).ConfigureAwait(false);
+                var deadline = DateTime.UtcNow + timeout;
+                while (DateTime.UtcNow < deadline)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    sc.Refresh();
+                    if (sc.Status == ServiceControllerStatus.Stopped)
+                    {
+                        log.Report(new LogLine(LogStream.Stdout, $"[service] {serviceName} reported STOPPED."));
+                        break;
+                    }
+
+                    await Task.Delay(500, ct).ConfigureAwait(false);
+                }
+
+                if (sc.Status != ServiceControllerStatus.Stopped)
+                {
+                    log.Report(new LogLine(LogStream.Stderr, $"[service] Timed out waiting for {serviceName} to stop."));
+                    return false;
+                }
             }
 
-            log.Report(new LogLine(LogStream.Stderr, $"[service] Timed out waiting for {serviceName} to stop."));
-            return false;
+            if (processId.HasValue && !await WaitForProcessExitAsync(serviceName, processId.Value, log, ct).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            log.Report(new LogLine(LogStream.Stdout, $"[service] {serviceName} process has exited."));
+            return true;
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
         {
             log.Report(new LogLine(LogStream.Stderr, $"[service] Could not stop {serviceName}: {ex.Message}"));
             return false;
@@ -277,5 +316,69 @@ public static class ServiceLifecycle
 
         var exeEnd = value.IndexOf(".exe", StringComparison.OrdinalIgnoreCase);
         return exeEnd >= 0 ? value[..(exeEnd + 4)].Trim() : null;
+    }
+
+    private static int? GetServiceProcessId(ServiceController service)
+    {
+        if (!QueryServiceStatusEx(
+                service.ServiceHandle.DangerousGetHandle(),
+                0,
+                out var status,
+                (uint)Marshal.SizeOf<ServiceStatusProcess>(),
+                out _))
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error(), $"Could not query the process ID for service {service.ServiceName}.");
+        }
+
+        return status.ProcessId == 0 ? null : checked((int)status.ProcessId);
+    }
+
+    private static async Task<bool> WaitForProcessExitAsync(
+        string serviceName,
+        int processId,
+        IProgress<LogLine> log,
+        CancellationToken ct)
+    {
+        Process process;
+        try
+        {
+            process = Process.GetProcessById(processId);
+        }
+        catch (ArgumentException)
+        {
+            return true;
+        }
+
+        using (process)
+        {
+            if (process.HasExited)
+            {
+                return true;
+            }
+
+            log.Report(new LogLine(
+                LogStream.Stdout,
+                $"[service] Waiting for {serviceName} process {processId} to exit after the service reported STOPPED..."));
+
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(ServiceProcessExitTimeout);
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+                return true;
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                if (process.HasExited)
+                {
+                    return true;
+                }
+
+                log.Report(new LogLine(
+                    LogStream.Stderr,
+                    $"[service] {serviceName} process {processId} did not exit within {ServiceProcessExitTimeout.TotalSeconds:0} seconds."));
+                return false;
+            }
+        }
     }
 }
