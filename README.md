@@ -751,6 +751,7 @@ dotnet _output/publish/Chaptarr.Console.dll
 Note: the inherited assembly is named `Chaptarr.dll` on Linux/macOS and `Chaptarr.Console.dll` on Windows.
 
 ## Documentation
+- [Documentation index](docs/README.md): migration, features, operations, and development guides
 - [Setup experience contract](docs/development/setup-experience-contract.md): evolve Quickstart in place for ChaptarrNG's ebook and audiobook workflow
 - [UI localization roadmap](docs/localization-roadmap.md): current locale order, translated high-use strings, and remaining catalog work
 
@@ -775,11 +776,10 @@ ChaptarrNG is a community project, and we welcome contributions! Please see [CON
 
 ## Bug Reports & Features
 
-Found a bug or have a feature request? Please open an issue on GitHub with:
-- Clear description of the issue/feature
-- Steps to reproduce (for bugs)
-- Logs if applicable
-- Your environment details
+Found a bug or have a feature request? Open an issue on GitHub with the steps
+to reproduce it, the expected behavior, and your environment details. See
+[Reporting issues](docs/REPORTING_ISSUES.md) for useful log excerpts and
+privacy guidance before attaching logs.
 
 ## Security
 
