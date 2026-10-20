@@ -17,13 +17,13 @@
 > exact migration-158 SQLite schema. Its pre-upgrade check rejects schemas
 > before migration 14; upgrade those installations to the final BookshelfNG
 > `0.4.21.71` release first. The current migration candidate code head is
-> `c0aabe4441fd263e0f9e9019fd51441b7c821615`. It includes the migration and
+> `0c8bc86d5af8dd3aa639bb9b1f827a9e6365a7d6`. It includes the migration and
 > installer work, Books index Both filter, combined Bookshelf Formats view,
 > audiobook-scoped SeerrNG narrator operations, visible retry actions, and the
 > responsive ChaptarrNG UI. It also preserves manual edition choices on local
-> book adds and resolves bare numeric Hardcover/Goodreads IDs through the
-> Readarr facade. Exact-head Build
-> [39503006775](https://github.com/snapetech-org/chaptarrng/actions/runs/39503006775)
+> book adds, resolves bare numeric Hardcover/Goodreads IDs through the
+> Readarr facade, and passes each book row's format to the author editor. Exact-head Build
+> [39512434958](https://github.com/snapetech-org/chaptarrng/actions/runs/39512434958)
 > passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
 > receipt reconciliation. Windows also passed migration-installer fingerprint,
 > service upgrade/rollback, cleanup, and selected-data-directory checks.

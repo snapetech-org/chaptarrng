@@ -51,10 +51,11 @@ index's **Both** filter lists audiobook and ebook records as separate rows,
 with status, monitoring, and quality profiles scoped to each record's format.
 These additions are not in `v0.9.977`. The runtime feature commit is
 `c75ecbb37c5708441219887f7180d5ab10ee194d`; current source code is at
-`c0aabe4441fd263e0f9e9019fd51441b7c821615`. It also reuses matching local
+`0c8bc86d5af8dd3aa639bb9b1f827a9e6365a7d6`. It also reuses matching local
 catalog books during add, preserves an explicitly selected manual edition,
 and resolves bare numeric Hardcover/Goodreads IDs through the Readarr facade
-before title search. The current UI pass adds accessible
+before title search. Author edit actions from book rows now open the editor
+with the row's audiobook or ebook format. The current UI pass adds accessible
 ChaptarrNG branding, a responsive search and sidebar, slate-and-purple dark
 colors, and visible keyboard focus. Source-only updates also add visible retry
 actions to the Editions and Narrations panels and tighten the SeerrNG service
@@ -62,14 +63,17 @@ key: it can read audiobook-scoped narrator comparisons and set a preferred
 narrator only with the non-overriding payload. Ebook-scoped narrator access
 and unrelated or administrative routes stay denied.
 Exact-head Build
-[39503006775](https://github.com/snapetech-org/chaptarrng/actions/runs/39503006775)
+[39512434958](https://github.com/snapetech-org/chaptarrng/actions/runs/39512434958)
 passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
 receipt reconciliation. Windows also passed the BookshelfNG installer
 fingerprint, upgrade/rollback, cleanup, and selected-data-directory checks.
 CodeQL, Security Analysis, Semgrep CE, Trivy, and NuGet submission passed; the
 release-note contract was skipped because no release was prepared. Focused
 regression fixtures cover local edition preservation and raw Hardcover facade
-lookup. This validation does not authorize a release or production cutover.
+lookup; a reducer fixture also protects duplicate book IDs in paged results. The
+row-format handoff into the author editor is included in the hosted cross-platform
+build, but has no dedicated UI assertion. This validation does not authorize a
+release or production cutover.
 
 Current `main` also applies the author freshness policy to book-added events
 while retaining the author-scoped folder rescan, even when metadata is skipped

@@ -20,17 +20,19 @@ or migration acceptance.
 
 ChaptarrNG PR #131 merged to `main` as
 `d2bcba7953a14d2d726f47005a660314cc5e4c26`. Current source head is
-`c0aabe4441fd263e0f9e9019fd51441b7c821615`. Runtime application code includes
+`0c8bc86d5af8dd3aa639bb9b1f827a9e6365a7d6`. Runtime application code includes
 the related-format book actions and combined Bookshelf **Formats** view from
 `c75ecbb37c5708441219887f7180d5ab10ee194d`, plus the Books index **Both**
 filter with per-record format status, monitoring, and quality profiles. The
 latest changes reuse an existing matching catalog book during local add,
-preserve an explicit manual edition selection, and resolve bare numeric
-Hardcover/Goodreads lookup IDs through the Readarr facade. Focused tests cover
-these behaviors.
+preserve an explicit manual edition selection, resolve bare numeric
+Hardcover/Goodreads lookup IDs through the Readarr facade, and pass the
+selected row format into the author editor. Focused regression tests cover local
+add and provider lookup; the row-format wiring is compiled in the hosted build,
+with no dedicated UI assertion.
 
 Exact-head Build
-[39503006775](https://github.com/snapetech-org/chaptarrng/actions/runs/39503006775)
+[39512434958](https://github.com/snapetech-org/chaptarrng/actions/runs/39512434958)
 passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
 receipt reconciliation. Windows also passed migration-installer fingerprint,
 service upgrade/rollback, cleanup, and selected-data-directory checks.

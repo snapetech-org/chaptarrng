@@ -55,15 +55,16 @@ point ChaptarrNG at its `/config` directory or apply the published `.977`
 converter to BookshelfNG appdata.
 
 The current ChaptarrNG source candidate is
-[`c0aabe44`](https://github.com/snapetech-org/chaptarrng/commit/c0aabe4441fd263e0f9e9019fd51441b7c821615).
+[`0c8bc86d`](https://github.com/snapetech-org/chaptarrng/commit/0c8bc86d5af8dd3aa639bb9b1f827a9e6365a7d6).
 Exact-head Build
-[`39503006775`](https://github.com/snapetech-org/chaptarrng/actions/runs/39503006775)
+[`39512434958`](https://github.com/snapetech-org/chaptarrng/actions/runs/39512434958)
 passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
 receipt reconciliation. Windows also passed migration-installer fingerprint,
 upgrade/rollback, cleanup, and selected-data-directory checks. Security
 Analysis, Semgrep CE, Trivy, CodeQL, and NuGet submission passed. The current
-source adds local-add edition preservation and numeric Hardcover/Goodreads
-facade lookup; it is not in the published image. BookshelfNG issue
+source adds local-add edition preservation, numeric Hardcover/Goodreads
+facade lookup, and row-format-aware author editing; it is not in the
+published image. BookshelfNG issue
 [#144](https://github.com/snapetech-org/bookshelfng/issues/144) remains open,
 and the legacy Unraid handoff [PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5)
 is still a draft. Community Applications update/rollback and
