@@ -9,45 +9,43 @@ feature inventory remains in the
 
 **Merged source status (2026-10-20)**
 
-ChaptarrNG PR #131 merged to `main` on 2026-10-20 as
-`d2bcba7953a14d2d726f47005a660314cc5e4c26`, from code head
-`87c57a2bffd25a5ecbda40b9c63fd6d82993c54d`. Exact-head Build
-[39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961)
-passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
-native-runner receipt checks. CodeQL, security analysis, Trivy, Semgrep
-Community, dependency review, NuGet, and Helm checks passed. Disposable-fork
-validation was skipped by its gate. The separate GHAS Semgrep OSS check failed
-with 12 SQL-format findings and three fixture-path warnings; these were
-reviewed and are not reported as a clean check. Source checks do not establish
-representative operator data, semantic parity, installed rollback, or
-installer/update-channel acceptance. The public release remains `v0.9.977`;
-do not use this source for production cutover.
+ChaptarrNG PR #131 merged to `main` as
+`d2bcba7953a14d2d726f47005a660314cc5e4c26` from validated code head
+`87c57a2bffd25a5ecbda40b9c63fd6d82993c54`. The latest public releases remain
+BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977`; no new release or bridge was
+published. The source is not approved for production cutover.
 
-Post-merge ChaptarrNG `main` at `8448e90d` passed Build
-[39382585956](https://github.com/snapetech-org/chaptarrng/actions/runs/39382585956)
-on Linux, macOS, and Windows, including the Windows migration-installer
-upgrade and rollback checks, plus PostgreSQL migration and native-runner
-receipt validation. The source remains unpublished and is not approved for
-operator cutover.
+ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
+passed exact-head Build
+[39387591772](https://github.com/snapetech-org/chaptarrng/actions/runs/39387591772)
+on Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
+reconciliation. Security analysis, Semgrep CE, Trivy, dependency submission,
+and push checks passed; the release-note contract was skipped for that
+docs-only source update. The separate GHAS Semgrep OSS check on PR #131 remains
+failed with 12 reviewed SQL-format alerts and 3 fixed-fixture path warnings;
+these are documented exceptions, not a passing check. BookshelfNG audit-tool
+commit `9fcc0aea` passed Build
+[39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595).
+Unraid main `296caed2` passed CI
+[39387608787](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39387608787)
+and package-sync, security, and release-note checks.
 
-Current ChaptarrNG `main` at `be304ff0` passed Build
-[39385113986](https://github.com/snapetech-org/chaptarrng/actions/runs/39385113986)
-on Linux, macOS, Windows, and PostgreSQL migration, including the Windows
-migration-installer rollback checks. BookshelfNG main commit `9fcc0aea` adds
-schema-v4 per-path disposition tracking; its local audit suite passes 23/23,
-but the pinned inventory still has 0/1,115 dispositions. BookshelfNG Build
-[39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595)
-and mirrored Unraid Build
-[39386647719](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39386647719)
-passed. Unraid transition PR [#5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5)
-at candidate head `e615e37e` passed its exact-head build, template, dependency,
-package-sync, release-note, Trivy, and Semgrep checks. It remains draft because
-representative data and Community Applications update/rollback acceptance are
-still open; its publication jobs were skipped.
+The refreshed path inventory pins BookshelfNG `c63eb848` to ChaptarrNG
+`3254c15b`. It covers 679 reachable post-fork commits (670 absent from the
+pinned upstream history) and 1,116 changed paths: 377 unmapped, 557 needing
+semantic review, 176 identical, four renamed project files ported after review,
+and two paths absent from the Bookshelf snapshot. It records 25 reviewed path
+mappings and 180 file dispositions (176 retained, 4 ported), leaving 936 paths
+undispositioned and no approved retirements. This is a path review; it does not
+prove feature behavior.
 
-No release, package, image, or bridge was published. BookshelfNG remains in
-service until operator data, exhaustive semantic disposition, provider
-fulfillment, installer/channel handoff, and operator acceptance are complete.
+Unraid transition PR [#5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5)
+remains draft at `1261a9f8`. Its exact-head build, template, package-sync,
+dependency, release-note, Semgrep, and Trivy checks passed; publication jobs
+were skipped. Real Community Applications update/rollback and representative
+data migration/rollback remain unaccepted. Issue [#144](https://github.com/snapetech-org/bookshelfng/issues/144)
+remains open. Keep BookshelfNG running and do not apply migration or start
+ChaptarrNG against BookshelfNG appdata until acceptance is complete.
 
 **Prior application-code validation (2026-10-19):** ChaptarrNG draft PR #131
 contains code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build

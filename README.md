@@ -41,26 +41,38 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
-Post-merge ChaptarrNG `main` at `8448e90d` passed Build
-[39382585956](https://github.com/snapetech-org/chaptarrng/actions/runs/39382585956)
-on Linux, macOS, and Windows, including the Windows migration-installer
-upgrade and rollback checks, plus PostgreSQL migration and native-runner
-receipt validation. This validates the merged source on the current main head;
-it does not close operator-data, feature-parity, rollback, or channel
-acceptance.
+ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
+passed exact-head Build
+[39387591772](https://github.com/snapetech-org/chaptarrng/actions/runs/39387591772)
+on Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
+reconciliation. Security analysis, Semgrep CE, Trivy, dependency submission,
+and push checks passed; the release-note contract was skipped for that
+docs-only source update. The merged code remains unpublished and is not
+approved for operator cutover.
 
-Current ChaptarrNG `main` at `be304ff0` also passed Build
-[39385113986](https://github.com/snapetech-org/chaptarrng/actions/runs/39385113986)
-on Linux, macOS, Windows, and PostgreSQL migration, including the Windows
-migration-installer rollback checks. BookshelfNG's schema-v4 audit tooling at
-`9fcc0aea` passed Build
-[39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595);
-the mirrored Unraid `main` at `23bebe2a` passed Build
-[39386647719](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39386647719).
-The inventory still has 0/1,115 reviewed path dispositions. Unraid transition
-PR [#5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5) passed its
-exact-head checks at `e615e37e` but remains draft pending populated-data and
-Community Applications upgrade/rollback acceptance. No publishing jobs ran.
+The refreshed BookshelfNG source inventory pins `c63eb848` to this ChaptarrNG
+target snapshot. It records 1,116 changed paths, 25 reviewed path mappings, and
+180 file dispositions (176 retained, 4 ported), with 936 paths still requiring
+semantic review and no approved retirements. Exact file retention and project
+reference comparison do not establish full feature or runtime parity.
+
+BookshelfNG audit-tool commit `9fcc0aea` passed Build
+[39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595).
+Its docs-only main head `c63eb848` passed its push and security checks. Unraid
+main `296caed2` passed CI
+[39387608787](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39387608787)
+and package-sync, security, and release-note checks. Unraid transition PR
+[#5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5) remains draft
+at `1261a9f8`; its exact-head build, template, package-sync, dependency,
+release-note, Semgrep, and Trivy checks passed. Publication jobs were skipped.
+The real Community Applications update/rollback path and representative-data
+migration/rollback remain open.
+
+The release freeze remains in force. BookshelfNG issue [#144](https://github.com/snapetech-org/bookshelfng/issues/144)
+remains open, and BookshelfNG must stay in service until representative data,
+rollback, feature parity, provider workflows, update-channel handoff, and
+operator acceptance are complete. No release or compatibility bridge was
+published.
 
 The BookshelfNG Windows WPF installer still installs BookshelfNG. ChaptarrNG
 `main` contains an unpublished transactional WPF handoff installer. It keeps
