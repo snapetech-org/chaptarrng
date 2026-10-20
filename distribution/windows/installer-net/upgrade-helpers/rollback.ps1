@@ -92,27 +92,48 @@ if (Test-Path -LiteralPath $savedBackups -PathType Container) {
 }
 
 Write-Host 'Registering the restored Readarr service...'
-& $readarrConsole '/i' "-data=$DataDirectory" '/nobrowser'
+# BookshelfNG 0.4.21.71 starts the service as soon as it registers it and
+# writes an unquoted executable path. Create the restored service directly so
+# its first start uses the quoted executable and data paths, and so it points
+# at the restored appdata bin directory instead of the retained backup folder.
+$readarrImagePath = '"' + $readarrConsole + '" -data="' + $DataDirectory + '" /nobrowser'
+$imagePathArgument = '"\"' + $readarrConsole + '\" -data=\"' + $DataDirectory + '\" /nobrowser"'
+$createArguments = "create Readarr DisplayName= `"Readarr`" binpath= $imagePathArgument start= auto depend= EventLog/Tcpip/http obj= `"NT AUTHORITY\LocalService`""
+$createProcess = Start-Process -FilePath 'sc.exe' -ArgumentList $createArguments -Wait -PassThru -NoNewWindow
+if ($createProcess.ExitCode -ne 0) {
+    throw "sc.exe could not create the restored Readarr service (exit code $($createProcess.ExitCode))."
+}
+
+$descriptionProcess = Start-Process -FilePath 'sc.exe' -ArgumentList 'description Readarr "Readarr Application Server"' -Wait -PassThru -NoNewWindow
+if ($descriptionProcess.ExitCode -ne 0) {
+    throw "sc.exe could not set the restored Readarr service description (exit code $($descriptionProcess.ExitCode))."
+}
+
+$daclLines = & sc.exe sdshow Readarr
 if ($LASTEXITCODE -ne 0) {
-    throw "Readarr.Console.exe service installation failed with exit code $LASTEXITCODE."
+    throw "sc.exe could not read the restored Readarr service permissions (exit code $LASTEXITCODE)."
+}
+$serviceDacl = ($daclLines | Where-Object { $_ -match '^D:' } | Select-Object -First 1).Trim()
+if ([string]::IsNullOrWhiteSpace($serviceDacl)) {
+    throw 'The restored Readarr service returned an invalid security descriptor.'
+}
+
+$authenticatedUsersDacl = '(A;;CCLCSWRPWPLOCRRC;;;AU)'
+if (-not $serviceDacl.Contains($authenticatedUsersDacl)) {
+    $indexOfS = $serviceDacl.IndexOf('S:', [StringComparison]::OrdinalIgnoreCase)
+    $serviceDacl = if ($indexOfS -eq -1) {
+        "$serviceDacl$authenticatedUsersDacl"
+    } else {
+        $serviceDacl.Insert($indexOfS, $authenticatedUsersDacl)
+    }
+
+    $permissionsProcess = Start-Process -FilePath 'sc.exe' -ArgumentList "sdset Readarr $serviceDacl" -Wait -PassThru -NoNewWindow
+    if ($permissionsProcess.ExitCode -ne 0) {
+        throw "sc.exe could not set the restored Readarr service permissions (exit code $($permissionsProcess.ExitCode))."
+    }
 }
 
 $readarrServiceKey = 'HKLM:\SYSTEM\CurrentControlSet\Services\Readarr'
-$serviceKey = Get-ItemProperty -Path $readarrServiceKey -ErrorAction SilentlyContinue
-if (-not $serviceKey) {
-    throw 'Readarr service registration was not created by the BookshelfNG installer.'
-}
-
-# BookshelfNG 0.4.21.71 registers its executable without quoting the image
-# path. The restored executable and data directory may contain spaces, so
-# correct the command line before asking the Service Control Manager to start
-# the service. Register from the restored appdata bin directory rather than
-# leaving the service dependent on a retained backup folder.
-$quotedReadarrConsole = '"' + $readarrConsole + '"'
-$quotedDataDirectory = '"' + $DataDirectory + '"'
-$readarrImagePath = "$quotedReadarrConsole -data=$quotedDataDirectory /nobrowser"
-Set-ItemProperty -Path $readarrServiceKey -Name ImagePath -Value $readarrImagePath -ErrorAction Stop
-
 $serviceKey = Get-ItemProperty -Path $readarrServiceKey -ErrorAction Stop
 if (-not [string]::Equals([string] $serviceKey.ImagePath, $readarrImagePath, [StringComparison]::Ordinal)) {
     throw 'The restored Readarr service command did not retain its quoted executable and data paths.'
@@ -121,13 +142,6 @@ if (-not [string]::Equals([string] $serviceKey.ImagePath, $readarrImagePath, [St
 $serviceAccount = [string] $serviceKey.ObjectName
 if (-not [string]::Equals($serviceAccount, 'NT AUTHORITY\LocalService', [StringComparison]::OrdinalIgnoreCase)) {
     throw "The restored Readarr service uses unsupported account '$serviceAccount'."
-}
-
-$service = Get-Service -Name 'Readarr' -ErrorAction Stop
-if ($service.Status -ne 'Stopped') {
-    Stop-Service -Name 'Readarr' -Force -ErrorAction Stop
-    $service = Get-Service -Name 'Readarr' -ErrorAction Stop
-    $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
 }
 
 Write-Host 'Starting the restored Readarr service with its quoted executable path...'
