@@ -53,6 +53,7 @@ class AddNewItemConnector extends Component {
     super(props, context);
 
     this._searchTimeout = null;
+    this._pendingSearch = null;
   }
 
   componentDidMount() {
@@ -70,18 +71,12 @@ class AddNewItemConnector extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    // Trigger initial Hardcover search once we know Hardcover is configured.
-    // This replaces the old behavior where the local /config/hardcover fetch callback started the search.
     if (prevProps.isHardcoverConfigured !== true &&
-        this.props.isHardcoverConfigured === true) {
-      const { term, provider } = this.props;
-      if (term && (!provider || provider === 'hardcover')) {
-        if (this._searchTimeout) {
-          clearTimeout(this._searchTimeout);
-          this._searchTimeout = null;
-        }
-        this.props.getSearchResults({ term, provider: 'hardcover' });
-      }
+        this.props.isHardcoverConfigured === true &&
+        this._pendingSearch) {
+      const pendingSearch = this._pendingSearch;
+      this._pendingSearch = null;
+      this.props.getSearchResults(pendingSearch);
     }
   }
 
@@ -106,9 +101,12 @@ class AddNewItemConnector extends Component {
 
   onSearchChange = (term, provider) => {
     this.clearSearchTimeout();
+    this._pendingSearch = null;
 
     if (term.trim() === '') {
       this.props.clearSearchResults();
+    } else if (provider === 'hardcover' && this.props.isHardcoverConfigured !== true) {
+      this._pendingSearch = { term, provider };
     } else {
       this._searchTimeout = setTimeout(() => {
         this._searchTimeout = null;
@@ -122,11 +120,13 @@ class AddNewItemConnector extends Component {
 
   onClearSearch = () => {
     this.clearSearchTimeout();
+    this._pendingSearch = null;
     this.props.clearSearchResults();
   };
 
   onSearchSubmit = (term, provider = 'hardcover') => {
     this.clearSearchTimeout();
+    this._pendingSearch = null;
 
     const normalizedTerm = term.trim();
     const encodedProvider = encodeURIComponent(provider);

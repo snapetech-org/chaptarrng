@@ -126,6 +126,7 @@ class InteractiveSearch extends Component {
   componentDidUpdate(prevProps) {
     const searchChanged =
       prevProps.searchPayload?.bookId !== this.props.searchPayload?.bookId ||
+      prevProps.searchPayload?.seriesId !== this.props.searchPayload?.seriesId ||
       prevProps.searchPayload?.authorId !== this.props.searchPayload?.authorId ||
       prevProps.searchPayload?.initialMediaType !== this.props.searchPayload?.initialMediaType;
 

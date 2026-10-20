@@ -102,6 +102,7 @@ class InteractiveSearchConnector extends Component {
 
     return [
       `book:${searchPayload.bookId ?? ''}`,
+      `series:${searchPayload.seriesId ?? ''}`,
       `author:${searchPayload.authorId ?? ''}`,
       `mediaType:${searchPayload.initialMediaType ?? ''}`,
       `bypass:${bypassFilters ? 1 : 0}`

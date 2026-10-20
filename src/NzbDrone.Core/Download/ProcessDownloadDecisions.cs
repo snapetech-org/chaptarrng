@@ -208,6 +208,11 @@ namespace NzbDrone.Core.Download
 
                 return ProcessedDecisionResult.Grabbed;
             }
+            catch (ExistingTorrentFoundException ex)
+            {
+                _logger.DebugSafe(ex, "Skipping release because it is already in a download client. " + remoteBook);
+                return ProcessedDecisionResult.Skipped;
+            }
             catch (MamUnsatisfiedSlotsUnavailableException ex)
             {
                 _logger.DebugSafe(ex, "MAM has no safely available unsatisfied-torrent slot; storing release until later. " + remoteBook);

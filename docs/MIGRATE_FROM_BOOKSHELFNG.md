@@ -81,6 +81,19 @@ commands, and normal startup also detects and converts a supported BookshelfNG
 database automatically. Do not run normal ChaptarrNG startup against
 BookshelfNG appdata while cutover remains unapproved.
 
+The Add New page carries over the BookshelfNG “search as you type” choice when
+you open ChaptarrNG from the same browser origin. If you move to a different
+host, scheme, or port, browser storage is separate; set the option on the
+ChaptarrNG Add New page there.
+
+Series rows include the BookshelfNG series pack search action. Grabbed packs
+retain their series books for ChaptarrNG's existing Manual Import review; check
+the file-to-book assignments before importing a pack.
+
+Interactive search checks the selected torrent client for a matching info hash.
+If it finds one, ChaptarrNG offers to adopt that existing item into its tracked
+queue without starting a second download. Confirm the match before adopting it.
+
 Migration selects one supported database per appdata directory. If both
 `readarr.db` and `audioarr.db` are non-empty in the same directory, the current
 source resolver stops with an ambiguity error; migration does not merge them

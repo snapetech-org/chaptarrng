@@ -9927,6 +9927,14 @@
               "type": "boolean",
               "default": false
             }
+          },
+          {
+            "name": "seriesId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         ],
         "responses": {
@@ -19395,6 +19403,9 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          },
+          "adoptExistingTorrent": {
+            "type": "boolean"
           },
           "downloadClient": {
             "type": "string",

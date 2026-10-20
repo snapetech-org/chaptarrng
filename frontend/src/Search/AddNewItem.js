@@ -340,6 +340,8 @@ class AddNewItem extends Component {
 
             <Button
               className={styles.clearLookupButton}
+              title={translate('Clear')}
+              aria-label={translate('Clear')}
               onPress={this.onClearSearchPress}
             >
               <Icon
@@ -352,6 +354,7 @@ class AddNewItem extends Component {
               <SelectInput
                 className={styles.providerSelect}
                 name="provider"
+                aria-label={translate('MetadataSource')}
                 value={selectedProvider}
                 values={metadataProviders}
                 onChange={this.onProviderChange}
