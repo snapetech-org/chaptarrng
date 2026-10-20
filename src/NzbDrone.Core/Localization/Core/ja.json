@@ -1858,6 +1858,8 @@
   "ScriptPath": "スクリプトパス",
   "Search": "検索",
   "SearchAll": "すべて検索",
+  "SearchAsYouType": "入力中に検索",
+
   "SearchBook": "書籍検索",
   "SearchBoxPlaceHolder": "例: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "一度開始するとChaptarrを再起動しないとキャンセルできません。",

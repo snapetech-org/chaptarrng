@@ -1857,6 +1857,8 @@
   "ScriptPath": "脚本路径",
   "Search": "搜索",
   "SearchAll": "搜索全部",
+  "SearchAsYouType": "输入时搜索",
+
   "SearchBook": "搜索书籍",
   "SearchBoxPlaceHolder": "例如战争与和平，gr：656，isbn：067003469X，az：B00JCDK5ME",
   "SearchCannotBeCancelled": "启动时不能取消, 不重新启动Chaptarr 。",

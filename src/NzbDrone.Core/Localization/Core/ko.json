@@ -1858,6 +1858,8 @@
   "ScriptPath": "스크립트 경로",
   "Search": "검색",
   "SearchAll": "모두 검색",
+  "SearchAsYouType": "입력 중 검색",
+
   "SearchBook": "본문 바로가기",
   "SearchBoxPlaceHolder": "예: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Chaptarr를 다시 시작하지 않고 한 번 시작할 수 없습니다.",

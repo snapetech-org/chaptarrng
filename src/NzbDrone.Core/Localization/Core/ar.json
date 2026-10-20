@@ -1858,6 +1858,8 @@
   "ScriptPath": "مسار البرنامج النصي",
   "Search": "بحث",
   "SearchAll": "بحث عن",
+  "SearchAsYouType": "البحث أثناء الكتابة",
+
   "SearchBook": "البحث",
   "SearchBoxPlaceHolder": "مثال: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "لا يمكن إلغاء هذا بمجرد البدء دون إعادة تشغيل Chaptarr.",

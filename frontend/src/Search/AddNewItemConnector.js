@@ -86,9 +86,7 @@ class AddNewItemConnector extends Component {
   }
 
   componentWillUnmount() {
-    if (this._searchTimeout) {
-      clearTimeout(this._searchTimeout);
-    }
+    this.clearSearchTimeout();
 
     this.props.clearSearchResults();
 
@@ -99,15 +97,21 @@ class AddNewItemConnector extends Component {
   //
   // Listeners
 
-  onSearchChange = (term, provider) => {
+  clearSearchTimeout = () => {
     if (this._searchTimeout) {
       clearTimeout(this._searchTimeout);
+      this._searchTimeout = null;
     }
+  };
+
+  onSearchChange = (term, provider) => {
+    this.clearSearchTimeout();
 
     if (term.trim() === '') {
       this.props.clearSearchResults();
     } else {
       this._searchTimeout = setTimeout(() => {
+        this._searchTimeout = null;
         if (provider === 'hardcover' && this.props.isHardcoverConfigured !== true) {
           return;
         }
@@ -117,13 +121,32 @@ class AddNewItemConnector extends Component {
   };
 
   onClearSearch = () => {
+    this.clearSearchTimeout();
     this.props.clearSearchResults();
   };
 
   onSearchSubmit = (term, provider = 'hardcover') => {
-    // Update the URL when Enter is pressed
-    const encodedTerm = encodeURIComponent(term);
+    this.clearSearchTimeout();
+
+    const normalizedTerm = term.trim();
     const encodedProvider = encodeURIComponent(provider);
+
+    if (!normalizedTerm) {
+      this.props.clearSearchResults();
+      this.props.push(`/add/search?provider=${encodedProvider}`);
+      return;
+    }
+
+    const currentProvider = this.props.provider ||
+      (this.props.isHardcoverConfigured === false ? 'goodreads' : 'hardcover');
+
+    if (this.props.term === normalizedTerm && currentProvider === provider) {
+      this.onSearchChange(normalizedTerm, provider);
+      return;
+    }
+
+    // Update the URL when a search is submitted. The route change starts the search.
+    const encodedTerm = encodeURIComponent(normalizedTerm);
     this.props.push(`/add/search?term=${encodedTerm}&provider=${encodedProvider}`);
   };
 

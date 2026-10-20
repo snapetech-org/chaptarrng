@@ -1858,6 +1858,8 @@
   "ScriptPath": "Chemin du script",
   "Search": "Rechercher",
   "SearchAll": "Tout rechercher",
+  "SearchAsYouType": "Rechercher pendant la saisie",
+
   "SearchBook": "Rechercher un livre",
   "SearchBoxPlaceHolder": "p. ex. : War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Cela ne peut pas être annulé une fois commencé sans redémarrer Chaptarr.",

@@ -1858,6 +1858,8 @@
   "ScriptPath": "Path Skrip",
   "Search": "Cari",
   "SearchAll": "Cari Semua",
+  "SearchAsYouType": "Cari saat mengetik",
+
   "SearchBook": "Cari Buku",
   "SearchBoxPlaceHolder": "Contoh: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Ini tidak dapat dibatalkan sekali dimulai tanpa memulai kembali Chaptarr.",

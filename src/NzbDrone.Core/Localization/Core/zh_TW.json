@@ -1858,6 +1858,8 @@
   "ScriptPath": "文稿路徑",
   "Search": "搜尋",
   "SearchAll": "全部搜尋",
+  "SearchAsYouType": "輸入時搜尋",
+
   "SearchBook": "搜尋書",
   "SearchBoxPlaceHolder": "例如戰爭與和平，gr：656，isbn：067003469X，az：B00JCDK5ME",
   "SearchCannotBeCancelled": "一旦啟動，如果不重新啟動 Chaptarr，則無法取消此操作。",

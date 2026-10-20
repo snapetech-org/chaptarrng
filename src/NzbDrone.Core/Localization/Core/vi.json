@@ -1857,6 +1857,8 @@
   "ScriptPath": "Đường dẫn tập lệnh",
   "Search": "Tìm kiếm",
   "SearchAll": "Tìm kiếm tất cả",
+  "SearchAsYouType": "Tìm kiếm khi nhập",
+
   "SearchBook": "Tìm kiếm",
   "SearchBoxPlaceHolder": "Ví dụ: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Không thể hủy bỏ điều này một khi bắt đầu mà không khởi chạy lại Chaptarr.",
