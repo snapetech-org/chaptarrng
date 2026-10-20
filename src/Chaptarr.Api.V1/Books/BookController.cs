@@ -1288,8 +1288,18 @@ namespace Chaptarr.Api.V1.Books
         [HttpGet("shelf/authors")]
         public ActionResult<List<BookshelfAuthorCountResource>> GetBookshelfAuthors([FromQuery] string mediaType)
         {
-            var parsedMediaType = MediaTypeParameterParser.ParseRequired(mediaType);
-            var counts = _bookService.GetBookshelfAuthorCounts(parsedMediaType);
+            var includeBothFormats = string.Equals(mediaType?.Trim(), "both", StringComparison.OrdinalIgnoreCase);
+            var counts = includeBothFormats
+                ? new[] { BookMediaType.Audiobook, BookMediaType.Ebook }
+                    .SelectMany(_bookService.GetBookshelfAuthorCounts)
+                    .GroupBy(count => count.AuthorId)
+                    .Select(group => new AuthorBookCount
+                    {
+                        AuthorId = group.Key,
+                        BookCount = group.Sum(count => count.BookCount)
+                    })
+                    .ToList()
+                : _bookService.GetBookshelfAuthorCounts(MediaTypeParameterParser.ParseRequired(mediaType));
 
             return counts.Select(count => new BookshelfAuthorCountResource
             {
@@ -1301,7 +1311,10 @@ namespace Chaptarr.Api.V1.Books
         [HttpGet("shelf")]
         public ActionResult<List<BookResource>> GetBookshelfBooks([FromQuery] List<int> authorIds, [FromQuery] string mediaType)
         {
-            var parsedMediaType = MediaTypeParameterParser.ParseRequired(mediaType);
+            var includeBothFormats = string.Equals(mediaType?.Trim(), "both", StringComparison.OrdinalIgnoreCase);
+            var parsedMediaType = includeBothFormats
+                ? (BookMediaType?)null
+                : MediaTypeParameterParser.ParseRequired(mediaType);
             var distinctAuthorIds = (authorIds ?? new List<int>()).Distinct().ToList();
 
             if (distinctAuthorIds.Count == 0 || distinctAuthorIds.Count > MaxBookshelfAuthorIds)
@@ -1309,7 +1322,11 @@ namespace Chaptarr.Api.V1.Books
                 return BadRequest($"authorIds must contain between 1 and {MaxBookshelfAuthorIds} author IDs");
             }
 
-            var books = _bookService.GetBooksForBookshelf(distinctAuthorIds, parsedMediaType);
+            var books = includeBothFormats
+                ? _bookService.GetBooksForBookshelf(distinctAuthorIds, BookMediaType.Audiobook)
+                    .Concat(_bookService.GetBooksForBookshelf(distinctAuthorIds, BookMediaType.Ebook))
+                    .ToList()
+                : _bookService.GetBooksForBookshelf(distinctAuthorIds, parsedMediaType.Value);
             if (books.Count == 0)
             {
                 return new List<BookResource>();
@@ -1326,8 +1343,13 @@ namespace Chaptarr.Api.V1.Books
             }
 
             // Statistics for just these authors, so a page of shelf rows doesn't compute them for the whole library.
-            var apiMediaType = MediaTypeParameterParser.ToApiValue(parsedMediaType);
-            var authorStatistics = _authorStatisticsService.AuthorStatistics(distinctAuthorIds, apiMediaType);
+            var authorStatistics = includeBothFormats
+                ? _authorStatisticsService.AuthorStatistics(distinctAuthorIds, "audiobook")
+                    .Concat(_authorStatisticsService.AuthorStatistics(distinctAuthorIds, "ebook"))
+                    .ToList()
+                : _authorStatisticsService.AuthorStatistics(
+                    distinctAuthorIds,
+                    MediaTypeParameterParser.ToApiValue(parsedMediaType.Value));
             var statsByBookId = BuildBookStatisticsById(authorStatistics);
 
             return MapToResource(books,

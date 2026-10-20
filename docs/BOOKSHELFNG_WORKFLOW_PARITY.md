@@ -16,6 +16,7 @@ representative library, or installed build.
 | Add an author, book, or series | All three flows support audiobook, ebook, or both where relevant; root folders and quality profiles are visible first, with monitoring, metadata, and tags under **More options**. Missing setup links to Quickstart. Root-folder loading failures show a retry. | Exercise each format, both formats, saved defaults, one-item overrides, missing roots/profiles, existing-author book adds, and add failures. |
 | Find a title in the catalog | Add New has provider selection, result filtering, and submit-to-search by default; Search as you type is optional. Query changes and clearing cancel stale requests. | Check first search, Enter, repeated same-query search, preference persistence, provider errors, and clearing during a slow request. |
 | Browse and understand the library | Authors, Books, Bookshelf, Calendar, and Unmapped Files are reachable from Library. Book details include edition and narration information; series details compare narrators and volumes. | Browse a representative mixed-format library on narrow and wide screens; check empty, loading, partial-metadata, and no-file states. |
+| See ebooks and audiobooks together | Bookshelf's **Formats** view loads both formats in one pass, groups records only when canonical Hardcover, Goodreads, or Open Library work IDs match, and leaves unrelated or unidentified records separate. Each format keeps its own progress, detail link, and monitor toggle; bulk monitoring applies to both. | Check matched, unmatched, duplicate-edition, missing-ID, and provider-alias records; switch formats repeatedly, reload the page, retry failures, and confirm bulk and per-book monitoring. |
 | Move between the ebook and audiobook for the same work | Search results link to tracked records in each format. Book details label both formats, link to same-work records, and offer the missing format in the standard add modal when the work and author have provider IDs. The add action appears only after the server confirms no same-work record exists. | Confirm identity matching never links unrelated works; test duplicate editions, missing identity, endpoint failure/retry, and successful add against real catalog data. |
 | Decide what to monitor | Add flows and author/book editors expose per-format monitoring, initial-book monitoring, and future-book policies. Wanted has Missing and Cutoff Unmet pages. | Confirm changes affect only the selected format and that automatic searches honor the chosen monitoring state. |
 | Search and grab a release | Book actions offer automatic and interactive release search. Series rows can search for a pack and send files to Manual Import. Direct Download provides an ebook-only source path. | With a supported indexer and client, search, inspect, grab, retry, and import representative audiobook and ebook releases. |
@@ -35,6 +36,11 @@ a live end-to-end parity run. The local pass did not have an isolated browser QA
 workspace available, nor configured provider and download-client test services.
 So the UI changes in this pass have source-level and automated validation only;
 the browser checks in the table remain open.
+
+The combined shelf is a presentation over ChaptarrNG's separate audiobook and
+ebook records. It does not turn them into one database record or combine their
+monitoring and file state. Cross-format work links rely on canonical work IDs;
+records without shared work identity remain ungrouped.
 
 The BookshelfNG-to-ChaptarrNG path inventory also has unresolved semantic review.
 That inventory is useful for finding code that needs inspection, but a path count

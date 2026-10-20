@@ -292,7 +292,7 @@ class Bookshelf extends Component {
   onUpdateSelectedPress = (changes) => {
     this.props.onUpdateSelectedPress({
       authorIds: this.getSelectedIds(),
-      mediaType: this.props.selectedMediaType,
+      mediaType: this.props.selectedMediaType === 'both' ? null : this.props.selectedMediaType,
       ...changes
     });
   };
@@ -354,6 +354,8 @@ class Bookshelf extends Component {
 
     if (totalItems > 0) {
       emptyMessage = translate('AllResultsAreHiddenByTheAppliedFilter');
+    } else if (selectedMediaType === 'both') {
+      emptyMessage = translate('NoResultsFound');
     } else if (selectedMediaType === 'ebook') {
       emptyMessage = translate('BookshelfNoEbooks');
     }
@@ -364,6 +366,7 @@ class Bookshelf extends Component {
           <PageToolbarSection>
             <MediaTypeToggle
               selectedMediaType={selectedMediaType}
+              includeBoth={true}
               onMediaTypeChange={onMediaTypeChange}
             />
           </PageToolbarSection>
@@ -462,7 +465,7 @@ Bookshelf.propTypes = {
   totalItems: PropTypes.number.isRequired,
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   bookCount: PropTypes.number.isRequired,
-  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook']).isRequired,
+  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook', 'both']).isRequired,
   sortKey: PropTypes.string,
   sortDirection: PropTypes.oneOf(sortDirections.all),
   selectedFilterKey: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,

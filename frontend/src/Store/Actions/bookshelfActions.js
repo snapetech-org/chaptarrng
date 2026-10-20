@@ -22,7 +22,7 @@ export const section = 'bookshelf';
 const BOOK_BATCH_DELAY_MS = 50;
 const MAX_AUTHORS_PER_BOOK_REQUEST = 50;
 
-let pendingAuthorIds = { audiobook: new Set(), ebook: new Set() };
+let pendingAuthorIds = { audiobook: new Set(), ebook: new Set(), both: new Set() };
 let requestedBookKeys = new Set();
 let pendingFlushTimeout = null;
 let bookRequestGeneration = 0;
@@ -102,6 +102,7 @@ export const defaultState = {
 export const persistState = [
   'bookshelf.sortKey',
   'bookshelf.sortDirection',
+  'bookshelf.selectedMediaType',
   'bookshelf.selectedFilterKey',
   'bookshelf.customFilters'
 ];
@@ -111,6 +112,7 @@ export const persistState = [
 
 export const SET_BOOKSHELF_SORT = 'bookshelf/setBookshelfSort';
 export const SET_BOOKSHELF_FILTER = 'bookshelf/setBookshelfFilter';
+export const SET_BOOKSHELF_MEDIA_TYPE = 'bookshelf/setBookshelfMediaType';
 export const SAVE_BOOKSHELF = 'bookshelf/saveBookshelf';
 export const FETCH_BOOKSHELF_AUTHORS = 'bookshelf/fetchBookshelfAuthors';
 export const FETCH_BOOKSHELF_BOOKS = 'bookshelf/fetchBookshelfBooks';
@@ -121,6 +123,7 @@ export const CLEAR_BOOKSHELF = 'bookshelf/clearBookshelf';
 
 export const setBookshelfSort = createAction(SET_BOOKSHELF_SORT);
 export const setBookshelfFilter = createAction(SET_BOOKSHELF_FILTER);
+export const setBookshelfMediaType = createAction(SET_BOOKSHELF_MEDIA_TYPE);
 export const saveBookshelf = createThunk(SAVE_BOOKSHELF);
 export const fetchBookshelfAuthors = createThunk(FETCH_BOOKSHELF_AUTHORS);
 export const fetchBookshelfBooks = createThunk(FETCH_BOOKSHELF_BOOKS);
@@ -149,9 +152,15 @@ function requestBookshelfBooks(getState, dispatch, authorIds, mediaType, generat
     }
 
     // Replace these authors' books for this media type, and keep everything else.
+    // The combined shelf request replaces both sets so revisiting the shelf cannot
+    // append a duplicate copy of a format already loaded by another page.
     const authorIdSet = new Set(authorIds);
     const otherBooks = getState().books.items.filter((book) => {
-      return !(authorIdSet.has(book.authorId) && book.mediaType === mediaType);
+      const matchesRequestedMediaType = mediaType === 'both' ?
+        book.mediaType === 'audiobook' || book.mediaType === 'ebook' :
+        book.mediaType === mediaType;
+
+      return !(authorIdSet.has(book.authorId) && matchesRequestedMediaType);
     });
 
     const loadedBookKeys = { ...getState().bookshelf.loadedBookKeys };
@@ -288,7 +297,7 @@ export const actionHandlers = handleThunks({
     authorCountsGeneration++;
     clearTimeout(pendingFlushTimeout);
     pendingFlushTimeout = null;
-    pendingAuthorIds = { audiobook: new Set(), ebook: new Set() };
+    pendingAuthorIds = { audiobook: new Set(), ebook: new Set(), both: new Set() };
     requestedBookKeys = new Set();
 
     if (abortAuthorCountsRequest) {
@@ -360,6 +369,13 @@ export const reducers = createHandleActions({
 
   [SET_BOOKSHELF_SORT]: createSetClientSideCollectionSortReducer(section),
   [SET_BOOKSHELF_FILTER]: createSetClientSideCollectionFilterReducer(section),
+
+  [SET_BOOKSHELF_MEDIA_TYPE]: function(state, { payload }) {
+    return {
+      ...state,
+      selectedMediaType: payload.mediaType
+    };
+  },
 
   [SET_SELECTED_MEDIA_TYPE]: function(state, { payload }) {
     return {

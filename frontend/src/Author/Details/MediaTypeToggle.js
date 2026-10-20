@@ -9,7 +9,8 @@ function MediaTypeToggle(props) {
     selectedMediaType,
     onMediaTypeChange,
     hasAudiobookRootFolder = true,
-    hasEbookRootFolder = true
+    hasEbookRootFolder = true,
+    includeBoth = false
   } = props;
 
   const options = [
@@ -27,6 +28,15 @@ function MediaTypeToggle(props) {
     }
   ];
 
+  if (includeBoth) {
+    options.push({
+      key: 'both',
+      label: translate('Formats'),
+      icon: <span className={styles.icon}>{'🎧📖'}</span>,
+      isDisabled: !hasAudiobookRootFolder && !hasEbookRootFolder
+    });
+  }
+
   return (
     <div className={styles.mediaToggleContainer}>
       <SegmentedToggle
@@ -39,10 +49,11 @@ function MediaTypeToggle(props) {
 }
 
 MediaTypeToggle.propTypes = {
-  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook']).isRequired,
+  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook', 'both']).isRequired,
   onMediaTypeChange: PropTypes.func.isRequired,
   hasAudiobookRootFolder: PropTypes.bool,
-  hasEbookRootFolder: PropTypes.bool
+  hasEbookRootFolder: PropTypes.bool,
+  includeBoth: PropTypes.bool
 };
 
 export default MediaTypeToggle;
