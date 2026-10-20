@@ -13,7 +13,7 @@ import PageToolbar from 'Components/Page/Toolbar/PageToolbar';
 import PageToolbarSection from 'Components/Page/Toolbar/PageToolbarSection';
 import VirtualTable from 'Components/Table/VirtualTable';
 import VirtualTableRow from 'Components/Table/VirtualTableRow';
-import { align, sortDirections } from 'Helpers/Props';
+import { align, kinds, sortDirections } from 'Helpers/Props';
 import getIndexOfFirstCharacter from 'Utilities/Array/getIndexOfFirstCharacter';
 import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
@@ -441,6 +441,15 @@ class Bookshelf extends Component {
               !error && isPopulated && !items.length &&
                 <div className={styles.emptyMessage}>
                   {emptyMessage}
+                  {
+                    totalItems === 0 &&
+                      <Button
+                        to="/add/search"
+                        kind={kinds.PRIMARY}
+                      >
+                        {translate('AddNew')}
+                      </Button>
+                  }
                 </div>
             }
           </PageContentBody>
