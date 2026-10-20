@@ -94,7 +94,7 @@ public static class InstallPipeline
                 ct).ConfigureAwait(false);
             var chaptarrConsole = Path.Combine(stagingDirectory, "Chaptarr.Console.exe");
             var environment = GetProviderEnvironment(providerMode.Value);
-            var sourceFingerprint = BackupService.GetDatabaseFingerprint(dataDirectory);
+            var sourceFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
 
             ui.SetStep("Previewing the migration...", "The source database is checked for changes before and after preview.");
             var previewExit = await ProcessStreamer.RunAsync(
@@ -109,10 +109,14 @@ public static class InstallPipeline
                 throw new InvalidOperationException($"The read-only BookshelfNG migration preview exited with code {previewExit}.");
             }
 
-            var afterPreviewFingerprint = BackupService.GetDatabaseFingerprint(dataDirectory);
-            if (!string.Equals(sourceFingerprint, afterPreviewFingerprint, StringComparison.Ordinal))
+            var afterPreviewFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
+            if (!string.Equals(sourceFingerprint.Hash, afterPreviewFingerprint.Hash, StringComparison.Ordinal))
             {
-                throw new InvalidDataException("BookshelfNG's SQLite database changed during preview. The installer stopped before apply and will restore the verified backup.");
+                var changedFiles = SqliteDatabaseFingerprint.GetChangedFiles(sourceFingerprint, afterPreviewFingerprint);
+                var changedFileDetails = changedFiles.Count == 0
+                    ? string.Empty
+                    : " Changed files: " + string.Join(", ", changedFiles) + ".";
+                throw new InvalidDataException("BookshelfNG's SQLite database changed during preview." + changedFileDetails + " The installer stopped before apply and will restore the verified backup.");
             }
 
             ui.SetStep("Review the migration preview...", "Read the row report and warnings in the log before continuing.");
