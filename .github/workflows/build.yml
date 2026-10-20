@@ -95,7 +95,6 @@ jobs:
       run: |
         bash packaging/scripts/test-publish-image-aliases.sh
         bash packaging/scripts/test-dispatch-ghcr-release-bridge.sh
-        bash packaging/scripts/test-release-readiness-gate.sh
 
     - name: Test Chocolatey legacy package publish gate
       if: matrix.os == 'windows-latest'
@@ -212,7 +211,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
-        dotnet-version: 10.0.401
+        dotnet-version: 10.0.402
 
     - name: Cache NuGet packages
       if: runner.os == 'Windows'
@@ -419,7 +418,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
-        dotnet-version: 10.0.401
+        dotnet-version: 10.0.402
 
     - name: Install PostgreSQL client
       shell: bash

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "${CHAPTARRNG_RELEASE_READY:-}" == "true" ]]; then
-  exit 0
+readiness="${CHAPTARRNG_RELEASE_READY:-}"
+if [[ "${readiness,,}" != "true" ]]; then
+  message="ChaptarrNG publication is frozen until BookshelfNG retirement acceptance is complete. Set CHAPTARRNG_RELEASE_READY=true only after every readiness gate closes."
+  echo "$message" >&2
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    printf '%s\n' "$message" >> "$GITHUB_STEP_SUMMARY"
+  fi
+  exit 1
 fi
 
-message='ChaptarrNG release and distribution are frozen until the BookshelfNG retirement readiness gates are complete. Set CHAPTARRNG_RELEASE_READY=true only after the documented parity, migration, rollback, and channel gates pass.'
-if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-  echo "::error::$message" >&2
-fi
-echo "$message" >&2
-exit 1
+echo "ChaptarrNG retirement release-readiness gate passed."

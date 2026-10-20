@@ -20,12 +20,6 @@ jobs:
         ref: main
         persist-credentials: false
 
-    - name: Require retirement readiness approval
-      env:
-        CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
-      shell: bash
-      run: bash packaging/scripts/require-release-readiness.sh
-
     - name: Require a releasable branch
       shell: bash
       run: |
@@ -34,6 +28,11 @@ jobs:
           echo "Releases must run from main; selected ref is $GITHUB_REF."
           exit 1
         fi
+
+    - name: Require retirement release readiness
+      env:
+        CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+      run: ./packaging/scripts/require-release-readiness.sh
 
   validate:
     needs: preflight
@@ -326,7 +325,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
-        dotnet-version: 10.0.401
+        dotnet-version: 10.0.402
 
     - name: Require ImageSharp build license
       env:

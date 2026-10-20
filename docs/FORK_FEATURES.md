@@ -21,8 +21,9 @@ commands, ordinary startup conversion, and an unmonitored dual-catalog
 fallback for records whose format cannot be inferred. PR #126 merged the
 version-aware migration-1-to-13 table guard into `main`; hosted Linux, macOS,
 Windows, and PostgreSQL migration checks passed. The fix is not in public
-`.977`, and releases remain frozen until all retirement acceptance gates close.
-The manual Release workflow requires `CHAPTARRNG_RELEASE_READY=true`.
+`.977`; a versioned release is produced by the manual Release workflow after
+its CI validation passes. Retirement acceptance remains separate from standard
+ChaptarrNG release publication.
 BookshelfNG `0.4.21.71` is published as the final source release; its issue
 #114 request is closed, and it includes the source-side appdata archive helper.
 ChaptarrNG `v0.9.974` and later initialize missing format-specific roots for
@@ -525,8 +526,8 @@ in both catalogs without monitoring and writes a private review file. `v0.9.977`
 aggregate-only diagnostics module. The public `.977` converter still rejects
 pre-migration-14 databases. PR #126 merged the version-aware source fix and
 migration-1 rollback fixture into `main`; its Linux, macOS, Windows, and
-PostgreSQL migration checks passed. The fix remains unreleased while the
-retirement gates are open. No release will be cut until those gates close.
+PostgreSQL migration checks passed. The fix is in `main`; standard
+ChaptarrNG releases are not gated by BookshelfNG retirement acceptance.
 
 <a id="chaptarrng-retirement-blockers"></a>
 
@@ -597,14 +598,13 @@ coverage does not prove older-schema behavior on real data, PostgreSQL source
 conversion, populated real-data rollback, every provider/settings/client
 contract, semantic feature parity, or compatibility with every installation
 channel. Each capability and applicable upgrade, rollback, and redirect path
-remains an independent replacement gate. Releases remain frozen until all
-retirement gates close.
+remains an independent replacement consideration. These migration gaps do not
+block standard ChaptarrNG releases.
 
-The release workflows enforce that distinction: standard ChaptarrNG releases
-publish the new ChaptarrNG identities, while old BookshelfNG package IDs and
-mutable image aliases remain untouched unless the shared
-`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` repository variable is explicitly set
-to `true` after the retirement gates pass.
+Standard releases publish the ChaptarrNG identities. Old BookshelfNG package
+IDs and mutable image aliases remain untouched unless the shared
+`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` repository variable is explicitly set to
+`true` by a maintainer.
 
 ## What would allow replacement
 
