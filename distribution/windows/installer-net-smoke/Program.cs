@@ -1,5 +1,6 @@
 using System.IO;
 using ChaptarrNG.Installer.Pipeline;
+using Microsoft.Data.Sqlite;
 
 if (args.Contains("--windows-service-round-trip", StringComparer.OrdinalIgnoreCase))
 {
@@ -29,8 +30,9 @@ try
     AssertDurableChange("readarr.db", baselineSnapshot);
     AssertDurableChange("readarr.db-wal", baselineSnapshot);
     AssertDurableChange("readarr.db-journal", baselineSnapshot);
+    AssertDatabaseVersionGuard();
 
-    Console.WriteLine("PASS: database, WAL, and journal changes are detected; transient -shm changes are ignored.");
+    Console.WriteLine("PASS: database, WAL, and journal changes are reported; transient -shm changes are ignored; committed changes are detected through SQLite data_version.");
     return 0;
 }
 catch (Exception exception)
@@ -63,6 +65,46 @@ void AssertDurableChange(string name, SqliteDatabaseFingerprint.Snapshot baselin
         "readarr.db-wal" => "wal",
         _ => "journal"
     });
+}
+
+void AssertDatabaseVersionGuard()
+{
+    var guardDirectory = Path.Combine(dataDirectory, "version-guard");
+    Directory.CreateDirectory(guardDirectory);
+    var databasePath = Path.Combine(guardDirectory, "readarr.db");
+    var connectionString = new SqliteConnectionStringBuilder
+    {
+        DataSource = databasePath,
+        Mode = SqliteOpenMode.ReadWriteCreate,
+        Pooling = false
+    }.ConnectionString;
+
+    using (var setup = new SqliteConnection(connectionString))
+    {
+        setup.Open();
+        using var command = setup.CreateCommand();
+        command.CommandText = "CREATE TABLE GuardProbe (Value INTEGER NOT NULL); INSERT INTO GuardProbe VALUES (0);";
+        command.ExecuteNonQuery();
+    }
+
+    using var guard = new SqliteDatabaseVersionGuard(guardDirectory);
+    if (guard.HasChanged)
+    {
+        throw new InvalidOperationException("The SQLite data-version guard changed without a source commit.");
+    }
+
+    using (var writer = new SqliteConnection(connectionString))
+    {
+        writer.Open();
+        using var command = writer.CreateCommand();
+        command.CommandText = "UPDATE GuardProbe SET Value = 1;";
+        command.ExecuteNonQuery();
+    }
+
+    if (!guard.HasChanged)
+    {
+        throw new InvalidOperationException("The SQLite data-version guard did not detect a commit from another connection.");
+    }
 }
 
 void AssertEqual(string expected, string actual, string message)

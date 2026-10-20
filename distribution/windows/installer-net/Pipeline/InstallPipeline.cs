@@ -94,35 +94,33 @@ public static class InstallPipeline
                 ct).ConfigureAwait(false);
             var chaptarrConsole = Path.Combine(stagingDirectory, "Chaptarr.Console.exe");
             var environment = GetProviderEnvironment(providerMode.Value);
-            var sourceFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
-
-            ui.SetStep("Previewing the migration...", "The source database is checked for changes before and after preview.");
-            var previewExit = await ProcessStreamer.RunAsync(
-                chaptarrConsole,
-                new[] { "-preview-bookshelf-migration", $"-data={dataDirectory}" },
-                stagingDirectory,
-                log,
-                ct,
-                environment).ConfigureAwait(false);
-            if (previewExit != 0)
+            ui.SetStep("Previewing the migration...", "The source database is checked for changes through operator confirmation.");
+            using (var sourceVersionGuard = new SqliteDatabaseVersionGuard(dataDirectory))
             {
-                throw new InvalidOperationException($"The read-only BookshelfNG migration preview exited with code {previewExit}.");
-            }
+                var sourceFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
+                var previewExit = await ProcessStreamer.RunAsync(
+                    chaptarrConsole,
+                    new[] { "-preview-bookshelf-migration", $"-data={dataDirectory}" },
+                    stagingDirectory,
+                    log,
+                    ct,
+                    environment).ConfigureAwait(false);
+                if (previewExit != 0)
+                {
+                    throw new InvalidOperationException($"The read-only BookshelfNG migration preview exited with code {previewExit}.");
+                }
 
-            var afterPreviewFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
-            if (!string.Equals(sourceFingerprint.Hash, afterPreviewFingerprint.Hash, StringComparison.Ordinal))
-            {
-                var changedFiles = SqliteDatabaseFingerprint.GetChangedFiles(sourceFingerprint, afterPreviewFingerprint);
-                var changedFileDetails = changedFiles.Count == 0
-                    ? string.Empty
-                    : " Changed files: " + string.Join(", ", changedFiles) + ".";
-                throw new InvalidDataException("BookshelfNG's SQLite database changed during preview." + changedFileDetails + " The installer stopped before apply and will restore the verified backup.");
-            }
+                var afterPreviewFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
+                EnsureSourceDatabaseUnchanged(sourceVersionGuard, sourceFingerprint, afterPreviewFingerprint, "during preview", ui);
 
-            ui.SetStep("Review the migration preview...", "Read the row report and warnings in the log before continuing.");
-            if (!ui.ConfirmMigrationApply(providerMode.Value, backup.Path))
-            {
-                throw new OperationCanceledException("Migration cancelled at the preview review step.", ct);
+                ui.SetStep("Review the migration preview...", "Read the row report and warnings in the log before continuing.");
+                if (!ui.ConfirmMigrationApply(providerMode.Value, backup.Path))
+                {
+                    throw new OperationCanceledException("Migration cancelled at the preview review step.", ct);
+                }
+
+                var beforeApplyFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
+                EnsureSourceDatabaseUnchanged(sourceVersionGuard, sourceFingerprint, beforeApplyFingerprint, "while the preview awaited confirmation", ui);
             }
 
             ui.SetStep("Applying BookshelfNG data migration...", "This modifies the database after the separate, verified backup.");
@@ -436,6 +434,28 @@ public static class InstallPipeline
         catch (Exception ex)
         {
             ui.LogError($"[rollback] Could not record the rollback timestamp: {ex.Message}");
+        }
+    }
+
+    private static void EnsureSourceDatabaseUnchanged(
+        SqliteDatabaseVersionGuard sourceVersionGuard,
+        SqliteDatabaseFingerprint.Snapshot initialFingerprint,
+        SqliteDatabaseFingerprint.Snapshot currentFingerprint,
+        string phase,
+        IUiReporter ui)
+    {
+        var changedFiles = SqliteDatabaseFingerprint.GetChangedFiles(initialFingerprint, currentFingerprint);
+        if (sourceVersionGuard.HasChanged)
+        {
+            var changedFileDetails = changedFiles.Count == 0
+                ? string.Empty
+                : " Changed files: " + string.Join(", ", changedFiles) + ".";
+            throw new InvalidDataException($"BookshelfNG's SQLite database received a committed change {phase}.{changedFileDetails} The installer stopped before apply and will restore the verified backup.");
+        }
+
+        if (!string.Equals(initialFingerprint.Hash, currentFingerprint.Hash, StringComparison.Ordinal))
+        {
+            ui.Log($"[pipeline] SQLite file representation changed {phase} ({string.Join(", ", changedFiles)}), but PRAGMA data_version did not change; no committed source database change was detected.");
         }
     }
 
