@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -62,7 +63,9 @@ namespace Chaptarr.Http.Authentication
 
             if (string.Equals(method, "PUT", StringComparison.OrdinalIgnoreCase))
             {
-                return IsNumericItemPath(suffix, "/book");
+                return IsNumericItemPath(suffix, "/book") ||
+                       (IsSeriesNarratorPreferencePath(suffix) &&
+                        await IsSafeSeriesNarratorPreferenceAsync(request));
             }
 
             if (string.Equals(method, "DELETE", StringComparison.OrdinalIgnoreCase))
@@ -103,6 +106,9 @@ namespace Chaptarr.Http.Authentication
                 case "/book":
                 case "/book/paged":
                 case "/book/lookup":
+                    return true;
+                case "/series/narrators/matrix":
+                    return IsSeriesNarratorMatrixQueryAllowed(request);
                 case "/author":
                 case "/author/lookup":
                 case "/edition":
@@ -112,10 +118,123 @@ namespace Chaptarr.Http.Authentication
             }
 
             return IsNumericItemPath(path, "/book") ||
+                   IsBookEditionCatalogPath(path) ||
                    IsNumericItemPath(path, "/author") ||
                    IsNumericItemPath(path, "/pendingauthorimport") ||
                    IsNumericItemPath(path, "/command") ||
                    IsMediaCoverPath(path);
+        }
+
+        private static bool IsBookEditionCatalogPath(string path)
+        {
+            const string prefix = "/book/";
+            const string suffix = "/editions/catalog";
+            if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+                !path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var id = path.Substring(prefix.Length, path.Length - prefix.Length - suffix.Length);
+            return int.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedId) &&
+                   parsedId > 0;
+        }
+
+        private static bool IsSeriesNarratorPreferencePath(string path)
+        {
+            const string prefix = "/series/";
+            const string suffix = "/narrators/preferred";
+            if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+                !path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var id = path.Substring(prefix.Length, path.Length - prefix.Length - suffix.Length);
+            return int.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedId) &&
+                   parsedId > 0;
+        }
+
+        private static bool IsSeriesNarratorMatrixQueryAllowed(HttpRequest request)
+        {
+            var title = request.Query["title"];
+            var authorId = request.Query["authorId"];
+            var mediaType = request.Query["mediaType"];
+            if (request.Query.Keys.Any(key =>
+                    !string.Equals(key, "title", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(key, "authorId", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(key, "mediaType", StringComparison.OrdinalIgnoreCase)) ||
+                title.Count != 1 ||
+                string.IsNullOrWhiteSpace(title[0]) ||
+                title[0].Length > 256 ||
+                authorId.Count > 1 ||
+                mediaType.Count != 1 ||
+                !string.Equals(mediaType[0], "audiobook", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return authorId.Count == 0 ||
+                   (int.TryParse(authorId[0], NumberStyles.None, CultureInfo.InvariantCulture, out var parsedAuthorId) &&
+                    parsedAuthorId > 0);
+        }
+
+        private static async Task<bool> IsSafeSeriesNarratorPreferenceAsync(HttpRequest request)
+        {
+            if (request.ContentLength == null ||
+                request.ContentLength <= 0 ||
+                request.ContentLength > MaxCommandBodyBytes ||
+                request.ContentType == null ||
+                !request.ContentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            request.EnableBuffering();
+            try
+            {
+                using (var document = await JsonDocument.ParseAsync(
+                    request.Body,
+                    new JsonDocumentOptions { MaxDepth = 8 },
+                    request.HttpContext.RequestAborted))
+                {
+                    var root = document.RootElement;
+                    var narratorValue = root.ValueKind == JsonValueKind.Object &&
+                                        TryGetUniquePropertyIgnoreCase(root, "narrator", out var narratorProperty) &&
+                                        narratorProperty.ValueKind == JsonValueKind.String
+                        ? narratorProperty.GetString()
+                        : null;
+                    if (root.ValueKind != JsonValueKind.Object ||
+                        root.EnumerateObject().Count() != 3 ||
+                        root.EnumerateObject().Any(property =>
+                            !string.Equals(property.Name, "narrator", StringComparison.OrdinalIgnoreCase) &&
+                            !string.Equals(property.Name, "applyToAllBooks", StringComparison.OrdinalIgnoreCase) &&
+                            !string.Equals(property.Name, "overrideExisting", StringComparison.OrdinalIgnoreCase)) ||
+                        narratorValue == null ||
+                        string.IsNullOrWhiteSpace(narratorValue) ||
+                        narratorValue.Length > 256 ||
+                        !TryGetUniquePropertyIgnoreCase(root, "applyToAllBooks", out var applyToAllBooks) ||
+                        applyToAllBooks.ValueKind != JsonValueKind.True ||
+                        !TryGetUniquePropertyIgnoreCase(root, "overrideExisting", out var overrideExisting) ||
+                        overrideExisting.ValueKind != JsonValueKind.False)
+                    {
+                        return false;
+                    }
+
+                    return true;
+                }
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+            finally
+            {
+                if (request.Body.CanSeek)
+                {
+                    request.Body.Position = 0;
+                }
+            }
         }
 
         private static bool HasSinglePositiveIdQuery(HttpRequest request, string name)

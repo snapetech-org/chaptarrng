@@ -12,6 +12,7 @@ using NzbDrone.Core.AuthorStats;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.Validation;
 
 namespace Chaptarr.Core.Test.Api
@@ -135,6 +136,11 @@ namespace Chaptarr.Core.Test.Api
             }
         }
 
+        private class StubCoverMapper : DispatchProxy
+        {
+            protected override object Invoke(MethodInfo targetMethod, object[] args) => null;
+        }
+
         private sealed class StubMediaFileService : IMediaFileService
         {
             private readonly List<BookFile> _files;
@@ -191,7 +197,7 @@ namespace Chaptarr.Core.Test.Api
                         DispatchProxy.Create<ISeriesBookLinkService, StubSeriesBookLinkService>(),
                     authorStatisticsService: authorStatisticsService,
                     mediaFileService: mediaFileService ?? new StubMediaFileService(),
-                    coverMapper: null,
+                    coverMapper: DispatchProxy.Create<IMapCoversToLocal, StubCoverMapper>(),
                     mediaCoverProxy: null,
                     upgradableSpecification: null,
                     signalRBroadcaster: null,
