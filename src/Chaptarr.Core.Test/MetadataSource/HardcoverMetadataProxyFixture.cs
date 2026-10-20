@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Reflection;
 using System.Text;
 using FluentAssertions;
 using NLog;
@@ -31,6 +33,8 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         [SetUp]
         public void Setup()
         {
+            ResetRateLimitState();
+
             _previousHardcover = Environment.GetEnvironmentVariable("HARDCOVER");
             _previousNativeMode = Environment.GetEnvironmentVariable("HARDCOVER_NATIVE");
             _previousAuth = Environment.GetEnvironmentVariable("HARDCOVER_AUTH");
@@ -55,6 +59,8 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         [TearDown]
         public void TearDown()
         {
+            ResetRateLimitState();
+
             Environment.SetEnvironmentVariable("HARDCOVER", _previousHardcover);
             Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", _previousNativeMode);
             Environment.SetEnvironmentVariable("HARDCOVER_AUTH", _previousAuth);
@@ -98,6 +104,90 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
                 .Returns("saved-hardcover-token");
 
             Subject.IsConfigured.Should().BeTrue();
+        }
+
+        [Test]
+        public void should_pause_all_requests_after_hardcover_returns_429()
+        {
+            var requestCount = 0;
+            _httpClient
+                .Setup(x => x.Execute(It.IsAny<HttpRequest>()))
+                .Returns<HttpRequest>(request =>
+                {
+                    requestCount++;
+                    return new HttpResponse(request,
+                        new HttpHeader
+                        {
+                            { "Content-Type", "application/json" },
+                            { "Retry-After", "120" }
+                        },
+                        "{}",
+                        HttpStatusCode.TooManyRequests);
+                });
+
+            Action firstRequest = () => Subject.GetWork("901");
+            firstRequest.Should().Throw<BookInfoException>()
+                .WithMessage("*rate limit reached*");
+
+            Action secondRequest = () => Subject.GetWork("902");
+            secondRequest.Should().Throw<BookInfoException>()
+                .WithMessage("*no request was sent*");
+
+            requestCount.Should().Be(1);
+        }
+
+        [Test]
+        public void should_reserve_the_daily_hardcover_quota_for_interactive_searches()
+        {
+            var requestCount = 0;
+            const string EmptySearchResponse = @"{
+                ""data"": { ""search"": { ""ids"": [] } }
+            }";
+
+            _httpClient
+                .Setup(x => x.Execute(It.IsAny<HttpRequest>()))
+                .Returns<HttpRequest>(request =>
+                {
+                    requestCount++;
+                    return new HttpResponse(request,
+                        new HttpHeader
+                        {
+                            { "Content-Type", "application/json" },
+                            { "RateLimit-Policy", "daily;q=100;w=86400" },
+                            { "RateLimit", "daily;r=10;t=3600" }
+                        },
+                        EmptySearchResponse);
+                });
+
+            Subject.Search("background query").Should().BeEmpty();
+
+            Action backgroundRequest = () => Subject.GetWork("903");
+            backgroundRequest.Should().Throw<BookInfoException>()
+                .WithMessage("*daily quota reserve is active*");
+
+            Subject.Search("interactive query", interactiveSearch: true).Should().BeEmpty();
+            requestCount.Should().Be(2);
+        }
+
+        [Test]
+        public void should_cache_hardcover_work_details_by_work_id()
+        {
+            var requestCount = 0;
+            _httpClient
+                .Setup(x => x.Execute(It.IsAny<HttpRequest>()))
+                .Returns<HttpRequest>(request =>
+                {
+                    requestCount++;
+                    return new HttpResponse(request,
+                        new HttpHeader { { "Content-Type", "application/json" } },
+                        WorkResponse);
+                });
+
+            Subject.GetWork("101").ForeignId.Should().Be(101);
+            Subject.GetWork("101").ForeignId.Should().Be(101);
+            Subject.GetWork("102").ForeignId.Should().Be(101);
+
+            requestCount.Should().Be(2);
         }
 
         [Test]
@@ -316,6 +406,16 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
                     ["books"] = new JArray(work)
                 }
             }.ToString();
+        }
+
+        private static void ResetRateLimitState()
+        {
+            const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Static;
+            var type = typeof(HardcoverMetadataProxy);
+            type.GetField("_rateLimitPauseUntilUtc", Flags).SetValue(null, DateTime.MinValue);
+            type.GetField("_dailyRateLimitLimit", Flags).SetValue(null, -1L);
+            type.GetField("_dailyRateLimitRemaining", Flags).SetValue(null, -1L);
+            type.GetField("_dailyRateLimitResetAtUtc", Flags).SetValue(null, DateTime.MinValue);
         }
 
         private const string SearchResponse = @"{
