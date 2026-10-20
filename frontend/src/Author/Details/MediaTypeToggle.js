@@ -31,8 +31,9 @@ function MediaTypeToggle(props) {
   if (includeBoth) {
     options.push({
       key: 'both',
-      label: translate('Formats'),
+      label: translate('Both'),
       icon: <span className={styles.icon}>{'🎧📖'}</span>,
+      title: translate('AudiobooksAndEbooks'),
       isDisabled: !hasAudiobookRootFolder && !hasEbookRootFolder
     });
   }
@@ -42,6 +43,7 @@ function MediaTypeToggle(props) {
       <SegmentedToggle
         value={selectedMediaType}
         options={options}
+        ariaLabel={translate('Format')}
         onChange={onMediaTypeChange}
       />
     </div>
