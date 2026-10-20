@@ -39,6 +39,101 @@ internal static class WindowsServiceRoundTrip
             return 1;
         }
 
+        var runnerTemp = Environment.GetEnvironmentVariable("RUNNER_TEMP");
+        var cleanupDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(
+            string.IsNullOrWhiteSpace(runnerTemp) ? Path.GetTempPath() : runnerTemp));
+        var configuredCleanupManifest = Environment.GetEnvironmentVariable("CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST");
+        var cleanupManifestPath = string.IsNullOrWhiteSpace(configuredCleanupManifest)
+            ? Path.Combine(cleanupDirectory, "chaptarr-bookshelf-service-roundtrip-cleanup.json")
+            : Path.GetFullPath(configuredCleanupManifest);
+        if (!string.Equals(Path.GetDirectoryName(cleanupManifestPath), cleanupDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine("FAIL: the deferred cleanup manifest must be a direct child of RUNNER_TEMP.");
+            return 1;
+        }
+
+        if (File.Exists(cleanupManifestPath))
+        {
+            Console.Error.WriteLine($"FAIL: refusing to replace an existing cleanup manifest at {cleanupManifestPath}.");
+            return 1;
+        }
+
+        var deferCleanupToWorkflow = !string.IsNullOrWhiteSpace(configuredCleanupManifest);
+        var failed = false;
+        CleanupManifest? manifest = null;
+        try
+        {
+            Console.WriteLine("[smoke] Starting the isolated BookshelfNG migration worker...");
+            var workerExitCode = await RunMigrationWorkerProcessAsync(cleanupManifestPath).ConfigureAwait(false);
+            if (workerExitCode != 0)
+            {
+                throw new InvalidOperationException($"The migration worker exited with code {workerExitCode}.");
+            }
+
+            manifest = ReadCleanupManifest(cleanupManifestPath);
+            await WaitForDeferredBookshelfServiceRemovalAsync().ConfigureAwait(false);
+            if (!ServiceLifecycle.IsInstalled(ServiceLifecycle.ChaptarrServiceName))
+            {
+                throw new InvalidOperationException("Chaptarr was not registered after deferred BookshelfNG service cleanup.");
+            }
+
+            await WaitForServiceAsync(
+                ServiceLifecycle.ChaptarrServiceName,
+                ServiceControllerStatus.Running,
+                TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+            await WaitForHealthAsync(manifest.DataDirectory, TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+            await RestoreAndValidateAsync(manifest.DataDirectory).ConfigureAwait(false);
+            Console.WriteLine("PASS: BookshelfNG upgraded, deferred service removal completed after installer exit, and explicit restore passed.");
+        }
+        catch (Exception exception)
+        {
+            failed = true;
+            Console.Error.WriteLine($"FAIL: {exception.GetType().Name}: {exception.Message}");
+        }
+
+        if (deferCleanupToWorkflow)
+        {
+            if (File.Exists(cleanupManifestPath))
+            {
+                Console.WriteLine($"[smoke] Fixture cleanup is deferred to the workflow: {cleanupManifestPath}");
+            }
+        }
+        else if (File.Exists(cleanupManifestPath))
+        {
+            try
+            {
+                manifest ??= ReadCleanupManifest(cleanupManifestPath);
+                var cleanupOk = await CleanupAsync(
+                    manifest.ScratchRoot,
+                    manifest.InstallerTempDirectory,
+                    manifest.RemoveInstallerTempDirectory).ConfigureAwait(false);
+                if (!cleanupOk)
+                {
+                    failed = true;
+                }
+                else
+                {
+                    File.Delete(cleanupManifestPath);
+                }
+            }
+            catch (Exception exception)
+            {
+                failed = true;
+                Console.Error.WriteLine($"Could not safely clean up the smoke-test fixture: {exception.Message}");
+            }
+        }
+
+        return failed ? 1 : 0;
+    }
+
+    public static async Task<int> RunWorkerAsync()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Console.Error.WriteLine("FAIL: Windows service round-trip smoke can only run on Windows.");
+            return 1;
+        }
+
         var principal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
         if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
         {
@@ -100,6 +195,7 @@ internal static class WindowsServiceRoundTrip
                 JsonSerializer.Serialize(manifestStream, new CleanupManifest(
                     scratchRoot,
                     installerTempDirectory,
+                    dataDirectory,
                     RemoveInstallerTempDirectory: !installerTempDirectoryExisted));
             }
 
@@ -210,50 +306,9 @@ internal static class WindowsServiceRoundTrip
             }
             AssertServiceStartType(ServiceLifecycle.BookshelfServiceName, expected: 4, "successful migration handoff");
 
-            Console.WriteLine("[smoke] Running deferred handoff cleanup against the healthy Chaptarr service...");
-            await ExerciseDeferredHandoffCleanupAsync(dataDirectory, scratchRoot).ConfigureAwait(false);
-            if (ServiceLifecycle.IsInstalled(ServiceLifecycle.BookshelfServiceName))
-            {
-                throw new InvalidOperationException("Deferred handoff cleanup did not remove the disabled Readarr service.");
-            }
-
-            Console.WriteLine("[smoke] Running the installer restore action and its embedded rollback script...");
-            var restore = await InstallPipeline.RunRestoreAsync(ui).ConfigureAwait(false);
-            if (!restore.Success)
-            {
-                throw new InvalidOperationException("The installer restore pipeline failed: " + restore.ErrorMessage);
-            }
-
-            if (ServiceLifecycle.IsInstalled(ServiceLifecycle.ChaptarrServiceName))
-            {
-                throw new InvalidOperationException("The Chaptarr service remained registered after BookshelfNG restore.");
-            }
-
-            await WaitForServiceAsync(ServiceLifecycle.BookshelfServiceName, ServiceControllerStatus.Running, TimeSpan.FromSeconds(30))
-                .ConfigureAwait(false);
-            await WaitForHealthAsync(dataDirectory, TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-            AssertServicePath(ServiceLifecycle.BookshelfServiceName, dataDirectory);
-            AssertServiceExecutablePath(
-                ServiceLifecycle.BookshelfServiceName,
-                Path.Combine(dataDirectory, "bin", "Readarr.Console.exe"));
-            if (!string.Equals(ReadServiceAccount(ServiceLifecycle.BookshelfServiceName), LocalService, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("The restored Readarr service did not preserve the supported LocalService account.");
-            }
-            AssertServiceStartType(ServiceLifecycle.BookshelfServiceName, expected: 2, "manual restore after handoff cleanup");
-            AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "restored BookshelfNG database");
-            AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "restored BookshelfNG books");
-            AssertRowCount(sourceDatabase, FixtureTable.BookFiles, expectedAtLeast: 2, "restored BookshelfNG files");
-            AssertDatabaseIntegrity(sourceDatabase, "restored BookshelfNG database");
-
-            var registry = RegistryService.Read();
-            if (string.IsNullOrWhiteSpace(registry?.LastRollbackTime) ||
-                !string.Equals(Path.GetFullPath(registry.DataDirectory ?? ""), Path.GetFullPath(dataDirectory), StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("The installer did not record the completed rollback against the selected data directory.");
-            }
-
-            Console.WriteLine("PASS: BookshelfNG 0.4.21.71 upgraded through the installer, passed Chaptarr health checks, and restored through the embedded rollback script.");
+            Console.WriteLine("[smoke] Scheduling deferred handoff cleanup for after this installer worker exits...");
+            await ScheduleDeferredHandoffCleanupAsync(dataDirectory, scratchRoot).ConfigureAwait(false);
+            Console.WriteLine("PASS: BookshelfNG 0.4.21.71 upgraded through the installer and Chaptarr passed health and migration checks.");
         }
         catch (Exception exception)
         {
@@ -713,7 +768,7 @@ internal static class WindowsServiceRoundTrip
         }
     }
 
-    private static async Task ExerciseDeferredHandoffCleanupAsync(string dataDirectory, string scratchRoot)
+    private static async Task ScheduleDeferredHandoffCleanupAsync(string dataDirectory, string scratchRoot)
     {
         var scriptPath = Path.Combine(scratchRoot, "finalize-service-handoff-smoke.ps1");
         await using (var source = typeof(ServiceCleanupRunner).Assembly.GetManifestResourceStream("finalize-service-handoff.ps1")
@@ -723,16 +778,39 @@ internal static class WindowsServiceRoundTrip
             await source.CopyToAsync(destination).ConfigureAwait(false);
         }
 
-        await RunProcessAsync("powershell.exe", new[]
+        var parent = Process.GetCurrentProcess();
+        var parentStartTicks = parent.StartTime.ToUniversalTime().Ticks;
+        parent.Dispose();
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = scratchRoot
+        };
+        foreach (var argument in new[]
         {
             "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", scriptPath,
             "-ParentProcessId", Environment.ProcessId.ToString(),
-            "-ParentProcessStartTicks", "0",
+            "-ParentProcessStartTicks", parentStartTicks.ToString(),
             "-DataDirectory", Path.GetFullPath(dataDirectory)
-        }).ConfigureAwait(false);
+        })
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
 
+        using var cleanup = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Could not start deferred BookshelfNG service cleanup.");
+        Console.WriteLine($"[smoke] Deferred cleanup process {cleanup.Id} is waiting for worker {Environment.ProcessId} to exit.");
+    }
+
+    private static async Task WaitForDeferredBookshelfServiceRemovalAsync()
+    {
         var serviceKey = $@"SYSTEM\CurrentControlSet\Services\{ServiceLifecycle.BookshelfServiceName}";
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(90);
         while (DateTime.UtcNow < deadline)
         {
             using var key = Registry.LocalMachine.OpenSubKey(serviceKey, writable: false);
@@ -744,7 +822,105 @@ internal static class WindowsServiceRoundTrip
             await Task.Delay(250).ConfigureAwait(false);
         }
 
-        throw new InvalidOperationException("The deferred cleanup script left the Readarr service registration behind.");
+        throw new InvalidOperationException("The deferred cleanup script did not remove the disabled Readarr service after the migration worker exited.");
+    }
+
+    private static async Task RestoreAndValidateAsync(string dataDirectory)
+    {
+        var sourceDatabase = Path.Combine(dataDirectory, "readarr.db");
+        Console.WriteLine("[smoke] Running the installer restore action after deferred service cleanup...");
+        var restore = await InstallPipeline.RunRestoreAsync(new SmokeUiReporter()).ConfigureAwait(false);
+        if (!restore.Success)
+        {
+            throw new InvalidOperationException("The installer restore pipeline failed: " + restore.ErrorMessage);
+        }
+
+        if (ServiceLifecycle.IsInstalled(ServiceLifecycle.ChaptarrServiceName))
+        {
+            throw new InvalidOperationException("The Chaptarr service remained registered after BookshelfNG restore.");
+        }
+
+        await WaitForServiceAsync(ServiceLifecycle.BookshelfServiceName, ServiceControllerStatus.Running, TimeSpan.FromSeconds(30))
+            .ConfigureAwait(false);
+        await WaitForHealthAsync(dataDirectory, TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+        AssertServicePath(ServiceLifecycle.BookshelfServiceName, dataDirectory);
+        AssertServiceExecutablePath(
+            ServiceLifecycle.BookshelfServiceName,
+            Path.Combine(dataDirectory, "bin", "Readarr.Console.exe"));
+        if (!string.Equals(ReadServiceAccount(ServiceLifecycle.BookshelfServiceName), LocalService, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The restored Readarr service did not preserve the supported LocalService account.");
+        }
+        AssertServiceStartType(ServiceLifecycle.BookshelfServiceName, expected: 2, "manual restore after handoff cleanup");
+        AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "restored BookshelfNG database");
+        AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "restored BookshelfNG books");
+        AssertRowCount(sourceDatabase, FixtureTable.BookFiles, expectedAtLeast: 2, "restored BookshelfNG files");
+        AssertDatabaseIntegrity(sourceDatabase, "restored BookshelfNG database");
+
+        var registry = RegistryService.Read();
+        if (string.IsNullOrWhiteSpace(registry?.LastRollbackTime) ||
+            !string.Equals(Path.GetFullPath(registry.DataDirectory ?? ""), Path.GetFullPath(dataDirectory), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The installer did not record the completed rollback against the selected data directory.");
+        }
+    }
+
+    private static async Task<int> RunMigrationWorkerProcessAsync(string cleanupManifestPath)
+    {
+        var processPath = Environment.ProcessPath
+            ?? throw new InvalidOperationException("Could not determine the Windows service smoke executable path.");
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = processPath,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = AppContext.BaseDirectory
+        };
+
+        if (string.Equals(Path.GetFileNameWithoutExtension(processPath), "dotnet", StringComparison.OrdinalIgnoreCase))
+        {
+            var assemblyPath = typeof(WindowsServiceRoundTrip).Assembly.Location;
+            if (string.IsNullOrWhiteSpace(assemblyPath))
+            {
+                throw new InvalidOperationException("Could not locate the smoke assembly to start the migration worker.");
+            }
+
+            startInfo.ArgumentList.Add(assemblyPath);
+        }
+
+        startInfo.ArgumentList.Add("--windows-service-round-trip-worker");
+        startInfo.Environment["CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST"] = cleanupManifestPath;
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Could not start the isolated Windows service migration worker.");
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(20));
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(entireProcessTree: true); } catch { }
+            throw new System.TimeoutException("The Windows service migration worker did not finish within twenty minutes.");
+        }
+
+        return process.ExitCode;
+    }
+
+    private static CleanupManifest ReadCleanupManifest(string cleanupManifestPath)
+    {
+        using var stream = new FileStream(cleanupManifestPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var manifest = JsonSerializer.Deserialize<CleanupManifest>(stream)
+            ?? throw new InvalidDataException("The Windows service smoke cleanup manifest was empty.");
+        var scratchRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(manifest.ScratchRoot));
+        var dataDirectory = Path.GetFullPath(manifest.DataDirectory);
+        var scratchPrefix = scratchRoot + Path.DirectorySeparatorChar;
+        if (!dataDirectory.StartsWith(scratchPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("The Windows service smoke data directory is outside its scratch root.");
+        }
+
+        return manifest;
     }
 
     private static async Task RunProcessAsync(string fileName, IReadOnlyList<string> arguments)
@@ -956,5 +1132,6 @@ internal static class WindowsServiceRoundTrip
     private sealed record CleanupManifest(
         string ScratchRoot,
         string InstallerTempDirectory,
+        string DataDirectory,
         bool RemoveInstallerTempDirectory);
 }
