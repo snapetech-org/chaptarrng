@@ -221,6 +221,7 @@ jobs:
         frontend/src/Book/Delete/DeleteBookModalContentConnector.test.cjs
         frontend/src/Book/Details/BookDetailRequests.test.cjs
         frontend/src/Book/Index/Overview/BookIndexOverview.test.cjs
+        frontend/src/Book/Index/BookIndexAuthorEditorFormat.test.cjs
         frontend/src/Bookshelf/BookshelfFooter.test.cjs
         frontend/src/Components/Form/ProfileSelectInputConnectors.test.cjs
         frontend/src/Store/Actions/createBookMonitoringFailureAction.test.cjs
