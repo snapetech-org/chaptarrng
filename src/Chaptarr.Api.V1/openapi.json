@@ -1493,6 +1493,46 @@
         }
       }
     },
+    "/api/v1/book/{bookId}/related-formats": {
+      "get": {
+        "tags": [
+          "Book"
+        ],
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookRelatedFormatsResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookRelatedFormatsResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookRelatedFormatsResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/book/{bookId}/siblings": {
       "get": {
         "tags": [
@@ -14039,6 +14079,45 @@
           },
           "grabbed": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BookRelatedFormatResource": {
+        "type": "object",
+        "properties": {
+          "bookId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mediaType": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "narrator": {
+            "type": "string",
+            "nullable": true
+          },
+          "disambiguation": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BookRelatedFormatsResource": {
+        "type": "object",
+        "properties": {
+          "formats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookRelatedFormatResource"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false

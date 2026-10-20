@@ -1019,6 +1019,38 @@ namespace Chaptarr.Api.V1.Books
             return book.IsMonitored();
         }
 
+        [HttpGet("{bookId:int}/related-formats")]
+        public ActionResult<BookRelatedFormatsResource> GetRelatedFormats(int bookId)
+        {
+            var book = _bookService.GetBook(bookId);
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            var relatedFormats = book.AuthorId > 0
+                ? _bookService.GetBooksByAuthor(book.AuthorId)
+                    .Where(candidate =>
+                        candidate != null &&
+                        candidate.Id != book.Id &&
+                        candidate.MediaType != book.MediaType &&
+                        WorkIdMatcher.WorkProviderIdMatches(book, candidate))
+                    .OrderBy(candidate => candidate.MediaType)
+                    .ThenBy(candidate => candidate.Id)
+                    .Select(candidate => new BookRelatedFormatResource
+                    {
+                        BookId = candidate.Id,
+                        MediaType = ToMediaTypeName(candidate.MediaType),
+                        Title = candidate.Title,
+                        Narrator = candidate.Narrator,
+                        Disambiguation = candidate.PublicationYear?.ToString() ?? candidate.Publisher
+                    })
+                    .ToList()
+                : new List<BookRelatedFormatResource>();
+
+            return new BookRelatedFormatsResource { Formats = relatedFormats };
+        }
+
         [HttpGet("{bookId:int}/siblings")]
         public ActionResult<BookSiblingDeleteInfoResource> GetBookSiblings(int bookId)
         {

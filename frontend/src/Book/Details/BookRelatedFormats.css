@@ -1,0 +1,17 @@
+.relatedFormats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin: 0 0 8px;
+  color: var(--textColor);
+}
+
+.label {
+  font-weight: 600;
+}
+
+.relatedFormats button {
+  margin-left: 4px;
+}

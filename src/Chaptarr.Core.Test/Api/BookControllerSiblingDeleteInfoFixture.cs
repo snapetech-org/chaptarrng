@@ -209,6 +209,80 @@ namespace Chaptarr.Core.Test.Api
         }
 
         [Test]
+        public void should_return_only_work_matched_records_in_the_other_format()
+        {
+            var book = new Book
+            {
+                Id = 1,
+                Title = "1984",
+                MediaType = BookMediaType.Audiobook,
+                BaseBookId = "hc:1984",
+                HardcoverBookId = "hc:1984"
+            };
+            book.AuthorId = 10;
+
+            var ebook = new Book
+            {
+                Id = 200,
+                Title = "1984",
+                MediaType = BookMediaType.Ebook,
+                BaseBookId = "hc:1984",
+                HardcoverBookId = "hc:1984",
+                PublicationYear = 1949,
+                Publisher = "Secker & Warburg"
+            };
+            ebook.AuthorId = 10;
+
+            var audiobookClone = new Book
+            {
+                Id = 2,
+                Title = "1984",
+                MediaType = BookMediaType.Audiobook,
+                BaseBookId = "hc:1984",
+                HardcoverBookId = "hc:1984"
+            };
+            audiobookClone.AuthorId = 10;
+
+            var unrelatedEbook = new Book
+            {
+                Id = 201,
+                Title = "Animal Farm",
+                MediaType = BookMediaType.Ebook,
+                BaseBookId = "hc:animal-farm",
+                HardcoverBookId = "hc:animal-farm"
+            };
+            unrelatedEbook.AuthorId = 10;
+
+            var controller = new TestableBookController(
+                new StubBookService(
+                    getBook: id => id == book.Id ? book : null,
+                    getBooksByAuthor: _ => new List<Book> { book, audiobookClone, unrelatedEbook, ebook }),
+                new StubAuthorStatisticsService(getStats: _ => new AuthorStatistics()),
+                LogManager.GetCurrentClassLogger());
+
+            var result = controller.GetRelatedFormats(book.Id);
+
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.Value.Formats.Select(format => format.BookId), Is.EqualTo(new[] { 200 }));
+            Assert.That(result.Value.Formats.Single().MediaType, Is.EqualTo("ebook"));
+            Assert.That(result.Value.Formats.Single().Title, Is.EqualTo("1984"));
+            Assert.That(result.Value.Formats.Single().Disambiguation, Is.EqualTo("1949"));
+        }
+
+        [Test]
+        public void should_return_404_when_related_format_book_is_missing()
+        {
+            var controller = new TestableBookController(
+                new StubBookService(getBook: _ => null, getBooksByAuthor: _ => new List<Book>()),
+                new StubAuthorStatisticsService(getStats: _ => new AuthorStatistics()),
+                LogManager.GetCurrentClassLogger());
+
+            var result = controller.GetRelatedFormats(123);
+
+            Assert.That(result.Result, Is.InstanceOf<NotFoundResult>());
+        }
+
+        [Test]
         public void should_return_single_sibling_with_file_details_and_aggregated_stats()
         {
             var book = new Book
