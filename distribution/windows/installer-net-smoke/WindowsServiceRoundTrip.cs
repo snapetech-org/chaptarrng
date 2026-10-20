@@ -684,6 +684,21 @@ internal static class WindowsServiceRoundTrip
                 var deleted = await ServiceLifecycle.DeleteAsync(
                     serviceName,
                     new Progress<LogLine>(line => Console.WriteLine(line.Text))).ConfigureAwait(false);
+                if (!deleted)
+                {
+                    var remainingStatus = "unknown";
+                    try
+                    {
+                        remainingStatus = ServiceLifecycle.TryGetStatus(serviceName)?.ToString() ?? "not queryable";
+                    }
+                    catch (Exception exception)
+                    {
+                        remainingStatus = $"query failed ({exception.GetType().Name})";
+                    }
+
+                    Console.Error.WriteLine($"Service cleanup did not remove {serviceName}; final SCM status: {remainingStatus}.");
+                }
+
                 allServicesStopped &= deleted;
             }
             catch (Exception exception)

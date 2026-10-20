@@ -24,24 +24,30 @@ function Stop-And-DeleteService([string] $Name) {
 
     $serviceProcessId = [int] (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$Name'" -ErrorAction Stop).ProcessId
 
-    Write-Host "Stopping $Name service..."
-    if ($service.Status -ne 'Stopped') {
-        Stop-Service -Name $Name -Force
-        $service = Get-Service -Name $Name -ErrorAction Stop
-        $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
-    }
-
-    if ($serviceProcessId -gt 0) {
-        $serviceProcess = Get-Process -Id $serviceProcessId -ErrorAction SilentlyContinue
-        if ($serviceProcess -and -not $serviceProcess.WaitForExit(15000)) {
-            throw "$Name service process $serviceProcessId did not exit after the service reported STOPPED."
+    try {
+        Write-Host "Stopping $Name service..."
+        if ($service.Status -ne 'Stopped') {
+            $service.Stop()
+            $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
         }
-    }
 
-    # ServiceController retains a handle that keeps a deleted service marked
-    # for deletion until it is disposed. Release it before waiting for removal.
-    $service.Dispose()
-    $service = $null
+        if ($serviceProcessId -gt 0) {
+            $serviceProcess = Get-Process -Id $serviceProcessId -ErrorAction SilentlyContinue
+            if ($serviceProcess) {
+                try {
+                    if (-not $serviceProcess.WaitForExit(15000)) {
+                        throw "$Name service process $serviceProcessId did not exit after the service reported STOPPED."
+                    }
+                } finally {
+                    $serviceProcess.Dispose()
+                }
+            }
+        }
+    } finally {
+        # Release this exact ServiceController before asking SCM to delete it.
+        $service.Dispose()
+        $service = $null
+    }
 
     Write-Host "Removing $Name service registration..."
     & sc.exe delete $Name | Out-Null
@@ -161,15 +167,15 @@ if (-not [string]::Equals($serviceAccount, 'NT AUTHORITY\LocalService', [StringC
 Write-Host 'Starting the restored Readarr service with its quoted executable path...'
 Start-Service -Name 'Readarr' -ErrorAction Stop
 
-$deadline = [DateTime]::UtcNow.AddSeconds(60)
-do {
-    $service = Get-Service -Name 'Readarr' -ErrorAction SilentlyContinue
-    if ($service -and $service.Status -eq 'Running') { break }
-    Start-Sleep -Seconds 1
-} while ([DateTime]::UtcNow -lt $deadline)
-
-if (-not $service -or $service.Status -ne 'Running') {
-    throw 'The restored Readarr service did not reach RUNNING.'
+$service = Get-Service -Name 'Readarr' -ErrorAction Stop
+try {
+    $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(60))
+    if ($service.Status -ne 'Running') {
+        throw 'The restored Readarr service did not reach RUNNING.'
+    }
+} finally {
+    $service.Dispose()
+    $service = $null
 }
 
 try {
