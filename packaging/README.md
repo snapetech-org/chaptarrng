@@ -166,6 +166,13 @@ validated image/package identity bridge, or operators must change their install
 source. Debian/PPA, Flatpak/AppImage, Helm, third-party catalogs, and
 pinned/offline installs need an explicit handoff or retirement decision.
 
+The BookshelfNG Cloudron and StartOS packages still reference their legacy
+`.37` image, and no ChaptarrNG update has been tested for either package.
+The Co-op Cloud recipe remains an unsubmitted draft. These package definitions
+must not be pointed at ChaptarrNG until their data identity, update behavior,
+and rollback are accepted or the channel is explicitly retired. See the
+[BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
+
 ## Work required before enabling the legacy bridge
 
 - Validate the AUR candidate with representative operator data and
