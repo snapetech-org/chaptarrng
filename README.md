@@ -41,6 +41,16 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+The current migration candidate accepts raw SQLite backup uploads with `.db`
+and legacy `.xml` filename suffixes; `.xml` is not an XML database format.
+This is source-only and is not in `v0.9.977`. Code snapshot `00cf7b1a` passed
+Linux, macOS, and PostgreSQL migration jobs in exact-head Build
+[39409347888](https://github.com/snapetech-org/chaptarrng/actions/runs/39409347888);
+the run was later cancelled before Windows and native-runner receipt results,
+so no Windows result is claimed. Security analysis, Semgrep CE, Trivy,
+dependency submission, and push checks passed. The release-note check was
+skipped because no release was prepared.
+
 Current `main` also has explicit trusted-proxy and CORS allowlists, per-client
 API rate limiting, and a bounded general request-body setting. The backup
 restore route retains its separate 1 GiB upload limit. These controls are

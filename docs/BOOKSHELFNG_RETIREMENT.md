@@ -33,6 +33,14 @@ boundary checks. This closes the upload-extension gap in the current source;
 the raw formats are not supported by published `v0.9.977`, and the retirement
 release freeze remains active.
 
+The current migration code snapshot is `00cf7b1a`. Exact-head Build
+[39409347888](https://github.com/snapetech-org/chaptarrng/actions/runs/39409347888)
+passed Linux, macOS, and PostgreSQL migration jobs, but the run was later
+cancelled before Windows and native-runner receipt results, so no Windows
+result is claimed. Security analysis, Semgrep CE, Trivy, dependency
+submission, and push checks passed. The release-note check was skipped because
+no release was prepared.
+
 The regression fixture first failed on exact-head commit `36623faf` because
 of missing imports and an incorrect attribute property. Follow-up `aac32822`
 fixed the imports but exposed the explicit request-size metadata interface;
