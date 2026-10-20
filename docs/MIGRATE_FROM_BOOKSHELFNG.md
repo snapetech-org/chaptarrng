@@ -17,20 +17,20 @@
 > exact migration-158 SQLite schema. Its pre-upgrade check rejects schemas
 > before migration 14; upgrade those installations to the final BookshelfNG
 > `0.4.21.71` release first. The current migration candidate code head is
-> `55f6ae1a2eac79e2af4ae9a7a2d92cd827ab5ad1`, which contains the current migration,
-> installer, Books index Both filter, combined Bookshelf Formats view, and
-> audiobook-scoped SeerrNG narrator operations, visible retry actions, and
-> the responsive ChaptarrNG UI shell/theme update.
-> Exact-head Build
-> [39474807076](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
-> passed Linux, Windows, and PostgreSQL migration jobs. Windows also passed
-> installer fingerprint, upgrade/rollback service, cleanup, and selected-data
-> directory checks. The macOS job was cancelled before runner setup on both
-> attempts, so there is no macOS result. CodeQL, Security Analysis, Semgrep CE,
-> Trivy, and dependency submission passed. Focused lint, type-check,
-> translation checks, and production build pass; repository-wide lint findings
-> remain outside the changed files. None of this source-only work is in `.977` or approved for
-> operator cutover during the release freeze.
+> `c0aabe4441fd263e0f9e9019fd51441b7c821615`. It includes the migration and
+> installer work, Books index Both filter, combined Bookshelf Formats view,
+> audiobook-scoped SeerrNG narrator operations, visible retry actions, and the
+> responsive ChaptarrNG UI. It also preserves manual edition choices on local
+> book adds and resolves bare numeric Hardcover/Goodreads IDs through the
+> Readarr facade. Exact-head Build
+> [39503006775](https://github.com/snapetech-org/chaptarrng/actions/runs/39503006775)
+> passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
+> receipt reconciliation. Windows also passed migration-installer fingerprint,
+> service upgrade/rollback, cleanup, and selected-data-directory checks.
+> CodeQL, Security Analysis, Semgrep CE, Trivy, and NuGet submission passed;
+> the release-note contract was skipped because no release was prepared. The
+> current code remains unpublished and is not approved for operator cutover
+> during the release freeze.
 > **Provider identity warning:** `.977` maps bare numeric source IDs to
 > Goodreads regardless of `HARDCOVER`. A database from the native Hardcover
 > BookshelfNG mode can therefore pass integrity checks while acquiring the
@@ -710,11 +710,12 @@ non-overriding narrator-preference payload for the restricted key. Focused
 ChaptarrNG NUnit tests cover both formats, allowed and denied narrator calls,
 and plus-encoded spaces; SeerrNG's focused adapter tests confirm that it sends
 `mediaType=audiobook`. This migration smoke predates the later narrator-scope
-and UI-shell changes. Exact-head Build
+and UI-shell changes. At that time, exact-head Build
 [39474807076](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
 passed Linux, Windows, and PostgreSQL migration jobs for source commit
-`55f6ae1a`. The macOS job was cancelled before runner setup on both attempts,
-so there is no macOS result. No release or compatibility bridge was published.
+`55f6ae1a`; the macOS job was cancelled before runner setup on both attempts.
+The current exact-head result is recorded at the top of this guide. No release
+or compatibility bridge was published.
 
 ## Historical populated-database rehearsal (2026-10-14)
 

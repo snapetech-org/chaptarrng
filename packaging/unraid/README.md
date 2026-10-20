@@ -25,7 +25,7 @@ mirror; it is not the Community Apps submission target.
 
 ## Manual installation
 
-Use the main repository's [ChaptarrNG template XML](../../templates/chaptarrng.xml) with
+Use the main repository's [ChaptarrNG template XML](https://github.com/snapetech-org/chaptarrng/blob/main/templates/chaptarrng.xml) with
 Unraid's Docker template workflow. It installs `ghcr.io/snapetech-org/chaptarrng:latest`,
 which stable releases keep in sync with `:main`, and configures persistent
 appdata, audiobook, ebook, and download paths.
@@ -43,7 +43,7 @@ configuration and SeerrNG integration, see the
 [SeerrNG Bookshelf backend guide](https://github.com/snapetech-org/seerrng/blob/main/docs/using-seerr/bookshelf-backend.md).
 
 For builds that include the current main HTTP controls, see the
-[HTTP security settings](../../docs/HTTP_SECURITY.md). These controls are not
+[HTTP security settings](https://github.com/snapetech-org/chaptarrng/blob/main/docs/HTTP_SECURITY.md). These controls are not
 available in the published `v0.9.977` image.
 
 ## BookshelfNG migration status
@@ -55,18 +55,20 @@ point ChaptarrNG at its `/config` directory or apply the published `.977`
 converter to BookshelfNG appdata.
 
 The current ChaptarrNG source candidate is
-[`55f6ae1a`](https://github.com/snapetech-org/chaptarrng/commit/55f6ae1a2eac79e2af4ae9a7a2d92cd827ab5ad1).
+[`c0aabe44`](https://github.com/snapetech-org/chaptarrng/commit/c0aabe4441fd263e0f9e9019fd51441b7c821615).
 Exact-head Build
-[`39474807076`](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
-passed Linux, Windows, and PostgreSQL migration jobs; its macOS job was
-cancelled before runner setup on both attempts, so there is no macOS result.
-CodeQL, Security Analysis, Semgrep CE, Trivy, and dependency submission passed.
-This source work is not in the published image. BookshelfNG issue
+[`39503006775`](https://github.com/snapetech-org/chaptarrng/actions/runs/39503006775)
+passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
+receipt reconciliation. Windows also passed migration-installer fingerprint,
+upgrade/rollback, cleanup, and selected-data-directory checks. Security
+Analysis, Semgrep CE, Trivy, CodeQL, and NuGet submission passed. The current
+source adds local-add edition preservation and numeric Hardcover/Goodreads
+facade lookup; it is not in the published image. BookshelfNG issue
 [#144](https://github.com/snapetech-org/bookshelfng/issues/144) remains open,
 and the legacy Unraid handoff [PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5)
 is still a draft. Community Applications update/rollback and
 representative-data migration/rollback acceptance remain outstanding. Follow
-the [migration guide](../../docs/MIGRATE_FROM_BOOKSHELFNG.md) for the supported
+the [migration guide](https://github.com/snapetech-org/chaptarrng/blob/main/docs/MIGRATE_FROM_BOOKSHELFNG.md) for the supported
 schema, backup, preview, apply, and rollback limits.
 
 ## Source and support

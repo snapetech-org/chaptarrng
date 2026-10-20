@@ -19,37 +19,34 @@ or migration acceptance.
 **Merged source status (2026-10-20)**
 
 ChaptarrNG PR #131 merged to `main` as
-`d2bcba7953a14d2d726f47005a660314cc5e4c26` from validated code head
-`87c57a2bffd25a5ecbda40b9c63fd6d82993c54`. The migration candidate code head is
-`55f6ae1a2eac79e2af4ae9a7a2d92cd827ab5ad1`. Runtime application code includes
+`d2bcba7953a14d2d726f47005a660314cc5e4c26`. Current source head is
+`c0aabe4441fd263e0f9e9019fd51441b7c821615`. Runtime application code includes
 the related-format book actions and combined Bookshelf **Formats** view from
 `c75ecbb37c5708441219887f7180d5ab10ee194d`, plus the Books index **Both**
-filter with per-record format status, monitoring, and quality profiles.
+filter with per-record format status, monitoring, and quality profiles. The
+latest changes reuse an existing matching catalog book during local add,
+preserve an explicit manual edition selection, and resolve bare numeric
+Hardcover/Goodreads lookup IDs through the Readarr facade. Focused tests cover
+these behaviors.
+
 Exact-head Build
-[39474807076](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
-passed Linux, Windows, and PostgreSQL migration jobs. Windows also passed the
-installer fingerprint, upgrade/rollback service, cleanup, and selected-data
-directory checks. The macOS job was cancelled before runner setup on both
-attempts, so there is no macOS result. CodeQL, Security Analysis, Semgrep CE,
-Trivy, and dependency submission passed. Focused ESLint and Stylelint checks
-for changed files, frontend type-check, translation check, and production
-webpack build pass. Repository-wide ESLint and Stylelint still report 833 and
-657 findings outside changed files; the production build reports 22 CSS
-module ordering warnings. The candidate also has visible
-retry actions for failed edition-catalog and narrator-comparison requests, and
-the dedicated SeerrNG key permits only the audiobook-scoped narrator read and
-non-overriding preference update. The UI shell now has accessible ChaptarrNG
-branding, responsive search/sidebar styling, and a slate-and-purple dark theme.
+[39503006775](https://github.com/snapetech-org/chaptarrng/actions/runs/39503006775)
+passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
+receipt reconciliation. Windows also passed migration-installer fingerprint,
+service upgrade/rollback, cleanup, and selected-data-directory checks.
+Security Analysis, Semgrep CE, Trivy, CodeQL, and NuGet submission passed. The
+release-note contract was skipped because no release was prepared. The current
+source is unpublished and does not approve production cutover.
 
 BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public
 releases. No release, package, image, installer, or migration bridge was
 published. The source is not approved for production cutover.
 
-Current ChaptarrNG `main` now applies the author freshness policy to
-book-added events while retaining the author-scoped rescan when metadata is
-skipped or unchanged. This keeps the remote metadata fetch bounded without
-dropping the scan that can discover files already on disk. The behavior is
-source-only and has not passed hosted exact-head validation; see the
+Current ChaptarrNG `main` applies the author freshness policy to book-added
+events while retaining the author-scoped rescan when metadata is skipped or
+unchanged. This keeps the remote metadata fetch bounded without dropping the
+scan that can discover files already on disk. The exact-head build above
+includes this behavior; see the
 [author metadata refresh guide](AUTHOR_METADATA_REFRESH.md). The legacy
 source's complete author metadata policy is documented in
 [BookshelfNG's author refresh guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/author-metadata-refresh.md).

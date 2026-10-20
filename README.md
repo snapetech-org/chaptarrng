@@ -50,9 +50,11 @@ monitoring; bulk monitoring applies to both formats. Separately, the Books
 index's **Both** filter lists audiobook and ebook records as separate rows,
 with status, monitoring, and quality profiles scoped to each record's format.
 These additions are not in `v0.9.977`. The runtime feature commit is
-`c75ecbb37c5708441219887f7180d5ab10ee194d`; the source code candidate is at
-`55f6ae1a2eac79e2af4ae9a7a2d92cd827ab5ad1`, including the loading-retry fix
-and Both-filter profile scoping. The current UI pass adds accessible
+`c75ecbb37c5708441219887f7180d5ab10ee194d`; current source code is at
+`c0aabe4441fd263e0f9e9019fd51441b7c821615`. It also reuses matching local
+catalog books during add, preserves an explicitly selected manual edition,
+and resolves bare numeric Hardcover/Goodreads IDs through the Readarr facade
+before title search. The current UI pass adds accessible
 ChaptarrNG branding, a responsive search and sidebar, slate-and-purple dark
 colors, and visible keyboard focus. Source-only updates also add visible retry
 actions to the Editions and Narrations panels and tighten the SeerrNG service
@@ -60,22 +62,20 @@ key: it can read audiobook-scoped narrator comparisons and set a preferred
 narrator only with the non-overriding payload. Ebook-scoped narrator access
 and unrelated or administrative routes stay denied.
 Exact-head Build
-[39474807076](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
-passed Linux, Windows, and PostgreSQL migration jobs. Windows also passed the
-installer fingerprint, upgrade/rollback service, cleanup, and selected-data
-directory checks. The macOS job was cancelled before runner setup on both
-attempts, so there is no macOS result. CodeQL, Security Analysis, Semgrep CE,
-Trivy, and dependency submission passed. Focused ESLint and Stylelint checks
-for changed files, frontend type-check, translation check, and production
-webpack build pass. Repository-wide ESLint and Stylelint still report 833 and
-657 findings outside the changed files; the production build reports 22 CSS
-module ordering warnings. The release freeze remains
-active and this source does not approve production cutover.
+[39503006775](https://github.com/snapetech-org/chaptarrng/actions/runs/39503006775)
+passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
+receipt reconciliation. Windows also passed the BookshelfNG installer
+fingerprint, upgrade/rollback, cleanup, and selected-data-directory checks.
+CodeQL, Security Analysis, Semgrep CE, Trivy, and NuGet submission passed; the
+release-note contract was skipped because no release was prepared. Focused
+regression fixtures cover local edition preservation and raw Hardcover facade
+lookup. This validation does not authorize a release or production cutover.
 
 Current `main` also applies the author freshness policy to book-added events
 while retaining the author-scoped folder rescan, even when metadata is skipped
-or unchanged. See the [author metadata refresh guide](docs/AUTHOR_METADATA_REFRESH.md).
-This source update is not in `v0.9.977` and has not passed its hosted build yet.
+or unchanged. The exact-head run above includes this change. See the
+[author metadata refresh guide](docs/AUTHOR_METADATA_REFRESH.md). This source
+update is not in `v0.9.977`.
 
 The HTTP security controls remain source-only: explicit trusted proxies and
 CORS origins, per-client request limits, a bounded body size, query-key
