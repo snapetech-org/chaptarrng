@@ -43,20 +43,22 @@ and [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) before switching.
 
 Current `main` accepts raw SQLite Bookshelf backup uploads with `.db` or legacy
 `.xml` filename suffixes; the content must still be SQLite. It also contains the
-BookshelfNG migration and installer work. These additions are not in `v0.9.977`.
-The runtime application code is at
-`ace817cc016411c50ac3b1ff0f862cae950a3829`; current `main` is
-`771a26e63111114990b926df0f8bd0918ff9cf0a`, including the Windows running-service
-rollback test correction. Exact-head Build
-[39428515452](https://github.com/snapetech-org/chaptarrng/actions/runs/39428515452)
-passed on Linux, macOS, Windows, and PostgreSQL migration smoke in attempt 4,
-including native-runner receipt reconciliation. Attempt 3's macOS job was
-canceled before setup while waiting for a runner; the full retry completed.
-Windows passed installer build, source fingerprint, running-service upgrade and
-rollback, cleanup, and selected-data-directory checks. CodeQL, security analysis,
-Semgrep CE, Trivy, and dependency submission also passed. The release-note
-contract was skipped because no release was prepared. These source changes are
-not in `v0.9.977` and do not approve production cutover.
+BookshelfNG migration and installer work, and a combined Bookshelf **Formats**
+view that groups audiobook and ebook records only when they share a recognized
+work-level provider ID. Each record keeps its own details, progress, and
+monitoring; bulk monitoring applies to both formats. Separately, the Books
+index's **Both** filter lists audiobook and ebook records as separate rows,
+with status, monitoring, and quality profiles scoped to each record's format.
+These additions are not in `v0.9.977`. The runtime feature commit is
+`c75ecbb37c5708441219887f7180d5ab10ee194d`; the source code candidate is at
+`65c0400aa43588504b3788c9ec6898dc7e6881b5`, including the loading-retry fix
+and Both-filter profile scoping.
+Exact-head Build
+[39468166089](https://github.com/snapetech-org/chaptarrng/actions/runs/39468166089)
+is in progress; no result
+is claimed yet. Local focused tests, type-check, translations, ESLint,
+Stylelint, and production webpack builds pass. The release freeze remains
+active and this source does not approve production cutover.
 
 The HTTP security controls remain source-only: explicit trusted proxies and
 CORS origins, per-client request limits, a bounded body size, query-key
@@ -94,7 +96,11 @@ key access, and the pending-import cancel lifecycle. The `.m4b` and `.epub`
 files are placeholders, so this does not establish media processing or
 operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM_BOOKSHELFNG.md#exact-head-artifact-migration-and-seerrng-smoke-2026-10-20).
 
-The refreshed BookshelfNG inventory pins source `c63eb84813392cdb398d9e6bf4446694952f256d` to ChaptarrNG `main` at `771a26e63111114990b926df0f8bd0918ff9cf0a`. It covers 679 post-fork commits and 1,116 changed paths: 29 reviewed mappings, 473 dispositions (176 retained, 129 equivalent, 10 ported, and 158 approved non-runtime retirements), and 643 open paths (235 unmapped and 408 requiring semantic review). No runtime feature has been approved for retirement; these are path-level records, not proof of behavior or feature parity. See the [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
+The BookshelfNG inventory covers 679 post-fork commits and 1,116 changed
+paths. Its reviewed dispositions and unresolved paths are summarized in the
+[consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
+Path-level records are not proof of behavior or feature parity; no runtime
+feature has been approved for retirement.
 
 BookshelfNG audit-tool commit `9fcc0aea` passed Build
 [39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595).
@@ -436,7 +442,7 @@ runtime, while source builds require the .NET 10 SDK.
 - **Restricted service access:** ChaptarrNG `0.9.941` and later can use a SeerrNG-only API key for supported book requests, searches, library status, and pending imports without granting global administration or destructive access.
 - **Standalone additions maintained here:** An optional built-in indexer and download client can search configured ebook sources, use API-key downloads, and optionally fall back to browser-assisted links. Full backup archives can use passphrase-based authenticated encryption; the direct Chaptarr project separately offers encryption for quick-start settings backups.
 - **Safer list and file workflows:** Preview an import list's next sync, inspect durable per-list sync history, and review manual-import matching evidence. Book-file downloads are limited to configured roots; imports check destinations before writing, extract supported archives, and can merge or convert multipart audiobooks with progress and cancellation. New multi-part releases can remain as separate book files.
-- **Cross-format book navigation:** The current source links audiobook and ebook records in book details only when they share a recognized work-level provider ID. This addition is not in published `v0.9.977`.
+- **Cross-format library views:** The Books index can show audiobooks and ebooks together, labels each record by format, and keeps monitoring actions scoped to that record. Bookshelf's **Formats** view groups records only when they share a recognized work-level provider ID; book details link formats by the same safe identity. These additions are not in published `v0.9.977`.
 - **More metadata and library connections:** RanobeDB adds light-novel ebook metadata; Audible searches can use a selected marketplace. Metadata profiles can rank edition terms and choose preferred series. AudioBookShelf, Calibre, Grimmory, and BookLore BookDrop provide optional library connections; BookOrbit Book Dock is in the unpublished retirement candidate; Emby/Jellyfin can refresh after an import.
 - **Search and library maintenance:** Indexers can run optional recurring searches for missing monitored books. MyAnonaMouse health reports explain when stale account status blocks grabs. Operators can preview and backfill missing author root folders without moving files.
 - **Operations and automation:** An optional MQTT gateway publishes library snapshots and lifecycle events, including Home Assistant discovery. A separate Prometheus listener exposes low-cardinality metrics. The full-library API supports paging, large library views use paged reads, and long author deletions run in the background.

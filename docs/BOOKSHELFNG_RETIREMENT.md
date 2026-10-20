@@ -11,22 +11,16 @@ feature inventory remains in the
 
 ChaptarrNG PR #131 merged to `main` as
 `d2bcba7953a14d2d726f47005a660314cc5e4c26` from validated code head
-`87c57a2bffd25a5ecbda40b9c63fd6d82993c54`. Current `main` is at
-`771a26e63111114990b926df0f8bd0918ff9cf0a`; the runtime application code is at
-`ace817cc016411c50ac3b1ff0f862cae950a3829`. The previous exact-head Build
-[39423725592](https://github.com/snapetech-org/chaptarrng/actions/runs/39423725592)
-passed PostgreSQL migrations but failed two Linux/macOS auth tests because the
-SeerrNG test context omitted its HTTP method. The fixture now sets GET
-explicitly, and the Windows running-service rollback fixture was corrected in
-`771a26e`. Exact-head Build
-[39428515452](https://github.com/snapetech-org/chaptarrng/actions/runs/39428515452)
-passed in attempt 4 on Linux, macOS, Windows, and PostgreSQL migration smoke,
-including native-runner receipt reconciliation. Attempt 3's macOS job was
-canceled before setup while waiting for a runner. Windows passed installer
-build, source fingerprint, running-service upgrade and rollback, cleanup, and
-selected-data-directory checks. CodeQL, security analysis, Semgrep CE, Trivy,
-and dependency submission passed; the release-note contract was skipped
-because no release was prepared.
+`87c57a2bffd25a5ecbda40b9c63fd6d82993c54`. The migration candidate code head is
+`65c0400aa43588504b3788c9ec6898dc7e6881b5`. Runtime application code includes
+the related-format book actions and combined Bookshelf **Formats** view from
+`c75ecbb37c5708441219887f7180d5ab10ee194d`, plus the Books index **Both**
+filter with per-record format status, monitoring, and quality profiles.
+Exact-head Build
+[39468166089](https://github.com/snapetech-org/chaptarrng/actions/runs/39468166089)
+is in progress; no result
+is claimed yet. Local focused tests, type-check, translations, ESLint,
+Stylelint, and production webpack builds pass.
 
 BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public
 releases. No release, package, image, installer, or migration bridge was
@@ -57,7 +51,13 @@ boundary checks. This closes the upload-extension gap in the current source;
 the raw formats are not supported by published `v0.9.977`, and the retirement
 release freeze remains active.
 
-The exact-head result for `771a26e63111114990b926df0f8bd0918ff9cf0a` is Build
+The current source also includes a combined Bookshelf **Formats** view. It
+loads audiobook and ebook records together, groups only records with matching
+Hardcover, Goodreads, or Open Library work IDs, and keeps per-format progress,
+details, and monitoring. This source is not in `v0.9.977`; browser checks on a
+representative library remain open.
+
+Earlier exact-head result for `771a26e63111114990b926df0f8bd0918ff9cf0a` was Build
 [39428515452](https://github.com/snapetech-org/chaptarrng/actions/runs/39428515452),
 attempt 4: all platform suites, PostgreSQL migration smoke, and receipt
 reconciliation passed. The release-note check was skipped because no release
@@ -113,16 +113,14 @@ Unraid main `296caed2` passed CI
 [39387608787](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39387608787)
 and package-sync, security, and release-note checks.
 
-The refreshed path inventory pins BookshelfNG source snapshot
-`c63eb84813392cdb398d9e6bf4446694952f256d` to ChaptarrNG target `771a26e63111114990b926df0f8bd0918ff9cf0a`. It
-covers 679 reachable post-fork commits (670 absent from the pinned upstream
-history) and 1,116 changed paths. It records 29 reviewed path mappings and 473
-dispositions (176 retained, 129 equivalent, 10 ported, and 158 non-runtime
-retirements), leaving 643 paths open (235 without mapped targets and 408 needing
-semantic review). No runtime feature is approved for retirement. These are
-path-level decisions, not proof of feature behavior. The old contributor wiki
-stub is covered by ChaptarrNG's guide, and the obsolete Readarr Azure Pipelines
-definition is retired; both paths have explicit dispositions.
+The current BookshelfNG path inventory, exact revisions, dispositions, and
+review maps are maintained in the
+[consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
+It covers 679 reachable post-fork commits and 1,116 changed paths. These are
+path-level decisions, not proof of feature behavior; no runtime feature has
+been approved for retirement. The old contributor wiki stub is covered by
+ChaptarrNG's guide, and the obsolete Readarr Azure Pipelines definition is
+retired; both paths have explicit dispositions.
 
 Unraid transition PR [#5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5)
 remains draft at `1261a9f8`. Its exact-head build, template, package-sync,

@@ -16,14 +16,13 @@
 > The release bundles the BookshelfNG source migration chain and supports the
 > exact migration-158 SQLite schema. Its pre-upgrade check rejects schemas
 > before migration 14; upgrade those installations to the final BookshelfNG
-> `0.4.21.71` release first. Current `main` at
-> `771a26e63111114990b926df0f8bd0918ff9cf0a` contains additional migration and
-> Windows handoff work. Exact-head Build
-> [39428515452](https://github.com/snapetech-org/chaptarrng/actions/runs/39428515452)
-> passed on Linux, macOS, Windows, and PostgreSQL migration smoke in attempt 4,
-> including native-runner receipt reconciliation. The Windows installer
-> fingerprint, running-service upgrade/rollback, cleanup, and data-directory
-> checks passed. None of this source-only work is in `.977` or approved for
+> `0.4.21.71` release first. The current migration candidate code head is
+> `65c0400aa43588504b3788c9ec6898dc7e6881b5`, which contains the current migration,
+> installer, Books index Both filter, and combined Bookshelf Formats-view source.
+> Exact-head Build
+> [39468166089](https://github.com/snapetech-org/chaptarrng/actions/runs/39468166089)
+> is in progress; no result
+> is claimed yet. None of this source-only work is in `.977` or approved for
 > operator cutover during the release freeze.
 > **Provider identity warning:** `.977` maps bare numeric source IDs to
 > Goodreads regardless of `HARDCOVER`. A database from the native Hardcover
