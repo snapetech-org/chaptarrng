@@ -66,8 +66,8 @@ Unraid main `296caed2` passed CI
 [39387608787](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39387608787)
 and package-sync, security, and release-note checks.
 
-The refreshed path inventory pins BookshelfNG `c63eb848` to ChaptarrNG
-`29852b13`. It covers 679 reachable post-fork commits (670 absent from the
+The refreshed path inventory pins BookshelfNG source snapshot `c63eb848` to
+ChaptarrNG target `00cf7b1a`. It covers 679 reachable post-fork commits (670 absent from the
 pinned upstream history) and 1,116 changed paths: 239 paths without mapped targets, 408
 undispositioned semantic differences, 176 retained identical paths, 129 equivalent paths (118
 automatically checked C# files, 8 Roslyn-checked C# files, and 3 license/build/documentation files),

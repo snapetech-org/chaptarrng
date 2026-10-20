@@ -56,7 +56,7 @@ and push checks passed; the release-note contract was skipped for that
 docs-only source update. The merged code remains unpublished and is not
 approved for operator cutover.
 
-The HTTP security controls and regression fixtures are now on `main` at
+The HTTP security controls and regression fixtures entered `main` in
 `29852b13`. The first exact-head run on `36623faf` found missing test imports
 and an incorrect attribute property. Follow-up `aac32822` fixed the imports;
 its Build exposed that request-size metadata is an explicit interface, now
@@ -76,8 +76,8 @@ key access, and the pending-import cancel lifecycle. The `.m4b` and `.epub`
 files are placeholders, so this does not establish media processing or
 operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM_BOOKSHELFNG.md#exact-head-artifact-migration-and-seerrng-smoke-2026-10-20).
 
-The refreshed BookshelfNG source inventory pins `c63eb848` to ChaptarrNG
-application snapshot `29852b13`. It records 1,116 changed paths, 25 reviewed path mappings, and
+The refreshed BookshelfNG source inventory pins source snapshot `c63eb848` to
+ChaptarrNG application snapshot `00cf7b1a`. It records 1,116 changed paths, 25 reviewed path mappings, and
 469 file dispositions (176 retained, 129 equivalent, 6 ported, and 158 retired: 145 historical
 release-note fragments, 12 BookshelfNG logo assets, and one obsolete Readarr Azure Pipelines definition); 647 paths remain undispositioned. No runtime
 feature has been approved for retirement. Exact file retention and project reference comparison do not establish
