@@ -361,7 +361,7 @@ class PageSidebar extends Component {
       return;
     }
 
-    if (isSidebarVisible && (touchStartX > 210 || touchStartX < 180)) {
+    if (isSidebarVisible && (touchStartX > SIDEBAR_WIDTH || touchStartX < SIDEBAR_WIDTH - 30)) {
       return;
     } else if (!isSidebarVisible && touchStartX > 40) {
       return;

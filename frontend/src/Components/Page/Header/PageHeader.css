@@ -4,6 +4,7 @@
   align-items: center;
   flex: 0 0 auto;
   height: $headerHeight;
+  border-bottom: 1px solid var(--shellBorderColor, var(--borderColor));
   background-color: var(--pageHeaderBackgroundColor);
   color: var(--white);
 }
@@ -12,16 +13,38 @@
   display: flex;
   align-items: center;
   flex: 0 0 $sidebarWidth;
-  padding-left: 20px;
+  gap: 10px;
+
+  padding: 0 14px 0 16px;
+  background-color: var(--sidebarBackgroundColor);
 }
 
 .logoLink {
-  line-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  line-height: 1;
 }
 
 .logo {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+}
+
+.brandName {
+  color: var(--white);
+  white-space: nowrap;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+
+  font-size: 20px;
+}
+
+.brandMark {
+  color: #c4b5fd;
+  letter-spacing: -0.02em;
+  font-size: 0.78em;
 }
 
 .sidebarToggleContainer {
@@ -36,6 +59,7 @@
   align-items: center;
   justify-content: flex-end;
   flex-grow: 1;
+  padding-right: 8px;
 }
 
 .donate {
@@ -53,7 +77,18 @@
 
 @media only screen and (max-width: $breakpointSmall) {
   .logoContainer {
+    justify-content: center;
     flex: 0 0 60px;
+    padding: 0;
+  }
+
+  .brandName {
+    display: none;
+  }
+
+  .logo {
+    width: 34px;
+    height: 34px;
   }
 
   .sidebarToggleContainer {
