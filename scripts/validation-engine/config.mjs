@@ -108,7 +108,7 @@ export const validation = {
       inventory: ['core-dotnet-test-sources'],
       nodeIds: ['chaptarr-linux-X64', 'chaptarr-win-X64', 'chaptarr-osx-ARM64'],
       artifacts: ['_tests/net10.0/Chaptarr.Core.Test.dll'],
-      runtimes: [{ command: 'dotnet', args: ['--version'], versionPattern: '^10\\.0\\.401$' }],
+      runtimes: [{ command: 'dotnet', args: ['--version'], versionPattern: '^10\\.0\\.402$' }],
       timeoutSeconds: 5400,
     },
     {
@@ -132,7 +132,7 @@ export const validation = {
       inventory: ['migration-sources'],
       dependsOn: ['engine-contract-tests'],
       runtimes: [
-        { command: 'dotnet', args: ['--version'], versionPattern: '^10\\.0\\.401$' },
+        { command: 'dotnet', args: ['--version'], versionPattern: '^10\\.0\\.402$' },
         { command: 'curl', args: ['--version'], versionPattern: '^curl ' },
       ],
       githubOnly: true,
