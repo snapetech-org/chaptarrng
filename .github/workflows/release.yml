@@ -29,6 +29,11 @@ jobs:
           exit 1
         fi
 
+    - name: Require retirement release readiness
+      env:
+        CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+      run: ./packaging/scripts/require-release-readiness.sh
+
   validate:
     needs: preflight
     uses: ./.github/workflows/build.yml

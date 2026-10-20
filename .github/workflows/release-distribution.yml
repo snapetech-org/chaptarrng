@@ -55,6 +55,11 @@ jobs:
         ref: main
         persist-credentials: false
 
+    - name: Require retirement release readiness
+      env:
+        CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+      run: ./packaging/scripts/require-release-readiness.sh
+
     - id: target
       env:
         GH_TOKEN: ${{ github.token }}

@@ -33,7 +33,23 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  require-release-readiness:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: main
+        persist-credentials: false
+
+    - name: Require retirement release readiness
+      env:
+        CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+      run: ./packaging/scripts/require-release-readiness.sh
+
   build-and-push:
+    needs: require-release-readiness
     runs-on: ubuntu-latest
     outputs:
       image_digest: ${{ steps.build.outputs.digest }}
@@ -64,14 +80,17 @@ jobs:
 
     - name: Validate release inputs
       shell: bash
+      env:
+        RELEASE_BRANCH: ${{ inputs.branch }}
+        RELEASE_SHA: ${{ inputs.sha }}
       run: |
         set -euo pipefail
-        if [[ "${{ inputs.branch }}" != "main" ]]; then
+        if [[ "$RELEASE_BRANCH" != "main" ]]; then
           echo "Docker publication requires branch=main."
           exit 1
         fi
 
-        if [[ "$(git rev-parse HEAD)" != "${{ inputs.sha }}" ]]; then
+        if [[ "$(git rev-parse HEAD)" != "$RELEASE_SHA" ]]; then
           echo "Checked-out commit does not match the release commit."
           exit 1
         fi
@@ -109,11 +128,13 @@ jobs:
     - name: Generate Docker tags
       id: docker-tags
       shell: bash
+      env:
+        RELEASE_BRANCH: ${{ inputs.branch }}
       run: |
         set -euo pipefail
 
         sha="$(git rev-parse HEAD)"
-        branch="${{ inputs.branch }}"
+        branch="$RELEASE_BRANCH"
         version="$(python3 -c "import json; print(json.load(open('package.json', encoding='utf-8'))['version'])")"
         release_tag="v${version}"
         echo "version=$version" >> "$GITHUB_OUTPUT"
