@@ -59,6 +59,22 @@ Hardcover identities and restricted-key boundaries, and completed a synthetic
 pending-import cancellation. The fixture media files are placeholders; this
 is not operator-data or media-processing acceptance.
 
+**Native Hardcover provider parity review (2026-10-20):** A line-by-line
+comparison of the BookshelfNG and ChaptarrNG proxy implementations found
+matching request pacing, retries, rate-limit cooldown, daily quota, caching,
+paging, batching, and GraphQL mapping logic. Adaptations are limited to product
+identity, the narrator resource shape, error text, and ChaptarrNG's saved
+`HardcoverApiToken` fallback versus BookshelfNG's `HardcoverAuth`. ChaptarrNG
+commit `1f56de51` adds regression tests for a 429/`Retry-After` pause, the
+interactive-search quota reserve, and work-detail cache reuse. Exact-head Build
+[39413811593](https://github.com/snapetech-org/chaptarrng/actions/runs/39413811593)
+passed Linux, macOS, Windows, PostgreSQL migration smoke, and native-runner
+receipt reconciliation. Windows also passed the installer fingerprint,
+service upgrade/rollback, cleanup, and selected-data-directory checks. This
+closes the source comparison only. Live Hardcover calls and representative
+converted-data acceptance remain open, and no release or migration bridge is
+enabled.
+
 ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
 passed exact-head Build
 [39387591772](https://github.com/snapetech-org/chaptarrng/actions/runs/39387591772)
