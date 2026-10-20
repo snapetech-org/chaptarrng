@@ -75,7 +75,7 @@ RUN test -s /app/UI/index.html
 ###### runtime stage ######
 # Keep the cross-platform runtime on the exact .NET patch tag. MCR advertises
 # an index digest for this image but currently rejects requests by that digest.
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.12 AS runtime
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.13 AS runtime
 
 # Copy Playwright Chromium from the browser stage
 COPY --from=browser /ms-playwright /ms-playwright
