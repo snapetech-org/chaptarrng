@@ -15,6 +15,14 @@ using Microsoft.Win32;
 
 internal static class WindowsServiceRoundTrip
 {
+    private enum FixtureTable
+    {
+        Authors,
+        Books,
+        Editions,
+        BookFiles
+    }
+
     private const string BookshelfArchiveUrl =
         "https://github.com/snapetech-org/bookshelfng/releases/download/main-v0.4.21.71/BookshelfNG-main-v0.4.21.71-win-x64.zip";
     private const string BookshelfArchiveSha256 =
@@ -124,7 +132,7 @@ internal static class WindowsServiceRoundTrip
 
             var sourceDatabase = Path.Combine(dataDirectory, "readarr.db");
             AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "BookshelfNG source startup");
-            AssertRowCount(sourceDatabase, "Books", expectedAtLeast: 1, "BookshelfNG source data");
+            AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "BookshelfNG source data");
             await StopServiceAsync(ServiceLifecycle.BookshelfServiceName).ConfigureAwait(false);
 
             Console.WriteLine("[smoke] Injecting an HTTP port conflict to exercise automatic installer rollback...");
@@ -161,7 +169,7 @@ internal static class WindowsServiceRoundTrip
                 await WaitForHealthAsync(dataDirectory, TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 AssertServicePath(ServiceLifecycle.BookshelfServiceName, dataDirectory);
                 AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "automatic rollback database");
-                AssertRowCount(sourceDatabase, "Books", expectedAtLeast: 1, "automatically restored BookshelfNG books");
+                AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "automatically restored BookshelfNG books");
                 AssertDatabaseIntegrity(sourceDatabase, "automatically restored BookshelfNG database");
             }
 
@@ -175,12 +183,12 @@ internal static class WindowsServiceRoundTrip
 
             var migrationBackupDatabase = Path.Combine(upgrade.BackupPath, "readarr.db");
             AssertLineage(migrationBackupDatabase, DatabaseLineageKind.BookshelfNG, "retained migration backup");
-            AssertRowCount(migrationBackupDatabase, "Books", expectedAtLeast: 1, "retained BookshelfNG backup");
+            AssertRowCount(migrationBackupDatabase, FixtureTable.Books, expectedAtLeast: 1, "retained BookshelfNG backup");
             AssertLineage(sourceDatabase, DatabaseLineageKind.Chaptarr, "migrated Chaptarr database");
-            AssertRowCount(sourceDatabase, "Authors", expectedAtLeast: 1, "migrated authors");
-            AssertRowCount(sourceDatabase, "Books", expectedAtLeast: 1, "migrated books");
-            AssertRowCount(sourceDatabase, "Editions", expectedAtLeast: 2, "migrated editions");
-            AssertRowCount(sourceDatabase, "BookFiles", expectedAtLeast: 2, "migrated audiobook and ebook files");
+            AssertRowCount(sourceDatabase, FixtureTable.Authors, expectedAtLeast: 1, "migrated authors");
+            AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "migrated books");
+            AssertRowCount(sourceDatabase, FixtureTable.Editions, expectedAtLeast: 2, "migrated editions");
+            AssertRowCount(sourceDatabase, FixtureTable.BookFiles, expectedAtLeast: 2, "migrated audiobook and ebook files");
             AssertDatabaseIntegrity(sourceDatabase, "migrated Chaptarr database");
             AssertServicePath(ServiceLifecycle.ChaptarrServiceName, dataDirectory);
             await WaitForServiceAsync(ServiceLifecycle.ChaptarrServiceName, ServiceControllerStatus.Running, TimeSpan.FromSeconds(30))
@@ -210,8 +218,8 @@ internal static class WindowsServiceRoundTrip
                 throw new InvalidOperationException("The restored Readarr service did not preserve the supported LocalService account.");
             }
             AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "restored BookshelfNG database");
-            AssertRowCount(sourceDatabase, "Books", expectedAtLeast: 1, "restored BookshelfNG books");
-            AssertRowCount(sourceDatabase, "BookFiles", expectedAtLeast: 2, "restored BookshelfNG files");
+            AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "restored BookshelfNG books");
+            AssertRowCount(sourceDatabase, FixtureTable.BookFiles, expectedAtLeast: 2, "restored BookshelfNG files");
             AssertDatabaseIntegrity(sourceDatabase, "restored BookshelfNG database");
 
             var registry = RegistryService.Read();
@@ -516,7 +524,7 @@ internal static class WindowsServiceRoundTrip
             throw new InvalidDataException($"Expected {label} to contain Authors; found no supported database lineage.");
         }
 
-        var authorColumns = GetColumns(connection, "Authors");
+        var authorColumns = GetColumns(connection, FixtureTable.Authors);
         var actual = DatabaseLineageKind.Unsupported;
         if (authorColumns.Contains("AudiobookRootFolderPath") && authorColumns.Contains("EbookRootFolderPath"))
         {
@@ -524,7 +532,7 @@ internal static class WindowsServiceRoundTrip
         }
         else if (tables.Contains("AuthorMetadata") && tables.Contains("Books") &&
                  authorColumns.Contains("AuthorMetadataId") &&
-                 GetColumns(connection, "Books").Contains("ForeignBookId"))
+                 GetColumns(connection, FixtureTable.Books).Contains("ForeignBookId"))
         {
             actual = DatabaseLineageKind.BookshelfNG;
         }
@@ -535,11 +543,16 @@ internal static class WindowsServiceRoundTrip
         }
     }
 
-    private static HashSet<string> GetColumns(SqliteConnection connection, string table)
+    private static HashSet<string> GetColumns(SqliteConnection connection, FixtureTable table)
     {
         var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using var command = connection.CreateCommand();
-        command.CommandText = $"PRAGMA table_info(\"{table}\");";
+        command.CommandText = table switch
+        {
+            FixtureTable.Authors => "PRAGMA table_info(\"Authors\");",
+            FixtureTable.Books => "PRAGMA table_info(\"Books\");",
+            _ => throw new InvalidDataException($"Unexpected SQLite fixture table '{table}'.")
+        };
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
@@ -549,7 +562,7 @@ internal static class WindowsServiceRoundTrip
         return columns;
     }
 
-    private static void AssertRowCount(string databasePath, string table, long expectedAtLeast, string label)
+    private static void AssertRowCount(string databasePath, FixtureTable table, long expectedAtLeast, string label)
     {
         var connectionString = new SqliteConnectionStringBuilder
         {
@@ -560,7 +573,14 @@ internal static class WindowsServiceRoundTrip
         using var connection = new SqliteConnection(connectionString);
         connection.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT COUNT(*) FROM \"{table}\";";
+        command.CommandText = table switch
+        {
+            FixtureTable.Authors => "SELECT COUNT(*) FROM \"Authors\";",
+            FixtureTable.Books => "SELECT COUNT(*) FROM \"Books\";",
+            FixtureTable.Editions => "SELECT COUNT(*) FROM \"Editions\";",
+            FixtureTable.BookFiles => "SELECT COUNT(*) FROM \"BookFiles\";",
+            _ => throw new InvalidDataException($"Unexpected SQLite fixture table '{table}'.")
+        };
         var count = Convert.ToInt64(command.ExecuteScalar());
         if (count < expectedAtLeast)
         {
