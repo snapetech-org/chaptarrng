@@ -58,7 +58,7 @@ namespace Chaptarr.Core.Test.Backup
 
             public void Extract(string compressedFile, string destination)
             {
-                File.WriteAllText(Path.Combine(destination, "Config.xml"), "replacement");
+                File.WriteAllText(Path.Combine(destination, "Config.xml"), "replacement"); // nosemgrep: csharp.lang.security.filesystem.unsafe-path-combine.unsafe-path-combine -- destination is a test-owned extraction folder and the filename is fixed.
                 if (ExtractContents != null)
                 {
                     ExtractContents(destination);
@@ -84,7 +84,7 @@ namespace Chaptarr.Core.Test.Backup
         {
             public void BackupDatabase(IDatabase database, string targetDirectory)
             {
-                File.WriteAllText(Path.Combine(targetDirectory, "chaptarr.db"), "database backup");
+                File.WriteAllText(Path.Combine(targetDirectory, "chaptarr.db"), "database backup"); // nosemgrep: csharp.lang.security.filesystem.unsafe-path-combine.unsafe-path-combine -- targetDirectory is a test-owned temporary folder and the filename is fixed.
             }
         }
 

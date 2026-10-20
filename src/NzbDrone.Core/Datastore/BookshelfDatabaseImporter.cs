@@ -2324,7 +2324,7 @@ namespace NzbDrone.Core.Datastore
                 return result;
             }
 
-            command.CommandText = $"PRAGMA table_info({Quote(table)});";
+            command.CommandText = $"PRAGMA table_info({Quote(table)});"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table is an identifier escaped by Quote; row data is never interpolated.
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
@@ -2344,21 +2344,21 @@ namespace NzbDrone.Core.Datastore
         private static long CountRows(DbConnection connection, string table)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT COUNT(*) FROM {Quote(table)};";
+            command.CommandText = $"SELECT COUNT(*) FROM {Quote(table)};"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table is an identifier escaped by Quote.
             return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
 
         private static object Scalar(DbConnection connection, string sql)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- callers pass constant migration queries; values use parameters.
             return command.ExecuteScalar();
         }
 
         private static IEnumerable<Dictionary<string, object>> ReadRows(DbConnection connection, string table)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT * FROM {Quote(table)} ORDER BY {Quote("Id")};";
+            command.CommandText = $"SELECT * FROM {Quote(table)} ORDER BY {Quote("Id")};"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table and column are escaped identifiers.
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
@@ -2398,14 +2398,14 @@ namespace NzbDrone.Core.Datastore
             command.Transaction = transaction;
             if (insertValues.Length == 0)
             {
-                command.CommandText = $"INSERT INTO {Quote(table)} DEFAULT VALUES;";
+                command.CommandText = $"INSERT INTO {Quote(table)} DEFAULT VALUES;"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table is an identifier escaped by Quote.
             }
             else
             {
                 var names = insertValues.Select(x => Quote(x.Key)).ToArray();
                 var parameters = insertValues.Select((_, index) => "@p" + index.ToString(CultureInfo.InvariantCulture)).ToArray();
                 var identityOverride = target is NpgsqlConnection ? " OVERRIDING SYSTEM VALUE" : string.Empty;
-                command.CommandText = $"INSERT INTO {Quote(table)} ({string.Join(", ", names)}){identityOverride} VALUES ({string.Join(", ", parameters)});";
+                command.CommandText = $"INSERT INTO {Quote(table)} ({string.Join(", ", names)}){identityOverride} VALUES ({string.Join(", ", parameters)});"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- identifiers are escaped by Quote and row values are bound below.
                 for (var i = 0; i < insertValues.Length; i++)
                 {
                     var column = targetColumns[insertValues[i].Key];

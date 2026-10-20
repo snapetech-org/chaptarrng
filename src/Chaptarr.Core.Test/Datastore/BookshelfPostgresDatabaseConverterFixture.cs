@@ -434,7 +434,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- callers pass fixed test queries; any dynamic values use parameters.
             return Convert.ToInt32(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
         }
 
@@ -443,7 +443,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- callers pass fixed test queries; any dynamic values use parameters.
             return Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
         }
 
@@ -510,7 +510,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "CREATE SCHEMA \"" + schema.Replace("\"", "\"\"", StringComparison.Ordinal) + "\";";
+            command.CommandText = "CREATE SCHEMA \"" + schema.Replace("\"", "\"\"", StringComparison.Ordinal) + "\";"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- schema is a test identifier with embedded quotes escaped.
             command.ExecuteNonQuery();
         }
 
@@ -519,7 +519,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "DROP SCHEMA IF EXISTS \"" + schema.Replace("\"", "\"\"", StringComparison.Ordinal) + "\" CASCADE;";
+            command.CommandText = "DROP SCHEMA IF EXISTS \"" + schema.Replace("\"", "\"\"", StringComparison.Ordinal) + "\" CASCADE;"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- schema is a test identifier with embedded quotes escaped.
             command.ExecuteNonQuery();
         }
 

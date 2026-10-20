@@ -194,7 +194,7 @@ namespace NzbDrone.Core.Datastore
             {
                 using var command = connection.CreateCommand();
                 command.Transaction = transaction;
-                command.CommandText = $"CREATE TABLE {Quote(snapshotSchema)}.{Quote(table)} AS SELECT * FROM {Quote(sourceSchema)}.{Quote(table)};";
+                command.CommandText = $"CREATE TABLE {Quote(snapshotSchema)}.{Quote(table)} AS SELECT * FROM {Quote(sourceSchema)}.{Quote(table)};"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- all interpolated values are escaped SQL identifiers.
                 command.ExecuteNonQuery();
             }
 
@@ -416,7 +416,7 @@ namespace NzbDrone.Core.Datastore
         {
             using var command = connection.CreateCommand();
             SetTransaction(command, transaction);
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- callers use fixed SQL plus identifiers escaped by Quote; data values are parameters.
             command.ExecuteNonQuery();
         }
 

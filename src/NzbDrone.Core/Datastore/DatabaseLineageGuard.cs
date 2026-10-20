@@ -171,9 +171,19 @@ namespace NzbDrone.Core.Datastore
         {
             using var command = connection.CreateCommand();
             command.Transaction = transaction;
-            command.CommandText = databaseType == DatabaseType.SQLite
-                ? $"PRAGMA table_info(\"{tableName}\");"
-                : "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @tableName;";
+            if (databaseType == DatabaseType.SQLite)
+            {
+                command.CommandText = tableName switch
+                {
+                    "Authors" => "PRAGMA table_info(\"Authors\");",
+                    "Books" => "PRAGMA table_info(\"Books\");",
+                    _ => throw new ArgumentOutOfRangeException(nameof(tableName), tableName, "Only lineage tables may be inspected.")
+                };
+            }
+            else
+            {
+                command.CommandText = "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @tableName;";
+            }
 
             if (databaseType == DatabaseType.PostgreSQL)
             {
