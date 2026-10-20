@@ -159,7 +159,6 @@ namespace Chaptarr.Http.Authentication
         {
             var title = request.Query["title"];
             var authorId = request.Query["authorId"];
-            var mediaType = request.Query["mediaType"];
             if (request.Query.Keys.Any(key =>
                     !string.Equals(key, "title", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(key, "authorId", StringComparison.OrdinalIgnoreCase) &&
@@ -168,8 +167,7 @@ namespace Chaptarr.Http.Authentication
                 string.IsNullOrWhiteSpace(title[0]) ||
                 title[0].Length > 256 ||
                 authorId.Count > 1 ||
-                mediaType.Count != 1 ||
-                !string.Equals(mediaType[0], "audiobook", StringComparison.OrdinalIgnoreCase))
+                !HasAudiobookMediaType(request))
             {
                 return false;
             }
@@ -179,8 +177,27 @@ namespace Chaptarr.Http.Authentication
                     parsedAuthorId > 0);
         }
 
+        private static bool HasAudiobookMediaType(HttpRequest request)
+        {
+            var mediaType = request.Query["mediaType"];
+            return mediaType.Count == 1 &&
+                   string.Equals(mediaType[0], "audiobook", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool HasOnlyAudiobookMediaType(HttpRequest request)
+        {
+            return request.Query.Keys.All(key =>
+                       string.Equals(key, "mediaType", StringComparison.OrdinalIgnoreCase)) &&
+                   HasAudiobookMediaType(request);
+        }
+
         private static async Task<bool> IsSafeSeriesNarratorPreferenceAsync(HttpRequest request)
         {
+            if (!HasOnlyAudiobookMediaType(request))
+            {
+                return false;
+            }
+
             if (request.ContentLength == null ||
                 request.ContentLength <= 0 ||
                 request.ContentLength > MaxCommandBodyBytes ||

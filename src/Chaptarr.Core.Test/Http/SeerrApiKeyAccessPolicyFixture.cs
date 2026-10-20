@@ -137,6 +137,10 @@ namespace Chaptarr.Core.Test.Http
             Assert.That(await IsAllowedSeriesNarratorPreferenceAsync(
                 "/series/0/narrators/preferred",
                 "{\"narrator\":\"Jane Doe\",\"applyToAllBooks\":true,\"overrideExisting\":false}"), Is.False);
+            Assert.That(await IsAllowedSeriesNarratorPreferenceAsync(
+                "/series/21/narrators/preferred",
+                "{\"narrator\":\"Jane Doe\",\"applyToAllBooks\":true,\"overrideExisting\":false}",
+                "?mediaType=ebook"), Is.False);
         }
 
         [Test]
@@ -165,7 +169,8 @@ namespace Chaptarr.Core.Test.Http
 
         private static async Task<bool> IsAllowedSeriesNarratorPreferenceAsync(
             string route,
-            string json)
+            string json,
+            string queryString = "?mediaType=audiobook")
         {
             var context = new DefaultHttpContext();
             var bytes = Encoding.UTF8.GetBytes(json);
@@ -173,6 +178,7 @@ namespace Chaptarr.Core.Test.Http
             context.Request.Path = route.StartsWith("/readarr/", StringComparison.OrdinalIgnoreCase)
                 ? route
                 : "/api/v1" + route;
+            context.Request.QueryString = new QueryString(queryString);
             context.Request.ContentType = "application/json";
             context.Request.ContentLength = bytes.Length;
             context.Request.Body = new MemoryStream(bytes);
