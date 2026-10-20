@@ -78,10 +78,11 @@ operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM
 
 The refreshed BookshelfNG source inventory pins `c63eb848` to ChaptarrNG
 application snapshot `29852b13`. It records 1,116 changed paths, 25 reviewed path mappings, and
-467 file dispositions (176 retained, 129 equivalent, 5 ported, and 157 retired: 145 historical
-release-note fragments and 12 BookshelfNG logo assets); 649 paths remain undispositioned. No runtime
+469 file dispositions (176 retained, 129 equivalent, 6 ported, and 158 retired: 145 historical
+release-note fragments, 12 BookshelfNG logo assets, and one obsolete Readarr Azure Pipelines definition); 647 paths remain undispositioned. No runtime
 feature has been approved for retirement. Exact file retention and project reference comparison do not establish
-full feature or runtime parity.
+full feature or runtime parity. The obsolete Readarr contributor stub is
+covered by ChaptarrNG's current guide, and its legacy Azure pipeline is retired.
 
 BookshelfNG audit-tool commit `9fcc0aea` passed Build
 [39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595).

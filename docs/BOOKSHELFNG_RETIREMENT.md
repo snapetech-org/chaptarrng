@@ -60,14 +60,16 @@ and package-sync, security, and release-note checks.
 
 The refreshed path inventory pins BookshelfNG `c63eb848` to ChaptarrNG
 `29852b13`. It covers 679 reachable post-fork commits (670 absent from the
-pinned upstream history) and 1,116 changed paths: 239 paths without mapped targets, 420
+pinned upstream history) and 1,116 changed paths: 239 paths without mapped targets, 408
 undispositioned semantic differences, 176 retained identical paths, 129 equivalent paths (118
 automatically checked C# files, 8 Roslyn-checked C# files, and 3 license/build/documentation files),
-five ported files, 157 archive-only retirements (145 historical release-note fragments and 12
-BookshelfNG logo assets), and two paths absent from the
-Bookshelf snapshot. It records 25 reviewed path mappings and 467 dispositions, leaving 649 paths
+six ported files, 158 non-runtime retirements (145 historical release-note fragments, 12
+BookshelfNG logo assets, and one obsolete Readarr Azure Pipelines definition), and two paths absent from the
+Bookshelf snapshot. It records 25 reviewed path mappings and 469 dispositions, leaving 647 paths
 undispositioned. No runtime feature has been approved for retirement. These are path-level
-decisions; they do not prove feature behavior.
+decisions; they do not prove feature behavior. The old contributor wiki stub is
+covered by ChaptarrNG's guide, and the obsolete Readarr Azure Pipelines definition
+is retired; both paths now have explicit dispositions.
 
 Unraid transition PR [#5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5)
 remains draft at `1261a9f8`. Its exact-head build, template, package-sync,
