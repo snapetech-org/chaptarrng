@@ -25,9 +25,14 @@ The installer requires administrator privileges and performs this sequence:
 4. Run SQLite `PRAGMA integrity_check` against the copied database. The backup
    is retained permanently; the installer does not rotate older backups.
 5. Stage the ChaptarrNG payload outside `bin` and run the non-mutating migration
-   preview with the chosen provider mode. The installer hashes the database,
-   WAL, and rollback journal before and after preview. SQLite rebuilds its
-   transient `-shm` index when the database is reopened, so it is not backed up.
+   preview with the chosen provider mode. A read-only SQLite connection holds
+   `PRAGMA data_version` across preview and operator confirmation, then checks
+   immediately before apply. Raw database, WAL, and rollback-journal
+   fingerprints are captured before opening and after closing that connection;
+   differences are diagnostic when `data_version` is unchanged. Windows may
+   deny direct access to WAL bytes while SQLite holds the connection open.
+   SQLite rebuilds its transient `-shm` index when the database is reopened, so
+   it is not backed up.
 6. Show the preview output in the installer log and require a separate apply
    confirmation.
 7. Apply the migration, replace `bin`, remove the `Readarr` service, and register

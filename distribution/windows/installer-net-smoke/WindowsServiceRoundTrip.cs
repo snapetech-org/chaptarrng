@@ -20,6 +20,7 @@ internal static class WindowsServiceRoundTrip
         "54200ccd62c3f20d71c52144af0bbb38117150ab04c657263ffb9c7cf1391762";
     private const string BookshelfRegistryKey = @"SOFTWARE\ChaptarrNG\BookshelfMigration";
     private const string LocalService = @"NT AUTHORITY\LocalService";
+    private const int MaxArchiveDownloadAttempts = 3;
 
     public static async Task<int> RunAsync()
     {
@@ -218,20 +219,61 @@ internal static class WindowsServiceRoundTrip
     private static async Task DownloadBookshelfArchiveAsync(string destination)
     {
         using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-        using var response = await client.GetAsync(BookshelfArchiveUrl, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        await using (var input = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-        await using (var output = File.Create(destination))
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("ChaptarrNG-Windows-Smoke/1.0");
+
+        for (var attempt = 1; attempt <= MaxArchiveDownloadAttempts; attempt++)
         {
-            await input.CopyToAsync(output).ConfigureAwait(false);
+            try
+            {
+                using var response = await client.GetAsync(
+                    BookshelfArchiveUrl,
+                    HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode &&
+                    attempt < MaxArchiveDownloadAttempts &&
+                    IsTransientArchiveStatus(response.StatusCode))
+                {
+                    Console.WriteLine($"[smoke] BookshelfNG archive download returned HTTP {(int)response.StatusCode}; retrying.");
+                    await Task.Delay(TimeSpan.FromSeconds(attempt * 2)).ConfigureAwait(false);
+                    continue;
+                }
+
+                response.EnsureSuccessStatusCode();
+                await using (var input = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                await using (var output = File.Create(destination))
+                {
+                    await input.CopyToAsync(output).ConfigureAwait(false);
+                }
+
+                await using var archive = File.OpenRead(destination);
+                var actual = Convert.ToHexString(await SHA256.HashDataAsync(archive).ConfigureAwait(false)).ToLowerInvariant();
+                if (!string.Equals(actual, BookshelfArchiveSha256, StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException($"The downloaded BookshelfNG archive checksum did not match the pinned release asset ({actual}).");
+                }
+
+                return;
+            }
+            catch (HttpRequestException exception) when (
+                attempt < MaxArchiveDownloadAttempts &&
+                (!exception.StatusCode.HasValue || IsTransientArchiveStatus(exception.StatusCode.Value)))
+            {
+                Console.WriteLine($"[smoke] BookshelfNG archive download failed ({exception.StatusCode?.ToString() ?? "network error"}); retrying.");
+                await Task.Delay(TimeSpan.FromSeconds(attempt * 2)).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException) when (attempt < MaxArchiveDownloadAttempts)
+            {
+                Console.WriteLine("[smoke] BookshelfNG archive download timed out; retrying.");
+                await Task.Delay(TimeSpan.FromSeconds(attempt * 2)).ConfigureAwait(false);
+            }
         }
 
-        await using var archive = File.OpenRead(destination);
-        var actual = Convert.ToHexString(await SHA256.HashDataAsync(archive).ConfigureAwait(false)).ToLowerInvariant();
-        if (!string.Equals(actual, BookshelfArchiveSha256, StringComparison.Ordinal))
-        {
-            throw new InvalidDataException($"The downloaded BookshelfNG archive checksum did not match the pinned release asset ({actual}).");
-        }
+        throw new InvalidOperationException("The pinned BookshelfNG archive download exhausted its retry attempts.");
+    }
+
+    private static bool IsTransientArchiveStatus(HttpStatusCode statusCode)
+    {
+        var status = (int)statusCode;
+        return statusCode is HttpStatusCode.Forbidden or HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests || status >= 500;
     }
 
     private static void ExtractBookshelfArchive(string archivePath, string destination)

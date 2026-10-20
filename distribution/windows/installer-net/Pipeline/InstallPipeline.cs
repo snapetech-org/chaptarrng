@@ -95,9 +95,9 @@ public static class InstallPipeline
             var chaptarrConsole = Path.Combine(stagingDirectory, "Chaptarr.Console.exe");
             var environment = GetProviderEnvironment(providerMode.Value);
             ui.SetStep("Previewing the migration...", "The source database is checked for changes through operator confirmation.");
+            var sourceFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
             using (var sourceVersionGuard = new SqliteDatabaseVersionGuard(dataDirectory))
             {
-                var sourceFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
                 var previewExit = await ProcessStreamer.RunAsync(
                     chaptarrConsole,
                     new[] { "-preview-bookshelf-migration", $"-data={dataDirectory}" },
@@ -110,8 +110,7 @@ public static class InstallPipeline
                     throw new InvalidOperationException($"The read-only BookshelfNG migration preview exited with code {previewExit}.");
                 }
 
-                var afterPreviewFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
-                EnsureSourceDatabaseUnchanged(sourceVersionGuard, sourceFingerprint, afterPreviewFingerprint, "during preview", ui);
+                EnsureSourceDatabaseUnchanged(sourceVersionGuard, "during preview");
 
                 ui.SetStep("Review the migration preview...", "Read the row report and warnings in the log before continuing.");
                 if (!ui.ConfirmMigrationApply(providerMode.Value, backup.Path))
@@ -119,9 +118,11 @@ public static class InstallPipeline
                     throw new OperationCanceledException("Migration cancelled at the preview review step.", ct);
                 }
 
-                var beforeApplyFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
-                EnsureSourceDatabaseUnchanged(sourceVersionGuard, sourceFingerprint, beforeApplyFingerprint, "while the preview awaited confirmation", ui);
+                EnsureSourceDatabaseUnchanged(sourceVersionGuard, "while the preview awaited confirmation");
             }
+
+            var afterReviewFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
+            LogSourceDatabaseRepresentationChange(sourceFingerprint, afterReviewFingerprint, "during preview and operator review", ui);
 
             ui.SetStep("Applying BookshelfNG data migration...", "This modifies the database after the separate, verified backup.");
             var applyExit = await ProcessStreamer.RunAsync(
@@ -439,20 +440,21 @@ public static class InstallPipeline
 
     private static void EnsureSourceDatabaseUnchanged(
         SqliteDatabaseVersionGuard sourceVersionGuard,
+        string phase)
+    {
+        if (sourceVersionGuard.HasChanged)
+        {
+            throw new InvalidDataException($"BookshelfNG's SQLite database received a committed change {phase}. The installer stopped before apply and will restore the verified backup.");
+        }
+    }
+
+    private static void LogSourceDatabaseRepresentationChange(
         SqliteDatabaseFingerprint.Snapshot initialFingerprint,
         SqliteDatabaseFingerprint.Snapshot currentFingerprint,
         string phase,
         IUiReporter ui)
     {
         var changedFiles = SqliteDatabaseFingerprint.GetChangedFiles(initialFingerprint, currentFingerprint);
-        if (sourceVersionGuard.HasChanged)
-        {
-            var changedFileDetails = changedFiles.Count == 0
-                ? string.Empty
-                : " Changed files: " + string.Join(", ", changedFiles) + ".";
-            throw new InvalidDataException($"BookshelfNG's SQLite database received a committed change {phase}.{changedFileDetails} The installer stopped before apply and will restore the verified backup.");
-        }
-
         if (!string.Equals(initialFingerprint.Hash, currentFingerprint.Hash, StringComparison.Ordinal))
         {
             ui.Log($"[pipeline] SQLite file representation changed {phase} ({string.Join(", ", changedFiles)}), but PRAGMA data_version did not change; no committed source database change was detected.");
