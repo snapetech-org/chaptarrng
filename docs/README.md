@@ -13,6 +13,7 @@ installation choices.
 
 ## Features and integrations
 
+- [Author metadata refresh](AUTHOR_METADATA_REFRESH.md): freshness rules, book-added behavior, and Hardcover request pacing.
 - [Fork feature guide](FORK_FEATURES.md): ChaptarrNG capabilities, compatibility notes, and retirement matrix.
 - [SeerrNG integration](SEERRNG_INTEGRATION.md): discovery, supported API routes, service-key restrictions, and validation.
 - [BookLore and BookOrbit](BOOKLORE_INTEGRATION.md): BookDrop uploads and the separate Book Dock destination.

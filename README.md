@@ -72,6 +72,11 @@ webpack build pass. Repository-wide ESLint and Stylelint still report 833 and
 module ordering warnings. The release freeze remains
 active and this source does not approve production cutover.
 
+Current `main` also applies the author freshness policy to book-added events
+while retaining the author-scoped folder rescan, even when metadata is skipped
+or unchanged. See the [author metadata refresh guide](docs/AUTHOR_METADATA_REFRESH.md).
+This source update is not in `v0.9.977` and has not passed its hosted build yet.
+
 The HTTP security controls remain source-only: explicit trusted proxies and
 CORS origins, per-client request limits, a bounded body size, query-key
 controls, and a restricted SeerrNG key with route-level authorization. Existing

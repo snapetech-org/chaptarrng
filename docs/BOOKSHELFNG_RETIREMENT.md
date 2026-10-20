@@ -36,6 +36,15 @@ BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public
 releases. No release, package, image, installer, or migration bridge was
 published. The source is not approved for production cutover.
 
+Current ChaptarrNG `main` now applies the author freshness policy to
+book-added events while retaining the author-scoped rescan when metadata is
+skipped or unchanged. This keeps the remote metadata fetch bounded without
+dropping the scan that can discover files already on disk. The behavior is
+source-only and has not passed hosted exact-head validation; see the
+[author metadata refresh guide](AUTHOR_METADATA_REFRESH.md). The legacy
+source's complete author metadata policy is documented in
+[BookshelfNG's author refresh guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/author-metadata-refresh.md).
+
 The current ChaptarrNG `main` source also ports BookshelfNG's HTTP boundary
 controls: explicitly trusted proxy IPs/CIDRs, opt-in CORS origins, per-client
 fixed-window API rate limits, a configurable 16 MiB default request-body cap,
