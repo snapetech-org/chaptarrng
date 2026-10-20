@@ -38,6 +38,11 @@ function Stop-And-DeleteService([string] $Name) {
         }
     }
 
+    # ServiceController retains a handle that keeps a deleted service marked
+    # for deletion until it is disposed. Release it before waiting for removal.
+    $service.Dispose()
+    $service = $null
+
     Write-Host "Removing $Name service registration..."
     & sc.exe delete $Name | Out-Null
     if ($LASTEXITCODE -ne 0) {
