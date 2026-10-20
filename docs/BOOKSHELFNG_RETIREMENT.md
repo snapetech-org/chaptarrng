@@ -18,11 +18,13 @@ published. The source is not approved for production cutover.
 The current ChaptarrNG `main` source also ports BookshelfNG's HTTP boundary
 controls: explicitly trusted proxy IPs/CIDRs, opt-in CORS origins, per-client
 fixed-window API rate limits, a configurable 16 MiB default request-body cap,
-and the request-correlation response header. ChaptarrNG settings take
-precedence while the legacy `Readarr:Server` keys remain accepted. The backup
-restore endpoint keeps its separate 1 GiB upload allowance. This source change
-is not in the public `.977` release; the release freeze and production
-acceptance gates remain in force. See the
+the request-correlation response header, and a switch to disable API-key query
+authentication. `CHAPTARR__AUTH__ALLOWAPIKEYQUERY=false` rejects `?apikey=`;
+when unset, `BOOKSHELF_ALLOW_API_KEY_QUERY=false` remains supported. ChaptarrNG
+settings take precedence while the legacy `Readarr:Server` keys remain
+accepted. The backup restore endpoint keeps its separate 1 GiB upload
+allowance. This source change is not in the public `.977` release; the release
+freeze and production acceptance gates remain in force. See the
 [HTTP security settings](HTTP_SECURITY.md).
 
 Current ChaptarrNG `main` also accepts raw `.db` and `.xml` BookshelfNG backup

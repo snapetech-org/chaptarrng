@@ -21,6 +21,18 @@ If both namespaces define a value, the `CHAPTARR` value takes precedence.
 `READARR__SERVER__REQUESTSPERMINUTE`, and
 `READARR__SERVER__MAXREQUESTBODYSIZE` remain accepted for migration.
 
+## API key query compatibility
+
+API keys are accepted from the `X-Api-Key` or `Authorization: Bearer` header.
+For older clients, `?apikey=` query authentication remains enabled by default.
+Set `CHAPTARR__AUTH__ALLOWAPIKEYQUERY=false` to reject API keys in query
+strings. If that ChaptarrNG setting is unset, the legacy
+`BOOKSHELF_ALLOW_API_KEY_QUERY=false` variable is honored. An explicit
+ChaptarrNG setting takes precedence. This switch only disables the `apikey`
+query parameter; SignalR's `access_token` query remains supported. Query-string
+credentials can persist in browser history and proxy logs, so use a header and
+HTTPS when possible.
+
 ## Trusted proxies
 
 `TRUSTEDPROXIES` is empty by default. Each entry must be an IP address or CIDR
