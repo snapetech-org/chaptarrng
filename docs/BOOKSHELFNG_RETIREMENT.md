@@ -63,8 +63,9 @@ The refreshed path inventory pins BookshelfNG `c63eb848` to ChaptarrNG
 pinned upstream history) and 1,116 changed paths: 239 paths without mapped targets, 420
 undispositioned semantic differences, 176 retained identical paths, 129 equivalent paths (118
 automatically checked C# files, 8 Roslyn-checked C# files, and 3 license/build/documentation files),
-five ported files, 145 approved archive-only release-note retirements, and two paths absent from the
-Bookshelf snapshot. It records 25 reviewed path mappings and 455 dispositions, leaving 661 paths
+five ported files, 157 archive-only retirements (145 historical release-note fragments and 12
+BookshelfNG logo assets), and two paths absent from the
+Bookshelf snapshot. It records 25 reviewed path mappings and 467 dispositions, leaving 649 paths
 undispositioned. No runtime feature has been approved for retirement. These are path-level
 decisions; they do not prove feature behavior.
 

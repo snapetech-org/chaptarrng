@@ -78,9 +78,9 @@ operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM
 
 The refreshed BookshelfNG source inventory pins `c63eb848` to ChaptarrNG
 application snapshot `29852b13`. It records 1,116 changed paths, 25 reviewed path mappings, and
-455 file dispositions (176 retained, 129 equivalent, 5 ported, and 145 approved archive-only
-release-note retirements), with 661 paths still requiring disposition. No runtime feature has been
-approved for retirement. Exact file retention and project reference comparison do not establish
+467 file dispositions (176 retained, 129 equivalent, 5 ported, and 157 retired: 145 historical
+release-note fragments and 12 BookshelfNG logo assets); 649 paths remain undispositioned. No runtime
+feature has been approved for retirement. Exact file retention and project reference comparison do not establish
 full feature or runtime parity.
 
 BookshelfNG audit-tool commit `9fcc0aea` passed Build
