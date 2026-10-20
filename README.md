@@ -56,8 +56,28 @@ and push checks passed; the release-note contract was skipped for that
 docs-only source update. The merged code remains unpublished and is not
 approved for operator cutover.
 
-The refreshed BookshelfNG source inventory pins `c63eb848` to this ChaptarrNG
-target snapshot. It records 1,116 changed paths, 25 reviewed path mappings, and
+The HTTP security controls and regression fixtures are now on `main` at
+`29852b13`. The first exact-head run on `36623faf` found missing test imports
+and an incorrect attribute property. Follow-up `aac32822` fixed the imports;
+its Build exposed that request-size metadata is an explicit interface, now
+handled in `29852b13`. Exact-head Build
+[39394240337](https://github.com/snapetech-org/chaptarrng/actions/runs/39394240337)
+passed Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
+reconciliation. Security analysis, Semgrep CE, Trivy, and dependency submission
+also passed. The release-note contract was skipped because no release was
+prepared. These source-only changes are not in `.977`, and the release freeze
+remains in force.
+
+The exact-head Linux artifact passed a populated synthetic migration and
+SeerrNG smoke: normal startup converted the checked-in BookshelfNG schema-158
+fixture to schema 121 and retained an integrity-checked source backup;
+SeerrNG read both migrated formats and verified provider identities, restricted
+key access, and the pending-import cancel lifecycle. The `.m4b` and `.epub`
+files are placeholders, so this does not establish media processing or
+operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM_BOOKSHELFNG.md#exact-head-artifact-migration-and-seerrng-smoke-2026-10-20).
+
+The refreshed BookshelfNG source inventory pins `c63eb848` to ChaptarrNG
+application snapshot `29852b13`. It records 1,116 changed paths, 25 reviewed path mappings, and
 180 file dispositions (176 retained, 4 ported), with 936 paths still requiring
 semantic review and no approved retirements. Exact file retention and project
 reference comparison do not establish full feature or runtime parity.

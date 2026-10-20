@@ -137,6 +137,24 @@ source-build evidence; it does not establish operator-data acceptance,
 representative M4B compatibility, pre-14 schemas, PostgreSQL operator data, or
 installed channel/rollback acceptance. No release or bridge was published.
 
+## Exact-head artifact migration and SeerrNG smoke (2026-10-20)
+
+Build [39394240337](https://github.com/snapetech-org/chaptarrng/actions/runs/39394240337)
+passed Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
+reconciliation. The Windows job passed the migration installer upgrade and
+rollback smoke. Its Linux artifact ran from application snapshot
+`29852b1334ee049e30de84b44806932a3e9364f4`. The checked-in schema-158
+BookshelfNG fixture converted on normal startup to schema 121, and the retained
+schema-158 backup and converted database both passed SQLite integrity checks.
+
+SeerrNG `ce632a6e6834fe094eb24ceda9b8a388472cc23e` read both migrated formats
+through `ReadarrAPI`, checked their Hardcover identities, exercised the
+restricted/global API-key boundary, and ran the synthetic pending-import
+create/poll/cancel lifecycle. This does not test real media, successful
+provider fulfillment, operator records, PostgreSQL operator data, or installed
+rollback. The `.m4b` and `.epub` fixture files are placeholders. No release or
+bridge was published.
+
 ## Earlier source-build request-lifecycle run (2026-10-19)
 
 The prior checked-in Compose run built ChaptarrNG PR #131 head

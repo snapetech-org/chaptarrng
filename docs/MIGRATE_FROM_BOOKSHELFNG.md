@@ -695,6 +695,36 @@ Hardcover identity; none were assigned Goodreads IDs. Keep the release freeze
 and production cutover restrictions in place; the candidate is not a published
 migration tool.
 
+## Exact-head artifact migration and SeerrNG smoke (2026-10-20)
+
+The Linux artifact from ChaptarrNG Build
+[39394240337](https://github.com/snapetech-org/chaptarrng/actions/runs/39394240337)
+was run from the current application snapshot
+`29852b1334ee049e30de84b44806932a3e9364f4`. A task-scoped config and library
+were seeded from the checked-in BookshelfNG schema-158 fixture. Normal startup
+converted the database to ChaptarrNG schema 121 and retained a schema-158
+BookshelfNG backup. Both databases passed `PRAGMA integrity_check`; the app
+reported `0.9.978.0`.
+
+SeerrNG at source commit
+[`ce632a6e6834fe094eb24ceda9b8a388472cc23e`](https://github.com/snapetech-org/seerrng/commit/ce632a6e6834fe094eb24ceda9b8a388472cc23e)
+read the migrated audiobook and ebook through its real `ReadarrAPI` adapter
+and verified their Hardcover identities. The restricted key read capabilities
+and both format libraries, was denied administrative and unrelated command
+routes, and the global key retained administrative access. ChaptarrNG's
+`integration/seerrng-request-lifecycle.mjs` then created, polled, and cancelled
+a synthetic pending import, which remained queryable in its terminal state.
+
+This uses only synthetic records. The `.m4b` and `.epub` files are placeholders,
+so it does not test media decoding, file access, provider fulfillment, operator
+data, PostgreSQL operator data, or installed rollback. The Build's Windows
+installer test is tracked separately in the exact-head validation section.
+Build [39394240337](https://github.com/snapetech-org/chaptarrng/actions/runs/39394240337)
+passed Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
+reconciliation. The Windows job passed the installer fingerprint, service
+upgrade/rollback, cleanup, and selected-data-directory checks. No release or
+compatibility bridge was published.
+
 ## Historical populated-database rehearsal (2026-10-14)
 
 The ordinary Linux/amd64 ChaptarrNG image was exercised against an isolated

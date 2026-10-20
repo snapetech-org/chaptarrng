@@ -42,6 +42,10 @@ configuration and SeerrNG integration, see the
 [ChaptarrNG README](https://github.com/snapetech-org/chaptarrng#readme) and the
 [SeerrNG Bookshelf backend guide](https://github.com/snapetech-org/seerrng/blob/main/docs/using-seerr/bookshelf-backend.md).
 
+For builds that include the current main HTTP controls, see the
+[HTTP security settings](../../docs/HTTP_SECURITY.md). These controls are not
+available in the published `v0.9.977` image.
+
 ## Source and support
 
 - [ChaptarrNG application source](https://github.com/snapetech-org/chaptarrng)

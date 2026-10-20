@@ -25,6 +25,24 @@ is not in the public `.977` release; the release freeze and production
 acceptance gates remain in force. See the
 [HTTP security settings](HTTP_SECURITY.md).
 
+The regression fixture first failed on exact-head commit `36623faf` because
+of missing imports and an incorrect attribute property. Follow-up `aac32822`
+fixed the imports but exposed the explicit request-size metadata interface;
+`29852b13` now reads `IRequestSizeLimitMetadata.MaxRequestBodySize`. Exact-head
+Build [39394240337](https://github.com/snapetech-org/chaptarrng/actions/runs/39394240337)
+passed Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
+reconciliation. Windows passed the installer fingerprint, service upgrade,
+rollback, cleanup, and selected-data-directory checks. Security analysis,
+Semgrep CE, Trivy, and dependency submission passed; no release-note job ran
+because no release was prepared.
+
+The Linux artifact from that exact head converted the checked-in synthetic
+schema-158 database on normal startup to schema 121 and retained an
+integrity-checked source backup. SeerrNG read both migrated formats, verified
+Hardcover identities and restricted-key boundaries, and completed a synthetic
+pending-import cancellation. The fixture media files are placeholders; this
+is not operator-data or media-processing acceptance.
+
 ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
 passed exact-head Build
 [39387591772](https://github.com/snapetech-org/chaptarrng/actions/runs/39387591772)
@@ -41,7 +59,7 @@ Unraid main `296caed2` passed CI
 and package-sync, security, and release-note checks.
 
 The refreshed path inventory pins BookshelfNG `c63eb848` to ChaptarrNG
-`3254c15b`. It covers 679 reachable post-fork commits (670 absent from the
+`29852b13`. It covers 679 reachable post-fork commits (670 absent from the
 pinned upstream history) and 1,116 changed paths: 377 unmapped, 557 needing
 semantic review, 176 identical, four renamed project files ported after review,
 and two paths absent from the Bookshelf snapshot. It records 25 reviewed path
