@@ -212,6 +212,9 @@ jobs:
     - name: Test Books list both-format filtering
       run: node --test frontend/src/Book/Index/getBookIndexQuery.test.cjs
 
+    - name: Test book infinite-scroll id deduplication
+      run: node --test frontend/src/Store/Reducers/bookInfiniteScrollReducer.test.cjs
+
     - name: Test client-side collection equality
       run: node --test frontend/src/Utilities/Object/clientSideCollectionEqual.test.cjs
 

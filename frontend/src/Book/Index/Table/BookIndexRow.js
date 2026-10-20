@@ -410,6 +410,7 @@ class BookIndexRow extends Component {
         <EditAuthorModalConnector
           isOpen={isEditAuthorModalOpen}
           authorId={authorId}
+          initialMediaType={rowMediaType}
           onModalClose={this.onEditAuthorModalClose}
           onDeleteAuthorPress={this.onDeleteAuthorPress}
         />
