@@ -133,14 +133,19 @@ internal static class WindowsServiceRoundTrip
             var sourceDatabase = Path.Combine(dataDirectory, "readarr.db");
             AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "BookshelfNG source startup");
             AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "BookshelfNG source data");
-            await StopServiceAsync(ServiceLifecycle.BookshelfServiceName).ConfigureAwait(false);
-
             Console.WriteLine("[smoke] Injecting an HTTP port conflict to exercise automatic installer rollback...");
             using (var blocker = new TcpListener(IPAddress.Loopback, GetConfiguredHttpPort(dataDirectory)))
             using (var releaseCancellation = new CancellationTokenSource())
             {
-                blocker.Start();
-                var releaseBlocker = ReleasePortBlockerAfterChaptarrStopsAsync(blocker, releaseCancellation.Token);
+                var blockerStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var startBlocker = StartPortBlockerAfterBookshelfStopsAsync(
+                    blocker,
+                    blockerStarted,
+                    releaseCancellation.Token);
+                var releaseBlocker = ReleasePortBlockerAfterChaptarrStopsAsync(
+                    blocker,
+                    blockerStarted.Task,
+                    releaseCancellation.Token);
                 InstallOutcome failedUpgrade;
                 try
                 {
@@ -148,8 +153,10 @@ internal static class WindowsServiceRoundTrip
                 }
                 finally
                 {
-                    blocker.Stop();
                     releaseCancellation.Cancel();
+                    blocker.Stop();
+                    try { await startBlocker.ConfigureAwait(false); }
+                    catch (OperationCanceledException) { }
                     try { await releaseBlocker.ConfigureAwait(false); }
                     catch (OperationCanceledException) { }
                 }
@@ -182,6 +189,7 @@ internal static class WindowsServiceRoundTrip
             {
                 throw new InvalidOperationException("The installer upgrade pipeline failed: " + upgrade.ErrorMessage);
             }
+            AssertBookshelfWasRunningAtUpgrade(expected: true, "successful migration handoff");
 
             var migrationBackupDatabase = Path.Combine(upgrade.BackupPath, "readarr.db");
             AssertLineage(migrationBackupDatabase, DatabaseLineageKind.BookshelfNG, "retained migration backup");
@@ -489,10 +497,39 @@ internal static class WindowsServiceRoundTrip
         return int.TryParse(portText, out var port) && port is > 0 and <= 65535 ? port : 8787;
     }
 
-    private static async Task ReleasePortBlockerAfterChaptarrStopsAsync(
+    private static async Task StartPortBlockerAfterBookshelfStopsAsync(
         TcpListener blocker,
+        TaskCompletionSource<bool> blockerStarted,
         CancellationToken cancellationToken)
     {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            if (ServiceLifecycle.TryGetStatus(ServiceLifecycle.BookshelfServiceName) == ServiceControllerStatus.Stopped)
+            {
+                try
+                {
+                    blocker.Start();
+                    blockerStarted.TrySetResult(true);
+                    Console.WriteLine("[smoke] BookshelfNG has stopped; holding its HTTP port to force Chaptarr health-check rollback.");
+                    return;
+                }
+                catch (SocketException)
+                {
+                    // The service can report STOPPED just before Windows releases its listener.
+                    blocker.Stop();
+                }
+            }
+
+            await Task.Delay(25, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task ReleasePortBlockerAfterChaptarrStopsAsync(
+        TcpListener blocker,
+        Task blockerStarted,
+        CancellationToken cancellationToken)
+    {
+        await blockerStarted.WaitAsync(cancellationToken).ConfigureAwait(false);
         var sawChaptarrRunning = false;
         while (!cancellationToken.IsCancellationRequested)
         {
