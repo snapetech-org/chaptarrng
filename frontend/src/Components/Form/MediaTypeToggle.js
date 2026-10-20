@@ -49,6 +49,7 @@ function MediaTypeToggle(props) {
       <SegmentedToggle
         value={effectiveMediaType}
         options={options}
+        ariaLabel={translate('Format')}
         onChange={onMediaTypeChange}
       />
       {children}

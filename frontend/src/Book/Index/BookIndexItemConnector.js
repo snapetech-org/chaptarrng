@@ -57,7 +57,7 @@ function createMapStateToProps() {
   return (state, ownProps) => {
     // Get book from props or state (compute only once)
     const bookId = ownProps.bookId ?? ownProps.id;
-    const book = ownProps.book || (bookId != null ? selectBook(state, { bookId }) : undefined);
+    const book = ownProps.book || selectBook(state, { bookId });
 
     if (!book) {
       return EMPTY_RESULT;
