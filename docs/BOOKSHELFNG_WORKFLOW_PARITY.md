@@ -11,13 +11,13 @@ representative library, or installed build.
 
 | User task | ChaptarrNG source and affordance | Remaining end-user acceptance |
 | --- | --- | --- |
-| Get a new instance ready | System > Quickstart checks format roots, profiles, indexers, clients, and optional integrations. Settings now groups destinations by Library, Search, Connect, General, and System, with Quickstart linked from both Settings and System. | Walk through a clean setup on desktop and mobile, including missing roots, an empty indexer list, and a failed provider test. |
+| Get a new instance ready | System > Quickstart checks format roots, profiles, indexers, clients, and optional integrations. It has direct setup flows for MyAnonamouse and Hardcover and shows Calibre and AudioBookShelf when relevant. Settings now groups destinations by Library, Search, Connect, General, and System, with Quickstart linked from both Settings and System. | Walk through a clean setup on desktop and mobile, including missing roots, an empty indexer list, and a failed provider test. |
 | Choose the default format for new items | Add New dialogs share a saved default format. Users can change it in Settings > UI or with **Set as default** in an add dialog; individual items can still override it. | Verify persistence after reload and confirm author, book, and series dialogs all start with the saved value. |
-| Add an author, book, or series | All three flows support audiobook, ebook, or both where relevant; root folders and quality profiles are visible first, with monitoring, metadata, and tags under **More options**. Missing setup links to Quickstart. Root-folder loading failures show a retry. | Exercise each format, both formats, saved defaults, one-item overrides, missing roots/profiles, existing-author book adds, and add failures. |
+| Add an author, book, or series | All three flows support audiobook, ebook, or both where relevant; root folders and quality profiles are visible first, with monitoring, metadata, and tags under **More options**. Missing setup links to Quickstart. Root-folder loading failures show a retry. Author profile editors can reset either format's quality and metadata profiles to the selected root folder's current defaults. | Exercise each format, both formats, saved defaults, one-item overrides, profile reset for one format while preserving the other, missing roots/profiles, existing-author book adds, and add failures. |
 | Find a title in the catalog | Add New has provider selection, result filtering, and submit-to-search by default; Search as you type is optional. Query changes and clearing cancel stale requests. | Check first search, Enter, repeated same-query search, preference persistence, provider errors, and clearing during a slow request. |
-| Browse and understand the library | Authors, Books, Bookshelf, Calendar, and Unmapped Files are reachable from Library. The Books index has a saved **Both** filter with a format label on each record; editing an author from a book row opens the matching format tab. Bookshelf groups recognized same-work records. Book details include edition and narration information; series details compare narrators and volumes. Failed bookshelf loads have a retry action. | Browse a representative mixed-format library on narrow and wide screens; check empty, loading, retry after a failed request, partial-metadata, and no-file states. |
+| Browse and understand the library | Authors, Books, Bookshelf, Calendar, and Unmapped Files are reachable from Library. The Books index has a saved **Both** filter with a format label on each record; editing an author from a book row opens the matching format tab. Bookshelf groups recognized same-work records. Book details include edition and narration information; series details compare narrators and volumes. Failed bookshelf loads and desktop book-overview cards have a retry action; small screens skip hidden overview requests. Edition lists and narrator comparisons discard responses from a previous title; delete confirmation only uses sibling-format details for the selected book. | Browse a representative mixed-format library on narrow and wide screens; check empty, loading, retry after a failed request, partial-metadata, and no-file states. |
 | See ebooks and audiobooks together in Books | The Books index **Both** filter lists every audiobook and ebook as its own record and shows its format label. Monitoring, status, narrator controls, and quality profiles use that record's format. | Verify paging, custom filters, sort order, per-format profiles, monitoring labels, selected-row edits, and reload persistence across both formats. |
-| See related ebooks and audiobooks together in Bookshelf | Bookshelf's **Formats** view loads both formats in one pass, groups records only when canonical Hardcover, Goodreads, or Open Library work IDs match, and leaves unrelated or unidentified records separate. Each format keeps its own progress, detail link, and monitor toggle; bulk monitoring applies to both. | Check matched, unmatched, duplicate-edition, missing-ID, and provider-alias records; switch formats repeatedly, reload the page, retry failures, and confirm bulk and per-book monitoring. |
+| See related ebooks and audiobooks together in Bookshelf | Bookshelf's **Formats** view loads both formats in one pass, groups records only when canonical Hardcover, Goodreads, or Open Library work IDs match, and leaves unrelated or unidentified records separate. Each format keeps its own progress, detail link, and monitor toggle; bulk monitoring applies to both. Bulk failures show the server error and preserve the selection for retry; per-book failures produce an error notification. | Check matched, unmatched, duplicate-edition, missing-ID, and provider-alias records; switch formats repeatedly, reload the page, retry failures, and confirm bulk and per-book monitoring. |
 | Move between the ebook and audiobook for the same work | Search results link to tracked records in each format. Book details label both formats, link to same-work records, and offer the missing format in the standard add modal when the work and author have provider IDs. The add action appears only after the server confirms no same-work record exists. | Confirm identity matching never links unrelated works; test duplicate editions, missing identity, endpoint failure/retry, and successful add against real catalog data. |
 | Decide what to monitor | Add flows and author/book editors expose per-format monitoring, initial-book monitoring, and future-book policies. In **Formats**, each book keeps its own monitor toggle and the bulk action applies to both formats. Wanted has Missing and Cutoff Unmet pages. | Confirm per-book changes affect only one format, bulk changes affect both, and automatic searches honor the chosen monitoring state. |
 | Search and grab a release | Book actions offer automatic and interactive release search. Series rows can search for a pack and send files to Manual Import. Direct Download provides an ebook-only source path. | With a supported indexer and client, search, inspect, grab, retry, and import representative audiobook and ebook releases. |
@@ -26,9 +26,10 @@ representative library, or installed build.
 | Import or recover files | Manual Import and Unmapped Files provide review paths. Pending-author imports retain requested books and formats while author preparation retries; retry and cancellation are exposed. | Validate ambiguous matches, multi-file assignment, provider failure, shared requests, retry, and cancellation against representative files. |
 | Organize files safely | Media-management settings configure roots and naming. Format-aware move/retag workflows preview affected files, check destination conflicts, and preserve linked sidecars. | Exercise preview, copy/move, mixed roots, collisions, interrupted moves, external files, and a large library. |
 | Automate from lists | Import Lists supports Preview Next Sync and per-list sync history, including read-only preview counts and provider-state commit status. | Test supported list providers with an unchanged saved configuration, then compare preview with a later scheduled sync. |
-| Connect external tools and services | Settings > Connect, Metadata, Indexers, Download Clients, and Import Lists expose providers. The SeerrNG contract has capability discovery and format-aware operations; request dispatch qualifies numeric provider work IDs, and Editions/Narrations failures offer a visible retry. | Focused regressions now cover bare numeric Hardcover lookup IDs through the format facade and plus-encoded series titles through the restricted-key policy. Still verify saved credentials, notifications, request fulfillment with a live provider, reverse proxies, and unchanged clients. |
+| Connect external tools and services | Settings > Connect, Metadata, Indexers, Download Clients, and Import Lists expose providers. Quickstart opens MyAnonamouse and Hardcover setup. Calibre-backed roots, Calibre Content Server, AudioBookShelf library mappings, and per-format AudioBookShelf sidecars are documented in [external library integrations](EXTERNAL_LIBRARY_INTEGRATIONS.md). BookLore and BookOrbit remain separate destinations with separate login guidance. The SeerrNG contract has capability discovery and format-aware operations; request dispatch qualifies numeric provider work IDs, and Editions/Narrations failures offer a visible retry. | Focused regressions cover bare numeric Hardcover lookup IDs through the format facade and plus-encoded series titles through the restricted-key policy. Still verify saved credentials, notifications, request fulfillment with live providers, reverse proxies, and unchanged clients. |
+| Deliver imported books to reader apps | Settings > Connect offers BookLore BookDrop and BookOrbit Book Dock as separate upload destinations. Each has its own URL and account; imports retain their source files, and uploads are sequential. The [BookLore integration guide](BOOKLORE_INTEGRATION.md) explains partial-batch behavior and keeps migrated BookLore credentials attached to BookLore. | Verify each destination with a real account, including rejected files and partial retries. Confirm a migrated BookLore connection is left intact when adding BookOrbit. |
 | Back up and restore | System > Backup supports the app’s scheduled and portable backup paths; current source includes BookshelfNG archive restore and encrypted export/restore. | Restore a representative backup, verify profiles and settings, test wrong-passphrase and rollback paths, and confirm no secret values appear in logs. |
-| Diagnose and maintain the service | System exposes Status, Tasks, Updates, Events, and Log Files; optional metrics and MQTT have separate settings and docs. | Check service restart, task failure, log access, metrics, MQTT discovery, and recovery on the target installation. |
+| Diagnose and maintain the service | System exposes Status, Tasks, Updates, Events, and Log Files; optional metrics and MQTT have separate settings and docs. Update details render distinct change notes and link issue numbers. | Check service restart, task failure, log access, metrics, MQTT discovery, and recovery on the target installation. |
 
 ## Feature-level crosswalk
 
@@ -38,7 +39,7 @@ and keeps source presence separate from end-user acceptance.
 
 | User-facing capability | ChaptarrNG path | End-user acceptance still needed |
 | --- | --- | --- |
-| Set up audiobook and ebook libraries independently | System > Quickstart, Settings > Media Management, and the per-format author editor configure roots, quality profiles, metadata profiles, and defaults. Edit Author actions from Overview, Posters, and Table rows open with that row's media type. ChaptarrNG stores formats as separate records; Bookshelf > Formats brings recognized same-work records together. | Walk through ebook-only, audiobook-only, and mixed setups. Open Edit Author from audiobook and ebook rows in each view and verify the correct format is selected and its roots/profiles stay independent. Confirm default-root/profile inheritance, explicit per-author overrides, and that one format’s settings never change the other. |
+| Set up audiobook and ebook libraries independently | System > Quickstart, Settings > Media Management, and the per-format author editor configure roots, quality profiles, metadata profiles, and defaults. Edit Author actions from Overview, Posters, and Table rows open with that row's media type. Author profile editors can reset one format to its selected root folder's current defaults. ChaptarrNG stores formats as separate records; Bookshelf > Formats brings recognized same-work records together. | Walk through ebook-only, audiobook-only, and mixed setups. Open Edit Author from audiobook and ebook rows in each view and verify the correct format is selected and its roots/profiles stay independent. Confirm default-root/profile inheritance, explicit per-author overrides, reset one format while preserving the other, and that one format's settings never change the other. |
 | Choose catalog sources and edition-matching preferences | Settings > Metadata and Settings > Profiles > Metadata configure enabled catalogs, field preferences, language filters, weighted edition terms, and preferred series. | Save and reload choices, then compare real catalog results for language, preferred series, narrator/publisher evidence, and missing metadata. |
 | Search by title or identifier | Add New supports provider selection, submit-to-search, optional search-as-you-type, and ISBN/ASIN/provider-ID matching. Existing work and edition IDs retain their provider namespace. | Exercise first and repeated searches, clearing a slow query, same-query resubmission, identifier collisions, provider errors, and preference persistence in a browser. |
 | Review editions and narrators before choosing | Book details expose Editions and Narrations; series details compare narrators across volumes. Edition cards retain language, format, narrator, ownership, and monitoring context when the provider supplies them. | Use real provider records with incomplete and conflicting metadata. Confirm unknown details remain unknown and retries recover after an endpoint failure. |
@@ -50,7 +51,8 @@ and keeps source presence separate from end-user acceptance.
 | Merge and preserve audiobook chapters | Quality profiles can opt into multipart M4B merging; conversion preserves tagged track order and chapter metadata, reports progress, and has a safe fallback. | Verify representative M4B and MP3 media in Move and Copy modes, including chapter edits, failure recovery, cancellation, and restart/resume. Synthetic fixtures do not close this check. |
 | Move files or change format-specific storage safely | Author and bulk editors provide previewable format-aware moves, collision checks, root containment, and registered-sidecar handling. Unknown files stay outside the move. | Review preview completeness, cross-device moves, collisions, partial-failure rollback, external files, and a large mixed-format library. |
 | Automate additions from lists and notifications | Settings > Import Lists supports Goodreads and Hardcover sources, preview, exclusions, and durable sync history; notification settings include list and import events. | Verify existing Goodreads credentials and Hardcover list responses, private/owned-list behavior, notification delivery, rollback, and secret redaction. |
-| Connect library, reader, and delivery services | Settings > Connect and Notifications configure AudioBookShelf, Calibre, Grimmory, BookLore BookDrop, BookOrbit Book Dock, and Emby/Jellyfin workflows. Each integration keeps its own direction and file-ownership rules. | Connect real services and confirm uploads, refreshes, metadata direction, partial-batch recovery, supported file types, and no duplicate processing. |
+| Configure providers and media-library services | Quickstart offers MyAnonamouse and Hardcover setup; Settings > Indexers and Metadata hold the saved provider choices. Calibre-backed roots and Calibre Content Server are separate workflows. AudioBookShelf maps each ChaptarrNG root and format to a library, with optional metadata/cover sidecars and push controls. See [external library integrations](EXTERNAL_LIBRARY_INTEGRATIONS.md). | Use existing saved connections and fresh setup to verify test failures are actionable, ebook/audiobook destinations stay distinct, and each provider keeps its data-ownership direction. |
+| Deliver imports to reader apps | BookLore sends imported files to BookDrop; BookOrbit sends them to Book Dock through a separately configured connection. The [integration guide](BOOKLORE_INTEGRATION.md) describes authentication, supported actions, partial-batch errors, and why BookLore settings are not rewritten as BookOrbit credentials. | Verify upload, file retention, partial rejection, retry, and migrated settings against real BookLore and BookOrbit accounts; do not treat API-level checks as full book-processing acceptance. |
 | Request and monitor books through SeerrNG | The restricted SeerrNG API exposes capabilities, format-scoped libraries, edition/narrator data, and pending-import actions without granting global administration. | Synthetic migrated-record reads and request create/poll/cancel pass. Still verify successful acquisition, retries, availability/history, reverse proxies, and unchanged production settings with live services. |
 | Restore a portable or encrypted backup | System > Backup handles scheduled archives, encrypted portable archives, and recognized BookshelfNG restores; unsupported or unsafe inputs fail closed. | Restore a representative backup and profiles, check wrong passphrases and tampering, exercise rollback, and confirm secrets stay out of logs. |
 | Diagnose and operate the installation | System > Status, Tasks, Events, and Log Files expose operational state; MQTT, Prometheus, and aggregate diagnostics are optional integrations. | Check the installed service’s permissions, restart and failure recovery, metrics/events, diagnostics opt-in, and log redaction. |
@@ -62,26 +64,48 @@ accepted by this user-workflow map.
 ## Known review gaps
 
 The source map includes substantial user-facing coverage, but full live parity
-acceptance is still open. A disposable source build from ChaptarrNG `main` at
-`c0aabe44` was exercised on 2026-10-20 with the checked-in BookshelfNG schema-158
-fixture. SeerrNG's `ReadarrAPI` read the migrated audiobook and ebook records;
-the restricted key could read capabilities and both libraries but could not
-access host configuration or unrelated commands; the global key retained that
-access. A second run created, polled, and cancelled a synthetic pending author
-request through the adapter. A separate HTTP regression probe for the bare
-numeric Hardcover ID fix resolved `2459845` through both audiobook and ebook
-facades and returned the canonical `hc:2459845` identity.
+acceptance is still open. A disposable source build was exercised on
+2026-10-20 with the checked-in BookshelfNG schema-158 fixture. SeerrNG's
+`ReadarrAPI` read the migrated audiobook and ebook records; the restricted key
+could read capabilities and both libraries but could not access host
+configuration or unrelated commands; the global key retained that access. A
+second run created, polled, and cancelled a synthetic pending author request
+through the adapter. A separate HTTP regression probe for the bare numeric
+Hardcover ID fix resolved `2459845` through both audiobook and ebook facades and
+returned the canonical `hc:2459845` identity.
 
 On the `c0aabe44` source snapshot, the full Chaptarr Core suite passed with
 4,496 tests passed, 15 skipped, and no failures; focused book-lookup and
-edition-selection tests passed 11/11. The current frontend Node suite passed
-29/29, including the paged-book numeric-ID regression, and focused ESLint passed
-for the table, poster, and overview book-index components changed in this pass.
-Browser QA is still outstanding; isolated browser workspace tools, configured
-live metadata providers, and download-client test services were unavailable in
-this session. These results verify synthetic HTTP integration and automated
-source behavior, not every workflow in the table. Browser checks and live
-provider/client acceptance remain open.
+edition-selection tests passed 11/11. On this worktree, the frontend CJS suite
+passed 44/44, including regressions for nullable profile reset to root defaults,
+visible monitoring failures and retries, paged book IDs, release notes, and
+stale responses in book overviews, editions, narrator comparisons, and
+delete-confirmation details. Small-screen book cards skip hidden summary
+requests and fetch them again when returning to desktop. Typecheck and
+translation-key checks passed. The production frontend build completed with 22
+CSS-order warnings. Focused ESLint and Stylelint passed for changed UI, action,
+and test files. Linting the paged-book reducer still reports 66 existing style
+errors elsewhere in that file; the changed line introduces none. The focused
+backend profile-reset test is added, but could not be run locally: this checkout
+pins .NET SDK 10.0.402, only 10.0.401 is installed, and the local build-license
+configuration is absent.
+
+A production UI was checked in Chromium 154 against the disposable migrated
+fixture before the latest profile-reset and failure-feedback changes. In Books,
+**Both** showed separate audiobook and ebook cards.
+Opening **Edit Author** from either record selected that format's settings in
+Posters, Table, and Overview (all six cases passed). In Bookshelf, **Both**
+showed separate format links under their shared work; opening the ebook link
+loaded its book details, formats, history, and file row without file or history
+errors. At a 390-pixel viewport, the Books page retained both records without
+document-width overflow, and the browser reported no failed API requests. The
+fixture initially had empty quality-profile items; I populated valid allowed
+qualities through its local API before checking detail history. That was a
+fixture correction, not a product-code change.
+
+These checks cover synthetic integration and user-facing rendering, not every
+workflow in the table. No live metadata provider or download client was
+configured, so real acquisition and import acceptance remains open.
 
 The combined shelf is a presentation over ChaptarrNG's separate audiobook and
 ebook records. It does not turn them into one database record or combine their

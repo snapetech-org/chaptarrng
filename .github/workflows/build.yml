@@ -215,6 +215,17 @@ jobs:
     - name: Test book infinite-scroll id deduplication
       run: node --test frontend/src/Store/Reducers/bookInfiniteScrollReducer.test.cjs
 
+    - name: Test BookshelfNG workflow request state and controls
+      run: >-
+        node --test
+        frontend/src/Book/Delete/DeleteBookModalContentConnector.test.cjs
+        frontend/src/Book/Details/BookDetailRequests.test.cjs
+        frontend/src/Book/Index/Overview/BookIndexOverview.test.cjs
+        frontend/src/Bookshelf/BookshelfFooter.test.cjs
+        frontend/src/Components/Form/ProfileSelectInputConnectors.test.cjs
+        frontend/src/Store/Actions/createBookMonitoringFailureAction.test.cjs
+        frontend/src/System/Updates/UpdateChanges.test.cjs
+
     - name: Test client-side collection equality
       run: node --test frontend/src/Utilities/Object/clientSideCollectionEqual.test.cjs
 

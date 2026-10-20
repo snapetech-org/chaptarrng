@@ -11,7 +11,16 @@ const { code } = transformSync(source, {
   filename: filePath,
   babelrc: false,
   configFile: false,
-  presets: ['@babel/preset-env']
+  presets: [[
+    '@babel/preset-env',
+    {
+      targets: {
+        browsers: ['last 2 versions']
+      },
+      loose: true,
+      modules: 'commonjs'
+    }
+  ]]
 });
 
 const sandbox = {

@@ -1,12 +1,14 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import Alert from 'Components/Alert';
 import MonitorBooksSelectInput from 'Components/Form/MonitorBooksSelectInput';
 import Icon from 'Components/Icon';
 import SpinnerButton from 'Components/Link/SpinnerButton';
 import PageContentFooter from 'Components/Page/PageContentFooter';
 import Popover from 'Components/Tooltip/Popover';
 import { icons, kinds, tooltipPositions } from 'Helpers/Props';
-import translate from 'Utilities/String/translate';
+import getErrorMessage from 'Utilities/Object/getErrorMessage';
+import translate, { translateWithFallback } from 'Utilities/String/translate';
 import styles from './BookshelfFooter.css';
 
 const NO_CHANGE = 'noChange';
@@ -55,13 +57,37 @@ class BookshelfFooter extends Component {
     const {
       selectedCount,
       selectedMediaType,
-      isSaving
+      isSaving,
+      saveError
     } = this.props;
 
     const { monitor } = this.state;
 
     return (
-      <PageContentFooter>
+      <PageContentFooter className={styles.pageContentFooter}>
+        {
+          saveError &&
+            <div className={styles.saveErrorContainer}>
+              <Alert kind={kinds.DANGER} role="alert">
+                <div>
+                  {getErrorMessage(
+                    saveError,
+                    translateWithFallback(
+                      'UnableToUpdateBookMonitoring',
+                      'Unable to update book monitoring.'
+                    )
+                  )}
+                </div>
+                <div>
+                  {translateWithFallback(
+                    'BookshelfMonitoringRetryHint',
+                    'Your selection is still here. You can try the update again below.'
+                  )}
+                </div>
+              </Alert>
+            </div>
+        }
+
         <div className={styles.inputContainer}>
           <div className={styles.label}>
             {translate('BookMonitoring')}

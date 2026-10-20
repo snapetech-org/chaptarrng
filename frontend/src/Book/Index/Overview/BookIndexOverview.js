@@ -8,11 +8,14 @@ import BookCover from 'Book/BookCover';
 import BookMediaTypeBadge from 'Book/BookMediaTypeBadge';
 import getBookIndexItemMediaType from 'Book/Index/getBookIndexItemMediaType';
 import BookIndexProgressBar from 'Book/Index/ProgressBar/BookIndexProgressBar';
+import Alert from 'Components/Alert';
 import Icon from 'Components/Icon';
+import Button from 'Components/Link/Button';
 import IconButton from 'Components/Link/IconButton';
 import Link from 'Components/Link/Link';
 import SpinnerIconButton from 'Components/Link/SpinnerIconButton';
-import { icons } from 'Helpers/Props';
+import LoadingIndicator from 'Components/Loading/LoadingIndicator';
+import { icons, kinds } from 'Helpers/Props';
 import dimensions from 'Styles/Variables/dimensions';
 import fonts from 'Styles/Variables/fonts';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
@@ -48,24 +51,117 @@ class BookIndexOverview extends Component {
     this.state = {
       isEditAuthorModalOpen: false,
       isDeleteAuthorModalOpen: false,
-      overview: ''
+      overview: '',
+      overviewBookId: props.id,
+      isOverviewLoading: true,
+      hasOverviewError: false
     };
+
+    this._overviewGeneration = 0;
+    this._abortOverviewRequest = null;
   }
 
   componentDidMount() {
-    const { id } = this.props;
+    if (this.props.isSmallScreen) {
+      this.setState({
+        overviewBookId: this.props.id,
+        isOverviewLoading: false
+      });
+      return;
+    }
 
-    // Note that this component is lazy loaded by the virtualised view.
-    // We want to avoid storing overviews for *all* books which is
-    // why it's not put into the redux store
-    const promise = createAjaxRequest({
-      url: `/book/${id}/overview`
-    }).request;
-
-    promise.done((data) => {
-      this.setState({ overview: data.overview });
-    });
+    this.fetchOverview();
   }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.id !== this.props.id || prevProps.isSmallScreen !== this.props.isSmallScreen) {
+      if (this.props.isSmallScreen) {
+        this._overviewGeneration++;
+
+        if (this._abortOverviewRequest) {
+          this._abortOverviewRequest();
+          this._abortOverviewRequest = null;
+        }
+
+        this.setState({
+          overview: '',
+          overviewBookId: this.props.id,
+          isOverviewLoading: false,
+          hasOverviewError: false
+        });
+        return;
+      }
+
+      this.fetchOverview();
+    }
+  }
+
+  componentWillUnmount() {
+    this._overviewGeneration++;
+
+    if (this._abortOverviewRequest) {
+      this._abortOverviewRequest();
+      this._abortOverviewRequest = null;
+    }
+  }
+
+  fetchOverview = () => {
+    const { id } = this.props;
+    const generation = ++this._overviewGeneration;
+
+    if (this._abortOverviewRequest) {
+      this._abortOverviewRequest();
+      this._abortOverviewRequest = null;
+    }
+
+    this.setState({
+      overview: '',
+      overviewBookId: id,
+      isOverviewLoading: true,
+      hasOverviewError: false
+    });
+
+    // Overview cards are virtualized, so fetch only for mounted cards.
+    const { request, abortRequest } = createAjaxRequest({
+      url: `/book/${id}/overview`
+    });
+
+    this._abortOverviewRequest = abortRequest;
+
+    request.done((data) => {
+      if (generation !== this._overviewGeneration) {
+        return;
+      }
+
+      this._abortOverviewRequest = null;
+      this.setState({
+        overview: data?.overview || '',
+        overviewBookId: id,
+        isOverviewLoading: false,
+        hasOverviewError: false
+      });
+    });
+
+    request.fail((xhr) => {
+      if (generation !== this._overviewGeneration) {
+        return;
+      }
+
+      this._abortOverviewRequest = null;
+
+      if (!xhr?.aborted) {
+        this.setState({
+          overviewBookId: id,
+          isOverviewLoading: false,
+          hasOverviewError: true
+        });
+      }
+    });
+  };
+
+  onRetryOverviewPress = () => {
+    this.fetchOverview();
+  };
 
   //
   // Listeners
@@ -172,6 +268,9 @@ class BookIndexOverview extends Component {
 
     const {
       overview,
+      overviewBookId,
+      isOverviewLoading,
+      hasOverviewError,
       isEditAuthorModalOpen,
       isDeleteAuthorModalOpen
     } = this.state;
@@ -193,6 +292,39 @@ class BookIndexOverview extends Component {
 
     const contentHeight = getContentHeight(rowHeight, isSmallScreen);
     const overviewHeight = contentHeight - titleRowHeight;
+    const hasCurrentOverview = overviewBookId === id;
+
+    let overviewContent = null;
+
+    if (!hasCurrentOverview || isOverviewLoading) {
+      overviewContent = <LoadingIndicator size={24} />;
+    } else if (hasOverviewError) {
+      overviewContent = (
+        <Alert
+          kind={kinds.DANGER}
+          role="alert"
+          data-select-exempt="true"
+        >
+          <div>{translate('LoadingBookOverviewFailed')}</div>
+          <Button onPress={this.onRetryOverviewPress}>
+            {translate('Retry')}
+          </Button>
+        </Alert>
+      );
+    } else if (overview) {
+      overviewContent = (
+        <Link
+          className={styles.overview}
+          component={isEditorActive ? 'div' : undefined}
+          to={isEditorActive ? undefined : link}
+        >
+          <TextTruncate
+            line={Math.floor(overviewHeight / (defaultFontSize * lineHeight))}
+            text={stripHtml(overview)}
+          />
+        </Link>
+      );
+    }
 
     return (
       <div
@@ -291,17 +423,9 @@ class BookIndexOverview extends Component {
             </div>
 
             <div className={styles.details}>
-
-              <Link
-                className={styles.overview}
-                component={isEditorActive ? 'div' : undefined}
-                to={isEditorActive ? undefined : link}
-              >
-                <TextTruncate
-                  line={Math.floor(overviewHeight / (defaultFontSize * lineHeight))}
-                  text={stripHtml(overview)}
-                />
-              </Link>
+              <div className={styles.overviewMessage}>
+                {overviewContent}
+              </div>
 
               <BookIndexOverviewInfo
                 height={overviewHeight}

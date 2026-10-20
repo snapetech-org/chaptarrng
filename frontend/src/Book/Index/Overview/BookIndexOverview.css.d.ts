@@ -11,6 +11,7 @@ interface CssExports {
   'link': string;
   'mediaTypeBadge': string;
   'overview': string;
+  'overviewMessage': string;
   'poster': string;
   'posterContainer': string;
   'selectable': string;

@@ -63,31 +63,42 @@ function abridgementLabel(abridged) {
 }
 
 function BookEditionCatalog({ bookId }) {
-  const [state, setState] = useState({ isFetching: true, error: false, items: [] });
+  const [state, setState] = useState({ bookId, isFetching: true, error: false, items: [] });
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    let isCurrent = true;
+
     const { request, abortRequest } = createAjaxRequest({
       url: `/book/${bookId}/editions/catalog`,
       dataType: 'json'
     });
 
-    setState({ isFetching: true, error: false, items: [] });
-    request.done((items) => setState({ isFetching: false, error: false, items: items || [] }));
-    request.fail((xhr) => {
-      if (xhr.aborted) {
+    setState({ bookId, isFetching: true, error: false, items: [] });
+    request.done((items) => {
+      if (!isCurrent) {
         return;
       }
 
-      setState({ isFetching: false, error: true, items: [] });
+      setState({ bookId, isFetching: false, error: false, items: items || [] });
+    });
+    request.fail((xhr) => {
+      if (!isCurrent || xhr.aborted) {
+        return;
+      }
+
+      setState({ bookId, isFetching: false, error: true, items: [] });
     });
 
-    return abortRequest;
+    return () => {
+      isCurrent = false;
+      abortRequest();
+    };
   }, [bookId, retryCount]);
 
   const { isFetching, error, items } = state;
 
-  if (isFetching) {
+  if (state.bookId !== bookId || isFetching) {
     return <LoadingIndicator />;
   }
 

@@ -268,9 +268,10 @@ class EditAuthorModalContent extends Component {
                   <FormInputGroup
                     type={inputTypes.QUALITY_PROFILE_SELECT}
                     name="audiobookQualityProfileId"
-                    helpText={translate('AudiobookQualityProfileHelpText')}
+                    helpText={translate('EditAuthorRootFolderDefaultsHelpText')}
                     includeNone={true}
-                    noneLabel={translate('EditAuthorNoAudiobooksOption')}
+                    noneLabel={translate('UseRootFolderDefaults')}
+                    noneValue={null}
                     profileType="audiobook"
                     {...audiobookQualityProfileId}
                     onChange={onInputChange}
@@ -296,8 +297,10 @@ class EditAuthorModalContent extends Component {
                   <FormInputGroup
                     type={inputTypes.METADATA_PROFILE_SELECT}
                     name="audiobookMetadataProfileId"
-                    helpText={translate('AudiobookMetadataProfileHelpText')}
+                    helpText={translate('EditAuthorRootFolderDefaultsHelpText')}
                     includeNone={true}
+                    includeRootFolderDefault={true}
+                    rootFolderDefaultLabel={translate('UseRootFolderDefaults')}
                     profileType="audiobook"
                     {...audiobookMetadataProfileId}
                     onChange={onInputChange}
@@ -412,9 +415,10 @@ class EditAuthorModalContent extends Component {
                   <FormInputGroup
                     type={inputTypes.QUALITY_PROFILE_SELECT}
                     name="ebookQualityProfileId"
-                    helpText={translate('EbookQualityProfileHelpText')}
+                    helpText={translate('EditAuthorRootFolderDefaultsHelpText')}
                     includeNone={true}
-                    noneLabel={translate('EditAuthorNoEbooksOption')}
+                    noneLabel={translate('UseRootFolderDefaults')}
+                    noneValue={null}
                     profileType="ebook"
                     {...ebookQualityProfileId}
                     onChange={onInputChange}
@@ -440,8 +444,10 @@ class EditAuthorModalContent extends Component {
                   <FormInputGroup
                     type={inputTypes.METADATA_PROFILE_SELECT}
                     name="ebookMetadataProfileId"
-                    helpText={translate('EbookMetadataProfileHelpText')}
+                    helpText={translate('EditAuthorRootFolderDefaultsHelpText')}
                     includeNone={true}
+                    includeRootFolderDefault={true}
+                    rootFolderDefaultLabel={translate('UseRootFolderDefaults')}
                     profileType="ebook"
                     {...ebookMetadataProfileId}
                     onChange={onInputChange}
