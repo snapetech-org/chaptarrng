@@ -94,6 +94,7 @@ if [[ "${DOCKERHUB_CONFIGURED:-false}" == "true" ]]; then
         publish_alias "docker.io/snapetech/chaptarrng:latest" "$dockerhub_source"
         publish_alias "docker.io/snapetech/chaptarrng:main" "$dockerhub_source"
         publish_alias "docker.io/snapetech/chaptarrng:master" "$dockerhub_source"
+        publish_alias "docker.io/snapetech/chaptarrng:stable" "$dockerhub_source"
         if [[ "$publish_legacy_aliases" == "true" ]]; then
           publish_alias "docker.io/snapetech/bookshelfng:latest" "$dockerhub_source"
           publish_alias "docker.io/snapetech/bookshelfng:main" "$dockerhub_source"

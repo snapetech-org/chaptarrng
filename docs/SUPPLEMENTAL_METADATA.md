@@ -2,8 +2,8 @@
 
 The current source checkout can search public catalogs alongside ChaptarrNG's
 configured primary metadata provider. These adapters and field preferences are
-not included in the published `v0.9.977` release; publication remains frozen
-while BookshelfNG retirement gates are open.
+not included in the published `v0.9.977` release. Check the current
+release notes before relying on these adapters in a deployed instance.
 
 ## Available catalogs
 

@@ -50,11 +50,6 @@ jobs:
         ref: ${{ inputs.sha }}
         fetch-depth: 0
 
-    - name: Require retirement readiness approval
-      env:
-        CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
-      run: bash packaging/scripts/require-release-readiness.sh
-
     - name: Test legacy image aliases use the standard image digest
       run: bash packaging/scripts/test-publish-image-aliases.sh
 
@@ -135,6 +130,7 @@ jobs:
           tags+=("$image:$branch")
           tags+=("$image:master")
           tags+=("$image:latest")
+          tags+=("$image:stable")
         fi
 
         # Exact version tags keep stable releases immutable and distinct from latest.

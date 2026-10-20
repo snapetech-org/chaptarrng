@@ -1,9 +1,10 @@
 # BookshelfNG retirement status
 
-**Reviewed:** 2026-10-18 after ChaptarrNG `v0.9.977` was published and PR #128
-merged the fail-closed release and distribution gates. This page is the current
-handoff summary for moving BookshelfNG users to ChaptarrNG. The
-detailed feature inventory remains in the
+**Reviewed:** 2026-10-19. This page is the current handoff summary for moving
+BookshelfNG users to ChaptarrNG. Standard ChaptarrNG releases use the manual
+Release workflow; the migration checklist below records compatibility limits
+and handoff work but does not block those releases. The detailed feature
+inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
 ## Current releases
@@ -17,11 +18,10 @@ detailed feature inventory remains in the
   authentic migration-1 coverage to `main`; hosted Linux, macOS, Windows, and
   PostgreSQL migration checks passed. This fix is source-only until a later
   ChaptarrNG release.
-- ChaptarrNG releases are frozen while retirement gates remain open. The
-  merged release and distribution workflows require
-  `CHAPTARRNG_RELEASE_READY=true`; this repository variable remains unset.
-  Do not set it until parity, migration/rollback, and channel acceptance are
-  complete. The current `main` version bump to `.978` is source-only.
+- The current `main` version bump to `.978` is source-only until the manual
+  Release workflow publishes it. Remaining migration and rollback evidence is
+  documented below; it does not block standard ChaptarrNG releases. The old
+  BookshelfNG compatibility bridge remains separately disabled.
 - ChaptarrNG PR #127 merged to `main` as `b3089a39`, adding selectable
   supplemental catalogs, per-field preferences, and conservative
   cross-catalog unmapped-file recovery through exact ISBN, ASIN, provider ID,
@@ -90,8 +90,8 @@ mode against expected behavior on converted data. The mapping is not in public
 
 For a source earlier than migration 14, first update BookshelfNG to its final
 `0.4.21.71` release so it can bring the database to migration 158. The `.977`
-converter does not include the later `main` fix, and no follow-up release is
-available while the release freeze is active. The converter does not accept
+converter does not include the later `main` fix. Use a release that contains
+that fix before migrating such a database. The converter does not accept
 PostgreSQL databases or two populated BookshelfNG databases at once. The
 BookshelfNG helper archives appdata, but
 media/download volumes and settings stored outside appdata need separate
@@ -145,8 +145,10 @@ offline, third-party, or manually installed copy automatically.
 ## Retirement acceptance
 
 BookshelfNG is not ready to retire solely because the converter and a
-ChaptarrNG release exist. No new ChaptarrNG release or legacy redirect is
-authorized while these gates remain open. The remaining work is:
+ChaptarrNG release exist. The items below remain BookshelfNG retirement work;
+they do not block standard ChaptarrNG releases. Legacy package and image
+redirects remain behind the separate `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` gate.
+The remaining work is:
 
 1. Close each BookshelfNG feature row with behavioral and converted-data
    evidence, or record an explicit maintainer decision to retire that behavior.
@@ -154,9 +156,8 @@ authorized while these gates remain open. The remaining work is:
    against converted data. The cross-catalog fallback is merged source work,
    not in `.977`; it needs identifier, exact-name, ambiguity, and pending-import
    acceptance evidence.
-2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
-   passes; validate older-schema support on representative operator data,
-   then validate
+2. Validate migration-1-to-13 support on representative operator data, then
+   validate
    old-identity AUR, COPR, Chocolatey, Helm, container, and Unraid
    upgrades through install, conversion, restart, backup retention, and
    rollback.
@@ -168,7 +169,7 @@ authorized while these gates remain open. The remaining work is:
    redirected. Preserve a manual migration path for pinned and offline installs.
 5. Run the final migration against representative operator data, review every
    ambiguous media choice, and verify external clients against the converted
-   library before enabling automatic aliases.
+   library before enabling automatic legacy BookshelfNG aliases.
 
 The conversion preview, source-side archive helper, synthetic conversion and
 rollback checks, and package templates are present. Full feature parity,

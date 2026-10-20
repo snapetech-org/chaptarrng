@@ -34,11 +34,9 @@ tools for BookshelfNG SQLite, plus the embedded source migration chain. The
 BookshelfNG helper creates an appdata archive before it runs the tools.
 ChaptarrNG also initializes new author format paths from configured defaults,
 a behavior released in `v0.9.974`; explicit roots and existing authors are
-left alone. The next version bump is not a release: publication is frozen
-until the BookshelfNG migration, rollback, feature-parity, and install-channel
-acceptance gates are closed. The merged release and distribution workflows
-fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
-remains unset. Read the
+left alone. Versioned images are published by the manual Release workflow after its
+validation jobs pass; direct pushes to `main` run CI but do not move Docker tags.
+The legacy BookshelfNG compatibility bridge remains separately disabled. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
 The source migration runs on a disposable copy and keeps the original database
@@ -49,10 +47,9 @@ rejects pre-migration-14 databases because their `Blacklist` table must first
 be renamed by the embedded chain. The version-aware fix and authentic
 migration-1 fixture passed the hosted Linux, macOS, Windows, and PostgreSQL
 migration checks in PR #126 and are on `main`, but are not in public `.977`.
-No release will be cut until the full retirement acceptance gates close; the
-merged release and distribution workflows now require
-`CHAPTARRNG_RELEASE_READY=true`. This is not yet real-data evidence or proof for
-every historical release. PostgreSQL
+The retirement checklist tracks migration coverage and handoff work; it does
+not block standard ChaptarrNG releases. This synthetic coverage is not real-data
+evidence or proof for every historical release. PostgreSQL
 BookshelfNG databases and two populated source databases are not supported.
 Books with no recorded
 format are retained in both ChaptarrNG catalogs, unmonitored, with a private

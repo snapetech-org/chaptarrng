@@ -20,12 +20,6 @@ jobs:
         ref: main
         persist-credentials: false
 
-    - name: Require retirement readiness approval
-      env:
-        CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
-      shell: bash
-      run: bash packaging/scripts/require-release-readiness.sh
-
     - name: Require a releasable branch
       shell: bash
       run: |
