@@ -23,6 +23,13 @@ representative operator data, semantic parity, installed rollback, or
 installer/update-channel acceptance. The public release remains `v0.9.977`;
 do not use this source for production cutover.
 
+Post-merge ChaptarrNG `main` at `8448e90d` passed Build
+[39382585956](https://github.com/snapetech-org/chaptarrng/actions/runs/39382585956)
+on Linux, macOS, and Windows, including the Windows migration-installer
+upgrade and rollback checks, plus PostgreSQL migration and native-runner
+receipt validation. The source remains unpublished and is not approved for
+operator cutover.
+
 No release, package, image, or bridge was published. BookshelfNG remains in
 service until operator data, exhaustive semantic disposition, provider
 fulfillment, installer/channel handoff, and operator acceptance are complete.

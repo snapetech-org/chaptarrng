@@ -41,6 +41,14 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+Post-merge ChaptarrNG `main` at `8448e90d` passed Build
+[39382585956](https://github.com/snapetech-org/chaptarrng/actions/runs/39382585956)
+on Linux, macOS, and Windows, including the Windows migration-installer
+upgrade and rollback checks, plus PostgreSQL migration and native-runner
+receipt validation. This validates the merged source on the current main head;
+it does not close operator-data, feature-parity, rollback, or channel
+acceptance.
+
 The BookshelfNG Windows WPF installer still installs BookshelfNG. ChaptarrNG
 `main` contains an unpublished transactional WPF handoff installer. It keeps
 the existing `Readarr` data directory, asks for provider mode, retains a

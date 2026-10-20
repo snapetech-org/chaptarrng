@@ -526,8 +526,10 @@ in both catalogs without monitoring and writes a private review file. `v0.9.977`
 aggregate-only diagnostics module. The public `.977` converter still rejects
 pre-migration-14 databases. PR #126 merged the version-aware source fix and
 migration-1 rollback fixture into `main`; its Linux, macOS, Windows, and
-PostgreSQL migration checks passed. The fix is in `main`; standard
-ChaptarrNG releases are not gated by BookshelfNG retirement acceptance.
+PostgreSQL migration checks passed. The fix is in `main`. ChaptarrNG
+publication remains frozen under the BookshelfNG retirement gate.
+The upstream-retirement matrix below tracks the separate, later ChaptarrNG to
+Chaptarr scope.
 
 <a id="chaptarrng-retirement-blockers"></a>
 
