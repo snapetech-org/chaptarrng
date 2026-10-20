@@ -39,6 +39,20 @@ validation jobs pass; direct pushes to `main` run CI but do not move Docker tags
 The legacy BookshelfNG compatibility bridge remains separately disabled. Read the
 [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
 
+> **Retirement candidate (draft, source-only):** ChaptarrNG PR #131 is at
+> 7ff38a58530814d73da280b297eb3ed215bd2c83. Exact-head Build
+> [39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
+> passed PostgreSQL migration, Linux, macOS, and Windows validation, including
+> the Windows installer service round-trip and selected data-directory check.
+> Native-runner receipt reconciliation is still queued. Security Analysis
+> [39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
+> Trivy, Python and JavaScript/TypeScript CodeQL, and NuGet submission passed;
+> C# CodeQL remains pending. This validates synthetic fixtures and
+> build artifacts only. PR #131 remains draft; representative operator data,
+> full parity, installed rollback, and installer/channel acceptance remain
+> open. The public release stays at v0.9.977; no release or bridge is
+> authorized.
+
 The source migration runs on a disposable copy and keeps the original database
 for rollback. A populated synthetic v22 SQLite fixture upgrades through the
 embedded chain, converts, and rolls back; preview leaves the source unchanged,
@@ -47,10 +61,13 @@ rejects pre-migration-14 databases because their `Blacklist` table must first
 be renamed by the embedded chain. The version-aware fix and authentic
 migration-1 fixture passed the hosted Linux, macOS, Windows, and PostgreSQL
 migration checks in PR #126 and are on `main`, but are not in public `.977`.
-The retirement checklist tracks migration coverage and handoff work; it does
-not block standard ChaptarrNG releases. This synthetic coverage is not real-data
-evidence or proof for every historical release. PostgreSQL
-BookshelfNG databases and two populated source databases are not supported.
+Retirement acceptance blocks ChaptarrNG release and distribution workflows.
+The workflows fail closed unless CHAPTARRNG_RELEASE_READY is true; the
+repository variable remains unset while acceptance is open. This synthetic
+coverage is not real-data evidence or proof for every historical release. The
+published .977 converter does not support PostgreSQL BookshelfNG databases. PR #131 adds a draft PostgreSQL migration candidate with synthetic
+fixtures; representative operator-database conversion and rollback remain
+unaccepted.
 Books with no recorded
 format are retained in both ChaptarrNG catalogs, unmonitored, with a private
 review file so the operator can classify them after startup. The helper does

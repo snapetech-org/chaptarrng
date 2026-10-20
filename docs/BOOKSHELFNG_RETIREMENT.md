@@ -1,11 +1,26 @@
 # BookshelfNG retirement status
 
-**Reviewed:** 2026-10-19. This page is the current handoff summary for moving
-BookshelfNG users to ChaptarrNG. Standard ChaptarrNG releases use the manual
-Release workflow; the migration checklist below records compatibility limits
-and handoff work but does not block those releases. The detailed feature
-inventory remains in the
+**Reviewed:** 2026-10-19. ChaptarrNG `v0.9.977` remains the latest published
+release. All releases, images, packages, standalone distributions, and
+migration bridges are frozen until BookshelfNG retirement acceptance closes.
+The manual Release, reusable Docker, and package-channel workflows require
+`CHAPTARRNG_RELEASE_READY=true`; the variable remains unset. The detailed
+feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
+
+> **Retirement candidate (draft, source-only):** ChaptarrNG PR #131 is at
+> 7ff38a58530814d73da280b297eb3ed215bd2c83. Exact-head Build
+> [39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
+> passed PostgreSQL migration, Linux, macOS, and Windows validation, including
+> the Windows installer service round-trip and selected data-directory check.
+> Native-runner receipt reconciliation is still queued. Security Analysis
+> [39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
+> Trivy, Python and JavaScript/TypeScript CodeQL, and NuGet submission passed;
+> C# CodeQL remains pending. This validates synthetic fixtures and
+> build artifacts only. PR #131 remains draft; representative operator data,
+> full parity, installed rollback, and installer/channel acceptance remain
+> open. The public release stays at v0.9.977; no release or bridge is
+> authorized.
 
 ## Current releases
 
@@ -18,10 +33,11 @@ inventory remains in the
   authentic migration-1 coverage to `main`; hosted Linux, macOS, Windows, and
   PostgreSQL migration checks passed. This fix is source-only until a later
   ChaptarrNG release.
-- The current `main` version bump to `.978` is source-only until the manual
-  Release workflow publishes it. Remaining migration and rollback evidence is
-  documented below; it does not block standard ChaptarrNG releases. The old
-  BookshelfNG compatibility bridge remains separately disabled.
+- The current `main` version bump to `.978` is source-only. The manual
+  Release workflow, reusable Docker publisher, and package-channel workflow
+  fail closed unless `CHAPTARRNG_RELEASE_READY=true`. No publication is
+  authorized while this variable remains unset. The BookshelfNG compatibility
+  bridge remains separately disabled.
 - ChaptarrNG PR #127 merged to `main` as `b3089a39`, adding selectable
   supplemental catalogs, per-field preferences, and conservative
   cross-catalog unmapped-file recovery through exact ISBN, ASIN, provider ID,
@@ -145,10 +161,10 @@ offline, third-party, or manually installed copy automatically.
 ## Retirement acceptance
 
 BookshelfNG is not ready to retire solely because the converter and a
-ChaptarrNG release exist. The items below remain BookshelfNG retirement work;
-they do not block standard ChaptarrNG releases. Legacy package and image
-redirects remain behind the separate `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` gate.
-The remaining work is:
+ChaptarrNG release exist. All ChaptarrNG release and distribution paths remain
+frozen until the items below close. Legacy package and image redirects remain
+behind the separate `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` gate. The remaining
+work is:
 
 1. Close each BookshelfNG feature row with behavioral and converted-data
    evidence, or record an explicit maintainer decision to retire that behavior.

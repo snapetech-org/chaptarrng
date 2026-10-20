@@ -1,15 +1,31 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
 > **Release status (2026-10-19).** ChaptarrNG `v0.9.977` is the latest
-> published release at this review. Standard releases are published from
-> validated `main` through the manual Release workflow; direct source changes
-> do not update images. Use the standard ChaptarrNG `v0.9.977` release for the
+> published release at this review. The manual Release workflow, reusable
+> Docker publisher, and package-channel retry workflow now fail closed unless
+> `CHAPTARRNG_RELEASE_READY=true`; the variable remains unset while retirement
+> acceptance is open. Direct source changes do not update images. Use the
+> standard ChaptarrNG `v0.9.977` release for the
 > published BookshelfNG `0.4.21.71` release. That BookshelfNG release includes
 > an optional source-side helper that creates a full appdata archive before it
 > invokes ChaptarrNG preview, apply, and rollback; see the
 > [BookshelfNG operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md).
 > For an immutable Docker deployment, use
 > `ghcr.io/snapetech-org/chaptarrng:0.9.977`.
+> **Retirement candidate (draft, source-only):** ChaptarrNG PR #131 is at
+> 7ff38a58530814d73da280b297eb3ed215bd2c83. Exact-head Build
+> [39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
+> passed PostgreSQL migration, Linux, macOS, and Windows validation, including
+> the Windows installer service round-trip and selected data-directory check.
+> Native-runner receipt reconciliation is still queued. Security Analysis
+> [39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
+> Trivy, Python and JavaScript/TypeScript CodeQL, and NuGet submission passed;
+> C# CodeQL remains pending. This validates synthetic fixtures and
+> build artifacts only. PR #131 remains draft; representative operator data,
+> full parity, installed rollback, and installer/channel acceptance remain
+> open. The public release stays at v0.9.977; no release or bridge is
+> authorized.
+
 > The release bundles the BookshelfNG source migration chain and supports the
 > exact migration-158 SQLite schema. Its pre-upgrade check rejects schemas
 > before migration 14; upgrade those installations to the final BookshelfNG
