@@ -41,28 +41,29 @@ fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
 remains unset. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)
 and [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) before switching.
 
-The current migration candidate accepts raw SQLite backup uploads with `.db`
-and legacy `.xml` filename suffixes; `.xml` is not an XML database format.
-This is source-only and is not in `v0.9.977`. Code snapshot `00cf7b1a` passed
-Linux, macOS, and PostgreSQL migration jobs in exact-head Build
-[39409347888](https://github.com/snapetech-org/chaptarrng/actions/runs/39409347888);
-the run was later cancelled before Windows and native-runner receipt results,
-so no Windows result is claimed. Security analysis, Semgrep CE, Trivy,
-dependency submission, and push checks passed. The release-note check was
-skipped because no release was prepared.
+Current `main` accepts raw SQLite Bookshelf backup uploads with `.db` or legacy
+`.xml` filename suffixes; the content must still be SQLite. It also contains the
+BookshelfNG migration and installer work. These additions are not in `v0.9.977`.
+The runtime application code is at
+`ace817cc016411c50ac3b1ff0f862cae950a3829`; current `main` is
+`771a26e63111114990b926df0f8bd0918ff9cf0a`, including the Windows running-service
+rollback test correction. Exact-head Build
+[39428515452](https://github.com/snapetech-org/chaptarrng/actions/runs/39428515452)
+passed on Linux, macOS, Windows, and PostgreSQL migration smoke in attempt 4,
+including native-runner receipt reconciliation. Attempt 3's macOS job was
+canceled before setup while waiting for a runner; the full retry completed.
+Windows passed installer build, source fingerprint, running-service upgrade and
+rollback, cleanup, and selected-data-directory checks. CodeQL, security analysis,
+Semgrep CE, Trivy, and dependency submission also passed. The release-note
+contract was skipped because no release was prepared. These source changes are
+not in `v0.9.977` and do not approve production cutover.
 
-Current `main` also has explicit trusted-proxy and CORS allowlists, per-client
-API rate limiting, a bounded general request-body setting, and an option to
-disable `?apikey=` authentication. The new setting is
-`CHAPTARR__AUTH__ALLOWAPIKEYQUERY=false`; when it is unset,
-`BOOKSHELF_ALLOW_API_KEY_QUERY=false` remains honored. Existing
-`BOOKSHELF_SEERRNG_API_KEY` values are also accepted when
-`CHAPTARR__AUTH__SEERRAPIKEY` is unset. The SeerrNG service key cannot read
-global configuration or health endpoints, and file/history reads must target
-one book. The backup restore route retains its separate 1 GiB upload limit.
-These controls are source-only and are not in the published
-`.977` release; see the
-[HTTP security settings](docs/HTTP_SECURITY.md).
+The HTTP security controls remain source-only: explicit trusted proxies and
+CORS origins, per-client request limits, a bounded body size, query-key
+controls, and a restricted SeerrNG key with route-level authorization. Existing
+`BOOKSHELF_SEERRNG_API_KEY` values remain accepted only when
+`CHAPTARR__AUTH__SEERRAPIKEY` is unset. The restore route retains its separate
+1 GiB upload limit. See [HTTP security settings](docs/HTTP_SECURITY.md).
 
 ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
 passed exact-head Build
@@ -93,13 +94,7 @@ key access, and the pending-import cancel lifecycle. The `.m4b` and `.epub`
 files are placeholders, so this does not establish media processing or
 operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM_BOOKSHELFNG.md#exact-head-artifact-migration-and-seerrng-smoke-2026-10-20).
 
-The refreshed BookshelfNG source inventory pins source snapshot `c63eb848` to
-ChaptarrNG application snapshot `ac3da942`. It records 1,116 changed paths, 25 reviewed path mappings, and
-469 file dispositions (176 retained, 129 equivalent, 6 ported, and 158 retired: 145 historical
-release-note fragments, 12 BookshelfNG logo assets, and one obsolete Readarr Azure Pipelines definition); 647 paths remain undispositioned. No runtime
-feature has been approved for retirement. Exact file retention and project reference comparison do not establish
-full feature or runtime parity. The obsolete Readarr contributor stub is
-covered by ChaptarrNG's current guide, and its legacy Azure pipeline is retired.
+The refreshed BookshelfNG inventory pins source `c63eb84813392cdb398d9e6bf4446694952f256d` to ChaptarrNG `main` at `771a26e63111114990b926df0f8bd0918ff9cf0a`. It covers 679 post-fork commits and 1,116 changed paths: 29 reviewed mappings, 473 dispositions (176 retained, 129 equivalent, 10 ported, and 158 approved non-runtime retirements), and 643 open paths (235 unmapped and 408 requiring semantic review). No runtime feature has been approved for retirement; these are path-level records, not proof of behavior or feature parity. See the [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
 
 BookshelfNG audit-tool commit `9fcc0aea` passed Build
 [39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595).
