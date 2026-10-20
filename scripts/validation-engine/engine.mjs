@@ -397,6 +397,15 @@ export function parseNodeTestSummary(output) {
     const match = [...output.matchAll(new RegExp(`^# ${name} (\\d+)\\s*$`, 'gm'))].at(-1);
     return match ? Number(match[1]) : null;
   };
+  const failedTestNames = [];
+  for (const match of output.matchAll(/^[ \t]*not ok \d+ - (.+?)\s*$/gm)) {
+    const name = match[1].trim();
+    // TAP diagnostics can include assertion values and paths. Keep only the
+    // authored test title, and exclude separators that could carry a path.
+    if (name.length <= 240 && /^[A-Za-z0-9][A-Za-z0-9 _().,:+'-]*$/.test(name)) {
+      failedTestNames.push(name);
+    }
+  }
   const summary = {
     total: read('tests'),
     passed: read('pass'),
@@ -410,7 +419,12 @@ export function parseNodeTestSummary(output) {
       summary.passed + summary.failed + summary.cancelled + summary.skipped + summary.todo !== summary.total) {
     throw new Error('Node TAP summary has missing, invalid, zero, or inconsistent case counts');
   }
-  return { ...summary, inconclusive: summary.todo };
+  return {
+    ...summary,
+    inconclusive: summary.todo,
+    failedTestNames: failedTestNames.slice(0, 100),
+    failedTestNamesTruncated: failedTestNames.length > 100,
+  };
 }
 
 function decodeNUnitXmlText(value) {
@@ -948,6 +962,9 @@ export async function runTask(task, runRoot, testSpec = null) {
       failedCases = summary.failed;
       skippedCases = summary.skipped;
       inconclusiveCases = summary.inconclusive;
+      failedTestNames = summary.failedTestNames;
+      failedTestNamesTruncated = summary.failedTestNamesTruncated;
+      failedTestDetails = failedTestNames.map((name) => ({ name }));
       if (summary.cancelled > 0) summaryError = `Node TAP reported ${summary.cancelled} cancelled cases`;
     } catch (error) { summaryError = error.message; }
   } else {
@@ -967,7 +984,8 @@ export async function runTask(task, runRoot, testSpec = null) {
     durationMs: Date.now() - started,
     exitCode: exit.code,
     signal: exit.signal,
-    error: exit.error?.message ?? summaryError ?? (artifactsChanged ? 'compiled test artifact changed during execution' : null) ?? logError,
+    error: exit.error?.message ?? summaryError ?? (artifactsChanged ? 'compiled test artifact changed during execution' : null) ?? logError ??
+      (failedCases > 0 ? `${failedCases} test case${failedCases === 1 ? '' : 's'} failed` : null),
     timedOut,
     outputBytes,
     logSha256: hash(readFileSync(logPath)),
@@ -1160,7 +1178,15 @@ async function main(argv = process.argv.slice(2)) {
     requireTrustedLocalTestSandbox();
   }
   const result = await execute(plan);
-  process.stdout.write(`${JSON.stringify({ repository: validation.repository, status: result.receipt.status, totals: result.receipt.totals, evidenceDirectory: result.runRoot }, null, 2)}\n`);
+  const failedTasks = result.receipt.tasks.filter((task) => task.status === 'failed').map((task) => ({
+    taskId: task.taskId,
+    error: task.error,
+    failedTestNames: task.failedTestNames,
+    failedTestDetails: task.failedTestDetails,
+    failedTestNamesTruncated: task.failedTestNamesTruncated,
+    failedTestDetailsTruncated: task.failedTestDetailsTruncated,
+  }));
+  process.stdout.write(`${JSON.stringify({ repository: validation.repository, status: result.receipt.status, totals: result.receipt.totals, failedTasks, evidenceDirectory: result.runRoot }, null, 2)}\n`);
   return result.exitCode;
 }
 

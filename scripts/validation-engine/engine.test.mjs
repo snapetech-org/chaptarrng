@@ -524,7 +524,44 @@ test('task receipts retain safe PostgreSQL NUnit details without raw messages or
 test('Node TAP summary accounts for pass, fail, skip, todo, and cancelled cases', () => {
   assert.deepEqual(parseNodeTestSummary(
     '# tests 7\n# pass 3\n# fail 1\n# cancelled 1\n# skipped 1\n# todo 1\n',
-  ), { total: 7, passed: 3, failed: 1, cancelled: 1, skipped: 1, todo: 1, inconclusive: 1 });
+  ), {
+    total: 7,
+    passed: 3,
+    failed: 1,
+    cancelled: 1,
+    skipped: 1,
+    todo: 1,
+    inconclusive: 1,
+    failedTestNames: [],
+    failedTestNamesTruncated: false,
+  });
+});
+
+test('Node TAP receipts keep safe failed test names and discard diagnostic values and paths', () => {
+  const summary = parseNodeTestSummary(`not ok 2 - catalog refresh keeps existing author\n  ---\n  error: 'secret expected value at /private/worktree'\n  ...\nnot ok 4 - /private/worktree/credential.json\n  ---\n  error: 'secret token'\n  ...\n1..4\n# tests 4\n# pass 2\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n`);
+
+  assert.deepEqual(summary.failedTestNames, ['catalog refresh keeps existing author']);
+  assert.equal(summary.failedTestNamesTruncated, false);
+  assert.doesNotMatch(JSON.stringify(summary), /secret expected value|secret token|private/);
+});
+
+test('Node task receipts carry safe failure names and omit raw TAP diagnostics', async (t) => {
+  const runRoot = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-node-summary-'));
+  t.after(() => rmSync(runRoot, { recursive: true, force: true }));
+  const output = `not ok 1 - safe authored test title\n  ---\n  error: 'private value at /private/source'\n  ...\n1..1\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n`;
+  const spec = {
+    id: 'engine-contract-tests',
+    resultFormat: 'node-test',
+    command: [process.execPath, '-e', `process.stdout.write(${JSON.stringify(output)}); process.exitCode = 1;`],
+    timeoutSeconds: 10,
+  };
+
+  const receipt = await runTask({ id: spec.id }, runRoot, spec);
+  assert.equal(receipt.status, 'failed');
+  assert.equal(receipt.error, '1 test case failed');
+  assert.deepEqual(receipt.failedTestNames, ['safe authored test title']);
+  assert.deepEqual(receipt.failedTestDetails, [{ name: 'safe authored test title' }]);
+  assert.doesNotMatch(JSON.stringify(receipt), /private value|private/);
 });
 
 test('Node TAP summary refuses missing and inconsistent case totals', () => {
