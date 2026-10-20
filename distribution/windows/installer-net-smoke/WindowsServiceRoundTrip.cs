@@ -170,6 +170,9 @@ internal static class WindowsServiceRoundTrip
                 .ConfigureAwait(false);
             await WaitForHealthAsync(dataDirectory, TimeSpan.FromSeconds(60)).ConfigureAwait(false);
             AssertServicePath(ServiceLifecycle.BookshelfServiceName, dataDirectory);
+            AssertServiceExecutablePath(
+                ServiceLifecycle.BookshelfServiceName,
+                Path.Combine(dataDirectory, "bin", "Readarr.Console.exe"));
             if (!string.Equals(ReadServiceAccount(ServiceLifecycle.BookshelfServiceName), LocalService, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("The restored Readarr service did not preserve the supported LocalService account.");
@@ -524,6 +527,18 @@ internal static class WindowsServiceRoundTrip
             !imagePath.Contains(dataDirectory, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"The {serviceName} service command did not retain {dataDirectory}.");
+        }
+    }
+
+    private static void AssertServiceExecutablePath(string serviceName, string executablePath)
+    {
+        var imagePath = ServiceLifecycle.GetImagePath(serviceName);
+        var expectedExecutable = "\"" + Path.GetFullPath(executablePath) + "\"";
+        if (string.IsNullOrWhiteSpace(imagePath) ||
+            !imagePath.StartsWith(expectedExecutable, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"The {serviceName} service command must start with its quoted executable path {expectedExecutable}.");
         }
     }
 

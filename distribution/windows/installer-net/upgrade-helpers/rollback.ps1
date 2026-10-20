@@ -10,10 +10,10 @@ $ErrorActionPreference = 'Stop'
 $BackupPath = [IO.Path]::GetFullPath($BackupPath)
 $DataDirectory = [IO.Path]::GetFullPath($DataDirectory)
 $backupBin = Join-Path $BackupPath 'bin'
-$readarrConsole = Join-Path $backupBin 'Readarr.Console.exe'
+$backupReadarrConsole = Join-Path $backupBin 'Readarr.Console.exe'
 
 if (-not (Test-Path -LiteralPath $backupBin -PathType Container) -or
-    -not (Test-Path -LiteralPath $readarrConsole -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $backupReadarrConsole -PathType Leaf) -or
     -not (Test-Path -LiteralPath (Join-Path $BackupPath 'readarr.db') -PathType Leaf)) {
     throw "The BookshelfNG rollback backup is incomplete: $BackupPath"
 }
@@ -66,6 +66,10 @@ if (Test-Path -LiteralPath $currentBin) {
     Remove-Item -LiteralPath $currentBin -Recurse -Force
 }
 Copy-Item -LiteralPath $backupBin -Destination $currentBin -Recurse -Force
+$readarrConsole = Join-Path $currentBin 'Readarr.Console.exe'
+if (-not (Test-Path -LiteralPath $readarrConsole -PathType Leaf)) {
+    throw "The restored BookshelfNG executable is missing from $currentBin."
+}
 
 foreach ($name in @('config.xml', 'readarr.db', 'readarr.db-journal', 'readarr.db-wal')) {
     $current = Join-Path $DataDirectory $name
@@ -92,6 +96,42 @@ Write-Host 'Registering the restored Readarr service...'
 if ($LASTEXITCODE -ne 0) {
     throw "Readarr.Console.exe service installation failed with exit code $LASTEXITCODE."
 }
+
+$readarrServiceKey = 'HKLM:\SYSTEM\CurrentControlSet\Services\Readarr'
+$serviceKey = Get-ItemProperty -Path $readarrServiceKey -ErrorAction SilentlyContinue
+if (-not $serviceKey) {
+    throw 'Readarr service registration was not created by the BookshelfNG installer.'
+}
+
+# BookshelfNG 0.4.21.71 registers its executable without quoting the image
+# path. The restored executable and data directory may contain spaces, so
+# correct the command line before asking the Service Control Manager to start
+# the service. Register from the restored appdata bin directory rather than
+# leaving the service dependent on a retained backup folder.
+$quotedReadarrConsole = '"' + $readarrConsole + '"'
+$quotedDataDirectory = '"' + $DataDirectory + '"'
+$readarrImagePath = "$quotedReadarrConsole -data=$quotedDataDirectory /nobrowser"
+Set-ItemProperty -Path $readarrServiceKey -Name ImagePath -Value $readarrImagePath -ErrorAction Stop
+
+$serviceKey = Get-ItemProperty -Path $readarrServiceKey -ErrorAction Stop
+if (-not [string]::Equals([string] $serviceKey.ImagePath, $readarrImagePath, [StringComparison]::Ordinal)) {
+    throw 'The restored Readarr service command did not retain its quoted executable and data paths.'
+}
+
+$serviceAccount = [string] $serviceKey.ObjectName
+if (-not [string]::Equals($serviceAccount, 'NT AUTHORITY\LocalService', [StringComparison]::OrdinalIgnoreCase)) {
+    throw "The restored Readarr service uses unsupported account '$serviceAccount'."
+}
+
+$service = Get-Service -Name 'Readarr' -ErrorAction Stop
+if ($service.Status -ne 'Stopped') {
+    Stop-Service -Name 'Readarr' -Force -ErrorAction Stop
+    $service = Get-Service -Name 'Readarr' -ErrorAction Stop
+    $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+}
+
+Write-Host 'Starting the restored Readarr service with its quoted executable path...'
+Start-Service -Name 'Readarr' -ErrorAction Stop
 
 $deadline = [DateTime]::UtcNow.AddSeconds(60)
 do {
