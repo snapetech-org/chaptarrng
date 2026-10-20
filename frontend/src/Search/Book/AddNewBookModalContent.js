@@ -14,12 +14,16 @@ import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import stripHtml from 'Utilities/String/stripHtml';
 import translate from 'Utilities/String/translate';
 import AddAuthorOptionsForm from '../Common/AddAuthorOptionsForm.js';
+import { getMissingAddFormatSetup } from '../Common/addFormatSetup.cjs';
 import styles from './AddNewBookModalContent.css';
 
 const MEDIA_TYPES = ['audiobook', 'ebook'];
 
 function hasAddedMediaType(props, mediaType) {
-  if (mediaType === 'audiobook' && (props.localAudiobookBooks || []).length > 0) {
+  if (
+    mediaType === 'audiobook' &&
+    (props.localAudiobookBooks || []).length > 0
+  ) {
     return true;
   }
 
@@ -31,7 +35,9 @@ function hasAddedMediaType(props, mediaType) {
 }
 
 function getMissingMediaTypes(props) {
-  return MEDIA_TYPES.filter((mediaType) => !hasAddedMediaType(props, mediaType));
+  return MEDIA_TYPES.filter(
+    (mediaType) => !hasAddedMediaType(props, mediaType)
+  );
 }
 
 function canSelectBoth(props) {
@@ -48,7 +54,8 @@ function normalizeDefaultMediaType(value, allowBoth, missingMediaTypes) {
   const normalized = (value ?? '').trim().toLowerCase();
 
   if (normalized === 'audiobook' || normalized === 'ebook') {
-    return missingMediaTypes.includes(normalized) || missingMediaTypes.length !== 1 ?
+    return missingMediaTypes.includes(normalized) ||
+      missingMediaTypes.length !== 1 ?
       normalized :
       missingMediaTypes[0];
   }
@@ -57,11 +64,15 @@ function normalizeDefaultMediaType(value, allowBoth, missingMediaTypes) {
     return normalized;
   }
 
-  return allowBoth ? 'both' : (missingMediaTypes[0] || 'audiobook');
+  return allowBoth ? 'both' : missingMediaTypes[0] || 'audiobook';
 }
 
 function getSelectedMediaType(props) {
-  return normalizeDefaultMediaType(props.initialMediaType || props.defaultMediaType, canSelectBoth(props), getMissingMediaTypes(props));
+  return normalizeDefaultMediaType(
+    props.initialMediaType || props.defaultMediaType,
+    canSelectBoth(props),
+    getMissingMediaTypes(props)
+  );
 }
 
 function getSelectedMediaTypeForAddedState(props, currentMediaType) {
@@ -72,10 +83,14 @@ function getSelectedMediaTypeForAddedState(props, currentMediaType) {
   }
 
   if (currentMediaType === 'both') {
-    return missingMediaTypes.length === MEDIA_TYPES.length ? 'both' : missingMediaTypes[0];
+    return missingMediaTypes.length === MEDIA_TYPES.length ?
+      'both' :
+      missingMediaTypes[0];
   }
 
-  return missingMediaTypes.includes(currentMediaType) ? currentMediaType : missingMediaTypes[0];
+  return missingMediaTypes.includes(currentMediaType) ?
+    currentMediaType :
+    missingMediaTypes[0];
 }
 
 function canAddSelectedMediaType(props, mediaType) {
@@ -83,7 +98,17 @@ function canAddSelectedMediaType(props, mediaType) {
     return canSelectBoth(props);
   }
 
-  return MEDIA_TYPES.includes(mediaType) && !hasAddedMediaType(props, mediaType);
+  return (
+    MEDIA_TYPES.includes(mediaType) && !hasAddedMediaType(props, mediaType)
+  );
+}
+
+function getMissingSetupForMediaType(props, mediaType) {
+  if (!props.rootFoldersPopulated && !props.isExistingAuthor) {
+    return ['loading'];
+  }
+
+  return getMissingAddFormatSetup({ ...props, selectedMediaType: mediaType });
 }
 
 function getAddButtonLabel(props, mediaType) {
@@ -111,7 +136,6 @@ function getAddButtonLabel(props, mediaType) {
 }
 
 class AddNewBookModalContent extends Component {
-
   //
   // Lifecycle
 
@@ -133,14 +157,20 @@ class AddNewBookModalContent extends Component {
       return;
     }
 
-    if (prevProps.addFailedMediaType !== this.props.addFailedMediaType && this.props.addFailedMediaType) {
+    if (
+      prevProps.addFailedMediaType !== this.props.addFailedMediaType &&
+      this.props.addFailedMediaType
+    ) {
       this._didUserSelectMediaType = true;
       this.setState({ selectedMediaType: this.props.addFailedMediaType });
       return;
     }
 
     if (prevProps.addedMediaTypes !== this.props.addedMediaTypes) {
-      const selectedMediaType = getSelectedMediaTypeForAddedState(this.props, this.state.selectedMediaType);
+      const selectedMediaType = getSelectedMediaTypeForAddedState(
+        this.props,
+        this.state.selectedMediaType
+      );
 
       if (selectedMediaType !== this.state.selectedMediaType) {
         this._didUserSelectMediaType = false;
@@ -171,12 +201,19 @@ class AddNewBookModalContent extends Component {
   };
 
   onAddBookPress = () => {
-    if (!canAddSelectedMediaType(this.props, this.state.selectedMediaType)) {
+    if (
+      getMissingSetupForMediaType(this.props, this.state.selectedMediaType)
+        .length > 0 ||
+      !canAddSelectedMediaType(this.props, this.state.selectedMediaType)
+    ) {
       return;
     }
 
     // Add the book without closing the modal; optionally trigger a search based on checkbox state.
-    this.props.onAddBookPress(this.state.searchForNewBook, this.state.selectedMediaType);
+    this.props.onAddBookPress(
+      this.state.searchForNewBook,
+      this.state.selectedMediaType
+    );
   };
 
   onClosePress = () => {
@@ -220,63 +257,64 @@ class AddNewBookModalContent extends Component {
     });
     const addErrorFallback = addFailedMediaType ?
       translate('CouldNotAddMediaType', {
-        mediaType: translate(addFailedMediaType === 'ebook' ? 'EbookLabel' : 'AudiobookLabel')
+        mediaType: translate(
+          addFailedMediaType === 'ebook' ? 'EbookLabel' : 'AudiobookLabel'
+        )
       }) :
       translate('CouldNotAddThisBook');
-    const addErrorMessage = addError ? getErrorMessage(addError, addError.message || addErrorFallback) : null;
+    const addErrorMessage = addError ?
+      getErrorMessage(addError, addError.message || addErrorFallback) :
+      null;
+    const missingAddSetup = getMissingSetupForMediaType(
+      this.props,
+      this.state.selectedMediaType
+    );
 
     return (
       <ModalContent onModalClose={onModalClose}>
-        <ModalHeader>
-          {translate('AddNewBook')}
-        </ModalHeader>
+        <ModalHeader>{translate('AddNewBook')}</ModalHeader>
 
         <ModalBody>
           <div className={styles.container}>
-            {
-              isSmallScreen ?
-                null:
-                <div className={styles.poster}>
-                  <BookCover
-                    className={styles.poster}
-                    images={images}
-                    size={250}
-                  />
-                </div>
-            }
+            {isSmallScreen ? null : (
+              <div className={styles.poster}>
+                <BookCover
+                  className={styles.poster}
+                  images={images}
+                  size={250}
+                />
+              </div>
+            )}
 
             <div className={styles.info}>
-              <div className={styles.name}>
-                {bookTitle}
-              </div>
+              <div className={styles.name}>{bookTitle}</div>
 
-              {
-                !!disambiguation &&
-                  <span className={styles.disambiguation}>({disambiguation})</span>
-              }
+              {!!disambiguation && (
+                <span className={styles.disambiguation}>
+                  ({disambiguation})
+                </span>
+              )}
 
-              {
-                !!seriesTitle &&
-                  <div className={styles.series}>
-                    {seriesTitle}
-                  </div>
-              }
+              {!!seriesTitle && (
+                <div className={styles.series}>{seriesTitle}</div>
+              )}
 
               <div>
-                <span className={styles.authorName}> {translate('ByAuthor', { authorName })}</span>
+                <span className={styles.authorName}>
+                  {' '}
+                  {translate('ByAuthor', { authorName })}
+                </span>
               </div>
 
-              {
-                overview ?
-                  <div className={styles.overview}>
-                    <TextTruncate
-                      truncateText="…"
-                      line={8}
-                      text={stripHtml(overview)}
-                    />
-                  </div> :
-                  null
-              }
+              {overview ? (
+                <div className={styles.overview}>
+                  <TextTruncate
+                    truncateText="…"
+                    line={8}
+                    text={stripHtml(overview)}
+                  />
+                </div>
+              ) : null}
 
               <AddAuthorOptionsForm
                 authorName={authorName}
@@ -292,27 +330,17 @@ class AddNewBookModalContent extends Component {
                 {...otherProps}
               />
 
-              {
-                isQueued && addNotice ?
-                  <Alert
-                    className={styles.addError}
-                    kind={kinds.SUCCESS}
-                  >
-                    {addNotice}
-                  </Alert> :
-                  null
-              }
+              {isQueued && addNotice ? (
+                <Alert className={styles.addError} kind={kinds.SUCCESS}>
+                  {addNotice}
+                </Alert>
+              ) : null}
 
-              {
-                addErrorMessage ?
-                  <Alert
-                    className={styles.addError}
-                    kind={kinds.DANGER}
-                  >
-                    {addErrorMessage}
-                  </Alert> :
-                  null
-              }
+              {addErrorMessage ? (
+                <Alert className={styles.addError} kind={kinds.DANGER}>
+                  {addErrorMessage}
+                </Alert>
+              ) : null}
             </div>
           </div>
         </ModalBody>
@@ -336,7 +364,14 @@ class AddNewBookModalContent extends Component {
             <SpinnerButton
               className={styles.addButton}
               kind={kinds.PRIMARY}
-              isDisabled={isQueued || !canAddSelectedMediaType(this.props, this.state.selectedMediaType)}
+              isDisabled={
+                isQueued ||
+                missingAddSetup.length > 0 ||
+                !canAddSelectedMediaType(
+                  this.props,
+                  this.state.selectedMediaType
+                )
+              }
               isSpinning={isAdding}
               onPress={this.onAddBookPress}
             >
@@ -372,6 +407,7 @@ AddNewBookModalContent.propTypes = {
   addFailedMediaType: PropTypes.oneOf(['audiobook', 'ebook']),
   isExistingAuthor: PropTypes.bool.isRequired,
   isSmallScreen: PropTypes.bool.isRequired,
+  rootFoldersPopulated: PropTypes.bool,
   initialMediaType: PropTypes.string,
   defaultMediaType: PropTypes.string,
   localAudiobookBooks: PropTypes.arrayOf(PropTypes.object),

@@ -1,26 +1,43 @@
 # BookshelfNG user workflow parity map
 
-This map covers the user-facing search and acquisition workflows that matter
-when someone uses ChaptarrNG in place of BookshelfNG. It describes the current
-source tree, not the behavior of a published image.
+This map compares the everyday work a BookshelfNG user needs to do in ChaptarrNG.
+It describes source affordances, not a published image. BookshelfNG retirement
+is not yet accepted, so ChaptarrNG releases and migration channels remain
+frozen.
 
-| User task | ChaptarrNG source status | What still needs acceptance |
+“Available in source” means a user-facing route or action is present. It does not
+mean the workflow has been exercised against a real provider, download client,
+representative library, or installed build.
+
+| User task | ChaptarrNG source and affordance | Remaining end-user acceptance |
 | --- | --- | --- |
-| Search the catalog from Add | Search waits for **Search** or Enter by default. **Search as you type** is an optional browser preference. Clearing or changing a query cancels pending and active requests. Existing catalog choices and result filters remain available. | Browser-check first search, Enter, repeated same-query search, preference persistence, and clearing during a slow request. |
-| Search for releases for one book | Automatic search and interactive release search are available from book rows and details. The two icon actions now expose their names to keyboard and screen-reader users. | Confirm indexer results, grab, queue, and manual import in a running instance. |
-| Search for a series pack | Each series now has a **Search for a series pack** action. The modal submits the series and author IDs; the release API searches that series and retains its books for the existing manual import flow. | Confirm an indexed pack reaches the queue and that Manual Import can assign each file to the right book and media format. |
-| Adopt a torrent that is already in the download client | A duplicate-torrent response opens an **Adopt Existing Torrent** confirmation. ChaptarrNG rechecks the torrent hash, tracks the existing client item, and avoids submitting it to the indexer or starting another download. Automated searches skip a matching existing torrent. | Confirm matching client/category, wrong category, completed and seeding states, stale results where the torrent disappears before confirmation, and recovery when the client cannot be queried. |
-| Download an ebook from a direct source | The Direct Download indexer and built-in download client are present in source, with API-key and optional browser-fallback setup. A separate download client is not required for this path. | Verify a supported source and the target container architecture, including retry and import after restart. |
-| Stop tracking a download but leave it in the client | The queue removal modal offers **Ignore** for tracked downloads and explains the available removal choices. | Confirm the client item remains untouched and the ignored history behaves as expected. |
+| Get a new instance ready | System > Quickstart checks format roots, profiles, indexers, clients, and optional integrations. Settings now groups destinations by Library, Search, Connect, General, and System, with Quickstart linked from both Settings and System. | Walk through a clean setup on desktop and mobile, including missing roots, an empty indexer list, and a failed provider test. |
+| Choose the default format for new items | Add New dialogs share a saved default format. Users can change it in Settings > UI or with **Set as default** in an add dialog; individual items can still override it. | Verify persistence after reload and confirm author, book, and series dialogs all start with the saved value. |
+| Add an author, book, or series | All three flows support audiobook, ebook, or both where relevant; root folders and quality profiles are visible first, with monitoring, metadata, and tags under **More options**. Missing setup links to Quickstart. Root-folder loading failures show a retry. | Exercise each format, both formats, saved defaults, one-item overrides, missing roots/profiles, existing-author book adds, and add failures. |
+| Find a title in the catalog | Add New has provider selection, result filtering, and submit-to-search by default; Search as you type is optional. Query changes and clearing cancel stale requests. | Check first search, Enter, repeated same-query search, preference persistence, provider errors, and clearing during a slow request. |
+| Browse and understand the library | Authors, Books, Bookshelf, Calendar, and Unmapped Files are reachable from Library. Book details include edition and narration information; series details compare narrators and volumes. | Browse a representative mixed-format library on narrow and wide screens; check empty, loading, partial-metadata, and no-file states. |
+| Decide what to monitor | Add flows and author/book editors expose per-format monitoring, initial-book monitoring, and future-book policies. Wanted has Missing and Cutoff Unmet pages. | Confirm changes affect only the selected format and that automatic searches honor the chosen monitoring state. |
+| Search and grab a release | Book actions offer automatic and interactive release search. Series rows can search for a pack and send files to Manual Import. Direct Download provides an ebook-only source path. | With a supported indexer and client, search, inspect, grab, retry, and import representative audiobook and ebook releases. |
+| Reuse a torrent already in the client | Duplicate-hash detection can offer **Adopt Existing Torrent**; automatic searches skip matching torrents. Adoption tracks the existing item instead of starting a second download. | Check wrong categories, completed and seeding states, stale results, client outages, restart recovery, and final import. |
+| Track or stop a download | Activity groups Queue, History, Blocklist, and Ignored Downloads. Queue removal explains ignore and remove choices. | Confirm ignore leaves the client item untouched; verify retry, blocklist, client removal, and history after restart. |
+| Import or recover files | Manual Import and Unmapped Files provide review paths. Pending-author imports retain requested books and formats while author preparation retries; retry and cancellation are exposed. | Validate ambiguous matches, multi-file assignment, provider failure, shared requests, retry, and cancellation against representative files. |
+| Organize files safely | Media-management settings configure roots and naming. Format-aware move/retag workflows preview affected files, check destination conflicts, and preserve linked sidecars. | Exercise preview, copy/move, mixed roots, collisions, interrupted moves, external files, and a large library. |
+| Automate from lists | Import Lists supports Preview Next Sync and per-list sync history, including read-only preview counts and provider-state commit status. | Test supported list providers with an unchanged saved configuration, then compare preview with a later scheduled sync. |
+| Connect external tools and services | Settings > Connect, Metadata, Indexers, Download Clients, and Import Lists expose providers. The SeerrNG contract has capability discovery and format-aware operations. | Verify saved credentials, notifications, request fulfillment, restricted-key boundaries, reverse proxies, and unchanged clients. |
+| Back up and restore | System > Backup supports the app’s scheduled and portable backup paths; current source includes BookshelfNG archive restore and encrypted export/restore. | Restore a representative backup, verify profiles and settings, test wrong-passphrase and rollback paths, and confirm no secret values appear in logs. |
+| Diagnose and maintain the service | System exposes Status, Tasks, Updates, Events, and Log Files; optional metrics and MQTT have separate settings and docs. | Check service restart, task failure, log access, metrics, MQTT discovery, and recovery on the target installation. |
 
-This map follows the Add, search, grab, import, and queue workflows described
-in BookshelfNG's search-and-download guide. The search defaults, series-pack
-search, and existing-torrent adoption changes are in ChaptarrNG source. They
-have not been exercised against a running backend, indexer, or download client
-in this pass.
+## Known review gaps
 
-This map covers the request and acquisition path raised in this conversation,
-not every BookshelfNG capability. The broader feature, migration, integration,
-client, and release-channel comparison remains open in
-[`FORK_FEATURES.md`](FORK_FEATURES.md); those workflows need their own behavior
-and upgrade acceptance before a deployment can be called fully equivalent.
+The source map includes substantial user-facing coverage, but I have not completed
+a live end-to-end parity run. The local pass did not have an isolated browser QA
+workspace available, nor configured provider and download-client test services.
+So the UI changes in this pass have source-level and automated validation only;
+the browser checks in the table remain open.
+
+The BookshelfNG-to-ChaptarrNG path inventory also has unresolved semantic review.
+That inventory is useful for finding code that needs inspection, but a path count
+is not a user-facing feature gap by itself. Keep migration, installed update
+channels, and release readiness in
+[the retirement status](BOOKSHELFNG_RETIREMENT.md), separate from this workflow
+map.

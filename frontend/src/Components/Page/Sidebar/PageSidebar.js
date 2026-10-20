@@ -163,6 +163,10 @@ const links = [
         statusComponent: HealthStatusConnector
       },
       {
+        title: () => translate('Quickstart'),
+        to: '/system/quickstart'
+      },
+      {
         title: () => translate('Tasks'),
         to: '/system/tasks'
       },
@@ -183,12 +187,6 @@ const links = [
         to: '/system/logs/files'
       }
     ]
-  },
-
-  {
-    iconName: icons.QUICK_IMPORT,
-    title: () => translate('Quickstart'),
-    to: '/system/quickstart'
   }
 ];
 
@@ -240,7 +238,10 @@ function hasActiveChildLink(link, pathname) {
 }
 
 function getPositioning() {
-  const windowScroll = window.scrollY == null ? document.documentElement.scrollTop : window.scrollY;
+  const windowScroll =
+    window.scrollY == null ?
+      document.documentElement.scrollTop :
+      window.scrollY;
   const top = Math.max(HEADER_HEIGHT - windowScroll, 0);
   const height = window.innerHeight - top;
 
@@ -251,7 +252,6 @@ function getPositioning() {
 }
 
 class PageSidebar extends Component {
-
   //
   // Lifecycle
 
@@ -282,9 +282,7 @@ class PageSidebar extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    const {
-      isSidebarVisible
-    } = this.props;
+    const { isSidebarVisible } = this.props;
 
     const transform = this.state.transform;
 
@@ -299,7 +297,9 @@ class PageSidebar extends Component {
 
   componentWillUnmount() {
     if (this.props.isSmallScreen) {
-      window.removeEventListener('click', this.onWindowClick, { capture: true });
+      window.removeEventListener('click', this.onWindowClick, {
+        capture: true
+      });
       window.removeEventListener('scroll', this.onWindowScroll);
       window.removeEventListener('touchstart', this.onTouchStart);
       window.removeEventListener('touchmove', this.onTouchMove);
@@ -316,10 +316,13 @@ class PageSidebar extends Component {
   };
 
   _setSidebarTransform(isSidebarVisible, transition, callback) {
-    this.setState({
-      transition,
-      transform: isSidebarVisible ? 0 : SIDEBAR_WIDTH * -1
-    }, callback);
+    this.setState(
+      {
+        transition,
+        transform: isSidebarVisible ? 0 : SIDEBAR_WIDTH * -1
+      },
+      callback
+    );
   }
 
   //
@@ -438,20 +441,14 @@ class PageSidebar extends Component {
   // Render
 
   render() {
-    const {
-      location,
-      isSmallScreen
-    } = this.props;
+    const { location, isSmallScreen } = this.props;
 
-    const {
-      top,
-      height,
-      transition,
-      transform
-    } = this.state;
+    const { top, height, transition, transform } = this.state;
 
     const urlBase = window.Chaptarr.urlBase;
-    const pathname = urlBase ? location.pathname.substr(urlBase.length) || '/' : location.pathname;
+    const pathname = urlBase ?
+      location.pathname.substr(urlBase.length) || '/' :
+      location.pathname;
     const activeParent = getActiveParent(pathname);
 
     let containerStyle = {};
@@ -474,62 +471,58 @@ class PageSidebar extends Component {
     return (
       <div
         ref={this._setSidebarRef}
-        className={classNames(
-          styles.sidebarContainer
-        )}
+        className={classNames(styles.sidebarContainer)}
         style={containerStyle}
       >
-        <ScrollerComponent
-          className={styles.sidebar}
-          style={sidebarStyle}
-        >
+        <ScrollerComponent className={styles.sidebar} style={sidebarStyle}>
           <div className={styles.sidebarContent}>
-            {
-              links.map((link) => {
-                const childWithStatusComponent = find(link.children, (child) => {
-                  return !!child.statusComponent;
-                });
+            {links.map((link) => {
+              const childWithStatusComponent = find(link.children, (child) => {
+                return !!child.statusComponent;
+              });
 
-                const childStatusComponent = childWithStatusComponent ?
-                  childWithStatusComponent.statusComponent :
-                  null;
+              const childStatusComponent = childWithStatusComponent ?
+                childWithStatusComponent.statusComponent :
+                null;
 
-                const isActiveParent = activeParent === link.to;
-                const hasActiveChild = hasActiveChildLink(link, pathname);
+              const isActiveParent = activeParent === link.to;
+              const hasActiveChild = hasActiveChildLink(link, pathname);
 
-                return (
-                  <PageSidebarItem
-                    key={link.to}
-                    iconName={link.iconName}
-                    title={link.title}
-                    to={link.to}
-                    statusComponent={isActiveParent || !childStatusComponent ? link.statusComponent : childStatusComponent}
-                    isActive={pathname === link.to && !hasActiveChild}
-                    isActiveParent={isActiveParent}
-                    isParentItem={!!link.children}
-                    onPress={this.onItemPress}
-                  >
-                    {
-                      link.children && link.to === activeParent &&
-                        link.children.map((child) => {
-                          return (
-                            <PageSidebarItem
-                              key={child.to}
-                              title={child.title}
-                              to={child.to}
-                              isActive={pathname.startsWith(child.to)}
-                              isParentItem={false}
-                              isChildItem={true}
-                              statusComponent={child.statusComponent}
-                              onPress={this.onItemPress}
-                            />
-                          );
-                        })
-                    }
-                  </PageSidebarItem>
-                );
-              })
-            }
+              return (
+                <PageSidebarItem
+                  key={link.to}
+                  iconName={link.iconName}
+                  title={link.title}
+                  to={link.to}
+                  statusComponent={
+                    isActiveParent || !childStatusComponent ?
+                      link.statusComponent :
+                      childStatusComponent
+                  }
+                  isActive={pathname === link.to && !hasActiveChild}
+                  isActiveParent={isActiveParent}
+                  isParentItem={!!link.children}
+                  onPress={this.onItemPress}
+                >
+                  {link.children &&
+                    link.to === activeParent &&
+                    link.children.map((child) => {
+                      return (
+                        <PageSidebarItem
+                          key={child.to}
+                          title={child.title}
+                          to={child.to}
+                          isActive={pathname.startsWith(child.to)}
+                          isParentItem={false}
+                          isChildItem={true}
+                          statusComponent={child.statusComponent}
+                          onPress={this.onItemPress}
+                        />
+                      );
+                    })}
+                </PageSidebarItem>
+              );
+            })}
           </div>
 
           <MessagesConnector />

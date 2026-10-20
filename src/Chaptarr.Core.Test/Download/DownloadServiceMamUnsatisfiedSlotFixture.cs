@@ -393,7 +393,7 @@ namespace Chaptarr.Core.Test.Download
             {
                 Assert.That(calls, Is.EqualTo(new[] { "get-items", "reserve", "download" }));
                 Assert.That(client.DownloadCount, Is.EqualTo(1));
-                Assert.That(events.PublishedEvents.OfType<BookGrabbedEvent>(), Has.Count.EqualTo(1));
+                Assert.That(events.PublishedEvents.OfType<BookGrabbedEvent>().Count(), Is.EqualTo(1));
             });
         }
 
