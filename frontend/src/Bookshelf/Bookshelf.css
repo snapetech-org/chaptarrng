@@ -26,6 +26,11 @@
 }
 
 .emptyMessage {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+
   margin-top: 10px;
   margin-bottom: 30px;
   text-align: center;

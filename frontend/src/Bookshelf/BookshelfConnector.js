@@ -114,6 +114,10 @@ class BookshelfConnector extends Component {
     this.props.setSelectedMediaType({ mediaType });
   };
 
+  onRetryPress = () => {
+    this.fetchAuthorBookCounts();
+  };
+
   onUpdateSelectedPress = (payload) => {
     this.props.saveBookshelf(payload);
   };
@@ -128,6 +132,7 @@ class BookshelfConnector extends Component {
         onSortPress={this.onSortPress}
         onFilterSelect={this.onFilterSelect}
         onMediaTypeChange={this.onMediaTypeChange}
+        onRetryPress={this.onRetryPress}
         onUpdateSelectedPress={this.onUpdateSelectedPress}
       />
     );
