@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { CellMeasurer, CellMeasurerCache } from 'react-virtualized';
 import MediaTypeToggle from 'Author/Details/MediaTypeToggle';
+import Button from 'Components/Link/Button';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import FilterMenu from 'Components/Menu/FilterMenu';
 import PageContent from 'Components/Page/PageContent';
@@ -338,7 +339,8 @@ class Bookshelf extends Component {
       selectedMediaType,
       onSortPress,
       onFilterSelect,
-      onMediaTypeChange
+      onMediaTypeChange,
+      onRetryPress
     } = this.props;
 
     const {
@@ -355,7 +357,7 @@ class Bookshelf extends Component {
     if (totalItems > 0) {
       emptyMessage = translate('AllResultsAreHiddenByTheAppliedFilter');
     } else if (selectedMediaType === 'both') {
-      emptyMessage = translate('NoResultsFound');
+      emptyMessage = translate('BookshelfNoFormats');
     } else if (selectedMediaType === 'ebook') {
       emptyMessage = translate('BookshelfNoEbooks');
     }
@@ -395,7 +397,12 @@ class Bookshelf extends Component {
 
             {
               !isFetching && !!error &&
-                <div>{getErrorMessage(error, translate('ErrorPageAuthorUnavailable'))}</div>
+                <div className={styles.emptyMessage}>
+                  <div>{getErrorMessage(error, translate('ErrorPageBooksUnavailable'))}</div>
+                  <Button onPress={onRetryPress}>
+                    {translate('Retry')}
+                  </Button>
+                </div>
             }
 
             {
@@ -449,6 +456,7 @@ class Bookshelf extends Component {
 
         <BookshelfFooter
           selectedCount={this.getSelectedIds().length}
+          selectedMediaType={selectedMediaType}
           isSaving={isSaving}
           saveError={saveError}
           onUpdateSelectedPress={this.onUpdateSelectedPress}
@@ -476,6 +484,7 @@ Bookshelf.propTypes = {
   isSmallScreen: PropTypes.bool.isRequired,
   onSortPress: PropTypes.func.isRequired,
   onFilterSelect: PropTypes.func.isRequired,
+  onRetryPress: PropTypes.func.isRequired,
   onMediaTypeChange: PropTypes.func.isRequired,
   onUpdateSelectedPress: PropTypes.func.isRequired
 };

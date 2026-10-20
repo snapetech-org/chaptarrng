@@ -54,6 +54,7 @@ class BookshelfFooter extends Component {
   render() {
     const {
       selectedCount,
+      selectedMediaType,
       isSaving
     } = this.props;
 
@@ -67,7 +68,17 @@ class BookshelfFooter extends Component {
             <Popover
               anchor={<Icon className={styles.labelIcon} name={icons.INFO} />}
               title={translate('BookMonitoring')}
-              body={<div>{translate('BookshelfBookMonitoringHelpText')}</div>}
+              body={
+                <div>
+                  {
+                    translate(
+                      selectedMediaType === 'both' ?
+                        'BookshelfAllFormatsMonitoringHelpText' :
+                        'BookshelfBookMonitoringHelpText'
+                    )
+                  }
+                </div>
+              }
               position={tooltipPositions.RIGHT}
             />
           </div>
@@ -103,6 +114,7 @@ class BookshelfFooter extends Component {
 
 BookshelfFooter.propTypes = {
   selectedCount: PropTypes.number.isRequired,
+  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook', 'both']).isRequired,
   isSaving: PropTypes.bool.isRequired,
   saveError: PropTypes.object,
   onUpdateSelectedPress: PropTypes.func.isRequired
