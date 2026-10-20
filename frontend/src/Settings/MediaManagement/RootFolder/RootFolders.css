@@ -44,6 +44,15 @@
   margin-top: 15px;
 }
 
+.backfillRootFoldersButton {
+  margin-left: 10px;
+}
+
+.backfillError {
+  margin-top: 10px;
+  color: var(--dangerColor);
+}
+
 .addRootFolderIcon {
   margin-right: 6px;
 }

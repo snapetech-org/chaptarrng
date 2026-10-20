@@ -14,6 +14,7 @@ representative library, or installed build.
 | Get a new instance ready | System > Quickstart checks format roots, profiles, indexers, clients, and optional integrations. It has direct setup flows for MyAnonamouse and Hardcover and shows Calibre and AudioBookShelf when relevant. Settings now groups destinations by Library, Search, Connect, General, and System, with Quickstart linked from both Settings and System. | Walk through a clean setup on desktop and mobile, including missing roots, an empty indexer list, and a failed provider test. |
 | Choose the default format for new items | Add New dialogs share a saved default format. Users can change it in Settings > UI or with **Set as default** in an add dialog; individual items can still override it. | Verify persistence after reload and confirm author, book, and series dialogs all start with the saved value. |
 | Add an author, book, or series | All three flows support audiobook, ebook, or both where relevant; root folders and quality profiles are visible first, with monitoring, metadata, and tags under **More options**. Missing setup links to Quickstart. Root-folder loading failures show a retry. Author profile editors can reset each format's quality and metadata profiles to the selected root folder's current defaults; a missing default is identified and its reset is unavailable. | Exercise each format, both formats, saved defaults, one-item overrides, profile reset for one format while preserving the other, missing roots/profiles/defaults, existing-author book adds, and add failures. |
+| Fill an existing author's missing format root | Settings > Media Management > Root Folders first previews eligible authors and skip reasons. Confirmation assigns only the applicable effective default root and queues a forced author refresh; it does not move files. | Confirm the preview alone is read-only, manual per-format overrides and missing profiles/defaults are skipped, and confirming changes only eligible authors without moving media. |
 | Find a title in the catalog | Add New has provider selection, result filtering, and submit-to-search by default; Search as you type is optional. Query changes and clearing cancel stale requests. | Check first search, Enter, repeated same-query search, preference persistence, provider errors, and clearing during a slow request. |
 | Browse and understand the library | Authors, Books, Bookshelf, Calendar, and Unmapped Files are reachable from Library. The Books index has a saved **Both** filter with a format label on each record; editing an author from a book row opens the matching format tab. Bookshelf groups recognized same-work records. Book details include edition and narration information; series details compare narrators and volumes. Failed bookshelf loads and desktop book-overview cards have a retry action; small screens skip hidden overview requests. Edition lists and narrator comparisons discard responses from a previous title; delete confirmation only uses sibling-format details for the selected book. | Browse a representative mixed-format library on narrow and wide screens; check empty, loading, retry after a failed request, partial-metadata, and no-file states. |
 | See ebooks and audiobooks together in Books | The Books index **Both** filter lists every audiobook and ebook as its own record and shows its format label. Monitoring, status, narrator controls, and quality profiles use that record's format. | Verify paging, custom filters, sort order, per-format profiles, monitoring labels, selected-row edits, and reload persistence across both formats. |
@@ -77,10 +78,11 @@ returned the canonical `hc:2459845` identity.
 On the `c0aabe44` source snapshot, the full Chaptarr Core suite passed with
 4,496 tests passed, 15 skipped, and no failures; focused book-lookup and
 edition-selection tests passed 11/11. On the current source worktree, the
-frontend CJS suite passed 52/52, including per-format profile resets,
-missing-default protection, row-format author editing, visible monitoring
-failures and retries, paged book IDs, release notes, and stale responses in
-book overviews, editions, narrator comparisons, and delete-confirmation details.
+frontend CJS suite passed 55/55, including per-format profile resets,
+missing-default protection, read-only root-backfill preview and confirmation,
+row-format author editing, visible monitoring failures and retries, paged book
+IDs, release notes, and stale responses in book overviews, editions, narrator
+comparisons, and delete-confirmation details.
 Small-screen book cards skip hidden summary
 requests and fetch them again when returning to desktop. Typecheck and
 translation-key checks passed. The production frontend build completed with 22

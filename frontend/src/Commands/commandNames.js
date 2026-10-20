@@ -21,6 +21,7 @@ export const MOVE_AUTHOR = 'MoveAuthor';
 export const PUSH_GRIMMORY_METADATA = 'PushGrimmoryMetadata';
 export const REFRESH_AUTHOR = 'RefreshAuthor';
 export const BULK_REFRESH_AUTHOR = 'BulkRefreshAuthor';
+export const BACKFILL_AUTHOR_ROOT_FOLDERS = 'BackfillAuthorRootFolders';
 export const REFRESH_BOOK = 'RefreshBook';
 export const BULK_REFRESH_BOOK = 'BulkRefreshBook';
 export const RENAME_FILES = 'RenameFiles';

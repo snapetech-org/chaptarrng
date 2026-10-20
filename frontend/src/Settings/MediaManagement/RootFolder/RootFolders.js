@@ -3,12 +3,15 @@ import React, { Component } from 'react';
 import FieldSet from 'Components/FieldSet';
 import Icon from 'Components/Icon';
 import Button from 'Components/Link/Button';
+import SpinnerButton from 'Components/Link/SpinnerButton';
+import ConfirmModal from 'Components/Modal/ConfirmModal';
 import PageSectionContent from 'Components/Page/PageSectionContent';
 import Table from 'Components/Table/Table';
 import TableBody from 'Components/Table/TableBody';
-import { icons } from 'Helpers/Props';
+import { icons, kinds } from 'Helpers/Props';
 import { getRootFolderMediaTypeLabel, getRootFolderMediaTypes } from 'Helpers/Props/folderTypes';
 import sortByName from 'Utilities/Array/sortByName';
+import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
 import EditRootFolderModalConnector from './EditRootFolderModalConnector';
 import RootFolder from './RootFolder';
@@ -68,8 +71,20 @@ class RootFolders extends Component {
     super(props, context);
 
     this.state = {
-      isAddRootFolderModalOpen: false
+      isAddRootFolderModalOpen: false,
+      isBackfillPreviewModalOpen: false,
+      isPreviewingAuthorRoots: false,
+      backfillPreview: null,
+      backfillPreviewError: null
     };
+  }
+
+  componentWillUnmount() {
+    this._isUnmounted = true;
+
+    if (this._backfillPreviewRequest) {
+      this._backfillPreviewRequest.abortRequest();
+    }
   }
 
   //
@@ -100,6 +115,96 @@ class RootFolders extends Component {
       isAddRootFolderModalOpen: false
     });
   };
+
+  onReviewAuthorRootBackfillPress = () => {
+    this.setState({
+      isPreviewingAuthorRoots: true,
+      backfillPreview: null,
+      backfillPreviewError: null
+    });
+
+    this._backfillPreviewRequest = createAjaxRequest({
+      url: '/author/editor/backfill-roots?dryRun=true',
+      method: 'POST',
+      dataType: 'json'
+    });
+
+    this._backfillPreviewRequest.request.then((preview) => {
+      this._backfillPreviewRequest = null;
+
+      if (this._isUnmounted) {
+        return;
+      }
+
+      this.setState({
+        isPreviewingAuthorRoots: false,
+        isBackfillPreviewModalOpen: true,
+        backfillPreview: preview
+      });
+    }).catch(() => {
+      this._backfillPreviewRequest = null;
+
+      if (this._isUnmounted) {
+        return;
+      }
+
+      this.setState({
+        isPreviewingAuthorRoots: false,
+        backfillPreviewError: translate('UnableToLoadAuthorRootFolderBackfillPreview')
+      });
+    });
+  };
+
+  onBackfillPreviewModalClose = () => {
+    this.setState({ isBackfillPreviewModalOpen: false });
+  };
+
+  onConfirmAuthorRootBackfill = () => {
+    if (Number(this.state.backfillPreview?.updated) > 0) {
+      this.props.onBackfillAuthorRootFolders();
+    }
+
+    this.setState({ isBackfillPreviewModalOpen: false });
+  };
+
+  renderAuthorRootBackfillPreview() {
+    const { backfillPreview } = this.state;
+
+    if (!backfillPreview) {
+      return null;
+    }
+
+    const candidates = Number(backfillPreview.candidates) || 0;
+    const updated = Number(backfillPreview.updated) || 0;
+
+    return (
+      <div>
+        <p>{translate('BackfillAuthorRootFoldersHelpText')}</p>
+        <p>{translate('BackfillAuthorRootFoldersSummary', [updated, candidates])}</p>
+        {
+          candidates === 0 ?
+            <p>{translate('NoAuthorsMissingRootFolder')}</p> :
+            <ul>
+              <li>
+                {translate('BackfillAuthorRootFoldersSkippedManuallyOverridden', [
+                  Number(backfillPreview.skippedManuallyOverridden) || 0
+                ])}
+              </li>
+              <li>
+                {translate('BackfillAuthorRootFoldersSkippedNoDefault', [
+                  Number(backfillPreview.skippedNoDefault) || 0
+                ])}
+              </li>
+              <li>
+                {translate('BackfillAuthorRootFoldersSkippedNoProfile', [
+                  Number(backfillPreview.skippedNoProfile) || 0
+                ])}
+              </li>
+            </ul>
+        }
+      </div>
+    );
+  }
 
   getProfileId = (folder, mediaType, profileType) => {
     const mediaSettings = folder[mediaType];
@@ -161,6 +266,7 @@ class RootFolders extends Component {
       items,
       isDeleting,
       deleteError,
+      isBackfillingAuthorRootFolders,
       onConfirmDeleteRootFolder,
       ...otherProps
     } = this.props;
@@ -206,7 +312,36 @@ class RootFolders extends Component {
               />
               {translate('AddRootFolder')}
             </Button>
+
+            <SpinnerButton
+              className={styles.backfillRootFoldersButton}
+              isDisabled={isBackfillingAuthorRootFolders || this.state.isPreviewingAuthorRoots}
+              isSpinning={this.state.isPreviewingAuthorRoots}
+              onPress={this.onReviewAuthorRootBackfillPress}
+            >
+              {translate('ReviewMissingAuthorRoots')}
+            </SpinnerButton>
           </div>
+
+          {
+            this.state.backfillPreviewError &&
+              <div className={styles.backfillError} role="alert">
+                {this.state.backfillPreviewError}
+              </div>
+          }
+
+          <ConfirmModal
+            isOpen={this.state.isBackfillPreviewModalOpen}
+            kind={Number(this.state.backfillPreview?.updated) > 0 ? kinds.PRIMARY : kinds.DEFAULT}
+            title={translate('BackfillAuthorRootFoldersTitle')}
+            message={this.renderAuthorRootBackfillPreview()}
+            confirmLabel={Number(this.state.backfillPreview?.updated) > 0 ?
+              translate('FillMissingAuthorRoots') :
+              translate('Close')}
+            isSpinning={isBackfillingAuthorRootFolders}
+            onConfirm={this.onConfirmAuthorRootBackfill}
+            onCancel={this.onBackfillPreviewModalClose}
+          />
 
           <EditRootFolderModalConnector
             isOpen={isAddRootFolderModalOpen}
@@ -224,10 +359,12 @@ RootFolders.propTypes = {
   error: PropTypes.object,
   isDeleting: PropTypes.bool,
   deleteError: PropTypes.object,
+  isBackfillingAuthorRootFolders: PropTypes.bool,
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   qualityProfiles: PropTypes.arrayOf(PropTypes.object).isRequired,
   metadataProfiles: PropTypes.arrayOf(PropTypes.object).isRequired,
   onConfirmDeleteRootFolder: PropTypes.func.isRequired,
+  onBackfillAuthorRootFolders: PropTypes.func.isRequired,
   setRootFolderValue: PropTypes.func
 };
 
