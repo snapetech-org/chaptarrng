@@ -7,6 +7,15 @@ handoff summary for moving BookshelfNG users to ChaptarrNG. The detailed
 feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
+The exact revision-pinned path audit stays canonical in BookshelfNG's
+maintainer ledger: the
+[consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md),
+[generated inventory](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation-inventory.json),
+[reviewed path mappings](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation-review-map.json),
+and [feature dispositions](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation-disposition-map.json).
+These path records organize the review; they do not establish feature parity
+or migration acceptance.
+
 **Merged source status (2026-10-20)**
 
 ChaptarrNG PR #131 merged to `main` as

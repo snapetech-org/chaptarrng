@@ -96,6 +96,9 @@
   justify-content: space-between;
   min-width: 0;
   width: 100%;
+  /* Keep guided targets clickable with a small gap in the content scroller. */
+  scroll-margin-top: 12px;
+
   padding: 0;
   border: 0;
   background: none;
