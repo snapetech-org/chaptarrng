@@ -191,6 +191,7 @@ export function isShippedReleaseNoteChanged(file, head, cwd = process.cwd()) {
     shippedContent = execFileSync('git', ['show', tag + ':' + file], {
       cwd,
       encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
     });
   } catch {
     return false;

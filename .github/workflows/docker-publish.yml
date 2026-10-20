@@ -18,6 +18,12 @@ on:
       image_digest:
         description: Digest of the single standard ChaptarrNG image built and pushed by this workflow.
         value: ${{ jobs.build-and-push.outputs.image_digest }}
+      bookshelf_softcover_digest:
+        description: Digest of the migration image that preserves BookshelfNG's softcover/Goodreads mode.
+        value: ${{ jobs.build-and-push.outputs.bookshelf_softcover_digest }}
+      bookshelf_hardcover_digest:
+        description: Digest of the migration image that preserves BookshelfNG's hardcover/native mode.
+        value: ${{ jobs.build-and-push.outputs.bookshelf_hardcover_digest }}
     secrets:
       SIXLABORS_LICENSE_KEY:
         required: true
@@ -53,6 +59,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_digest: ${{ steps.build.outputs.digest }}
+      bookshelf_softcover_digest: ${{ steps.build_softcover.outputs.digest }}
+      bookshelf_hardcover_digest: ${{ steps.build_hardcover.outputs.digest }}
     permissions:
       contents: read
       packages: write
@@ -179,6 +187,7 @@ jobs:
       with:
         context: .
         file: ./Dockerfile.cross
+        target: runtime
         platforms: linux/amd64,linux/arm64,linux/arm/v7
         push: true
         tags: ${{ steps.docker-tags.outputs.tags }}
@@ -192,9 +201,56 @@ jobs:
         sbom: true
         provenance: mode=max
 
+    - name: Build and push BookshelfNG softcover compatibility image
+      if: steps.docker-tags.outputs.has_tags == 'true'
+      id: build_softcover
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+      with:
+        context: .
+        file: ./Dockerfile.cross
+        target: bookshelf-softcover
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
+        push: true
+        tags: ${{ env.STANDARD_IMAGE }}:bookshelf-softcover
+        labels: |
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.revision=${{ inputs.sha }}
+          org.snapetech.chaptarrng.compatibility=bookshelf-softcover
+        cache-from: |
+          type=gha,scope=buildkit
+          type=gha,scope=bookshelf-softcover
+        cache-to: type=gha,scope=bookshelf-softcover,mode=max
+        secrets: |
+          SIXLABORS_LICENSE_KEY=${{ secrets.SIXLABORS_LICENSE_KEY }}
+        sbom: true
+        provenance: mode=max
+
+    - name: Build and push BookshelfNG Hardcover compatibility image
+      if: steps.docker-tags.outputs.has_tags == 'true'
+      id: build_hardcover
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+      with:
+        context: .
+        file: ./Dockerfile.cross
+        target: bookshelf-hardcover
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
+        push: true
+        tags: ${{ env.STANDARD_IMAGE }}:bookshelf-hardcover
+        labels: |
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.revision=${{ inputs.sha }}
+          org.snapetech.chaptarrng.compatibility=bookshelf-hardcover
+        cache-from: |
+          type=gha,scope=buildkit
+          type=gha,scope=bookshelf-hardcover
+        cache-to: type=gha,scope=bookshelf-hardcover,mode=max
+        secrets: |
+          SIXLABORS_LICENSE_KEY=${{ secrets.SIXLABORS_LICENSE_KEY }}
+        sbom: true
+        provenance: mode=max
+
     - name: Install Skopeo for optional Docker Hub mirroring
       if: steps.docker-tags.outputs.has_tags == 'true' && steps.dockerhub-credentials.outputs.configured == 'true'
-      continue-on-error: true
       shell: bash
       run: |
         set -euo pipefail
@@ -203,14 +259,17 @@ jobs:
           sudo apt-get install -y skopeo
         fi
 
-    - name: Publish legacy image aliases from the standard image digest
+    - name: Publish provider-mode compatibility aliases and verify image digests
       id: legacy-image-aliases
       if: steps.docker-tags.outputs.has_tags == 'true'
-      continue-on-error: true
       shell: bash
       env:
         SOURCE_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build.outputs.digest }}
         EXPECTED_DIGEST: ${{ steps.build.outputs.digest }}
+        BOOKSHELF_SOFTCOVER_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build_softcover.outputs.digest }}
+        BOOKSHELF_SOFTCOVER_DIGEST: ${{ steps.build_softcover.outputs.digest }}
+        BOOKSHELF_HARDCOVER_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build_hardcover.outputs.digest }}
+        BOOKSHELF_HARDCOVER_DIGEST: ${{ steps.build_hardcover.outputs.digest }}
         VERSION: ${{ steps.docker-tags.outputs.version }}
         DOCKERHUB_CONFIGURED: ${{ steps.dockerhub-credentials.outputs.configured }}
         PUBLISH_LEGACY_ALIASES: ${{ inputs.legacy_bridge_enabled }}
@@ -226,4 +285,20 @@ jobs:
       with:
         subject-name: ${{ env.STANDARD_IMAGE }}
         subject-digest: ${{ steps.build.outputs.digest }}
+        push-to-registry: true
+
+    - name: Attest BookshelfNG softcover compatibility image provenance
+      if: steps.docker-tags.outputs.has_tags == 'true'
+      uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+      with:
+        subject-name: ${{ env.STANDARD_IMAGE }}
+        subject-digest: ${{ steps.build_softcover.outputs.digest }}
+        push-to-registry: true
+
+    - name: Attest BookshelfNG Hardcover compatibility image provenance
+      if: steps.docker-tags.outputs.has_tags == 'true'
+      uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+      with:
+        subject-name: ${{ env.STANDARD_IMAGE }}
+        subject-digest: ${{ steps.build_hardcover.outputs.digest }}
         push-to-registry: true

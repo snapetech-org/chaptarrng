@@ -14,8 +14,8 @@ const columns = [
   { name: 'title', label: () => translate('Title'), isVisible: true, isSortable: false },
   { name: 'narrators', label: () => translate('EditionNarrators'), isVisible: true, isSortable: false },
   { name: 'production', label: () => translate('EditionProduction'), isVisible: true, isSortable: false },
-  { name: 'abridgement', label: () => translate('EditionAbridgement'), isVisible: true, isSortable: false },
   { name: 'duration', label: () => translate('Duration'), isVisible: true, isSortable: false },
+  { name: 'abridgement', label: () => translate('EditionAbridgement'), isVisible: true, isSortable: false },
   { name: 'language', label: () => translate('Language'), isVisible: true, isSortable: false },
   { name: 'publisher', label: () => translate('Publisher'), isVisible: true, isSortable: false },
   { name: 'status', label: () => translate('Status'), isVisible: true, isSortable: false }
@@ -26,14 +26,24 @@ export function formatDuration(seconds) {
     return null;
   }
 
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
+  const totalMinutes = Math.max(1, Math.round(seconds / 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
   return `${hours}h ${String(minutes).padStart(2, '0')}m`;
 }
 
-function NotProvided() {
-  return <span className={styles.unknown}>{translate('EditionNotProvided')}</span>;
+function UnknownValue({ notApplicable = false }) {
+  return (
+    <span className={styles.unknown}>
+      {translate(notApplicable ? 'EditionNotApplicable' : 'EditionNotProvided')}
+    </span>
+  );
 }
+
+UnknownValue.propTypes = {
+  notApplicable: PropTypes.bool
+};
 
 function productionLabel(production) {
   if (production === 'full-cast') {
@@ -93,32 +103,34 @@ function BookEditionCatalog({ bookId }) {
       <Table columns={columns}>
         <TableBody>
           {items.map((edition) => {
-            const duration = formatDuration(edition.durationSeconds);
             const production = edition.isEbook ? null : productionLabel(edition.production);
+            const duration = edition.isEbook ? null : formatDuration(edition.durationSeconds);
             const abridgement = edition.isEbook ? null : abridgementLabel(edition.abridged);
 
             return (
               <TableRow key={edition.editionId}>
-                <TableRowCell className={styles.title}>{edition.title}</TableRowCell>
+                <TableRowCell className={styles.title}>
+                  {edition.title || <UnknownValue />}
+                </TableRowCell>
                 <TableRowCell className={styles.narrators}>
                   {edition.narrators && edition.narrators.length ?
                     edition.narrators.join(', ') :
-                    <NotProvided />}
+                    <UnknownValue />}
                 </TableRowCell>
                 <TableRowCell className={styles.production}>
-                  {production || <NotProvided />}
-                </TableRowCell>
-                <TableRowCell className={styles.abridgement}>
-                  {abridgement || <NotProvided />}
+                  {production || <UnknownValue notApplicable={edition.isEbook} />}
                 </TableRowCell>
                 <TableRowCell className={styles.duration}>
-                  {duration || <NotProvided />}
+                  {duration || <UnknownValue notApplicable={edition.isEbook} />}
+                </TableRowCell>
+                <TableRowCell className={styles.abridgement}>
+                  {abridgement || <UnknownValue notApplicable={edition.isEbook} />}
                 </TableRowCell>
                 <TableRowCell className={styles.language}>
-                  {edition.language || <NotProvided />}
+                  {edition.language || <UnknownValue />}
                 </TableRowCell>
                 <TableRowCell className={styles.publisher}>
-                  {edition.publisher || <NotProvided />}
+                  {edition.publisher || <UnknownValue />}
                 </TableRowCell>
                 <TableRowCell className={styles.status}>
                   {edition.monitored && <Label kind="primary">{translate('EditionSelected')}</Label>}

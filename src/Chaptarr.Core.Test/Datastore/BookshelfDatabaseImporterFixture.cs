@@ -14,20 +14,32 @@ using NLog.Extensions.Logging;
 using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
+using NzbDrone.Core.Download.Clients.QBittorrent;
+using NzbDrone.Core.Indexers.DirectDownload;
+using NzbDrone.Core.Indexers.MyAnonaMouse;
 using NzbDrone.Core.MetadataSource.BookInfo;
+using NzbDrone.Core.Notifications.BookLore;
 
 namespace Chaptarr.Core.Test.Datastore
 {
     [TestFixture]
+    [NonParallelizable]
     public class BookshelfDatabaseImporterFixture
     {
         private string _directory;
         private string _sourcePath;
         private string _sourceConnectionString;
+        private string _previousHardcoverMode;
+        private string _previousHardcoverNativeMode;
 
         [SetUp]
         public void SetUp()
         {
+            _previousHardcoverMode = Environment.GetEnvironmentVariable("HARDCOVER");
+            _previousHardcoverNativeMode = Environment.GetEnvironmentVariable("HARDCOVER_NATIVE");
+            Environment.SetEnvironmentVariable("HARDCOVER", null);
+            Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", null);
+
             _directory = Path.Combine(Path.GetTempPath(), $"bookshelf-importer-{Guid.NewGuid().ToString("N").Substring(0, 8)}");
             Directory.CreateDirectory(_directory);
             _sourcePath = Path.Combine(_directory, "readarr.db");
@@ -46,6 +58,296 @@ namespace Chaptarr.Core.Test.Datastore
         {
             SqliteConnection.ClearAllPools();
             if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
+            Environment.SetEnvironmentVariable("HARDCOVER", _previousHardcoverMode);
+            Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", _previousHardcoverNativeMode);
+        }
+
+        [Test]
+        public void should_preserve_bare_numeric_provider_ids_as_hardcover_ids_when_native_mode_is_enabled()
+        {
+            SetBareNumericProviderIds();
+            Environment.SetEnvironmentVariable("HARDCOVER", "true");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT HardcoverAuthorId FROM Authors WHERE Id = 20;"), Is.EqualTo("hc:10"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT HardcoverBookId FROM Books WHERE Id = 30;"), Is.EqualTo("hc:30"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT ForeignEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo("hc:40"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT HardcoverEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo("40"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT HardcoverSeriesId FROM Series WHERE Id = 70;"), Is.EqualTo("hc:70"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverEnabled';"), Is.EqualTo("true"),
+                    "native BookshelfNG Hardcover mode must remain enabled after conversion");
+            });
+        }
+
+        [Test]
+        public void should_keep_bare_numeric_provider_ids_as_goodreads_ids_when_hardcover_mode_is_disabled()
+        {
+            SetBareNumericProviderIds();
+            Environment.SetEnvironmentVariable("HARDCOVER", "false");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsAuthorId FROM Authors WHERE Id = 20;"), Is.EqualTo("gr:10"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsWorkId FROM Books WHERE Id = 30;"), Is.EqualTo("gr:30"));
+                Assert.That(QueryScalar<long>(_sourcePath, "SELECT GoodreadsEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo(40));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsSeriesId FROM Series WHERE Id = 70;"), Is.EqualTo("gr:70"));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Config WHERE Key = 'HardcoverEnabled' AND Value = 'true';"), Is.Zero,
+                    "Goodreads mode must not be changed to native Hardcover during conversion");
+            });
+        }
+
+        [Test]
+        public void should_report_unmapped_provider_settings_in_preview_and_refuse_to_apply_them()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
+                    VALUES (123, 'Plugin fixture', 'FixturePluginIndexer', '{}', 'FixturePluginSettings', 1, 1, 1, 25, '[]', 0);
+                    INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
+                    VALUES (130, 'Legacy Torznab fixture', 'Torznab', '{""baseUrl"":""https://indexer.example"",""apiKey"":""fixture-indexer-key"",""legacyIndexerSecret"":""fixture-indexer-secret""}', 'TorznabSettings', 1, 1, 1, 25, '[]', 0);
+                    INSERT INTO DownloadClients (Id, Enable, Name, Implementation, Settings, ConfigContract)
+                    VALUES (124, 1, 'Plugin download fixture', 'FixturePluginDownload', '{}', 'FixturePluginDownloadSettings');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (125, 'Legacy Hardcover fixture', 'HardcoverImport', '{}', 'HardcoverImportSettings', 0, '/library', 0, 1, 1, '[]');
+                    INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                    VALUES (126, 'Legacy Goodreads owned notification', 1, '{}', 'GoodreadsOwnedBooks', 'GoodreadsOwnedBooksNotificationSettings', 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (127, 'Legacy Goodreads owned list', 'GoodreadsOwnedBooks', '{}', 'GoodreadsOwnedBooksImportListSettings', 0, '/library', 0, 1, 1, '[]');
+                    INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                    VALUES (128, 'Legacy Goodreads bookshelf notification', 1, '{}', 'GoodreadsBookshelf', 'GoodreadsBookshelfNotificationSettings', 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (129, 'Legacy Goodreads shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""to-read""],""accessToken"":""fixture-goodreads-access-secret"",""accessTokenSecret"":""fixture-goodreads-secret"",""requestTokenSecret"":""fixture-request-secret"",""userName"":""fixture-user"",""signIn"":""startOAuth"",""signingUrl"":""https://auth.servarr.com/v1/goodreads/sign"",""oauthUrl"":""https://www.goodreads.com/oauth/authorize"",""oauthRequestTokenUrl"":""https://www.goodreads.com/oauth/request_token"",""oauthAccessTokenUrl"":""https://www.goodreads.com/oauth/access_token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (131, 'Legacy public Goodreads shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""to-read""],""accessToken"":"""",""accessTokenSecret"":"""",""requestTokenSecret"":"""",""userName"":"""",""signIn"":""startOAuth"",""signingUrl"":""https://auth.servarr.com/v1/goodreads/sign"",""oauthUrl"":""https://www.goodreads.com/oauth/authorize"",""oauthRequestTokenUrl"":""https://www.goodreads.com/oauth/request_token"",""oauthAccessTokenUrl"":""https://www.goodreads.com/oauth/access_token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (132, 'Legacy Goodreads partial OAuth shelf list', 'GoodreadsBookshelf', '{""userId"":""12345678"",""bookshelfIds"":[""read""],""accessToken"":""fixture-partial-goodreads-token""}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (133, 'Legacy Goodreads shelf without an account', 'GoodreadsBookshelf', '{""bookshelfIds"":[""read""]}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO Metadata (Id, Enable, Name, Implementation, Settings, ConfigContract)
+                    VALUES (134, 1, 'Legacy OPF sidecar', 'AudiobookshelfMetadata', '{}', 'NullConfig');
+                    INSERT INTO Metadata (Id, Enable, Name, Implementation, Settings, ConfigContract)
+                    VALUES (135, 1, 'Unmapped metadata plugin', 'FixturePluginMetadata', '{""apiKey"":""fixture-metadata-secret""}', 'FixturePluginMetadataSettings');
+                    INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
+                    VALUES (66, 20, 'FixturePluginMetadata', 0, 'plugin.sidecar', '2026-01-05', 30, NULL, 'sidecar');";
+                command.ExecuteNonQuery();
+            }
+
+            var sourceBefore = File.ReadAllBytes(_sourcePath);
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(10));
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginIndexer/FixturePluginSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("Torznab/TorznabSettings", StringComparison.Ordinal) &&
+                    issue.Contains("legacyIndexerSecret", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-indexer-secret", StringComparison.Ordinal)), Is.False,
+                    "provider settings and credentials must not be included in the report");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginDownload/FixturePluginDownloadSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("LegacyAudiobookshelfMetadata/NullConfig", StringComparison.Ordinal)), Is.False,
+                    "the legacy OPF metadata provider is mapped by its exact implementation and contract");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("FixturePluginMetadata/FixturePluginMetadataSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("FixturePluginMetadata", StringComparison.Ordinal) &&
+                    issue.Contains("metadata consumer", StringComparison.OrdinalIgnoreCase)), Is.True,
+                    "unmapped sidecar consumers must block apply");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-metadata-secret", StringComparison.Ordinal)), Is.False,
+                    "metadata provider settings and credentials must not be included in the report");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("HardcoverImport/HardcoverImportSettings", StringComparison.Ordinal)), Is.False,
+                    "the migrated Hardcover public-list provider is available in Chaptarr");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsOwnedBooks/GoodreadsOwnedBooksNotificationSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsBookshelf/GoodreadsBookshelfNotificationSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("GoodreadsOwnedBooks/GoodreadsOwnedBooksImportListSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("GoodreadsBookshelf/GoodreadsBookshelfImportListSettings", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("row 129:", StringComparison.Ordinal)), Is.False,
+                    "complete legacy OAuth settings are supported by the migration candidate");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("row 132:", StringComparison.Ordinal) &&
+                    issue.Contains("accessTokenSecret", StringComparison.Ordinal)), Is.True,
+                    "partial OAuth credentials must block migration without exposing their values");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("row 133:", StringComparison.Ordinal) &&
+                    issue.Contains("userId or OAuth credentials", StringComparison.Ordinal)), Is.True,
+                    "public shelves without an account ID or complete OAuth credentials must block migration");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("row 131:", StringComparison.Ordinal)), Is.False,
+                    "empty OAuth fields and fixed Goodreads runtime settings do not block public-shelf migration");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-goodreads-access-secret", StringComparison.Ordinal)), Is.False,
+                    "provider settings and credentials must not be included in the report");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-partial-goodreads-token", StringComparison.Ordinal)), Is.False,
+                    "provider settings and credentials must not be included in the report");
+                Assert.That(preview.ImportReport.Tables["DownloadClients"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(preview.ImportReport.Tables["ImportLists"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(preview.ImportReport.Tables["Notifications"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(preview.ImportReport.Tables["Indexers"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(preview.ImportReport.Tables["Metadata"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(preview.ImportReport.Tables["MetadataFiles"].TargetMapping, Does.Contain("block apply"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBefore), "preview must leave source bytes unchanged");
+            });
+
+            var exception = Assert.Throws<InvalidDataException>(() => migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain("cannot be applied"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBefore), "a blocked apply must leave source bytes unchanged");
+            });
+        }
+
+        [Test]
+        public void should_preserve_goodreads_oauth_provider_settings_during_bookshelf_conversion()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = """
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (201, 'Legacy Goodreads OAuth shelf', 'GoodreadsBookshelf', '{"userId":"12345678","bookshelfIds":["to-read"],"accessToken":"fixture-access-token","accessTokenSecret":"fixture-access-secret","requestTokenSecret":"fixture-request-secret","userName":"fixture-user","signIn":"startOAuth","signingUrl":"https://auth.servarr.com/v1/goodreads/sign","oauthUrl":"https://www.goodreads.com/oauth/authorize","oauthRequestTokenUrl":"https://www.goodreads.com/oauth/request_token","oauthAccessTokenUrl":"https://www.goodreads.com/oauth/access_token"}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (202, 'Legacy Goodreads public shelf', 'GoodreadsBookshelf', '{"userId":"12345678","bookshelfIds":["to-read"],"accessToken":"","accessTokenSecret":"","requestTokenSecret":"","userName":"","signIn":"startOAuth","signingUrl":"https://auth.servarr.com/v1/goodreads/sign","oauthUrl":"https://www.goodreads.com/oauth/authorize","oauthRequestTokenUrl":"https://www.goodreads.com/oauth/request_token","oauthAccessTokenUrl":"https://www.goodreads.com/oauth/access_token"}', 'GoodreadsBookshelfImportListSettings', 1, '/library', 1, 1, 1, '[]');
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (203, 'Legacy Goodreads owned list', 'GoodreadsOwnedBooks', '{"userId":"12345678","accessToken":"fixture-owned-access-token","accessTokenSecret":"fixture-owned-access-secret","requestTokenSecret":"fixture-owned-request-secret","userName":"fixture-owned-user","signIn":"startOAuth"}', 'GoodreadsOwnedBooksImportListSettings', 0, '/library', 0, 1, 1, '[]');
+                    INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                    VALUES (204, 'Legacy Goodreads bookshelf notification', 0, '{"accessToken":"fixture-notify-access-token","accessTokenSecret":"fixture-notify-access-secret","requestTokenSecret":"fixture-notify-request-secret","userId":"12345678","userName":"fixture-notify-user","addIds":["read"],"removeIds":["to-read"],"signIn":"startOAuth"}', 'GoodreadsBookshelf', 'GoodreadsBookshelfNotificationSettings', 0, '[]', 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                    VALUES (205, 'Legacy Goodreads owned notification', 0, '{"accessToken":"fixture-owned-notify-token","accessTokenSecret":"fixture-owned-notify-secret","requestTokenSecret":"fixture-owned-notify-request","userId":"12345678","userName":"fixture-owned-notify-user","condition":10,"description":"","location":"","signIn":"startOAuth"}', 'GoodreadsOwnedBooks', 'GoodreadsOwnedBooksNotificationSettings', 0, '[]', 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    """;
+                command.ExecuteNonQuery();
+            }
+
+            var sourceBeforePreview = File.ReadAllBytes(_sourcePath);
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(preview.ImportReport.BlockingIssues, Is.Empty);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-access-secret", StringComparison.Ordinal)), Is.False);
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBeforePreview));
+            });
+
+            migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessToken') FROM ImportLists WHERE Id = 201;"), Is.EqualTo("fixture-access-token"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM ImportLists WHERE Id = 201;"), Is.EqualTo("fixture-access-secret"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM ImportLists WHERE Id = 203;"), Is.EqualTo("fixture-owned-access-secret"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM Notifications WHERE Id = 204;"), Is.EqualTo("fixture-notify-access-secret"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM Notifications WHERE Id = 205;"), Is.EqualTo("fixture-owned-notify-secret"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT json_extract(Settings, '$.accessTokenSecret') FROM ImportLists WHERE Id = 202;"), Is.EqualTo(string.Empty));
+            });
+        }
+
+        [Test]
+        public void should_preserve_hardcover_public_list_provider_settings()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (111, 'Hardcover public list', 'HardcoverImport', '{""apiKey"":""fixture-token"",""user"":""fixture-user"",""listIds"":[""fixture-list""]}', 'HardcoverImportSettings', 1, '/library', 1, 1, 1, '[]');";
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Implementation FROM ImportLists WHERE Id = 111;"), Is.EqualTo("HardcoverImport"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM ImportLists WHERE Id = 111;"), Is.EqualTo("HardcoverImportSettings"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 111;"), Does.Contain("fixture-token"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 111;"), Does.Contain("fixture-list"));
+            });
+        }
+
+        [Test]
+        public void should_fail_closed_when_bare_numeric_provider_ids_have_no_explicit_source_mode()
+        {
+            SetBareNumericProviderIds();
+            var sourceBefore = File.ReadAllBytes(_sourcePath);
+
+            var exception = Assert.Throws<InvalidDataException>(() =>
+                new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                    _sourceConnectionString,
+                    new MigrationContext(MigrationType.Main),
+                    DatabaseType.SQLite));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain("primary catalog mode is not explicit"));
+                Assert.That(exception.Message, Does.Contain("HARDCOVER=true"));
+                Assert.That(exception.Message, Does.Contain("HARDCOVER=false"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBefore));
+            });
+        }
+
+        [Test]
+        public void should_replace_target_naming_defaults_when_bookshelf_has_saved_settings()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO NamingConfig (Id, ReplaceIllegalCharacters, AuthorFolderFormat, RenameBooks, StandardBookFormat, ColonReplacementFormat)
+                    VALUES (5, 0, '{Author NameLastFirst}', 1, '{Book Title} custom', 4);";
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM NamingConfig;"), Is.EqualTo(1),
+                    "saved BookshelfNG settings must replace the seeded Chaptarr defaults");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT MultiEpisodeStyle FROM NamingConfig WHERE Id = 5;"), Is.Zero);
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT ReplaceIllegalCharacters FROM NamingConfig WHERE Id = 5;"), Is.Zero);
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT RenameBooks FROM NamingConfig WHERE Id = 5;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT AuthorFolderFormat FROM NamingConfig WHERE Id = 5;"), Is.EqualTo("{Author NameLastFirst}"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT StandardBookFormat FROM NamingConfig WHERE Id = 5;"), Is.EqualTo("{Book Title} custom"));
+            });
         }
 
         [Test]
@@ -64,6 +366,8 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(DatabaseLineageGuard.Detect(ConnectionStringFor(backupPath), DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;").Length, Is.Zero);
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM NamingConfig WHERE MultiEpisodeStyle = 0 AND LENGTH(StandardBookFormat) > 0 AND LENGTH(AuthorFolderFormat) > 0;"), Is.EqualTo(1),
+                    "an empty BookshelfNG naming table must retain Chaptarr's migrated defaults");
                 Assert.That(QueryScalar<string>(backupPath, "SELECT ForeignBookId FROM Books WHERE Id = 30;"), Is.EqualTo("hardcover:book-30"));
             });
 
@@ -86,15 +390,43 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT PreferredSeries FROM MetadataProfiles WHERE Id = 2;"), Is.EqualTo("Fixture Ebooks"));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'FixtureSetting';"), Is.EqualTo("preserved"));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT QualityProfileId FROM ImportLists WHERE Id = 110;"), Is.EqualTo(1));
-            Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 110;"), Does.Contain("fixture-list-setting"));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM ImportLists WHERE Id = 110;"), Is.EqualTo("GoodreadsBookshelfImportListSettings"));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 110;"), Does.Contain("12345678"));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM Notifications WHERE Id = 111;"), Is.EqualTo(nameof(BookLoreSettings)));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM DownloadClients WHERE Id = 109;"), Is.EqualTo(nameof(QBittorrentSettings)));
+            var qBittorrentSettings = NzbDrone.Common.Serializer.STJson.Deserialize<QBittorrentSettings>(
+                QueryScalar<string>(_sourcePath, "SELECT Settings FROM DownloadClients WHERE Id = 109;"));
+            Assert.That(qBittorrentSettings.AudiobookCategory, Is.EqualTo("legacy-audio"));
+            Assert.That(qBittorrentSettings.EbookCategory, Is.EqualTo("legacy-ebooks"));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Indexers WHERE Id = 120 AND EnableRss = 1 AND SupportsRss = 0 AND SupportsSearch = 0;"), Is.EqualTo(1));
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM Indexers WHERE Id = 120;"), Is.EqualTo(nameof(MyAnonaMouseSettings)));
+            var mamSettings = NzbDrone.Common.Serializer.STJson.Deserialize<MyAnonaMouseSettings>(
+                QueryScalar<string>(_sourcePath, "SELECT Settings FROM Indexers WHERE Id = 120;"));
+            Assert.Multiple(() =>
+            {
+                Assert.That(mamSettings.MamId, Is.EqualTo("fixture-token"));
+                Assert.That(mamSettings.SearchType, Is.EqualTo((int)MyAnonaMouseSearchType.Freeleech));
+                Assert.That(mamSettings.SearchInDescription, Is.True);
+                Assert.That(mamSettings.SearchInSeries, Is.False);
+                Assert.That(mamSettings.SearchInFilenames, Is.True);
+                Assert.That(mamSettings.SearchLanguages, Is.EqualTo(new[] { 4, 1 }));
+                Assert.That(mamSettings.UseFreeleechWedge, Is.EqualTo((int)MyAnonaMouseFreeleechWedgeAction.Never),
+                    "the unsafe legacy Required value is conservatively mapped to Never");
+            });
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM Indexers WHERE Id = 121;"), Is.EqualTo(nameof(DirectDownloadSettings)));
+            var directDownloadSettings = NzbDrone.Common.Serializer.STJson.Deserialize<DirectDownloadSettings>(
+                QueryScalar<string>(_sourcePath, "SELECT Settings FROM Indexers WHERE Id = 121;"));
+            Assert.That(directDownloadSettings.Urls, Is.EqualTo("https://primary.example\nhttps://secondary.example"));
+            Assert.That(directDownloadSettings.ApiKey, Is.EqualTo("fixture-key"));
+            Assert.That(directDownloadSettings.EnableSlowFallback, Is.True);
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM Indexers WHERE Id = 122;"), Is.EqualTo("NewznabSettings"));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT OnBookRetag FROM Notifications WHERE Id = 111;"), Is.EqualTo(1));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Password FROM Users WHERE Id = 112;"), Is.EqualTo("legacy-sha256-hash"));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Users WHERE Id = 112 AND Salt IS NULL AND Iterations IS NULL;"), Is.EqualTo(1));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE AuthorId = 20;"), Is.EqualTo(2));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 30 AND MediaType = 0 AND AudiobookMonitored = 1 AND ForeignEditionId = 'hc:audio-40';"), Is.EqualTo(1));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 31 AND MediaType = 1 AND EbookMonitored = 0 AND ForeignEditionId IS NULL;"), Is.EqualTo(1));
-            Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND HardcoverEditionId = 'hc:audio-40';"), Is.EqualTo(1));
+            Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND HardcoverEditionId = 'audio-40';"), Is.EqualTo(1));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT NarratorNames FROM Editions WHERE Id = 40;"), Is.EqualTo("[\"A Narrator\"]"));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Images FROM Editions WHERE Id = 40;"), Is.EqualTo("[{\"Url\":\"https://covers.example/audio.jpg\",\"CoverType\":6}]"));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Links FROM Editions WHERE Id = 40;"), Is.EqualTo("[{\"Url\":\"https://catalog.example/audio-40\",\"Name\":\"Catalog\"}]"));
@@ -117,6 +449,41 @@ namespace Chaptarr.Core.Test.Datastore
                 new MigrationContext(MigrationType.Main),
                 DatabaseType.SQLite);
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books;"), Is.EqualTo(2), "a restart must not repeat the conversion");
+        }
+
+        [Test]
+        public void should_preserve_booklore_notification_settings_and_release_import_trigger()
+        {
+            const string settings = "{\"BaseUrl\":\"https://booklore.example\",\"Username\":\"migration-fixture\",\"Password\":\"fixture-only-password\"}";
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                    VALUES (113, 'BookLore', 0, @settings, @implementation, @configContract, 0, '[]', 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);";
+                command.Parameters.AddWithValue("@settings", settings);
+                command.Parameters.AddWithValue("@implementation", typeof(BookLore).Name);
+                command.Parameters.AddWithValue("@configContract", typeof(BookLoreSettings).Name);
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+            const string preservedRow = @"SELECT COUNT(*) FROM Notifications
+                WHERE Id = 113 AND Name = 'BookLore' AND Implementation = 'BookLore'
+                    AND ConfigContract = 'BookLoreSettings'
+                    AND Settings = '{""BaseUrl"":""https://booklore.example"",""Username"":""migration-fixture"",""Password"":""fixture-only-password""}'
+                    AND OnReleaseImport = 1;";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, preservedRow), Is.EqualTo(1), "the ChaptarrNG database must retain the BookLore provider, credentials, and import trigger");
+                Assert.That(QueryScalar<int>(backupPath, preservedRow), Is.EqualTo(1), "the retained BookshelfNG backup must preserve the original BookLore settings and trigger");
+            });
         }
 
         [Test]
@@ -191,6 +558,62 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataTitleSourcePreference';"), Is.EqualTo("openlibrary"));
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataCoverSourcePreference';"), Is.EqualTo("googlebooks"));
                 Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'GoogleBooksApiKey';"), Is.EqualTo("fixture-key-preserved"));
+            });
+        }
+
+        [Test]
+        public void should_migrate_a_saved_bookshelf_hardcover_token_to_the_chaptarr_setting()
+        {
+            AddConfigValue("HardcoverAuth", "Bearer fixture-hardcover-token");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverApiToken';"), Is.EqualTo("fixture-hardcover-token"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverAuth';"), Is.EqualTo("Bearer fixture-hardcover-token"));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'HardcoverAuth';"), Is.EqualTo("Bearer fixture-hardcover-token"));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'HardcoverApiToken';"), Is.Zero);
+            });
+        }
+
+        [Test]
+        public void should_preserve_an_explicit_chaptarr_hardcover_token_over_the_legacy_value()
+        {
+            AddConfigValue("HardcoverAuth", "fixture-legacy-token");
+            AddConfigValue("HardcoverApiToken", "fixture-explicit-token");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverApiToken';"), Is.EqualTo("fixture-explicit-token"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverAuth';"), Is.EqualTo("fixture-legacy-token"));
+            });
+        }
+
+        [Test]
+        public void should_preserve_an_explicitly_cleared_chaptarr_hardcover_token()
+        {
+            AddConfigValue("HardcoverAuth", "fixture-legacy-token");
+            AddConfigValue("HardcoverApiToken", string.Empty);
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverApiToken';"), Is.Empty);
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'HardcoverAuth';"), Is.EqualTo("fixture-legacy-token"));
             });
         }
 
@@ -802,6 +1225,10 @@ namespace Chaptarr.Core.Test.Datastore
                     VALUES (62, 20, 30, 50, 'linked-cover.jpg', 'jpg', '2026-01-05', '2026-01-05');
                     INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
                     VALUES (63, 20, 'AudioBookShelf', 0, 'unmapped.opf', '2026-01-05', 30, 50, 'opf');
+                    INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
+                    VALUES (67, 20, 'AudiobookshelfMetadata', 0, 'legacy-consumer.opf', '2026-01-05', 30, 50, 'opf');
+                    INSERT INTO Metadata (Id, Enable, Name, Implementation, Settings, ConfigContract)
+                    VALUES (101, 1, 'Legacy OPF sidecars', 'AudiobookshelfMetadata', '{}', 'NullConfig');
                     INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
                     VALUES (94, 'book.m4b', '2026-01-05', '{}', '{""FileId"":""50"",""ImportedPath"":""/library/Fixture Author/book.m4b""}', 3, 'download-94', 20, 30);";
                 command.ExecuteNonQuery();
@@ -818,7 +1245,81 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Path FROM BookFiles WHERE Id = 50;"), Is.EqualTo("/library/Fixture Author/book.m4b"));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM ExtraFiles WHERE Id = 62 AND BookId = 30 AND BookFileId = 50;"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM MetadataFiles WHERE Id = 63 AND BookId = 30 AND BookFileId = 50;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 63;"), Is.EqualTo("LegacyAudiobookshelfMetadata"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 67;"), Is.EqualTo("LegacyAudiobookshelfMetadata"),
+                    "the provider-name sidecar alias must win over Chaptarr's case-insensitive AudioBookShelf provider ID");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Metadata WHERE Id = 101 AND Enable = 1 AND Implementation = 'LegacyAudiobookshelfMetadata' AND ConfigContract = 'NullConfig';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 94 AND BookId = 30 AND EditionId IS NULL AND Data LIKE '%\"FileId\":\"50\"%';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_preserve_book_files_that_reference_a_missing_edition_as_unmapped()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO BookFiles (Id, EditionId, CalibreId, Quality, Size, DateAdded, MediaInfo, Modified, Path, Part)
+                    VALUES (52, 9999, 0, '{}', 300, '2026-01-04', '{}', '2026-01-04', '/library/Fixture Author/unmapped.m4b', 0);
+                    INSERT INTO ExtraFiles (Id, AuthorId, BookId, BookFileId, RelativePath, Extension, Added, LastUpdated)
+                    VALUES (64, 20, 30, 52, 'unmapped-cover.jpg', 'jpg', '2026-01-06', '2026-01-06');
+                    INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
+                    VALUES (65, 20, 'AudioBookShelf', 0, 'unmapped.opf', '2026-01-06', 30, 52, 'opf');
+                    INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
+                    VALUES (95, 'unmapped.m4b', '2026-01-06', '{}', '{""FileId"":""52"",""ImportedPath"":""/library/Fixture Author/unmapped.m4b""}', 3, 'download-95', 20, 30);";
+                command.ExecuteNonQuery();
+            }
+
+            var result = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 52 AND EditionId = 0 AND MediaType = '' AND UnmappedReason LIKE '%missing edition%' AND Path = '/library/Fixture Author/unmapped.m4b';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM ExtraFiles WHERE Id = 64 AND BookId = 30 AND BookFileId = 52;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM MetadataFiles WHERE Id = 65 AND BookId = 30 AND BookFileId = 52;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 95 AND BookId = 30 AND EditionId IS NULL AND Data LIKE '%\"FileId\":\"52\"%';"), Is.EqualTo(1));
+                Assert.That(result.ImportReport.Tables["BookFiles"].TargetMapping, Does.Contain("missing edition 1"));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_preserve_history_with_a_cross_book_file_reference_without_relinking_it()
+        {
+            InsertBookWithoutEdition(32, monitored: true);
+            const string historyData = "{\"FileId\":\"50\",\"ImportedPath\":\"/library/Fixture Author/book.m4b\"}";
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
+                    VALUES (96, 'book.m4b', '2026-01-07', '{}', $data, 3, 'download-96', 20, 32);";
+                command.Parameters.AddWithValue("$data", historyData);
+                command.ExecuteNonQuery();
+            }
+
+            var result = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND BookId = 32 AND EditionId IS NULL;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Data FROM History WHERE Id = 96;"), Is.EqualTo(historyData));
+                Assert.That(result.ImportReport.Tables["History"].TargetMapping, Does.Contain("cross-book file references: 1"));
+                Assert.That(result.ImportReport.Tables["History"].TargetMapping, Does.Contain("remain unlinked"));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
             });
@@ -983,65 +1484,25 @@ namespace Chaptarr.Core.Test.Datastore
             create.CommandText = reader.ReadToEnd();
             create.ExecuteNonQuery();
 
+            var seedResourceName = assembly.GetManifestResourceNames().Single(x => x.EndsWith("BookshelfNG.PopulatedMigration158.sql", StringComparison.Ordinal));
+            using var seed = assembly.GetManifestResourceStream(seedResourceName);
+            using var seedReader = new StreamReader(seed);
             using var data = connection.CreateCommand();
-            data.CommandText = @"
-                INSERT INTO VersionInfo (Version, AppliedOn, Description)
-                WITH RECURSIVE migrations(version) AS
-                (
-                    SELECT 1 UNION ALL SELECT version + 1 FROM migrations WHERE version < 158
-                )
-                SELECT version, CURRENT_TIMESTAMP, 'BookshelfNG schema fixture' FROM migrations;
-
-                INSERT INTO QualityProfiles (Id, Name, Cutoff, Items, UpgradeAllowed)
-                VALUES (1, 'Audio default', 1, '[]', 1), (2, 'Ebook override', 2, '[]', 0);
-                INSERT INTO MetadataProfiles (Id, Name, MinPopularity, SkipMissingDate, SkipMissingIsbn, SkipPartsAndSets, SkipSeriesSecondary, AllowedLanguages, PreferredEditionTerms, PreferredSeries)
-                VALUES
-                    (1, 'Audio metadata', 0, 0, 0, 0, 0, '[]', '3|audible', 'The Fixture Series'),
-                    (2, 'Ebook metadata', 0, 0, 0, 0, 0, '[]', '2|epub', 'Fixture Ebooks');
-                INSERT INTO RootFolders (Id, Path, Name, DefaultMetadataProfileId, DefaultQualityProfileId, DefaultMonitorOption, DefaultTags, IsCalibreLibrary, CalibreSettings, DefaultNewItemMonitorOption)
-                VALUES (1, '/library', 'Library', 1, 1, 0, '[]', 0, NULL, 2);
-                INSERT INTO Config (Id, Key, Value) VALUES (1, 'FixtureSetting', 'preserved');
-                INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
-                VALUES (110, 'Fixture list', 'FixtureList', '{""Value"":""fixture-list-setting""}', '{}', 1, '/library', 0, 1, 1, '[]');
-                INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
-                VALUES (120, 'Fixture indexer', 'MyAnonaMouse', '{}', '{}', 1, 1, 1, 25, '[]', 0);
-                INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
-                VALUES (111, 'Fixture notification', 1, '{}', 'FixtureNotification', '{}', 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);
-                INSERT INTO Users (Id, Identifier, Username, Password)
-                VALUES (112, '00000000-0000-0000-0000-000000000020', 'fixture-user', 'legacy-sha256-hash');
-                INSERT INTO AuthorMetadata (Id, ForeignAuthorId, TitleSlug, Name, Overview, Status, Images, Aliases, SortName, NameLastFirst, SortNameLastFirst)
-                VALUES (10, 'hardcover-author:author-10', 'hardcover-author:author-10', 'Fixture Author', 'Fixture overview', 0, '[]', '[]', 'Fixture Author', 'Author, Fixture', 'Author, Fixture');
-                INSERT INTO Authors (Id, CleanName, Path, Monitored, QualityProfileId, Tags, Added, MetadataProfileId, AuthorMetadataId, MonitorNewItems, EbookPath, AudiobookPath, EbookQualityProfileId, AudiobookQualityProfileId, EbookMetadataProfileId, AudiobookMetadataProfileId)
-                VALUES (20, 'fixtureauthor', '/library/Fixture Author', 1, 1, '[]', '2026-01-01', 1, 10, 2, '/library/Fixture Author/Ebooks', '/library/Fixture Author/Audiobooks', 2, 1, 2, 1);
-                INSERT INTO Books (Id, AuthorMetadataId, ForeignBookId, TitleSlug, Title, Links, Genres, Ratings, CleanTitle, Monitored, AnyEditionOk, Added, RelatedBooks, LastSearchTime)
-                VALUES (30, 10, 'hardcover:book-30', 'hardcover:book-30', 'Fixture Book', '[]', '[]', '{}', 'fixture book', 1, 0, '2026-01-02', '[]', NULL);
-                INSERT INTO Editions (Id, BookId, ForeignEditionId, Isbn13, Asin, Title, TitleSlug, Images, Links, IsEbook, Monitored, ManualAdd, Narrator)
-                VALUES
-                    (40, 30, 'hardcover-edition:audio-40', NULL, NULL, 'Fixture Audiobook', 'audio-40', '[{""Url"":""https://covers.example/audio.jpg"",""CoverType"":6}]', '[{""Url"":""https://catalog.example/audio-40"",""Name"":""Catalog""}]', 0, 1, 0, 'A Narrator'),
-                    (41, 30, 'openlibrary-edition:OL123M', '9780000000001', NULL, 'Fixture Ebook', 'OL123M', '[]', NULL, 1, 0, 0, NULL);
-                INSERT INTO BookFiles (Id, EditionId, CalibreId, Quality, Size, DateAdded, MediaInfo, Modified, Path, Part)
-                VALUES
-                    (50, 40, 0, '{}', 100, '2026-01-02', '{}', '2026-01-02', '/library/Fixture Author/book.m4b', 0),
-                    (51, 41, 0, '{}', 200, '2026-01-03', '{}', '2026-01-03', '/library/Fixture Author/book.epub', 0);
-                INSERT INTO ExtraFiles (Id, AuthorId, BookId, BookFileId, RelativePath, Extension, Added, LastUpdated)
-                VALUES (60, 20, 30, 999, 'cover.jpg', 'jpg', '2026-01-03', '2026-01-03');
-                INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
-                VALUES (61, 20, 'AudioBookShelf', 0, 'metadata.opf', '2026-01-03', 30, 51, 'opf');
-                INSERT INTO Series (Id, ForeignSeriesId, Title, Numbered, WorkCount, PrimaryWorkCount)
-                VALUES (70, 'hardcover-series:series-70', 'Fixture Series', 1, 1, 1);
-                INSERT INTO SeriesBookLink (Id, SeriesId, BookId, Position, IsPrimary, SeriesPosition)
-                VALUES (80, 70, 30, '1', 1, 1);
-                INSERT INTO Blocklist (Id, SourceTitle, Quality, Date, AuthorId, BookIds, IndexerFlags)
-                VALUES (92, 'Fixture release', '{}', '2026-01-04', 20, '[30]', 0);
-                INSERT INTO DownloadHistory (Id, EventType, AuthorId, DownloadId, SourceTitle, Date, Data)
-                VALUES (91, 1, 20, 'download-91', 'Fixture release', '2026-01-04', '{}');
-                INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
-                VALUES (90, 'Fixture release', '2026-01-04', '{}', '{}', 1, 'download-91', 20, 30);
-                INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
-                VALUES (93, 'book.epub', '2026-01-04', '{}', '{""FileId"":""51"",""ImportedPath"":""/library/Fixture Author/book.epub""}', 3, 'download-91', 20, 30);
-                INSERT INTO Commands (Id, Name, Body, Priority, Status, QueuedAt, Trigger)
-                VALUES (100, 'OldCommand', '{}', 1, 0, '2026-01-04', 0);";
+            data.CommandText = seedReader.ReadToEnd();
             data.ExecuteNonQuery();
+        }
+
+        private void SetBareNumericProviderIds()
+        {
+            using var source = new SqliteConnection(_sourceConnectionString);
+            source.Open();
+            using var command = source.CreateCommand();
+            command.CommandText = @"
+                UPDATE AuthorMetadata SET ForeignAuthorId = '10' WHERE Id = 10;
+                UPDATE Books SET ForeignBookId = '30' WHERE Id = 30;
+                UPDATE Editions SET ForeignEditionId = '40' WHERE Id = 40;
+                UPDATE Series SET ForeignSeriesId = '70' WHERE Id = 70;";
+            command.ExecuteNonQuery();
         }
 
         private void InsertBookWithoutEdition(int id, bool monitored)

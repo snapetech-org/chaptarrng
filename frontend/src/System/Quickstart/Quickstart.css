@@ -418,6 +418,11 @@
   gap: 6px;
 }
 
+.quickstartConnectionStatus {
+  color: var(--helpTextColor);
+  font-size: 12px;
+}
+
 .hardcoverAvatar {
   width: 22px;
   height: 22px;
@@ -748,5 +753,24 @@
 @media only screen and (max-width: $breakpointSmall) {
   .quickstartHeaderNextButton {
     min-width: 96px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressContainer,
+  .section,
+  .checkIcon,
+  .downloadClientItem {
+    animation: none;
+  }
+
+  .section {
+    opacity: 1;
+  }
+
+  .progressFill,
+  .collapsedSection,
+  .downloadClientItem {
+    transition: none;
   }
 }

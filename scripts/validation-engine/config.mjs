@@ -118,6 +118,7 @@ export const validation = {
       stage: 'tests',
       concurrencyGroup: 'postgres-smoke-fixtures',
       command: ['bash', 'scripts/validation-engine/run-postgres-migrations.sh'],
+      resultFormat: 'nunit-summary-json',
       env: {
         Chaptarr__Postgres__Host: 'localhost',
         Chaptarr__Postgres__Port: '5432',
@@ -126,10 +127,11 @@ export const validation = {
         Chaptarr__Postgres__MainDb: 'chaptarr-main',
         Chaptarr__Postgres__LogDb: 'chaptarr-log',
         Chaptarr__Postgres__CacheDb: 'chaptarr-cache',
+        CHAPTARRNG_POSTGRES_TEST_CONNECTION: 'Host=localhost;Port=5432;Database=chaptarr-main;Username=chaptarr;Password=chaptarr;Pooling=false;Timeout=5;Command Timeout=300',
         Chaptarr__Server__BindAddress: '127.0.0.1',
         Chaptarr__Server__Port: '8789',
       },
-      inventory: ['migration-sources'],
+      inventory: ['migration-sources', 'core-dotnet-test-sources'],
       dependsOn: ['engine-contract-tests'],
       runtimes: [
         { command: 'dotnet', args: ['--version'], versionPattern: '^10\\.0\\.402$' },
@@ -137,7 +139,7 @@ export const validation = {
       ],
       githubOnly: true,
       nodeIds: ['chaptarr-postgres-linux-X64'],
-      timeoutSeconds: 180,
+      timeoutSeconds: 600,
     },
   ],
 };

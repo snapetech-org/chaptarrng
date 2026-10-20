@@ -283,12 +283,14 @@ jobs:
           owner: snapetech
           repositories: bookshelfng-ghcr-release-bridge
           permission-contents: write
-      - name: Dispatch verified standard image digest
+      - name: Dispatch verified image and migration-flavor digests
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           VERSION: ${{ needs.release.outputs.version }}
           SOURCE_SHA: ${{ needs.release.outputs.sha }}
           IMAGE_DIGEST: ${{ needs.docker.outputs.image_digest }}
+          BOOKSHELF_SOFTCOVER_DIGEST: ${{ needs.docker.outputs.bookshelf_softcover_digest }}
+          BOOKSHELF_HARDCOVER_DIGEST: ${{ needs.docker.outputs.bookshelf_hardcover_digest }}
           SOURCE_REPOSITORY: ${{ github.repository }}
         run: bash packaging/scripts/dispatch-ghcr-release-bridge.sh
 

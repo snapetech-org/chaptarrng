@@ -1,12 +1,17 @@
 # Native package channels
 
-Status checked 2026-10-18. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
+Status checked 2026-10-19. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 is the latest published release. GitHub Release archives are the payload for
 native packages; the standard ChaptarrNG container is built separately from
 the same application source and migration code. Package recipes add service
 and filesystem integration. See the
 [ChaptarrNG v0.9.977 release](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 for the published archives, checksums, and source RPMs.
+
+The old-identity package recipes remain disabled candidates. Do not install a
+bridge package or point ChaptarrNG at BookshelfNG appdata until migration,
+rollback, feature-parity, and channel acceptance gates close. Normal startup
+can convert a supported BookshelfNG database automatically.
 
 For current BookshelfNG migration and legacy-channel acceptance status, see
 [BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
@@ -19,6 +24,7 @@ For current BookshelfNG migration and legacy-channel acceptance status, see
 | Fedora COPR | `slskdn/chaptarrng` | `slskdn/bookshelfng` | `/var/lib/bookshelfng` |
 | Chocolatey | `chaptarrng` | `bookshelfng` | `%ProgramData%\BookshelfNG\data` |
 | Docker | `ghcr.io/snapetech-org/chaptarrng` | Legacy image aliases | Existing `/config` mount |
+| Helm | ChaptarrNG `charts/bookshelfng` (source candidate; unpublished) | `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` | Same Helm release, namespace, `/config` PVC, and volume name |
 
 Legacy package recipes keep the old package identity, service name, and data
 path so a package upgrade can start the normal ChaptarrNG database migration.
@@ -29,10 +35,11 @@ upgraded safely.
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
 | --- | --- | --- | --- |
-| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains on the BookshelfNG payload | Test an old-package upgrade through conversion and rollback |
-| COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped | Test the old package identity in a Fedora upgrade before enabling its bridge |
+| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
+| COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
-| Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged | Verify legacy registry write access and digest equality before enabling the bridge |
+| Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode. | Validate all three manifests and old-alias digest routing on exact-head CI before enabling the bridge |
+| Helm | A same-name chart candidate keeps existing resource and PVC identities and requires explicit approval, provider mode, and image digest. Local render checks pass. | The BookshelfNG OCI chart remains unchanged; no ChaptarrNG chart is published. | Test a real PVC/GitOps upgrade and rollback, then publish only after retirement gates close; current users need a chart-source change |
 
 Core release validation passed on Linux, macOS, Windows, and PostgreSQL. The
 Windows Chocolatey build and package-transition smoke also passed: it
@@ -58,6 +65,56 @@ identity was published at `0.9.977-1`; the BookshelfNG AUR identity was not
 updated. The `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` Actions variable is `false`,
 so old package IDs and image aliases do not redirect to ChaptarrNG.
 
+The current legacy COPR repository metadata contains no package entries for
+Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 transaction test
+installed the published BookshelfNG `.71` RPM, upgraded it to a locally built
+`.977` `bookshelfng` RPM candidate from the current bridge spec, and downgraded
+to `.71`. The test preserved a config override and data canary. A mocked
+`systemctl` verified stop-then-start scriptlet ordering during upgrade; the
+downgrade was performed after an explicit stop and followed by a manual start.
+The RPM transaction used `--nodeps`, did not run a real systemd service, and
+did not migrate a database. This validates the package identity and file
+handling only. It does not validate an install or upgrade through COPR/DNF;
+there is no currently published old-identity package in that repository.
+
+On 2026-10-18, the AUR build script built both `chaptarrng-bin 0.9.977-1`
+and a local `bookshelfng-bin 0.9.977-1` candidate against the public Linux
+release archive. Package-content checks confirmed the ChaptarrNG executable
+and package metadata in both packages, plus the legacy service and
+`/etc/bookshelfng/bookshelfng.env` path in the candidate. An isolated,
+network-disconnected Arch container installed the published AUR version
+`0.4.21.71-1`, upgraded the same package identity to the local `.977` candidate,
+and downgraded back to `.71`. Pacman retained the modified environment file
+with a `.pacnew` default, preserved a synthetic data canary, and restored the
+old executable on downgrade.
+
+The installed `.977` package then previewed and converted a synthetic populated
+BookshelfNG migration-158 SQLite database to ChaptarrNG migration 120. The
+preview left the source bytes unchanged; apply retained the source backup and
+passed SQLite integrity and foreign-key checks. Restore returned the active
+database to migration 158, retained the converted database as a backup, and
+passed the same checks.
+
+A second rehearsal booted systemd in a network-isolated Arch container. It
+started the public `.71` BookshelfNG package against the same populated fixture,
+then upgraded the active service to the local `.977` candidate. The pacman hook
+stopped the BookshelfNG process before replacement; the post-upgrade hook
+reloaded systemd and started ChaptarrNG, whose normal startup converted the
+database to migration 120. The migration-158 source backup passed integrity and
+foreign-key checks; the target had two format-specific book rows and passed the
+same checks. The environment override was retained with a `.pacnew` default,
+and the data canary remained intact.
+
+With the service stopped, restore preview preserved both database hashes.
+Explicit restore returned the database to migration 158 and retained the
+converted migration-120 database as a backup; both passed integrity and
+foreign-key checks. Pacman downgrade restored `.71`, and starting the service
+opened the restored database. The test container had no network, so
+`systemd-networkd-wait-online` was masked only inside that disposable container
+to let its `network-online.target` complete. This validates synthetic package
+and service lifecycle behavior; representative operator data and host-specific
+settings remain open. The candidate remains unpublished.
+
 ## Migration behavior and limits
 
 The default ChaptarrNG app-data location differs from BookshelfNG's
@@ -68,32 +125,56 @@ databases and bundles the BookshelfNG SQLite migration chain. It upgrades
 recognized source schemas on a disposable copy before conversion; the raw
 snapshot remains available for rollback. The current `.977` pre-upgrade check
 rejects source schemas before migration 14 because they still have `Blacklist`.
-A fix and authentic migration-1 coverage are being validated for a follow-up
-release. Populated synthetic migration-22 tests cover conversion and rollback;
-real older-schema operator data remains untested. Unknown or newer schemas,
-PostgreSQL sources, and two populated source databases fail closed.
+PR #126's version-aware table check and authentic migration-1
+rollback fixture passed hosted Linux, macOS, Windows, and PostgreSQL migration
+checks, but the fix is still source-only. No follow-up release will be cut
+until the full retirement gates close. Populated synthetic migration-22 tests
+cover conversion and rollback; real older-schema operator data remains
+untested. Unknown or newer schemas, PostgreSQL sources, and two populated
+source databases fail closed in the published `.977` build.
+The separate PostgreSQL candidate is limited to one migration-158 schema. Earlier smoke run 39127070836 on code head 21c41ad5 timed out during application startup before readiness; this was not a confirmed converter assertion failure. Current PR #131 head 50e4cc14 passed hosted PostgreSQL migration fixtures (53 passed, 0 failed) in Build 39219378504. That synthetic result does not establish PostgreSQL operator-data support, and the candidate remains unpublished.
 The importer keeps records with unresolved formats in both catalogs
 without monitoring, writes a private review file, retains the source backup,
 and supports validated rollback.
 
 Docker Compose, Unraid, and other container users can change the image to
 `ghcr.io/snapetech-org/chaptarrng` and retain `/config`, media/download mounts,
-ports, UID/GID, and environment settings. Unraid has a ChaptarrNG template.
-Only mutable aliases can be repointed; pinned versions and image digests need
-an operator change. A repointed tag does not change a running container.
+ports, UID/GID, and environment settings. BookshelfNG stores no primary-provider
+marker alongside bare numeric IDs, so direct migration must preserve
+`HARDCOVER=true` or explicitly set `HARDCOVER=false`; the converter now fails
+closed if neither mode is available. The legacy mutable-image bridge will map
+the old `hardcover`/`main`/`latest` aliases to a Hardcover-enabled compatibility
+image and `softcover` to a Goodreads-mode image. These targets and alias changes
+are source-only, have not been published, and remain gated. Pinned versions and
+image digests still need an operator change. A repointed tag does not change a
+running container.
+
+The BookshelfNG Windows WPF installer still installs the old application and
+does not hand off its `Readarr` service. ChaptarrNG now contains a source-only
+WPF migration-installer candidate in `distribution/windows/installer-net`.
+Windows CI builds it as an internal artifact; it is not published. It supports
+one SQLite database, asks for provider mode, creates a verified retained
+backup, previews before apply, then switches to the `Chaptarr` service and
+checks the saved data path and health endpoint. PostgreSQL and multi-database
+installations are rejected. Native Windows migration/rollback, representative
+data, and channel acceptance remain open, so it is not approved for operator
+use. See the [Windows migration procedure](../docs/MIGRATE_FROM_BOOKSHELFNG.md#windows-standalone-service-migration).
 
 BookshelfNG's in-app updater still checks its existing upstream update service,
 which ChaptarrNG cannot redirect. Automatic migration must therefore use a
 validated image/package identity bridge, or operators must change their install
-source. Debian/PPA, Flatpak/AppImage, standalone installer definitions, Helm,
-third-party catalogs, and pinned/offline installs need an explicit handoff or
-retirement decision.
+source. Debian/PPA, Flatpak/AppImage, Helm, third-party catalogs, and
+pinned/offline installs need an explicit handoff or retirement decision.
 
 ## Work required before enabling the legacy bridge
 
-- Test AUR, COPR, and Chocolatey old-identity upgrades in disposable systems.
-  Preserve service settings and data paths, convert the migration-158 fixture,
-  retain the source backup, and verify rollback without losing later writes.
+- Validate the AUR candidate with representative operator data and
+  host-specific service settings; the Fedora `.71` to `.977` RPM transaction
+  rehearsal passed with canaries, but the legacy COPR repo is empty and live
+  DNF/COPR upgrade acceptance remains open. Test the old-identity Chocolatey
+  upgrade in a disposable Windows system. Preserve service settings and data
+  paths, retain the source backup, and verify rollback without losing later
+  writes.
 - Resolve Chocolatey HTTP 403 authorization, publish the `chaptarrng` identity,
   and confirm its public checksum matches the tested package.
 - Publish and validate the migration-1-to-13 alias fix before recommending

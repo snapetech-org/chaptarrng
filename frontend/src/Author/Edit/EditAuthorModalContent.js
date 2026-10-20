@@ -25,6 +25,7 @@ import monitorNewItemsOptions, {
 } from 'Utilities/Author/monitorNewItemsOptions';
 import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
+import AuthorMediaMoveControl from './AuthorMediaMoveControl';
 import styles from './EditAuthorModalContent.css';
 
 class EditAuthorModalContent extends Component {
@@ -85,6 +86,7 @@ class EditAuthorModalContent extends Component {
 
   render() {
     const {
+      authorId,
       authorName,
       item,
       isSaving,
@@ -314,6 +316,11 @@ class EditAuthorModalContent extends Component {
                     {...(audiobookPath || { value: item.audiobookRootFolderPath?.value ? `${item.audiobookRootFolderPath.value}/${authorName}` : '' })}
                     onChange={onInputChange}
                   />
+                  <AuthorMediaMoveControl
+                    authorId={authorId}
+                    format="audiobook"
+                    destinationPath={audiobookPath?.value || (item.audiobookRootFolderPath?.value ? `${item.audiobookRootFolderPath.value}/${authorName}` : path?.value)}
+                  />
                 </FormGroup>
 
                 <FormGroup>
@@ -452,6 +459,11 @@ class EditAuthorModalContent extends Component {
                     helpText={translate('EbookPathHelpText')}
                     {...(ebookPath || { value: item.ebookRootFolderPath?.value ? `${item.ebookRootFolderPath.value}/${authorName}` : '' })}
                     onChange={onInputChange}
+                  />
+                  <AuthorMediaMoveControl
+                    authorId={authorId}
+                    format="ebook"
+                    destinationPath={ebookPath?.value || (item.ebookRootFolderPath?.value ? `${item.ebookRootFolderPath.value}/${authorName}` : path?.value)}
                   />
                 </FormGroup>
 

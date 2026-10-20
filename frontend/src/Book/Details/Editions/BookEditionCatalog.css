@@ -14,8 +14,8 @@
 .title,
 .narrators,
 .production,
-.abridgement,
 .duration,
+.abridgement,
 .language,
 .publisher,
 .status {
@@ -33,7 +33,7 @@
 }
 
 .unknown {
-  font-family: inherit;
   color: var(--darkGray);
   font-style: italic;
+  font-family: inherit;
 }

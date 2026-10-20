@@ -13,8 +13,10 @@ Every platform matrix leg runs on GitHub-hosted runners. The Linux leg uses
 
 ## Local use
 
-Use Node.js `26.10.0` and .NET SDK `10.0.402`, matching the CI toolchain. Build
-the existing CI outputs first:
+Use Node.js `26.10.0` and .NET SDK `10.0.402`, matching the CI toolchain. The
+root `global.json` pins that exact SDK with roll-forward disabled, so a newer
+SDK already present on a hosted runner cannot silently change the compiler or
+validation runtime. Build the existing CI outputs first:
 
 ImageSharp 4.1.3 requires the complete Six Labors license at build time. Store
 it as a single shell-quoted `SIXLABORS_LICENSE_KEY` assignment in the ignored
@@ -121,10 +123,16 @@ Each task requires a nonzero native case count. NUnit XML provides total,
 passed, failed, skipped, and inconclusive counts; the Node test contracts use
 the standard TAP summary with the same zero-case and accounting checks. The
 migration smoke emits one case only after the app starts against the workflow's ephemeral PostgreSQL service and `/ping` responds.
-NUnit receipts also include at most 100 failed test-case names and exception
-types. They omit test stdout, assertion messages, and test values, so platform
-failures can be narrowed down from the short-lived CI artifact without exposing
-failure payloads.
+If startup fails, the receipt instead records a bounded diagnostic with the
+stage, reason, readiness timeout, process exit state, and up to eight exception
+type names and stack-frame identifiers. It omits exception messages, method
+arguments, and filesystem paths. Frame order and repeats are retained so a
+recursive startup path remains visible.
+NUnit receipts also include at most 100 failed test-case names, exception
+types, allowlisted method names, and (when available) the positive integer
+source line number. They omit test stdout, assertion messages, test values, and
+source file paths, so platform failures can be narrowed down from the short-lived
+CI artifact without exposing failure payloads.
 
 The source fingerprint binds the commit, tree, working diff, configured build
 inputs, and test-source inventory. Text inputs and inventory files use Git's
@@ -134,9 +142,10 @@ assembly byte-for-byte; platform binaries are allowed to differ. Before and
 after each concurrent task batch the engine checks that the source fingerprint
 has not moved and blocks successful receipts if it changes. Logs stay private
 under the system temporary directory; the exported receipt carries counts,
-bounded failing test names, exception types, and allowlisted method names. For
-SQLite failures it also records only the numeric primary error code. Exception
-messages, paths, source values, and assertion contents stay out of receipts.
+bounded failing test names, exception types, allowlisted method names, and safe
+source line numbers. For SQLite failures it also records only the numeric
+primary error code. Exception messages, paths, source values, and assertion
+contents stay out of receipts.
 Overlapping runs in one
 checkout are rejected.
 Runtime probes and task child processes

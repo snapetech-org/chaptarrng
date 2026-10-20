@@ -252,32 +252,13 @@ namespace NzbDrone.Host
 
         private static IEnumerable<string> GetDiagnosticsPluginPaths(StartupContext context)
         {
-            var currentSetting = Environment.GetEnvironmentVariable("CHAPTARR_DIAGNOSTICS_ENABLED");
-            var enabled = string.Equals(currentSetting, "true", StringComparison.OrdinalIgnoreCase);
-            if (string.IsNullOrWhiteSpace(currentSetting) &&
-                string.Equals(Environment.GetEnvironmentVariable("BOOKSHELF_DIAGNOSTICS_ENABLED"), "true", StringComparison.OrdinalIgnoreCase))
-            {
-                var legacyPluginPath = Path.Combine(new AppFolderInfo(context).AppDataFolder, "plugins", "Bookshelf.Diagnostics.dll");
-                enabled = File.Exists(legacyPluginPath);
-                if (!enabled)
-                {
-                    Logger.Warn("BookshelfNG diagnostics were enabled, but no legacy diagnostics plugin was found. ChaptarrNG will not send diagnostics.");
-                }
-            }
-
-            if (!enabled)
-            {
-                return Array.Empty<string>();
-            }
-
-            var pluginPath = Path.Combine(new AppFolderInfo(context).StartUpFolder, "Chaptarr.Diagnostics.dll");
-            if (!File.Exists(pluginPath))
-            {
-                Logger.Warn("Optional diagnostics are enabled, but Chaptarr.Diagnostics.dll is not installed. No diagnostics will be sent.");
-                return Array.Empty<string>();
-            }
-
-            return new[] { pluginPath };
+            var appFolders = new AppFolderInfo(context);
+            return DiagnosticsPluginPathResolver.Resolve(
+                appFolders.AppDataFolder,
+                appFolders.StartUpFolder,
+                Environment.GetEnvironmentVariable("CHAPTARR_DIAGNOSTICS_ENABLED"),
+                Environment.GetEnvironmentVariable("BOOKSHELF_DIAGNOSTICS_ENABLED"),
+                message => Logger.Warn(message));
         }
 
         public static ApplicationModes GetApplicationMode(IStartupContext startupContext)

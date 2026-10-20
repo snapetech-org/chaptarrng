@@ -13,6 +13,7 @@ using NzbDrone.Common.Composition;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Common.TPL;
 using NzbDrone.Core.Datastore.Events;
+using NzbDrone.Core.Books.Commands;
 using NzbDrone.Core.MediaFiles.BookImport.Manual;
 using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.Messaging.Commands;
@@ -62,6 +63,11 @@ namespace Chaptarr.Api.V1.Commands
                 _knownTypes.GetImplementations(typeof(Command))
                                .Single(c => c.Name.Replace("Command", "")
                                              .Equals(commandResource.Name, StringComparison.InvariantCultureIgnoreCase));
+
+            if (commandType == typeof(MoveAuthorMediaCommand) || commandType == typeof(MoveAuthorMediaBatchCommand))
+            {
+                throw new BadRequestException("Author media moves must be started through the preview-validated author/media-move endpoint.");
+            }
 
             Request.Body.Seek(0, SeekOrigin.Begin);
             using var reader = new StreamReader(Request.Body);
