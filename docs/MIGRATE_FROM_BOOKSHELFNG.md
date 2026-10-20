@@ -426,21 +426,29 @@ service to `Chaptarr`, and checks its data path and local health. It holds a rea
 review and blocks committed changes from another connection immediately before
 apply. Raw database, WAL, and rollback-journal fingerprints remain diagnostic;
 WAL representation changes without a committed database update are logged but
-do not fail preview. The previous service round-trip received HTTP 403 while
-downloading the pinned BookshelfNG test archive; its retry exposed a raw WAL
-read while the SQLite guard held it open. Build [39357519729](https://github.com/snapetech-org/chaptarrng/actions/runs/39357519729)
+do not fail preview. **Earlier Windows candidate checks (2026-10-19):** One
+service round-trip received HTTP 403 while downloading the pinned BookshelfNG
+test archive; its retry exposed a raw WAL read while the SQLite guard held it
+open. Build [39357519729](https://github.com/snapetech-org/chaptarrng/actions/runs/39357519729)
 passed migration, health checks, and explicit restore, but cleanup did not
 confirm service removal within 20 seconds after `sc.exe delete` succeeded.
-Exact-head Build [39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
-passed Linux, macOS, Windows, and PostgreSQL migration jobs. The Windows
+Exact-head Build
+[39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
+passed Linux, macOS, Windows, and PostgreSQL migration jobs. Its Windows
 installer service round-trip, deferred service cleanup, and selected
-data-directory check passed. Linux tests, the pinned-tool M4B smoke, and CI
-artifact build passed. Native-runner receipt reconciliation remains queued.
-Security Analysis [39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
-Trivy, Python, JavaScript/TypeScript, and Actions CodeQL analyses plus NuGet
-submission passed; C# CodeQL remains pending. The
-separate cleanup step runs after the smoke process exits and verifies service
-registry removal.
+data-directory check passed; Linux tests, the pinned-tool M4B smoke, and CI
+artifact build passed. At that checkpoint native-runner receipt reconciliation
+and C# CodeQL were pending. The separate cleanup step runs after the smoke
+process exits and verifies service registry removal.
+
+**Merged source validation (2026-10-20):** PR #131 merged to ChaptarrNG
+`main`. Exact-head Build
+[39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
+native-runner receipt checks. CodeQL passed; the separate GHAS Semgrep OSS
+check remains failed with reviewed SQL-format findings and fixture-path
+warnings. This establishes hosted source checks, not representative Windows
+data or accepted operator rollback.
 The initial path supports one SQLite database only; PostgreSQL, custom service
 accounts, multiple databases, unsupported schemas, and real operator-data
 rollback still require manual handling and maintainer acceptance. Keep the

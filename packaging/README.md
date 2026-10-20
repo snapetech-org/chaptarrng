@@ -132,7 +132,7 @@ until the full retirement gates close. Populated synthetic migration-22 tests
 cover conversion and rollback; real older-schema operator data remains
 untested. Unknown or newer schemas, PostgreSQL sources, and two populated
 source databases fail closed in the published `.977` build.
-The separate PostgreSQL candidate is limited to one migration-158 schema. Earlier smoke run 39127070836 on code head 21c41ad5 timed out during application startup before readiness; this was not a confirmed converter assertion failure. Current PR #131 head 50e4cc14 passed hosted PostgreSQL migration fixtures (53 passed, 0 failed) in Build 39219378504. That synthetic result does not establish PostgreSQL operator-data support, and the candidate remains unpublished.
+The separate PostgreSQL candidate is limited to one migration-158 schema. Earlier smoke run 39127070836 on code head 21c41ad5 timed out during application startup before readiness; this was not a confirmed converter assertion failure. PR #131 later merged to `main` on 2026-10-20. Its exact-head Build [39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961) passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks. Those PostgreSQL checks use synthetic fixtures only; they do not establish PostgreSQL operator-data support, and the candidate remains unpublished.
 The importer keeps records with unresolved formats in both catalogs
 without monitoring, writes a private review file, retains the source backup,
 and supports validated rollback.

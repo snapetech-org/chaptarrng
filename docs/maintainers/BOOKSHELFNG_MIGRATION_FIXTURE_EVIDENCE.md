@@ -1,6 +1,7 @@
 # BookshelfNG migration fixture evidence
 
-**Reviewed:** 2026-10-19. This file covers synthetic fixtures and one private
+**Reviewed:** 2026-10-20. ChaptarrNG PR #131 merged to `main` on 2026-10-20;
+the public release remains `v0.9.977`. This file covers synthetic fixtures and one private
 populated migration-158 snapshot tested on a disposable copy. This is
 maintainer evidence, not approval to cut over operator data.
 
@@ -26,7 +27,7 @@ unchanged, and apply refuses any remaining unsupported provider before
 promotion. Reports contain row IDs, implementation/contract names, and
 unsupported field names, never saved values or credentials.
 
-- ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131). The populated rehearsal below is one fixture run; it does not stand in for representative-data acceptance.
+- ChaptarrNG source: merged PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131), merge commit `d2bcba7953a14d2d726f47005a660314cc5e4c26`. The populated rehearsal below is one fixture run; it does not stand in for representative-data acceptance.
 - Earlier integrated code snapshot `8b4c6e23` passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-receipt checks in Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341). CodeQL, dependency review, security scan, and NuGet submission also passed. Those hosted checks do not rerun the private populated-data rehearsal or expand its scope.
 - Earlier exact-head Build run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)

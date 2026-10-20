@@ -1,14 +1,16 @@
 # BookshelfNG PostgreSQL migration candidate
 
-> **Not supported in a published release.** ChaptarrNG v0.9.977 cannot
-> convert a PostgreSQL BookshelfNG database. Exact-head Build
-> [39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
-> passed the synthetic migration-158 PostgreSQL job, along with Linux, macOS,
-> and Windows validation. Build is waiting only on native-runner receipt
-> reconciliation. These PostgreSQL checks use synthetic fixtures only.
-> Representative operator-data conversion, independent backup/restore, and
-> installed rollback remain open. See the [retirement status report](BOOKSHELFNG_RETIREMENT.md)
-> for the complete release and acceptance state.
+> **Not supported in a published release.** ChaptarrNG `v0.9.977` cannot
+> convert a PostgreSQL BookshelfNG database. PR #131 merged to `main` on
+> 2026-10-20. Exact-head Build
+> [39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961)
+> passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
+> native-runner receipt checks. These PostgreSQL checks use synthetic fixtures
+> only. The separate GHAS Semgrep OSS check still has reviewed SQL-format
+> findings and fixture-path warnings. Representative operator-data conversion,
+> independent backup/restore, and installed rollback remain open. See the
+> [retirement status report](BOOKSHELFNG_RETIREMENT.md) for the full release
+> and acceptance state.
 
 
 **Prior PR #131 validation, 2026-10-19:** Draft code head a111b5754421cccaafc756abcf4efe226f86d7eb passed exact-head Build [39230899323](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899323), including Linux, macOS, and Windows tests, PostgreSQL migration smoke, and native receipt reconciliation. CodeQL [39230892934](https://github.com/snapetech-org/chaptarrng/actions/runs/39230892934), security [39230899375](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899375), NuGet [39230915422](https://github.com/snapetech-org/chaptarrng/actions/runs/39230915422), dependency review [39230899544](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899544), and the release-note contract passed. Disposable-fork validation [39230899435](https://github.com/snapetech-org/chaptarrng/actions/runs/39230899435) was skipped by its external-fork gate. These are source checks only; representative operator data, full feature parity, installed rollback, and channel acceptance remain open. No release or final handoff is authorized.
