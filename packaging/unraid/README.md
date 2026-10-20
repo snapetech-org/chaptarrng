@@ -47,4 +47,13 @@ configuration and SeerrNG integration, see the
 - [ChaptarrNG application source](https://github.com/snapetech-org/chaptarrng)
 - [Unraid package support and SeerrNG integration](https://github.com/snapetech-org/seerrng/issues)
 
+## Security scanning
+
+The companion repository runs Semgrep Community Edition and Trivy workflows
+against its shell scripts and GitHub Actions configuration. Run the same local
+checks with `./scripts/security-scan-local.sh`. There are no application
+dependency manifests in this checkout, so Trivy does not run its dependency
+vulnerability scanner. See the
+[security scanning guide](docs/security-scanning.md).
+
 This template repository is distributed under GPLv3; see [LICENSE](LICENSE).
