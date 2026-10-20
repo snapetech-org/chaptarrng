@@ -26,13 +26,14 @@ multiple narrator names alone do not imply a full-cast production. Facade
 requests receive the edition ID for the selected provider dialect.
 
 **Availability:** current ChaptarrNG source includes the edition catalog,
-series narrator matrix, and wanted-edition variant capability. The migration
-candidate also returns provider IDs in the selected facade dialect, proxies
-remote cover URLs, and derives ownership from the media-file service. Public
-ChaptarrNG `v0.9.977` predates these endpoints. PR #131 remains a draft, and
-release publication stays frozen until the BookshelfNG retirement gates pass.
+series narrator matrix, and wanted-edition variant capability. The merged
+migration source also returns provider IDs in the selected facade dialect,
+proxies remote cover URLs, and derives ownership from the media-file service. Public
+ChaptarrNG `v0.9.977` predates these endpoints. PR #131 merged to `main` on
+2026-10-20; release publication stays frozen until the BookshelfNG retirement
+gates pass.
 
-The PR #131 candidate also adds an **Editions and Narrations** tab to the book
+Merged PR #131 also adds an **Editions and Narrations** tab to the book
 details page. It lists known editions with narrators, production, duration,
 abridgement, language, publisher, and selected/file-owned status. Metadata
 that does not state a value is shown as not provided rather than inferred.
@@ -45,9 +46,9 @@ translation, type, targeted ESLint, and Stylelint checks pass. Exact-head Build
 run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
 passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
 runner-receipt checks; CodeQL, dependency review, security scan, and NuGet
-submission also passed. The UI is source-only in public `v0.9.977`, and the
-candidate remains draft while operator-data, full SeerrNG workflow, rollback,
-and channel acceptance remain open.
+submission also passed. The UI is source-only in public `v0.9.977`. PR #131 is
+merged, but operator-data, full SeerrNG workflow, rollback, and channel
+acceptance remain open, so release publication stays frozen.
 
 **Prior PR #131 application-code validation (2026-10-19):** snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed [Build 39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract. [CodeQL 39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), [security 39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), [NuGet 39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and [dependency review 39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. The SeerrNG adapter and request-route unit suite at source commit `b810153c` passed 4 files / 283 tests. The built Linux artifact also passed the earlier empty-library API and service-key smoke. The populated source-build check for later code is recorded below.
 

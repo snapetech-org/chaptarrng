@@ -13,10 +13,9 @@ against BookshelfNG source earlier in the branch. Exact-head Build
 passed Linux, macOS, Windows, PostgreSQL migration, release-note, and receipt
 checks on that code commit. Historical Build
 [39267876585](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876585)
-passed on candidate `38be9422`. PR #131 remains draft; see its
-[live checks](https://github.com/snapetech-org/chaptarrng/pull/131) for the
-current head. The format remains unreleased. Keep using BookshelfNG or the
-published release until the migration and retirement gates close.
+passed on candidate `38be9422`. PR #131 merged to `main` on 2026-10-20.
+The format remains unreleased. Keep using BookshelfNG or the published release
+until the migration and retirement gates close.
 
 ## Export and restore
 

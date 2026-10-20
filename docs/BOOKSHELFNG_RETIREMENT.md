@@ -1,29 +1,27 @@
 # BookshelfNG retirement status
 
-**Reviewed:** 2026-10-19. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977`
+**Reviewed:** 2026-10-20. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977`
 remain the latest published releases. The source and distribution publishers
 are fail-closed and their readiness variables remain unset. This is the current
 handoff summary for moving BookshelfNG users to ChaptarrNG. The detailed
 feature inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
-**Current candidate (2026-10-19)**
+**Merged source status (2026-10-20)**
 
-Draft ChaptarrNG PR #131 is at code head
-7ff38a58530814d73da280b297eb3ed215bd2c83. Exact-head Build
-[39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
-passed Linux, macOS, Windows, and PostgreSQL migration jobs. The Windows
-installer service round-trip, deferred service cleanup, and selected
-data-directory check passed. Linux tests, the pinned-tool M4B smoke, and CI
-artifact build passed. Native-runner receipt reconciliation is still queued.
-Security Analysis
-[39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
-Trivy, Python, JavaScript/TypeScript, and Actions CodeQL analyses plus NuGet submission passed;
-C# CodeQL remains pending. PR #131 is still draft. These are
-synthetic and CI-artifact checks only; representative operator data, semantic
-parity, installed rollback, and installer/update-channel acceptance remain
-open. The public release is still v0.9.977; do not use the candidate for
-production cutover.
+ChaptarrNG PR #131 merged to `main` on 2026-10-20 as
+`d2bcba7953a14d2d726f47005a660314cc5e4c26`, from code head
+`87c57a2bffd25a5ecbda40b9c63fd6d82993c54d`. Exact-head Build
+[39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
+native-runner receipt checks. CodeQL, security analysis, Trivy, Semgrep
+Community, dependency review, NuGet, and Helm checks passed. Disposable-fork
+validation was skipped by its gate. The separate GHAS Semgrep OSS check failed
+with 12 SQL-format findings and three fixture-path warnings; these were
+reviewed and are not reported as a clean check. Source checks do not establish
+representative operator data, semantic parity, installed rollback, or
+installer/update-channel acceptance. The public release remains `v0.9.977`;
+do not use this source for production cutover.
 
 No release, package, image, or bridge was published. BookshelfNG remains in
 service until operator data, exhaustive semantic disposition, provider
@@ -61,7 +59,7 @@ installer/channel handoff, or operator sign-off. No release or bridge was
 published.
 
 The Windows standalone handoff remains candidate-only. BookshelfNG's WPF
-installer still installs its own Readarr service. Draft PR #131 contains a
+installer still installs its own Readarr service. Merged PR #131 contains a
 ChaptarrNG migration installer for one SQLite database under the standard
 NT AUTHORITY\LocalService account. The exact-head Windows service round-trip
 on Build 39365402673 passed injected-health-failure rollback, retry, explicit
@@ -134,10 +132,9 @@ dependency review
 and NuGet submission
 [39292213603](https://github.com/snapetech-org/chaptarrng/actions/runs/39292213603)
 passed. Disposable-fork validation was skipped by its external-fork gate.
-This validates application code only. PR #131 remains draft; see its
-[live checks](https://github.com/snapetech-org/chaptarrng/pull/131) for the
-current head. It does not establish retirement acceptance; representative
-data, semantic parity, installed rollback, and channel handoff remain open.
+This validates application code only. PR #131 later merged on 2026-10-20.
+It does not establish retirement acceptance; representative data, semantic
+parity, installed rollback, and channel handoff remain open.
 
 **Candidate code CI (2026-10-19):** ChaptarrNG PR #131 code commit `12f290bd` passed [Build 39256254892](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254892): Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks passed. CodeQL, [security scan 39256254713](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254713), [dependency review 39256254710](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254710), and [NuGet submission 39256277391](https://github.com/snapetech-org/chaptarrng/actions/runs/39256277391) passed. Disposable-fork validation was skipped by its external-fork gate. This is source validation, not migration or release acceptance.
 
@@ -219,7 +216,7 @@ acceptance remain open.
   original-track imports in Move and Copy modes when one source cannot be
   probed, and when `m4b-tool` fails after a controlled FFmpeg conversion error.
   Synthetic embedded-chapter Move/Copy and TagLib-write cases pass on c4fa; representative M4B media and restart or resume remain open. This source is not in `.977`.
-- The current retirement candidate is draft ChaptarrNG
+- The retirement implementation is merged in ChaptarrNG
   [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131). It adds
   older SQLite support, one migration-158 PostgreSQL source schema, native
   Hardcover identity handling, and BookOrbit Book Dock as a separate
@@ -320,9 +317,9 @@ acceptance remain open.
   establish populated-data acceptance or end-to-end SeerrNG workflows.
   Unchanged SeerrNG edition-card, request, polling, availability, pending-work,
   and authorization acceptance remains open.
-- This work branch also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs now require an explicit mode: `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) selects Hardcover, and `HARDCOVER=false` selects Goodreads. An unset or invalid mode fails closed. The Docker candidate builds separate softcover and Hardcover compatibility targets so legacy aliases can retain that mode; `latest`, `main`, and `hardcover` must use the Hardcover target, while `softcover` must use the Goodreads target. These source changes are not in `.977`, PR #131 remains draft, and converted-data acceptance remains open.
+- The merged source also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs now require an explicit mode: `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) selects Hardcover, and `HARDCOVER=false` selects Goodreads. An unset or invalid mode fails closed. The Docker candidate builds separate softcover and Hardcover compatibility targets so legacy aliases can retain that mode; `latest`, `main`, and `hardcover` must use the Hardcover target, while `softcover` must use the Goodreads target. These source changes are not in `.977`; PR #131 merged on 2026-10-20, and converted-data acceptance remains open.
 - BookshelfNG's BookLore notification settings and `OnReleaseImport` trigger are copied unchanged into ChaptarrNG, and remain in the retained source backup. A separate BookOrbit Book Dock destination is candidate work in this branch; it does not rewrite BookLore URLs or credentials. Mock tests cover login, Book Dock permission, streamed uploads, redirects, rejected credentials/files, and partial-batch failure. An isolated BookOrbit v3.2.0 live API check passed setup, login, permission check, EPUB upload/listing, and unsupported-file rejection. That does not verify downstream processing of a production book or a real-user handoff. The integration is not in `.977`, and the broader retirement gate remains open.
-- Draft PR #131 adds ChaptarrNG's format-aware author-media move workflow:
+- Merged PR #131 adds ChaptarrNG's format-aware author-media move workflow:
   preview and confirm a single-author or bulk move, move only registered media
   and linked book sidecars, check destination conflicts and copy space, and
   leave unknown files and author-wide extras in place. The UI requires a
@@ -337,7 +334,7 @@ acceptance remain open.
   passed on earlier head 2c0401fc, including Windows tests after replacing the
   POSIX-only fixture paths identified by run
   [39195460843](https://github.com/snapetech-org/chaptarrng/actions/runs/39195460843).
-  This implementation is not on main or in .977; representative library,
+  This implementation is on `main` but not in `.977`; representative library,
   cross-device, partial-failure rollback, and channel acceptance remain open.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - The BookshelfNG `.71` tag contains issue #114's optional new-author path
@@ -378,13 +375,13 @@ instead of guessing or merging. Independently operated BookshelfNG instances
 can be migrated one at a time with separate appdata directories; co-located
 databases need their ownership and settings resolved before separate copies can
 be migrated. A PostgreSQL
-migration-158 candidate is under review in this work branch; it does not
+migration-158 candidate is now in the merged source; it does not
 support older PostgreSQL schemas. The candidate remains unaccepted for operator data; see the [PostgreSQL migration notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). A private populated migration-158 SQLite snapshot completed preview, apply, and rollback with public `.977` on Linux/amd64 on 2026-10-18. That proved structural conversion and rollback only; it did not validate native Hardcover identity. The separate 2026-10-19 candidate rehearsal with explicit Hardcover mode passed the same four-step path on a disposable copy and restored the source database byte-for-byte from its retained backup. Neither run resolves ambiguous media classifications, PostgreSQL acceptance, feature parity, or installation-channel handoff; details are in the [operator guide](MIGRATE_FROM_BOOKSHELFNG.md).
 The SQLite path stages a native database, accounts for source rows, checks
 SQLite integrity and foreign keys, and promotes only after validation. Preview
 does not modify the source. Apply and rollback are explicit operations, and
 normal startup can run the same converter when it finds a supported source
-database. The work-branch PostgreSQL candidate uses temporary schemas and
+database. The merged PostgreSQL candidate uses temporary schemas and
 transactional promotion, checks row accounting and both schema lineages, and
 retains the original tables in a backup schema. The exact-head PostgreSQL
 fixture passed all 4 migration cases in run

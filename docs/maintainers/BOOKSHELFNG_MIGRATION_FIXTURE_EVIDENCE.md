@@ -40,7 +40,7 @@ unsupported field names, never saved values or credentials.
   [39198708193](https://github.com/snapetech-org/chaptarrng/actions/runs/39198708193),
   including Linux, macOS, and Windows, PostgreSQL fixtures, release-note,
   CodeQL, dependency/security, NuGet, and runner-receipt checks. It did not
-  change application code. PR #131 remains draft; these checks do not authorize
+  change application code. PR #131 later merged; these checks do not authorize
   operator cutover.
 - Documentation-only checkpoint `ddec3e81` passed exact-head hosted run
   [39199730309](https://github.com/snapetech-org/chaptarrng/actions/runs/39199730309),
@@ -179,7 +179,7 @@ remaining acceptance gates.
 
 ## Legacy BookshelfNG backup ZIP restore candidate
 
-Draft PR #131 adds source-lineage validation that allows the standard restore
+Merged PR #131 adds source-lineage validation that allows the standard restore
 flow to stage a recognized BookshelfNG database extracted from a legacy
 `readarr_backup_*.zip`. Normal startup then upgrades a disposable copy and
 converts it through the existing row-accounted workflow; the archive remains
@@ -326,4 +326,4 @@ the Linux build workflow. Real provider responses, operator records, pre-14
 schemas, PostgreSQL operator data, successful SeerrNG fulfillment, installed
 rollback, and update channels remain unvalidated. It is local synthetic
 evidence; no public image, release, package, or channel alias was published.
-PR #131 remains draft and the release freeze remains active.
+PR #131 merged on 2026-10-20; the release freeze remains active.
