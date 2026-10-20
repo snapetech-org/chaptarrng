@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Chaptarr.Api.V1.System.Backup;
 using Chaptarr.Http;
 using Chaptarr.Http.Middleware;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -133,7 +134,7 @@ namespace Chaptarr.Core.Test.Http
             var formLimits = method.GetCustomAttribute<RequestFormLimitsAttribute>();
             const long backupRestoreLimit = 1024L * 1024 * 1024;
 
-            Assert.That(requestSizeLimit.Bytes, Is.EqualTo(backupRestoreLimit));
+            Assert.That(requestSizeLimit.SizeLimit, Is.EqualTo(backupRestoreLimit));
             Assert.That(formLimits.MultipartBodyLengthLimit, Is.EqualTo(backupRestoreLimit));
         }
 
