@@ -17,14 +17,8 @@ function MediaTypeToggle(props) {
     {
       key: 'audiobook',
       label: translate('Audiobooks'),
-      icon: <span className={styles.icon}>🎧</span>,
+      icon: <span className={styles.icon} aria-hidden="true">🎧</span>,
       isDisabled: !hasAudiobookRootFolder
-    },
-    {
-      key: 'ebook',
-      label: translate('Ebooks'),
-      icon: <span className={styles.icon}>📖</span>,
-      isDisabled: !hasEbookRootFolder
     }
   ];
 
@@ -32,11 +26,18 @@ function MediaTypeToggle(props) {
     options.push({
       key: 'both',
       label: translate('Both'),
-      icon: <span className={styles.icon}>{'🎧📖'}</span>,
+      icon: <span className={styles.icon} aria-hidden="true">{'🎧📖'}</span>,
       title: translate('AudiobooksAndEbooks'),
       isDisabled: !hasAudiobookRootFolder && !hasEbookRootFolder
     });
   }
+
+  options.push({
+    key: 'ebook',
+    label: translate('Ebooks'),
+    icon: <span className={styles.icon} aria-hidden="true">📖</span>,
+    isDisabled: !hasEbookRootFolder
+  });
 
   return (
     <div className={styles.mediaToggleContainer}>
