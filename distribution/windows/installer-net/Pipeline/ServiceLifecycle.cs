@@ -271,7 +271,10 @@ public static class ServiceLifecycle
             return false;
         }
 
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(20);
+        // Windows may keep a stopped service marked for deletion until every
+        // outstanding SCM handle closes. Give service-host and management
+        // handles enough time to drain before reporting that removal failed.
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(60);
         while (DateTime.UtcNow < deadline)
         {
             ct.ThrowIfCancellationRequested();

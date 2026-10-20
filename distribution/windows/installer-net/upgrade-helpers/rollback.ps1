@@ -51,16 +51,19 @@ function Stop-And-DeleteService([string] $Name) {
 
     Write-Host "Removing $Name service registration..."
     & sc.exe delete $Name | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 1072) {
         throw "sc.exe delete $Name failed with exit code $LASTEXITCODE."
+    }
+    if ($LASTEXITCODE -eq 1072) {
+        Write-Host "$Name is already marked for deletion; waiting for Windows to release it..."
     }
 
     $serviceKeyPath = "HKLM:\SYSTEM\CurrentControlSet\Services\$Name"
-    $deadline = [DateTime]::UtcNow.AddSeconds(20)
+    $deadline = [DateTime]::UtcNow.AddSeconds(60)
     # Query the registry while deletion is pending. Get-Service opens an SCM
     # handle, which can keep the marked-for-deletion registration alive.
     while ((Test-Path -LiteralPath $serviceKeyPath) -and [DateTime]::UtcNow -lt $deadline) {
-        Start-Sleep -Milliseconds 250
+        Start-Sleep -Milliseconds 500
     }
     if (Test-Path -LiteralPath $serviceKeyPath) {
         throw "$Name is still registered after a delete request."
