@@ -856,6 +856,7 @@ test('test-only planning distinguishes local and hosted tasks regardless of ambi
   assert.ok(engineContractTask);
   assert.equal(engineContractTask.command.includes('--test-concurrency=2'), true);
   assert.equal(engineContractTask.shortTemporaryPath, true);
+  assert.ok(validation.tasks.find((task) => task.id === 'dotnet-core-tests').nodeIds.includes('chaptarr-osx-X64'));
 
   const localPlan = withEnvironmentVariable('GITHUB_ACTIONS', undefined, () =>
     withEnvironmentVariable('VALIDATION_NODE_ID', undefined, () =>

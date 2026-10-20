@@ -106,7 +106,7 @@ export const validation = {
       env: { DIRECT_DOWNLOAD_REQUIRE_PLAYWRIGHT: process.platform === 'linux' ? 'true' : 'false' },
       passEnv: ['PLAYWRIGHT_BROWSERS_PATH'],
       inventory: ['core-dotnet-test-sources'],
-      nodeIds: ['chaptarr-linux-X64', 'chaptarr-win-X64', 'chaptarr-osx-ARM64'],
+      nodeIds: ['chaptarr-linux-X64', 'chaptarr-win-X64', 'chaptarr-osx-X64'],
       artifacts: ['_tests/net10.0/Chaptarr.Core.Test.dll'],
       runtimes: [{ command: 'dotnet', args: ['--version'], versionPattern: '^10\\.0\\.402$' }],
       timeoutSeconds: 5400,
