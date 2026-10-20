@@ -143,9 +143,16 @@ namespace NzbDrone.Core.Books
             // Ensure we never Upsert NULL Title/Edition titles.
             book.Title ??= dbBook.Title;
 
+            // API clients commonly send only the selected edition and do not know this
+            // Chaptarr instance's local edition row ID. Merge that selection into the
+            // persisted catalog so a request neither duplicates a known edition nor
+            // replaces the rest of the work's edition catalog.
+            var catalogEditions = _editionService.GetEditionsByBook(dbBook.Id) ?? new List<Edition>();
+            book.Editions = MergeSubmittedEditionsWithCatalog(book.Editions, catalogEditions);
+
             if (HasMissingOrEmptyEditionMetadata(book.Editions))
             {
-                book.Editions = _editionService.GetEditionsByBook(dbBook.Id) ?? new List<Edition>();
+                book.Editions = catalogEditions;
 
                 if (book.Editions.Any())
                 {
@@ -1011,6 +1018,16 @@ namespace NzbDrone.Core.Books
                 edition.ManualAdd = edition.ManualAdd && edition.Monitored;
             }
 
+            var selectedExplicitly = requestedEditionProviderIds?.Any(providerId =>
+                BookEditionIdentity.EditionMatchesProviderId(selectedEdition, providerId)) == true;
+            if (selectedExplicitly)
+            {
+                // A request that names an edition is a concrete user choice. Preserve it
+                // across refreshes and stop treating the work as an any-edition request.
+                selectedEdition.ManualAdd = true;
+                book.AnyEditionOk = false;
+            }
+
             book.Editions = retainedEditions;
             if (selectedEdition.ForeignEditionId.IsNotNullOrWhiteSpace())
             {
@@ -1107,6 +1124,27 @@ namespace NzbDrone.Core.Books
                 e == null ||
                 string.IsNullOrWhiteSpace(e.Title) ||
                 !e.ReadingFormatId.HasValue);
+        }
+
+        private static List<Edition> MergeSubmittedEditionsWithCatalog(
+            IEnumerable<Edition> submittedEditions,
+            IEnumerable<Edition> catalogEditions)
+        {
+            var merged = catalogEditions?.Where(edition => edition != null).ToList() ?? new List<Edition>();
+
+            foreach (var submitted in submittedEditions ?? Enumerable.Empty<Edition>())
+            {
+                if (submitted == null || merged.Any(existing =>
+                        (submitted.Id > 0 && existing.Id == submitted.Id) ||
+                        BookEditionIdentity.EditionsMatch(existing, submitted)))
+                {
+                    continue;
+                }
+
+                merged.Add(submitted);
+            }
+
+            return merged;
         }
 
         public async Task<List<Book>> AddBooks(List<Book> books, bool doRefresh = true)

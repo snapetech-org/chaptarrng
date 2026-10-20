@@ -170,6 +170,7 @@ namespace Chaptarr.Core.Test.Books
             public List<Book> AddOptionsBooks { get; private set; }
             public Book AddedBook { get; private set; }
             public Book UpdatedBook { get; private set; }
+            public Book ProviderMatch { get; set; }
 
             public Book UpdateBook(Book book)
             {
@@ -205,7 +206,7 @@ namespace Chaptarr.Core.Test.Books
             public Book FindByTitleInexact(int authorId, string title) => throw new NotImplementedException();
             public Book FindByGoodreadsId(string goodreadsId) => throw new NotImplementedException();
             public Book FindByProviderId(string provider, string providerId) => throw new NotImplementedException();
-            public Book FindByProviderId(string provider, string providerId, BookMediaType mediaType) => null;
+            public Book FindByProviderId(string provider, string providerId, BookMediaType mediaType) => ProviderMatch;
             public List<Book> FindAllByProviderId(string provider, string providerId, BookMediaType mediaType) => throw new NotImplementedException();
             public List<Book> FindAllByWorkProviderId(string provider, string providerId, BookMediaType mediaType)
             {
@@ -1437,6 +1438,59 @@ namespace Chaptarr.Core.Test.Books
             Assert.That(result.Editions.Single(edition => edition.Monitored).ManualAdd, Is.True);
             Assert.That(result.AnyEditionOk, Is.False);
             Assert.That(result.ForeignEditionId, Is.EqualTo("ol:edition-2"));
+        }
+
+        [Test]
+        public async Task existing_book_request_should_pin_the_requested_edition_before_persistence()
+        {
+            var author = CreateExistingAuthor();
+            var requestedBook = CreateRequestedBook(author, "ol:edition-2");
+            var localBook = CreateLocalBook(101, author, "ol:edition-1");
+            localBook.AnyEditionOk = true;
+            var bookService = new StubBookService { ProviderMatch = localBook };
+            var storedEditions = new List<Edition>
+            {
+                new Edition
+                {
+                    Id = 1101,
+                    BookId = localBook.Id,
+                    ForeignEditionId = "ol:edition-1",
+                    OpenLibraryEditionId = "edition-1",
+                    Title = "Existing Edition",
+                    ReadingFormatId = 2,
+                    Language = "eng",
+                    Monitored = true
+                },
+                new Edition
+                {
+                    Id = 1102,
+                    BookId = localBook.Id,
+                    ForeignEditionId = "ol:edition-2",
+                    OpenLibraryEditionId = "edition-2",
+                    Title = "Requested Edition",
+                    ReadingFormatId = 2,
+                    Language = "eng"
+                }
+            };
+            var service = BuildService(
+                new StubAuthorService(author, (_, _) => author),
+                bookService,
+                new StubEditionService(storedEditions),
+                new StubMetadataProfileService(
+                    new MetadataProfile { Id = 1, AllowedLanguages = "eng" },
+                    new MetadataProfile { Id = 2, AllowedLanguages = "eng" }),
+                importListExclusionService: DispatchProxy.Create<IImportListExclusionService, ImportListExclusionServiceProxy>());
+
+            var result = await service.AddBook(requestedBook);
+
+            Assert.That(result.Id, Is.EqualTo(localBook.Id));
+            Assert.That(result.Editions, Has.Count.EqualTo(2), "The selected edition should reuse the catalog row instead of adding a duplicate.");
+            Assert.That(result.AnyEditionOk, Is.False);
+            Assert.That(result.ForeignEditionId, Is.EqualTo("ol:edition-2"));
+            var monitoredEdition = result.Editions.Single(edition => edition.Monitored);
+            Assert.That(monitoredEdition.Id, Is.EqualTo(1102));
+            Assert.That(monitoredEdition.ForeignEditionId, Is.EqualTo("ol:edition-2"));
+            Assert.That(monitoredEdition.ManualAdd, Is.True);
         }
 
         [Test]
