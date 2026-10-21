@@ -60,6 +60,7 @@ jobs:
         fi
         body_file="$RUNNER_TEMP/pr-body.md"
         printf '%s' "$PR_BODY" > "$body_file"
+        node --test scripts/release-notes.test.mjs
         node scripts/check-release-notes.mjs \
           --base "$BASE_SHA" \
           --head "$HEAD_SHA" \
