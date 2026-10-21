@@ -39,10 +39,15 @@ archive matrix: `linux-x64`, `linux-x86`, `linux-arm64`, `linux-musl-x64`,
 `linux-musl-arm64`, `freebsd-x64`, `osx-x64`, `osx-arm64`, `win-x64`, and
 `win-x86`. Linux x86 and FreeBSD use separately built, pinned .NET runtime
 packs. A no-publication validation workflow builds and verifies all ten
-candidate archives. The hosted runtime-pack permission regression now passes;
-the full exact-head archive matrix is still running. These assets are not
-public until a later release is approved. Keep BookshelfNG in service until the
-full migration and channel acceptance gates close.
+candidate archives. Run
+[39582093706](https://github.com/snapetech-org/chaptarrng/actions/runs/39582093706)
+has passed nine archive targets and the focused runtime-pack permission
+regression; the combined Linux x86 and FreeBSD runtime-pack build is still
+running. The previous attempt failed in those two jobs because GNU tar tried
+to reset metadata on existing shared .NET directories; the installer fix uses
+`--no-overwrite-dir`. These assets are not public until a later release is
+approved. Keep BookshelfNG in service until the full migration and channel
+acceptance gates close.
 Keep the BookshelfNG installation in service until a replacement channel is
 validated or that platform is explicitly retired.
 

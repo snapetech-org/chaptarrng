@@ -64,12 +64,20 @@ open.
 
 Standalone archive work now covers all ten BookshelfNG runtime identifiers in
 the ChaptarrNG source release matrix. Linux x86 and FreeBSD use pinned custom
-.NET runtime packs. Exact-head Build [39573719771](https://github.com/snapetech-org/chaptarrng/actions/runs/39573719771)
-passed. No-publication standalone validation
+.NET runtime packs. No-publication validation
+[39582093706](https://github.com/snapetech-org/chaptarrng/actions/runs/39582093706)
+on candidate `d71ec42e` has passed nine archive targets and the focused
+existing-runtime-permission regression; its combined Linux x86 and FreeBSD
+runtime-pack build is still running. The earlier attempt
 [39573719493](https://github.com/snapetech-org/chaptarrng/actions/runs/39573719493)
-is still running the Linux x86 and FreeBSD runtime-pack job. The public
-`v0.9.977` assets remain unchanged, and no release or channel handoff is
-authorized.
+finished with failures in those two archive jobs because GNU tar tried to
+change metadata on existing shared .NET directories. The installer now uses
+`--no-overwrite-dir`, and the targeted permission test passes. Current
+ChaptarrNG `main` is `ac9d0f67`, which includes this fix; its Build workflow is
+[39582456911](https://github.com/snapetech-org/chaptarrng/actions/runs/39582456911).
+The audit target below remains deliberately pinned to `4d9c4b2d`; these
+newer source changes do not alter its path dispositions. Public `v0.9.977`
+assets remain unchanged, and no release or channel handoff is authorized.
 
 The current migration fix is ChaptarrNG commit
 `c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`. It maps legacy
