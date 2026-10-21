@@ -12,6 +12,8 @@ on:
       - 'packaging/scripts/test-copy-dotnet-sdk-reference-packs.sh'
       - 'packaging/scripts/install-extra-platform-runtime-packs.sh'
       - 'packaging/scripts/test-install-extra-platform-runtime-packs.sh'
+      - 'packaging/scripts/prepare-writable-dotnet-root.sh'
+      - 'packaging/scripts/test-prepare-writable-dotnet-root.sh'
       - 'packaging/scripts/check-standalone-rids.py'
       - 'src/**'
       - 'frontend/**'
@@ -32,6 +34,8 @@ jobs:
         persist-credentials: false
     - name: Test Linux x86 and FreeBSD runtime pack installation
       run: bash packaging/scripts/test-install-extra-platform-runtime-packs.sh
+    - name: Test writable .NET SDK root preparation
+      run: bash packaging/scripts/test-prepare-writable-dotnet-root.sh
     - name: Test SDK reference-pack collection across servicing versions
       run: bash packaging/scripts/test-copy-dotnet-sdk-reference-packs.sh
 
@@ -122,6 +126,13 @@ jobs:
       with:
         dotnet-version: 10.0.402
 
+    # Extra runtime packs must go into an owned copy of the runner-managed SDK.
+    - name: Prepare writable .NET SDK root for extra platform packs
+      env:
+        SOURCE_DOTNET_ROOT: /usr/share/dotnet
+        DOTNET_ROOT: ${{ runner.temp }}/chaptarrng-dotnet
+      run: bash packaging/scripts/prepare-writable-dotnet-root.sh "$SOURCE_DOTNET_ROOT" "$DOTNET_ROOT"
+
     - name: Require ImageSharp build license
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
@@ -130,7 +141,7 @@ jobs:
     - name: Build standalone application archive
       env:
         CUSTOM_RUNTIME_PACKS_DIR: ${{ runner.temp }}/platform-runtime-packs/packages
-        DOTNET_ROOT: /usr/share/dotnet
+        DOTNET_ROOT: ${{ runner.temp }}/chaptarrng-dotnet
         DOTNETVERSION: 10.0.402
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: bash packaging/scripts/build-standalone.sh 0.0.0 "${{ matrix.rid }}" "$RUNNER_TEMP/release-assets"
