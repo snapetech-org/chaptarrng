@@ -50,6 +50,11 @@ the candidate has not been exercised on a real systemd host or published to a
 GitHub Release or Ubuntu PPA. Keep this channel disabled until those checks and
 representative-data rollback acceptance pass.
 
+The stable release workflow now attaches the legacy `.deb` and checksum only
+after an explicit bridge request and when the migration and both release
+readiness gates are true. Those gates remain closed; this workflow has not
+published a bridge asset. No Launchpad PPA bridge is configured yet.
+
 ## Standalone archive coverage
 
 The published `v0.9.977` archives cover `linux-x64`, `linux-arm64`, and

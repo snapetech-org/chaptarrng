@@ -29,6 +29,8 @@ OUTPUT_DIR="$task_root/out" \
   bash "$repo_root/packaging/scripts/build-bookshelfng-deb-bridge.sh"
 
 package="$task_root/out/bookshelfng_0.9.977-1_amd64.deb"
+test -s "$package.sha256"
+(cd "$task_root/out" && sha256sum --check "$(basename "$package").sha256")
 test "$(dpkg-deb --field "$package" Package)" = bookshelfng
 test "$(dpkg-deb --field "$package" Version)" = 0.9.977-1
 test "$(dpkg-deb --field "$package" Architecture)" = amd64

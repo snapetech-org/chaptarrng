@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_legacy_bridge:
-        description: Publish BookshelfNG package, image, and Helm identities after all migration acceptance gates pass.
+        description: Publish BookshelfNG Debian, package, image, and Helm identities after all migration acceptance gates pass.
         required: false
         type: boolean
         default: false
@@ -480,11 +480,26 @@ jobs:
         name: chaptarrng-rpm-source
         path: ${{ runner.temp }}/release-assets
 
+    - name: Build the gated BookshelfNG Debian package asset
+      if: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
+      env:
+        VERSION: ${{ needs.release.outputs.version }}
+        ARCHIVE_PATH: ${{ runner.temp }}/release-assets/ChaptarrNG-${{ needs.release.outputs.version }}-linux-x64.tar.gz
+        OUTPUT_DIR: ${{ runner.temp }}/bookshelfng-deb-bridge
+      run: |
+        set -euo pipefail
+        archive="$(basename "$ARCHIVE_PATH")"
+        (cd "$(dirname "$ARCHIVE_PATH")" && sha256sum --check "$archive.sha256")
+        bash packaging/scripts/build-bookshelfng-deb-bridge.sh
+        cp "$OUTPUT_DIR"/bookshelfng_*.deb "$RUNNER_TEMP/release-assets/"
+        cp "$OUTPUT_DIR"/bookshelfng_*.deb.sha256 "$RUNNER_TEMP/release-assets/"
+
     - name: Verify and attach release assets
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: ${{ needs.release.outputs.tag }}
         VERSION: ${{ needs.release.outputs.version }}
+        LEGACY_BRIDGE_ENABLED: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
       run: |
         set -euo pipefail
         release_state="$(gh release view "$TAG" --json isDraft --jq '.isDraft')"
@@ -506,6 +521,11 @@ jobs:
         legacy_srpm="bookshelfng-${VERSION}-1.src.rpm"
         test -s "$RUNNER_TEMP/release-assets/$legacy_srpm"
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$legacy_srpm.sha256")
+        if [[ "$LEGACY_BRIDGE_ENABLED" == true ]]; then
+          legacy_deb="bookshelfng_${VERSION}-1_amd64.deb"
+          test -s "$RUNNER_TEMP/release-assets/$legacy_deb"
+          (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$legacy_deb.sha256")
+        fi
         mapfile -d '' release_files < <(find "$RUNNER_TEMP/release-assets" -mindepth 1 -maxdepth 1 -type f -print0)
         ((${#release_files[@]} > 0))
         gh release upload "$TAG" "${release_files[@]}" --clobber

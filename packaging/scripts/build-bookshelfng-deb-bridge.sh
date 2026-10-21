@@ -66,4 +66,5 @@ dpkg-deb --root-owner-group --build "$package_root" "$output_package"
 test "$(dpkg-deb --field "$output_package" Package)" = bookshelfng
 test "$(dpkg-deb --field "$output_package" Version)" = "${version}-1"
 test "$(dpkg-deb --field "$output_package" Architecture)" = amd64
+(cd "$output_dir" && sha256sum "$(basename "$output_package")" > "$(basename "$output_package").sha256")
 echo "Built candidate-only BookshelfNG Debian bridge: $output_package"

@@ -1,9 +1,9 @@
 # BookshelfNG retirement status
 
 **Reviewed:** 2026-10-21. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977`
-remain the latest public app releases. ChaptarrNG main is
-([current source](https://github.com/snapetech-org/chaptarrng/tree/main))
-and now contains a candidate-only Debian bridge builder. Its local dpkg
+remain the latest public app releases. ChaptarrNG
+[main](https://github.com/snapetech-org/chaptarrng/tree/main) contains a
+candidate-only Debian bridge builder. Its local dpkg
 round-trip passed against the public BookshelfNG `.71` package and preserved a
 modified config and data canary; systemd and dependency checks were mocked.
 No compatibility package or migration bridge has been published. Release
