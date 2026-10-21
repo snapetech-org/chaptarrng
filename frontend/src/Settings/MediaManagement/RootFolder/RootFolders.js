@@ -166,8 +166,16 @@ class RootFolders extends Component {
     this.setState({ isBackfillPreviewModalOpen: false });
   };
 
+  canQueueAuthorRootBackfill = (preview) => {
+    const candidates = Number(preview?.candidates);
+    const updated = Number(preview?.updated);
+
+    return Number.isInteger(candidates) && Number.isInteger(updated) &&
+      candidates >= updated && updated > 0;
+  };
+
   onConfirmAuthorRootBackfill = () => {
-    if (Number(this.state.backfillPreview?.updated) <= 0) {
+    if (!this.canQueueAuthorRootBackfill(this.state.backfillPreview)) {
       this.setState({ isBackfillPreviewModalOpen: false });
       return;
     }
@@ -210,7 +218,8 @@ class RootFolders extends Component {
     }
 
     const candidates = Number(backfillPreview.candidates) || 0;
-    const updated = Number(backfillPreview.updated) || 0;
+    const updatedCount = Number(backfillPreview.updated);
+    const updated = Number.isInteger(updatedCount) ? updatedCount : 0;
 
     return (
       <div>
@@ -315,6 +324,7 @@ class RootFolders extends Component {
     const {
       isAddRootFolderModalOpen
     } = this.state;
+    const canBackfill = this.canQueueAuthorRootBackfill(this.state.backfillPreview);
 
     return (
       <FieldSet legend={translate('RootFolders')}>
@@ -373,10 +383,10 @@ class RootFolders extends Component {
 
           <ConfirmModal
             isOpen={this.state.isBackfillPreviewModalOpen}
-            kind={Number(this.state.backfillPreview?.updated) > 0 ? kinds.PRIMARY : kinds.DEFAULT}
+            kind={canBackfill ? kinds.PRIMARY : kinds.DEFAULT}
             title={translate('BackfillAuthorRootFoldersTitle')}
             message={this.renderAuthorRootBackfillPreview()}
-            confirmLabel={Number(this.state.backfillPreview?.updated) > 0 ?
+            confirmLabel={canBackfill ?
               translate('FillMissingAuthorRoots') :
               translate('Close')}
             isSpinning={isBackfillingAuthorRootFolders || this.state.isSubmittingAuthorRootBackfill}

@@ -276,6 +276,31 @@ test('author root backfill cannot run when the preview has no eligible authors',
   assert.equal(component.state.isBackfillPreviewModalOpen, false);
 });
 
+test('author root backfill cannot run when the preview count is invalid', () => {
+  const ajax = createAjaxHarness();
+  const RootFolders = loadRootFolders(ajax.create);
+  let backfillCount = 0;
+  const component = createComponent(RootFolders, () => backfillCount++);
+
+  for (const preview of [
+    { candidates: 2, updated: 'unknown' },
+    { candidates: 'unknown', updated: 1 },
+    { candidates: 1, updated: 2 },
+    { candidates: 2, updated: 1.5 }
+  ]) {
+    component.state.backfillPreview = preview;
+    component.state.isBackfillPreviewModalOpen = true;
+
+    const previewModal = findElement(component.render(), RootFolders.ConfirmModal);
+    assert.equal(previewModal.props.confirmLabel, 'Close');
+
+    component.onConfirmAuthorRootBackfill();
+
+    assert.equal(backfillCount, 0);
+    assert.equal(component.state.isBackfillPreviewModalOpen, false);
+  }
+});
+
 test('author root backfill prevents duplicate queueing and keeps a retry after queue failure', async () => {
   const ajax = createAjaxHarness();
   const RootFolders = loadRootFolders(ajax.create);
