@@ -23,10 +23,10 @@
 > pages; focused pagination tests pass 5/5. Focused backend/migration fixtures
 > pass 11/11, configuration persistence 1/1, Calibre proxy/series 6/6,
 > Hardcover metadata/search 45/45, book-file move planning 15/15, and
-> author-move path coverage 3/3. The single-author and bulk media-move CLI
-> helpers pass Bash syntax, help, and ShellCheck checks; see the [media-move
-> guide](MEDIA_MOVES.md). The exact-head platform matrix is running in [Build
-> 39545396737](https://github.com/snapetech-org/chaptarrng/actions/runs/39545396737).
+> author-move path coverage 3/3. The single-author, bulk media-move, and
+> unmapped-retry CLI helpers pass Bash syntax, help, and ShellCheck checks; see
+> the [media-move guide](MEDIA_MOVES.md) and [unmapped-files guide](UNMAPPED_FILES.md).
+> The exact-head platform matrix is running in [Build 39546268367](https://github.com/snapetech-org/chaptarrng/actions/runs/39546268367).
 > The source is unpublished. The source also
 > preserves BookshelfNG's optional
 > `MoveExtraFilesOnRename` setting, exposes it in Media Management, and includes
@@ -328,7 +328,9 @@ result must use the same media type and have stable provider work and author
 IDs. Conflicting or ambiguous results stay unmapped. A single result is sent
 through the existing pending-author-import flow; catalog search never moves or
 attaches a file directly. This source change does not change release or
-channel acceptance status.
+channel acceptance status. The ChaptarrNG shell helper can also queue an
+all-format retry using RetryUnmappedMatch and unmappedFiles.scope=all; see the
+[unmapped-files guide](UNMAPPED_FILES.md). It is not in public `.977`.
 
 ## Matching setting compatibility
 

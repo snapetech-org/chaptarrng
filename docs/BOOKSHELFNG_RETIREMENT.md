@@ -29,8 +29,7 @@ paths under the moved directory and fetches Goodreads series imports page by
 page. Focused backend/migration fixtures pass 11/11, configuration persistence
 1/1, Goodreads pagination 5/5, Calibre proxy/series 6/6, Hardcover
 metadata/search 45/45, book-file move planning 15/15, and author-move path
-coverage 3/3. The single-author and bulk media-move CLI helpers pass Bash
-syntax, help, and ShellCheck checks. The exact-head matrix is running in [Build 39545396737](https://github.com/snapetech-org/chaptarrng/actions/runs/39545396737).
+coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and ShellCheck checks. The exact-head matrix is running in [Build 39546268367](https://github.com/snapetech-org/chaptarrng/actions/runs/39546268367).
 The source is not in public `.977`.
 
 The canonical

@@ -78,11 +78,10 @@ filtering and configured import limits; the focused pagination suite passes
 5/5. Other focused checks pass author/migration 11/11, configuration
 persistence 1/1, format-profile refresh 5/5, Calibre language 4/4, Calibre
 proxy/series 6/6, Hardcover metadata/search 45/45, book-file move planning
-15/15, and author-move path coverage 3/3. Both new media-move CLI helpers pass
-Bash syntax, help, and ShellCheck checks. The prior exact-head run for
+15/15, and author-move path coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and ShellCheck checks. The prior exact-head run for
 `6fc744ef` passed Linux, macOS, Windows, PostgreSQL migration, and native
 runner receipt checks; it does not cover the Goodreads pagination or CLI changes.
-The current full matrix is running in [Build 39545396737](https://github.com/snapetech-org/chaptarrng/actions/runs/39545396737).
+The current full matrix is running in [Build 39546268367](https://github.com/snapetech-org/chaptarrng/actions/runs/39546268367).
 These source changes remain unpublished.
 Current `main` also applies the author freshness policy to book-added events
 while retaining the author-scoped folder rescan, even when metadata is skipped
@@ -570,7 +569,7 @@ marketplace.
 
 ## Getting Started
 
-> **Docker is the primary maintained installation.** Releases also include standalone Linux and Windows archives, with package-manager feeds available on selected platforms. Publication and upgrade coverage varies by channel; check the [package status](packaging/README.md) before choosing one. For a BookshelfNG move, start with the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md).
+> **Docker is the primary maintained installation.** Releases also include standalone Linux and Windows archives, with package-manager feeds available on selected platforms. Publication and upgrade coverage varies by channel; check the [package status](packaging/README.md) before choosing one. For a BookshelfNG move, start with the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md). The [unmapped-files guide](docs/UNMAPPED_FILES.md) covers match retries.
 
 ChaptarrNG uses ImageSharp to resize cover images. ImageSharp 4 requires a
 valid Six Labors license when building this direct dependency from source.
