@@ -62,6 +62,37 @@ const columns = [
   }
 ];
 
+const authorRootBackfillCountKeys = [
+  'candidates',
+  'updated',
+  'skippedManuallyOverridden',
+  'skippedNoDefault',
+  'skippedNoProfile'
+];
+
+function isValidAuthorRootBackfillPreview(preview) {
+  if (!preview || typeof preview !== 'object') {
+    return false;
+  }
+
+  const counts = authorRootBackfillCountKeys.map((key) => preview[key]);
+
+  if (!counts.every((count) => Number.isSafeInteger(count) && count >= 0)) {
+    return false;
+  }
+
+  const {
+    candidates,
+    updated,
+    skippedManuallyOverridden,
+    skippedNoDefault,
+    skippedNoProfile
+  } = preview;
+
+  return updated + skippedManuallyOverridden + skippedNoDefault + skippedNoProfile ===
+    candidates;
+}
+
 class RootFolders extends Component {
 
   //
@@ -119,6 +150,10 @@ class RootFolders extends Component {
   };
 
   onReviewAuthorRootBackfillPress = () => {
+    if (this._backfillPreviewRequest || this.state.isPreviewingAuthorRoots) {
+      return;
+    }
+
     this.setState({
       isPreviewingAuthorRoots: true,
       backfillPreview: null,
@@ -136,6 +171,16 @@ class RootFolders extends Component {
       this._backfillPreviewRequest = null;
 
       if (this._isUnmounted) {
+        return;
+      }
+
+      if (!isValidAuthorRootBackfillPreview(preview)) {
+        this.setState({
+          isPreviewingAuthorRoots: false,
+          backfillPreview: null,
+          isBackfillPreviewModalOpen: false,
+          backfillPreviewError: translate('UnableToLoadAuthorRootFolderBackfillPreview')
+        });
         return;
       }
 
@@ -159,7 +204,11 @@ class RootFolders extends Component {
   };
 
   onBackfillPreviewModalClose = () => {
-    if (this.state.isSubmittingAuthorRootBackfill || this.props.isBackfillingAuthorRootFolders) {
+    if (
+      this.state.isSubmittingAuthorRootBackfill ||
+      this.props.isBackfillingAuthorRootFolders ||
+      this._isSubmittingAuthorRootBackfill
+    ) {
       return;
     }
 
@@ -167,11 +216,7 @@ class RootFolders extends Component {
   };
 
   canQueueAuthorRootBackfill = (preview) => {
-    const candidates = Number(preview?.candidates);
-    const updated = Number(preview?.updated);
-
-    return Number.isInteger(candidates) && Number.isInteger(updated) &&
-      candidates >= updated && updated > 0;
+    return isValidAuthorRootBackfillPreview(preview) && preview.updated > 0;
   };
 
   onConfirmAuthorRootBackfill = () => {
@@ -180,16 +225,19 @@ class RootFolders extends Component {
       return;
     }
 
-    if (this.state.isSubmittingAuthorRootBackfill) {
+    if (this.state.isSubmittingAuthorRootBackfill || this._isSubmittingAuthorRootBackfill) {
       return;
     }
 
+    this._isSubmittingAuthorRootBackfill = true;
     this.setState({
       isSubmittingAuthorRootBackfill: true,
       backfillCommandError: null
     });
 
     Promise.resolve().then(() => this.props.onBackfillAuthorRootFolders()).then(() => {
+      this._isSubmittingAuthorRootBackfill = false;
+
       if (this._isUnmounted) {
         return;
       }
@@ -199,6 +247,8 @@ class RootFolders extends Component {
         isBackfillPreviewModalOpen: false
       });
     }).catch(() => {
+      this._isSubmittingAuthorRootBackfill = false;
+
       if (this._isUnmounted) {
         return;
       }
@@ -366,11 +416,20 @@ class RootFolders extends Component {
 
             <SpinnerButton
               className={styles.backfillRootFoldersButton}
-              isDisabled={isBackfillingAuthorRootFolders || this.state.isPreviewingAuthorRoots}
-              isSpinning={this.state.isPreviewingAuthorRoots}
+              isDisabled={
+                isBackfillingAuthorRootFolders ||
+                this.state.isPreviewingAuthorRoots ||
+                this.state.isSubmittingAuthorRootBackfill ||
+                this._isSubmittingAuthorRootBackfill
+              }
+              isSpinning={this.state.isPreviewingAuthorRoots || this.state.isSubmittingAuthorRootBackfill}
               onPress={this.onReviewAuthorRootBackfillPress}
             >
-              {translate('ReviewMissingAuthorRoots')}
+              {translate(
+                this.state.backfillPreviewError ?
+                  'RetryAuthorRootFolderBackfillPreview' :
+                  'ReviewMissingAuthorRoots'
+              )}
             </SpinnerButton>
           </div>
 

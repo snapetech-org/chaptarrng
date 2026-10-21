@@ -96,22 +96,25 @@ function createMapDispatchToProps(dispatch, props) {
     },
 
     onRefreshBookPress(items) {
-      dispatch(executeCommand({
+      return dispatch(executeCommand({
         name: commandNames.BULK_REFRESH_BOOK,
-        bookIds: items
+        bookIds: items,
+        suppressStartErrorMessage: true
       }));
     },
 
     onRssSyncPress() {
-      dispatch(executeCommand({
-        name: commandNames.RSS_SYNC
+      return dispatch(executeCommand({
+        name: commandNames.RSS_SYNC,
+        suppressStartErrorMessage: true
       }));
     },
 
     onSearchPress(items) {
-      dispatch(executeCommand({
+      return dispatch(executeCommand({
         name: commandNames.BOOK_SEARCH,
-        bookIds: items
+        bookIds: items,
+        suppressStartErrorMessage: true
       }));
     },
 

@@ -4,6 +4,8 @@ import React, { Component } from 'react';
 import MediaTypeToggle from 'Author/Details/MediaTypeToggle';
 import NoAuthor from 'Author/NoAuthor';
 import BookEditorFooter from 'Book/Editor/BookEditorFooter';
+import Alert from 'Components/Alert';
+import Button from 'Components/Link/Button';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import ConfirmModal from 'Components/Modal/ConfirmModal';
 import PageContent from 'Components/Page/PageContent';
@@ -48,6 +50,12 @@ function getViewComponent(view, useClientSideBooks) {
   return useClientSideBooks ? BookIndexTableConnector : BookIndexTableInfiniteConnector;
 }
 
+function getBookIds(response) {
+  const ids = Array.isArray(response) ? response : response?.ids;
+
+  return Array.isArray(ids) ? ids : null;
+}
+
 class BookIndex extends Component {
 
   //
@@ -64,7 +72,20 @@ class BookIndex extends Component {
       isOverviewOptionsModalOpen: false,
       isConfirmSearchModalOpen: false,
       isEditorActive: false,
+      isStartingRefresh: false,
+      refreshError: null,
+      failedRefreshBookIds: [],
+      isStartingRssSync: false,
+      rssSyncError: null,
       isSelectingAll: false,
+      selectAllError: null,
+      selectAllErrorKind: null,
+      isResolvingSearchBookIds: false,
+      isSubmittingBookSearch: false,
+      searchBookIdsError: null,
+      searchBookIdsErrorKind: null,
+      searchBookIdsErrorHelp: null,
+      searchScopeChangeNotice: null,
       allSelected: false,
       allUnselected: false,
       lastToggled: null,
@@ -73,6 +94,7 @@ class BookIndex extends Component {
   }
 
   componentDidMount() {
+    this._isUnmounted = false;
     this.setJumpBarItems();
     this.setSelectedState();
   }
@@ -83,6 +105,8 @@ class BookIndex extends Component {
       sortKey,
       sortDirection,
       view,
+      isRefreshingBook,
+      isRssSyncExecuting,
       selectedFilterKey,
       selectedMediaType,
       bookBuckets,
@@ -97,6 +121,44 @@ class BookIndex extends Component {
     const selectionScopeChanged = viewChanged ||
       selectedFilterKey !== prevProps.selectedFilterKey ||
       selectedMediaType !== prevProps.selectedMediaType;
+
+    if (this.state.isStartingRefresh && isRefreshingBook) {
+      this.setState({ isStartingRefresh: false });
+    }
+
+    if (this.state.isStartingRssSync && isRssSyncExecuting) {
+      this.setState({ isStartingRssSync: false });
+    }
+
+    const bookListScopeChanged = selectedFilterKey !== prevProps.selectedFilterKey ||
+      selectedMediaType !== prevProps.selectedMediaType;
+
+    if (bookListScopeChanged) {
+      const nextState = {};
+
+      if (this._selectAllRequestPending) {
+        this.invalidateSelectAllRequest();
+        nextState.isSelectingAll = false;
+        nextState.selectAllError = translate('BookListChangedDuringSelectAll');
+        nextState.selectAllErrorKind = kinds.WARNING;
+      } else {
+        nextState.selectAllError = null;
+        nextState.selectAllErrorKind = null;
+      }
+
+      if (!this.state.isSubmittingBookSearch &&
+          (this._searchBookIdsRequestPending || this.state.isConfirmSearchModalOpen)) {
+        this._retrySearchBookIds = null;
+        this._retrySearchScope = null;
+        this.invalidateSearchBookIdsRequest();
+        nextState.isConfirmSearchModalOpen = false;
+        nextState.isResolvingSearchBookIds = false;
+        nextState.searchBookIdsError = null;
+        nextState.searchScopeChangeNotice = translate('BookListChangedDuringMassSearch');
+      }
+
+      this.setState(nextState);
+    }
 
     // Jump bar in server-paged views is driven by server-provided buckets.
     // Avoid re-building it on every page load (itemsChanged).
@@ -116,6 +178,12 @@ class BookIndex extends Component {
     if (this.state.jumpToCharacter != null) {
       this.setState({ jumpToCharacter: null });
     }
+  }
+
+  componentWillUnmount() {
+    this._isUnmounted = true;
+    this.invalidateSelectAllRequest();
+    this.invalidateSearchBookIdsRequest();
   }
 
   //
@@ -269,7 +337,13 @@ class BookIndex extends Component {
 
   onEditorTogglePress = () => {
     if (this.state.isEditorActive) {
-      this.setState({ isEditorActive: false });
+      this.invalidateSelectAllRequest();
+      this.setState({
+        isEditorActive: false,
+        isSelectingAll: false,
+        selectAllError: null,
+        selectAllErrorKind: null
+      });
     } else {
       const newState = selectAll(this.state.selectedState, false);
       newState.isEditorActive = true;
@@ -283,9 +357,13 @@ class BookIndex extends Component {
 
   onSelectAllChange = ({ value }) => {
     if (!value) {
+      this.invalidateSelectAllRequest();
       this.setState({
         allSelected: false,
         allUnselected: true,
+        isSelectingAll: false,
+        selectAllError: null,
+        selectAllErrorKind: null,
         lastToggled: null,
         selectedState: {}
       });
@@ -300,11 +378,32 @@ class BookIndex extends Component {
     } = this.props;
 
     if (!useClientSideBooks) {
-      this.setState({ isSelectingAll: true });
+      if (this._selectAllRequestPending) {
+        return;
+      }
 
-      Promise.resolve(onFetchBookIds(bookQueryKey, bookQueryParams))
+      const requestId = this.startSelectAllRequest();
+      this.setState({ isSelectingAll: true, selectAllError: null, selectAllErrorKind: null });
+
+      Promise.resolve()
+        .then(() => onFetchBookIds(bookQueryKey, bookQueryParams))
         .then((response) => {
-          const ids = Array.isArray(response) ? response : (response?.ids || []);
+          if (requestId !== this._selectAllRequestId) {
+            return;
+          }
+
+          this._selectAllRequestPending = false;
+          const ids = getBookIds(response);
+
+          if (!ids) {
+            this.setState({
+              isSelectingAll: false,
+              selectAllError: translate('UnableToSelectAllBooks'),
+              selectAllErrorKind: kinds.DANGER
+            });
+            return;
+          }
+
           const nextSelectedState = {};
 
           ids.forEach((id) => {
@@ -315,12 +414,23 @@ class BookIndex extends Component {
             allSelected: ids.length > 0,
             allUnselected: ids.length === 0,
             isSelectingAll: false,
+            selectAllError: ids.length ? null : translate('NoBooksMatchedForSelection'),
+            selectAllErrorKind: ids.length ? null : kinds.WARNING,
             lastToggled: null,
             selectedState: nextSelectedState
           });
         })
-        .catch(() => {
-          this.setState({ isSelectingAll: false });
+        .catch((error) => {
+          if (requestId !== this._selectAllRequestId) {
+            return;
+          }
+
+          this._selectAllRequestPending = false;
+          this.setState({
+            isSelectingAll: false,
+            selectAllError: getErrorMessage(error, translate('UnableToSelectAllBooks')),
+            selectAllErrorKind: kinds.DANGER
+          });
         });
 
       return;
@@ -364,14 +474,85 @@ class BookIndex extends Component {
   };
 
   onSearchPress = () => {
-    this.setState({ isConfirmSearchModalOpen: true });
+    this._retrySearchBookIds = null;
+    this._retrySearchScope = null;
+    this.setState({
+      isConfirmSearchModalOpen: true,
+      searchBookIdsError: null,
+      searchBookIdsErrorKind: null,
+      searchBookIdsErrorHelp: null,
+      searchScopeChangeNotice: null
+    });
   };
 
-  onRefreshBookPress = () => {
-    const selectedIds = this.getSelectedIds();
-    const refreshIds = this.state.isEditorActive && selectedIds.length > 0 ? selectedIds : [];
+  onRefreshBookPress = (bookIds = null) => {
+    if (this.state.isStartingRefresh || this.props.isRefreshingBook) {
+      return;
+    }
 
-    this.props.onRefreshBookPress(refreshIds);
+    const selectedIds = this.getSelectedIds();
+    const refreshIds = bookIds || (this.state.isEditorActive && selectedIds.length > 0 ? selectedIds : []);
+
+    this.setState({
+      isStartingRefresh: true,
+      refreshError: null,
+      failedRefreshBookIds: refreshIds
+    });
+
+    Promise.resolve()
+      .then(() => this.props.onRefreshBookPress(refreshIds))
+      .then(() => {
+        if (this._isUnmounted) {
+          return;
+        }
+
+        if (!this.props.isRefreshingBook) {
+          this.setState({ isStartingRefresh: false });
+        }
+      })
+      .catch((error) => {
+        if (this._isUnmounted) {
+          return;
+        }
+
+        this.setState({
+          isStartingRefresh: false,
+          refreshError: getErrorMessage(error, translate('UnableToStartLibraryUpdate'))
+        });
+      });
+  };
+
+  onRetryRefreshPress = () => {
+    this.onRefreshBookPress(this.state.failedRefreshBookIds);
+  };
+
+  onRssSyncPress = () => {
+    if (this.state.isStartingRssSync || this.props.isRssSyncExecuting) {
+      return;
+    }
+
+    this.setState({ isStartingRssSync: true, rssSyncError: null });
+    Promise.resolve()
+      .then(() => this.props.onRssSyncPress())
+      .then(() => {
+        if (this._isUnmounted) {
+          return;
+        }
+
+        if (!this.props.isRssSyncExecuting) {
+          this.setState({ isStartingRssSync: false });
+        }
+      })
+      .catch((error) => {
+        if (this._isUnmounted) {
+          return;
+        }
+
+        this.setState({
+          isStartingRssSync: false,
+          rssSyncError: getErrorMessage(error, translate('UnableToStartRssSync'))
+        });
+      });
   };
 
   onSearchConfirmed = () => {
@@ -380,36 +561,170 @@ class BookIndex extends Component {
       useClientSideBooks,
       bookQueryKey,
       bookQueryParams,
-      onFetchBookIds,
-      onSearchPress
+      onFetchBookIds
     } = this.props;
 
+    if (this._searchBookIdsRequestPending) {
+      return;
+    }
+
+    if (this._retrySearchBookIds && this._retrySearchScope === this.getBookListScope()) {
+      const requestId = this.startSearchBookIdsRequest();
+      this.startBookSearch(this._retrySearchBookIds, requestId);
+      return;
+    }
+
     const selectedBookIds = this.getSelectedIds();
-    this.setState({ isConfirmSearchModalOpen: false });
 
     if (this.state.isEditorActive && selectedBookIds.length > 0) {
-      onSearchPress(selectedBookIds);
+      const requestId = this.startSearchBookIdsRequest();
+      this.startBookSearch(selectedBookIds, requestId);
       return;
     }
 
     // Paged views only hold the loaded pages, so ask the server for every book in the list.
     if (!useClientSideBooks) {
-      Promise.resolve(onFetchBookIds(bookQueryKey, bookQueryParams)).then((response) => {
-        const ids = Array.isArray(response) ? response : (response?.ids || []);
-
-        if (ids.length) {
-          onSearchPress(ids);
-        }
+      const requestId = this.startSearchBookIdsRequest();
+      this.setState({
+        isResolvingSearchBookIds: true,
+        searchBookIdsError: null,
+        searchBookIdsErrorKind: null,
+        searchBookIdsErrorHelp: null,
+        searchScopeChangeNotice: null
       });
+
+      Promise.resolve()
+        .then(() => onFetchBookIds(bookQueryKey, bookQueryParams))
+        .then((response) => {
+          if (requestId !== this._searchBookIdsRequestId) {
+            return;
+          }
+
+          const ids = getBookIds(response);
+
+          if (!ids || !ids.length) {
+            this._searchBookIdsRequestPending = false;
+            this.setState({
+              isResolvingSearchBookIds: false,
+              searchBookIdsError: translate(ids ? 'NoBooksMatchedForMassSearch' : 'UnableToLoadBooksForMassSearch'),
+              searchBookIdsErrorKind: ids ? kinds.WARNING : kinds.DANGER,
+              searchBookIdsErrorHelp: translate(ids ? 'CheckFilterBeforeRetryingMassSearch' : 'RetryToResolveBookSearch')
+            });
+            return;
+          }
+
+          this.startBookSearch(ids, requestId);
+        })
+        .catch((error) => {
+          if (requestId !== this._searchBookIdsRequestId) {
+            return;
+          }
+
+          this._searchBookIdsRequestPending = false;
+          this.setState({
+            isResolvingSearchBookIds: false,
+            searchBookIdsError: getErrorMessage(error, translate('UnableToLoadBooksForMassSearch')),
+            searchBookIdsErrorKind: kinds.DANGER,
+            searchBookIdsErrorHelp: translate('RetryToResolveBookSearch')
+          });
+        });
 
       return;
     }
 
-    onSearchPress(items.map((m) => m.id));
+    const requestId = this.startSearchBookIdsRequest();
+    this.startBookSearch(items.map((m) => m.id), requestId);
   };
 
   onConfirmSearchModalClose = () => {
-    this.setState({ isConfirmSearchModalOpen: false });
+    if (this.state.isSubmittingBookSearch) {
+      return;
+    }
+
+    this._retrySearchBookIds = null;
+    this._retrySearchScope = null;
+    this.invalidateSearchBookIdsRequest();
+    this.setState({
+      isConfirmSearchModalOpen: false,
+      isResolvingSearchBookIds: false,
+      isSubmittingBookSearch: false,
+      searchBookIdsError: null,
+      searchBookIdsErrorKind: null,
+      searchBookIdsErrorHelp: null
+    });
+  };
+
+  getBookListScope = () => `${this.props.selectedFilterKey}:${this.props.selectedMediaType}`;
+
+  startBookSearch = (bookIds, requestId) => {
+    this._searchBookIdsRequestPending = true;
+    this._retrySearchBookIds = bookIds;
+    this._retrySearchScope = this.getBookListScope();
+    this.setState({
+      isResolvingSearchBookIds: false,
+      isSubmittingBookSearch: true,
+      searchBookIdsError: null,
+      searchBookIdsErrorKind: null,
+      searchBookIdsErrorHelp: null
+    });
+
+    Promise.resolve()
+      .then(() => this.props.onSearchPress(bookIds))
+      .then(() => {
+        if (requestId !== this._searchBookIdsRequestId) {
+          return;
+        }
+
+        this._searchBookIdsRequestPending = false;
+        this._retrySearchBookIds = null;
+        this._retrySearchScope = null;
+        this.setState({
+          isConfirmSearchModalOpen: false,
+          isSubmittingBookSearch: false,
+          searchBookIdsError: null,
+          searchBookIdsErrorKind: null,
+          searchBookIdsErrorHelp: null,
+          searchScopeChangeNotice: null
+        });
+      })
+      .catch((error) => {
+        if (requestId !== this._searchBookIdsRequestId) {
+          return;
+        }
+
+        this._searchBookIdsRequestPending = false;
+        this.setState({
+          isResolvingSearchBookIds: false,
+          isSubmittingBookSearch: false,
+          searchBookIdsError: getErrorMessage(error, translate('UnableToStartBookSearch')),
+          searchBookIdsErrorKind: kinds.DANGER,
+          searchBookIdsErrorHelp: translate('RetryToStartBookSearch')
+        });
+      });
+  };
+
+  startSelectAllRequest = () => {
+    this._selectAllRequestPending = true;
+    this._selectAllRequestId = (this._selectAllRequestId || 0) + 1;
+
+    return this._selectAllRequestId;
+  };
+
+  invalidateSelectAllRequest = () => {
+    this._selectAllRequestPending = false;
+    this._selectAllRequestId = (this._selectAllRequestId || 0) + 1;
+  };
+
+  startSearchBookIdsRequest = () => {
+    this._searchBookIdsRequestPending = true;
+    this._searchBookIdsRequestId = (this._searchBookIdsRequestId || 0) + 1;
+
+    return this._searchBookIdsRequestId;
+  };
+
+  invalidateSearchBookIdsRequest = () => {
+    this._searchBookIdsRequestPending = false;
+    this._searchBookIdsRequestId = (this._searchBookIdsRequestId || 0) + 1;
   };
 
   //
@@ -440,7 +755,6 @@ class BookIndex extends Component {
       onSortSelect,
       onFilterSelect,
       onViewSelect,
-      onRssSyncPress,
       selectedMediaType,
       onMediaTypeChange,
       useClientSideBooks,
@@ -457,7 +771,19 @@ class BookIndex extends Component {
       isOverviewOptionsModalOpen,
       isConfirmSearchModalOpen,
       isEditorActive,
+      isStartingRefresh,
+      refreshError,
+      isStartingRssSync,
+      rssSyncError,
       isSelectingAll,
+      selectAllError,
+      selectAllErrorKind,
+      isResolvingSearchBookIds,
+      isSubmittingBookSearch,
+      searchBookIdsError,
+      searchBookIdsErrorKind,
+      searchBookIdsErrorHelp,
+      searchScopeChangeNotice,
       selectedState,
       allSelected,
       allUnselected
@@ -481,6 +807,8 @@ class BookIndex extends Component {
     const noBooksTotalItems = isPagedViewEmpty ? 0 : totalItems;
 
     const refreshLabel = isEditorActive && selectedBookIds.length > 0 ? translate('UpdateSelected') : translate('UpdateAll');
+    const isRefreshPending = isRefreshingBook || isStartingRefresh;
+    const isRssSyncPending = isRssSyncExecuting || isStartingRssSync;
     const searchIndexLabel = selectedFilterKey === 'all' ? translate('SearchAll') : translate('SearchFiltered');
     const searchEditorLabel = selectedBookIds.length > 0 ? translate('SearchSelected') : translate('SearchAll');
     const listedBookCount = isPagedView ? (bookTotalCount || 0) : items.length;
@@ -500,16 +828,17 @@ class BookIndex extends Component {
               label={refreshLabel}
               iconName={icons.REFRESH}
               spinningName={icons.REFRESH}
-              isSpinning={isRefreshingBook}
+              isSpinning={isRefreshPending}
+              isDisabled={hasNoAuthor || isRefreshPending}
               onPress={this.onRefreshBookPress}
             />
 
             <PageToolbarButton
               label={translate('RSSSync')}
               iconName={icons.RSS}
-              isSpinning={isRssSyncExecuting}
-              isDisabled={hasNoAuthor}
-              onPress={onRssSyncPress}
+              isSpinning={isRssSyncPending}
+              isDisabled={hasNoAuthor || isRssSyncPending}
+              onPress={this.onRssSyncPress}
             />
 
             <PageToolbarSeparator />
@@ -639,6 +968,53 @@ class BookIndex extends Component {
             }
 
             {
+              !!refreshError &&
+                <Alert kind={kinds.DANGER} role="alert">
+                  <div>{refreshError}</div>
+                  <Button onPress={this.onRetryRefreshPress}>
+                    {translate('Retry')}
+                  </Button>
+                </Alert>
+            }
+
+            {
+              !!rssSyncError &&
+                <Alert kind={kinds.DANGER} role="alert">
+                  <div>{rssSyncError}</div>
+                  <Button onPress={this.onRssSyncPress}>
+                    {translate('Retry')}
+                  </Button>
+                </Alert>
+            }
+
+            {
+              !!selectAllError &&
+                <div className={styles.operationError}>
+                  <Alert
+                    kind={selectAllErrorKind || kinds.DANGER}
+                    role={selectAllErrorKind === kinds.WARNING ? 'status' : 'alert'}
+                  >
+                    {selectAllError}
+                  </Alert>
+                  <Button onPress={this.onSelectAllPress}>
+                    {translate('Retry')}
+                  </Button>
+                </div>
+            }
+
+            {
+              !!searchScopeChangeNotice &&
+                <div className={styles.operationError}>
+                  <Alert kind={kinds.INFO} role="status">
+                    {searchScopeChangeNotice}
+                  </Alert>
+                  <Button onPress={this.onSearchPress}>
+                    {translate('ReviewSearch')}
+                  </Button>
+                </div>
+            }
+
+            {
               isLoaded &&
                 <div className={styles.contentBodyContainer}>
                   <ViewComponent
@@ -719,9 +1095,21 @@ class BookIndex extends Component {
               <div>
                 {translate('ThisCannotBeCancelled')}
               </div>
+              {
+                !!searchBookIdsError &&
+                  <Alert
+                    kind={searchBookIdsErrorKind || kinds.DANGER}
+                    role={searchBookIdsErrorKind === kinds.WARNING ? 'status' : 'alert'}
+                  >
+                    <div>{searchBookIdsError}</div>
+                    <div>{searchBookIdsErrorHelp}</div>
+                  </Alert>
+              }
             </div>
           }
-          confirmLabel={translate('Search')}
+          confirmLabel={translate(searchBookIdsError ? 'Retry' : 'Search')}
+          isSpinning={isResolvingSearchBookIds || isSubmittingBookSearch}
+          hideCancelButton={isSubmittingBookSearch}
           onConfirm={this.onSearchConfirmed}
           onCancel={this.onConfirmSearchModalClose}
         />

@@ -49,7 +49,10 @@ class RootFoldersConnector extends Component {
   };
 
   onBackfillAuthorRootFolders = () => {
-    return this.props.executeCommand({ name: commandNames.BACKFILL_AUTHOR_ROOT_FOLDERS });
+    return this.props.executeCommand({
+      name: commandNames.BACKFILL_AUTHOR_ROOT_FOLDERS,
+      suppressStartErrorMessage: true
+    });
   };
 
   //

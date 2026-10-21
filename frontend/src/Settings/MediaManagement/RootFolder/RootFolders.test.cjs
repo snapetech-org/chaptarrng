@@ -171,15 +171,18 @@ function collectText(tree, values = []) {
 }
 
 function createAjaxHarness() {
-  let resolveRequest;
-  let rejectRequest;
-  let requestOptions;
+  let resolveRequest = null;
+  let rejectRequest = null;
+  let requestOptions = null;
+  let requestCount = 0;
 
   return {
     requestOptions: () => requestOptions,
+    requestCount: () => requestCount,
     resolve: (value) => resolveRequest(value),
     reject: (error) => rejectRequest(error),
     create(options) {
+      requestCount++;
       requestOptions = options;
       const request = new Promise((resolve, reject) => {
         resolveRequest = resolve;
@@ -205,13 +208,13 @@ function createComponent(RootFolders, onBackfillAuthorRootFolders) {
     isBackfillingAuthorRootFolders: false,
     qualityProfiles: [],
     metadataProfiles: [],
-    onConfirmDeleteRootFolder: () => {},
+    onConfirmDeleteRootFolder: () => null,
     onBackfillAuthorRootFolders,
     setRootFolderValue: () => {}
   });
 }
 
-test('author root backfill reviews the dry-run counts and only runs after confirmation', async () => {
+test('author root backfill reviews the dry-run counts and only runs after confirmation', async() => {
   const ajax = createAjaxHarness();
   const RootFolders = loadRootFolders(ajax.create);
   let backfillCount = 0;
@@ -264,7 +267,13 @@ test('author root backfill cannot run when the preview has no eligible authors',
   let backfillCount = 0;
   const component = createComponent(RootFolders, () => backfillCount++);
 
-  component.state.backfillPreview = { candidates: 2, updated: 0 };
+  component.state.backfillPreview = {
+    candidates: 2,
+    updated: 0,
+    skippedManuallyOverridden: 1,
+    skippedNoDefault: 1,
+    skippedNoProfile: 0
+  };
   component.state.isBackfillPreviewModalOpen = true;
 
   const previewModal = findElement(component.render(), RootFolders.ConfirmModal);
@@ -301,7 +310,7 @@ test('author root backfill cannot run when the preview count is invalid', () => 
   }
 });
 
-test('author root backfill prevents duplicate queueing and keeps a retry after queue failure', async () => {
+test('author root backfill prevents duplicate queueing and keeps a retry after queue failure', async() => {
   const ajax = createAjaxHarness();
   const RootFolders = loadRootFolders(ajax.create);
   let backfillCount = 0;
@@ -313,7 +322,13 @@ test('author root backfill prevents duplicate queueing and keeps a retry after q
       Promise.resolve();
   });
 
-  component.state.backfillPreview = { candidates: 3, updated: 2 };
+  component.state.backfillPreview = {
+    candidates: 3,
+    updated: 2,
+    skippedManuallyOverridden: 0,
+    skippedNoDefault: 1,
+    skippedNoProfile: 0
+  };
   component.state.isBackfillPreviewModalOpen = true;
 
   component.onConfirmAuthorRootBackfill();
@@ -336,7 +351,13 @@ test('author root backfill prevents duplicate queueing and keeps a retry after q
 
   component.onReviewAuthorRootBackfillPress();
   assert.equal(component.state.backfillCommandError, null);
-  ajax.resolve({ candidates: 3, updated: 2 });
+  ajax.resolve({
+    candidates: 3,
+    updated: 2,
+    skippedManuallyOverridden: 0,
+    skippedNoDefault: 1,
+    skippedNoProfile: 0
+  });
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(component.state.isBackfillPreviewModalOpen, true);
 
@@ -348,10 +369,10 @@ test('author root backfill prevents duplicate queueing and keeps a retry after q
   assert.equal(component.state.backfillCommandError, null);
 });
 
-test('author root backfill shows a retryable preview error', async () => {
+test('author root backfill shows a retryable preview error', async() => {
   const ajax = createAjaxHarness();
   const RootFolders = loadRootFolders(ajax.create);
-  const component = createComponent(RootFolders, () => {});
+  const component = createComponent(RootFolders, () => null);
 
   component.onReviewAuthorRootBackfillPress();
   ajax.reject(new Error('offline'));
@@ -362,4 +383,80 @@ test('author root backfill shows a retryable preview error', async () => {
 
   const error = findElementWithProp(component.render(), 'role', 'alert');
   assert.ok(error);
+  assert.equal(
+    findElement(component.render(), RootFolders.SpinnerButton).props.children,
+    'RetryAuthorRootFolderBackfillPreview'
+  );
+});
+
+test('author root backfill does not issue duplicate preview requests', () => {
+  const ajax = createAjaxHarness();
+  const RootFolders = loadRootFolders(ajax.create);
+  const component = createComponent(RootFolders, () => null);
+
+  component.onReviewAuthorRootBackfillPress();
+  component.onReviewAuthorRootBackfillPress();
+
+  assert.equal(ajax.requestCount(), 1);
+});
+
+test('author root backfill rejects malformed preview counts and offers a retry', async() => {
+  const ajax = createAjaxHarness();
+  const RootFolders = loadRootFolders(ajax.create);
+  const component = createComponent(RootFolders, () => null);
+
+  component.onReviewAuthorRootBackfillPress();
+  ajax.resolve({
+    candidates: 2,
+    updated: 1,
+    skippedManuallyOverridden: 0,
+    skippedNoDefault: 0,
+    skippedNoProfile: 0
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(component.state.isBackfillPreviewModalOpen, false);
+  assert.equal(component.state.backfillPreview, null);
+  assert.equal(component.state.backfillPreviewError, 'UnableToLoadAuthorRootFolderBackfillPreview');
+  assert.equal(
+    findElement(component.render(), RootFolders.SpinnerButton).props.children,
+    'RetryAuthorRootFolderBackfillPreview'
+  );
+});
+
+test('author root backfill blocks same-turn duplicate queueing before React commits state', async() => {
+  const ajax = createAjaxHarness();
+  const RootFolders = loadRootFolders(ajax.create);
+  let backfillCount = 0;
+  const component = createComponent(RootFolders, () => {
+    backfillCount++;
+    return Promise.resolve();
+  });
+  const setState = component.setState.bind(component);
+
+  component.state.backfillPreview = {
+    candidates: 1,
+    updated: 1,
+    skippedManuallyOverridden: 0,
+    skippedNoDefault: 0,
+    skippedNoProfile: 0
+  };
+  component.state.isBackfillPreviewModalOpen = true;
+  component.setState = (update) => {
+    if (update.isSubmittingAuthorRootBackfill === true) {
+      return;
+    }
+
+    setState(update);
+  };
+
+  component.onConfirmAuthorRootBackfill();
+  component.onConfirmAuthorRootBackfill();
+  component.onBackfillPreviewModalClose();
+
+  assert.equal(component.state.isBackfillPreviewModalOpen, true);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(backfillCount, 1);
+  assert.equal(component.state.isBackfillPreviewModalOpen, false);
 });
