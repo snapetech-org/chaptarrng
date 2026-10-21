@@ -257,11 +257,15 @@ The BookshelfNG StartOS package is parked at
 `docker.io/snapetech/bookshelfng:hardcover-v0.4.21.37`. Its wrapper keeps the
 `bookshelfng` package identity, backs up the `main`, `books`, and `downloads`
 volumes, mounts `/config`, `/books`, and `/downloads`, exposes port `8787`, and
-starts `/init`. ChaptarrNG `v0.9.977` uses a different container entrypoint and
-default port, and does not convert native Hardcover IDs. A StartOS handoff must
-preserve the package ID and volumes, adapt the entrypoint and port, preserve
-provider identity, and pass upgrade, backup, and rollback checks on a StartOS
-device. No such update has been tested or published.
+starts `/init`. Public ChaptarrNG `v0.9.977` uses `/entrypoint.sh`, defaults to
+port `8789`, and does not convert native Hardcover IDs. The current production-
+image candidate adds a compatible `/init` launcher; the Bookshelf compatibility
+target preserves port `8787` and native Hardcover mode. A disposable wrapper
+image derived from the published `.977` digest started through `/init`, passed
+`/ping` on port `8787`, and retained all three mounted paths. The StartOS
+package itself remains unchanged and needs an update to a released compatibility
+image, followed by install, upgrade, backup, and rollback checks on a StartOS
+device. No handoff has been tested or published.
 
 The BookshelfNG Cloudron package also remains on its legacy `.37` image, with
 no tested ChaptarrNG update. The Co-op Cloud recipe remains an unsubmitted

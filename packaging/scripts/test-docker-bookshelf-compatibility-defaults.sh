@@ -16,6 +16,13 @@ run_case() {
   fi
 }
 
+run_case 'production image keeps the StartOS /init command' bash -c '
+  set -euo pipefail
+  grep -Fq "COPY --chmod=0755 docker-startos-init.sh /init" "$1"
+  grep -Fxq "ENTRYPOINT [\"/entrypoint.sh\"]" "$1"
+  grep -Fq "dotnet /app/Chaptarr.dll -nobrowser -data=/config" "$2"
+' _ "$repo_root/Dockerfile.cross" "$repo_root/docker-startos-init.sh"
+
 run_case 'fresh legacy image defaults to port 8787' bash -c '
   set -euo pipefail
   DATA_DIR="$1/fresh"

@@ -132,6 +132,7 @@ RUN set -eux; \
 # Copy our robust entrypoint script
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY docker-bookshelf-compatibility-defaults.sh /docker-bookshelf-compatibility-defaults.sh
+COPY --chmod=0755 docker-startos-init.sh /init
 RUN chmod +x /entrypoint.sh
 COPY docker-healthcheck.sh /usr/local/bin/chaptarr-healthcheck
 RUN chmod +x /usr/local/bin/chaptarr-healthcheck

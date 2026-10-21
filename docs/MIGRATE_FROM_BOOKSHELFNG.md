@@ -1058,11 +1058,16 @@ mutable tag only affects a later pull or container recreation.
 
 The parked StartOS package is still BookshelfNG package ID `bookshelfng` and
 pins its `.37` native-Hardcover image. Its wrapper expects port `8787` and
-starts `/init`; ChaptarrNG `v0.9.977` uses `/entrypoint.sh`, defaults to port
-`8789`, and does not convert native Hardcover IDs. There is no tested StartOS
-handoff yet. Keep that package on BookshelfNG until a ChaptarrNG wrapper
-preserves the package identity, mounted and backed-up volumes, provider mode,
-and update rollback, then passes upgrade and restore checks on a StartOS device.
+starts `/init`; public ChaptarrNG `v0.9.977` uses `/entrypoint.sh`, defaults
+to port `8789`, and does not convert native Hardcover IDs. The current
+production-image candidate adds an `/init` launcher and preserves the legacy
+port/provider defaults in its compatibility target. A disposable wrapper
+image based on the public `.977` digest passed startup through `/init`, `/ping`
+on `8787`, and checks for the `/config`, `/books`, and `/downloads` mounts.
+This only verifies the launcher. The StartOS package has not been updated or
+tested on a StartOS device. Keep the package on BookshelfNG until the released
+compatibility image passes package build, upgrade, backup, and rollback checks
+on a StartOS device.
 See the [channel status](../packaging/README.md#package-identities).
 
 ### Helm chart handoff
