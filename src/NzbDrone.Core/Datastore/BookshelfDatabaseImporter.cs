@@ -28,6 +28,7 @@ namespace NzbDrone.Core.Datastore
     public static class BookshelfDatabaseImporter
     {
         private const int SupportedSourceMigration = 158;
+        private const int BookshelfRequiredMamFreeleechWedge = 2;
         private static readonly IReadOnlyDictionary<string, string> CompatibleIndexerContracts =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -1387,29 +1388,66 @@ namespace NzbDrone.Core.Datastore
             var configContract = GetString(sourceRow, "ConfigContract") ?? "";
             var hasCompatibleImplementation = compatibleContracts.TryGetValue(implementation, out var expectedContract) &&
                 string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase);
-            var unsupportedSettings = hasCompatibleImplementation
+            var settingsIssues = hasCompatibleImplementation
                 ? FindUnsupportedSettingsFields(GetString(sourceRow, "Settings"), expectedContract, implementation)
+                    .Concat(FindNonEquivalentSettingsValues(GetString(sourceRow, "Settings"), implementation))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(field => field, StringComparer.OrdinalIgnoreCase)
+                    .ToArray()
                 : Array.Empty<string>();
             var missingOAuthSettings = hasCompatibleImplementation
                 ? FindMissingGoodreadsOAuthSettings(GetString(sourceRow, "Settings"), implementation, configContract)
                 : Array.Empty<string>();
 
-            if (hasCompatibleImplementation && unsupportedSettings.Length == 0 && missingOAuthSettings.Length == 0)
+            if (hasCompatibleImplementation && settingsIssues.Length == 0 && missingOAuthSettings.Length == 0)
             {
                 return;
             }
 
             SetIfPresent(targetRow, "ConfigContract", "");
             SetIfPresent(targetRow, "Enable", false);
-            var settingsDisposition = unsupportedSettings.Length == 0
+            var settingsDisposition = settingsIssues.Length == 0
                 ? ""
-                : " (unsupported settings fields: " + string.Join(", ", unsupportedSettings) + ")";
+                : " (unsupported or non-equivalent settings: " + string.Join(", ", settingsIssues) + ")";
             if (missingOAuthSettings.Length > 0)
             {
                 settingsDisposition += " (missing Goodreads OAuth settings: " + string.Join(", ", missingOAuthSettings) + ")";
             }
 
             unsupported.Add($"row {GetInt(sourceRow, "Id")}: {sourceImplementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}{settingsDisposition}");
+        }
+
+        private static string[] FindNonEquivalentSettingsValues(string settingsJson, string implementation)
+        {
+            if (!implementation.Equals("MyAnonaMouse", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrWhiteSpace(settingsJson))
+            {
+                return Array.Empty<string>();
+            }
+
+            JObject settings;
+            try
+            {
+                settings = JObject.Parse(settingsJson);
+            }
+            catch (JsonException)
+            {
+                // The settings-contract check already reports invalid JSON.
+                return Array.Empty<string>();
+            }
+
+            var wedgeSetting = settings.GetValue("useFreeleechWedge", StringComparison.OrdinalIgnoreCase);
+            if (wedgeSetting == null ||
+                (wedgeSetting.Type != JTokenType.Integer && wedgeSetting.Type != JTokenType.String) ||
+                !int.TryParse(wedgeSetting.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var wedgeAction) ||
+                wedgeAction != BookshelfRequiredMamFreeleechWedge)
+            {
+                return Array.Empty<string>();
+            }
+
+            // Chaptarr deliberately normalizes BookshelfNG's Required value to Never. Do not
+            // apply that behavior change silently during a BookshelfNG database conversion.
+            return new[] { "useFreeleechWedge (BookshelfNG Required maps to Chaptarr Never)" };
         }
 
         private static string[] FindMissingGoodreadsOAuthSettings(string settingsJson, string implementation, string configContract)

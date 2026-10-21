@@ -440,6 +440,11 @@ feature-parity and migration-readiness gate. See the
 [migration guide](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers)
 and [Goodreads API deprecation notice](https://www.goodreads.com/topic/show/21788520-api-deprecation).
 
+The importer also detects BookshelfNG's MyAnonaMouse `useFreeleechWedge=2`
+(`Required`) value, which ChaptarrNG normalizes to `Never`. Preview identifies
+the row and setting and blocks apply until the behavior difference is resolved;
+it does not silently alter the source.
+
 The candidate ports BookshelfNG's legacy `AudiobookshelfMetadata` OPF
 consumer as ChaptarrNG's distinct `LegacyAudiobookshelfMetadata` provider.
 Provider and sidecar IDs are mapped while preserving the exact `NullConfig`

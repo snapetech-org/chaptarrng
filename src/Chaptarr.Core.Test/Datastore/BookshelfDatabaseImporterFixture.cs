@@ -120,6 +120,8 @@ namespace Chaptarr.Core.Test.Datastore
                     VALUES (123, 'Plugin fixture', 'FixturePluginIndexer', '{}', 'FixturePluginSettings', 1, 1, 1, 25, '[]', 0);
                     INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
                     VALUES (130, 'Legacy Torznab fixture', 'Torznab', '{""baseUrl"":""https://indexer.example"",""apiKey"":""fixture-indexer-key"",""legacyIndexerSecret"":""fixture-indexer-secret""}', 'TorznabSettings', 1, 1, 1, 25, '[]', 0);
+                    INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
+                    VALUES (136, 'Legacy Required MAM fixture', 'MyAnonaMouse', '{""baseUrl"":""https://www.myanonamouse.net"",""mamId"":""fixture-required-mam-secret"",""useFreeleechWedge"":2}', 'MyAnonaMouseSettings', 1, 1, 1, 25, '[]', 0);
                     INSERT INTO DownloadClients (Id, Enable, Name, Implementation, Settings, ConfigContract)
                     VALUES (124, 1, 'Plugin download fixture', 'FixturePluginDownload', '{}', 'FixturePluginDownloadSettings');
                     INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
@@ -157,12 +159,19 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(10));
+                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(11));
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginIndexer/FixturePluginSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
                     issue.Contains("Torznab/TorznabSettings", StringComparison.Ordinal) &&
                     issue.Contains("legacyIndexerSecret", StringComparison.Ordinal)), Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
+                    issue.Contains("row 136: MyAnonaMouse/MyAnonaMouseSettings", StringComparison.Ordinal) &&
+                    issue.Contains("useFreeleechWedge", StringComparison.Ordinal) &&
+                    issue.Contains("Required maps to Chaptarr Never", StringComparison.Ordinal)), Is.True,
+                    "a lossy legacy required-wedge setting must be reported and block apply");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-indexer-secret", StringComparison.Ordinal)), Is.False,
+                    "provider settings and credentials must not be included in the report");
+                Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-required-mam-secret", StringComparison.Ordinal)), Is.False,
                     "provider settings and credentials must not be included in the report");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginDownload/FixturePluginDownloadSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
@@ -411,8 +420,8 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(mamSettings.SearchInSeries, Is.False);
                 Assert.That(mamSettings.SearchInFilenames, Is.True);
                 Assert.That(mamSettings.SearchLanguages, Is.EqualTo(new[] { 4, 1 }));
-                Assert.That(mamSettings.UseFreeleechWedge, Is.EqualTo((int)MyAnonaMouseFreeleechWedgeAction.Never),
-                    "the unsafe legacy Required value is conservatively mapped to Never");
+                Assert.That(mamSettings.UseFreeleechWedge, Is.EqualTo((int)MyAnonaMouseFreeleechWedgeAction.Preferred),
+                    "the supported legacy Prefer value must keep using MAM's freeleech wedge");
             });
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM Indexers WHERE Id = 121;"), Is.EqualTo(nameof(DirectDownloadSettings)));
             var directDownloadSettings = NzbDrone.Common.Serializer.STJson.Deserialize<DirectDownloadSettings>(

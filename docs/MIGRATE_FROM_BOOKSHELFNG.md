@@ -250,6 +250,11 @@ migration does not treat BookLore as BookOrbit. The candidate adds BookOrbit as
 a separate Book Dock destination. Configure and test that separate connection
 in **Settings > Connect** after an approved migration.
 
+One MyAnonaMouse value is not equivalent: BookshelfNG's `useFreeleechWedge=2`
+(`Required`) is normalized to `Never` by ChaptarrNG. Preview now identifies the
+provider row and setting, and blocks apply until that behavior difference is
+resolved. The source database remains unchanged.
+
 Provider configuration is preserved only when the implementation, contract,
 and every populated saved settings field match the target provider. The
 unreleased PR #131 candidate now includes compatibility ports for
