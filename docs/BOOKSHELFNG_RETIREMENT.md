@@ -30,7 +30,9 @@ selectors with empty-state guidance, retry, stale-choice protection, and
 disabled submission when no quality options exist. Add New and narrator search
 failures also announce errors and provide retry actions. Interactive release
 search and organize, retag, and convert previews also expose retry after errors.
-The frontend CJS suite passes 112/112 locally, and focused migration, metadata, move, and CLI checks
+Manual Import hides stale rows and disables Import after a preview error; File
+Browser can retry the current directory. The frontend CJS suite passes 114/114
+locally, and focused migration, metadata, move, and CLI checks
 are recorded below. Application code is at
 the current [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). The source is not in public `.977`.

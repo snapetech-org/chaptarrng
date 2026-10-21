@@ -44,8 +44,8 @@ Calibre proxy/series 6/6, Hardcover metadata/search 45/45, book-file move
 planning 15/15, and author-move path coverage 3/3. All three migration CLI
 helpers pass Bash syntax, help, and ShellCheck checks. Manual Import selector
 empty states, retries, and stale-choice handling, Add New and interactive
-search recovery, narrator retry, and media-preview retry pass in the 112/112
-frontend CJS suite. Current application source is on
+search recovery, narrator and media-preview retry, and Manual Import and File
+Browser error recovery pass in the 114/114 frontend CJS suite. Current application source is on
 [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Publication remains frozen; no release, package, image, installer,
 or migration bridge was published. Representative operator-data migration and
