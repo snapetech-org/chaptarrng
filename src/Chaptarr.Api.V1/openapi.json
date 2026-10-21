@@ -17245,6 +17245,9 @@
           "autoAddMissingAuthorsFromCompletedDownloads": {
             "type": "boolean"
           },
+          "autoInitializeFormatSpecificAuthorPaths": {
+            "type": "boolean"
+          },
           "defaultAudiobookRootFolderPath": {
             "type": "string",
             "nullable": true

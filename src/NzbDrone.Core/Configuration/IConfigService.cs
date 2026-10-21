@@ -44,6 +44,7 @@ namespace NzbDrone.Core.Configuration
         BookMatchingStrictness BookMatchingStrictness { get; set; }
         bool UsePathAsTagsFallback { get; set; }
         bool AutoAddMissingAuthorsFromCompletedDownloads { get; set; }
+        bool AutoInitializeFormatSpecificAuthorPaths { get; set; }
         string DefaultAudiobookRootFolderPath { get; set; }
         string DefaultEbookRootFolderPath { get; set; }
 

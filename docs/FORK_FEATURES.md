@@ -61,8 +61,11 @@ its CI validation passes. Retirement acceptance remains separate from standard
 ChaptarrNG release publication.
 BookshelfNG `0.4.21.71` is published as the final source release; its issue
 #114 request is closed, and it includes the source-side appdata archive helper.
-ChaptarrNG `v0.9.974` and later initialize missing format-specific roots for
-new authors; explicit roots and existing authors or files are left alone. See
+ChaptarrNG adds opt-in initialization of missing format-specific paths for new
+authors in Settings > Media Management > New Author Folders. It is disabled by
+default; explicit roots and existing authors or files are left alone. Migration
+preserves the opt-in setting and maps its saved format roots to ChaptarrNG's
+per-format defaults. See
 the [operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
 and [retirement status page](BOOKSHELFNG_RETIREMENT.md). The `.977` release
 supports the final migration-158 SQLite schema. Populated synthetic migration

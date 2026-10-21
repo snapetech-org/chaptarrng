@@ -1741,6 +1741,9 @@ namespace NzbDrone.Core.Datastore
             var legacyHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverEnabledRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverEnabledKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var autoInitializeAuthorPathsRows = configRows
+                .Where(row => string.Equals(GetString(row, "Key"), "AutoInitializeFormatSpecificAuthorPaths", StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
             if (legacyRows.Count > 1 || strictnessRows.Count > 1)
             {
@@ -1755,6 +1758,11 @@ namespace NzbDrone.Core.Datastore
             if (chaptarrHardcoverEnabledRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate Hardcover mode settings; conversion stopped before promotion.");
+            }
+
+            if (autoInitializeAuthorPathsRows.Count > 1)
+            {
+                throw new InvalidDataException("BookshelfNG config contains duplicate format-specific author path settings; conversion stopped before promotion.");
             }
 
             var matchSettingDisposition = "no BookshelfNG numeric match threshold was present; ChaptarrNG's default matching mode applies";
@@ -1873,6 +1881,38 @@ namespace NzbDrone.Core.Datastore
                 hardcoverModeDisposition = "BookshelfNG's native Hardcover runtime mode was copied to ChaptarrNG HardcoverEnabled";
             }
 
+            var authorPathSettingDisposition = "no BookshelfNG format-specific author path setting was saved; ChaptarrNG's disabled default applies";
+            if (autoInitializeAuthorPathsRows.SingleOrDefault() is { } autoInitializeAuthorPathsRow)
+            {
+                if (!bool.TryParse(GetString(autoInitializeAuthorPathsRow, "Value"), out var autoInitializeAuthorPaths))
+                {
+                    throw new InvalidDataException("BookshelfNG AutoInitializeFormatSpecificAuthorPaths must be true or false; conversion stopped before promotion.");
+                }
+
+                if (autoInitializeAuthorPaths)
+                {
+                    MapBookshelfNewAuthorRoot(
+                        configRows,
+                        "NewAuthorEbookRootFolderPath",
+                        "DefaultEbookRootFolderPath",
+                        target,
+                        targetColumns,
+                        ref nextGeneratedConfigId);
+                    MapBookshelfNewAuthorRoot(
+                        configRows,
+                        "NewAuthorAudiobookRootFolderPath",
+                        "DefaultAudiobookRootFolderPath",
+                        target,
+                        targetColumns,
+                        ref nextGeneratedConfigId);
+                    authorPathSettingDisposition = "BookshelfNG's opt-in author path initialization was preserved; configured new-author roots map to ChaptarrNG's per-format default roots, with explicit Chaptarr values taking precedence";
+                }
+                else
+                {
+                    authorPathSettingDisposition = "BookshelfNG's opt-in author path initialization was disabled; its new-author root overrides were not applied";
+                }
+            }
+
             foreach (var row in configRows)
             {
                 var unmapped = row.Where(x => x.Value != null && !targetColumns.ContainsKey(x.Key))
@@ -1890,7 +1930,66 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Config", sourceCount, 0, sourceCount, 0, 0,
-                "saved configuration is copied with compatible fields; " + matchSettingDisposition + "; " + hardcoverTokenDisposition + "; " + hardcoverModeDisposition);
+                "saved configuration is copied with compatible fields; " + matchSettingDisposition + "; " + hardcoverTokenDisposition + "; " + hardcoverModeDisposition + "; " + authorPathSettingDisposition);
+        }
+
+        private static void MapBookshelfNewAuthorRoot(
+            List<Dictionary<string, object>> configRows,
+            string bookshelfKey,
+            string chaptarrKey,
+            DbConnection target,
+            IReadOnlyDictionary<string, ColumnInfo> targetColumns,
+            ref int nextGeneratedConfigId)
+        {
+            var bookshelfRows = configRows
+                .Where(row => string.Equals(GetString(row, "Key"), bookshelfKey, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (bookshelfRows.Count > 1)
+            {
+                throw new InvalidDataException($"BookshelfNG config contains duplicate {bookshelfKey} settings; conversion stopped before promotion.");
+            }
+
+            var bookshelfRow = bookshelfRows.SingleOrDefault();
+            if (bookshelfRow == null)
+            {
+                return;
+            }
+
+            var bookshelfValue = GetString(bookshelfRow, "Value");
+            if (string.IsNullOrWhiteSpace(bookshelfValue))
+            {
+                return;
+            }
+
+            var chaptarrRows = configRows
+                .Where(row => string.Equals(GetString(row, "Key"), chaptarrKey, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (chaptarrRows.Count > 1)
+            {
+                throw new InvalidDataException($"BookshelfNG config contains duplicate {chaptarrKey} settings; conversion stopped before promotion.");
+            }
+
+            if (chaptarrRows.SingleOrDefault() is { } chaptarrRow)
+            {
+                if (string.IsNullOrWhiteSpace(GetString(chaptarrRow, "Value")))
+                {
+                    chaptarrRow["Value"] = bookshelfValue;
+                }
+
+                return;
+            }
+
+            var mappedRoot = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["Key"] = chaptarrKey,
+                ["Value"] = bookshelfValue
+            };
+            if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+            {
+                mappedRoot["Id"] = checked(++nextGeneratedConfigId);
+            }
+
+            configRows.Add(mappedRoot);
         }
 
         private static void ImportNotifications(

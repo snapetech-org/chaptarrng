@@ -72,6 +72,7 @@ class MediaManagement extends Component {
     const bookMatchingStrictness = settings.bookMatchingStrictness || { value: 'balanced' };
     const usePathAsTagsFallback = settings.usePathAsTagsFallback || { value: true };
     const autoAddMissingAuthorsFromCompletedDownloads = settings.autoAddMissingAuthorsFromCompletedDownloads || { value: false };
+    const autoInitializeFormatSpecificAuthorPaths = settings.autoInitializeFormatSpecificAuthorPaths || { value: false };
     const isStrictMatching = bookMatchingStrictness.value === 'strict';
 
     return (
@@ -250,6 +251,22 @@ class MediaManagement extends Component {
                       }
                     </FieldSet>
                 }
+
+                <FieldSet legend={translate('NewAuthorFolders')}>
+                  <FormGroup size={sizes.MEDIUM}>
+                    <FormLabel>
+                      {translate('AutoInitializeFormatSpecificAuthorPaths')}
+                    </FormLabel>
+
+                    <FormInputGroup
+                      type={inputTypes.CHECK}
+                      name="autoInitializeFormatSpecificAuthorPaths"
+                      helpText={translate('AutoInitializeFormatSpecificAuthorPathsHelpText')}
+                      onChange={onInputChange}
+                      {...autoInitializeFormatSpecificAuthorPaths}
+                    />
+                  </FormGroup>
+                </FieldSet>
 
                 <FieldSet
                   legend={translate('Matching')}

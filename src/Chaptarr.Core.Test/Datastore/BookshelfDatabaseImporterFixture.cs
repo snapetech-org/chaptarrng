@@ -562,6 +562,66 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_preserve_opt_in_format_specific_author_paths_and_map_their_roots()
+        {
+            AddConfigValue("AutoInitializeFormatSpecificAuthorPaths", "true");
+            AddConfigValue("NewAuthorEbookRootFolderPath", "/library/ebooks");
+            AddConfigValue("NewAuthorAudiobookRootFolderPath", "/library/audiobooks");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'AutoInitializeFormatSpecificAuthorPaths';"), Is.EqualTo("true"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'DefaultEbookRootFolderPath';"), Is.EqualTo("/library/ebooks"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'DefaultAudiobookRootFolderPath';"), Is.EqualTo("/library/audiobooks"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'NewAuthorEbookRootFolderPath';"), Is.EqualTo("/library/ebooks"));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'NewAuthorAudiobookRootFolderPath';"), Is.EqualTo("/library/audiobooks"));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'DefaultAudiobookRootFolderPath';"), Is.Zero);
+            });
+        }
+
+        [Test]
+        public void should_not_apply_bookshelf_author_root_overrides_when_auto_initialization_is_disabled()
+        {
+            AddConfigValue("AutoInitializeFormatSpecificAuthorPaths", "false");
+            AddConfigValue("NewAuthorEbookRootFolderPath", "/library/ebooks");
+            AddConfigValue("NewAuthorAudiobookRootFolderPath", "/library/audiobooks");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'AutoInitializeFormatSpecificAuthorPaths';"), Is.EqualTo("false"));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Config WHERE Key = 'DefaultEbookRootFolderPath';"), Is.Zero);
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Config WHERE Key = 'DefaultAudiobookRootFolderPath';"), Is.Zero);
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'NewAuthorEbookRootFolderPath';"), Is.EqualTo("/library/ebooks"));
+            });
+        }
+
+        [Test]
+        public void should_keep_explicit_chaptarr_author_root_defaults_over_bookshelf_values()
+        {
+            AddConfigValue("AutoInitializeFormatSpecificAuthorPaths", "true");
+            AddConfigValue("NewAuthorEbookRootFolderPath", "/library/ebooks");
+            AddConfigValue("DefaultEbookRootFolderPath", "/custom/ebooks");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'DefaultEbookRootFolderPath';"), Is.EqualTo("/custom/ebooks"));
+        }
+
+        [Test]
         public void should_migrate_a_saved_bookshelf_hardcover_token_to_the_chaptarr_setting()
         {
             AddConfigValue("HardcoverAuth", "Bearer fixture-hardcover-token");

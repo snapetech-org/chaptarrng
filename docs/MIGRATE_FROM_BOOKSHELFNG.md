@@ -333,6 +333,20 @@ the chosen mode against expected behavior on converted data; do not treat it as
 an exact recreation of BookshelfNG matching. This source change is not in
 `.977` while the release freeze remains active.
 
+## New author format paths
+
+The current migration candidate preserves BookshelfNG's
+`AutoInitializeFormatSpecificAuthorPaths` setting; it remains opt-in and is
+false when the source did not save it. When enabled, saved
+`NewAuthorEbookRootFolderPath` and `NewAuthorAudiobookRootFolderPath` values map
+to ChaptarrNG's `DefaultEbookRootFolderPath` and
+`DefaultAudiobookRootFolderPath`. Existing non-empty ChaptarrNG defaults take
+precedence, and the original BookshelfNG config rows remain available for
+review. When BookshelfNG had the feature disabled, its new-author root overrides
+are not applied. The setting only affects newly added authors; it does not
+backfill existing paths or move files. This source change remains under the
+release freeze and still needs hosted validation and migration acceptance.
+
 ## Extra files after rename
 
 The unpublished migration candidate preserves BookshelfNG's

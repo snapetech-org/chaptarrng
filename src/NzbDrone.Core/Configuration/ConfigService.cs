@@ -325,6 +325,14 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("AutoAddMissingAuthorsFromCompletedDownloads", value); }
         }
 
+        public bool AutoInitializeFormatSpecificAuthorPaths
+        {
+            // Match the opt-in new-author path behavior; existing author paths are never backfilled here.
+            get { return GetValueBoolean("AutoInitializeFormatSpecificAuthorPaths", false); }
+
+            set { SetValue("AutoInitializeFormatSpecificAuthorPaths", value); }
+        }
+
         public string DefaultAudiobookRootFolderPath
         {
             get { return GetValue("DefaultAudiobookRootFolderPath", string.Empty); }
