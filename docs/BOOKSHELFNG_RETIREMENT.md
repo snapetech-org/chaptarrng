@@ -30,12 +30,22 @@ Wanted pages, and conversion settings also retry after load errors. Startup
 errors identify the failed data source and retry failed setup requests when
 browser storage works. The frontend
 CJS suite passes 122/122 locally, and focused migration, metadata, move, and
-CLI checks are recorded below. The current application migration fix is commit
+CLI checks are recorded below. An earlier application migration fix is commit
 [`c2535e71`](https://github.com/snapetech-org/chaptarrng/commit/c2535e712aa7c1ecbf29347a7e1e9d477bb870e3).
 Its exact-head Build
 [39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854)
 passed Linux, macOS, Windows, PostgreSQL migration, and runner-receipt checks.
-The current source remains unpublished; `v0.9.977` predates these changes.
+The latest matching-parity change is commit
+[`6f296ed2`](https://github.com/snapetech-org/chaptarrng/commit/6f296ed20792bdfce7192d12e730bc996818fa3).
+It restores BookshelfNG's fuzzy RSS-title fallback, keeps the configured
+`BookImportMinimumMatchPercent` active for that fallback, and preserves the
+matched author and edition title. Its focused regression set passed 126/126
+locally. Exact-head Build
+[39660910878](https://github.com/snapetech-org/chaptarrng/actions/runs/39660910878)
+and standalone-asset validation
+[39660911376](https://github.com/snapetech-org/chaptarrng/actions/runs/39660911376)
+are queued. The current source remains unpublished; `v0.9.977` predates these
+changes and the retirement release freeze remains active.
 
 The canonical
 [audit report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)
