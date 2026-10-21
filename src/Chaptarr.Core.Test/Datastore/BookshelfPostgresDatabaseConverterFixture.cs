@@ -159,12 +159,14 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.Chaptarr));
             Assert.That(ReadConfigValue(sourceConnectionString, "bookmatchingstrictness"), Is.EqualTo("balanced"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfMatchCompatibility"), Is.EqualTo("true"));
             Assert.That(ReadConfigValue(sourceConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverApiToken"), Is.EqualTo("pg-fixture-token"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
             Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 1} AND \"Key\" = 'bookmatchingstrictness';"), Is.EqualTo(1));
-            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 2} AND \"Key\" = 'HardcoverApiToken';"), Is.EqualTo(1));
-            Assert.That(ReadScalarLong(sourceConnectionString, "SELECT nextval(pg_get_serial_sequence('\"Config\"', 'Id'));"), Is.GreaterThan(maxSourceConfigId + 2));
+            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 2} AND \"Key\" = 'BookshelfMatchCompatibility';"), Is.EqualTo(1));
+            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 3} AND \"Key\" = 'HardcoverApiToken';"), Is.EqualTo(1));
+            Assert.That(ReadScalarLong(sourceConnectionString, "SELECT nextval(pg_get_serial_sequence('\"Config\"', 'Id'));"), Is.GreaterThan(maxSourceConfigId + 3));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Authors\" WHERE \"Id\" = 20 AND \"HardcoverAuthorId\" = 'hc:10';"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30 AND \"HardcoverBookId\" = 'hc:30';"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Editions\" WHERE \"Id\" = 40 AND \"HardcoverEditionId\" = '40';"), Is.EqualTo(1));
@@ -177,6 +179,7 @@ namespace Chaptarr.Core.Test.Datastore
             var bookshelfBackupConnectionString = BuildConnectionString(_baseConnectionString, bookshelfBackupSchema);
             Assert.That(DatabaseLineageGuard.Detect(bookshelfBackupConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
             Assert.That(ReadConfigValue(bookshelfBackupConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
+            Assert.That(ReadScalarInt(bookshelfBackupConnectionString, "SELECT COUNT(*) FROM \"Config\" WHERE \"Key\" = 'BookshelfMatchCompatibility';"), Is.Zero);
             Assert.That(ReadConfigValue(bookshelfBackupConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
             WriteConfigValue(sourceConnectionString, "FixtureSetting", "after-migration");
 
