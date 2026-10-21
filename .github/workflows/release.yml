@@ -32,6 +32,7 @@ jobs:
     - name: Require retirement release readiness
       env:
         CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+        BOOKSHELFNG_RELEASE_READY: ${{ vars.BOOKSHELFNG_RELEASE_READY }}
       run: ./packaging/scripts/require-release-readiness.sh
 
   validate:
@@ -264,12 +265,12 @@ jobs:
     with:
       sha: ${{ needs.release.outputs.sha }}
       branch: ${{ github.ref_name }}
-      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
+      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
 
   dispatch-legacy-ghcr:
     name: Dispatch personal-account BookshelfNG GHCR bridge
     needs: [release, docker, publish-release]
-    if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
+    if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -525,14 +526,15 @@ jobs:
           --latest
 
   publish-packages:
-    needs: [release, publish-release]
+    needs: [release, docker, publish-release]
     uses: ./.github/workflows/release-distribution.yml
     permissions:
       contents: read
+      packages: write
     with:
       tag: ${{ needs.release.outputs.tag }}
       version: ${{ needs.release.outputs.version }}
-      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
+      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
     secrets:
       AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
       COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}

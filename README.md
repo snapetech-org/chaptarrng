@@ -41,8 +41,9 @@ setting and BookshelfNG ebook/audiobook root defaults during migration. The
 new switch is source-only and is not in `.977`. The next version bump is not a release: publication is frozen
 until the BookshelfNG migration, rollback, feature-parity, and install-channel
 acceptance gates are closed. The merged release and distribution workflows
-fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
-remains unset. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)
+fail closed unless both `CHAPTARRNG_RELEASE_READY=true` and
+`BOOKSHELFNG_RELEASE_READY=true`. They must remain false until every retirement
+gate closes. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)
 and [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) before switching.
 
 Current `main` accepts raw SQLite Bookshelf backup uploads with `.db` or legacy

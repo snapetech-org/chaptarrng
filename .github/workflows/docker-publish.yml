@@ -52,6 +52,7 @@ jobs:
     - name: Require retirement release readiness
       env:
         CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+        BOOKSHELFNG_RELEASE_READY: ${{ vars.BOOKSHELFNG_RELEASE_READY }}
       run: ./packaging/scripts/require-release-readiness.sh
 
   build-and-push:
@@ -272,7 +273,7 @@ jobs:
         BOOKSHELF_HARDCOVER_DIGEST: ${{ steps.build_hardcover.outputs.digest }}
         VERSION: ${{ steps.docker-tags.outputs.version }}
         DOCKERHUB_CONFIGURED: ${{ steps.dockerhub-credentials.outputs.configured }}
-        PUBLISH_LEGACY_ALIASES: ${{ inputs.legacy_bridge_enabled }}
+        PUBLISH_LEGACY_ALIASES: ${{ inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
         # GHCR legacy aliases are written by the personal-account bridge
         # repository because this source repository belongs to the org.
         PUBLISH_GHCR_ALIASES: false

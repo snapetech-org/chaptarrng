@@ -402,9 +402,9 @@ acceptance remain open.
   PostgreSQL migration checks passed. This fix is source-only until a later
   ChaptarrNG release.
 - ChaptarrNG releases are frozen while retirement gates remain open. The
-  merged release and distribution workflows require
-  `CHAPTARRNG_RELEASE_READY=true`; this repository variable remains unset.
-  Do not set it until parity, migration/rollback, and channel acceptance are
+  merged release, image, and distribution workflows now require both
+  `CHAPTARRNG_RELEASE_READY=true` and `BOOKSHELFNG_RELEASE_READY=true`. Keep
+  both false until parity, migration/rollback, and channel acceptance are
   complete. The current `main` version bump to `.978` is source-only.
 - ChaptarrNG PR #127 merged to `main` as `b3089a39`, adding selectable
   supplemental catalogs, per-field preferences, and conservative
@@ -672,14 +672,17 @@ and follow the
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |
 | Chocolatey | The `.977` package built and the hosted BookshelfNG-to-ChaptarrNG upgrade smoke passed, but Chocolatey returned HTTP 403 on publish; the live feed has no `chaptarrng` entry. | The [Chocolatey feed](https://community.chocolatey.org/packages/bookshelfng) still lists BookshelfNG `0.4.21.70`; its final GitHub release is `0.4.21.71`. The legacy package identity was not submitted because the bridge is disabled. |
 | Unraid | The ChaptarrNG template is maintained separately. | The legacy-template handoff is in [BookshelfNG Unraid PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5); its XML and settings-preservation check passed, but the Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
-| Helm | A same-name compatibility chart is under review in PR #131. It requires explicit migration approval, source provider mode, and an immutable image digest. Local lint and resource-identity checks pass. | The chart keeps the existing release, StatefulSet, Service, selectors, port, `/config` mount, and PVC name. No chart is published, the legacy OCI chart is unchanged, and no installed PVC upgrade or rollback has been tested. Existing installs will need a chart-source change after the gates close. |
+| Helm | A same-name compatibility chart is in ChaptarrNG `main`; its versioned publisher targets the existing BookshelfNG OCI chart identity and requires both release-readiness gates, the migration bridge gate, and an explicit bridge request. The publisher has not run during the freeze. | Local build and chart contract checks cover the preserved release, StatefulSet, Service, selectors, port, `/config` mount, PVC, both provider modes, and pinned image. No chart is published; installed PVC upgrade, GitOps sync, and rollback remain open. Existing installs can keep the same chart source after acceptance, while pinned/offline archives need a manual update. |
 | Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, Flatpak, AppImage, standalone installers, third-party catalogs, pinned/offline installs, and manually managed services do not all have a tested identity-preserving bridge. |
 
-The compatibility package and image publishers are implemented behind the
-`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` gate, which is `false`. The
-scheduled BookshelfNG bridge workflow confirmed that it found a stable
-ChaptarrNG release but skipped publishing because the gate is off. Do not turn
-the gate on until the feature and channel acceptance items below are closed.
+Release, image, and package publishing require both
+`CHAPTARRNG_RELEASE_READY` and `BOOKSHELFNG_RELEASE_READY`. The legacy package,
+image, and Helm bridges additionally require
+`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` and an explicit bridge request; the
+migration bridge gate remains `false`. The scheduled BookshelfNG bridge
+workflow confirmed that it found a stable ChaptarrNG release but skipped
+publishing because the gate is off. Do not turn the gate on until the feature
+and channel acceptance items below are closed.
 
 ### Audiobook merge compatibility
 

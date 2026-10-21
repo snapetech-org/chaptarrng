@@ -82,7 +82,7 @@ grep -Fq 'tags+=("$image:stable")' "$docker_workflow"
 grep -Fq 'SOURCE_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build.outputs.digest }}' "$docker_workflow"
 grep -Fq 'subject-name: ${{ env.STANDARD_IMAGE }}' "$docker_workflow"
 grep -Fq 'legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == ' "$release_workflow"
-grep -Fq 'PUBLISH_LEGACY_ALIASES: ${{ inputs.legacy_bridge_enabled }}' "$docker_workflow"
+grep -Fq "PUBLISH_LEGACY_ALIASES: \${{ inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}" "$docker_workflow"
 grep -Fq 'PUBLISH_GHCR_ALIASES: false' "$docker_workflow"
 for workflow in "$release_workflow" "$docker_workflow" "$package_workflow"; do
   grep -Fq 'run: ./packaging/scripts/require-release-readiness.sh' "$workflow" || {
@@ -90,11 +90,15 @@ for workflow in "$release_workflow" "$docker_workflow" "$package_workflow"; do
     exit 1
   }
 done
-if CHAPTARRNG_RELEASE_READY=false bash "$readiness_gate"; then
+if CHAPTARRNG_RELEASE_READY=false BOOKSHELFNG_RELEASE_READY=true bash "$readiness_gate"; then
   echo "The retirement release-readiness gate accepted a disabled value." >&2
   exit 1
 fi
-CHAPTARRNG_RELEASE_READY=true bash "$readiness_gate"
+if CHAPTARRNG_RELEASE_READY=true BOOKSHELFNG_RELEASE_READY=false bash "$readiness_gate"; then
+  echo "The retirement release-readiness gate accepted incomplete BookshelfNG readiness." >&2
+  exit 1
+fi
+CHAPTARRNG_RELEASE_READY=true BOOKSHELFNG_RELEASE_READY=true bash "$readiness_gate"
 grep -Fq 'name: Dispatch personal-account BookshelfNG GHCR bridge' "$release_workflow"
 grep -Fq 'repositories: bookshelfng-ghcr-release-bridge' "$release_workflow"
 grep -Fq 'permission-contents: write' "$release_workflow"
@@ -105,7 +109,7 @@ grep -Fq 'legacy_bridge_enabled:' "$package_workflow"
 grep -Fq 'REQUESTED_LEGACY_BRIDGE: ${{ inputs.legacy_bridge_enabled }}' "$package_workflow"
 grep -Fq 'MIGRATION_BRIDGE_GATE: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED || ' "$package_workflow"
 grep -Fq 'legacy_bridge_enabled=false' "$package_workflow"
-grep -Fq 'if [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true && "${MIGRATION_BRIDGE_GATE,,}" == true ]]' "$package_workflow"
+grep -Fq 'if [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true && "${MIGRATION_BRIDGE_GATE,,}" == true && "${BOOKSHELFNG_RELEASE_READY,,}" == true ]]' "$package_workflow"
 grep -Fq 'needs.release-target.outputs.legacy_bridge_enabled' "$package_workflow"
 grep -Fq 'LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}' "$package_workflow"
 grep -Fq 'pkg_bases=(chaptarrng-bin)' "$package_workflow"
