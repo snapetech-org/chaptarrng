@@ -26,7 +26,7 @@
 > author-move path coverage 3/3. The single-author, bulk media-move, and
 > unmapped-retry CLI helpers pass Bash syntax, help, and ShellCheck checks; see
 > the [media-move guide](MEDIA_MOVES.md) and [unmapped-files guide](UNMAPPED_FILES.md).
-> The exact-head platform matrix is running in [Build 39546268367](https://github.com/snapetech-org/chaptarrng/actions/runs/39546268367).
+> Exact-head [Build 39546916729](https://github.com/snapetech-org/chaptarrng/actions/runs/39546916729) for `031b118e` has passed PostgreSQL migration plus Linux and macOS; Windows is still running.
 > The source is unpublished. The source also
 > preserves BookshelfNG's optional
 > `MoveExtraFilesOnRename` setting, exposes it in Media Management, and includes

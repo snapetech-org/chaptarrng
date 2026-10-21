@@ -42,7 +42,7 @@ Focused author/migration fixtures pass 11/11, configuration persistence 1/1,
 Goodreads pagination 5/5, format-profile refresh 5/5, Calibre language 4/4,
 Calibre proxy/series 6/6, Hardcover metadata/search 45/45, book-file move
 planning 15/15, and author-move path coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and ShellCheck checks. The
-current exact-head platform matrix is running in [Build 39546268367](https://github.com/snapetech-org/chaptarrng/actions/runs/39546268367). Publication
+exact-head [Build 39546916729](https://github.com/snapetech-org/chaptarrng/actions/runs/39546916729) for `031b118e` has passed PostgreSQL migration plus Linux and macOS; Windows is still running. Publication
 remains frozen; no release,
 package, image, installer, or migration bridge was published. Representative
 operator-data migration and rollback, provider and SeerrNG workflows,
