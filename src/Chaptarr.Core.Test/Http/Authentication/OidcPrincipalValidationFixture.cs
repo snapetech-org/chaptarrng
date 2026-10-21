@@ -63,11 +63,11 @@ namespace Chaptarr.Core.Test.Http.Authentication
         }
 
         [Test]
-        public void should_allow_missing_email_verified_claim_by_default_when_allowlist_matches()
+        public void should_reject_missing_email_verified_claim_even_when_legacy_setting_is_disabled()
         {
             var failure = Validate(BuildPrincipal("alice@example.com"), ConfigFileProviderProxy.Create(allowedEmails: "alice@example.com"));
 
-            Assert.That(failure, Is.Null);
+            Assert.That(failure, Is.EqualTo("Verified email claim is required to sign in."));
         }
 
         [Test]
@@ -129,7 +129,7 @@ namespace Chaptarr.Core.Test.Http.Authentication
             Assert.That(failure, Is.EqualTo("Verified email claim is required to sign in."));
         }
 
-        [TestCase("bob@example.com", null, "oidc_user_not_allowed")]
+        [TestCase("bob@example.com", null, "oidc_email_not_verified")]
         [TestCase("alice@example.com", "false", "oidc_email_not_verified")]
         public void should_stop_sign_in_and_redirect_to_login_when_ticket_is_rejected(string email, string emailVerified, string expectedError)
         {

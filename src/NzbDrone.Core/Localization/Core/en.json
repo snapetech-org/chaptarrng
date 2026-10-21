@@ -1545,7 +1545,7 @@
   "OidcRedirectUri": "OIDC Redirect URI",
   "OidcRedirectUriHelpText": "Register this exact redirect/callback URL with your identity provider. Chaptarr uses ASP.NET Core's default OIDC callback path.",
   "OidcRequireEmailVerified": "Require Verified OIDC Email",
-  "OidcRequireEmailVerifiedHelpText": "Reject OIDC sign-ins unless the provider sends email_verified=true. Recommended for public identity providers.",
+  "OidcRequireEmailVerifiedHelpText": "Always enforced. OIDC sign-in requires the provider to send email_verified=true; this compatibility setting cannot be disabled.",
   "OidcScopes": "OIDC Scopes",
   "OidcScopesHelpText": "Space-separated scopes to request (must include openid)",
   "Ok": "Ok",
