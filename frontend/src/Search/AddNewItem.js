@@ -404,7 +404,17 @@ class AddNewItem extends Component {
                   {translate('FailedLoadingSearchResults')}
                 </div>
 
-                <Alert kind={kinds.WARNING}>{getErrorMessage(error)}</Alert>
+                <Alert kind={kinds.WARNING} role="alert">
+                  <div>{getErrorMessage(error, translate('FailedLoadingSearchResults'))}</div>
+                  {
+                    searchAsYouTypeEnabled &&
+                      <div>
+                        <Button size="small" onPress={this.onSearchPress}>
+                          {translate('Retry')}
+                        </Button>
+                      </div>
+                  }
+                </Alert>
 
                 <div>
                   <Link to="https://discord.gg/nqFGsGUug2">
