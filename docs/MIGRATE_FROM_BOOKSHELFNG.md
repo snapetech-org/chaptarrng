@@ -23,10 +23,11 @@
 > pages; focused pagination tests pass 5/5. Focused backend/migration fixtures
 > pass 11/11, configuration persistence 1/1, Calibre proxy/series 6/6,
 > Hardcover metadata/search 45/45, book-file move planning 15/15, and
-> author-move path coverage 3/3. The current candidate's full cross-platform
-> run is tracked in [ChaptarrNG
-> Actions](https://github.com/snapetech-org/chaptarrng/actions). The source is
-> unpublished. The source also
+> author-move path coverage 3/3. The single-author and bulk media-move CLI
+> helpers pass Bash syntax, help, and ShellCheck checks; see the [media-move
+> guide](MEDIA_MOVES.md). The exact-head platform matrix is running in [Build
+> 39545396737](https://github.com/snapetech-org/chaptarrng/actions/runs/39545396737).
+> The source is unpublished. The source also
 > preserves BookshelfNG's optional
 > `MoveExtraFilesOnRename` setting, exposes it in Media Management, and includes
 > it in settings backups. When enabled, it moves only configured loose files

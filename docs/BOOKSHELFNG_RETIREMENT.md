@@ -29,9 +29,9 @@ paths under the moved directory and fetches Goodreads series imports page by
 page. Focused backend/migration fixtures pass 11/11, configuration persistence
 1/1, Goodreads pagination 5/5, Calibre proxy/series 6/6, Hardcover
 metadata/search 45/45, book-file move planning 15/15, and author-move path
-coverage 3/3. The current candidate's full cross-platform run is tracked in
-[ChaptarrNG Actions](https://github.com/snapetech-org/chaptarrng/actions). The
-source is not in public `.977`.
+coverage 3/3. The single-author and bulk media-move CLI helpers pass Bash
+syntax, help, and ShellCheck checks. The exact-head matrix is running in [Build 39545396737](https://github.com/snapetech-org/chaptarrng/actions/runs/39545396737).
+The source is not in public `.977`.
 
 The canonical
 [audit report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)
@@ -481,8 +481,8 @@ acceptance remain open.
 - Merged PR #131 adds ChaptarrNG's format-aware author-media move workflow:
   preview and confirm a single-author or bulk move, move only registered media
   and linked book sidecars, check destination conflicts and copy space, and
-  leave unknown files and author-wide extras in place. The UI requires a
-  reviewed preview token before queueing, the generic command endpoint rejects
+  leave unknown files and author-wide extras in place. The UI and documented ChaptarrNG CLI helpers require a reviewed preview
+  token before queueing, the generic command endpoint rejects
   direct move commands, and the worker stops if a source changes after preview.
   Sidecars resolve against the linked book's format root, retain paths relative
   to the destination format root, and fail closed when a registered relative

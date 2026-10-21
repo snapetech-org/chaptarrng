@@ -78,11 +78,11 @@ filtering and configured import limits; the focused pagination suite passes
 5/5. Other focused checks pass author/migration 11/11, configuration
 persistence 1/1, format-profile refresh 5/5, Calibre language 4/4, Calibre
 proxy/series 6/6, Hardcover metadata/search 45/45, book-file move planning
-15/15, and author-move path coverage 3/3. The prior exact-head run for
+15/15, and author-move path coverage 3/3. Both new media-move CLI helpers pass
+Bash syntax, help, and ShellCheck checks. The prior exact-head run for
 `6fc744ef` passed Linux, macOS, Windows, PostgreSQL migration, and native
-runner receipt checks; it does not cover the Goodreads pagination change.
-The current candidate's full cross-platform run is tracked in
-[ChaptarrNG Actions](https://github.com/snapetech-org/chaptarrng/actions).
+runner receipt checks; it does not cover the Goodreads pagination or CLI changes.
+The current full matrix is running in [Build 39545396737](https://github.com/snapetech-org/chaptarrng/actions/runs/39545396737).
 These source changes remain unpublished.
 Current `main` also applies the author freshness policy to book-added events
 while retaining the author-scoped folder rescan, even when metadata is skipped
@@ -436,7 +436,9 @@ change is in public `.977`. Representative M4B media, restart/resume, full featu
 The same release-frozen retirement candidate adds format-aware media moves
 through `/api/v1/author/media-move`: preview and confirm a single author or a
 bulk selection, review registered sidecars and destination conflicts, then
-queue the move. Only files registered in ChaptarrNG move; untracked files and
+queue the move. Single-author and bulk command-line wrappers use the same
+preview-token flow; see the [media-move guide](docs/MEDIA_MOVES.md). Only files
+registered in ChaptarrNG move; untracked files and
 author-wide extras stay in place. The candidate includes regression coverage
 for format isolation, shared-root and format-root sidecars, traversal,
 untracked-file safety, conflicts, and stale sources. Exact-head run
