@@ -37,23 +37,34 @@ The Debian candidate recipe and local package builder are in
 `packaging/legacy/debian/` and
 `packaging/scripts/build-bookshelfng-deb-bridge.sh`. The builder consumes the
 standard Linux x64 release archive and produces a `.deb` under the old package
-identity. A package-content contract test checks the payload paths and service
-identity and mocks the maintainer-script stop/start handoff. A local candidate
-build used the checksum-verified public ChaptarrNG `v0.9.977` Linux x64 archive;
-inspection of the public BookshelfNG `0.4.21.71-1` package confirmed the Debian
-package identity and `/etc/bookshelfng/bookshelfng.env` conffile. An isolated
-dpkg transaction upgraded that actual `.71` package to the candidate and
-downgraded back, preserving an edited environment file and data canary. The
-transaction bypassed dependency checks and mocked systemd; it did not run the
-application or convert a database. There is no apt repository update path, and
-the candidate has not been exercised on a real systemd host or published to a
-GitHub Release or Ubuntu PPA. Keep this channel disabled until those checks and
-representative-data rollback acceptance pass.
+identity. The package-content contract checks the payload, service and config
+paths, and maintainer-script handoff. It also verifies that the shipped
+`bookshelfng.env` has the same SHA-256 as the final public `.71` package, then
+runs an isolated dpkg round-trip and an apt upgrade/downgrade in a pinned
+Debian Trixie container.
+
+A local candidate built from the checksum-verified ChaptarrNG `v0.9.977` Linux
+x64 archive upgraded the checksum-verified BookshelfNG `0.4.21.71-1` package
+and downgraded back. Both dpkg and apt transactions preserved an edited
+`/etc/bookshelfng/bookshelfng.env` and a data canary. The apt transaction
+resolved real Debian dependencies, including `libicu76` and
+`ca-certificates`; it installed the CA bundle and completed without a conffile
+prompt. The isolated dpkg transaction bypassed dependency checks and mocked
+systemd. The apt container did not run systemd, ChaptarrNG, or a database
+migration. There is no apt repository update path; the candidate has not been
+exercised on a real systemd host or published to a GitHub Release or Ubuntu
+PPA. Keep this channel disabled until those checks and representative-data
+rollback acceptance pass.
 
 The stable release workflow now attaches the legacy `.deb` and checksum only
 after an explicit bridge request and when the migration and both release
 readiness gates are true. Those gates remain closed; this workflow has not
 published a bridge asset. No Launchpad PPA bridge is configured yet.
+
+The legacy environment-file conffile is byte-for-byte identical to the final
+public BookshelfNG package. Keeping that checksum stable avoids an unnecessary
+dpkg prompt during unattended upgrades; add new migration guidance to external
+documentation instead of changing this file.
 
 ## Standalone archive coverage
 

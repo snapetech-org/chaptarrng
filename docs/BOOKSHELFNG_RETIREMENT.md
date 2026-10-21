@@ -1,17 +1,6 @@
 # BookshelfNG retirement status
 
-**Reviewed:** 2026-10-21. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977`
-remain the latest public app releases. ChaptarrNG
-[main](https://github.com/snapetech-org/chaptarrng/tree/main) contains a
-candidate-only Debian bridge builder. Its local dpkg
-round-trip passed against the public BookshelfNG `.71` package and preserved a
-modified config and data canary; systemd and dependency checks were mocked.
-No compatibility package or migration bridge has been published. Release
-publication remains frozen, and the source and distribution publishers remain
-fail-closed with their readiness variables unset. This is the current handoff
-summary for moving BookshelfNG users to ChaptarrNG. The detailed feature
-inventory remains in the
-[BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
+**Reviewed:** 2026-10-21. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public app releases. ChaptarrNG [main](https://github.com/snapetech-org/chaptarrng/tree/main) contains a candidate-only Debian bridge builder. An isolated dpkg round-trip against the checksum-verified public BookshelfNG `.71` package preserved a modified config and data canary with dependency checks bypassed and systemd mocked. A separate Debian Trixie apt transaction used that actual package and the local `.977` candidate, resolved dependencies (including `libicu76` and `ca-certificates`), installed the CA bundle, upgraded and downgraded without a conffile prompt, and preserved the canaries. The container did not run systemd or database migration. No compatibility package or migration bridge has been published. Release publication remains frozen and publisher readiness variables remain unset. This is the current handoff summary for moving BookshelfNG users to ChaptarrNG. The detailed feature inventory remains in the [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
 The exact revision-pinned path audit stays canonical in BookshelfNG's
 maintainer ledger: the

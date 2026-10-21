@@ -79,7 +79,7 @@ printf 'data-canary\n' > "$root/var/lib/bookshelfng/data-canary"
 printf 'active\n' > "$MOCK_ACTIVE_FILE"
 
 dpkg --root="$root" --admindir="$root/var/lib/dpkg" --instdir="$root" \
-  --force-not-root --force-script-chrootless --force-depends --force-confold \
+  --force-not-root --force-script-chrootless --force-depends \
   --install "$new_deb"
 installed_version="$(dpkg-query --root="$root" --admindir="$root/var/lib/dpkg" \
   -W -f='${Version}' bookshelfng)"
@@ -90,7 +90,7 @@ test -x "$root/usr/lib/chaptarrng/bin/Chaptarr"
 test "$(cat "$MOCK_ACTIVE_FILE")" = active
 
 dpkg --root="$root" --admindir="$root/var/lib/dpkg" --instdir="$root" \
-  --force-not-root --force-script-chrootless --force-depends --force-confold \
+  --force-not-root --force-script-chrootless --force-depends \
   --force-downgrade --install "$old_deb"
 installed_version="$(dpkg-query --root="$root" --admindir="$root/var/lib/dpkg" \
   -W -f='${Version}' bookshelfng)"
