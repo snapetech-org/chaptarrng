@@ -9,6 +9,23 @@ migration, use the [migration guide](MIGRATE_FROM_BOOKSHELFNG.md).
 Moving media requires an administrator API key, including when the move is
 started from the web UI.
 
+## Initialize paths for new authors
+
+For separate ebook and audiobook libraries, configure the matching default
+root folders under **Settings → Media Management**. The server-wide
+**Initialize ebook and audiobook paths for new authors** setting is off by
+default. When enabled, ChaptarrNG fills missing format-specific root folders
+from their matching effective defaults when a new author is added, including
+through an import. If a matching default is missing or ambiguous, that path
+stays unset. Explicit roots and existing authors are left alone; this setting
+does not move files. Use the move workflow below to relocate existing media.
+
+The setting is available on current `main` and has not shipped in public
+`v0.9.977`. During a BookshelfNG migration, its saved value is preserved; it
+still applies only to new authors and does not backfill existing paths.
+See the [migration guide](MIGRATE_FROM_BOOKSHELFNG.md) for the full settings
+mapping.
+
 ## Move one author's format
 
 1. Open **Authors**, edit the author, and set **Ebook Path** or **Audiobook
