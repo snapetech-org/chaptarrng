@@ -171,9 +171,20 @@ namespace NzbDrone.Core.Indexers.DirectDownload
         private static string ResolveExtension(string meta, string filename)
         {
             var lowerFilename = filename?.ToLowerInvariant() ?? string.Empty;
-            foreach (var extension in DirectDownloadReleaseFactory.AllowedExtensions)
+
+            var filenameExtension = System.IO.Path.GetExtension(lowerFilename)?.TrimStart('.') ?? string.Empty;
+            if (DirectDownloadReleaseFactory.AllowedExtensions.Contains(filenameExtension))
             {
-                if (meta.IndexOf(extension, StringComparison.OrdinalIgnoreCase) >= 0 || lowerFilename.EndsWith('.' + extension, StringComparison.OrdinalIgnoreCase))
+                return filenameExtension;
+            }
+
+            foreach (var extension in DirectDownloadReleaseFactory.AllowedExtensions
+                         .OrderByDescending(value => value.Length)
+                         .ThenBy(value => value, StringComparer.Ordinal))
+            {
+                if (Regex.IsMatch(meta ?? string.Empty,
+                        $"(?<![a-z0-9]){Regex.Escape(extension)}(?![a-z0-9])",
+                        RegexOptions.IgnoreCase))
                 {
                     return extension;
                 }
