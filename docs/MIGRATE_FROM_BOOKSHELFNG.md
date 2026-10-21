@@ -30,6 +30,20 @@ commands, and normal startup also detects and converts a supported BookshelfNG
 database automatically. Do not run normal ChaptarrNG startup against
 BookshelfNG appdata while cutover remains unapproved.
 
+The ChaptarrNG source also includes
+[`scripts/bookshelfng-to-chaptarrng.sh`](../scripts/bookshelfng-to-chaptarrng.sh),
+a host-side helper for Docker installations. Each action first creates a
+mode-`0600` archive of the full appdata directory in a separate backup
+directory. The helper supports `snapshot`, migration `preview` and `apply`,
+and restore `preview` and `rollback`. It rejects ambiguous legacy databases,
+requires an explicit Goodreads or native Hardcover choice for migration,
+accepts only a versioned ChaptarrNG image or digest, and requires explicit
+stopped-service confirmation before apply or rollback. Native Hardcover
+migration requires a versioned `v0.9.978` or newer image; published `.977`
+does not support that identity conversion. The release workflow is configured
+to include the helper in future Linux standalone archives after a release is
+approved. No new release or cutover is authorized by this source change.
+
 The Add New page carries over the BookshelfNG “search as you type” choice when
 you open ChaptarrNG from the same browser origin. If you move to a different
 host, scheme, or port, browser storage is separate; set the option on the
@@ -410,6 +424,40 @@ directory copy and generated database backup until you have checked the
 library, root paths, profiles, indexers, download clients, notifications, and
 SeerrNG connection. The explicit stopped-service flag makes the required
 quiescent data directory an operator-confirmed precondition.
+
+### ChaptarrNG-owned Docker handoff helper
+
+Run the host helper from a ChaptarrNG source checkout. It is a wrapper around
+the same application migration and restore commands documented above; it does
+not perform a second conversion implementation. Use a separate working copy
+for preview while the retirement gate remains open. After operator approval,
+the migration sequence is:
+
+```sh
+scripts/bookshelfng-to-chaptarrng.sh snapshot \
+  --data-dir /host/path/to/bookshelfng-config \
+  --backup-dir /host/path/to/external-backups
+
+scripts/bookshelfng-to-chaptarrng.sh preview \
+  --data-dir /host/path/to/working-copy \
+  --backup-dir /host/path/to/external-backups \
+  --image "$CHAPTARRNG_IMAGE" \
+  --provider-mode native-hardcover
+```
+
+Set `CHAPTARRNG_IMAGE` to the exact versioned image or immutable digest that
+will run the replacement. Use `--provider-mode goodreads` for a
+Goodreads-primary source. Preview runs in a temporary container and does not
+apply the conversion. Review its report before proceeding.
+
+After stopping every process using the data directory, and only after the
+retirement gates close, apply with the same image and provider mode plus
+`--confirm-stopped`. The helper saves the complete appdata archive outside the
+source directory before running ChaptarrNG. For rollback, use the filename of
+the retained `readarr.db.bookshelfng-backup-*` database directly inside
+`--data-dir`; `rollback-preview` remains separate from `rollback`, and actual
+restore also requires `--confirm-stopped`. Keep the independent full-directory
+archive until the restored BookshelfNG instance has been checked.
 
 ### Windows standalone service migration
 

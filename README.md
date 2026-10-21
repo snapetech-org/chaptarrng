@@ -32,6 +32,8 @@ ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag
 is the current published release. It includes the migration and rollback
 tools for BookshelfNG SQLite, plus the embedded source migration chain. The
 BookshelfNG helper creates an appdata archive before it runs the tools.
+The source includes a Docker handoff helper; future Linux standalone archives
+will include it after a release is approved.
 ChaptarrNG also initializes new author format paths from configured defaults,
 a behavior released in `v0.9.974`; explicit roots and existing authors are
 left alone. The next version bump is not a release: publication is frozen

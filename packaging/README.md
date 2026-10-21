@@ -132,6 +132,11 @@ until the full retirement gates close. Populated synthetic migration-22 tests
 cover conversion and rollback; real older-schema operator data remains
 untested. Unknown or newer schemas, PostgreSQL sources, and two populated
 source databases fail closed in the published `.977` build.
+The ChaptarrNG-owned Docker handoff helper is source-only today. The release
+workflow will include it in future Linux standalone archives once publication
+is approved; the public `.977` archives do not contain it. See the
+[migration guide](../docs/MIGRATE_FROM_BOOKSHELFNG.md#chaptarrng-owned-docker-handoff-helper)
+for its backup, preview, apply, and rollback behavior.
 The separate PostgreSQL candidate is limited to one migration-158 schema. Earlier smoke run 39127070836 on code head 21c41ad5 timed out during application startup before readiness; this was not a confirmed converter assertion failure. PR #131 later merged to `main` on 2026-10-20. Its exact-head Build [39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961) passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks. Those PostgreSQL checks use synthetic fixtures only; they do not establish PostgreSQL operator-data support, and the candidate remains unpublished.
 The importer keeps records with unresolved formats in both catalogs
 without monitoring, writes a private review file, retains the source backup,

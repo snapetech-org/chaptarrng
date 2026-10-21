@@ -59,6 +59,12 @@ cp -a _output/UI/. "$bundle/UI/"
 cp LICENSE "$bundle/LICENSE"
 test -s "$bundle/UI/index.html"
 
+if [[ "$rid" == linux-* ]]; then
+  mkdir -p "$bundle/scripts"
+  install -m 0755 scripts/bookshelfng-to-chaptarrng.sh \
+    "$bundle/scripts/bookshelfng-to-chaptarrng.sh"
+fi
+
 asset="ChaptarrNG-${version}-${rid}"
 if [[ "$rid" == win-* ]]; then
   archive="$output/${asset}.zip"

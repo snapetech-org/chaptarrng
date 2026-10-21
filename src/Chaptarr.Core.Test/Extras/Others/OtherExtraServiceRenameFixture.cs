@@ -264,14 +264,14 @@ namespace Chaptarr.Core.Test.Extras.Others
                         return Disk.Files.Contains(NormalizePath((string)args[0]));
                     case nameof(IDiskProvider.FolderExists):
                         var folder = NormalizePath((string)args[0]);
-                        return Disk.Files.Any(path => string.Equals(Path.GetDirectoryName(path), folder, StringComparison.OrdinalIgnoreCase));
+                        return Disk.Files.Any(path => string.Equals(NormalizePath(Path.GetDirectoryName(path)), folder, StringComparison.OrdinalIgnoreCase));
                     case nameof(IDiskProvider.GetFiles):
                         var directory = NormalizePath((string)args[0]);
-                        return Disk.Files.Where(path => string.Equals(Path.GetDirectoryName(path), directory, StringComparison.OrdinalIgnoreCase)).ToList();
+                        return Disk.Files.Where(path => string.Equals(NormalizePath(Path.GetDirectoryName(path)), directory, StringComparison.OrdinalIgnoreCase)).ToList();
                     case nameof(IDiskProvider.GetDirectories):
                         var parentDirectory = NormalizePath((string)args[0]);
                         return Disk.Directories
-                            .Where(path => string.Equals(Path.GetDirectoryName(path), parentDirectory, StringComparison.OrdinalIgnoreCase))
+                            .Where(path => string.Equals(NormalizePath(Path.GetDirectoryName(path)), parentDirectory, StringComparison.OrdinalIgnoreCase))
                             .ToList();
                     case nameof(IDiskProvider.MoveFile):
                         var source = NormalizePath((string)args[0]);
