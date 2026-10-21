@@ -188,7 +188,7 @@ jobs:
       with:
         context: .
         file: ./Dockerfile.cross
-        target: runtime
+        target: chaptarrng-standard
         platforms: linux/amd64,linux/arm64,linux/arm/v7
         push: true
         tags: ${{ steps.docker-tags.outputs.tags }}

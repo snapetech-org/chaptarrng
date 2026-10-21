@@ -57,6 +57,11 @@ run_case 'compatibility image targets advertise their legacy container port' bas
   grep -A1 -Fx "FROM runtime AS chaptarrng-standard" "$1" | grep -Fxq "EXPOSE 8789"
 ' _ "$repo_root/Dockerfile.cross"
 
+run_case 'published standard image uses the port-advertising target' bash -c '
+  set -euo pipefail
+  grep -A10 -F "name: Build and push Docker image" "$1" | grep -Fxq "        target: chaptarrng-standard"
+' _ "$repo_root/.github/workflows/docker-publish.yml"
+
 run_case 'compatibility image targets preserve provider mode' check_compatibility_provider_modes
 
 run_case 'fresh legacy image defaults to port 8787' bash -c '

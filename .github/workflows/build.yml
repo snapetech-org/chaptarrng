@@ -546,8 +546,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: runtime
-            cache-scope: runtime
+          - target: chaptarrng-standard
+            cache-scope: standard
           - target: bookshelf-softcover
             cache-scope: bookshelf-softcover
           - target: bookshelf-hardcover
