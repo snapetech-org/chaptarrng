@@ -206,6 +206,83 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_migrate_an_older_postgres_source_on_a_snapshot_and_restore_its_original_schema()
+        {
+            var sourceConnectionString = BuildConnectionString(_baseConnectionString, _sourceSchema);
+            MigrateBookshelfSourceToVersion(sourceConnectionString, 22);
+            SeedMatchingThreshold(sourceConnectionString);
+            var originalVersion = ReadScalarInt(sourceConnectionString, "SELECT MAX(\"Version\") FROM \"VersionInfo\";");
+
+            var controller = new MigrationController(
+                LogManager.GetLogger(nameof(BookshelfPostgresDatabaseConverterFixture)),
+                null,
+                new TestAppFolderInfo(_temporaryDirectory));
+
+            var preview = controller.MigrateBookshelf(
+                sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.PostgreSQL,
+                previewOnly: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(preview.PreviewOnly, Is.True);
+                Assert.That(preview.ImportReport.BlockingIssues, Is.Empty);
+                Assert.That(preview.ImportReport.Tables["Books"].SourceRows, Is.Zero);
+                Assert.That(ReadScalarInt(sourceConnectionString, "SELECT MAX(\"Version\") FROM \"VersionInfo\";"), Is.EqualTo(originalVersion));
+                Assert.That(ReadConfigValue(sourceConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
+
+                var schemas = GetSchemaNames(_baseConnectionString).Except(_schemasBefore, StringComparer.Ordinal).ToArray();
+                Assert.That(schemas.Any(schema => schema.StartsWith("bookshelf_snapshot_", StringComparison.Ordinal)), Is.False);
+                Assert.That(schemas.Any(schema => schema.StartsWith("chaptarr_stage_", StringComparison.Ordinal)), Is.False);
+                Assert.That(schemas.Any(schema => schema.StartsWith("bookshelfng_backup_", StringComparison.Ordinal)), Is.False);
+            });
+
+            var converted = controller.MigrateBookshelf(
+                sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.PostgreSQL,
+                previewOnly: false);
+            var bookshelfBackupSchema = converted.BackupPath;
+            _knownBackupSchemas.Add(bookshelfBackupSchema);
+
+            var bookshelfBackupConnectionString = BuildConnectionString(_baseConnectionString, bookshelfBackupSchema);
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverApiToken"), Is.EqualTo("pg-fixture-token"));
+                Assert.That(DatabaseLineageGuard.Detect(bookshelfBackupConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(ReadScalarInt(bookshelfBackupConnectionString, "SELECT MAX(\"Version\") FROM \"VersionInfo\";"), Is.EqualTo(originalVersion));
+                Assert.That(ReadConfigValue(bookshelfBackupConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
+            });
+
+            var restorePreview = controller.RestoreBookshelf(
+                sourceConnectionString,
+                DatabaseType.PostgreSQL,
+                bookshelfBackupSchema,
+                previewOnly: true);
+            Assert.That(restorePreview.PreviewOnly, Is.True);
+            Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.Chaptarr));
+
+            var restored = controller.RestoreBookshelf(
+                sourceConnectionString,
+                DatabaseType.PostgreSQL,
+                bookshelfBackupSchema,
+                previewOnly: false);
+            _knownBackupSchemas.Add(restored.ChaptarrBackupPath);
+
+            var chaptarrBackupConnectionString = BuildConnectionString(_baseConnectionString, restored.ChaptarrBackupPath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(ReadScalarInt(sourceConnectionString, "SELECT MAX(\"Version\") FROM \"VersionInfo\";"), Is.EqualTo(originalVersion));
+                Assert.That(ReadConfigValue(sourceConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
+                Assert.That(DatabaseLineageGuard.Detect(chaptarrBackupConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(ReadConfigValue(chaptarrBackupConnectionString, "HardcoverApiToken"), Is.EqualTo("pg-fixture-token"));
+            });
+        }
+
+        [Test]
         public void should_convert_a_bookshelf_postgres_source_during_normal_startup_migration()
         {
             var sourceConnectionString = BuildConnectionString(_baseConnectionString, _sourceSchema);
@@ -321,6 +398,11 @@ namespace Chaptarr.Core.Test.Datastore
 
         private void MigrateBookshelfSourceToLatest(string connectionString)
         {
+            MigrateBookshelfSourceToVersion(connectionString, null);
+        }
+
+        private void MigrateBookshelfSourceToVersion(string connectionString, int? version)
+        {
             var migrationServices = new ServiceCollection()
                 .AddLogging(builder => builder.AddNLog())
                 .AddFluentMigratorCore()
@@ -344,7 +426,15 @@ namespace Chaptarr.Core.Test.Datastore
             MigrationContext.Current = new MigrationContext(MigrationType.Main);
             try
             {
-                scope.ServiceProvider.GetRequiredService<IMigrationRunner>().MigrateUp();
+                var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+                if (version.HasValue)
+                {
+                    runner.MigrateUp(version.Value);
+                }
+                else
+                {
+                    runner.MigrateUp();
+                }
             }
             finally
             {

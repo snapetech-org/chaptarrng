@@ -101,7 +101,8 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                     connectionString,
                     targetConnectionString => MigrateNative(targetConnectionString, effectiveMigrationContext, DatabaseType.PostgreSQL),
                     GetMediaMapBasePath(connectionString, databaseType),
-                    previewOnly);
+                    previewOnly,
+                    sourceSnapshotConnectionString => MigrateBookshelfSource(sourceSnapshotConnectionString, DatabaseType.PostgreSQL));
             }
 
             var sourceDatabasePath = Path.GetFullPath(new SqliteConnectionStringBuilder(connectionString).DataSource);
@@ -217,6 +218,76 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 {
                     MigrationContext.Current = null;
                 }
+            }
+        }
+
+        public void MigrateBookshelfSource(string connectionString, DatabaseType databaseType)
+        {
+            if (databaseType == DatabaseType.SQLite)
+            {
+                MigrateBookshelfSource(connectionString);
+                return;
+            }
+
+            if (databaseType != DatabaseType.PostgreSQL)
+            {
+                throw new InvalidDataException("BookshelfNG source migrations support only SQLite or PostgreSQL.");
+            }
+
+            var sourceSchema = GetPostgresCurrentSchema(connectionString);
+            using (var source = new NpgsqlConnection(connectionString))
+            {
+                source.Open();
+                if (DatabaseLineageGuard.Detect(source, DatabaseType.PostgreSQL) != DatabaseLineage.BookshelfNG)
+                {
+                    throw new InvalidDataException("The database is not a supported BookshelfNG PostgreSQL source. No database was changed.");
+                }
+
+                BookshelfDatabaseImporter.ValidateSourceBackup(source);
+            }
+
+            var migrationServices = new ServiceCollection()
+                .AddLogging(builder => builder.AddNLog())
+                .AddFluentMigratorCore()
+                .Configure<RunnerOptions>(options => options.IncludeUntaggedMaintenances = true)
+                .ConfigureRunner(builder => builder
+                    .AddPostgres()
+                    .WithGlobalConnectionString(connectionString)
+                    .ScanIn(Assembly.GetExecutingAssembly()).For.All())
+                .Configure<TypeFilterOptions>(options => options.Namespace = "NzbDrone.Core.Datastore.BookshelfMigration")
+                .Configure<ProcessorOptions>(options =>
+                {
+                    options.PreviewOnly = false;
+                    options.Timeout = TimeSpan.FromMinutes(5);
+                })
+                .Configure<SelectingProcessorAccessorOptions>(options => options.ProcessorId = "PostgreSQL")
+                .Configure<SelectingGeneratorAccessorOptions>(options => options.GeneratorId = "PostgreSQL");
+            migrationServices.AddSingleton<IConventionSet>(new DefaultConventionSet(sourceSchema, null));
+
+            using (var serviceProvider = migrationServices.BuildServiceProvider())
+            using (var scope = serviceProvider.CreateScope())
+            {
+                MigrationContext.Current = new MigrationContext(MigrationType.Main);
+                try
+                {
+                    scope.ServiceProvider.GetRequiredService<IMigrationRunner>().MigrateUp();
+                }
+                catch (Exception exception)
+                {
+                    throw new InvalidDataException(
+                        "BookshelfNG PostgreSQL source migrations failed on the disposable snapshot. The original database was not changed.",
+                        exception);
+                }
+                finally
+                {
+                    MigrationContext.Current = null;
+                }
+            }
+
+            using (var migratedSource = new NpgsqlConnection(connectionString))
+            {
+                migratedSource.Open();
+                BookshelfDatabaseImporter.ValidateSourceSchema(migratedSource);
             }
         }
 

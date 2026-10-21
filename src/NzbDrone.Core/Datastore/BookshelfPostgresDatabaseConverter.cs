@@ -10,8 +10,8 @@ using Npgsql;
 namespace NzbDrone.Core.Datastore
 {
     /// <summary>
-    /// Converts a current BookshelfNG PostgreSQL schema into ChaptarrNG in the same
-    /// database. The source is snapshotted into a disposable schema, and the
+    /// Converts a BookshelfNG PostgreSQL schema into ChaptarrNG in the same database.
+    /// Older recognized source schemas are upgraded on a disposable snapshot; the
     /// original tables move to a retained backup schema only after validation.
     /// </summary>
     public sealed class BookshelfPostgresDatabaseConverter
@@ -22,7 +22,8 @@ namespace NzbDrone.Core.Datastore
             string sourceConnectionString,
             Action<string> migrateNativeTarget,
             string mediaMapBasePath,
-            bool previewOnly = false)
+            bool previewOnly = false,
+            Action<string> migrateBookshelfSource = null)
         {
             if (migrateNativeTarget == null)
             {
@@ -57,8 +58,25 @@ namespace NzbDrone.Core.Datastore
                     throw new InvalidDataException("The database does not match the supported BookshelfNG PostgreSQL schema.");
                 }
 
-                BookshelfDatabaseImporter.ValidateSourceSchema(sourceConnection);
+                var sourceVersion = BookshelfDatabaseImporter.ValidateSourceBackup(sourceConnection);
                 CreateConsistentSnapshot(sourceConnection, sourceSchema, snapshotSchema);
+
+                if (sourceVersion < SupportedSourceMigration)
+                {
+                    if (migrateBookshelfSource == null)
+                    {
+                        throw new InvalidDataException(
+                            $"BookshelfNG PostgreSQL schema version {sourceVersion} requires the bundled source migration chain. The source database was not changed.");
+                    }
+
+                    migrateBookshelfSource(BuildSchemaConnectionString(connectionBuilder, snapshotSchema));
+                }
+
+                using (var snapshot = OpenSchemaConnection(connectionBuilder, snapshotSchema))
+                {
+                    BookshelfDatabaseImporter.ValidateSourceSchema(snapshot);
+                }
+
                 CreateSchema(sourceConnection, stageSchema);
 
                 var stagedConnectionString = BuildSchemaConnectionString(connectionBuilder, stageSchema);
@@ -151,7 +169,7 @@ namespace NzbDrone.Core.Datastore
 
                 using (var bookshelfBackup = OpenSchemaConnection(connectionBuilder, bookshelfBackupSchema))
                 {
-                    BookshelfDatabaseImporter.ValidateSourceSchema(bookshelfBackup);
+                    BookshelfDatabaseImporter.ValidateSourceBackup(bookshelfBackup);
                 }
 
                 EnsureSupportedSchemaObjects(connection, currentSchema);
