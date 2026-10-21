@@ -8,6 +8,7 @@ namespace Chaptarr.Core.Test
     public class ConfigServiceTestProxy : DispatchProxy
     {
         public BookMatchingStrictness BookMatchingStrictness { get; set; } = BookMatchingStrictness.Balanced;
+        public int BookImportMinimumMatchPercent { get; set; } = 70;
         public bool UsePathAsTagsFallback { get; set; } = true;
         public bool AutoAddMissingAuthorsFromCompletedDownloads { get; set; }
         public bool AutoInitializeFormatSpecificAuthorPaths { get; set; }
@@ -31,6 +32,17 @@ namespace Chaptarr.Core.Test
             if (targetMethod?.Name == "set_BookMatchingStrictness")
             {
                 BookMatchingStrictness = (BookMatchingStrictness)args[0];
+                return null;
+            }
+
+            if (targetMethod?.Name == "get_BookImportMinimumMatchPercent")
+            {
+                return BookImportMinimumMatchPercent;
+            }
+
+            if (targetMethod?.Name == "set_BookImportMinimumMatchPercent")
+            {
+                BookImportMinimumMatchPercent = (int)args[0];
                 return null;
             }
 

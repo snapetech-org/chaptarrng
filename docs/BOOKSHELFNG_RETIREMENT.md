@@ -698,13 +698,13 @@ validate the Unraid template handoff; details are in the
 [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 
 BookshelfNG's `BookImportMinimumMatchPercent` setting (default 70, valid range
-50–99) affects fuzzy title parsing and import acceptance. The current source
-converter retains the original row and, when no explicit ChaptarrNG mode is
-present, translates the nearest policy band: 50–66 to Aggressive, 67–82 to
-Balanced, and 83–99 to Strict. The migration report names the chosen mode, and
-invalid values stop conversion. This is deliberately an approximation because
-the two applications use different matching algorithms; validate the selected
-mode against expected behavior on converted data. The mapping is not in public
+50–99) now remains active for ChaptarrNG's fuzzy RSS-title fallback. When no
+explicit ChaptarrNG mode is present, the current source converter also maps the
+nearest policy band: 50–66 to Aggressive, 67–82 to Balanced, and 83–99 to
+Strict. The migration report names both behaviors, and invalid values stop
+conversion. The strictness mapping is still an approximation because the two
+applications use different release-title and import-scoring algorithms;
+validate it against converted data. This source change is not in public
 `.977`.
 
 For a source earlier than migration 14, first update BookshelfNG to its final

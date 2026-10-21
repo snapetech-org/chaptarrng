@@ -161,6 +161,7 @@ namespace NzbDrone.Core.DecisionEngine
 
                     if (searchCriteria == null)
                     {
+                        parsedBookInfo ??= _parsingService.ParseBookTitleFuzzy(report.Title);
                         parsedBookInfo ??= new ParsedBookInfo();
 
                         if (parsedBookInfo.AuthorName.IsNullOrWhiteSpace())

@@ -1765,7 +1765,7 @@ namespace NzbDrone.Core.Datastore
                 throw new InvalidDataException("BookshelfNG config contains duplicate format-specific author path settings; conversion stopped before promotion.");
             }
 
-            var matchSettingDisposition = "no BookshelfNG numeric match threshold was present; ChaptarrNG's default matching mode applies";
+            var matchSettingDisposition = "no BookshelfNG numeric match threshold was present; ChaptarrNG defaults apply, including 70% for the fuzzy RSS-title fallback";
             var existingStrictnessValue = strictnessRows.SingleOrDefault() is { } strictnessRow
                 ? GetString(strictnessRow, "Value")
                 : null;
@@ -1795,7 +1795,7 @@ namespace NzbDrone.Core.Datastore
 
                 matchSettingDisposition = legacyRows.Count == 0
                     ? $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' was preserved"
-                    : $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' took precedence; the BookshelfNG numeric match threshold was retained unchanged for audit because the matching algorithms differ";
+                    : $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' was preserved for strictness-based matching; the BookshelfNG numeric threshold remains active only for the compatible fuzzy RSS-title fallback";
             }
             else if (legacyPercent.HasValue && legacyMappedStrictness.HasValue)
             {
@@ -1818,7 +1818,7 @@ namespace NzbDrone.Core.Datastore
                     configRows.Add(mappedStrictness);
                 }
 
-                matchSettingDisposition = $"BookshelfNG BookImportMinimumMatchPercent={legacyPercent.Value.ToString(CultureInfo.InvariantCulture)} was mapped to ChaptarrNG BookMatchingStrictness='{mappedValue}'; the original numeric row was retained. This is a documented closest-policy translation, not an equivalent implementation of BookshelfNG's fuzzy parser and weighted import-distance algorithms.";
+                matchSettingDisposition = $"BookshelfNG BookImportMinimumMatchPercent={legacyPercent.Value.ToString(CultureInfo.InvariantCulture)} remains active for the compatible fuzzy RSS-title fallback and was also mapped to ChaptarrNG BookMatchingStrictness='{mappedValue}' for strictness-based matching; the latter is a closest-policy translation, not an equivalent implementation of BookshelfNG's weighted import-distance algorithm.";
             }
 
             var hardcoverTokenDisposition = "no saved Hardcover token was present";

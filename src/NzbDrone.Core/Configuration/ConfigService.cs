@@ -311,6 +311,13 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("BookMatchingStrictness", value); }
         }
 
+        public int BookImportMinimumMatchPercent
+        {
+            get { return GetValueInt("BookImportMinimumMatchPercent", 70); }
+
+            set { SetValue("BookImportMinimumMatchPercent", value); }
+        }
+
         public bool UsePathAsTagsFallback
         {
             get { return GetValueBoolean("UsePathAsTagsFallback", true); }

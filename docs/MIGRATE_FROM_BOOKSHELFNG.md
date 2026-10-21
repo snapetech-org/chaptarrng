@@ -361,9 +361,10 @@ all-format retry using RetryUnmappedMatch and unmappedFiles.scope=all; see the
 ## Matching setting compatibility
 
 The published ChaptarrNG `v0.9.977` converter preserves the legacy
-`BookImportMinimumMatchPercent` row but does not apply it. The current source
-importer retains that row and, when the source has no explicit
-`BookMatchingStrictness`, maps the closest policy band:
+`BookImportMinimumMatchPercent` row but does not apply it. Current source reads
+the retained value for BookshelfNG's fuzzy RSS-title fallback. When the source
+has no explicit `BookMatchingStrictness`, migration also maps the closest
+policy band:
 
 | BookshelfNG percentage | ChaptarrNG mode |
 | --- | --- |
@@ -371,12 +372,13 @@ importer retains that row and, when the source has no explicit
 | 67–82 | Balanced |
 | 83–99 | Strict |
 
-An explicit ChaptarrNG mode takes precedence. The migration report names the
-mapping and the original numeric row remains for audit. Values outside 50–99
-stop conversion before promotion. This is a lossy policy translation: the
-applications use different fuzzy-title and import-scoring algorithms. Review
-the chosen mode against expected behavior on converted data; do not treat it as
-an exact recreation of BookshelfNG matching. This source change is not in
+An explicit ChaptarrNG mode takes precedence for strictness-based release and
+file-import matching; the numeric value remains active only for the compatible
+fuzzy RSS-title fallback. The migration report states both dispositions. Values
+outside 50–99 stop conversion before promotion. The strictness mapping remains
+lossy because the applications use different release-title and import-scoring
+algorithms. Review behavior on converted data; do not treat the mapping as an
+exact recreation of all BookshelfNG matching. This source change is not in
 `.977` while the release freeze remains active.
 
 ## New author format paths

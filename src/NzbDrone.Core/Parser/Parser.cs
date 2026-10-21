@@ -365,6 +365,45 @@ namespace NzbDrone.Core.Parser
             return null;
         }
 
+        public static ParsedBookInfo ParseBookTitleWithFuzzyMatch(string title, Author author, Book book)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(title) || !ValidateBeforeParsing(title) ||
+                    author == null || string.IsNullOrWhiteSpace(author.Name) || book == null)
+                {
+                    return null;
+                }
+
+                var authorName = author.Name == "Various Authors" ? "VA" : author.Name.RemoveAccent();
+                var result = new ParsedBookInfo
+                {
+                    AuthorName = author.Name,
+                    AuthorTitleInfo = GetAuthorTitleInfo(authorName),
+                    BookTitle = book.Title
+                };
+
+                result.Quality = QualityParser.ParseQuality(title);
+                result.ReleaseGroup = ParseReleaseGroup(CleanReleaseTitleForParsing(title));
+
+                return result;
+            }
+            catch (InvalidDateException ex)
+            {
+                Logger.Debug(ex, ex.Message);
+            }
+            catch (Exception e)
+            {
+                if (title == null || (!title.Contains("password", StringComparison.OrdinalIgnoreCase) &&
+                                      !title.Contains("yenc", StringComparison.OrdinalIgnoreCase)))
+                {
+                    Logger.ErrorSafe(e, "An error has occurred while parsing a fuzzy-matched release title.");
+                }
+            }
+
+            return null;
+        }
+
         public static string GetTitleFuzzy(string report, string name, out string remainder)
         {
             remainder = report;

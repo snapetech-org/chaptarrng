@@ -30,6 +30,7 @@ namespace NzbDrone.Core.Books
         Author FindByName(string title);
         Author FindByNameInexact(string title);
         List<Author> GetCandidates(string title);
+        List<Author> GetReportCandidates(string reportTitle);
 	        void DeleteAuthor(int authorId, bool deleteFiles, bool addImportListExclusion = false);
             // Purge/re-add deliberately retains files, so production must preserve the import
             // history that prevents a still-seeding download from being imported again.
@@ -605,6 +606,28 @@ namespace NzbDrone.Core.Books
             }
 
             return output.DistinctBy(x => x.Id).ToList();
+        }
+
+        public List<Author> GetReportCandidates(string reportTitle)
+        {
+            if (reportTitle.IsNullOrWhiteSpace())
+            {
+                return new List<Author>();
+            }
+
+            var authors = GetAllAuthors();
+            var output = new List<Author>();
+
+#pragma warning disable CS0618 // Keep BookshelfNG's report-author scoring for its migration fallback.
+            output.AddRange(FindByStringInexact(authors,
+                (author, title) => title.FuzzyMatch(author.Name, 0.6).Item3,
+                reportTitle));
+            output.AddRange(FindByStringInexact(authors,
+                (author, title) => title.FuzzyMatch(author.NameLastFirst, 0.6).Item3,
+                reportTitle));
+#pragma warning restore CS0618
+
+            return output.DistinctBy(author => author.Id).ToList();
         }
 
         private static string NormalizeAuthorNameForComparison(string name)

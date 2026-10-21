@@ -42,6 +42,7 @@ namespace NzbDrone.Core.Configuration
         RescanAfterRefreshType RescanAfterRefresh { get; set; }
         AllowFingerprinting AllowFingerprinting { get; set; }
         BookMatchingStrictness BookMatchingStrictness { get; set; }
+        int BookImportMinimumMatchPercent { get; set; }
         bool UsePathAsTagsFallback { get; set; }
         bool AutoAddMissingAuthorsFromCompletedDownloads { get; set; }
         bool AutoInitializeFormatSpecificAuthorPaths { get; set; }

@@ -33,11 +33,19 @@ namespace Chaptarr.Core.Test.DecisionEngine
             public List<Book> MappedBooks { get; set; } = new();
             public List<int> MappedBookIds { get; private set; } = new();
             public int GetAuthorCalls { get; private set; }
+            public ParsedBookInfo FuzzyParsedBookInfo { get; set; }
+            public int FuzzyParseCalls { get; private set; }
 
             public Author GetAuthor(string title)
             {
                 GetAuthorCalls++;
                 return null;
+            }
+
+            public ParsedBookInfo ParseBookTitleFuzzy(string title)
+            {
+                FuzzyParseCalls++;
+                return FuzzyParsedBookInfo;
             }
 
             public RemoteBook Map(ParsedBookInfo parsedBookInfo, SearchCriteriaBase searchCriteria = null)
@@ -174,6 +182,41 @@ namespace Chaptarr.Core.Test.DecisionEngine
             };
 
             return decisionMaker.GetSearchDecision(new List<ReleaseInfo> { report }, criteria)[0];
+        }
+
+        [Test]
+        public void should_use_bookshelf_fuzzy_parser_when_rss_title_does_not_parse()
+        {
+            var parsingService = new TestParsingService
+            {
+                FuzzyParsedBookInfo = new ParsedBookInfo
+                {
+                    AuthorName = "Example Author",
+                    BookTitle = "Example Book"
+                }
+            };
+
+            var decisionMaker = new DownloadDecisionMaker(new List<IDecisionEngineSpecification>(),
+                                                          parsingService,
+                                                          new TestEditionFtsRepository(),
+                                                          new NoOpCustomFormatCalculationService(),
+                                                          new NoOpRemoteBookAggregationService(),
+                                                          new NoOpReleaseNarratorMetadataEnricher(),
+                                                          (IConfigService)null,
+                                                          LogManager.GetCurrentClassLogger());
+
+            decisionMaker.GetRssDecision(new List<ReleaseInfo>
+            {
+                new ReleaseInfo
+                {
+                    Title = "123",
+                    Indexer = "Test Indexer",
+                    Categories = new List<int>(),
+                    PublishDate = DateTime.UtcNow
+                }
+            });
+
+            Assert.That(parsingService.FuzzyParseCalls, Is.EqualTo(1));
         }
 
         [Test]
