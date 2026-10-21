@@ -3,7 +3,9 @@ const assert = require('node:assert/strict');
 const {
   buildAddFormatModalProps,
   canAddFormat,
-  getBookFormatInstances
+  getBookFormatInstances,
+  haveRelatedFormatInputsChanged,
+  shouldShowFormatIdentityHelp
 } = require('./BookRelatedFormats.cjs');
 
 test('book details show the current format and only work-matched records in the other format', () => {
@@ -51,6 +53,44 @@ test('adding a missing format requires book and author provider identities', () 
   assert.equal(canAddFormat({ foreignBookId: 'hc:123' }, { foreignAuthorId: 'hc:456' }), true);
   assert.equal(canAddFormat({ foreignBookId: 'hc:123' }, {}), false);
   assert.equal(canAddFormat({}, { foreignAuthorId: 'hc:456' }), false);
+});
+
+test('explains how to enable the add action only when the other format is missing', () => {
+  const ebook = { mediaType: 'ebook', foreignBookId: 'hc:123' };
+  const ebookWithoutCatalogId = { ...ebook, foreignBookId: '' };
+  const author = { foreignAuthorId: 'hc:456' };
+  const noOtherFormat = { localAudiobookBooks: [], localEbookBooks: [] };
+  const matchingAudiobook = {
+    localAudiobookBooks: [{ id: 20 }],
+    localEbookBooks: []
+  };
+
+  assert.equal(shouldShowFormatIdentityHelp(ebook, {}, noOtherFormat), true);
+  assert.equal(shouldShowFormatIdentityHelp({ foreignBookId: 'hc:123' }, {}, noOtherFormat, 'ebook'), true);
+  assert.equal(shouldShowFormatIdentityHelp(ebookWithoutCatalogId, author, noOtherFormat), true);
+  assert.equal(shouldShowFormatIdentityHelp(ebook, author, noOtherFormat), false);
+  assert.equal(shouldShowFormatIdentityHelp(ebook, {}, matchingAudiobook), false);
+});
+
+test('refreshes related-format matches when catalog identities change', () => {
+  const props = {
+    bookId: 11,
+    mediaType: 'ebook',
+    book: { foreignBookId: 'hc:123' },
+    author: { foreignAuthorId: 'hc:456' }
+  };
+
+  assert.equal(haveRelatedFormatInputsChanged(props, { ...props }), false);
+  assert.equal(haveRelatedFormatInputsChanged(props, {
+    ...props,
+    book: { foreignBookId: 'hc:789' }
+  }), true);
+  assert.equal(haveRelatedFormatInputsChanged(props, {
+    ...props,
+    author: { foreignAuthorId: 'hc:999' }
+  }), true);
+  assert.equal(haveRelatedFormatInputsChanged(props, { ...props, bookId: 12 }), true);
+  assert.equal(haveRelatedFormatInputsChanged(props, { ...props, mediaType: 'audiobook' }), true);
 });
 
 test('direct add uses the requested format, existing author, and known format records', () => {

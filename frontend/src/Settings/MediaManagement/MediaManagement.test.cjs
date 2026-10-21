@@ -157,3 +157,13 @@ test('new-author format-folder setting reflects the saved admin value', () => {
 
   assert.equal(checkbox.props.value, true);
 });
+
+test('new-author format-folder help explains its server-wide admin scope', () => {
+  const localizationPath = path.resolve(__dirname, '../../../../src/NzbDrone.Core/Localization/Core/en.json');
+  const translations = JSON.parse(fs.readFileSync(localizationPath, 'utf8'));
+  const helpText = translations.AutoInitializeFormatSpecificAuthorPathsHelpText;
+
+  assert.match(helpText, /^Server-wide admin setting\./);
+  assert.match(helpText, /every new author, regardless of who adds the author/);
+  assert.match(helpText, /Existing author paths and files are not changed or moved\./);
+});

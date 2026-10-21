@@ -22,6 +22,7 @@ import selectAll from 'Utilities/Table/selectAll';
 import toggleSelected from 'Utilities/Table/toggleSelected';
 import BookStudioFilterModalConnector from './BookshelfFilterModalConnector';
 import BookshelfFooter from './BookshelfFooter';
+import BookshelfFormatGroupingHelp from './BookshelfFormatGroupingHelp';
 import BookStudioRowConnector from './BookshelfRowConnector';
 import BookshelfTableHeader from './BookshelfTableHeader';
 import styles from './Bookshelf.css';
@@ -366,11 +367,17 @@ class Bookshelf extends Component {
       <PageContent title={translate('BookStudio')}>
         <PageToolbar>
           <PageToolbarSection>
-            <MediaTypeToggle
-              selectedMediaType={selectedMediaType}
-              includeBoth={true}
-              onMediaTypeChange={onMediaTypeChange}
-            />
+            <div className={styles.formatToolbarGroup}>
+              <MediaTypeToggle
+                selectedMediaType={selectedMediaType}
+                includeBoth={true}
+                onMediaTypeChange={onMediaTypeChange}
+              />
+              <BookshelfFormatGroupingHelp
+                selectedMediaType={selectedMediaType}
+                className={styles.formatGroupingHelp}
+              />
+            </div>
           </PageToolbarSection>
           <PageToolbarSection alignContent={align.RIGHT}>
             <FilterMenu

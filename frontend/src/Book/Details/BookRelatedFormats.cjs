@@ -57,6 +57,37 @@ function canAddFormat(book, author) {
   );
 }
 
+function haveRelatedFormatInputsChanged(previousProps, nextProps) {
+  const previousBookId = String(previousProps.book?.foreignBookId ?? '').trim();
+  const nextBookId = String(nextProps.book?.foreignBookId ?? '').trim();
+  const previousAuthorId = String(previousProps.author?.foreignAuthorId ?? '').trim();
+  const nextAuthorId = String(nextProps.author?.foreignAuthorId ?? '').trim();
+
+  return (
+    previousProps.bookId !== nextProps.bookId ||
+    previousProps.mediaType !== nextProps.mediaType ||
+    previousBookId !== nextBookId ||
+    previousAuthorId !== nextAuthorId
+  );
+}
+
+function shouldShowFormatIdentityHelp(book, author, instances, mediaTypeOverride) {
+  if (canAddFormat(book, author)) {
+    return false;
+  }
+
+  const mediaType = normalizeMediaType(book?.mediaType || mediaTypeOverride);
+  let otherFormatBooks = null;
+
+  if (mediaType === 'ebook') {
+    otherFormatBooks = instances?.localAudiobookBooks;
+  } else if (mediaType === 'audiobook') {
+    otherFormatBooks = instances?.localEbookBooks;
+  }
+
+  return Array.isArray(otherFormatBooks) && otherFormatBooks.length === 0;
+}
+
 function buildAddFormatModalProps(book, author, instances, mediaType) {
   const title = book?.title || '';
 
@@ -78,4 +109,10 @@ function buildAddFormatModalProps(book, author, instances, mediaType) {
   };
 }
 
-module.exports = { buildAddFormatModalProps, canAddFormat, getBookFormatInstances };
+module.exports = {
+  buildAddFormatModalProps,
+  canAddFormat,
+  getBookFormatInstances,
+  haveRelatedFormatInputsChanged,
+  shouldShowFormatIdentityHelp
+};
