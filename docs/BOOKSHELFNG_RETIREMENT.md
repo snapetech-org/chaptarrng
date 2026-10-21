@@ -51,7 +51,7 @@ acceptance remain open. Keep BookshelfNG in service.
 
 The refreshed schema-v4 audit compares BookshelfNG source
 `2811718076d84777a1b1132e4e5d2abd21231229` with ChaptarrNG `main`
-`9da8a4f27dc5c3a11d41d19b09933f70e4929612`: 1,119 changed paths, 98 reviewed
+`34076e58620dda1bf4dee5506b30a9d4c71348ce`: 1,119 changed paths, 98 reviewed
 mappings, and 818 dispositions (177 retained, 135 equivalent, 266 ported, and
 240 non-runtime retirements). Another 301 paths remain open (71 unmapped and
 230 requiring semantic review). The audit tests pass 31/31; these per-path
