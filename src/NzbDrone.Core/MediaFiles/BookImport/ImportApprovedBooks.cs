@@ -1539,6 +1539,12 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
                     if (!adoptedUntrackedDestination)
                     {
+                        var freeSpaceRejection = GetImportFreeSpaceRejectionReason(bookFile, localBook);
+                        if (freeSpaceRejection != null)
+                        {
+                            return (new ImportResult(decision, freeSpaceRejection), null);
+                        }
+
                         // Handle file move/copy for new downloads
                         bool copyOnly = !localBook.IsGeneratedConversion &&
                                         (importMode == ImportMode.Copy || !ShouldMoveFile(localBook, author));
@@ -1851,6 +1857,54 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 {
                     return AlreadyImportedRejectionReason;
                 }
+            }
+
+            return null;
+        }
+
+        private string GetImportFreeSpaceRejectionReason(BookFile bookFile, LocalBook localBook)
+        {
+            if (localBook?.ExistingFile == true ||
+                _diskProvider == null ||
+                _configService == null ||
+                _configService.SkipFreeSpaceCheckWhenImporting)
+            {
+                return null;
+            }
+
+            try
+            {
+                var destinationPath = _bookFileMover.GetImportDestinationPath(bookFile, localBook);
+                var destinationFolder = Directory.GetParent(destinationPath);
+                if (destinationFolder == null)
+                {
+                    return null;
+                }
+
+                var freeSpace = _diskProvider.GetAvailableSpace(destinationFolder.FullName);
+                if (!freeSpace.HasValue)
+                {
+                    _logger.Debug("Free space check returned an invalid result for: {0}", destinationFolder.FullName);
+                    return null;
+                }
+
+                var minimumFreeSpace = Math.Max(0, _configService.MinimumFreeSpaceWhenImporting) * 1024L * 1024L;
+                var requiredSpace = localBook.Size + minimumFreeSpace;
+                if (freeSpace.Value >= requiredSpace)
+                {
+                    return null;
+                }
+
+                _logger.Warn("Not enough free space ({0}) to import: {1} ({2})", freeSpace, localBook, localBook.Size);
+                return "Not enough free space";
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                _logger.Error(ex, "Unable to check free disk space while importing.");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Unable to check free disk space while importing. {0}", localBook.Path);
             }
 
             return null;

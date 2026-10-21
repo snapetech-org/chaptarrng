@@ -3068,6 +3068,90 @@ namespace Chaptarr.Core.Test.MediaFiles
         }
 
         [Test]
+        public void should_reject_copy_when_import_destination_would_fall_below_minimum_free_space()
+        {
+            var sourceDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"import-space-source-{Guid.NewGuid():N}");
+            var destinationDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"import-space-destination-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(sourceDir);
+            Directory.CreateDirectory(destinationDir);
+            var sourcePath = Path.Combine(sourceDir, "Black Sheep.mp3");
+            File.WriteAllText(sourcePath, "fake mp3");
+            var destinationPath = Path.Combine(destinationDir, "Black Sheep.mp3");
+
+            try
+            {
+                var (qualityProfile, author, book, edition) = CreateAudiobookConversionGraph(417);
+                qualityProfile.ConvertToQualityId = 0;
+                book.CleanTitle = "black sheep";
+
+                var mover = new StubMoveBookFiles { DestinationPath = destinationPath };
+                var diskProvider = CreateDiskProviderProxy();
+                var diskProxy = (DiskProviderProxy)(object)diskProvider;
+                diskProxy.AvailableSpace = 1;
+                var configService = CreateConfigService();
+                ((ConfigServiceProxy)(object)configService).MinimumFreeSpaceWhenImporting = 100;
+
+                var service = new ImportApprovedBooks(
+                    new StubMediaFileService(),
+                    new StubMetadataTagService(),
+                    new StubMediaInfoExtractor(),
+                    Proxy<IAuthorService>(),
+                    Proxy<IBookService>(),
+                    CreateEditionService(new List<Edition> { edition }),
+                    Proxy<IRecycleBinProvider>(),
+                    Proxy<IExtraService>(),
+                    mover,
+                    Proxy<IHistoryService>(),
+                    Proxy<NzbDrone.Core.Download.History.IDownloadHistoryService>(),
+                    new NoOpEventAggregator(),
+                    Proxy<IManageCommandQueue>(),
+                    Proxy<ISeriesBookLinkService>(),
+                    Proxy<ISeriesService>(),
+                    Proxy<IQualityProfileService>(),
+                    new FailingM4bConversionService(),
+                    LogManager.GetLogger("ImportApprovedBooksAdditionalCopyFixture"),
+                    null,
+                    diskProvider,
+                    configService);
+
+                var localBook = new LocalBook
+                {
+                    Path = sourcePath,
+                    Size = 100 * 1024 * 1024,
+                    Book = book,
+                    Author = author,
+                    Edition = edition,
+                    Quality = new QualityModel { Quality = Quality.MP3, Revision = new Revision() }
+                };
+
+                var results = service.Import(
+                    new List<ImportDecision<LocalBook>> { new(localBook) },
+                    replaceExisting: false,
+                    importMode: ImportMode.Copy,
+                    cancellationToken: CancellationToken.None);
+
+                Assert.That(results, Has.Count.EqualTo(1));
+                Assert.That(results[0].Result, Is.EqualTo(ImportResultType.Skipped));
+                Assert.That(results[0].Errors.Single(), Is.EqualTo("Not enough free space"));
+                Assert.That(diskProxy.LastPath, Is.EqualTo(destinationDir));
+                Assert.That(mover.CopyCalls, Is.EqualTo(0));
+                Assert.That(mover.MoveCalls, Is.EqualTo(0));
+            }
+            finally
+            {
+                if (Directory.Exists(sourceDir))
+                {
+                    Directory.Delete(sourceDir, recursive: true);
+                }
+
+                if (Directory.Exists(destinationDir))
+                {
+                    Directory.Delete(destinationDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void should_skip_conversion_when_converted_destination_already_exists()
         {
             var tempPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-destination-exists-{Guid.NewGuid():N}.mp3");
