@@ -1300,6 +1300,8 @@ namespace Chaptarr.Core.Test.Datastore
                     VALUES (63, 20, 'AudioBookShelf', 0, 'unmapped.opf', '2026-01-05', 30, 50, 'opf');
                     INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
                     VALUES (67, 20, 'AudiobookshelfMetadata', 0, 'legacy-consumer.opf', '2026-01-05', 30, 50, 'opf');
+                    INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
+                    VALUES (68, 20, 'Readarr', 1, 'author-metadata.json', '2026-01-05', NULL, NULL, '.json');
                     INSERT INTO Metadata (Id, Enable, Name, Implementation, Settings, ConfigContract)
                     VALUES (101, 1, 'Legacy OPF sidecars', 'AudiobookshelfMetadata', '{}', 'NullConfig');
                     INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
@@ -1321,6 +1323,8 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 63;"), Is.EqualTo("LegacyAudiobookshelfMetadata"));
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 67;"), Is.EqualTo("LegacyAudiobookshelfMetadata"),
                     "the provider-name sidecar alias must win over Chaptarr's case-insensitive AudioBookShelf provider ID");
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 68;"), Is.EqualTo("LegacyAudiobookshelfMetadata"),
+                    "the legacy Readarr author-sidecar consumer must remain tracked by the compatible OPF metadata consumer");
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Metadata WHERE Id = 101 AND Enable = 1 AND Implementation = 'LegacyAudiobookshelfMetadata' AND ConfigContract = 'NullConfig';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 94 AND BookId = 30 AND EditionId IS NULL AND Data LIKE '%\"FileId\":\"50\"%';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));

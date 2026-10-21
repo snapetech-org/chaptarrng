@@ -59,7 +59,8 @@ namespace NzbDrone.Core.Datastore
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["AudioBookShelf"] = "LegacyAudiobookshelfMetadata",
-                ["AudiobookshelfMetadata"] = "LegacyAudiobookshelfMetadata"
+                ["AudiobookshelfMetadata"] = "LegacyAudiobookshelfMetadata",
+                ["Readarr"] = "LegacyAudiobookshelfMetadata"
             };
         private static readonly IReadOnlyDictionary<string, string> NotificationContracts =
             BuildProviderContractMap(typeof(INotification), typeof(NotificationBase<>));
