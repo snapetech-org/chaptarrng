@@ -332,7 +332,6 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        [Test]
         public void should_reject_a_newer_postgres_source_without_changing_its_tables()
         {
             var sourceConnectionString = BuildConnectionString(_baseConnectionString, _sourceSchema);

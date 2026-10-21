@@ -950,7 +950,6 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        [Test]
         public void should_reject_a_bookshelf_schema_newer_than_the_embedded_migration_chain()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))

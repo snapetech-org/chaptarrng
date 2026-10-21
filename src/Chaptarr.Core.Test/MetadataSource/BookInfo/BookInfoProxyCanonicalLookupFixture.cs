@@ -25,12 +25,18 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
         {
             private readonly List<SearchJsonResource> _results;
 
+            public int SearchCalls { get; private set; }
+
             public GoodreadsSearchProxyStub(List<SearchJsonResource> results)
             {
                 _results = results;
             }
 
-            public List<SearchJsonResource> Search(string query) => _results;
+            public List<SearchJsonResource> Search(string query)
+            {
+                SearchCalls++;
+                return _results;
+            }
         }
 
         private sealed class MetadataPreferencesStub : IAdditionalBookMetadataProxy
@@ -189,23 +195,41 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
         [Test]
         public void should_preserve_requested_media_type_on_goodreads_text_search()
         {
+            var goodreadsSearch = new GoodreadsSearchProxyStub(new List<SearchJsonResource>
+            {
+                new SearchJsonResource
+                {
+                    BookId = 22733729,
+                    WorkId = 22733728,
+                    Title = "The Long Way to a Small, Angry Planet",
+                    Author = new AuthorJsonResource { Id = 1306980, Name = "Becky Chambers" }
+                }
+            });
             var proxy = CreateProxy(
                 new RecordingHttpClient(_ => throw new AssertionException("HTTP should not be called")),
-                new GoodreadsSearchProxyStub(new List<SearchJsonResource>
-                {
-                    new SearchJsonResource
-                    {
-                        BookId = 22733729,
-                        WorkId = 22733728,
-                        Title = "The Long Way to a Small, Angry Planet",
-                        Author = new AuthorJsonResource { Id = 1306980, Name = "Becky Chambers" }
-                    }
-                }));
+                goodreadsSearch);
 
-            var results = proxy.SearchForNewBook("dune", author: null, mediaType: BookMediaType.Ebook);
+            // Select the fallback path explicitly. With no saved source preference,
+            // ChaptarrNG uses its metadata server as the primary catalog and resolves
+            // its result through the V5 work endpoint instead of Goodreads autocomplete.
+            var previousSources = Environment.GetEnvironmentVariable("CHAPTARR_METADATA_SOURCES");
+            List<Book> results;
+            try
+            {
+                Environment.SetEnvironmentVariable("CHAPTARR_METADATA_SOURCES", "loc,gutendex,openlibrary");
+                results = proxy.SearchForNewBook("dune", author: null, mediaType: BookMediaType.Ebook);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("CHAPTARR_METADATA_SOURCES", previousSources);
+            }
 
-            Assert.That(results, Has.Count.EqualTo(1));
-            Assert.That(results.Single().MediaType, Is.EqualTo(BookMediaType.Ebook));
+            Assert.Multiple(() =>
+            {
+                Assert.That(goodreadsSearch.SearchCalls, Is.EqualTo(1));
+                Assert.That(results, Has.Count.EqualTo(1));
+                Assert.That(results.Single().MediaType, Is.EqualTo(BookMediaType.Ebook));
+            });
         }
 
         [Test]
