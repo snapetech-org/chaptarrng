@@ -3045,7 +3045,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     }
                     catch (Exception exception)
                     {
-                        _logger.Warn(exception, "Metadata API catalog search failed for {0}", query?.ReplaceLineEndings(""));
+                        _logger.Warn(exception, "Metadata API catalog search failed for {0}", CleanseLogMessage.Cleanse(query));
                     }
                 }
 
@@ -3061,7 +3061,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 }
                 catch (Exception exception)
                 {
-                    _logger.Warn(exception, "Supplemental catalog search failed for {0}", query?.ReplaceLineEndings(""));
+                    _logger.Warn(exception, "Supplemental catalog search failed for {0}", CleanseLogMessage.Cleanse(query));
                 }
             }
 
@@ -3370,7 +3370,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     }
                     catch (Exception exception)
                     {
-                        _logger.Warn(exception, "Hardcover catalog search failed for {0}", q?.ReplaceLineEndings(""));
+                        _logger.Warn(exception, "Hardcover catalog search failed for {0}", CleanseLogMessage.Cleanse(q));
                     }
                 }
 

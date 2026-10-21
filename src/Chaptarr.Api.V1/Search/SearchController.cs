@@ -5,6 +5,7 @@ using Chaptarr.Api.V1.Author;
 using Chaptarr.Api.V1.Books;
 using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Api.V1.Series;
+using AuthorApiResource = Chaptarr.Api.V1.Author.AuthorResource;
 using Chaptarr.Http;
 using Chaptarr.Http.Middleware;
 using Microsoft.AspNetCore.Mvc;
@@ -313,7 +314,7 @@ namespace Chaptarr.Api.V1.Search
             }
         }
 
-        private static void ApplyPreferredSearchAuthorId(AuthorResource resource, string preferredAuthorId, ReadarrFacadeContext facadeContext)
+        private static void ApplyPreferredSearchAuthorId(AuthorApiResource resource, string preferredAuthorId, ReadarrFacadeContext facadeContext)
         {
             if (resource != null && facadeContext == null && !string.IsNullOrWhiteSpace(preferredAuthorId))
             {
