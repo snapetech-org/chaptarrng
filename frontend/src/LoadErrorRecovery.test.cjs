@@ -72,13 +72,24 @@ function loadComponent(componentPath) {
   const helpers = {
     align: { RIGHT: 'RIGHT' },
     icons: { REMOVE: 'REMOVE', CLEAR: 'CLEAR', TABLE: 'TABLE' },
-    kinds: { DANGER: 'DANGER', INFO: 'INFO' }
+    inputTypes: { NUMBER: 'number', SELECT: 'select', CHECK: 'check' },
+    kinds: { DANGER: 'DANGER', INFO: 'INFO' },
+    sizes: { MEDIUM: 'medium' }
   };
   const sandbox = {
     exports: {},
     require(moduleName) {
       if (moduleName === 'react') {
         return { __esModule: true, default: React, Component };
+      }
+      if (moduleName === 'react-redux') {
+        return { connect: () => (ConnectedComponent) => ConnectedComponent };
+      }
+      if (moduleName === 'lodash/find') {
+        return { __esModule: true, default: (items, query) => items.find((item) => Object.entries(query).every(([key, value]) => item[key] === value)) };
+      }
+      if (moduleName === 'lodash/reduceRight') {
+        return { __esModule: true, default: (items, iteratee, accumulator) => items.reduceRight(iteratee, accumulator) };
       }
       if (moduleName === 'prop-types') {
         return { __esModule: true, default: PropTypes };
@@ -190,3 +201,66 @@ for (const [name, componentPath, pageProps] of activityPages) {
     assert.equal(retries, 1);
   });
 }
+
+test('book file quality load failure is announced and can be retried', () => {
+  const BookFileEditor = loadComponent('BookFile/Editor/BookFileEditorTableContent.js');
+  let retries = 0;
+  const component = new BookFileEditor({
+    isDeleting: false,
+    isFetching: false,
+    isPopulated: false,
+    error: 'Quality profiles are unavailable',
+    items: [],
+    qualities: [],
+    onDeletePress() {},
+    onQualityChange() {},
+    onRetryPress: () => retries++,
+    dispatchDeleteBookFile() {}
+  });
+  const alert = findElements(component.render(), (element) => element.type === 'Alert' && element.props.role === 'alert')[0];
+  const retryButton = findElements(alert, (element) => element.type === 'Button')[0];
+
+  assert.match(getText(alert), /Quality profiles are unavailable/);
+  retryButton.props.onPress();
+  assert.equal(retries, 1);
+});
+
+test('manual import file details load failure retries the selected book file', () => {
+  const FileDetails = loadComponent('BookFile/FileDetailsConnector.js');
+  const requests = [];
+  const component = new FileDetails({
+    items: [],
+    id: 27,
+    isFetching: false,
+    error: { message: 'File details are unavailable' },
+    fetchBookFiles: (request) => requests.push(request)
+  });
+  const alert = findElements(component.render(), (element) => element.type === 'Alert' && element.props.role === 'alert')[0];
+  const retryButton = findElements(alert, (element) => element.type === 'Button')[0];
+
+  assert.match(getText(alert), /File details are unavailable/);
+  retryButton.props.onPress();
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].id, 27);
+});
+
+test('conversion settings load failure exposes the server error and retries', () => {
+  const ConversionSettings = loadComponent('Settings/Conversion/ConversionSettings.js');
+  let retries = 0;
+  const component = new ConversionSettings({
+    isFetching: false,
+    error: { message: 'Conversion settings are unavailable' },
+    settings: {},
+    hasSettings: false,
+    advancedSettings: false,
+    onInputChange() {},
+    onSavePress() {},
+    onRetryPress: () => retries++
+  });
+  const alert = findElements(component.render(), (element) => element.type === 'Alert' && element.props.role === 'alert')[0];
+  const retryButton = findElements(alert, (element) => element.type === 'Button')[0];
+
+  assert.match(getText(alert), /Conversion settings are unavailable/);
+  retryButton.props.onPress();
+  assert.equal(retries, 1);
+});

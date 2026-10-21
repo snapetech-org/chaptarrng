@@ -56,6 +56,11 @@ with status, monitoring, and quality profiles scoped to each record's format.
 These additions are not in `v0.9.977`. The runtime feature commit is
 `c75ecbb37c5708441219887f7180d5ab10ee194d`; current source code is on
 [ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main).
+Current main also offers announced load errors with Retry across activity and
+library lists, Manual Import, File Browser, book-file details and quality
+lookup, Calendar, backup lists, Wanted pages, author history, and conversion
+settings. The frontend CJS suite passes 119/119 on this source; these changes
+are not in `.977`.
 It also lets operators preview
 eligible existing authors and skip reasons under Settings > Media Management >
 Root Folders, then separately confirm filling missing format paths. The command
@@ -87,8 +92,9 @@ same. Narrator discovery errors announce the failure and can be retried without
 stale errors during loading. Organize, retag, and convert preview failures show
 available error details and Retry. Manual Import hides stale rows and disables
 Import after a preview error; File Browser can retry the current directory. Activity lists, author history,
-book-edit edition loading, Calendar, backup lists, and Wanted pages also retry
-after load errors. The frontend CJS regression suite passes 116/116 locally. These application
+book-edit edition and book-file detail/quality loading, Calendar, backup lists,
+Wanted pages, and conversion settings also retry after load errors. The frontend
+CJS regression suite passes 119/119 locally. These application
 changes are on [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Earlier matrix results predate the latest picker changes;
 follow the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml)

@@ -24,8 +24,9 @@
 > Add New and interactive searches expose retry for provider errors; narrator
 > discovery and organize, retag, and convert previews offer announced recovery.
 > Manual Import, File Browser, activity lists, author history, book-edit edition
-> loading, Calendar, backups, and Wanted pages also retry failed loads. The frontend CJS suite
-> passes 116/116 locally. Focused migration, metadata,
+> loading, book-file details and quality loading, Calendar, backups, Wanted pages,
+> and conversion settings also retry failed loads. The frontend CJS suite passes
+> 119/119 locally. Focused migration, metadata,
 > move, and CLI checks are listed in the retirement status. Current application
 > source is on [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 > Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Current source remains unpublished. The source also

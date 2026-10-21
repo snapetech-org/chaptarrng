@@ -32,8 +32,9 @@ failures also announce errors and provide retry actions. Interactive release
 search and organize, retag, and convert previews also expose retry after errors.
 Manual Import hides stale rows and disables Import after a preview error; File
 Browser can retry the current directory. Activity lists, author history,
-book-edit edition loading, Calendar, backup lists, and Wanted pages also retry
-after load errors. The frontend CJS suite passes 116/116
+book-edit edition and book-file detail/quality loading, Calendar, backup lists,
+Wanted pages, and conversion settings also retry after load errors. The frontend
+CJS suite passes 119/119
 locally, and focused migration, metadata, move, and CLI checks
 are recorded below. Application code is at
 the current [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).

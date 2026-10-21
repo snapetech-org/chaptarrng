@@ -46,7 +46,8 @@ helpers pass Bash syntax, help, and ShellCheck checks. Manual Import selector
 empty states, retries, and stale-choice handling, Add New and interactive
 search recovery, narrator and media-preview retry, Manual Import and File
 Browser recovery, and retry for activity lists, author history, book-edit edition
-loading, Calendar, backups, and Wanted pages pass in the 116/116 frontend CJS suite. Current application source is on
+loading, book-file detail and quality loading, Calendar, backups, Wanted pages,
+and conversion settings pass in the 119/119 frontend CJS suite. Current application source is on
 [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Publication remains frozen; no release, package, image, installer,
 or migration bridge was published. Representative operator-data migration and

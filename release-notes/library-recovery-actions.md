@@ -5,4 +5,4 @@ area: library
 action: none
 breaking: false
 ---
-Calendar, Wanted, author history, Edit Book editions, and backup lists now show load errors with Retry controls that reuse the current context.
+Calendar, Wanted, author history, Edit Book editions, book-file details and quality loading, and backup lists now show load errors with Retry controls that reuse the current context.

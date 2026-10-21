@@ -3,7 +3,10 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
+import Alert from 'Components/Alert';
+import Button from 'Components/Link/Button';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
+import { kinds } from 'Helpers/Props';
 import { fetchBookFiles } from 'Store/Actions/bookFileActions';
 import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
@@ -33,6 +36,10 @@ class FileDetailsConnector extends Component {
     this.props.fetchBookFiles({ id: this.props.id });
   }
 
+  onRetryPress = () => {
+    this.props.fetchBookFiles({ id: this.props.id });
+  };
+
   //
   // Render
 
@@ -47,13 +54,18 @@ class FileDetailsConnector extends Component {
     const item = find(items, { id });
     const errorMessage = getErrorMessage(error, translate('UnableToLoadManualImportItems'));
 
-    if (isFetching || !item) {
+    if (error && !isFetching) {
+      return (
+        <Alert kind={kinds.DANGER} role="alert">
+          <div>{errorMessage}</div>
+          <Button size="small" onPress={this.onRetryPress}>
+            {translate('Retry')}
+          </Button>
+        </Alert>
+      );
+    } else if (isFetching || !item) {
       return (
         <LoadingIndicator />
-      );
-    } else if (error) {
-      return (
-        <div>{errorMessage}</div>
       );
     }
 
