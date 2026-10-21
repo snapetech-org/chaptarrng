@@ -47,7 +47,7 @@ empty states, retries, and stale-choice handling, Add New and interactive
 search recovery, narrator and media-preview retry, Manual Import and File
 Browser recovery, and retry for activity lists, author history, book-edit edition
 loading, book-file detail and quality loading, Calendar, backups, Wanted pages,
-conversion settings, and startup-error recovery pass in the 121/121 frontend CJS
+conversion settings, and startup-error recovery pass in the 122/122 frontend CJS
 suite. Current application source is on
 [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Publication remains frozen; no release, package, image, installer,

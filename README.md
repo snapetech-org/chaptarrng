@@ -61,7 +61,7 @@ library lists, Manual Import, File Browser, book-file details and quality
 lookup, Calendar, backup lists, Wanted pages, author history, and conversion
 settings. Startup errors identify the failed data source and retry failed setup
 requests when browser storage is available. The frontend CJS suite passes
-121/121 on this source; these changes
+122/122 on this source; these changes
 are not in `.977`.
 It also lets operators preview
 eligible existing authors and skip reasons under Settings > Media Management >
@@ -96,7 +96,7 @@ available error details and Retry. Manual Import hides stale rows and disables
 Import after a preview error; File Browser can retry the current directory. Activity lists, author history,
 book-edit edition and book-file detail/quality loading, Calendar, backup lists,
 Wanted pages, and conversion settings also retry after load errors. The frontend
-CJS regression suite passes 121/121 locally. These application
+CJS regression suite passes 122/122 locally. These application
 changes are on [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Earlier matrix results predate the latest picker changes;
 follow the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml)

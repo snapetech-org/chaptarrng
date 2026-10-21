@@ -14,7 +14,15 @@ const PropTypes = new Proxy({}, {
   }
 });
 
+class Component {
+  constructor(props) {
+    this.props = props;
+    this.state = {};
+  }
+}
+
 const React = {
+  Component,
   createElement(type, props, ...children) {
     return {
       type,
@@ -77,6 +85,64 @@ function loadErrorPage() {
   return sandbox.exports.default;
 }
 
+function loadPageConnector() {
+  const filePath = path.join(__dirname, 'Components/Page/PageConnector.js');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const { code } = transformSync(source, {
+    filename: filePath,
+    babelrc: false,
+    configFile: false,
+    presets: [
+      [
+        '@babel/preset-env',
+        {
+          targets: { node: 'current' },
+          loose: true,
+          modules: 'commonjs'
+        }
+      ],
+      '@babel/preset-react'
+    ]
+  });
+  const sandbox = {
+    exports: {},
+    localStorage: {
+      setItem() {},
+      removeItem() {}
+    },
+    require(moduleName) {
+      if (moduleName === 'prop-types') {
+        return { __esModule: true, default: PropTypes };
+      }
+      if (moduleName === 'react') {
+        return { __esModule: true, default: React, Component };
+      }
+      if (moduleName === 'react-redux') {
+        return { connect: () => (component) => component };
+      }
+      if (moduleName === 'react-router-dom') {
+        return { withRouter: (component) => component };
+      }
+      if (moduleName === 'reselect') {
+        return { createSelector: () => () => ({}) };
+      }
+      if (moduleName.startsWith('Store/')) {
+        return new Proxy({}, { get: () => () => ({}) });
+      }
+      if (moduleName.startsWith('Store/Selectors/')) {
+        return { __esModule: true, default: () => () => ({}) };
+      }
+      if (moduleName.startsWith('./')) {
+        return { __esModule: true, default: moduleName };
+      }
+      return { __esModule: true, default: moduleName };
+    }
+  };
+
+  vm.runInNewContext(code, sandbox, { filename: filePath });
+  return sandbox.exports.default;
+}
+
 function findElements(element, predicate, matches = []) {
   if (Array.isArray(element)) {
     element.forEach((child) => findElements(child, predicate, matches));
@@ -132,4 +198,29 @@ test('browser storage failures explain the issue without offering a retry that c
 
   assert.match(getText(output), /Local Storage is not supported/);
   assert.equal(findElements(output, (element) => element.type === 'Button').length, 0);
+});
+
+test('startup Retry dispatches only the resources that failed', () => {
+  const PageConnector = loadPageConnector();
+  const requested = [];
+  const props = {
+    authorError: { message: 'author request failed' },
+    languagesError: { message: 'language request failed' },
+    dispatchFetchAuthor: () => requested.push('author'),
+    dispatchFetchCustomFilters: () => requested.push('custom filters'),
+    dispatchFetchTags: () => requested.push('tags'),
+    dispatchFetchLanguages: () => requested.push('languages'),
+    dispatchFetchQualityProfiles: () => requested.push('quality profiles'),
+    dispatchFetchMetadataProfiles: () => requested.push('metadata profiles'),
+    dispatchFetchImportLists: () => requested.push('import lists'),
+    dispatchFetchIndexerFlags: () => requested.push('indexer flags'),
+    dispatchFetchUISettings: () => requested.push('UI settings'),
+    dispatchFetchStatus: () => requested.push('system status'),
+    dispatchFetchTranslations: () => requested.push('translations')
+  };
+  const connector = new PageConnector(props);
+
+  connector.onRetryPress();
+
+  assert.deepEqual(requested, ['author', 'languages']);
 });
