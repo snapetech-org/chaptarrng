@@ -43,10 +43,10 @@ Goodreads pagination 5/5, format-profile refresh 5/5, Calibre language 4/4,
 Calibre proxy/series 6/6, Hardcover metadata/search 45/45, book-file move
 planning 15/15, and author-move path coverage 3/3. All three migration CLI
 helpers pass Bash syntax, help, and ShellCheck checks. Manual Import selector
-empty states, retries, and stale-choice handling, plus Add New and narrator
-search error recovery, pass in the 108/108 frontend CJS suite. Application code
-is at
-[`2f33460c`](https://github.com/snapetech-org/chaptarrng/commit/2f33460c62599ce2ade010edb4fd963d2af030f7).
+empty states, retries, and stale-choice handling, Add New and interactive
+search recovery, narrator retry, and media-preview retry pass in the 112/112
+frontend CJS suite. Current application source is on
+[ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Publication remains frozen; no release, package, image, installer,
 or migration bridge was published. Representative operator-data migration and
 rollback, provider and SeerrNG workflows, representative media and restart

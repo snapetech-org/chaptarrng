@@ -7,6 +7,7 @@ import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import Table from 'Components/Table/Table';
 import TableBody from 'Components/Table/TableBody';
 import { icons, kinds, sortDirections } from 'Helpers/Props';
+import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
 import FilterWarning from './FilterWarning';
 import InteractiveSearchMediaTypeToggle from './InteractiveSearchMediaTypeToggle';
@@ -219,7 +220,8 @@ class InteractiveSearch extends Component {
       siblingToggleEnabled,
       siblingToggleDisabledReason,
       onSortPress,
-      onToggleBypass
+      onToggleBypass,
+      onRetryPress
     } = this.props;
 
     const { showHiddenResults } = this.state;
@@ -248,9 +250,12 @@ class InteractiveSearch extends Component {
         {isFetching ? <LoadingIndicator /> : null}
 
         {!isFetching && error ?
-          <div className={styles.blankpad}>
-            {translate('InteractiveSearchUnableToLoadResults')}
-          </div> :
+          <Alert kind={kinds.DANGER} role="alert">
+            <div>{getErrorMessage(error, translate('InteractiveSearchUnableToLoadResults'))}</div>
+            <Button size="small" onPress={onRetryPress}>
+              {translate('Retry')}
+            </Button>
+          </Alert> :
           null}
 
         {!isFetching && isPopulated && !totalReleasesCount && (!filterSummary || !filterSummary.hasSoftFilters) ?
@@ -389,6 +394,7 @@ InteractiveSearch.propTypes = {
   siblingToggleDisabledReason: PropTypes.string,
   onSortPress: PropTypes.func.isRequired,
   onGrabPress: PropTypes.func.isRequired,
+  onRetryPress: PropTypes.func.isRequired,
   onToggleBypass: PropTypes.func,
   onMediaTypeChange: PropTypes.func
 };

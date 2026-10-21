@@ -82,10 +82,11 @@ coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and
 ShellCheck checks. Manual Import author, book, edition, and quality selectors
 explain empty states, retry failed loads, hide stale choices, and block empty
 quality submission. Add New provider-search failures announce the error and
-offer Retry in search-as-you-type mode; narrator discovery errors announce the
-failure and can be retried without stale errors during loading. The frontend
-CJS regression suite passes 108/108 locally.
-The application code is `2f33460c62599ce2ade010edb4fd963d2af030f7`.
+offer Retry in search-as-you-type mode; interactive release search does the
+same. Narrator discovery errors announce the failure and can be retried without
+stale errors during loading. Organize, retag, and convert preview failures show
+available error details and Retry. The frontend CJS regression suite passes
+112/112 locally. These application changes are on [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Earlier matrix results predate the latest picker changes;
 follow the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml)
 for the exact current head. These source changes remain unpublished.
