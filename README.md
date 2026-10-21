@@ -811,6 +811,7 @@ Note: the inherited assembly is named `Chaptarr.dll` on Linux/macOS and `Chaptar
 
 ## Documentation
 - [Documentation index](docs/README.md): migration, features, operations, and development guides
+- [OpenID Connect setup, account admission, and recovery](docs/oidc-authentication.md) · [shared provider catalog](https://github.com/snapetech-org/seerrng/blob/main/docs/maintainers/oidc-provider-catalog.md) · [implementation contract](https://github.com/snapetech-org/seerrng/blob/main/docs/maintainers/oidc-cross-project-template.md)
 - [Setup experience contract](docs/development/setup-experience-contract.md): evolve Quickstart in place for ChaptarrNG's ebook and audiobook workflow
 - [UI localization roadmap](docs/localization-roadmap.md): current locale order, translated high-use strings, and remaining catalog work
 

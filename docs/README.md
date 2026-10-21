@@ -13,7 +13,7 @@ installation choices.
 
 ## Features and integrations
 
-- [OpenID Connect authentication](oidc-authentication.md): provider setup, callback URL, account admission, and local-session behavior.
+- [OpenID Connect authentication](oidc-authentication.md): provider registration, exact callback and proxy path, verified-email admission, local-session behavior, secret lifecycle, recovery, Apple setup, and troubleshooting.
 - [Multipart audiobook merging](AUDIOBOOK_M4B_MERGING.md): legacy settings, conversion behavior, fallback, and current acceptance limits.
 - [Media moves](MEDIA_MOVES.md): preview and move registered files between author folders.
 - [Unmapped files](UNMAPPED_FILES.md): retry matching after catalog or metadata changes.
