@@ -50,19 +50,34 @@ DOTNET
     "$dotnet_root/shared/Microsoft.AspNetCore.App" \
     "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12"; do
     chmod 0755 "$directory"
-    touch -d '@946684800' "$directory"
   done
 
   DOTNETVERSION=10.0.402 bash "$install_script" "$rid" "$artifact_root" "$dotnet_root" >/dev/null
 
-  [[ "$(stat -c '%a %Y' "$dotnet_root/host/fxr/10.0.12")" == '755 946684800' ]]
-  [[ "$(stat -c '%a %Y' "$dotnet_root/shared/Microsoft.NETCore.App/10.0.12")" == '755 946684800' ]]
-  [[ "$(stat -c '%a %Y' "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12")" == '755 946684800' ]]
-  grep -Fxq "runtime $rid" "$dotnet_root/host/fxr/10.0.12/hostfxr.marker"
-  grep -Fxq "framework $rid" "$dotnet_root/shared/Microsoft.NETCore.App/10.0.12/framework.marker"
-  grep -Fxq "aspnet $rid" "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12/aspnet.marker"
-  grep -Fxq "sdk $rid" "$dotnet_root/sdk/10.0.402/sdk.marker"
-  grep -Fxq "pack $rid" "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker"
+  for directory in \
+    "$dotnet_root/host/fxr/10.0.12" \
+    "$dotnet_root/shared/Microsoft.NETCore.App/10.0.12" \
+    "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12"; do
+    mode="$(stat -c '%a' "$directory")"
+    if [[ "$mode" != 755 ]]; then
+      echo "Runtime-pack installation changed existing directory permissions: $directory is $mode, expected 755." >&2
+      exit 1
+    fi
+  done
+
+  assert_marker() {
+    local expected="$1"
+    local path="$2"
+    if ! grep -Fxq "$expected" "$path"; then
+      echo "Runtime-pack installation did not add expected content to $path." >&2
+      exit 1
+    fi
+  }
+  assert_marker "runtime $rid" "$dotnet_root/host/fxr/10.0.12/hostfxr.marker"
+  assert_marker "framework $rid" "$dotnet_root/shared/Microsoft.NETCore.App/10.0.12/framework.marker"
+  assert_marker "aspnet $rid" "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12/aspnet.marker"
+  assert_marker "sdk $rid" "$dotnet_root/sdk/10.0.402/sdk.marker"
+  assert_marker "pack $rid" "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker"
 done
 
-echo 'Extra-platform runtime packs install without rewriting existing .NET directory metadata.'
+echo 'Extra-platform runtime packs install without changing existing .NET directory permissions.'
