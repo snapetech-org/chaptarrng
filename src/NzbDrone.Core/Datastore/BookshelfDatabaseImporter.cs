@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using FluentMigrator;
 using Microsoft.Data.Sqlite;
 using Npgsql;
 using NpgsqlTypes;
@@ -28,6 +29,14 @@ namespace NzbDrone.Core.Datastore
     public static class BookshelfDatabaseImporter
     {
         private const int SupportedSourceMigration = 158;
+        private const string BookshelfMigrationNamespace = "NzbDrone.Core.Datastore.BookshelfMigration";
+
+        private static readonly HashSet<long> SupportedSourceMigrationVersions = typeof(BookshelfDatabaseImporter).Assembly
+            .GetTypes()
+            .Where(type => string.Equals(type.Namespace, BookshelfMigrationNamespace, StringComparison.Ordinal))
+            .SelectMany(type => type.GetCustomAttributes<MigrationAttribute>(inherit: false))
+            .Select(migration => migration.Version)
+            .ToHashSet();
 
         private static readonly IReadOnlyDictionary<string, string> CompatibleIndexerContracts =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -181,7 +190,7 @@ namespace NzbDrone.Core.Datastore
                     "; unknown: " + string.Join(", ", unknown) + "). The source database was not changed.");
             }
 
-            var version = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(\"Version\"), 0) FROM \"VersionInfo\";"), CultureInfo.InvariantCulture);
+            var version = ValidateSourceBackup(source);
             if (version != SupportedSourceMigration)
             {
                 throw new InvalidDataException(
@@ -199,11 +208,25 @@ namespace NzbDrone.Core.Datastore
                 throw new InvalidDataException("BookshelfNG backup has no migration history and cannot be upgraded by the bundled migration chain. The source database was not changed.");
             }
 
-            var version = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(\"Version\"), 0) FROM \"VersionInfo\";"), CultureInfo.InvariantCulture);
+            var migrationHistory = ReadSourceMigrationHistory(source);
+            var version = migrationHistory.DefaultIfEmpty(0).Max();
             if (version < 1 || version > SupportedSourceMigration)
             {
                 throw new InvalidDataException(
                     $"BookshelfNG schema version {version} is outside the bundled migration chain (1-{SupportedSourceMigration}). The source database was not changed.");
+            }
+
+            var unknownMigrations = migrationHistory.Except(SupportedSourceMigrationVersions).OrderBy(value => value).ToArray();
+            var missingMigrations = SupportedSourceMigrationVersions
+                .Where(value => value <= version && !migrationHistory.Contains(value))
+                .OrderBy(value => value)
+                .ToArray();
+            if (unknownMigrations.Length > 0 || missingMigrations.Length > 0)
+            {
+                throw new InvalidDataException(
+                    "BookshelfNG schema migration history cannot be upgraded by the bundled migration chain " +
+                    "(unrecognized: " + string.Join(", ", unknownMigrations) +
+                    "; missing: " + string.Join(", ", missingMigrations) + "). The source database was not changed.");
             }
 
             // Accept a historical alias only when the bundled migration chain will transform it.
@@ -218,7 +241,21 @@ namespace NzbDrone.Core.Datastore
                     string.Join(", ", unknown) + "). The source database was not changed.");
             }
 
-            return version;
+            return checked((int)version);
+        }
+
+        private static HashSet<long> ReadSourceMigrationHistory(DbConnection source)
+        {
+            using var command = source.CreateCommand();
+            command.CommandText = "SELECT DISTINCT \"Version\" FROM \"VersionInfo\";";
+            using var reader = command.ExecuteReader();
+            var versions = new HashSet<long>();
+            while (reader.Read())
+            {
+                versions.Add(Convert.ToInt64(reader.GetValue(0), CultureInfo.InvariantCulture));
+            }
+
+            return versions;
         }
 
         private static void DeferForeignKeys(DbConnection target, DbTransaction transaction)

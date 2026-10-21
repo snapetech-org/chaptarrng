@@ -1,14 +1,14 @@
 # BookshelfNG PostgreSQL migration candidate
 
 > **Not supported in a published release.** ChaptarrNG `v0.9.977` cannot
-> convert a PostgreSQL BookshelfNG database. PR #131 merged to `main` on
-> 2026-10-20. Exact-head Build
-> [39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961)
-> passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
-> native-runner receipt checks. These PostgreSQL checks use synthetic fixtures
-> only. The separate GHAS Semgrep OSS check still has reviewed SQL-format
-> findings and fixture-path warnings. Representative operator-data conversion,
-> independent backup/restore, and installed rollback remain open. See the
+> convert a PostgreSQL BookshelfNG database. Current `main` upgrades supported
+> older BookshelfNG schemas on a disposable PostgreSQL snapshot before staging
+> ChaptarrNG, and retains the untouched source schema for rollback. Local
+> PostgreSQL 17 coverage passes 8/8 cases, including source migrations 1, 13,
+> 22, and 33, the migration-158 schema, startup conversion, and refusal of
+> unsupported migration histories. These are synthetic fixtures; representative
+> operator-data conversion, independent backup/restore, installed rollback,
+> provider parity, and channel handoff remain open. See the
 > [retirement status report](BOOKSHELFNG_RETIREMENT.md) for the full release
 > and acceptance state.
 
@@ -32,11 +32,13 @@ BookshelfNG application to be stopped; its advisory lock coordinates ChaptarrNG
 conversions but does not stop BookshelfNG or other database clients from
 writing.
 
-The candidate accepts only the current BookshelfNG migration-158 main schema.
-For an older schema, run the final BookshelfNG `0.4.21.71` release against its
-own database first. The converter rejects unsupported tables and PostgreSQL
-views, materialized views, foreign tables, and partitioned tables before
-promotion.
+Current `main` accepts source migration histories represented in the bundled
+BookshelfNG chain (versions 1–46 and 158). If the source is older, the
+PostgreSQL-specific migration runner advances only the disposable snapshot to
+158 before import; it never migrates the live source in place. Migration
+history with unknown or missing entries fails closed, as do future versions,
+unsupported tables, PostgreSQL views, materialized views, foreign tables, and
+partitioned tables. The published `.977` release still supports SQLite only.
 
 The candidate importer translates a saved `HardcoverAuth` config row to
 ChaptarrNG's `HardcoverApiToken` setting when the source has no explicit
@@ -79,6 +81,10 @@ stored beside `readarr.db` in the ChaptarrNG app data directory.
 
 ## Acceptance still required
 
+- Current-source local PostgreSQL 17 conversion fixture: 8/8 cases pass,
+  including four older source versions, preview immutability, retained original
+  migration history, apply, restore preview, rollback, and rejection of unknown
+  or incomplete histories. This does not substitute for representative data.
 - Hosted synthetic PostgreSQL conversion and rollback fixture: passed 4/4 cases on exact-head run [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100), including normal-startup conversion and backup retention. This is one synthetic migration-158 schema. Representative operator data, independent backup/restore, and rollback acceptance on a supported deployment remain open.
 - Verify PostgreSQL BookshelfNG migrations and ChaptarrNG runtime startup in
   the supported deployment, including sequence allocation after import.

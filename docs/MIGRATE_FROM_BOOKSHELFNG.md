@@ -12,6 +12,14 @@
 > [ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main),
 > but remains unpublished and is not approved for cutover.
 >
+> Current `main` also upgrades supported older BookshelfNG PostgreSQL schemas
+> on a disposable schema snapshot and preserves the untouched source for
+> rollback. Its local synthetic PostgreSQL 17 fixture passes conversion and
+> rollback from source versions 1, 13, 22, and 33. This capability is not in
+> `.977`; representative operator data, independent restore, installed rollback,
+> and channel acceptance remain open. See the
+> [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
+>
 > Current ChaptarrNG [main](https://github.com/snapetech-org/chaptarrng/tree/main)
 > also implements BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114):
 > the author-path initialization setting is opt-in and disabled by default.
@@ -192,15 +200,17 @@ and table-boundary validation when the database is BookshelfNG. Normal startup
 then converts the staged database and retains the source for rollback. These
 raw upload extensions are not accepted by published `v0.9.977`.
 
-If BookshelfNG is older than `0.4.21.71`, update it to that final release and
-let BookshelfNG finish its own database upgrade before switching applications.
-This brings the source to migration 158, which the published `.977` converter
-accepts. For databases earlier than migration 14 that cannot be upgraded with
-BookshelfNG, do not switch to ChaptarrNG `.977`; the source fix is unreleased
-while the retirement freeze is active. Stop the service after it reaches an
-idle state, then run ChaptarrNG preview. The published `.977` converter does
-not support PostgreSQL BookshelfNG databases. Merged PR #131 contains an unreleased candidate for one PostgreSQL migration-158 schema. PostgreSQL remains unsupported for operators; see the [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). Do not use the candidate for operator data; the published migration path remains SQLite-only. See the
-[PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
+The published `.977` converter does not support PostgreSQL. Current `main`
+contains a separate PostgreSQL route that migrates recognized older source
+schemas on a disposable PostgreSQL snapshot, and preserves the original schema
+for rollback. This source candidate remains unpublished and unapproved for
+operator cutover; representative populated data, independent backup restore,
+installed rollback, and channel handoff are still required. See the
+[PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). For SQLite,
+the current source also bundles the BookshelfNG migration chain; `.977` still
+requires migration 158, and databases earlier than migration 14 require that
+unreleased source fix. Do not switch applications while the retirement freeze
+is active.
 
 Environment variables are outside the database conversion. If BookshelfNG
 used `BOOKSHELF_ALLOW_API_KEY_QUERY=false`, ChaptarrNG honors it while
