@@ -54,8 +54,9 @@ monitoring; bulk monitoring applies to both formats. Separately, the Books
 index's **Both** filter lists audiobook and ebook records as separate rows,
 with status, monitoring, and quality profiles scoped to each record's format.
 These additions are not in `v0.9.977`. The runtime feature commit is
-`c75ecbb37c5708441219887f7180d5ab10ee194d`; current source code is at
-`4b7f6da47b1607905c01c6e3f74a4fd544d1a395`. It also lets operators preview
+`c75ecbb37c5708441219887f7180d5ab10ee194d`; current source code is on
+[ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main).
+It also lets operators preview
 eligible existing authors and skip reasons under Settings > Media Management >
 Root Folders, then separately confirm filling missing format paths. The command
 rechecks current settings, preserves manual paths, queues author refreshes, and
@@ -72,15 +73,17 @@ actions to the Editions and Narrations panels and tighten the SeerrNG service
 key: it can read audiobook-scoped narrator comparisons and set a preferred
 narrator only with the non-overriding payload. Ebook-scoped narrator access
 and unrelated or administrative routes stay denied.
-Build [39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
-for the author-path implementation at `83f66c36` passed Linux and PostgreSQL
-migration checks; macOS and Windows were cancelled when follow-up commit
-`4b7f6da4` added configuration-persistence coverage. Build
-[39536365519](https://github.com/snapetech-org/chaptarrng/actions/runs/39536365519)
-for `4b7f6da4` is in progress across platforms. Focused author and migration
-fixtures pass 11/11; the new configuration test passes 1/1. Security Analysis
-Trivy and Semgrep passed; NuGet dependency submission passed. The
-current source remains unpublished.
+Goodreads series imports now fetch all pages while preserving duplicate
+filtering and configured import limits; the focused pagination suite passes
+5/5. Other focused checks pass author/migration 11/11, configuration
+persistence 1/1, format-profile refresh 5/5, Calibre language 4/4, Calibre
+proxy/series 6/6, Hardcover metadata/search 45/45, book-file move planning
+15/15, and author-move path coverage 3/3. The prior exact-head run for
+`6fc744ef` passed Linux, macOS, Windows, PostgreSQL migration, and native
+runner receipt checks; it does not cover the Goodreads pagination change.
+The current candidate's full cross-platform run is tracked in
+[ChaptarrNG Actions](https://github.com/snapetech-org/chaptarrng/actions).
+These source changes remain unpublished.
 Current `main` also applies the author freshness policy to book-added events
 while retaining the author-scoped folder rescan, even when metadata is skipped
 or unchanged. The exact-head run above includes this change. See the
@@ -126,9 +129,8 @@ key access, and the pending-import cancel lifecycle. The `.m4b` and `.epub`
 files are placeholders, so this does not establish media processing or
 operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM_BOOKSHELFNG.md#exact-head-artifact-migration-and-seerrng-smoke-2026-10-20).
 
-The current BookshelfNG inventory covers 732 post-fork commits (723 absent
-from upstream), 1,119 changed paths, 83 reviewed mappings, 663 dispositions,
-and 456 open paths (137 unmapped and 319 requiring semantic review). The
+The exact BookshelfNG inventory, revision pins, path dispositions, and open
+review count are maintained in the canonical
 [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
 Path-level records are not proof of behavior or feature parity; no runtime
 feature has been approved for retirement.

@@ -12,19 +12,28 @@
 > [ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main),
 > but remains unpublished and is not approved for cutover.
 >
-> Current ChaptarrNG `main` at [`4b7f6da4`](https://github.com/snapetech-org/chaptarrng/commit/4b7f6da47b1607905c01c6e3f74a4fd544d1a395)
+> Current ChaptarrNG [main](https://github.com/snapetech-org/chaptarrng/tree/main)
 > also implements BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114):
 > the author-path initialization setting is opt-in and disabled by default.
 > Migration carries the saved choice and maps configured ebook/audiobook roots
 > to ChaptarrNG defaults when those defaults are empty. Existing author paths and
-> files are untouched. This change is source-only. The Build for runtime commit
-> `4b7f6da4` is running at
-> [39536365519](https://github.com/snapetech-org/chaptarrng/actions/runs/39536365519);
-> Security Analysis, Semgrep CE, Trivy, and NuGet dependency submission
-> passed. The source also preserves BookshelfNG's optional
+> files are untouched. The latest source also restores whole-author move
+> updates for ebook and audiobook paths under the moved directory. Goodreads
+> series imports now fetch all pages and preserve the import limit across
+> pages; focused pagination tests pass 5/5. Focused backend/migration fixtures
+> pass 11/11, configuration persistence 1/1, Calibre proxy/series 6/6,
+> Hardcover metadata/search 45/45, book-file move planning 15/15, and
+> author-move path coverage 3/3. The current candidate's full cross-platform
+> run is tracked in [ChaptarrNG
+> Actions](https://github.com/snapetech-org/chaptarrng/actions). The source is
+> unpublished. The source also
+> preserves BookshelfNG's optional
 > `MoveExtraFilesOnRename` setting, exposes it in Media Management, and includes
 > it in settings backups. When enabled, it moves only configured loose files
-> after all renamed book media leaves the old folder. No release, package,
+> after all renamed book media leaves the old folder. The current path audit
+> is revision-pinned in the [canonical BookshelfNG consolidation
+> report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md);
+> path decisions do not establish feature parity. No release, package,
 > image, or migration bridge has been published. Representative operator data, rollback, provider
 > behavior, and installed update-channel acceptance remain open. See the
 > [BookshelfNG retirement issue](https://github.com/snapetech-org/bookshelfng/issues/144)

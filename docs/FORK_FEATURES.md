@@ -17,36 +17,39 @@ ChaptarrNG `main`'s history.
 
 ## BookshelfNG consolidation status — 2026-10-21
 
-ChaptarrNG PR #131 is merged to `main`. Current source head is
-[`4b7f6da4`](https://github.com/snapetech-org/chaptarrng/commit/4b7f6da47b1607905c01c6e3f74a4fd544d1a395). It includes the BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114)
+ChaptarrNG PR #131 is merged to `main`. Current source is on
+[ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main).
+It includes the BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114)
 setting for new-author format paths, disabled by default, and migration support
 that carries the saved flag and maps configured ebook/audiobook roots to
 ChaptarrNG defaults when those defaults are empty. Existing author paths and
-files are not changed. The feature is source-only; public ChaptarrNG `.977`
-predates the toggle.
+files are not changed. The feature remains source-only; public ChaptarrNG
+`.977` predates the toggle. The latest source also restores whole-author move
+updates for ebook and audiobook paths under the moved directory.
 
-The refreshed BookshelfNG audit covers 732 post-fork commits (723 absent from
-upstream), 1,119 paths, 83 reviewed mappings, and 663 dispositions (177
-retained, 132 equivalent, 183 ported, and 171 non-runtime retirements). Another
-456 paths remain open (137 unmapped and 319 requiring semantic review). The
-canonical path-level report and evidence are maintained in the
+The revision-pinned BookshelfNG path audit and its remaining review are
+maintained in the canonical
 [BookshelfNG consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
-Path classifications do not establish runtime parity, and no runtime feature
-is approved for retirement.
+The Calibre proxy review found legacy operations retained and new path lookup,
+selected-field updates, stable series selection, and no-op write avoidance;
+focused proxy/series tests pass 6/6. Live Calibre server authentication and
+version compatibility remain unverified. The book-file move service preserves
+the legacy organization, move, and copy flows through an explicit destination
+plan; its focused fixture passes 15/15. Path classifications do not establish
+runtime parity, and no runtime feature is approved for retirement.
 
-Focused backend and migration fixtures pass 11/11; the follow-up configuration
-test passes 1/1. Build
-[39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
-for `83f66c36` passed Linux and PostgreSQL but was cancelled on macOS and Windows
-when the follow-up was pushed. Build
-[39536365519](https://github.com/snapetech-org/chaptarrng/actions/runs/39536365519)
-for `4b7f6da4` is in progress. Security Analysis, Trivy, Semgrep CE, and NuGet dependency submission
-passed. Publication
-remains frozen; no release, package, image, installer, or migration bridge was
-published. Representative operator-data migration and rollback, provider and
-SeerrNG workflows, representative media and restart recovery, installed
-update-channel handoff, and operator acceptance remain open. Keep BookshelfNG
-in service and do not start ChaptarrNG against BookshelfNG appdata. See the
+Focused author/migration fixtures pass 11/11, configuration persistence 1/1,
+Goodreads pagination 5/5, format-profile refresh 5/5, Calibre language 4/4,
+Calibre proxy/series 6/6, Hardcover metadata/search 45/45, book-file move
+planning 15/15, and author-move path coverage 3/3. The current candidate's
+full cross-platform run is tracked in [ChaptarrNG
+Actions](https://github.com/snapetech-org/chaptarrng/actions). Publication
+remains frozen; no release,
+package, image, installer, or migration bridge was published. Representative
+operator-data migration and rollback, provider and SeerrNG workflows,
+representative media and restart recovery, installed update-channel handoff,
+and operator acceptance remain open. Keep BookshelfNG in service and do not
+start ChaptarrNG against BookshelfNG appdata. See the
 [retirement status](BOOKSHELFNG_RETIREMENT.md) and
 [migration guide](MIGRATE_FROM_BOOKSHELFNG.md).
 
@@ -112,7 +115,7 @@ the current complete path count. Upstream PR [#114](https://github.com/Chaptarr/
 which preserves media type during scoped book lookup, remains open. The broader
 upstream issue/PR audit remains incomplete.
 
-The BookshelfNG consolidation is in ChaptarrNG main; the standard image uses the same executable for fresh and migrated installs. The Editions and Narrations API first landed in BookshelfNG commit 6e1a62e12. The current BookshelfNG path inventory, exact revisions, dispositions, and review maps are maintained in the [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md). It covers 679 post-fork commits and 1,116 changed paths. These path-level decisions do not prove feature parity, and no runtime feature is approved for retirement. The audit suite passes 29/29 tests; BookshelfNG audit-tool Build [39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595) and mirrored Unraid main CI [39387608787](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39387608787) passed. ChaptarrNG main includes the matching book-details tab, series narrator comparison, and editionCatalog capability. Earlier candidate code snapshot 8b4c6e23 integrated those features and passed its own cross-platform and security checks. Application-code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and release-note contract. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These checks do not establish operator-data or update-channel acceptance. BookshelfNG issue #114 (new-author paths) is closed and already covered by ChaptarrNG v0.9.974+; issue #144 (retirement) remains open.
+The BookshelfNG consolidation is in ChaptarrNG main; the standard image uses the same executable for fresh and migrated installs. The Editions and Narrations API first landed in BookshelfNG commit 6e1a62e12. The current BookshelfNG path inventory, exact revisions, dispositions, and review maps are maintained in the [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md). Exact audit counts, revision pins, dispositions, and evidence are recorded in the consolidation report. These path-level decisions do not prove feature parity, and no runtime feature is approved for retirement. The audit suite passes 31/31 tests; BookshelfNG audit-tool Build [39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595) and mirrored Unraid main CI [39387608787](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39387608787) passed. ChaptarrNG main includes the matching book-details tab, series narrator comparison, and editionCatalog capability. Earlier candidate code snapshot 8b4c6e23 integrated those features and passed its own cross-platform and security checks. Application-code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and release-note contract. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These checks do not establish operator-data or update-channel acceptance. BookshelfNG issue #114 (new-author paths) is closed and already covered by ChaptarrNG v0.9.974+; issue #144 (retirement) remains open.
 ChaptarrNG's upstream PR #114 is a separate issue
 and remains open. ChaptarrNG's own
 repository has no open issues or pull requests. The converter,
