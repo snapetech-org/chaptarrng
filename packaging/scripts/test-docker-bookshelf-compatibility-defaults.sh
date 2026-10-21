@@ -16,6 +16,33 @@ run_case() {
   fi
 }
 
+docker_stage_body() {
+  local stage="$1"
+  awk -v stage="$stage" '
+    $0 == "FROM runtime AS " stage { in_stage = 1; next }
+    in_stage && /^FROM / { exit }
+    in_stage { print }
+  ' "$repo_root/Dockerfile.cross"
+}
+
+check_compatibility_provider_modes() {
+  local softcover hardcover standard
+  softcover="$(docker_stage_body bookshelf-softcover)"
+  hardcover="$(docker_stage_body bookshelf-hardcover)"
+  standard="$(docker_stage_body chaptarrng-standard)"
+
+  grep -Fxq "ENV HARDCOVER=false \\" <<<"$softcover"
+  grep -Fxq "    CHAPTARR_BOOKSHELF_COMPATIBILITY=true" <<<"$softcover"
+  grep -Fxq "ENV HARDCOVER=true \\" <<<"$hardcover"
+  grep -Fxq "    CHAPTARR_BOOKSHELF_COMPATIBILITY=true" <<<"$hardcover"
+  if grep -Fq "HARDCOVER=" <<<"$standard"; then
+    return 1
+  fi
+  if grep -Fq "CHAPTARR_BOOKSHELF_COMPATIBILITY=" <<<"$standard"; then
+    return 1
+  fi
+}
+
 run_case 'production image keeps the StartOS /init command' bash -c '
   set -euo pipefail
   grep -Fq "COPY --chmod=0755 docker-startos-init.sh /init" "$1"
@@ -29,6 +56,8 @@ run_case 'compatibility image targets advertise their legacy container port' bas
   grep -A1 -Fx "FROM runtime AS bookshelf-hardcover" "$1" | grep -Fxq "EXPOSE 8787"
   grep -A1 -Fx "FROM runtime AS chaptarrng-standard" "$1" | grep -Fxq "EXPOSE 8789"
 ' _ "$repo_root/Dockerfile.cross"
+
+run_case 'compatibility image targets preserve provider mode' check_compatibility_provider_modes
 
 run_case 'fresh legacy image defaults to port 8787' bash -c '
   set -euo pipefail
