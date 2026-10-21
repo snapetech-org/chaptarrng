@@ -1,9 +1,17 @@
 # Author metadata refresh
 
-ChaptarrNG stores the current author catalog in its database. `LastInfoSync`
-records when an author was last checked; older records are not deleted just
-because they are stale. The provider response caches are in memory and do not
-replace this saved catalog.
+ChaptarrNG stores author details, provider IDs, and `LastInfoSync` on the
+persisted author record. The database is the durable catalog; provider response
+caches are temporary and do not replace it. Old records are not deleted just
+because they are stale. Keep the application's `/config` data persistent so
+the database survives container replacement.
+
+Unlike BookshelfNG's separate author-metadata record, ChaptarrNG keeps catalog
+fields on its author record. Provider identities remain distinct: a Goodreads
+ID is not interchangeable with a Hardcover or Open Library ID. Changing
+metadata identity does not convert a library; use the
+[BookshelfNG migration guide](MIGRATE_FROM_BOOKSHELFNG.md) for provider
+conversion limits.
 
 ## Automatic refresh policy
 
@@ -38,6 +46,19 @@ Changing an author's metadata profile or adding a format-specific root also
 queues a forced metadata refresh so ChaptarrNG can apply the new profile or
 hydrate the newly available format path.
 
+When a refreshed book identifies an author already stored under the same
+provider identity, ChaptarrNG reuses that local author record. It does not need
+to fetch the author's full catalog a second time just to attach the book. A
+missing local author is fetched and added before the book is attached.
+
+## Manual refresh
+
+A manually triggered refresh for one author bypasses the age check. Scheduled
+and bulk work continues to use the freshness policy and provider change hints
+when available. Initial author sync, metadata-profile changes, and new
+format-specific roots also request the refresh needed to establish or update
+the local catalog.
+
 ## Hardcover request pacing
 
 The native Hardcover provider uses a process-local response cache:
@@ -49,14 +70,45 @@ The native Hardcover provider uses a process-local response cache:
 | Search results | 10 minutes |
 
 The client spaces requests at one per second in each ChaptarrNG process. It
-honors rate-limit reset information and `Retry-After`; when a 429 response has
-no usable reset, it pauses requests for one minute. Background catalog work
-leaves the final 10% of the reported daily quota for interactive searches.
-Cache and pacing state are not shared between separate ChaptarrNG processes.
+honors `Retry-After` and exhausted rate-limit buckets, and pauses all requests
+in that process until the applicable reset. A 429 without a usable reset
+causes a one-minute pause; requests made during cooldown are rejected locally
+without another network call.
+
+The client reads daily limits and remaining capacity from `RateLimit-Policy`
+and `RateLimit`, with legacy daily headers as a fallback. Background catalog
+work leaves the final 10% of the reported daily quota, rounded up to at least
+one request, for interactive searches. Interactive searches may use that
+reserve but still honor an active rate-limit pause or an exhausted bucket.
+Background work can resume when the reported daily window resets.
+
+Cache, pacing, and cooldown state are process-local. Separate ChaptarrNG
+instances do not share response caches or coordinate request rates, even when
+they use the same token or outbound IP. Use one metadata-active instance per
+token/IP when shared pacing matters.
+
+## Failed refreshes and local data
+
+A network error, HTTP error, invalid response, or rate-limit response does not
+replace the stored author catalog or make a failed lookup appear fresh. A
+later eligible or manual refresh can retry it. A successful unchanged-provider
+check may update `LastInfoSync` without replacing the catalog fields.
+
+ChaptarrNG does not automatically delete a local author just because a
+provider reports it missing or unavailable. The existing record and provider
+IDs remain available for correction or a later refresh; removal requires an
+explicit local action.
+
+For a rate-limit pause, look for log messages saying that Hardcover is pausing
+requests until a UTC reset time. A request rejected during that pause reports
+that no network request was sent. For other failures, check the provider error
+near the author-refresh command before retrying.
 
 ## Code references
 
+- [Persisted author fields and provider IDs](../src/NzbDrone.Core/Books/Model/Author.cs)
 - [Automatic freshness policy](../src/NzbDrone.Core/Books/Utilities/ShouldRefreshAuthor.cs)
+- [Book refresh and local-author reuse](../src/NzbDrone.Core/Books/Services/RefreshBookService.cs)
 - [Book-added event](../src/NzbDrone.Core/Books/Handlers/BookAddedHandler.cs)
 - [New-author refresh](../src/NzbDrone.Core/Books/Handlers/AuthorAddedHandler.cs)
 - [Profile and format-root refresh](../src/NzbDrone.Core/Books/Handlers/AuthorEditedHandler.cs)

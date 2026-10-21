@@ -515,6 +515,7 @@ runtime, while source builds require the .NET 10 SDK.
 
 The [fork feature guide](docs/FORK_FEATURES.md) covers the additions and their
 limits. Dedicated guides explain [import-list preview and history](docs/IMPORT_LIST_SYNC.md),
+[media moves](docs/MEDIA_MOVES.md), [author metadata refresh](docs/AUTHOR_METADATA_REFRESH.md),
 [external library connections](docs/EXTERNAL_LIBRARY_INTEGRATIONS.md),
 [MQTT and canonical events](docs/MQTT_GATEWAY.md), and
 [Prometheus metrics](docs/PROMETHEUS_METRICS.md). The
