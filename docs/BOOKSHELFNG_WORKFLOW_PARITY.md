@@ -151,8 +151,8 @@ action; the browser reported no page errors. Eligible, skipped, and retry states
 remain covered by component tests rather than a browser run with seeded author
 records.
 
-Frontend validation for the added UI feedback in an isolated worktree based on
-ChaptarrNG application code at `031b118e` passed the full frontend CJS suite (97/97),
+Earlier isolated frontend validation (application snapshot `031b118e`) passed
+the full frontend CJS suite (97/97),
 focused ESLint and Stylelint, translation checks (1,629 files), both frontend
 TypeScript projects, and a production webpack build. The bundle completed with
 the known 22 CSS-order warnings and a non-blocking Babel deprecation warning.
@@ -170,8 +170,8 @@ format or Unmapped Files failure states in the browser, and does not cover live
 provider/download behavior. Installed-build, mobile, and representative-library
 acceptance remain open.
 
-ChaptarrNG `main` is now at the docs-only `9588a35e`; its application code
-remains at `031b118e`, which restored the startup guard for configured
+At the time of this earlier validation, ChaptarrNG `main` was at docs-only
+`9588a35e`; application snapshot `031b118e` restored the startup guard for configured
 authentication with no local account. Its Core fixture covers
 disabling authentication for first-account setup, preserving the configured
 mode when a user exists, and leaving already-disabled authentication untouched.
@@ -180,6 +180,12 @@ repository pins 10.0.402, so this was not an exact-pinned SDK run. A fresh
 disposable browser run reached the authentication gate, showed the non-loopback
 warning, and returned to the app after saving temporary Forms credentials.
 The resulting sign-in and migrated-database behavior still need acceptance.
+
+Current ChaptarrNG source is `c47cf8cb`. Manual Import's author, book, edition,
+and quality selectors now explain empty results, retry failures, hide stale
+choices, and disable submission when no quality is available. The full
+frontend CJS regression suite passes 104/104 locally; Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). These checks do not close installed-build or operator-data
+acceptance.
 
 The combined shelf is a presentation over ChaptarrNG's separate audiobook and
 ebook records. It does not turn them into one database record or combine their

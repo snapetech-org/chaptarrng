@@ -41,13 +41,15 @@ runtime parity, and no runtime feature is approved for retirement.
 Focused author/migration fixtures pass 11/11, configuration persistence 1/1,
 Goodreads pagination 5/5, format-profile refresh 5/5, Calibre language 4/4,
 Calibre proxy/series 6/6, Hardcover metadata/search 45/45, book-file move
-planning 15/15, and author-move path coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and ShellCheck checks. The
-The application code remains `031b118e`. The previous [Build 39546916729](https://github.com/snapetech-org/chaptarrng/actions/runs/39546916729) passed PostgreSQL, Linux, and macOS but was canceled during Windows testing after a docs update; exact-head status for current `main` is on the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Publication
-remains frozen; no release,
-package, image, installer, or migration bridge was published. Representative
-operator-data migration and rollback, provider and SeerrNG workflows,
-representative media and restart recovery, installed update-channel handoff,
-and operator acceptance remain open. Keep BookshelfNG in service and do not
+planning 15/15, and author-move path coverage 3/3. All three migration CLI
+helpers pass Bash syntax, help, and ShellCheck checks. Manual Import selector
+empty states, retries, and stale-choice handling pass in the 104/104 frontend
+CJS suite. Application code is at
+[`c47cf8cb`](https://github.com/snapetech-org/chaptarrng/commit/c47cf8cb78fcffde3f5114242b86125ef735ab16).
+Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Publication remains frozen; no release, package, image, installer,
+or migration bridge was published. Representative operator-data migration and
+rollback, provider and SeerrNG workflows, representative media and restart
+recovery, installed update-channel handoff, and operator acceptance remain open. Keep BookshelfNG in service and do not
 start ChaptarrNG against BookshelfNG appdata. See the
 [retirement status](BOOKSHELFNG_RETIREMENT.md) and
 [migration guide](MIGRATE_FROM_BOOKSHELFNG.md).

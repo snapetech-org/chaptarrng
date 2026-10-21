@@ -17,17 +17,14 @@
 > the author-path initialization setting is opt-in and disabled by default.
 > Migration carries the saved choice and maps configured ebook/audiobook roots
 > to ChaptarrNG defaults when those defaults are empty. Existing author paths and
-> files are untouched. The latest source also restores whole-author move
-> updates for ebook and audiobook paths under the moved directory. Goodreads
-> series imports now fetch all pages and preserve the import limit across
-> pages; focused pagination tests pass 5/5. Focused backend/migration fixtures
-> pass 11/11, configuration persistence 1/1, Calibre proxy/series 6/6,
-> Hardcover metadata/search 45/45, book-file move planning 15/15, and
-> author-move path coverage 3/3. The single-author, bulk media-move, and
-> unmapped-retry CLI helpers pass Bash syntax, help, and ShellCheck checks; see
-> the [media-move guide](MEDIA_MOVES.md) and [unmapped-files guide](UNMAPPED_FILES.md).
-> The application code remains `031b118e`. The previous [Build 39546916729](https://github.com/snapetech-org/chaptarrng/actions/runs/39546916729) passed PostgreSQL, Linux, and macOS but was canceled during Windows testing after a docs update; exact-head status for current `main` is on the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml).
-> The source is unpublished. The source also
+> files are untouched. Current source restores whole-author move updates,
+> paginates Goodreads series imports, and improves Manual Import's author, book,
+> edition, and quality selectors with empty-state guidance, retry, stale-choice
+> protection, and disabled submission when quality choices are empty. The
+> frontend CJS suite passes 104/104 locally. Focused migration, metadata, move,
+> and CLI checks are listed in the retirement status. Application code is at
+> [`c47cf8cb`](https://github.com/snapetech-org/chaptarrng/commit/c47cf8cb78fcffde3f5114242b86125ef735ab16).
+> Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Current source remains unpublished. The source also
 > preserves BookshelfNG's optional
 > `MoveExtraFilesOnRename` setting, exposes it in Media Management, and includes
 > it in settings backups. When enabled, it moves only configured loose files

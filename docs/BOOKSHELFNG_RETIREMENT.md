@@ -24,13 +24,14 @@ ChaptarrNG `main` implements BookshelfNG issue [#114](https://github.com/snapete
 opt-in, disabled-by-default setting. Migration preserves the saved choice and
 maps BookshelfNG's configured ebook/audiobook roots to ChaptarrNG defaults
 when ChaptarrNG defaults are empty. Existing authors and files are untouched.
-The latest source restores whole-author move updates for ebook and audiobook
-paths under the moved directory and fetches Goodreads series imports page by
-page. Focused backend/migration fixtures pass 11/11, configuration persistence
-1/1, Goodreads pagination 5/5, Calibre proxy/series 6/6, Hardcover
-metadata/search 45/45, book-file move planning 15/15, and author-move path
-coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and ShellCheck checks. The application code remains `031b118e`. The previous [Build 39546916729](https://github.com/snapetech-org/chaptarrng/actions/runs/39546916729) passed PostgreSQL, Linux, and macOS but was canceled during Windows testing after a docs update; exact-head status for current `main` is on the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml).
-The source is not in public `.977`.
+Current source also restores whole-author move updates, paginates Goodreads
+series imports, and improves Manual Import's author, book, edition, and quality
+selectors with empty-state guidance, retry, stale-choice protection, and
+disabled submission when no quality options exist. The frontend CJS suite
+passes 104/104 locally, and focused migration, metadata, move, and CLI checks
+are recorded below. Application code is at
+[`c47cf8cb`](https://github.com/snapetech-org/chaptarrng/commit/c47cf8cb78fcffde3f5114242b86125ef735ab16).
+Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). The source is not in public `.977`.
 
 The canonical
 [audit report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)

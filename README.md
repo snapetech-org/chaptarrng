@@ -74,18 +74,21 @@ key: it can read audiobook-scoped narrator comparisons and set a preferred
 narrator only with the non-overriding payload. Ebook-scoped narrator access
 and unrelated or administrative routes stay denied.
 Goodreads series imports now fetch all pages while preserving duplicate
-filtering and configured import limits; the focused pagination suite passes
-5/5. Other focused checks pass author/migration 11/11, configuration
-persistence 1/1, format-profile refresh 5/5, Calibre language 4/4, Calibre
-proxy/series 6/6, Hardcover metadata/search 45/45, book-file move planning
-15/15, and author-move path coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and ShellCheck checks. The prior exact-head run for
-`6fc744ef` passed Linux, macOS, Windows, PostgreSQL migration, and native
-runner receipt checks; it does not cover the Goodreads pagination or CLI changes.
-The application code remains `031b118e`. The previous [Build 39546916729](https://github.com/snapetech-org/chaptarrng/actions/runs/39546916729) passed PostgreSQL, Linux, and macOS but was canceled during Windows testing after a docs update; exact-head status for current `main` is on the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml).
-These source changes remain unpublished.
+filtering and configured import limits. Focused checks pass author/migration
+11/11, configuration persistence 1/1, format-profile refresh 5/5, Calibre
+language 4/4, Calibre proxy/series 6/6, Hardcover metadata/search 45/45,
+book-file move planning 15/15, Goodreads pagination 5/5, and author-move path
+coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and
+ShellCheck checks. Manual Import author, book, edition, and quality selectors
+explain empty states, retry failed loads, hide stale choices, and block empty
+quality submission; the frontend CJS regression suite passes 104/104 locally.
+The application code is `c47cf8cb78fcffde3f5114242b86125ef735ab16`.
+Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Earlier matrix results predate the latest picker changes;
+follow the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml)
+for the exact current head. These source changes remain unpublished.
 Current `main` also applies the author freshness policy to book-added events
 while retaining the author-scoped folder rescan, even when metadata is skipped
-or unchanged. The exact-head run above includes this change. See the
+or unchanged. This behavior is present in the current source. See the
 [author metadata refresh guide](docs/AUTHOR_METADATA_REFRESH.md). This source
 update is not in `v0.9.977`.
 
