@@ -8,8 +8,10 @@ just because its contents did not change.
 ## Command-line helper
 
 The helper requires Bash and curl. jq is also required when using --wait. Set
-CHAPTARR_URL and CHAPTARR_API_KEY or pass --url and --api-key. The API key must
-be able to queue commands.
+CHAPTARR_URL and CHAPTARR_API_KEY or pass --url and --api-key. Migrated scripts
+can keep using BOOKSHELF_URL and BOOKSHELF_API_KEY; the ChaptarrNG variables
+take precedence when both pairs are set. The API key must be able to queue
+commands.
 
 Queue a retry and return immediately:
 

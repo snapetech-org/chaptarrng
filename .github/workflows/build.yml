@@ -132,6 +132,12 @@ jobs:
         TMPDIR: ${{ runner.temp }}
       run: bash packaging/scripts/test-docker-bookshelf-compatibility-defaults.sh
 
+    - name: Test legacy environment compatibility for unmapped retry
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TMPDIR: ${{ runner.temp }}
+      run: bash scripts/test-chaptarr-retry-unmapped-env.sh
+
     - name: Configure .NET install directory
       if: runner.os == 'Linux'
       shell: bash

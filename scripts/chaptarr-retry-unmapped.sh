@@ -11,6 +11,8 @@ Usage:
 Environment:
   CHAPTARR_URL       ChaptarrNG base URL, including any URL base path
   CHAPTARR_API_KEY   API key (prefer this over --api-key)
+  BOOKSHELF_URL      Legacy base URL fallback for migrated BookshelfNG scripts
+  BOOKSHELF_API_KEY  Legacy API key fallback for migrated BookshelfNG scripts
 
 Options:
   --url URL       ChaptarrNG base URL; may end in /api/v1
@@ -21,8 +23,8 @@ Options:
 USAGE
 }
 
-base_url="${CHAPTARR_URL:-}"
-api_key="${CHAPTARR_API_KEY:-}"
+base_url="${CHAPTARR_URL:-${BOOKSHELF_URL:-}}"
+api_key="${CHAPTARR_API_KEY:-${BOOKSHELF_API_KEY:-}}"
 wait_for_completion=false
 json_output=false
 
@@ -59,7 +61,7 @@ while (($#)); do
 done
 
 if [[ -z "$base_url" || -z "$api_key" ]]; then
-  printf 'Set CHAPTARR_URL and CHAPTARR_API_KEY, or pass --url and --api-key.\n' >&2
+  printf 'Set CHAPTARR_URL and CHAPTARR_API_KEY (or legacy BOOKSHELF_URL and BOOKSHELF_API_KEY), or pass --url and --api-key.\n' >&2
   exit 2
 fi
 
