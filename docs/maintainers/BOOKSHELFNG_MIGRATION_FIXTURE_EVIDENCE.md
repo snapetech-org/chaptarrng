@@ -1,6 +1,54 @@
 # BookshelfNG migration fixture evidence
 
-**Reviewed:** 2026-10-20. ChaptarrNG PR #131 merged to `main` on 2026-10-20;
+## Released BookshelfNG fixture against current ChaptarrNG candidate (2026-10-21)
+
+This rehearsal used the public BookshelfNG `main-v0.4.21.71` Linux x64 archive
+and the Linux artifact from ChaptarrNG Build
+[39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854),
+built from commit `c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`. The archive
+checksum was verified before the released Readarr binary created and served a
+deterministic synthetic Hardcover library. The ChaptarrNG artifact hashes were
+`b31763c3c0412fabdf22a7c5c31b3a1b05a884a8d85701055018d74df7fde3cc`
+(apphost) and
+`07689c53c6c942a67a68248ffca91fb38ca75642b4b0e7e904f088b7912fd8a3`
+(`Chaptarr.Core.dll`). Exact-head Build
+[39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854)
+completed successfully on Linux, Windows, macOS, and PostgreSQL; native-runner
+receipt reconciliation passed. The release-note contract was skipped for this
+internal fix.
+
+The fixture contained linked author/book records, ebook and audiobook editions
+and files, an extra file, a metadata sidecar, series, user, notification,
+history, download history, blocklist, roots, tag, and settings. It reproduced a
+real compatibility gap: `MetadataFiles.Consumer=Readarr` was rejected by
+preview/apply. ChaptarrNG commit `c2535e71` now maps that legacy consumer to
+`LegacyAudiobookshelfMetadata`; the importer regression fixture covers it.
+
+With `HARDCOVER=true HARDCOVER_NATIVE=true`, preview exited successfully,
+reported the sidecar as one retained row with no unsupported consumer, and
+left the source database hash unchanged. Explicit apply exited successfully;
+the target reached schema 121 with SQLite integrity `ok` and zero foreign-key
+errors. It retained 1 author, 2 books, 2 editions, 2 book files, 1 metadata
+file, 1 series, 2 series-book links, 2 roots, 1 history row, 1 download-history
+row, and 1 blocklist row. The author identity remained `HardcoverAuthorId=hc:9001`,
+and the sidecar mapped to `LegacyAudiobookshelfMetadata` with type 1.
+
+The retained BookshelfNG backup's raw SQLite file hash differs from the source
+hash because checkpointing/WAL normalization changes the file representation.
+Its logical SQLite dump, all 39 table row counts, and schema 158 match the
+source exactly; integrity is `ok` and there are no foreign-key errors. This is
+logical database equivalence, not byte-for-byte identity.
+
+Restore preview exited successfully and did not change either database. Explicit
+rollback exited successfully and restored `readarr.db` to the retained backup's
+hash. The restored source database has the original logical dump and row counts,
+schema 158, integrity `ok`, and zero foreign-key errors; ChaptarrNG's schema-121
+database remains separately backed up. These results establish one successful
+released-binary SQLite round trip for synthetic data. They do not establish
+representative operator-data acceptance, PostgreSQL operator-data support,
+provider fulfillment, complete semantic parity, or installed-channel handoff.
+
+**Reviewed:** 2026-10-21. ChaptarrNG PR #131 merged to `main` on 2026-10-20;
 the public release remains `v0.9.977`. This file covers synthetic fixtures and one private
 populated migration-158 snapshot tested on a disposable copy. This is
 maintainer evidence, not approval to cut over operator data.

@@ -49,6 +49,31 @@ review. No runtime retirement is approved. Representative operator data and roll
 fulfillment, SeerrNG workflows, installed update-channel handoff, and operator
 acceptance remain open. Keep BookshelfNG in service.
 
+The refreshed schema-v4 audit compares BookshelfNG source
+`2811718076d84777a1b1132e4e5d2abd21231229` with ChaptarrNG candidate
+`c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`: 1,119 changed paths, 98 reviewed
+mappings, 776 dispositions, and 343 paths still open (85 unmapped and 258
+requiring semantic review). The audit tests pass 31/31; these per-path decisions
+organize review and do not establish runtime parity.
+
+The current migration fix is ChaptarrNG commit
+`c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`. It maps legacy
+`MetadataFiles.Consumer=Readarr` rows to `LegacyAudiobookshelfMetadata`; the
+regression fixture covers the mapping. A released BookshelfNG `0.4.21.71`
+binary and the Linux artifact from Build
+[39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854)
+completed a synthetic schema-158 SQLite preview, apply, and restore rehearsal.
+The target passed integrity and foreign-key checks, preserved the fixture's
+linked records, and rolled back to the retained source database. The backup is
+logically equivalent to the source across its SQLite dump and all 39 table row
+counts; its file hash differs after SQLite checkpoint/WAL normalization.
+Build run 39561683854 completed successfully on Linux, Windows, macOS, and
+PostgreSQL; native-runner receipt reconciliation passed, and the release-note
+contract was skipped for this internal fix. This closes the reproduced sidecar blocker for
+the candidate fixture only; operator data, provider fulfillment, semantic
+parity, and installed-channel acceptance remain open, so the release freeze
+continues.
+
 **Historical source validation (2026-10-20)**
 
 ChaptarrNG PR #131 merged to `main` as

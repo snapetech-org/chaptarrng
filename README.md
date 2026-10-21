@@ -349,9 +349,12 @@ The retirement candidate now also carries BookshelfNG's legacy
 `AudiobookshelfMetadata` OPF writer as Chaptarr's distinct
 `LegacyAudiobookshelfMetadata` provider. It maps both legacy provider and
 sidecar IDs while preserving rows only for an exact `NullConfig` contract.
-Unknown metadata providers and sidecar consumers block apply. Source-level
-importer and metadata fixtures cover this mapping; representative operator
-libraries and release readiness remain unverified.
+The current source additionally maps legacy
+`MetadataFiles.Consumer=Readarr` author sidecars to that consumer; importer
+fixtures and the released-binary synthetic rehearsal cover the mapping. The
+public `.977` release does not include it. Unknown metadata providers and
+sidecar consumers still block apply. Representative operator libraries and
+release readiness remain unverified.
 
 A fresh copy of the restored database also opened in the BookshelfNG
 `hardcover` image on a Docker network with no external access; its configured

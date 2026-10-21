@@ -514,7 +514,12 @@ developer keys are no longer issued, so live account acceptance remains open.
 The migration candidate maps BookshelfNG's legacy OPF metadata provider and
 sidecar IDs to ChaptarrNG's `LegacyAudiobookshelfMetadata` consumer while
 preserving file references; unknown metadata providers or consumer IDs block
-apply. See the [migration provider notes](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers).
+apply. The current migration source also maps legacy
+`MetadataFiles.Consumer=Readarr` author sidecars to this consumer; that alias
+is not in public `v0.9.977`. A released-binary synthetic round trip passed, but
+operator-data and installed-channel acceptance remain open. See the
+[migration provider notes](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers)
+and [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 
 | Capability or change | Current ChaptarrNG scope | Evidence required before upstream retirement |
 | --- | --- | --- |

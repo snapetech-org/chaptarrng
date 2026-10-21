@@ -392,12 +392,25 @@ will run the migrated service. Preview performs the full conversion into a
 temporary staged database, prints the row disposition for every source table,
 and leaves the source database untouched.
 
+The commands below are for an approved migration-capable release. The published
+`.977` image does not include the current provider-identity migration; keep the
+release freeze above in effect until an approved image is published. Set
+`CHAPTARRNG_IMAGE` to that exact versioned image or immutable digest.
+
 ```sh
+CHAPTARRNG_IMAGE="ghcr.io/snapetech-org/chaptarrng:<approved-version-or-digest>"
 docker run --rm \
+  -e HARDCOVER=true \
+  -e HARDCOVER_NATIVE=true \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech-org/chaptarrng:0.9.977 \
+  "$CHAPTARRNG_IMAGE" \
   dotnet /app/Chaptarr.dll -preview-bookshelf-migration -data=/config
 ```
+
+These values are shown for a native Hardcover source. Use `HARDCOVER=false`
+for a Goodreads-primary source, and preserve the source's `HARDCOVER_NATIVE`
+value if it was explicitly set. Preview, apply, and automatic startup must use
+the same provider-mode values.
 
 Some source records have no edition rows, so their media type cannot be
 determined from the database. A monitored mixed-format book can also have no
@@ -409,6 +422,12 @@ audiobook catalogs; no files are assigned or moved for that book. The fallback
 also applies to a monitored mixed-format book with no selected edition: its
 existing editions and files remain, but neither format is monitored until the
 operator reviews it.
+
+The current ChaptarrNG migration candidate maps legacy
+`MetadataFiles.Consumer=Readarr` rows to `LegacyAudiobookshelfMetadata`. This
+keeps those sidecar records attached to ChaptarrNG's retained legacy metadata
+consumer; unknown consumer values still block apply. The public `.977` release
+does not include this mapping.
 
 The converter writes
 `readarr.db.bookshelf-media-review.json` beside the database and keeps it after
@@ -451,9 +470,12 @@ startup apply conversion or run the explicit apply command once:
 > implemented, but operator-data, parity, and channel acceptance remain open.
 
 ```sh
+CHAPTARRNG_IMAGE="ghcr.io/snapetech-org/chaptarrng:<approved-version-or-digest>"
 docker run --rm \
+  -e HARDCOVER=true \
+  -e HARDCOVER_NATIVE=true \
   -v /host/path/to/bookshelfng-config:/config \
-  ghcr.io/snapetech-org/chaptarrng:0.9.977 \
+  "$CHAPTARRNG_IMAGE" \
   dotnet /app/Chaptarr.dll -migrate-bookshelf -confirm-bookshelf-service-stopped -data=/config
 ```
 
