@@ -539,7 +539,7 @@ See the [SeerrNG Bookshelf backend guide](https://github.com/snapetech-org/seerr
 
 ### Organization
 * **Dual Media Libraries** - You can have separate root folders for audiobooks and eBooks or choose to have your eBooks placed alongside your audiobooks
-* **Format-specific author paths** - New authors inherit missing audiobook and ebook roots from configured defaults; explicit roots remain unchanged, and existing authors or files are not modified
+* **Format-specific author paths** - When enabled, the default-off setting initializes missing audiobook and ebook roots for new authors; explicit roots and existing authors or files remain unchanged
 * **Matching** - Match audiobook and eBook files using tags, folders, and release metadata
 * **Series Management** - Automatically organize books by series
 * **Metadata Profiles** - Control allowed languages, rank preferred edition terms, and choose the series name used in filenames and generated metadata. Stronger match evidence remains authoritative.
