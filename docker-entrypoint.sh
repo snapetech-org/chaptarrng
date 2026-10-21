@@ -42,6 +42,10 @@ for arg in "$@"; do
     esac
 done
 
+# Restore BookshelfNG's fresh-install port for compatibility aliases without
+# overriding a saved port or an explicit deployment setting.
+. /docker-bookshelf-compatibility-defaults.sh
+
 echo "================================"
 echo "Chaptarr Docker Entrypoint"
 echo "PUID: $PUID"

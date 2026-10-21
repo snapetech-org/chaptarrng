@@ -126,6 +126,12 @@ jobs:
         bash -n scripts/bookshelfng-to-chaptarrng.sh scripts/test-bookshelfng-to-chaptarrng.sh
         bash scripts/test-bookshelfng-to-chaptarrng.sh
 
+    - name: Test BookshelfNG Docker compatibility defaults
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TMPDIR: ${{ runner.temp }}
+      run: bash packaging/scripts/test-docker-bookshelf-compatibility-defaults.sh
+
     - name: Configure .NET install directory
       if: runner.os == 'Linux'
       shell: bash

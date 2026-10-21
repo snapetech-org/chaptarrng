@@ -107,7 +107,7 @@ validated or that platform is explicitly retired.
 | AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
 | Chocolatey | `chaptarrng 0.9.973` is moderator-approved; the `.977` update is not on the feed and the earlier `.977` bridge push returned HTTP 403. The approved `.973` package uses the ChaptarrNG service and `%ProgramData%\ChaptarrNG\data`, so it is not an in-place BookshelfNG handoff. | Public `bookshelfng 0.4.21.70` remains | Update the standard `chaptarrng` package to `.977`, then publish a `bookshelfng` identity bridge that retains the legacy service/data path; validate populated-data migration and rollback |
-| Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode. | Validate all three manifests and old-alias digest routing on exact-head CI before enabling the bridge |
+| Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode; fresh installs default to port `8787`, while saved and explicit ports take precedence. | Run the compatibility-default regression checks, then validate all three manifests and old-alias digest routing before enabling the bridge |
 | Helm | A same-name chart and versioned publisher target the existing BookshelfNG OCI identity. Both release-readiness gates, the migration bridge gate, and an explicit bridge opt-in are required. Local build/render and hosted resource-identity checks pass. | No chart is published; the BookshelfNG OCI chart remains unchanged. Existing installs can keep the same chart source after acceptance. | Test a real PVC/GitOps upgrade and rollback before publishing or switching existing installations |
 
 Core release validation passed on Linux, macOS, Windows, and PostgreSQL. The
@@ -230,9 +230,11 @@ marker alongside bare numeric IDs, so direct migration must preserve
 closed if neither mode is available. The legacy mutable-image bridge will map
 the old `hardcover`/`main`/`latest` aliases to a Hardcover-enabled compatibility
 image and `softcover` to a Goodreads-mode image. These targets and alias changes
-are source-only, have not been published, and remain gated. Pinned versions and
-image digests still need an operator change. A repointed tag does not change a
-running container.
+are source-only, have not been published, and remain gated. The compatibility
+targets use port `8787` for a fresh data directory, preserve an existing
+`config.xml` port, and respect an explicit `Chaptarr__Server__Port` setting.
+Pinned versions and image digests still need an operator change. A repointed tag
+does not change a running container.
 
 The BookshelfNG Windows WPF installer still installs the old application and
 does not hand off its `Readarr` service. ChaptarrNG now contains a source-only

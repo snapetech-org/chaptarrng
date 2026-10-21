@@ -676,8 +676,11 @@ targets, and port mapping. For a manual cutover, set `HARDCOVER=true` for a
 native Hardcover BookshelfNG source or `HARDCOVER=false` for a Goodreads-primary
 source. The compatibility image targets being added to the release workflow
 will set the matching mode for the legacy mutable aliases; they have not been
-published or enabled while the release freeze is active. For an installation
-that used the default BookshelfNG port, the shape is:
+published or enabled while the release freeze is active. Those compatibility
+targets will use port `8787` when starting with a fresh data directory; a saved
+`config.xml` port or explicit `Chaptarr__Server__Port` setting takes precedence.
+The ordinary ChaptarrNG image still defaults to `8789` for fresh installs. For
+an installation that used the default BookshelfNG port, the shape is:
 
 ```yaml
 services:
@@ -698,9 +701,8 @@ services:
     restart: unless-stopped
 ```
 
-The saved BookshelfNG `config.xml` keeps the internal port at `8787`; the
-published ChaptarrNG image still defaults to `8789` for fresh installs. If the
-old instance used a different port, preserve that port in both its container
+The saved BookshelfNG `config.xml` keeps the internal port at `8787`. If the old
+instance used a different port, preserve that port in both its container
 configuration and host mapping.
 
 ## Unpublished candidate populated SQLite round trip (2026-10-19)

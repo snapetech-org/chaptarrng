@@ -131,6 +131,7 @@ RUN set -eux; \
 
 # Copy our robust entrypoint script
 COPY docker-entrypoint.sh /entrypoint.sh
+COPY docker-bookshelf-compatibility-defaults.sh /docker-bookshelf-compatibility-defaults.sh
 RUN chmod +x /entrypoint.sh
 COPY docker-healthcheck.sh /usr/local/bin/chaptarr-healthcheck
 RUN chmod +x /usr/local/bin/chaptarr-healthcheck
@@ -157,10 +158,12 @@ CMD ["dotnet", "/app/Chaptarr.dll", "-nobrowser", "-data=/config"]
 # ChaptarrNG target intentionally leaves HARDCOVER unset so new installs do
 # not silently choose a primary catalog.
 FROM runtime AS bookshelf-softcover
-ENV HARDCOVER=false
+ENV HARDCOVER=false \
+    CHAPTARR_BOOKSHELF_COMPATIBILITY=true
 
 FROM runtime AS bookshelf-hardcover
-ENV HARDCOVER=true
+ENV HARDCOVER=true \
+    CHAPTARR_BOOKSHELF_COMPATIBILITY=true
 
 # Keep the default Docker build target the ordinary ChaptarrNG image.
 FROM runtime AS chaptarrng-standard

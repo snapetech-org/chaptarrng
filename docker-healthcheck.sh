@@ -2,7 +2,7 @@
 set -eu
 
 config_file="${CHAPTARR_CONFIG_FILE:-/config/config.xml}"
-port="${Chaptarr__Server__Port:-}"
+port="${Chaptarr__Server__Port:-${CHAPTARR__SERVER__PORT:-}}"
 url_base="${Chaptarr__Server__UrlBase:-}"
 
 if [ -r "$config_file" ]; then
