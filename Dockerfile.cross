@@ -148,7 +148,6 @@ COPY --from=build /app /app
 # Set app permissions at build time
 RUN chmod -R 755 /app
 
-EXPOSE 8789
 HEALTHCHECK --interval=30s --timeout=10s --start-period=2m --retries=3 \
     CMD ["/usr/local/bin/chaptarr-healthcheck"]
 ENTRYPOINT ["/entrypoint.sh"]
@@ -159,12 +158,15 @@ CMD ["dotnet", "/app/Chaptarr.dll", "-nobrowser", "-data=/config"]
 # ChaptarrNG target intentionally leaves HARDCOVER unset so new installs do
 # not silently choose a primary catalog.
 FROM runtime AS bookshelf-softcover
+EXPOSE 8787
 ENV HARDCOVER=false \
     CHAPTARR_BOOKSHELF_COMPATIBILITY=true
 
 FROM runtime AS bookshelf-hardcover
+EXPOSE 8787
 ENV HARDCOVER=true \
     CHAPTARR_BOOKSHELF_COMPATIBILITY=true
 
 # Keep the default Docker build target the ordinary ChaptarrNG image.
 FROM runtime AS chaptarrng-standard
+EXPOSE 8789
