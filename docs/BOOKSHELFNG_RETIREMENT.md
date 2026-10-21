@@ -42,9 +42,7 @@ errors identify the failed data source and retry failed setup requests when
 browser storage works. The frontend
 CJS suite passes 122/122
 locally, and focused migration, metadata, move, and CLI checks
-are recorded below. Application code is at
-the current [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
-Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). The source is not in public `.977`.
+are recorded below. The current application-code snapshot is [`3c6e0363`](https://github.com/snapetech-org/chaptarrng/commit/3c6e036302f67c5bef87ae9543614549b44c2790). Exact-head Build [39586754598](https://github.com/snapetech-org/chaptarrng/actions/runs/39586754598) is still in progress; current CI status is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). This source is not in public `.977`.
 
 The canonical
 [audit report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)
@@ -53,13 +51,15 @@ review. No runtime retirement is approved. Representative operator data and roll
 fulfillment, SeerrNG workflows, installed update-channel handoff, and operator
 acceptance remain open. Keep BookshelfNG in service.
 
-The latest schema-v4 audit compares BookshelfNG source
-`2811718076d84777a1b1132e4e5d2abd21231229` with ChaptarrNG target
-`4d9c4b2db0f438f05d81fb109aa6c32924ec5e85`: 1,119 changed paths, 102 reviewed
-mappings, and 856 dispositions (177 retained, 143 equivalent, 297 ported, and
-239 repository-only retirements). Another 263 paths remain open (66 without
-mapped targets and 197 requiring semantic review). The audit suite passes
-31/31; path decisions do not establish runtime parity or migration acceptance.
+The refreshed schema-v4 audit compares BookshelfNG source snapshot
+`e2d1088e28b566b7e27e23264846682e27b0eb06` with ChaptarrNG target snapshot
+`3c6e036302f67c5bef87ae9543614549b44c2790`: 1,119 changed paths, 73 reviewed
+mappings, and 771 dispositions (177 retained, 143 equivalent, 255 ported, and
+196 repository-only retirements). Another 348 paths remain open (97 without
+mapped targets, 249 requiring semantic review, and 2 deleted in BookshelfNG).
+Only decisions with unchanged source blobs and unchanged cited target blobs were
+carried forward. The audit suite passes 31/31; path decisions do not establish
+runtime parity or migration acceptance.
 
 The AUR and RPM source package paths now map to ChaptarrNG's legacy identity
 templates. Their local package rehearsals used synthetic migration data;
@@ -79,10 +79,9 @@ change metadata on existing shared .NET directories. The installer now uses
 `--no-overwrite-dir`, and the targeted permission test passes. Current
 ChaptarrNG `main` includes that fix and the candidate Debian bridge; the current
 source is on [main](https://github.com/snapetech-org/chaptarrng/tree/main).
-The audit target below remains pinned to `4d9c4b2d` and is historical. Changes
-after that target, including the Debian bridge, have not been reviewed in the
-path ledger. Public `v0.9.977` assets remain unchanged, and no release or
-channel handoff is authorized.
+The refreshed path ledger includes the candidate Debian bridge and pins the
+ChaptarrNG target snapshot to `3c6e0363`. The published `v0.9.977` assets remain
+unchanged; no compatibility package, release, or channel handoff is authorized.
 
 The current migration fix is ChaptarrNG commit
 `c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`. It maps legacy
