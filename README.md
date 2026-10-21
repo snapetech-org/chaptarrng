@@ -214,6 +214,12 @@ ChaptarrNG validates SQLite integrity and supported database lineage before
 staging the file. This compatibility change is unreleased and is not in
 `v0.9.977`.
 
+The current migration candidate also restores BookshelfNG's optional
+**Move Extra Files on Rename** setting. It preserves the setting through
+migration and backups, and moves only configured loose files when no book
+media remains in the old folder. This source change is unpublished and is not
+approved for operator cutover.
+
 The retirement candidate also adds portable encrypted `.enc` export and
 restore compatible with BookshelfNG's BKSENC01 format. ChaptarrNG's existing
 scheduled `.zip.enc` format remains separate. See the

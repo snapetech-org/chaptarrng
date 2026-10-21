@@ -13,6 +13,8 @@ namespace Chaptarr.Core.Test
         public string DefaultAudiobookRootFolderPath { get; set; } = string.Empty;
         public string DefaultEbookRootFolderPath { get; set; } = string.Empty;
         public bool ImportExtraFiles { get; set; }
+        public bool MoveExtraFilesOnRename { get; set; }
+        public bool MoveExtraFilesOnRename { get; set; }
         public bool KeepExistingLibraryFileOnImportConflict { get; set; }
         public ProperDownloadTypes DownloadPropersAndRepacks { get; set; } = ProperDownloadTypes.PreferAndUpgrade;
         public bool AudioProductionCustomFormatsSeeded { get; set; }
@@ -68,6 +70,16 @@ namespace Chaptarr.Core.Test
                 return ImportExtraFiles;
             }
 
+            if (targetMethod?.Name == "get_MoveExtraFilesOnRename")
+            {
+                return MoveExtraFilesOnRename;
+            }
+
+            if (targetMethod?.Name == "get_MoveExtraFilesOnRename")
+            {
+                return MoveExtraFilesOnRename;
+            }
+
             if (targetMethod?.Name == "get_KeepExistingLibraryFileOnImportConflict")
             {
                 return KeepExistingLibraryFileOnImportConflict;
@@ -115,6 +127,18 @@ namespace Chaptarr.Core.Test
             if (targetMethod?.Name == "set_ImportExtraFiles")
             {
                 ImportExtraFiles = (bool)args[0];
+                return null;
+            }
+
+            if (targetMethod?.Name == "set_MoveExtraFilesOnRename")
+            {
+                MoveExtraFilesOnRename = (bool)args[0];
+                return null;
+            }
+
+            if (targetMethod?.Name == "set_MoveExtraFilesOnRename")
+            {
+                MoveExtraFilesOnRename = (bool)args[0];
                 return null;
             }
 

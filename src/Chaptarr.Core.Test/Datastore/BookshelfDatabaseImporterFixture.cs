@@ -638,6 +638,19 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_preserve_the_move_extra_files_on_rename_setting()
+        {
+            AddConfigValue("MoveExtraFilesOnRename", "true");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MoveExtraFilesOnRename';"), Is.EqualTo("true"));
+        }
+
+        [Test]
         public void should_preserve_an_explicit_chaptarr_match_mode_over_the_legacy_threshold()
         {
             AddConfigValue("bookimportminimummatchpercent", "50");

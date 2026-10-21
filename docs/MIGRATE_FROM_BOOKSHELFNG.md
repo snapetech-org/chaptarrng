@@ -1,89 +1,28 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Release status (2026-10-20).** ChaptarrNG `v0.9.977` is still the latest
-> published release. Releases are frozen until the full BookshelfNG retirement
-> acceptance gates close; a source change or version bump is not a release.
-> The published `.977` converter supports read-only preview for BookshelfNG
-> `0.4.21.71` with a migration-158 SQLite database. Migration is not approved
-> for production cutover yet: do not apply it, install a bridge package, or
-> start ChaptarrNG against BookshelfNG appdata. Keep BookshelfNG in service
-> until the acceptance gates close. The `.71` source helper can archive
-> appdata and invoke migration commands, but its availability does not grant
-> cutover approval; see the
-> [BookshelfNG operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md).
-> For an immutable Docker deployment, use
-> `ghcr.io/snapetech-org/chaptarrng:0.9.977`.
-> The release bundles the BookshelfNG source migration chain and supports the
-> exact migration-158 SQLite schema. Its pre-upgrade check rejects schemas
-> before migration 14; upgrade those installations to the final BookshelfNG
-> `0.4.21.71` release first. The current migration candidate code head is
-> `f30dcec8c882c0169a544eee337f1d628e76e5d4`. It includes the migration and
-> installer work, Books index Both filter, combined Bookshelf Formats view,
-> audiobook-scoped SeerrNG narrator operations, visible retry actions, and the
-> responsive ChaptarrNG UI. It also preserves manual edition choices on local
-> book adds, resolves bare numeric Hardcover/Goodreads IDs through the
-> Readarr facade, and passes each book row's format to the author editor. Root
-> Folders provides a read-only preview and separate confirmation for filling
-> eligible existing-author format paths; confirmation rechecks settings and
-> queues refreshes without moving files. Profile reset is disabled when the
-> selected root has no configured default. Exact-head Build
-> [39520269403](https://github.com/snapetech-org/chaptarrng/actions/runs/39520269403)
-> passed Linux, Windows, and macOS build/test jobs, PostgreSQL migration
-> smoke, and native-runner receipt reconciliation. Security Analysis,
-> Semgrep CE, Trivy, and NuGet submission passed. No CodeQL run is attached to
-> this source commit; the release-note contract was skipped on the main push.
-> Local frontend tests pass 57/57, typecheck and translation-key checks pass,
-> and changed CSS passes Stylelint. The current code remains unpublished and
-> is not approved for operator cutover during the release freeze.
-> **Provider identity warning:** `.977` maps bare numeric source IDs to
-> Goodreads regardless of `HARDCOVER`. A database from the native Hardcover
-> BookshelfNG mode can therefore pass integrity checks while acquiring the
-> wrong provider identity. Do not apply `.977` to a native Hardcover database;
-> its read-only preview cannot validate provider identity either. The
-> unpublished candidate requires an explicit source mode, but remains
-> unsupported for operator cutover during the release freeze.
-> Merged PR #131 also accepts supported BookshelfNG ZIP backups through
-> ChaptarrNG's normal restore path; it validates and stages the legacy database
-> before normal startup converts it. This restore change is not in `.977`, and
-> exact-head validation is recorded below, but it does not approve production
-> cutover. Keep the original archive and a separate appdata backup.
-> On 2026-10-19, candidate build `0.9.978.0` passed preview, apply, rollback
-> preview, and explicit rollback against a task-scoped copy of populated
-> migration-158 SQLite operator data with `HARDCOVER=true`. The live
-> BookshelfNG service remained running, and every candidate command used the
-> separate copy; this did not test an installed service handoff. Migration
-> preview left the source copy unchanged. Apply produced a schema-121
-> ChaptarrNG database and retained the schema-158 source backup. Rollback
-> preview left the converted database and source backup unchanged; explicit
-> rollback restored a byte-identical source backup and preserved the converted
-> database separately. Integrity and foreign-key checks passed, and the
-> original private snapshot remained unchanged. Unresolved books were retained
-> in both catalogs as unmonitored and recorded in the review sidecar; their
-> media types still need human review. This is one candidate round trip; it
-> does not close ambiguous
-> media review, older-schema or PostgreSQL operator-data acceptance, feature
-> parity, or installer/channel handoff.
-> Prior PR #131 application-code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`
-> then passed exact-head Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)
-> on Linux, macOS, and Windows, plus PostgreSQL migration, release-note,
-> CodeQL, security/dependency, dependency-review, NuGet, and Helm identity
-> checks. Its Linux artifact passed an isolated populated migration-to-SeerrNG
-> smoke against synthetic data. These checks do not approve cutover; keep
-> BookshelfNG running until representative data, rollback, parity, and channel
-> acceptance gates close. See the [retirement status](docs/BOOKSHELFNG_RETIREMENT.md).
-> **Merged-source status (2026-10-20).** ChaptarrNG PR #131 merged to `main`
-> as `d2bcba7953a14d2d726f47005a660314cc5e4c26` from code head
-> `87c57a2bffd25a5ecbda40b9c63fd6d82993c54d`. Exact-head Build
-> [39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961)
-> passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
-> native-runner receipt checks. CodeQL, security analysis, Trivy, Semgrep
-> Community, dependency review, NuGet, and Helm checks passed. Disposable-fork
-> validation was skipped by its gate. The separate GHAS Semgrep OSS check failed
-> with 12 SQL-format findings and three fixture-path warnings; those findings
-> were reviewed and are not reported as a clean check. This is source and
-> synthetic validation only. Representative data, semantic parity, installed
-> rollback, and installer/update-channel acceptance remain open. No release,
-> package, image, or migration bridge was published; keep BookshelfNG in service.
+> **Release status (2026-10-20).** ChaptarrNG `v0.9.977` remains the latest
+> public release. Releases are frozen until the BookshelfNG retirement gates
+> close. Keep BookshelfNG in service; do not apply migration, install a bridge,
+> or start ChaptarrNG against BookshelfNG appdata.
+>
+> The published `.977` migration path supports BookshelfNG `0.4.21.71` with a
+> migration-158 SQLite database. It does not safely identify native Hardcover
+> provider IDs; do not apply `.977` to a database from native Hardcover mode.
+> Newer SQLite migration, provider compatibility, and installer work exists on
+> [ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main),
+> but remains unpublished and is not approved for cutover.
+>
+> The current source candidate also preserves BookshelfNG's optional
+> `MoveExtraFilesOnRename` setting, exposes it in Media Management, and includes
+> it in settings backups. When enabled, it moves only configured loose files
+> after all renamed book media leaves the old folder. Exact-head hosted checks
+> are required for this change. No release, package, image, or migration bridge
+> has been published. Representative operator data, rollback, provider
+> behavior, and installed update-channel acceptance remain open. See the
+> [BookshelfNG retirement issue](https://github.com/snapetech-org/bookshelfng/issues/144)
+> and [operator migration guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
+> for current gates. The validation notes below are dated evidence snapshots,
+> not authorization to cut over.
 
 An approved future migration will use the standard ChaptarrNG application and
 container build. The `Chaptarr` executable provides explicit preview and apply
@@ -379,6 +318,19 @@ applications use different fuzzy-title and import-scoring algorithms. Review
 the chosen mode against expected behavior on converted data; do not treat it as
 an exact recreation of BookshelfNG matching. This source change is not in
 `.977` while the release freeze remains active.
+
+## Extra files after rename
+
+The unpublished migration candidate preserves BookshelfNG's
+`MoveExtraFilesOnRename` setting in the converted database, exposes it in
+Media Management, and includes it in settings backups. It remains off by
+default. When enabled, ChaptarrNG moves only extensions listed in
+`ExtraFileExtensions` from a renamed file's old folder after all renamed files
+from that folder agree on one destination. It leaves the files in place if the
+source still contains a recognized book file or a subfolder, or if the
+destination already contains a file with the same name. This behavior is not
+in the published `.977` release and has not passed operator-data or installed
+rollback acceptance; keep the release freeze in place.
 
 ## Read-only preview and gated apply path
 

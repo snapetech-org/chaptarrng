@@ -843,6 +843,8 @@
   "ExternalUpdater": "{appName} is configured to use an external update mechanism",
   "ExtraFileExtensionsHelpText": "Comma separated list of extra files to import",
   "ExtraFileExtensionsHelpTextsExamples": "Examples: '.jpg, .png, .cue, .m3u, .opf, .json' or 'jpg,png,cue,m3u,opf,json'",
+  "MoveExtraFilesOnRename": "Move Extra Files on Rename",
+  "MoveExtraFilesOnRenameHelpText": "Move files with configured extra-file extensions when a renamed book folder no longer contains book files.",
   "FailedDownloadHandling": "Failed Download Handling",
   "FailedLoadingSearchResults": "Failed to load search results, please try again.",
   "FailedToFetchSettings": "Failed to fetch settings",

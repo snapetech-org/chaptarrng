@@ -36,6 +36,7 @@ namespace NzbDrone.Core.Configuration
         bool KeepExistingLibraryFileOnImportConflict { get; set; }
         bool ImportExtraFiles { get; set; }
         string ExtraFileExtensions { get; set; }
+        bool MoveExtraFilesOnRename { get; set; }
         bool WatchLibraryForChanges { get; set; }
         bool GranularFileSystemScanning { get; set; }
         RescanAfterRefreshType RescanAfterRefresh { get; set; }

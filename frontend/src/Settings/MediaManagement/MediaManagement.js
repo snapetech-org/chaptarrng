@@ -324,6 +324,20 @@ class MediaManagement extends Component {
                     />
                   </FormGroup>
 
+                  <FormGroup size={sizes.MEDIUM}>
+                    <FormLabel>
+                      {translate('MoveExtraFilesOnRename')}
+                    </FormLabel>
+
+                    <FormInputGroup
+                      type={inputTypes.CHECK}
+                      name="moveExtraFilesOnRename"
+                      helpText={translate('MoveExtraFilesOnRenameHelpText')}
+                      onChange={onInputChange}
+                      {...settings.moveExtraFilesOnRename}
+                    />
+                  </FormGroup>
+
                   <FormGroup
                     advancedSettings={advancedSettings}
                     isAdvanced={true}

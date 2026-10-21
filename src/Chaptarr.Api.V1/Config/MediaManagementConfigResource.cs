@@ -35,6 +35,7 @@ namespace Chaptarr.Api.V1.Config
         public bool KeepExistingLibraryFileOnImportConflict { get; set; }
         public bool ImportExtraFiles { get; set; }
         public string ExtraFileExtensions { get; set; }
+        public bool MoveExtraFilesOnRename { get; set; }
     }
 
     public static class MediaManagementConfigResourceMapper
@@ -71,6 +72,7 @@ namespace Chaptarr.Api.V1.Config
                 KeepExistingLibraryFileOnImportConflict = model.KeepExistingLibraryFileOnImportConflict,
                 ImportExtraFiles = model.ImportExtraFiles,
                 ExtraFileExtensions = model.ExtraFileExtensions,
+                MoveExtraFilesOnRename = model.MoveExtraFilesOnRename,
             };
         }
     }

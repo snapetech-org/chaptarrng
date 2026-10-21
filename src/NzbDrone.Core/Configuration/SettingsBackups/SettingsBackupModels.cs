@@ -265,6 +265,7 @@ namespace NzbDrone.Core.Configuration.SettingsBackups
         public bool KeepExistingLibraryFileOnImportConflict { get; set; }
         public bool ImportExtraFiles { get; set; }
         public string ExtraFileExtensions { get; set; }
+        public bool MoveExtraFilesOnRename { get; set; }
 
         public int AudiobookConversionConcurrentConversions { get; set; }
         public int AudiobookConversionMaxBitrate { get; set; }

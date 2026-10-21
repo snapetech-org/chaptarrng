@@ -17283,6 +17283,9 @@
           "extraFileExtensions": {
             "type": "string",
             "nullable": true
+          },
+          "moveExtraFilesOnRename": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
