@@ -53,7 +53,7 @@ services:
       - chaptarrng-smoke-books:/library
 
   smoke:
-    image: node:24.15.0-bookworm-slim
+    image: node:24.22.1-bookworm-slim
     working_dir: /seerrng
     depends_on:
       - chaptarrng

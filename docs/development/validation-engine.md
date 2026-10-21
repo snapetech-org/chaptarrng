@@ -13,7 +13,7 @@ Every platform matrix leg runs on GitHub-hosted runners. The Linux leg uses
 
 ## Local use
 
-Use Node.js `26.10.0` and .NET SDK `10.0.402`, matching the CI toolchain. The
+Use Node.js `26.12.1` and .NET SDK `10.0.402`, matching the CI toolchain. The
 root `global.json` pins that exact SDK with roll-forward disabled, so a newer
 SDK already present on a hosted runner cannot silently change the compiler or
 validation runtime. Build the existing CI outputs first:
