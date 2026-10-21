@@ -32,14 +32,57 @@ def render_chart(chart, *overrides)
   )
 end
 
-def render_legacy(chart)
+def render_legacy(chart, *overrides)
   stdout, stderr, status = Open3.capture3(
     "helm", "template", "bookshelfng", chart,
-    "--namespace", "bookshelf-test"
+    "--namespace", "bookshelf-test",
+    *overrides
   )
   raise "legacy chart render failed: #{stderr}" unless status.success?
 
   YAML.load_stream(stdout).compact
+end
+
+def normalize_expected_upgrade_differences(value)
+  case value
+  when Hash
+    value.each do |key, nested|
+      if key == "image"
+        value[key] = "<application-image>"
+      elsif ["app.kubernetes.io/version", "helm.sh/chart"].include?(key)
+        value[key] = "<release-version>"
+      else
+        value[key] = normalize_expected_upgrade_differences(nested)
+      end
+    end
+  when Array
+    value.map! { |nested| normalize_expected_upgrade_differences(nested) }
+  end
+
+  value
+end
+
+def compare_rendered_resources(candidate_objects, legacy_objects, scenario)
+  index = lambda do |objects|
+    objects.each_with_object({}) do |item, resources|
+      next unless item.is_a?(Hash) && item["kind"] && item.dig("metadata", "name")
+
+      resources[[item["kind"], item.dig("metadata", "name")]] = item
+    end
+  end
+
+  candidate = index.call(candidate_objects)
+  legacy = index.call(legacy_objects)
+  assert(candidate.keys.sort == legacy.keys.sort,
+         "#{scenario}: rendered resource identities differ: candidate=#{candidate.keys.inspect} legacy=#{legacy.keys.inspect}")
+
+  candidate.each do |identity, item|
+    legacy_item = legacy.fetch(identity)
+    candidate_resource = normalize_expected_upgrade_differences(JSON.parse(JSON.generate(item)))
+    legacy_resource = normalize_expected_upgrade_differences(JSON.parse(JSON.generate(legacy_item)))
+    assert(candidate_resource == legacy_resource,
+           "#{scenario}: #{identity[0]}/#{identity[1]} differs from the pinned BookshelfNG chart")
+  end
 end
 
 def assert(condition, message)
@@ -89,27 +132,39 @@ assert(service.dig("spec", "selector") == expected_selector, "Service selector c
 assert(service.dig("spec", "ports", 0, "port") == 8787, "Service port changed")
 assert(claim.dig("spec", "resources", "requests", "storage") == "10Gi", "PVC request changed")
 
-legacy_chart = File.expand_path("../bookshelfng/charts/bookshelfng", ROOT)
-legacy_compared = false
-if File.directory?(legacy_chart)
-  legacy_objects = render_legacy(legacy_chart)
-  legacy_resource = lambda do |kind, name|
-    legacy_objects.find do |item|
-      item.is_a?(Hash) && item["kind"] == kind && item.dig("metadata", "name") == name
-    end || raise("missing legacy #{kind}/#{name}")
-  end
+legacy_chart = ENV["BOOKSHELFNG_REFERENCE_CHART"] || File.expand_path("../bookshelfng/charts/bookshelfng", ROOT)
+assert(File.directory?(legacy_chart),
+       "pinned BookshelfNG reference chart is required; set BOOKSHELFNG_REFERENCE_CHART to its charts/bookshelfng directory")
+legacy_objects = render_legacy(legacy_chart, *valid)
+compare_rendered_resources(objects, legacy_objects, "default release values")
 
-  legacy_stateful_set = legacy_resource.call("StatefulSet", "bookshelfng")
-  candidate_spec = JSON.parse(JSON.generate(stateful_set["spec"]))
-  legacy_spec = JSON.parse(JSON.generate(legacy_stateful_set["spec"]))
-  candidate_spec.dig("template", "spec", "containers", 0).delete("image")
-  legacy_spec.dig("template", "spec", "containers", 0).delete("image")
-  assert(candidate_spec == legacy_spec, "StatefulSet spec differs from the BookshelfNG chart beyond the image")
-  assert(service["spec"] == legacy_resource.call("Service", "bookshelfng")["spec"], "Service spec differs from the BookshelfNG chart")
-  assert(claim["spec"] == legacy_resource.call("PersistentVolumeClaim", "bookshelfng-config")["spec"],
-         "PVC spec differs from the BookshelfNG chart")
-  legacy_compared = true
-end
+preserved_values = valid + [
+  "--set", "serviceAccount.create=true",
+  "--set", "serviceAccount.name=bookshelfng-service",
+  "--set", "ingress.enabled=true",
+  "--set", "ingress.hosts[0].host=books.example.com",
+  "--set", "ingress.hosts[0].paths[0].path=/",
+  "--set", "ingress.hosts[0].paths[0].pathType=Prefix",
+  "--set", "service.type=NodePort",
+  "--set", "podAnnotations.backup=keep",
+  "--set", "podLabels.migration=preserve",
+  "--set", "persistence.storageClass=media",
+  "--set-string", "resources.requests.cpu=100m",
+  "--set-string", "resources.limits.memory=1Gi",
+  "--set", "nodeSelector.role=library",
+  "--set", "tolerations[0].key=dedicated",
+  "--set", "tolerations[0].operator=Equal",
+  "--set", "tolerations[0].value=books",
+  "--set", "tolerations[0].effect=NoSchedule",
+  "--set", "extraEnv[0].name=Bookshelf__Authentication__ApiKey",
+  "--set", "extraEnv[0].valueFrom.secretKeyRef.name=bookshelfng-secret",
+  "--set", "extraEnv[0].valueFrom.secretKeyRef.key=apiKey"
+]
+preserved_stdout, preserved_stderr, preserved_status = render(*preserved_values)
+assert(preserved_status.success?, "candidate chart failed to render retained installation values: #{preserved_stderr}")
+preserved_objects = YAML.load_stream(preserved_stdout).compact
+legacy_preserved_objects = render_legacy(legacy_chart, *preserved_values)
+compare_rendered_resources(preserved_objects, legacy_preserved_objects, "existing installation values")
 
 Dir.mktmpdir("bookshelfng-helm-package-") do |directory|
   _, package_error, package_status = Open3.capture3("helm", "package", CHART, "--destination", directory)
@@ -200,5 +255,4 @@ custom_stateful_set = custom_objects.find { |item| item.is_a?(Hash) && item["kin
 custom_container = custom_stateful_set.dig("spec", "template", "spec", "containers").find { |item| item["name"] == "bookshelfng" }
 assert(custom_container["image"] == "registry.example/chaptarrng@#{DIGEST}", "explicit image mirror was not rendered")
 
-legacy_status = legacy_compared ? "exact legacy chart specs matched" : "legacy resource identity contract verified"
-puts "BookshelfNG Helm handoff contract passed: #{legacy_status}, versioned bridge package, both provider modes, release gates, digest pin, and fail-closed inputs verified."
+puts "BookshelfNG Helm handoff contract passed: all rendered resources matched the pinned legacy chart for default and retained installation values, versioned bridge package, both provider modes, release gates, digest pin, and fail-closed inputs verified."

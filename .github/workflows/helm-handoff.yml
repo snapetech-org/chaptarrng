@@ -33,6 +33,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      - name: Check out the pinned BookshelfNG source chart
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: snapetech-org/bookshelfng
+          ref: adea130aeea2b6ea29c28a6ea8bf4706169d15e
+          path: bookshelfng-reference
+          persist-credentials: false
+
+      - name: Verify BookshelfNG reference pin
+        run: test "$(git -C bookshelfng-reference rev-parse HEAD)" = "adea130aeea2b6ea29c28a6ea8bf4706169d15e"
+
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
         with:
           version: v3.20.0
@@ -45,4 +56,6 @@ jobs:
           --set-string image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
 
       - name: Verify stable resources and fail-closed inputs
+        env:
+          BOOKSHELFNG_REFERENCE_CHART: ${{ github.workspace }}/bookshelfng-reference/charts/bookshelfng
         run: ruby scripts/test_bookshelfng_helm_handoff.rb

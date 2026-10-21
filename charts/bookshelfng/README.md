@@ -77,13 +77,20 @@ need a manual chart and image update.
 With Helm 3.20.0 and Ruby available, run:
 
 ```sh
+mkdir -p /tmp/bookshelfng-reference
+git -C /path/to/bookshelfng archive adea130aeea2b6ea29c28a6ea8bf4706169d15e charts/bookshelfng \
+  | tar -x -C /tmp/bookshelfng-reference
+BOOKSHELFNG_REFERENCE_CHART=/tmp/bookshelfng-reference/charts/bookshelfng \
+  ruby scripts/test_bookshelfng_helm_handoff.rb
 helm lint charts/bookshelfng \
   --set bookshelfMigration.confirmed=true \
   --set bookshelfMigration.providerMode=hardcover \
   --set-string image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
-ruby scripts/test_bookshelfng_helm_handoff.rb
 ```
 
-The test renders with the legacy release name and verifies the workload,
-selector, service, PVC, image digest, and persistent mount identities. It also
+The test requires the pinned BookshelfNG reference chart, renders both charts
+with the same legacy release values, and compares every rendered resource
+after normalizing only the app image and chart-version labels. It covers the
+default release and retained ingress, service-account, persistence, resource,
+node-selection, pod-label, and secret-backed environment settings. It also
 checks that missing approval, provider mode, or a valid image digest fails.
