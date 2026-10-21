@@ -109,6 +109,7 @@ namespace NzbDrone.Core.Parser
             var bestScore = 0.0;
             Author bestAuthor = null;
             Book bestBook = null;
+            string bestBookTitle = null;
 
 #pragma warning disable CS0618 // The retained overload implements BookshelfNG's configured fuzzy fallback.
             var possibleAuthors = _authorService.GetReportCandidates(title);
@@ -127,6 +128,7 @@ namespace NzbDrone.Core.Parser
                         bestScore = bookMatch.Item3;
                         bestAuthor = author;
                         bestBook = book;
+                        bestBookTitle = book.Title;
                     }
                 }
 
@@ -148,12 +150,13 @@ namespace NzbDrone.Core.Parser
                         bestScore = editionMatch.Item3;
                         bestAuthor = author;
                         bestBook = edition.Book;
+                        bestBookTitle = edition.Title;
                     }
                 }
             }
 #pragma warning restore CS0618
 
-            if (bestAuthor == null || bestBook == null)
+            if (bestAuthor == null || bestBook == null || string.IsNullOrWhiteSpace(bestBookTitle))
             {
                 return null;
             }
@@ -164,7 +167,7 @@ namespace NzbDrone.Core.Parser
                 bestScore);
 
             return Parser.ParseBookTitleWithSearchCriteria(title, bestAuthor, new List<Book> { bestBook }) ??
-                   Parser.ParseBookTitleWithFuzzyMatch(title, bestAuthor, bestBook);
+                   Parser.ParseBookTitleWithFuzzyMatch(title, bestAuthor, bestBookTitle);
         }
 
         public RemoteBook Map(ParsedBookInfo parsedBookInfo, SearchCriteriaBase searchCriteria = null)

@@ -365,12 +365,13 @@ namespace NzbDrone.Core.Parser
             return null;
         }
 
-        public static ParsedBookInfo ParseBookTitleWithFuzzyMatch(string title, Author author, Book book)
+        public static ParsedBookInfo ParseBookTitleWithFuzzyMatch(string title, Author author, string matchedBookTitle)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(title) || !ValidateBeforeParsing(title) ||
-                    author == null || string.IsNullOrWhiteSpace(author.Name) || book == null)
+                    author == null || string.IsNullOrWhiteSpace(author.Name) ||
+                    string.IsNullOrWhiteSpace(matchedBookTitle))
                 {
                     return null;
                 }
@@ -379,7 +380,7 @@ namespace NzbDrone.Core.Parser
                 {
                     AuthorName = author.Name,
                     AuthorTitleInfo = GetAuthorTitleInfo(author.Name),
-                    BookTitle = book.Title
+                    BookTitle = matchedBookTitle
                 };
 
                 result.Quality = QualityParser.ParseQuality(title);

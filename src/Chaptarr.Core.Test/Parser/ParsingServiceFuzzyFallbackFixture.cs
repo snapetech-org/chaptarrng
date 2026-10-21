@@ -16,17 +16,22 @@ namespace Chaptarr.Core.Test.Parser
             var author = new Author { Id = 1, Name = "Frank Herbert" };
             var book = new Book { Id = 2, AuthorId = author.Id, Title = "The Mote in God's Eye" };
 
+            return CreateService(matchPercent, author, new List<Book> { book }, new List<Edition>());
+        }
+
+        private static ParsingService CreateService(int matchPercent, Author author, List<Book> books, List<Edition> editions)
+        {
             var authorService = new Mock<IAuthorService>();
             authorService.Setup(service => service.GetReportCandidates(It.IsAny<string>()))
                 .Returns(new List<Author> { author });
 
             var bookService = new Mock<IBookService>();
             bookService.Setup(service => service.GetCandidates(author.Id, It.IsAny<string>()))
-                .Returns(new List<Book> { book });
+                .Returns(books);
 
             var editionService = new Mock<IEditionService>();
             editionService.Setup(service => service.GetCandidates(author.Id, It.IsAny<string>()))
-                .Returns(new List<Edition>());
+                .Returns(editions);
 
             var configService = new Mock<IConfigService>();
             configService.Setup(service => service.BookImportMinimumMatchPercent).Returns(matchPercent);
@@ -65,6 +70,22 @@ namespace Chaptarr.Core.Test.Parser
             var result = CreateService(70).ParseBookTitleFuzzy("Frank Herbert - The Mote in God's Eye password yenc");
 
             Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void should_preserve_the_matched_edition_title_when_it_beats_the_book_title()
+        {
+            var author = new Author { Id = 1, Name = "Jane Austen" };
+            var book = new Book { Id = 2, AuthorId = author.Id, Title = "Unknown Catalog Title" };
+            var edition = new Edition { Id = 3, Book = book, BookId = book.Id, Title = "The Hobbit", Monitored = true };
+            book.Editions = new List<Edition> { edition };
+
+            var result = CreateService(70, author, new List<Book>(), new List<Edition> { edition })
+                .ParseBookTitleFuzzy("Jane Austen - The Hobbit");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.AuthorName, Is.EqualTo("Jane Austen"));
+            Assert.That(result.BookTitle, Is.EqualTo("The Hobbit"));
         }
     }
 }
