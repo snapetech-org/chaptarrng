@@ -91,6 +91,17 @@ the candidate fixture only; operator data, provider fulfillment, semantic
 parity, and installed-channel acceptance remain open, so the release freeze
 continues.
 
+An expanded local source-build rehearsal on 2026-10-21 used the repeatable
+multi-record schema-158 fixture. Preview left the source hash and logical rows
+unchanged; explicit apply preserved provider settings, format-specific
+monitoring, unresolved works, sidecars, history, and linked records; integrity
+and foreign-key checks passed; and rollback restored the source while retaining
+the converted database separately. A conflicting selected-edition case failed
+before promotion. This is synthetic Linux SQLite evidence only. It does not
+close representative operator data, PostgreSQL operator data, complete
+semantic parity, provider fulfillment, or installed-channel acceptance. See
+the [expanded fixture results](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md#expanded-multi-record-source-build-rehearsal-2026-10-21).
+
 **Historical source validation (2026-10-20)**
 
 ChaptarrNG PR #131 merged to `main` as

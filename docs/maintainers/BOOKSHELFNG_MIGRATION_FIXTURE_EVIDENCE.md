@@ -1,5 +1,69 @@
 # BookshelfNG migration fixture evidence
 
+## Expanded multi-record source-build rehearsal (2026-10-21)
+
+The optional `--expanded-fixture` mode in
+[`integration/prepare-bookshelfng-smoke.py`](../../integration/prepare-bookshelfng-smoke.py)
+extends the shared BookshelfNG schema-158 fixture without changing the smaller
+SeerrNG smoke default. This local Linux publish used the current `main`
+worktree at `3094b0ab`, .NET SDK `10.0.402`, and reported ChaptarrNG
+`0.9.978.0-Release-chaptarr-dev-chaptarr`. It was a source build, not a public
+release artifact. The worktree also carried local uncommitted source edits, so
+this is local behavioral evidence rather than exact-head hosted CI evidence.
+The expanded fixture helper is now committed in `380454f5`.
+
+The source had 39 tables and passed SQLite integrity and foreign-key checks.
+It contained four authors, six works, nine editions, four placeholder files,
+two sidecars, four history rows, three download-history rows, two series, three
+series links, provider configurations, and fake credentials. The works covered
+mixed audiobook/ebook media, selected and alternate editions in both formats,
+an audiobook with two narrators, a work with no edition rows, an unselected
+mixed-format work, and an unmonitored audiobook. The placeholder files are not
+valid media. The fixture values were synthetic and no external provider was
+called.
+
+With `HARDCOVER=true HARDCOVER_NATIVE=true`:
+
+- **Preview:** passed. `readarr.db` retained the same SHA-256 before and after
+  preview; all source table counts and the logical SQLite dump were unchanged.
+  Integrity was `ok`, there were no foreign-key errors, and no stage, snapshot,
+  migration-copy, or conversion-backup files remained. The review sidecar was
+  generated for the two unresolved works.
+- **Apply guard:** running `-migrate-bookshelf` without
+  `-confirm-bookshelf-service-stopped` was rejected with the required
+  confirmation error.
+- **Apply:** passed with explicit stopped-service confirmation. The target
+  reached schema 121, passed integrity and foreign-key checks, and contained
+  four authors, nine books, nine editions, and four files. The retained
+  schema-158 backup had the same logical SQLite dump and all 39 table row
+  counts as the source. The mixed-format source work split into format-scoped
+  records; the two unresolved works remained unmonitored in both catalogs.
+- **Mapped records:** all six provider setting objects retained every source
+  field for the fixture indexers, download client, Goodreads list, and BookLore
+  notification. Native Hardcover identities, format roots, file paths,
+  alternate-edition monitoring, history, series links, profiles, users, tags,
+  blocklist rows, and both sidecars were present in the expected target counts.
+  `MetadataFiles.Consumer=Readarr` mapped to
+  `LegacyAudiobookshelfMetadata`.
+- **Restore preview:** passed and left the target and retained source backup
+  byte-identical to their pre-preview hashes.
+- **Rollback:** passed. The restored `readarr.db` matched the retained
+  BookshelfNG backup byte-for-byte, and its logical dump, all 39 table counts,
+  schema 158, integrity, and foreign-key checks matched the starting source.
+  The schema-121 ChaptarrNG database was retained separately with nine books
+  and clean integrity and foreign-key checks.
+- **Fail-closed case:** a disposable copy with two monitored audiobook
+  editions for one work was rejected before promotion. The source hash and
+  schema 158 remained unchanged, integrity and foreign-key checks passed, and
+  no stage or backup file remained.
+
+This is stronger synthetic SQLite evidence, not operator-data acceptance. It
+does not prove full BookshelfNG feature parity, PostgreSQL operator-data
+conversion, provider fulfillment, installed rollback, or update-channel
+handoff. The existing release freeze and operator acceptance gates remain in
+force; the public latest remains `v0.9.977`, no release or compatibility
+bridge was published, and this rehearsal does not approve a BookshelfNG cutover.
+
 ## Released BookshelfNG fixture against current ChaptarrNG candidate (2026-10-21)
 
 This rehearsal used the public BookshelfNG `main-v0.4.21.71` Linux x64 archive

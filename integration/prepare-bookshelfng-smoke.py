@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Seed a disposable BookshelfNG 158 database for the SeerrNG smoke test."""
+"""Seed disposable BookshelfNG 158 databases for smoke and migration rehearsals."""
 
 from pathlib import Path
 import argparse
