@@ -8,8 +8,8 @@ import { fetchAuthor } from 'Store/Actions/authorActions';
 import { fetchCommands } from 'Store/Actions/commandActions';
 import { fetchCustomFilters } from 'Store/Actions/customFilterActions';
 import {
-  fetchImportLists,
   fetchHardcoverConfig,
+  fetchImportLists,
   fetchIndexerFlags,
   fetchLanguages,
   fetchMetadataProfiles,
@@ -134,6 +134,7 @@ const selectErrors = createSelector(
 
     return {
       hasError,
+      authorError: authorsError,
       customFiltersError,
       tagsError,
       uiSettingsError,
@@ -265,25 +266,62 @@ class PageConnector extends Component {
     this.props.onSidebarVisibleChange(!this.props.isSidebarVisible);
   };
 
+  onRetryPress = () => {
+    if (this.props.authorError) {
+      this.props.dispatchFetchAuthor();
+    }
+    if (this.props.customFiltersError) {
+      this.props.dispatchFetchCustomFilters();
+    }
+    if (this.props.tagsError) {
+      this.props.dispatchFetchTags();
+    }
+    if (this.props.languagesError) {
+      this.props.dispatchFetchLanguages();
+    }
+    if (this.props.qualityProfilesError) {
+      this.props.dispatchFetchQualityProfiles();
+    }
+    if (this.props.metadataProfilesError) {
+      this.props.dispatchFetchMetadataProfiles();
+    }
+    if (this.props.importListsError) {
+      this.props.dispatchFetchImportLists();
+    }
+    if (this.props.indexerFlagsError) {
+      this.props.dispatchFetchIndexerFlags();
+    }
+    if (this.props.uiSettingsError) {
+      this.props.dispatchFetchUISettings();
+    }
+    if (this.props.systemStatusError) {
+      this.props.dispatchFetchStatus();
+    }
+    if (this.props.translationsError) {
+      this.props.dispatchFetchTranslations();
+    }
+  };
+
   //
   // Render
 
   render() {
-	    const {
-	      isPopulated,
-	      hasError,
-	      dispatchFetchAuthor,
-	      dispatchFetchCommands,
-	      dispatchFetchTags,
-	      dispatchFetchLanguages,
-	      dispatchFetchQualityProfiles,
+    const {
+      isPopulated,
+      hasError,
+      dispatchFetchAuthor,
+      dispatchFetchCommands,
+      dispatchFetchCustomFilters,
+      dispatchFetchTags,
+      dispatchFetchLanguages,
+      dispatchFetchQualityProfiles,
       dispatchFetchMetadataProfiles,
       dispatchFetchImportLists,
-	      dispatchFetchIndexerFlags,
-	      dispatchFetchUISettings,
-	      dispatchFetchStatus,
-	      dispatchFetchTranslations,
-        dispatchFetchHardcoverConfig,
+      dispatchFetchIndexerFlags,
+      dispatchFetchUISettings,
+      dispatchFetchStatus,
+      dispatchFetchTranslations,
+      dispatchFetchHardcoverConfig,
       ...otherProps
     } = this.props;
 
@@ -292,6 +330,7 @@ class PageConnector extends Component {
         <ErrorPage
           {...this.state}
           {...otherProps}
+          onRetryPress={this.onRetryPress}
         />
       );
     }
@@ -311,15 +350,26 @@ class PageConnector extends Component {
   }
 }
 
-	PageConnector.propTypes = {
-	  isPopulated: PropTypes.bool.isRequired,
-	  hasError: PropTypes.bool.isRequired,
-	  isSidebarVisible: PropTypes.bool.isRequired,
-	  dispatchFetchAuthor: PropTypes.func.isRequired,
-	  dispatchFetchCommands: PropTypes.func.isRequired,
-	  dispatchFetchCustomFilters: PropTypes.func.isRequired,
-	  dispatchFetchTags: PropTypes.func.isRequired,
-	  dispatchFetchLanguages: PropTypes.func.isRequired,
+PageConnector.propTypes = {
+  authorError: PropTypes.object,
+  customFiltersError: PropTypes.object,
+  tagsError: PropTypes.object,
+  languagesError: PropTypes.object,
+  qualityProfilesError: PropTypes.object,
+  metadataProfilesError: PropTypes.object,
+  importListsError: PropTypes.object,
+  indexerFlagsError: PropTypes.object,
+  uiSettingsError: PropTypes.object,
+  systemStatusError: PropTypes.object,
+  translationsError: PropTypes.object,
+  isPopulated: PropTypes.bool.isRequired,
+  hasError: PropTypes.bool.isRequired,
+  isSidebarVisible: PropTypes.bool.isRequired,
+  dispatchFetchAuthor: PropTypes.func.isRequired,
+  dispatchFetchCommands: PropTypes.func.isRequired,
+  dispatchFetchCustomFilters: PropTypes.func.isRequired,
+  dispatchFetchTags: PropTypes.func.isRequired,
+  dispatchFetchLanguages: PropTypes.func.isRequired,
   dispatchFetchQualityProfiles: PropTypes.func.isRequired,
   dispatchFetchMetadataProfiles: PropTypes.func.isRequired,
   dispatchFetchImportLists: PropTypes.func.isRequired,

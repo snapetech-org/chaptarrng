@@ -316,5 +316,35 @@ namespace Chaptarr.Core.Test.MediaFiles
             });
         }
 
+        [Test]
+        public void should_preserve_incompatible_ebook_when_importing_audiobook()
+        {
+            var existingEbook = new BookFile
+            {
+                Id = 1,
+                Path = "/books/Author/Book.epub",
+                Quality = new QualityModel(Quality.EPUB),
+                MediaType = "ebook"
+            };
+            var incomingAudiobook = new BookFile
+            {
+                Id = 2,
+                Path = "/downloads/Book.m4b",
+                Quality = new QualityModel(Quality.M4B),
+                MediaType = "audiobook"
+            };
+            var localBook = BuildLocalBook(existingEbook, incomingAudiobook.Path);
+            var (subject, bin, media, mover) = BuildGuardedSubject();
+
+            Assert.DoesNotThrow(() => subject.UpgradeBookFile(incomingAudiobook, localBook));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(bin.DeletedFiles, Is.Empty);
+                Assert.That(media.Deleted, Is.Empty);
+                Assert.That(mover.Moved, Is.True);
+            });
+        }
+
     }
 }

@@ -36,6 +36,7 @@ namespace NzbDrone.Core.Configuration
         bool KeepExistingLibraryFileOnImportConflict { get; set; }
         bool ImportExtraFiles { get; set; }
         string ExtraFileExtensions { get; set; }
+        bool MoveExtraFilesOnRename { get; set; }
         bool WatchLibraryForChanges { get; set; }
         bool GranularFileSystemScanning { get; set; }
         RescanAfterRefreshType RescanAfterRefresh { get; set; }
@@ -43,6 +44,7 @@ namespace NzbDrone.Core.Configuration
         BookMatchingStrictness BookMatchingStrictness { get; set; }
         bool UsePathAsTagsFallback { get; set; }
         bool AutoAddMissingAuthorsFromCompletedDownloads { get; set; }
+        bool AutoInitializeFormatSpecificAuthorPaths { get; set; }
         string DefaultAudiobookRootFolderPath { get; set; }
         string DefaultEbookRootFolderPath { get; set; }
 

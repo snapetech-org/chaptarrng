@@ -11,11 +11,17 @@
   color: var(--darkGray);
 }
 
+.message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .title,
 .narrators,
 .production,
-.abridgement,
 .duration,
+.abridgement,
 .language,
 .publisher,
 .status {
@@ -33,7 +39,7 @@
 }
 
 .unknown {
-  font-family: inherit;
   color: var(--darkGray);
   font-style: italic;
+  font-family: inherit;
 }

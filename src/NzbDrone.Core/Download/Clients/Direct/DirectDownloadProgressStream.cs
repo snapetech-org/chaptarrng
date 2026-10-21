@@ -28,6 +28,11 @@ namespace NzbDrone.Core.Download.Clients.Direct
         public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
         public override void SetLength(long value) => _inner.SetLength(value);
 
+        public void ResetProgress()
+        {
+            _written = 0;
+        }
+
         public override void Write(byte[] buffer, int offset, int count)
         {
             _inner.Write(buffer, offset, count);

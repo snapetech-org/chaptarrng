@@ -18,7 +18,7 @@ namespace Chaptarr.Api.V1.Books
             _commandQueueManager = commandQueueManager;
         }
 
-        [HttpPut]
+        [HttpPut] // nosemgrep: csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery -- API fallback auth accepts API keys or bearer tokens, never browser cookies.
         public IActionResult SaveAll([FromBody] BookEditorResource resource)
         {
             // Validate mediaType up front: absent = legacy (per-book), audiobook/ebook = scoped,

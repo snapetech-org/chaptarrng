@@ -60,6 +60,7 @@ jobs:
         fi
         body_file="$RUNNER_TEMP/pr-body.md"
         printf '%s' "$PR_BODY" > "$body_file"
+        node --test scripts/release-notes.test.mjs
         node scripts/check-release-notes.mjs \
           --base "$BASE_SHA" \
           --head "$HEAD_SHA" \
@@ -76,13 +77,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-15-intel]
         include:
           - os: ubuntu-latest
             platform: linux
           - os: windows-latest
             platform: win
-          - os: macos-latest
+          - os: macos-15-intel
             platform: osx
 
     steps:
@@ -96,6 +97,13 @@ jobs:
         bash packaging/scripts/test-publish-image-aliases.sh
         bash packaging/scripts/test-dispatch-ghcr-release-bridge.sh
         bash packaging/scripts/test-release-readiness-gate.sh
+        bash packaging/scripts/test-bookshelfng-deb-publish-gate.sh
+
+    - name: Test release publisher configuration preflight
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TMPDIR: ${{ runner.temp }}
+      run: bash packaging/scripts/test-release-publisher-config.sh
 
     - name: Test Chocolatey legacy package publish gate
       if: matrix.os == 'windows-latest'
@@ -105,6 +113,18 @@ jobs:
     - name: Test hosted runner policy
       if: matrix.os == 'ubuntu-latest'
       run: python3 scripts/test_workflow_runner_policy.py
+
+    - name: Test candidate BookshelfNG Debian bridge package
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-deb-bridge-test
+      run: bash packaging/scripts/test-build-bookshelfng-deb-bridge.sh
+
+    - name: Test BookshelfNG host migration helper
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        bash -n scripts/bookshelfng-to-chaptarrng.sh scripts/test-bookshelfng-to-chaptarrng.sh
+        bash scripts/test-bookshelfng-to-chaptarrng.sh
 
     - name: Configure .NET install directory
       if: runner.os == 'Linux'
@@ -138,6 +158,9 @@ jobs:
       shell: bash
       run: python3 build-tools/version_guard.py sync
 
+    - name: Guard (.NET SDK) - workflow and container pins match global.json
+      run: python3 scripts/check_dotnet_sdk_pins.py
+
     - name: Guard (version) - no decreases on main
       if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
       shell: bash
@@ -167,12 +190,15 @@ jobs:
 
     - name: Guard (version) - version-only commits stay pure
       shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.base_ref }}
       run: |
         set -euo pipefail
 
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          git fetch --no-tags origin "refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
-          COMPARE_REF="origin/${{ github.base_ref }}"
+        if [[ "$EVENT_NAME" == "pull_request" ]]; then
+          git fetch --no-tags origin "refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          COMPARE_REF="origin/${BASE_REF}"
         else
           COMPARE_REF="$(git describe --tags --match 'v*' --abbrev=0 HEAD 2>/dev/null || true)"
 
@@ -194,11 +220,37 @@ jobs:
       with:
         node-version: 26.10.0
 
+    - name: Test Quickstart setup readiness
+      run: node --test frontend/src/System/Quickstart/quickstartReadiness.test.cjs
+
     - name: Install Yarn
       run: npm install --global yarn@1.22.22
 
     - name: Install frontend dependencies
       run: yarn install --frozen-lockfile
+
+    - name: Test Books list both-format filtering
+      run: node --test frontend/src/Book/Index/getBookIndexQuery.test.cjs
+
+    - name: Test book infinite-scroll id deduplication
+      run: node --test frontend/src/Store/Reducers/bookInfiniteScrollReducer.test.cjs
+
+    - name: Test BookshelfNG workflow request state and controls
+      run: >-
+        node --test
+        frontend/src/Book/Delete/DeleteBookModalContentConnector.test.cjs
+        frontend/src/Book/Details/BookDetailRequests.test.cjs
+        frontend/src/Book/Index/Overview/BookIndexOverview.test.cjs
+        frontend/src/Book/Index/BookIndexAuthorEditorFormat.test.cjs
+        frontend/src/Bookshelf/BookshelfFooter.test.cjs
+        frontend/src/Components/Form/ProfileSelectInputConnectors.test.cjs
+        frontend/src/Settings/MediaManagement/MediaManagement.test.cjs
+        frontend/src/Settings/MediaManagement/RootFolder/RootFolders.test.cjs
+        frontend/src/Store/Actions/createBookMonitoringFailureAction.test.cjs
+        frontend/src/System/Updates/UpdateChanges.test.cjs
+
+    - name: Test client-side collection equality
+      run: node --test frontend/src/Utilities/Object/clientSideCollectionEqual.test.cjs
 
     - name: Check React Router context
       run: yarn check-react-router-context
@@ -209,10 +261,11 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
-        dotnet-version: 10.0.401
+        dotnet-version: 10.0.402
 
     - name: Cache NuGet packages
-      if: runner.os == 'Windows'
+      # Manual release dispatch can select a branch; do not let those builds write shared cache entries.
+      if: runner.os == 'Windows' && github.event_name != 'workflow_dispatch'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.nuget/packages
@@ -240,6 +293,21 @@ jobs:
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore -p:UseSharedCompilation=false
+
+    - name: Build tool-enabled M4B test image
+      if: matrix.os == 'ubuntu-latest'
+      run: docker build -f integration/Dockerfile.m4b-test -t chaptarrng-m4b-test:ci integration
+
+    - name: Test real M4B merge and fallback
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        docker run --rm --network none \
+          --volume "$GITHUB_WORKSPACE:/workspace" \
+          --workdir /workspace/_tests/net10.0 \
+          chaptarrng-m4b-test:ci \
+          dotnet vstest Chaptarr.Core.Test.dll \
+            --TestCaseFilter:"FullyQualifiedName~real_m4b_tool_should_" \
+            --Logger:"console;verbosity=normal"
 
     - name: Configure Chromium cache for direct-download browser tests
       if: runner.os == 'Linux'
@@ -310,6 +378,49 @@ jobs:
     - name: Verify optional diagnostics module in artifact
       shell: bash
       run: test -s ./publish/Chaptarr/Chaptarr.Diagnostics.dll
+
+    - name: Build Windows BookshelfNG migration installer
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: ./packaging/scripts/build-windows-bookshelf-migration-installer.ps1 -KeepPayload
+
+    - name: Test Windows migration installer SQLite fingerprint
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: dotnet run --configuration Release --project ./distribution/windows/installer-net-smoke/ChaptarrNG.Installer.Smoke.csproj
+
+    - name: Test Windows BookshelfNG installer upgrade and rollback services
+      if: matrix.os == 'windows-latest'
+      env:
+        CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST: ${{ runner.temp }}/chaptarr-bookshelf-service-roundtrip-cleanup.json
+      shell: pwsh
+      run: dotnet run --configuration Release --project ./distribution/windows/installer-net-smoke/ChaptarrNG.Installer.Smoke.csproj -- --windows-service-round-trip
+
+    - name: Clean up Windows BookshelfNG installer round-trip services
+      if: always() && matrix.os == 'windows-latest'
+      env:
+        CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST: ${{ runner.temp }}/chaptarr-bookshelf-service-roundtrip-cleanup.json
+      shell: pwsh
+      run: ./distribution/windows/installer-net-smoke/CleanupServiceRoundTrip.ps1 -ManifestPath $env:CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST
+
+    - name: Remove temporary Windows installer payload
+      if: always() && matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        $payload = Join-Path $PWD 'distribution/windows/installer-net/Payload/Chaptarr.payload.zip'
+        if (Test-Path -LiteralPath $payload) {
+          Remove-Item -LiteralPath $payload -Force
+        }
+        $payloadDirectory = Split-Path -Parent $payload
+        if ((Test-Path -LiteralPath $payloadDirectory) -and
+            -not (Get-ChildItem -LiteralPath $payloadDirectory -Force | Select-Object -First 1)) {
+          Remove-Item -LiteralPath $payloadDirectory -Force
+        }
+
+    - name: Test Windows service preserves its selected data directory
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: ./packaging/scripts/test-windows-service-data-path.ps1 -AppDirectory ./publish/Chaptarr
     
     - name: Upload artifacts
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -358,7 +469,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
-        dotnet-version: 10.0.401
+        dotnet-version: 10.0.402
 
     - name: Install PostgreSQL client
       shell: bash
@@ -380,12 +491,16 @@ jobs:
     - name: Restore dependencies
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-      run: dotnet restore src/Chaptarr.NoTests.sln
+      run: |
+        dotnet restore src/Chaptarr.NoTests.sln
+        dotnet restore src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj
 
     - name: Build (migrations smoke)
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-      run: dotnet build src/Chaptarr.NoTests.sln --configuration Release --no-restore
+      run: |
+        dotnet build src/Chaptarr.NoTests.sln --configuration Release --no-restore
+        dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore -p:UseSharedCompilation=false
 
     - name: Smoke - migrate up on fresh PostgreSQL
       id: validation

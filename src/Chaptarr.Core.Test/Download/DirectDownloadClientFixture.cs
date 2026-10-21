@@ -38,6 +38,46 @@ namespace Chaptarr.Core.Test.Download
         }
 
         [Test]
+        public async Task should_follow_public_redirects_and_discard_redirect_response_body()
+        {
+            using var scenario = new DirectDownloadClientScenario();
+            const string sourceUrl = "https://downloads.example/redirect";
+            const string finalUrl = "https://cdn.example/dune.epub";
+            scenario.Transport.AddRoute(
+                url => url == sourceUrl,
+                request => scenario.WriteRedirectResponse(request, finalUrl, "redirect-body"));
+            scenario.RegisterBinary(finalUrl, "application/epub+zip", "ebook-body");
+
+            var client = scenario.BuildClient();
+            var downloadId = await client.Download(BuildRemoteBook(sourceUrl), indexer: null);
+
+            await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Completed);
+
+            var item = scenario.SingleItem(client, downloadId);
+            Assert.That(scenario.Transport.RequestedUrls, Is.EqualTo(new[] { sourceUrl, finalUrl }));
+            Assert.That(File.ReadAllText(item.OutputPath.FullPath), Is.EqualTo("ebook-body"));
+        }
+
+        [Test]
+        public async Task should_block_redirects_to_private_addresses_without_staging_redirect_body()
+        {
+            using var scenario = new DirectDownloadClientScenario();
+            const string sourceUrl = "https://downloads.example/private-redirect";
+            scenario.Transport.AddRoute(
+                url => url == sourceUrl,
+                request => scenario.WriteRedirectResponse(request, "http://127.0.0.1/private", "redirect-body"));
+
+            var client = scenario.BuildClient();
+            var downloadId = await client.Download(BuildRemoteBook(sourceUrl), indexer: null);
+
+            await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Failed);
+
+            var item = scenario.SingleItem(client, downloadId);
+            Assert.That(scenario.Transport.RequestedUrls, Is.EqualTo(new[] { sourceUrl }));
+            Assert.That(File.Exists(item.OutputPath.FullPath + ".part"), Is.False);
+        }
+
+        [Test]
         public async Task should_retry_transient_failure_and_complete_without_leaking_partial_path()
         {
             using var scenario = new DirectDownloadClientScenario();
@@ -295,6 +335,20 @@ namespace Chaptarr.Core.Test.Download
                 headers.ContentType = contentType;
                 var bytes = System.Text.Encoding.UTF8.GetBytes(body);
                 return WriteResponseAsync(request, headers, bytes);
+            }
+
+            public async Task<HttpResponse> WriteRedirectResponse(HttpRequest request, string location, string body)
+            {
+                var headers = new HttpHeader();
+                headers.ContentType = "text/html; charset=utf-8";
+                headers["Location"] = location;
+                var bytes = System.Text.Encoding.UTF8.GetBytes(body);
+                if (request.ResponseStream != null)
+                {
+                    await request.ResponseStream.WriteAsync(bytes, 0, bytes.Length);
+                }
+
+                return new HttpResponse(request, headers, Array.Empty<byte>(), HttpStatusCode.Found);
             }
 
             public async Task WaitForStatus(DirectDownloadClient client, string downloadId, DownloadItemStatus status)

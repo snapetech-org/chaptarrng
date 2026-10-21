@@ -22,6 +22,7 @@ namespace Chaptarr.Api.V1.Config
         public BookMatchingStrictness BookMatchingStrictness { get; set; }
         public bool UsePathAsTagsFallback { get; set; }
         public bool AutoAddMissingAuthorsFromCompletedDownloads { get; set; }
+        public bool AutoInitializeFormatSpecificAuthorPaths { get; set; }
         public string DefaultAudiobookRootFolderPath { get; set; }
         public string DefaultEbookRootFolderPath { get; set; }
 
@@ -35,6 +36,7 @@ namespace Chaptarr.Api.V1.Config
         public bool KeepExistingLibraryFileOnImportConflict { get; set; }
         public bool ImportExtraFiles { get; set; }
         public string ExtraFileExtensions { get; set; }
+        public bool MoveExtraFilesOnRename { get; set; }
     }
 
     public static class MediaManagementConfigResourceMapper
@@ -58,6 +60,7 @@ namespace Chaptarr.Api.V1.Config
                 BookMatchingStrictness = model.BookMatchingStrictness,
                 UsePathAsTagsFallback = model.UsePathAsTagsFallback,
                 AutoAddMissingAuthorsFromCompletedDownloads = model.AutoAddMissingAuthorsFromCompletedDownloads,
+                AutoInitializeFormatSpecificAuthorPaths = model.AutoInitializeFormatSpecificAuthorPaths,
                 DefaultAudiobookRootFolderPath = model.DefaultAudiobookRootFolderPath,
                 DefaultEbookRootFolderPath = model.DefaultEbookRootFolderPath,
 
@@ -71,6 +74,7 @@ namespace Chaptarr.Api.V1.Config
                 KeepExistingLibraryFileOnImportConflict = model.KeepExistingLibraryFileOnImportConflict,
                 ImportExtraFiles = model.ImportExtraFiles,
                 ExtraFileExtensions = model.ExtraFileExtensions,
+                MoveExtraFilesOnRename = model.MoveExtraFilesOnRename,
             };
         }
     }

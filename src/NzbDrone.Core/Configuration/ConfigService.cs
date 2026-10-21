@@ -269,6 +269,13 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("ExtraFileExtensions", value); }
         }
 
+        public bool MoveExtraFilesOnRename
+        {
+            get { return GetValueBoolean("MoveExtraFilesOnRename", false); }
+
+            set { SetValue("MoveExtraFilesOnRename", value); }
+        }
+
         public bool WatchLibraryForChanges
         {
             get { return GetValueBoolean("WatchLibraryForChanges", true); }
@@ -316,6 +323,14 @@ namespace NzbDrone.Core.Configuration
             get { return GetValueBoolean("AutoAddMissingAuthorsFromCompletedDownloads", false); }
 
             set { SetValue("AutoAddMissingAuthorsFromCompletedDownloads", value); }
+        }
+
+        public bool AutoInitializeFormatSpecificAuthorPaths
+        {
+            // Match the opt-in new-author path behavior; existing author paths are never backfilled here.
+            get { return GetValueBoolean("AutoInitializeFormatSpecificAuthorPaths", false); }
+
+            set { SetValue("AutoInitializeFormatSpecificAuthorPaths", value); }
         }
 
         public string DefaultAudiobookRootFolderPath

@@ -18,7 +18,7 @@ namespace Chaptarr.Api.V1.Bookshelf
             _bookMonitoredService = bookMonitoredService;
         }
 
-        [HttpPost]
+        [HttpPost] // nosemgrep: csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery -- API fallback auth accepts API keys or bearer tokens, never browser cookies.
         public IActionResult UpdateAll([FromBody] BookshelfResource request)
         {
             var requestedAuthors = request.Authors ?? new List<BookshelfAuthorResource>();

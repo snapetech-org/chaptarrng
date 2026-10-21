@@ -21,6 +21,7 @@ namespace NzbDrone.Core.Backup
     public interface IBackupService
     {
         void Backup(BackupType backupType);
+        string CreateTemporaryBackup();
         List<Backup> GetBackups();
         void Restore(string backupFileName);
         string GetBackupFolder();
@@ -108,9 +109,9 @@ namespace NzbDrone.Core.Backup
                     CleanupOldBackups(backupType);
                 }
 
-                BackupConfigFile();
-                BackupDatabase();
-                CreateVersionInfo(dateNow);
+                BackupConfigFile(_backupTempFolder);
+                BackupDatabase(_backupTempFolder);
+                CreateVersionInfo(dateNow, _backupTempFolder);
 
                 _logger.ProgressDebug("Creating backup zip");
 
@@ -150,6 +151,60 @@ namespace NzbDrone.Core.Backup
                 }
 
                 Cleanup();
+            }
+        }
+
+        public string CreateTemporaryBackup()
+        {
+            EnsurePrivateTempFolder(_backupEncryptionTempFolder);
+
+            var suffix = Guid.NewGuid().ToString("N");
+            var stagingFolder = Path.Combine(_backupEncryptionTempFolder, $"export_{suffix}");
+            var backupPath = Path.Combine(_backupEncryptionTempFolder, $"chaptarr_backup_export_{suffix}.zip");
+            var dateNow = DateTime.Now;
+
+            try
+            {
+                _diskProvider.EnsureFolder(stagingFolder);
+                RestrictTempFolder(stagingFolder);
+
+                BackupConfigFile(stagingFolder);
+                BackupDatabase(stagingFolder);
+                CreateVersionInfo(dateNow, stagingFolder);
+
+                foreach (var file in _diskProvider.GetFiles(stagingFolder, false))
+                {
+                    if (file.EndsWith("-journal", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _diskProvider.DeleteFile(file);
+                    }
+                }
+
+                _archiveService.CreateZip(backupPath, _diskProvider.GetFiles(stagingFolder, false));
+                _diskProvider.DeleteFolder(stagingFolder, true);
+
+                return backupPath;
+            }
+            catch
+            {
+                if (_diskProvider.FileExists(backupPath))
+                {
+                    _diskProvider.DeleteFile(backupPath);
+                }
+
+                if (_diskProvider.FolderExists(stagingFolder))
+                {
+                    try
+                    {
+                        _diskProvider.DeleteFolder(stagingFolder, true);
+                    }
+                    catch (Exception cleanupException)
+                    {
+                        _logger.Error(cleanupException, "Failed to clean up temporary plaintext backup staging folder {0}", stagingFolder);
+                    }
+                }
+
+                throw;
             }
         }
 
@@ -330,13 +385,13 @@ namespace NzbDrone.Core.Backup
             }
         }
 
-        private void BackupDatabase()
+        private void BackupDatabase(string backupTempFolder)
         {
             if (_maindDb.DatabaseType == DatabaseType.SQLite)
             {
                 _logger.ProgressDebug("Backing up database");
 
-                _makeDatabaseBackup.BackupDatabase(_maindDb, _backupTempFolder);
+                _makeDatabaseBackup.BackupDatabase(_maindDb, backupTempFolder);
             }
             else
             {
@@ -344,19 +399,19 @@ namespace NzbDrone.Core.Backup
             }
         }
 
-        private void BackupConfigFile()
+        private void BackupConfigFile(string backupTempFolder)
         {
             _logger.ProgressDebug("Backing up config.xml");
 
             var configFile = _appFolderInfo.GetConfigPath();
-            var tempConfigFile = Path.Combine(_backupTempFolder, Path.GetFileName(configFile));
+            var tempConfigFile = Path.Combine(backupTempFolder, Path.GetFileName(configFile));
 
             _diskTransferService.TransferFile(configFile, tempConfigFile, TransferMode.Copy);
         }
 
-        private void CreateVersionInfo(DateTime dateNow)
+        private void CreateVersionInfo(DateTime dateNow, string backupTempFolder)
         {
-            var tempFile = Path.Combine(_backupTempFolder, "INFO");
+            var tempFile = Path.Combine(backupTempFolder, "INFO");
 
             var builder = new StringBuilder();
             builder.AppendLine($"v{BuildInfo.Version}");

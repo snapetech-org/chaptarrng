@@ -1,0 +1,64 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/snapetech-org/chaptarrng
+  allowCustomRepository: false
+  # A published compatibility image digest must be supplied explicitly.
+  digest: ""
+  pullPolicy: IfNotPresent
+
+# The BookshelfNG-to-ChaptarrNG data migration is not approved for production
+# cutover yet. Rendering the chart requires an explicit future approval.
+bookshelfMigration:
+  confirmed: false
+  providerMode: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+  automountServiceAccountToken: false
+
+podAnnotations: {}
+podLabels: {}
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+
+service:
+  type: ClusterIP
+  port: 8787
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: bookshelfng.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  annotations: {}
+
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Keep credentials in Kubernetes Secrets and reference them with valueFrom.
+extraEnv: []

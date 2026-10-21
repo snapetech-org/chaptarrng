@@ -9,6 +9,7 @@ import ModalContent from 'Components/Modal/ModalContent';
 import ModalFooter from 'Components/Modal/ModalFooter';
 import ModalHeader from 'Components/Modal/ModalHeader';
 import { kinds } from 'Helpers/Props';
+import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
 import ConvertPreviewRow from './ConvertPreviewRow';
 import styles from './ConvertPreviewModalContent.css';
@@ -142,6 +143,7 @@ class ConvertPreviewModalContent extends Component {
       isPopulated,
       error,
       items,
+      onRetryPress,
       onModalClose
     } = this.props;
 
@@ -166,9 +168,12 @@ class ConvertPreviewModalContent extends Component {
 
           {
             !isFetching && error &&
-              <div>
-                {translate('ErrorLoadingPreviews')}
-              </div>
+              <Alert kind={kinds.DANGER} role="alert">
+                <div>{getErrorMessage(error, translate('ErrorLoadingPreviews'))}</div>
+                <Button size="small" onPress={onRetryPress}>
+                  {translate('Retry')}
+                </Button>
+              </Alert>
           }
 
           {
@@ -275,6 +280,7 @@ ConvertPreviewModalContent.propTypes = {
   isPopulated: PropTypes.bool.isRequired,
   error: PropTypes.object,
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
+  onRetryPress: PropTypes.func.isRequired,
   onConvertPress: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired
 };

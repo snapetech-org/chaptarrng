@@ -3786,9 +3786,10 @@ namespace NzbDrone.Core.Books
                 var effectiveForceRefresh = message.ForceRefresh ||
                                             (trigger == CommandTrigger.Manual && !message.IsFromImport);
                 var rescanWhenMetadataUnchanged =
-                    trigger == CommandTrigger.Manual &&
-                    message.RescanFolders &&
-                    !message.IsFromImport;
+                    message.RescanWhenMetadataUnchanged ||
+                    (trigger == CommandTrigger.Manual &&
+                     message.RescanFolders &&
+                     !message.IsFromImport);
 
                 RefreshSelectedAuthors(new List<int> { message.AuthorId.Value }, isNew, trigger, message.IsFromImport, message.RefreshMetadata, message.RescanFolders, "all", cancellationToken, rescanWhenMetadataUnchanged, forceRefresh: effectiveForceRefresh, useBulkSyncWhenNotForced: false, scopeRescanToSingleAuthor: true);
             }

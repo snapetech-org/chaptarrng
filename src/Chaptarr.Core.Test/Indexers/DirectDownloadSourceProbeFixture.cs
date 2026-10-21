@@ -220,6 +220,38 @@ namespace Chaptarr.Core.Test.Indexers
             Assert.That(catalogRequest, Does.Contain("q=9780441172719"));
         }
 
+        [TestCase("KEPUB", "Dune.kepub", "kepub")]
+        [TestCase("MOBI", "Dune.mobi", "mobi")]
+        [TestCase("AZW3", "Dune.azw3", "azw3")]
+        public async Task should_search_catalog_for_bookshelf_ebook_formats(string format, string filename, string expectedExtension)
+        {
+            const string md5 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+            var transport = new DirectDownloadTestHttp();
+            var html = $"<div><a class=\"js-vim-focus\" href=\"/md5/{md5}\">Dune</a><div class=\"text-gray-800 font-semibold\">English · {format} · 1.2 MB · 1965</div><div class=\"font-mono\">{filename}</div></div>";
+            transport.AddRoute(
+                url => url.StartsWith("https://primary.example/search", StringComparison.Ordinal),
+                request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
+                    request, HttpStatusCode.OK, html, "text/html; charset=utf-8")));
+            var subject = new DirectDownloadSourceProbeService(transport.CreateClient(), LogManager.GetCurrentClassLogger());
+
+            var result = await subject.ProbeAsync(new DirectDownloadProbeRequest
+            {
+                SourceUrls = new[] { "https://primary.example" },
+                Author = "Frank Herbert",
+                Title = "Dune",
+                Isbn = "9780441172719",
+                RequestTimeout = TimeSpan.FromMilliseconds(50),
+                MaxResponseBytes = 16 * 1024
+            });
+
+            Assert.That(result.SelectedFamily, Is.EqualTo(DirectDownloadSourceFamily.CatalogPage));
+            Assert.That(result.Releases, Has.Count.EqualTo(1));
+            Assert.That(result.Releases.Single().Title, Does.EndWith($"[{expectedExtension}]"));
+            Assert.That(result.Releases.Single().Categories, Is.EqualTo(new[] { 7020 }));
+            var catalogRequest = transport.RequestedUrls.Single(url => url.StartsWith("https://primary.example/search", StringComparison.Ordinal));
+            Assert.That(Uri.UnescapeDataString(catalogRequest), Does.Contain("ext=epub,kepub,mobi,azw3,pdf"));
+        }
+
         [Test]
         public async Task should_unwrap_comment_hidden_partial_matches_for_catalog_adapter()
         {
