@@ -1,5 +1,5 @@
 # Keep stable container aliases in sync
 
-ChaptarrNG stable releases now require a successful Docker Hub mirror and place
-the same image digest under `:main` and `:latest` in GHCR and Docker Hub. The
-Unraid template follows `:latest`.
+ChaptarrNG stable releases now place `:main`, `:master`, `:latest`, and `:stable`
+under the same multi-architecture image digest in GHCR and Docker Hub. The
+Unraid template continues to follow `:latest`.

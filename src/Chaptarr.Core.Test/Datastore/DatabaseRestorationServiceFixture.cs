@@ -1,12 +1,16 @@
 using System;
 using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
+using System.Reflection;
 using Microsoft.Data.Sqlite;
+using NLog;
 using NUnit.Framework;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Datastore;
+using NzbDrone.Core.Datastore.Migration.Framework;
 
 namespace Chaptarr.Core.Test.Datastore
 {
@@ -79,6 +83,35 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(ReadMarker(_appFolderInfo.GetDatabase()), Is.EqualTo("live"));
                 Assert.That(File.Exists(_appFolderInfo.GetDatabaseRestore()), Is.False);
                 Assert.That(File.Exists(_appFolderInfo.GetDatabaseRestore() + ".failed"), Is.True);
+            });
+        }
+
+        [Test]
+        public void should_restore_a_bookshelf_database_and_convert_it_during_normal_startup()
+        {
+            var connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = _appFolderInfo.GetDatabase(),
+                Pooling = false
+            }.ToString();
+            var migrationController = new MigrationController(LogManager.GetCurrentClassLogger(), null);
+            var migrationContext = new MigrationContext(MigrationType.Main);
+
+            migrationController.Migrate(connectionString, migrationContext, DatabaseType.SQLite);
+            CreateBookshelfDatabase(_appFolderInfo.GetDatabaseRestore());
+
+            Assert.That(_subject.Restore(), Is.True);
+            Assert.That(DatabaseLineageGuard.Detect(connectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+
+            migrationController.Migrate(connectionString, migrationContext, DatabaseType.SQLite);
+
+            Assert.That(DatabaseLineageGuard.Detect(connectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+            _subject.Commit();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(File.Exists(_appFolderInfo.GetDatabase() + ".pre-restore"), Is.False);
+                Assert.That(Directory.GetFiles(_tempFolder, Path.GetFileName(_appFolderInfo.GetDatabase()) + ".bookshelfng-backup-*.db"), Has.Length.EqualTo(1));
             });
         }
 
@@ -157,6 +190,23 @@ namespace Chaptarr.Core.Test.Datastore
                 CREATE TABLE Books (Id INTEGER PRIMARY KEY);");
         }
 
+        private static void CreateBookshelfDatabase(string path)
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var resourceName = assembly.GetManifestResourceNames().Single(name => name.EndsWith("BookshelfNG.Schema.158.sql", StringComparison.Ordinal));
+            using var schema = assembly.GetManifestResourceStream(resourceName);
+            using var reader = new StreamReader(schema);
+            using var connection = Open(path);
+            Execute(connection, reader.ReadToEnd());
+            Execute(connection, @"
+                WITH RECURSIVE migrations(version) AS
+                (
+                    SELECT 1 UNION ALL SELECT version + 1 FROM migrations WHERE version < 158
+                )
+                INSERT INTO VersionInfo (Version, AppliedOn, Description)
+                SELECT version, CURRENT_TIMESTAMP, 'restore fixture' FROM migrations;");
+        }
+
         private static SqliteConnection Open(string path)
         {
             var connection = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -172,7 +222,7 @@ namespace Chaptarr.Core.Test.Datastore
         private static void Execute(SqliteConnection connection, string sql, string marker = null)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- sql is fixed fixture setup authored in this test; marker values are bound below.
 
             if (marker != null)
             {

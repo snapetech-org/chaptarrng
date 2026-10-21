@@ -1145,13 +1145,14 @@ namespace NzbDrone.Core.Books
             TrySeedSyncMonitoredAcrossFormatsFromRootFolderDefaults(author, rootFolders, "when author became dual-format eligible");
         }
 
-        // Import paths create an author for the one format being imported, leaving the other format's root folder
-        // blank, which makes the author ineligible for "sync monitored across formats". Fill each blank root from the
-        // effective default for that format; never overwrite an explicit value, and leave it blank when the default
-        // is missing or ambiguous.
+        // Import paths can create an author for the one format being imported, leaving the other format's root folder
+        // blank, which makes the author ineligible for "sync monitored across formats". When enabled in Media
+        // Management, fill each blank root from that format's effective default; never overwrite an explicit value,
+        // and leave it blank when the default is missing or ambiguous.
         internal void ApplyDefaultRootFoldersOnAdd(Author author, List<RootFolder> rootFolders)
         {
-            if (author == null || rootFolders == null || rootFolders.Count == 0)
+            if (author == null || rootFolders == null || rootFolders.Count == 0 ||
+                _configService?.AutoInitializeFormatSpecificAuthorPaths != true)
             {
                 return;
             }

@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Alert from 'Components/Alert';
+import Button from 'Components/Link/Button';
 import FieldSet from 'Components/FieldSet';
 import Form from 'Components/Form/Form';
 import FormGroup from 'Components/Form/FormGroup';
@@ -10,6 +11,7 @@ import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import PageContent from 'Components/Page/PageContent';
 import PageContentBody from 'Components/Page/PageContentBody';
 import { inputTypes, kinds, sizes } from 'Helpers/Props';
+import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import SettingsToolbarConnector from 'Settings/SettingsToolbarConnector';
 import translate from 'Utilities/String/translate';
 
@@ -54,6 +56,7 @@ class ConversionSettings extends Component {
       advancedSettings,
       onInputChange,
       onSavePress,
+      onRetryPress,
       ...otherProps
     } = this.props;
 
@@ -76,8 +79,11 @@ class ConversionSettings extends Component {
           {
             !isFetching && error &&
               <FieldSet legend={translate('Conversion')}>
-                <Alert kind={kinds.DANGER}>
-                  {translate('UnableToLoadConversionSettings')}
+                <Alert kind={kinds.DANGER} role="alert">
+                  <div>{getErrorMessage(error, translate('UnableToLoadConversionSettings'))}</div>
+                  <Button size="small" onPress={onRetryPress}>
+                    {translate('Retry')}
+                  </Button>
                 </Alert>
               </FieldSet>
           }
@@ -200,6 +206,7 @@ class ConversionSettings extends Component {
 ConversionSettings.propTypes = {
   isFetching: PropTypes.bool.isRequired,
   error: PropTypes.object,
+  onRetryPress: PropTypes.func.isRequired,
   settings: PropTypes.object.isRequired,
   hasSettings: PropTypes.bool.isRequired,
   advancedSettings: PropTypes.bool.isRequired,

@@ -16,7 +16,7 @@ function createMapStateToProps() {
   return createSelector(
     (state) => state.bookIndex,
     (state) => state.bookInfiniteScroll,
-    (state) => state.app.selectedMediaType,
+    (state) => state.bookIndex.selectedMediaType,
     (bookIndex, bookInfiniteScroll, selectedMediaType) => {
       const { queryKey, queryParams } = getBookIndexQuery(bookIndex, selectedMediaType);
       const query = bookInfiniteScroll.queries[queryKey] || {};

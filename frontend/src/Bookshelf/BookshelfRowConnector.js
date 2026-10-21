@@ -29,7 +29,7 @@ function createMapStateToProps() {
     (author, bookMap, selectedMediaType, isBooksLoaded, hasBooksError) => {
       const booksInAuthor = bookMap.hasOwnProperty(author.id) ? bookMap[author.id] : [];
       const sortedBooks = orderBy(
-        booksInAuthor.filter((book) => book.mediaType === selectedMediaType),
+        booksInAuthor.filter((book) => selectedMediaType === 'both' || book.mediaType === selectedMediaType),
         'releaseDate',
         'desc'
       );
@@ -126,7 +126,7 @@ class BookshelfRowConnector extends Component {
 
 BookshelfRowConnector.propTypes = {
   authorId: PropTypes.number.isRequired,
-  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook']).isRequired,
+  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook', 'both']).isRequired,
   isBooksLoaded: PropTypes.bool.isRequired,
   hasBooksError: PropTypes.bool.isRequired,
   onBooksLoaded: PropTypes.func,

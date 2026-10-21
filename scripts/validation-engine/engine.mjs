@@ -86,18 +86,43 @@ function digestFile(relative, { text = false } = {}) {
   return text ? sha256GitText(content) : hash(content);
 }
 
+function globMatches(pattern, value) {
+  const memo = new Map();
+  const match = (patternIndex, valueIndex) => {
+    const key = `${patternIndex}:${valueIndex}`;
+    if (memo.has(key)) return memo.get(key);
+
+    let result;
+    if (patternIndex === pattern.length) {
+      result = valueIndex === value.length;
+    } else if (pattern[patternIndex] === '*' && pattern[patternIndex + 1] === '*') {
+      if (pattern[patternIndex + 2] === '/') {
+        result = match(patternIndex + 3, valueIndex);
+        for (let index = valueIndex; !result && index < value.length; index += 1) {
+          if (value[index] === '/') result = match(patternIndex + 3, index + 1);
+        }
+      } else {
+        result = match(patternIndex + 2, valueIndex) ||
+          (valueIndex < value.length && match(patternIndex, valueIndex + 1));
+      }
+    } else if (pattern[patternIndex] === '*') {
+      result = match(patternIndex + 1, valueIndex) ||
+        (valueIndex < value.length && value[valueIndex] !== '/' && match(patternIndex, valueIndex + 1));
+    } else {
+      result = valueIndex < value.length && pattern[patternIndex] === value[valueIndex] &&
+        match(patternIndex + 1, valueIndex + 1);
+    }
+
+    memo.set(key, result);
+    return result;
+  };
+
+  return match(0, 0);
+}
+
+// Preserve the inventory's .test call shape without compiling config into a regular expression.
 export function globRegex(pattern) {
-  let expression = '^';
-  for (let index = 0; index < pattern.length; index += 1) {
-    const char = pattern[index];
-    if (char === '*' && pattern[index + 1] === '*') {
-      index += 1;
-      if (pattern[index + 1] === '/') { index += 1; expression += '(?:.*/)?'; }
-      else expression += '.*';
-    } else if (char === '*') expression += '[^/]*';
-    else expression += char.replace(/[|\\{}()[\]^$+?.]/g, '\\$&');
-  }
-  return new RegExp(`${expression}$`);
+  return { test: (value) => globMatches(pattern, value) };
 }
 
 export function discoverInventory(files = repoFiles()) {
@@ -152,8 +177,16 @@ function inspectRuntime(runtime) {
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
   const version = output.split(/\r?\n/, 1)[0] ?? '';
   const available = !result.error && result.status === 0;
-  const compatible = available && new RegExp(runtime.versionPattern).test(version);
+  const compatible = available && matchesVersionPattern(runtime.versionPattern, version);
   return { command: runtime.command, expected: runtime.versionPattern, version, available, compatible, exitCode: result.status };
+}
+
+function matchesVersionPattern(pattern, version) {
+  if (!pattern.startsWith('^')) return false;
+
+  const exact = pattern.endsWith('$');
+  const literal = pattern.slice(1, exact ? -1 : undefined).replaceAll('\\.', '.');
+  return exact ? version === literal : version.startsWith(literal);
 }
 
 function inheritedToolchainEnvironment(inherited = process.env) {
@@ -393,10 +426,20 @@ function terminate(child) {
 }
 
 export function parseNodeTestSummary(output) {
-  const read = (name) => {
-    const match = [...output.matchAll(new RegExp(`^# ${name} (\\d+)\\s*$`, 'gm'))].at(-1);
-    return match ? Number(match[1]) : null;
-  };
+  const counts = new Map();
+  for (const match of output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)\s*$/gm)) {
+    counts.set(match[1], Number(match[2]));
+  }
+  const read = (name) => counts.get(name) ?? null;
+  const failedTestNames = [];
+  for (const match of output.matchAll(/^[ \t]*not ok \d+ - (.+?)\s*$/gm)) {
+    const name = match[1].trim();
+    // TAP diagnostics can include assertion values and paths. Keep only the
+    // authored test title, and exclude separators that could carry a path.
+    if (name.length <= 240 && /^[A-Za-z0-9][A-Za-z0-9 _().,:+'-]*$/.test(name)) {
+      failedTestNames.push(name);
+    }
+  }
   const summary = {
     total: read('tests'),
     passed: read('pass'),
@@ -410,7 +453,12 @@ export function parseNodeTestSummary(output) {
       summary.passed + summary.failed + summary.cancelled + summary.skipped + summary.todo !== summary.total) {
     throw new Error('Node TAP summary has missing, invalid, zero, or inconsistent case counts');
   }
-  return { ...summary, inconclusive: summary.todo };
+  return {
+    ...summary,
+    inconclusive: summary.todo,
+    failedTestNames: failedTestNames.slice(0, 100),
+    failedTestNamesTruncated: failedTestNames.length > 100,
+  };
 }
 
 function decodeNUnitXmlText(value) {
@@ -460,6 +508,21 @@ function nunitFailureFrame(body) {
   return method && /^[A-Za-z0-9_.$+`<>-]+$/.test(method) ? method : null;
 }
 
+function nunitFailureSourceLine(body) {
+  const failure = body.match(/<failure\b[^>]*>([\s\S]*?)<\/failure>/i);
+  if (!failure) return null;
+  const stackTrace = failure[1].match(/<stack-trace\b[^>]*>([\s\S]*?)<\/stack-trace>/i)?.[1];
+  if (!stackTrace) return null;
+  const stackLines = decodeNUnitXmlText(stackTrace).split(/\r?\n/).map((line) => line.trim());
+  const frames = stackLines.filter((line) => /^at\s+/.test(line) && /:line\s+\d+\s*$/.test(line));
+  const frame = frames.find((line) => line.match(/^at\s+([^ (]+)\s*\(/)?.[1]?.startsWith('NzbDrone.')) ?? frames[0];
+  const sourceLine = frame?.match(/:line\s+(\d+)\s*$/)?.[1];
+  const parsedLine = sourceLine === undefined ? null : Number(sourceLine);
+  return Number.isSafeInteger(parsedLine) && parsedLine > 0 && parsedLine <= 1_000_000
+    ? parsedLine
+    : null;
+}
+
 function nunitFailureSqliteErrorCode(body) {
   const failure = body.match(/<failure\b[^>]*>([\s\S]*?)<\/failure>/i);
   if (!failure) return null;
@@ -500,6 +563,8 @@ export function parseNUnitSummary(xml) {
     const bodyEnd = xml.indexOf('</test-case>', bodyStart);
     const body = tag.endsWith('/>') || bodyEnd < 0 ? '' : xml.slice(bodyStart, bodyEnd);
     const detail = { name, exceptionType: nunitFailureType(body), stackFrame: nunitFailureFrame(body) };
+    const sourceLine = nunitFailureSourceLine(body);
+    if (sourceLine !== null) detail.sourceLine = sourceLine;
     const sqliteErrorCode = nunitFailureSqliteErrorCode(body);
     if (sqliteErrorCode !== null) detail.sqliteErrorCode = sqliteErrorCode;
     const sqliteErrorKind = nunitFailureSqliteErrorKind(body);
@@ -524,6 +589,116 @@ export function parseNUnitSummary(xml) {
     failedTestDetails: failedTestDetails.slice(0, 100),
     failedTestDetailsTruncated: failedTestDetails.length > 100,
   };
+}
+
+export function parseNUnitSummaryMarker(output) {
+  const marker = [...output.matchAll(/^VALIDATION_NUNIT_SUMMARY=([^\r\n]+)$/gm)].at(-1)?.[1];
+  if (!marker || marker.length > 128 * 1024) throw new Error('NUnit summary marker is missing or too large');
+
+  let value;
+  try { value = JSON.parse(marker); } catch { throw new Error('NUnit summary marker is invalid JSON'); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('NUnit summary marker is not an object');
+  const counts = ['total', 'passed', 'failed', 'skipped', 'inconclusive'];
+  if (!counts.every((key) => Number.isSafeInteger(value[key]) && value[key] >= 0) ||
+      value.total < 1 ||
+      counts.slice(1).reduce((sum, key) => sum + value[key], 0) !== value.total) {
+    throw new Error('NUnit summary marker has invalid case counts');
+  }
+
+  const safeName = (name) => typeof name === 'string' && name.length <= 200 && !/[\\/:\r\n\x00-\x1f]/.test(name)
+    ? name
+    : null;
+  const safeIdentifier = (identifier) => typeof identifier === 'string' && identifier.length <= 200 && /^[A-Za-z0-9_.$+`<>-]+$/.test(identifier)
+    ? identifier
+    : null;
+  const failedTestNames = (Array.isArray(value.failedTestNames) ? value.failedTestNames : [])
+    .map(safeName).filter(Boolean);
+  const failedTestDetails = (Array.isArray(value.failedTestDetails) ? value.failedTestDetails : [])
+    .map((detail) => {
+      const name = safeName(detail?.name);
+      if (!name) return null;
+      const result = { name };
+      const exceptionType = safeIdentifier(detail.exceptionType);
+      const stackFrame = safeIdentifier(detail.stackFrame);
+      if (exceptionType) result.exceptionType = exceptionType;
+      if (stackFrame) result.stackFrame = stackFrame;
+      if (Number.isSafeInteger(detail.sourceLine) && detail.sourceLine > 0 && detail.sourceLine <= 1_000_000) {
+        result.sourceLine = detail.sourceLine;
+      }
+      if (Number.isSafeInteger(detail.sqliteErrorCode) && detail.sqliteErrorCode > 0 && detail.sqliteErrorCode < 10000) {
+        result.sqliteErrorCode = detail.sqliteErrorCode;
+      }
+      if (['missing-column', 'missing-table', 'syntax-error', 'duplicate-object', 'constraint-failed', 'sqlite-error'].includes(detail.sqliteErrorKind)) {
+        result.sqliteErrorKind = detail.sqliteErrorKind;
+      }
+      return result;
+    })
+    .filter(Boolean);
+
+  return {
+    total: value.total,
+    passed: value.passed,
+    failed: value.failed,
+    skipped: value.skipped,
+    inconclusive: value.inconclusive,
+    result: ['Passed', 'Failed'].includes(value.result) ? value.result : null,
+    failedTestNames: failedTestNames.slice(0, 100),
+    failedTestNamesTruncated: value.failedTestNamesTruncated === true || failedTestNames.length > 100,
+    failedTestDetails: failedTestDetails.slice(0, 100),
+    failedTestDetailsTruncated: value.failedTestDetailsTruncated === true || failedTestDetails.length > 100,
+  };
+}
+
+export function parseSmokeDiagnosticMarker(output) {
+  const marker = [...output.matchAll(/^VALIDATION_SMOKE_DIAGNOSTIC=([^\r\n]+)$/gm)].at(-1)?.[1];
+  if (!marker || marker.length > 4096) throw new Error('Smoke diagnostic marker is missing or too large');
+
+  let value;
+  try { value = JSON.parse(marker); } catch { throw new Error('Smoke diagnostic marker is invalid JSON'); }
+  const reasons = [
+    'application-not-ready',
+    'unexpected-result-file-count',
+    'unreadable-result-file',
+    'missing-test-run-summary',
+    'invalid-case-counts',
+    'invalid-result-xml',
+  ];
+  const stages = ['application-startup', 'result-reporting'];
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      !reasons.includes(value.reason) ||
+      !stages.includes(value.stage) ||
+      !Number.isSafeInteger(value.resultFileCount) ||
+      value.resultFileCount < 0 || value.resultFileCount > 100) {
+    throw new Error('Smoke diagnostic marker is invalid');
+  }
+
+  const diagnostic = { stage: value.stage, reason: value.reason, resultFileCount: value.resultFileCount };
+  if (Number.isSafeInteger(value.readinessTimeoutSeconds) && value.readinessTimeoutSeconds > 0 && value.readinessTimeoutSeconds <= 600) {
+    diagnostic.readinessTimeoutSeconds = value.readinessTimeoutSeconds;
+  }
+  if (typeof value.processExited === 'boolean') diagnostic.processExited = value.processExited;
+  if (typeof value.exceptionType === 'string' && value.exceptionType.length <= 160 &&
+      /^[A-Za-z_][A-Za-z0-9_.+]*Exception$/.test(value.exceptionType)) {
+    diagnostic.exceptionType = value.exceptionType;
+  }
+  if (Array.isArray(value.exceptionTypes)) {
+    if (value.exceptionTypes.length > 8 || value.exceptionTypes.some((item) =>
+      typeof item !== 'string' || item.length > 160 || !/^[A-Za-z_][A-Za-z0-9_.+]*Exception$/.test(item))) {
+      throw new Error('Smoke diagnostic exception types are invalid');
+    }
+    diagnostic.exceptionTypes = [...new Set(value.exceptionTypes)];
+  }
+  if (Array.isArray(value.startupFrames)) {
+    if (value.startupFrames.length > 8 || value.startupFrames.some((item) =>
+      typeof item !== 'string' || item.length > 240 || !/^[A-Za-z_][A-Za-z0-9_.+`]*$/.test(item))) {
+      throw new Error('Smoke diagnostic startup frames are invalid');
+    }
+    diagnostic.startupFrames = value.startupFrames.slice();
+  }
+  if ((diagnostic.reason === 'application-not-ready') !== (diagnostic.stage === 'application-startup')) {
+    throw new Error('Smoke diagnostic marker has an invalid stage and reason');
+  }
+  return diagnostic;
 }
 
 function formatElapsed(milliseconds) {
@@ -780,6 +955,7 @@ export async function runTask(task, runRoot, testSpec = null) {
   let failedTestNamesTruncated = false;
   let failedTestDetails = [];
   let failedTestDetailsTruncated = false;
+  let smokeDiagnostic = null;
   let summaryError = null;
   if (task.id === 'dotnet-core-tests') {
     try {
@@ -795,6 +971,23 @@ export async function runTask(task, runRoot, testSpec = null) {
       failedTestDetailsTruncated = summary.failedTestDetailsTruncated;
       if (summary.result && summary.result !== 'Passed') summaryError = `NUnit reported ${summary.result}`;
     } catch (error) { summaryError = error.message; }
+  } else if (spec.resultFormat === 'nunit-summary-json') {
+    try {
+      const summary = parseNUnitSummaryMarker(output);
+      activeCases = summary.total;
+      passedCases = summary.passed;
+      failedCases = summary.failed;
+      skippedCases = summary.skipped;
+      inconclusiveCases = summary.inconclusive;
+      failedTestNames = summary.failedTestNames;
+      failedTestNamesTruncated = summary.failedTestNamesTruncated;
+      failedTestDetails = summary.failedTestDetails;
+      failedTestDetailsTruncated = summary.failedTestDetailsTruncated;
+      if (summary.result && summary.result !== 'Passed') summaryError = `NUnit reported ${summary.result}`;
+    } catch {
+      summaryError = 'NUnit summary was missing or invalid';
+      try { smokeDiagnostic = parseSmokeDiagnosticMarker(output); } catch { /* keep the bounded generic summary error */ }
+    }
   } else if (spec.resultFormat === 'node-test') {
     try {
       const summary = parseNodeTestSummary(output);
@@ -803,6 +996,9 @@ export async function runTask(task, runRoot, testSpec = null) {
       failedCases = summary.failed;
       skippedCases = summary.skipped;
       inconclusiveCases = summary.inconclusive;
+      failedTestNames = summary.failedTestNames;
+      failedTestNamesTruncated = summary.failedTestNamesTruncated;
+      failedTestDetails = failedTestNames.map((name) => ({ name }));
       if (summary.cancelled > 0) summaryError = `Node TAP reported ${summary.cancelled} cancelled cases`;
     } catch (error) { summaryError = error.message; }
   } else {
@@ -822,7 +1018,8 @@ export async function runTask(task, runRoot, testSpec = null) {
     durationMs: Date.now() - started,
     exitCode: exit.code,
     signal: exit.signal,
-    error: exit.error?.message ?? summaryError ?? (artifactsChanged ? 'compiled test artifact changed during execution' : null) ?? logError,
+    error: exit.error?.message ?? summaryError ?? (artifactsChanged ? 'compiled test artifact changed during execution' : null) ?? logError ??
+      (failedCases > 0 ? `${failedCases} test case${failedCases === 1 ? '' : 's'} failed` : null),
     timedOut,
     outputBytes,
     logSha256: hash(readFileSync(logPath)),
@@ -836,6 +1033,7 @@ export async function runTask(task, runRoot, testSpec = null) {
     failedTestNamesTruncated,
     failedTestDetails,
     failedTestDetailsTruncated,
+    smokeDiagnostic,
     inventory: task.inventory,
     artifactInputs: artifactsBefore,
   };
@@ -1014,7 +1212,15 @@ async function main(argv = process.argv.slice(2)) {
     requireTrustedLocalTestSandbox();
   }
   const result = await execute(plan);
-  process.stdout.write(`${JSON.stringify({ repository: validation.repository, status: result.receipt.status, totals: result.receipt.totals, evidenceDirectory: result.runRoot }, null, 2)}\n`);
+  const failedTasks = result.receipt.tasks.filter((task) => task.status === 'failed').map((task) => ({
+    taskId: task.taskId,
+    error: task.error,
+    failedTestNames: task.failedTestNames,
+    failedTestDetails: task.failedTestDetails,
+    failedTestNamesTruncated: task.failedTestNamesTruncated,
+    failedTestDetailsTruncated: task.failedTestDetailsTruncated,
+  }));
+  process.stdout.write(`${JSON.stringify({ repository: validation.repository, status: result.receipt.status, totals: result.receipt.totals, failedTasks, evidenceDirectory: result.runRoot }, null, 2)}\n`);
   return result.exitCode;
 }
 

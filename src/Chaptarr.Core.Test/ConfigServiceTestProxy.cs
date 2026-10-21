@@ -10,9 +10,11 @@ namespace Chaptarr.Core.Test
         public BookMatchingStrictness BookMatchingStrictness { get; set; } = BookMatchingStrictness.Balanced;
         public bool UsePathAsTagsFallback { get; set; } = true;
         public bool AutoAddMissingAuthorsFromCompletedDownloads { get; set; }
+        public bool AutoInitializeFormatSpecificAuthorPaths { get; set; }
         public string DefaultAudiobookRootFolderPath { get; set; } = string.Empty;
         public string DefaultEbookRootFolderPath { get; set; } = string.Empty;
         public bool ImportExtraFiles { get; set; }
+        public bool MoveExtraFilesOnRename { get; set; }
         public bool KeepExistingLibraryFileOnImportConflict { get; set; }
         public ProperDownloadTypes DownloadPropersAndRepacks { get; set; } = ProperDownloadTypes.PreferAndUpgrade;
         public bool AudioProductionCustomFormatsSeeded { get; set; }
@@ -53,6 +55,11 @@ namespace Chaptarr.Core.Test
                 return AutoAddMissingAuthorsFromCompletedDownloads;
             }
 
+            if (targetMethod?.Name == "get_AutoInitializeFormatSpecificAuthorPaths")
+            {
+                return AutoInitializeFormatSpecificAuthorPaths;
+            }
+
             if (targetMethod?.Name == "get_DefaultAudiobookRootFolderPath")
             {
                 return DefaultAudiobookRootFolderPath;
@@ -66,6 +73,16 @@ namespace Chaptarr.Core.Test
             if (targetMethod?.Name == "get_ImportExtraFiles")
             {
                 return ImportExtraFiles;
+            }
+
+            if (targetMethod?.Name == "get_MoveExtraFilesOnRename")
+            {
+                return MoveExtraFilesOnRename;
+            }
+
+            if (targetMethod?.Name == "get_MoveExtraFilesOnRename")
+            {
+                return MoveExtraFilesOnRename;
             }
 
             if (targetMethod?.Name == "get_KeepExistingLibraryFileOnImportConflict")
@@ -100,6 +117,12 @@ namespace Chaptarr.Core.Test
                 return null;
             }
 
+            if (targetMethod?.Name == "set_AutoInitializeFormatSpecificAuthorPaths")
+            {
+                AutoInitializeFormatSpecificAuthorPaths = (bool)args[0];
+                return null;
+            }
+
             if (targetMethod?.Name == "set_DefaultAudiobookRootFolderPath")
             {
                 DefaultAudiobookRootFolderPath = (string)args[0];
@@ -115,6 +138,18 @@ namespace Chaptarr.Core.Test
             if (targetMethod?.Name == "set_ImportExtraFiles")
             {
                 ImportExtraFiles = (bool)args[0];
+                return null;
+            }
+
+            if (targetMethod?.Name == "set_MoveExtraFilesOnRename")
+            {
+                MoveExtraFilesOnRename = (bool)args[0];
+                return null;
+            }
+
+            if (targetMethod?.Name == "set_MoveExtraFilesOnRename")
+            {
+                MoveExtraFilesOnRename = (bool)args[0];
                 return null;
             }
 
@@ -150,7 +185,8 @@ namespace Chaptarr.Core.Test
                                             ProperDownloadTypes downloadPropersAndRepacks = ProperDownloadTypes.PreferAndUpgrade,
                                             bool autoAddMissingAuthorsFromCompletedDownloads = false,
                                             string defaultAudiobookRootFolderPath = "",
-                                            string defaultEbookRootFolderPath = "")
+                                            string defaultEbookRootFolderPath = "",
+                                            bool autoInitializeFormatSpecificAuthorPaths = false)
         {
             var service = DispatchProxy.Create<IConfigService, ConfigServiceTestProxy>();
             ((ConfigServiceTestProxy)service).BookMatchingStrictness = strictness;
@@ -159,6 +195,7 @@ namespace Chaptarr.Core.Test
             ((ConfigServiceTestProxy)service).AutoAddMissingAuthorsFromCompletedDownloads = autoAddMissingAuthorsFromCompletedDownloads;
             ((ConfigServiceTestProxy)service).DefaultAudiobookRootFolderPath = defaultAudiobookRootFolderPath;
             ((ConfigServiceTestProxy)service).DefaultEbookRootFolderPath = defaultEbookRootFolderPath;
+            ((ConfigServiceTestProxy)service).AutoInitializeFormatSpecificAuthorPaths = autoInitializeFormatSpecificAuthorPaths;
             return service;
         }
     }

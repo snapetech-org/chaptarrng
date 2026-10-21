@@ -73,7 +73,7 @@ function createProviderSettingsSelector(sectionName) {
 
       // Debug logging
       if (id && !foundItem) {
-        console.warn(`createProviderSettingsSelector: No item found with id ${id} in ${sectionName}. Items:`, items);
+        console.warn('createProviderSettingsSelector: No item found with id', id, 'in', sectionName, 'Items:', items);
       }
 
       const settings = selectSettings(foundItem, pendingChanges, saveError);

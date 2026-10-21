@@ -189,6 +189,9 @@ namespace Chaptarr.Api.V1.Indexers
         public int? DownloadClientId { get; set; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool AdoptExistingTorrent { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public string DownloadClient { get; set; }
 
         // Format type for grouping in UI (audiobook or ebook)

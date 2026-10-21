@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NzbDrone.Common.Http;
 using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Download.Clients;
+using NzbDrone.Core.Indexers.DirectDownload;
 
 namespace NzbDrone.Core.Download.Clients.Direct
 {
@@ -21,6 +22,8 @@ namespace NzbDrone.Core.Download.Clients.Direct
 
     public partial class DirectDownloadClient
     {
+        private const int MaxDownloadRedirects = 5;
+
         private async Task DownloadInternalAsync(string downloadId, ActiveDownload activeDownload)
         {
             var cancellationToken = activeDownload.Token;
@@ -51,6 +54,12 @@ namespace NzbDrone.Core.Download.Clients.Direct
                     {
                         if (attempt == MaxAttempts || IsPermanentFailure(ex))
                         {
+                            if (ex is DirectDownloadProbeException)
+                            {
+                                DeleteIfPresent(state.PartFilePath);
+                                state.DownloadedBytes = 0;
+                            }
+
                             state.Status = DownloadItemStatus.Failed;
                             state.Message = FormatFailureMessage(ex, attempt, MaxAttempts);
                             _stateStore.Save(Settings.StagingFolder, Definition.Id, state);
@@ -86,6 +95,7 @@ namespace NzbDrone.Core.Download.Clients.Direct
 
             long persistedBytes = 0;
             long lastPersistedBytes = 0;
+            var currentUri = DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(new Uri(effectiveUrl), effectiveUrl);
 
             await using (var fileStream = _diskProvider.OpenWriteStream(state.PartFilePath))
             await using (var progressStream = new DirectDownloadProgressStream(fileStream, bytes =>
@@ -102,15 +112,52 @@ namespace NzbDrone.Core.Download.Clients.Direct
                 _stateStore.Save(Settings.StagingFolder, Definition.Id, state);
             }))
             {
-                var request = new HttpRequest(effectiveUrl)
+                HttpResponse response = null;
+                for (var redirectCount = 0; redirectCount <= MaxDownloadRedirects; redirectCount++)
                 {
-                    AllowAutoRedirect = true,
-                    RequestTimeout = TimeSpan.FromMinutes(2),
-                    ResponseStream = progressStream,
-                    CancellationToken = cancellationToken
-                };
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var request = new HttpRequest(currentUri.AbsoluteUri)
+                    {
+                        AllowAutoRedirect = false,
+                        RequestTimeout = TimeSpan.FromMinutes(2),
+                        ResponseStream = progressStream,
+                        CancellationToken = cancellationToken
+                    };
 
-                var response = await _httpClient.GetAsync(request);
+                    response = await _httpClient.GetAsync(request);
+                    if (!response.HasHttpRedirect)
+                    {
+                        break;
+                    }
+
+                    // Redirect responses can have a body too. Discard it before
+                    // validating the next hop so it never becomes staged media.
+                    fileStream.Position = 0;
+                    fileStream.SetLength(0);
+                    persistedBytes = 0;
+                    lastPersistedBytes = 0;
+                    progressStream.ResetProgress();
+
+                    var location = response.Headers.GetSingleValue("Location");
+                    if (string.IsNullOrWhiteSpace(location))
+                    {
+                        throw new DownloadClientException("Direct download redirect is missing a destination.");
+                    }
+
+                    if (redirectCount == MaxDownloadRedirects)
+                    {
+                        throw new DownloadClientException("Direct download exceeded the redirect limit.");
+                    }
+
+                    var nextUri = new Uri(currentUri, location);
+                    currentUri = DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(nextUri, nextUri.AbsoluteUri);
+                }
+
+                if (response == null || response.HasHttpRedirect)
+                {
+                    throw new DownloadClientException("Direct download did not reach a file response.");
+                }
+
                 if (response.Headers.ContentType?.Contains("text/html", StringComparison.OrdinalIgnoreCase) == true)
                 {
                     var classification = ClassifyHtmlResponse(response);
@@ -193,6 +240,7 @@ namespace NzbDrone.Core.Download.Clients.Direct
         {
             return exception switch
             {
+                DirectDownloadProbeException => true,
                 DownloadClientException { Message: var msg } when msg.Contains("empty file", StringComparison.OrdinalIgnoreCase) => true,
                 _ => false
             };

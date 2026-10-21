@@ -40,6 +40,13 @@ class AuthorHistoryContentConnector extends Component {
     this.props.clearAuthorHistory();
   }
 
+  onRetryPress = () => {
+    this.props.fetchAuthorHistory({
+      authorId: this.props.authorId,
+      bookId: this.props.bookId
+    });
+  };
+
   //
   // Listeners
 
@@ -68,6 +75,7 @@ class AuthorHistoryContentConnector extends Component {
     return (
       <ViewComponent
         {...otherProps}
+        onRetryPress={this.onRetryPress}
         onMarkAsFailedPress={this.onMarkAsFailedPress}
       />
     );

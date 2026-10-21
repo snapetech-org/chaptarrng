@@ -69,7 +69,7 @@ for pkgbase in chaptarrng-bin bookshelfng-bin; do
     -e "s/__VERSION__/${version}/g" \
     -e "s/__ARCHIVE_SHA256__/${archive_sha256}/g" \
     "$work/PKGBUILD"
-  if rg -n '__[A-Z_]+__' "$work/PKGBUILD"; then
+  if grep -nE '__[A-Z_]+__' "$work/PKGBUILD"; then
     echo "The $pkgbase recipe has an unresolved release placeholder." >&2
     exit 1
   fi
