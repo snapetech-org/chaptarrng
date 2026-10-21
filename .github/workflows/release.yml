@@ -362,7 +362,7 @@ jobs:
       with:
         dotnet-version: 10.0.402
 
-    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       if: ${{ matrix.rid == 'linux-x86' || matrix.rid == 'freebsd-x64' }}
       with:
         name: chaptarrng-platform-runtime-packs
@@ -421,7 +421,7 @@ jobs:
         ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
-    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: chaptarrng-standalone-linux-x64
         path: ${{ runner.temp }}/linux-x64
@@ -462,13 +462,13 @@ jobs:
         ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
-    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         pattern: chaptarrng-standalone-*
         merge-multiple: true
         path: ${{ runner.temp }}/release-assets
 
-    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: chaptarrng-rpm-source
         path: ${{ runner.temp }}/release-assets
