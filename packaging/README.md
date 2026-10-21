@@ -82,13 +82,15 @@ archive matrix: `linux-x64`, `linux-x86`, `linux-arm64`, `linux-musl-x64`,
 packs. A no-publication validation workflow builds and verifies all ten
 candidate archives. Run
 [39582093706](https://github.com/snapetech-org/chaptarrng/actions/runs/39582093706)
-has passed nine archive targets and the focused runtime-pack permission
-regression; the combined Linux x86 and FreeBSD runtime-pack build is still
-running. The previous attempt failed in those two jobs because GNU tar tried
-to reset metadata on existing shared .NET directories; the installer fix uses
-`--no-overwrite-dir`. These assets are not public until a later release is
-approved. Keep BookshelfNG in service until the full migration and channel
-acceptance gates close.
+passed eight archive targets; Linux x86 and FreeBSD failed because `cp -a`
+tried to restore ownership and timestamps on preexisting SDK files. ChaptarrNG
+`main` now omits those attributes when merging custom packs, and its focused
+overlap regression passes locally. Follow-up exact-head validation
+[39595241427](https://github.com/snapetech-org/chaptarrng/actions/runs/39595241427)
+is queued to check all ten archives. The CI artifacts are temporary and do not publish
+assets. These archives are not public until a later release is approved. Keep
+BookshelfNG in service until the full migration and channel acceptance gates
+close.
 Keep the BookshelfNG installation in service until a replacement channel is
 validated or that platform is explicitly retired.
 

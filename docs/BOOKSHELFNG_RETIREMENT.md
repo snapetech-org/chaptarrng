@@ -29,9 +29,13 @@ book-edit edition and book-file detail/quality loading, Calendar, backup lists,
 Wanted pages, and conversion settings also retry after load errors. Startup
 errors identify the failed data source and retry failed setup requests when
 browser storage works. The frontend
-CJS suite passes 122/122
-locally, and focused migration, metadata, move, and CLI checks
-are recorded below. The current application-code snapshot is [`3c6e0363`](https://github.com/snapetech-org/chaptarrng/commit/3c6e036302f67c5bef87ae9543614549b44c2790). Exact-head Build [39586754598](https://github.com/snapetech-org/chaptarrng/actions/runs/39586754598) is still in progress; current CI status is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). This source is not in public `.977`.
+CJS suite passes 122/122 locally, and focused migration, metadata, move, and
+CLI checks are recorded below. The current application migration fix is commit
+[`c2535e71`](https://github.com/snapetech-org/chaptarrng/commit/c2535e712aa7c1ecbf29347a7e1e9d477bb870e3).
+Its exact-head Build
+[39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854)
+passed Linux, macOS, Windows, PostgreSQL migration, and runner-receipt checks.
+The current source remains unpublished; `v0.9.977` predates these changes.
 
 The canonical
 [audit report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)
@@ -40,37 +44,32 @@ review. No runtime retirement is approved. Representative operator data and roll
 fulfillment, SeerrNG workflows, installed update-channel handoff, and operator
 acceptance remain open. Keep BookshelfNG in service.
 
-The refreshed schema-v4 audit compares BookshelfNG source snapshot
-`e2d1088e28b566b7e27e23264846682e27b0eb06` with ChaptarrNG target snapshot
-`3c6e036302f67c5bef87ae9543614549b44c2790`: 1,119 changed paths, 73 reviewed
-mappings, and 771 dispositions (177 retained, 143 equivalent, 255 ported, and
-196 repository-only retirements). Another 348 paths remain open (97 without
-mapped targets, 249 requiring semantic review, and 2 deleted in BookshelfNG).
-Only decisions with unchanged source blobs and unchanged cited target blobs were
-carried forward. The audit suite passes 31/31; path decisions do not establish
-runtime parity or migration acceptance.
+The current source and target pins, disposition counts, and remaining path
+review live in the canonical BookshelfNG
+[consolidation ledger](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
+That audit suite passes 31/31. Path dispositions organize the review; they do
+not establish runtime parity or migration acceptance.
 
 The AUR and RPM source package paths now map to ChaptarrNG's legacy identity
 templates. Their local package rehearsals used synthetic migration data;
 representative data, live-feed handoff, and real-host service acceptance remain
 open.
 
-Standalone archive work now covers all ten BookshelfNG runtime identifiers in
-the ChaptarrNG source release matrix. Linux x86 and FreeBSD use pinned custom
-.NET runtime packs. No-publication validation
+Standalone archive work covers all ten BookshelfNG runtime identifiers in the
+ChaptarrNG source release matrix. The exact-head no-publication run
 [39582093706](https://github.com/snapetech-org/chaptarrng/actions/runs/39582093706)
-on candidate `d71ec42e` has passed nine archive targets and the focused
-existing-runtime-permission regression; its combined Linux x86 and FreeBSD
-runtime-pack build is still running. The earlier attempt
-[39573719493](https://github.com/snapetech-org/chaptarrng/actions/runs/39573719493)
-finished with failures in those two archive jobs because GNU tar tried to
-change metadata on existing shared .NET directories. The installer now uses
-`--no-overwrite-dir`, and the targeted permission test passes. Current
-ChaptarrNG `main` includes that fix and the candidate Debian bridge; the current
-source is on [main](https://github.com/snapetech-org/chaptarrng/tree/main).
-The refreshed path ledger includes the candidate Debian bridge and pins the
-ChaptarrNG target snapshot to `3c6e0363`. The published `v0.9.977` assets remain
-unchanged; no compatibility package, release, or channel handoff is authorized.
+passed eight archive targets; Linux x86 and FreeBSD failed while copying custom
+runtime packs over preexisting SDK files because `cp -a` tried to restore their
+ownership and timestamps. ChaptarrNG `main` now skips those attributes when
+merging the packs. The focused overlap regression passes locally, and the
+follow-up no-publication matrix
+[39595241427](https://github.com/snapetech-org/chaptarrng/actions/runs/39595241427)
+is queued to validate the fix. The matrix creates only temporary CI artifacts; no
+release, package, image, or migration bridge is published. Keep BookshelfNG in
+service until the full migration and channel acceptance gates close.
+The current path ledger records the candidate Debian bridge at its exact pinned
+source and target revisions. The published `v0.9.977` assets remain unchanged;
+no compatibility package, release, or channel handoff is authorized.
 
 The current migration fix is ChaptarrNG commit
 `c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`. It maps legacy
@@ -129,7 +128,7 @@ scan that can discover files already on disk. The exact-head build above
 includes this behavior; see the
 [author metadata refresh guide](AUTHOR_METADATA_REFRESH.md). The legacy
 source's complete author metadata policy is documented in
-[BookshelfNG's author refresh guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/author-metadata-refresh.md).
+[BookshelfNG's author refresh guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/AUTHOR_METADATA_REFRESH.md).
 
 The current ChaptarrNG `main` source also ports BookshelfNG's HTTP boundary
 controls: explicitly trusted proxy IPs/CIDRs, opt-in CORS origins, per-client

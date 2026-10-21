@@ -36,6 +36,12 @@ The output directory contains runtime packages, SDK metadata, and the install
 helper. Keep those paths separate from user data and remove only the exact
 task-scoped paths after their consumers finish.
 
+The runtime-pack installer merges files into the SDK already installed on the
+runner. It preserves file modes and symlinks but deliberately does not restore
+ownership or source timestamps, which may be unsupported for shared SDK files.
+`packaging/scripts/test-install-extra-platform-runtime-packs.sh` covers an
+overlapping pack file so the copy path is checked against a preexisting SDK.
+
 ## Build a standalone archive
 
 Build the frontend first so `_output/UI/index.html` exists. The archive builder
