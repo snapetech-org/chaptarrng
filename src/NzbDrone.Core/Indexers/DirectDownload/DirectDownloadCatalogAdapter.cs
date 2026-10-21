@@ -34,7 +34,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
             var supported = false;
             foreach (var searchTerm in DirectDownloadSearchTerms.Build(request))
             {
-                var searchUri = new Uri(baseUri, $"search?q={HttpUtility.UrlEncode(searchTerm)}&ext=epub,pdf&lang=en,de");
+                var searchUri = new Uri(baseUri, $"search?q={HttpUtility.UrlEncode(searchTerm)}&ext=epub,kepub,mobi,azw3,pdf&lang=en,de");
                 var response = await _reader.GetAsync(searchUri, request);
                 var unwrapped = UnwrapHtmlComments(response.Content);
                 var matches = ResultRegex.Matches(unwrapped);

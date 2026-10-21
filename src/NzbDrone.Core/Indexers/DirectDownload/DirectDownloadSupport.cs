@@ -64,7 +64,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
     {
         public static readonly ISet<string> AllowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "epub", "mobi", "azw3", "pdf", "djvu", "cbz", "cbr", "fb2", "txt"
+            "epub", "kepub", "mobi", "azw3", "pdf", "djvu", "cbz", "cbr", "fb2", "txt"
         };
 
         public static ReleaseInfo Create(

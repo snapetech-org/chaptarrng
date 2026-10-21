@@ -686,7 +686,7 @@ for the behavior and safety limits.
 
 During an ebook search, Chaptarr checks the configured URLs from top to bottom. It prefers the book ISBN when one is available, then falls back to the monitored edition title. A URL is selected only after it returns a supported response with usable ebook results. Chaptarr moves to the next URL when the current one is unsafe, unavailable, times out, returns an unsupported response, or produces no usable result. It stops after the first successful URL and does not probe later entries for that search.
 
-Each request has a bounded timeout and response-size limit. Redirects are followed only after every destination passes the same URL safety checks, and redirect chains are bounded. Search results are limited to recognized ebook file types and carry the normalized title, format, size, ISBN when available, and a direct download URL. A search fails with an actionable error when every configured URL fails or returns no usable result.
+Each request has a bounded timeout and response-size limit. Redirects are followed only after every destination passes the same URL safety checks, and redirect chains are bounded. Catalog searches request EPUB, KEPUB, MOBI, AZW3, and PDF results; mirror sources can provide other importer-supported ebook types. Search results carry the normalized title, format, size, ISBN when available, and a direct download URL. A search fails with an actionable error when every configured URL fails or returns no usable result.
 
 #### Ebook-only limitation
 
