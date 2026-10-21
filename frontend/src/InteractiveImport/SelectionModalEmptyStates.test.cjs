@@ -27,6 +27,7 @@ Component.prototype.setState = function(update) {
 
 const React = {
   Component,
+  Fragment: 'Fragment',
   createElement(type, props, ...children) {
     return {
       type,
@@ -62,6 +63,10 @@ function loadComponent(componentPath) {
     ['react', { __esModule: true, default: React, Component }],
     ['prop-types', { __esModule: true, default: PropTypes }],
     ['Components/Alert', { __esModule: true, default: 'Alert' }],
+    ['Components/Form/Form', { __esModule: true, default: 'Form' }],
+    ['Components/Form/FormGroup', { __esModule: true, default: 'FormGroup' }],
+    ['Components/Form/FormInputGroup', { __esModule: true, default: 'FormInputGroup' }],
+    ['Components/Form/FormLabel', { __esModule: true, default: 'FormLabel' }],
     ['Components/Form/TextInput', { __esModule: true, default: 'TextInput' }],
     ['Components/Link/Button', { __esModule: true, default: 'Button' }],
     ['Components/Loading/LoadingIndicator', { __esModule: true, default: 'LoadingIndicator' }],
@@ -73,8 +78,9 @@ function loadComponent(componentPath) {
     ['Components/Table/Table', { __esModule: true, default: 'Table' }],
     ['Components/Table/TableBody', { __esModule: true, default: 'TableBody' }],
     ['Helpers/Props', {
-      kinds: { DANGER: 'danger', INFO: 'info' },
-      scrollDirections: { NONE: 'none' }
+      inputTypes: { CHECK: 'check', SELECT: 'select' },
+      kinds: { DANGER: 'danger', INFO: 'info', SUCCESS: 'success' },
+      scrollDirections: { NONE: 'none', VERTICAL: 'vertical' }
     }],
     ['Utilities/Object/getErrorMessage', {
       __esModule: true,
@@ -83,6 +89,7 @@ function loadComponent(componentPath) {
     ['Utilities/String/translate', { __esModule: true, default: (key) => key }],
     ['./SelectBookRow', { __esModule: true, default: 'SelectBookRow' }],
     ['./SelectAuthorRow', { __esModule: true, default: 'SelectAuthorRow' }],
+    ['./SelectEditionRowConnector', { __esModule: true, default: 'SelectEditionRowConnector' }],
     ['./SelectBookModalContent.css', { __esModule: true, default: { modalBody: 'modalBody', filterInput: 'filterInput', scroller: 'scroller', emptyState: 'emptyState' } }],
     ['./SelectAuthorModalContent.css', { __esModule: true, default: { modalBody: 'modalBody', filterInput: 'filterInput', scroller: 'scroller', emptyState: 'emptyState' } }]
   ]);
@@ -138,6 +145,42 @@ function renderAuthorPicker(overrides = {}) {
   const component = new SelectAuthorModalContent({
     items: [],
     onAuthorSelect: noop,
+    onModalClose: noop,
+    ...overrides
+  });
+
+  return { component, output: component.render() };
+}
+
+function renderEditionPicker(overrides = {}) {
+  const SelectEditionModalContent = loadComponent('Edition/SelectEditionModalContent.js');
+  const noop = () => null;
+  const component = new SelectEditionModalContent({
+    books: [],
+    importIdsByBook: {},
+    isFetching: false,
+    isPopulated: true,
+    onEditionSelect: noop,
+    onRetryPress: noop,
+    onModalClose: noop,
+    ...overrides
+  });
+
+  return { component, output: component.render() };
+}
+
+function renderQualityPicker(overrides = {}) {
+  const SelectQualityModalContent = loadComponent('Quality/SelectQualityModalContent.js');
+  const noop = () => null;
+  const component = new SelectQualityModalContent({
+    qualityId: 1,
+    proper: false,
+    real: false,
+    items: [],
+    isFetching: false,
+    isPopulated: true,
+    onQualitySelect: noop,
+    onRetryPress: noop,
     onModalClose: noop,
     ...overrides
   });
@@ -208,4 +251,62 @@ test('author picker explains empty and filtered results and clears the filter', 
   assert.equal(clearButton.props.children, 'ClearFilter');
   clearButton.props.onPress();
   assert.equal(component.state.filter, '');
+});
+
+test('edition picker retains its modal controls and retries a failed edition load', () => {
+  let retries = 0;
+  const failed = renderEditionPicker({
+    books: [{ book: { id: 4, title: 'Dune' } }],
+    isPopulated: false,
+    error: { message: 'offline' },
+    onRetryPress: () => retries++
+  }).output;
+  const errorAlert = findElements(failed, (element) => element.type === 'Alert')[0];
+  const buttons = findElements(failed, (element) => element.type === 'Button');
+
+  assert.equal(findElements(failed, (element) => element.type === 'ModalContent').length, 1);
+  assert.equal(errorAlert.props.role, 'alert');
+  assert.equal(findElements(failed, (element) => element.type === 'Table').length, 0);
+  assert.deepEqual(buttons.map((button) => button.props.children), ['Retry', 'Cancel']);
+  buttons[0].props.onPress();
+  assert.equal(retries, 1);
+});
+
+test('edition picker does not show stale choices while loading', () => {
+  const loading = renderEditionPicker({
+    books: [{ book: { id: 4, title: 'Dune' } }],
+    isFetching: true,
+    isPopulated: true
+  }).output;
+
+  assert.equal(findElements(loading, (element) => element.type === 'LoadingIndicator').length, 1);
+  assert.equal(findElements(loading, (element) => element.type === 'Table').length, 0);
+  assert.equal(findElements(loading, (element) => element.type === 'ModalContent').length, 1);
+});
+
+test('quality picker disables submission when there are no choices and retries failures', () => {
+  const empty = renderQualityPicker().output;
+  const emptyAlert = findElements(empty, (element) => element.type === 'Alert')[0];
+  const emptySubmit = findElements(empty, (element) => element.type === 'Button')
+    .find((button) => button.props.children === 'SelectQuality');
+
+  assert.equal(emptyAlert.props.children, 'ManualImportNoQualitiesAvailable');
+  assert.equal(emptySubmit.props.isDisabled, true);
+
+  let retries = 0;
+  const failed = renderQualityPicker({
+    items: [{ id: 1, name: 'Good' }],
+    isPopulated: false,
+    error: { message: 'offline' },
+    onRetryPress: () => retries++
+  }).output;
+  const retryButton = findElements(failed, (element) => element.type === 'Button')
+    .find((button) => button.props.children === 'Retry');
+  const failedSubmit = findElements(failed, (element) => element.type === 'Button')
+    .find((button) => button.props.children === 'SelectQuality');
+
+  assert.equal(retryButton !== undefined, true);
+  assert.equal(failedSubmit.props.isDisabled, true);
+  retryButton.props.onPress();
+  assert.equal(retries, 1);
 });
