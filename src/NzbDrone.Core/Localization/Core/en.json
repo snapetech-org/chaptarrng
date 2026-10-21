@@ -256,6 +256,7 @@
   "BackfillAuthorRootFoldersSkippedNoProfile": "{0} skipped because the missing format has no quality profile.",
   "BackfillAuthorRootFoldersSummary": "{0} of {1} authors can be updated.",
   "BackfillAuthorRootFoldersTitle": "Fill missing author root folders",
+  "UnableToQueueAuthorRootFolderBackfill": "Could not start the root-folder update. Check the command queue and try again.",
   "Backup": "Backup",
   "BackupFolderHelpText": "Relative paths will be under Chaptarr's AppData directory",
   "BackupIntervalHelpText": "Interval to backup the Chaptarr DB and settings",

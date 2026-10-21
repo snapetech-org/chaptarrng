@@ -74,8 +74,10 @@ class RootFolders extends Component {
       isAddRootFolderModalOpen: false,
       isBackfillPreviewModalOpen: false,
       isPreviewingAuthorRoots: false,
+      isSubmittingAuthorRootBackfill: false,
       backfillPreview: null,
-      backfillPreviewError: null
+      backfillPreviewError: null,
+      backfillCommandError: null
     };
   }
 
@@ -160,11 +162,39 @@ class RootFolders extends Component {
   };
 
   onConfirmAuthorRootBackfill = () => {
-    if (Number(this.state.backfillPreview?.updated) > 0) {
-      this.props.onBackfillAuthorRootFolders();
+    if (Number(this.state.backfillPreview?.updated) <= 0) {
+      this.setState({ isBackfillPreviewModalOpen: false });
+      return;
     }
 
-    this.setState({ isBackfillPreviewModalOpen: false });
+    if (this.state.isSubmittingAuthorRootBackfill) {
+      return;
+    }
+
+    this.setState({
+      isSubmittingAuthorRootBackfill: true,
+      backfillCommandError: null
+    });
+
+    Promise.resolve().then(() => this.props.onBackfillAuthorRootFolders()).then(() => {
+      if (this._isUnmounted) {
+        return;
+      }
+
+      this.setState({
+        isSubmittingAuthorRootBackfill: false,
+        isBackfillPreviewModalOpen: false
+      });
+    }).catch(() => {
+      if (this._isUnmounted) {
+        return;
+      }
+
+      this.setState({
+        isSubmittingAuthorRootBackfill: false,
+        backfillCommandError: translate('UnableToQueueAuthorRootFolderBackfill')
+      });
+    });
   };
 
   renderAuthorRootBackfillPreview() {
@@ -181,6 +211,12 @@ class RootFolders extends Component {
       <div>
         <p>{translate('BackfillAuthorRootFoldersHelpText')}</p>
         <p>{translate('BackfillAuthorRootFoldersSummary', [updated, candidates])}</p>
+        {
+          this.state.backfillCommandError &&
+            <p className={styles.backfillError} role="alert">
+              {this.state.backfillCommandError}
+            </p>
+        }
         {
           candidates === 0 ?
             <p>{translate('NoAuthorsMissingRootFolder')}</p> :
@@ -338,7 +374,7 @@ class RootFolders extends Component {
             confirmLabel={Number(this.state.backfillPreview?.updated) > 0 ?
               translate('FillMissingAuthorRoots') :
               translate('Close')}
-            isSpinning={isBackfillingAuthorRootFolders}
+            isSpinning={isBackfillingAuthorRootFolders || this.state.isSubmittingAuthorRootBackfill}
             onConfirm={this.onConfirmAuthorRootBackfill}
             onCancel={this.onBackfillPreviewModalClose}
           />

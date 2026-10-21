@@ -252,6 +252,7 @@ test('author root backfill reviews the dry-run counts and only runs after confir
   assert.match(previewText, /BackfillAuthorRootFoldersHelpText/);
 
   component.onConfirmAuthorRootBackfill();
+  await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(backfillCount, 1);
   assert.equal(component.state.isBackfillPreviewModalOpen, false);
@@ -273,6 +274,42 @@ test('author root backfill cannot run when the preview has no eligible authors',
 
   assert.equal(backfillCount, 0);
   assert.equal(component.state.isBackfillPreviewModalOpen, false);
+});
+
+test('author root backfill prevents duplicate queueing and keeps a retry after queue failure', async () => {
+  const ajax = createAjaxHarness();
+  const RootFolders = loadRootFolders(ajax.create);
+  let backfillCount = 0;
+  const component = createComponent(RootFolders, () => {
+    backfillCount++;
+
+    return backfillCount === 1 ?
+      Promise.reject(new Error('offline')) :
+      Promise.resolve();
+  });
+
+  component.state.backfillPreview = { candidates: 3, updated: 2 };
+  component.state.isBackfillPreviewModalOpen = true;
+
+  component.onConfirmAuthorRootBackfill();
+  component.onConfirmAuthorRootBackfill();
+  assert.equal(backfillCount, 0);
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(backfillCount, 1);
+  assert.equal(component.state.isBackfillPreviewModalOpen, true);
+  assert.equal(component.state.backfillCommandError, 'UnableToQueueAuthorRootFolderBackfill');
+  assert.equal(component.state.isSubmittingAuthorRootBackfill, false);
+  const previewModal = findElement(component.render(), RootFolders.ConfirmModal);
+  assert.ok(findElementWithProp(previewModal.props.message, 'role', 'alert'));
+
+  component.onConfirmAuthorRootBackfill();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(backfillCount, 2);
+  assert.equal(component.state.isBackfillPreviewModalOpen, false);
+  assert.equal(component.state.backfillCommandError, null);
 });
 
 test('author root backfill shows a retryable preview error', async () => {
