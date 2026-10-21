@@ -20,7 +20,7 @@ namespace NzbDrone.Core.Download.Clients.Direct
             @"href=""(?<href>[^""]+)""[^>]*>(?:\s*)(?:GET|Download)(?:\s*)</a>",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex DetailPageFileExtensionRegex = new(
-            @"href=""(?<href>https?://[^""]+\.(?:pdf|epub|mobi|azw3|djvu|cbz|cbr|fb2|txt)(?:\?[^""]*)?)""",
+            @"href=""(?<href>https?://[^""]+\.(?:pdf|epub|kepub|mobi|azw3|djvu|cbz|cbr|fb2|txt)(?:\?[^""]*)?)""",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex DetailPageAaFastDownloadLinkRegex = new(
             @"href=""(?<href>/fast_download/[^""]+)""",

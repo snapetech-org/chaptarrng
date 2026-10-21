@@ -57,6 +57,37 @@ namespace Chaptarr.Core.Test.Indexers
         }
 
         [Test]
+        public void should_keep_bookshelf_mam_search_filters_and_languages_effective()
+        {
+            var generator = CreateGenerator();
+            generator.Settings.SearchType = (int)MyAnonaMouseSearchType.Freeleech;
+            generator.Settings.SearchInDescription = true;
+            generator.Settings.SearchInSeries = false;
+            generator.Settings.SearchInFilenames = true;
+            generator.Settings.SearchLanguages = new[] { 4, 1, 4 };
+
+            var criteria = new BookSearchCriteria
+            {
+                Author = new Author
+                {
+                    Name = "Author",
+                    AudiobookMetadataProfile = new MetadataProfile { AllowedLanguages = "spa" }
+                },
+                Books = new List<Book> { new Book { MediaType = BookMediaType.Audiobook } },
+                BookTitle = "Book"
+            };
+            var payload = GetRequestPayloadObject(generator.GetSearchRequests(criteria), 0);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(payload["tor"]?["searchType"]?.Value<string>(), Is.EqualTo("fl"));
+                Assert.That(payload["tor"]?["srchIn"]?.Values<string>(),
+                    Is.EqualTo(new[] { "title", "author", "narrator", "tags", "description", "filenames" }));
+                Assert.That(payload["tor"]?["browse_lang"]?.Values<string>(), Is.EqualTo(new[] { "4", "1" }));
+            });
+        }
+
+        [Test]
         public void should_query_an_alternate_edition_title_without_replacing_the_primary_title()
         {
             var searchCriteria = new BookSearchCriteria

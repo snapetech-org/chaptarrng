@@ -19,9 +19,13 @@ function createMapStateToProps() {
     (search, existingAuthorsCount, location, hardcoverConfig, metadataProviderConfig) => {
       const { params } = parseUrl(location.search);
       const { isPopulated, error, item } = hardcoverConfig;
+      const metadataProviderItem = metadataProviderConfig?.item || {};
+      const isLegacyHardcoverCatalogEnabled = metadataProviderConfig?.isPopulated &&
+        !metadataProviderConfig.error && metadataProviderItem.enableHardcover?.value;
+      const hasHardcoverToken = item?.hasToken || metadataProviderItem.hasHardcoverAuth?.value;
       const isHardcoverConfigured = (!isPopulated && !error) ?
         null :
-        !!(item?.enabled && item?.hasToken);
+        !!((item?.enabled || isLegacyHardcoverCatalogEnabled) && hasHardcoverToken);
 
       return {
         ...search,
@@ -53,6 +57,7 @@ class AddNewItemConnector extends Component {
     super(props, context);
 
     this._searchTimeout = null;
+    this._pendingSearch = null;
   }
 
   componentDidMount() {
@@ -70,25 +75,17 @@ class AddNewItemConnector extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    // Trigger initial Hardcover search once we know Hardcover is configured.
-    // This replaces the old behavior where the local /config/hardcover fetch callback started the search.
     if (prevProps.isHardcoverConfigured !== true &&
-        this.props.isHardcoverConfigured === true) {
-      const { term, provider } = this.props;
-      if (term && (!provider || provider === 'hardcover')) {
-        if (this._searchTimeout) {
-          clearTimeout(this._searchTimeout);
-          this._searchTimeout = null;
-        }
-        this.props.getSearchResults({ term, provider: 'hardcover' });
-      }
+        this.props.isHardcoverConfigured === true &&
+        this._pendingSearch) {
+      const pendingSearch = this._pendingSearch;
+      this._pendingSearch = null;
+      this.props.getSearchResults(pendingSearch);
     }
   }
 
   componentWillUnmount() {
-    if (this._searchTimeout) {
-      clearTimeout(this._searchTimeout);
-    }
+    this.clearSearchTimeout();
 
     this.props.clearSearchResults();
 
@@ -99,15 +96,24 @@ class AddNewItemConnector extends Component {
   //
   // Listeners
 
-  onSearchChange = (term, provider) => {
+  clearSearchTimeout = () => {
     if (this._searchTimeout) {
       clearTimeout(this._searchTimeout);
+      this._searchTimeout = null;
     }
+  };
+
+  onSearchChange = (term, provider) => {
+    this.clearSearchTimeout();
+    this._pendingSearch = null;
 
     if (term.trim() === '') {
       this.props.clearSearchResults();
+    } else if (provider === 'hardcover' && this.props.isHardcoverConfigured !== true) {
+      this._pendingSearch = { term, provider };
     } else {
       this._searchTimeout = setTimeout(() => {
+        this._searchTimeout = null;
         if (provider === 'hardcover' && this.props.isHardcoverConfigured !== true) {
           return;
         }
@@ -117,13 +123,34 @@ class AddNewItemConnector extends Component {
   };
 
   onClearSearch = () => {
+    this.clearSearchTimeout();
+    this._pendingSearch = null;
     this.props.clearSearchResults();
   };
 
   onSearchSubmit = (term, provider = 'hardcover') => {
-    // Update the URL when Enter is pressed
-    const encodedTerm = encodeURIComponent(term);
+    this.clearSearchTimeout();
+    this._pendingSearch = null;
+
+    const normalizedTerm = term.trim();
     const encodedProvider = encodeURIComponent(provider);
+
+    if (!normalizedTerm) {
+      this.props.clearSearchResults();
+      this.props.push(`/add/search?provider=${encodedProvider}`);
+      return;
+    }
+
+    const currentProvider = this.props.provider ||
+      (this.props.isHardcoverConfigured === false ? 'goodreads' : 'hardcover');
+
+    if (this.props.term === normalizedTerm && currentProvider === provider) {
+      this.onSearchChange(normalizedTerm, provider);
+      return;
+    }
+
+    // Update the URL when a search is submitted. The route change starts the search.
+    const encodedTerm = encodeURIComponent(normalizedTerm);
     this.props.push(`/add/search?term=${encodedTerm}&provider=${encodedProvider}`);
   };
 

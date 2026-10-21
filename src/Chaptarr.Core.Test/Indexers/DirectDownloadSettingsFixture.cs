@@ -128,6 +128,32 @@ namespace Chaptarr.Core.Test.Indexers
             Assert.That(restored.BaseUrl, Is.EqualTo("https://downloads.example.com"));
         }
 
+        [Test]
+        public void should_load_legacy_array_url_settings_and_preserve_order()
+        {
+            const string json = """
+                {"urls":["https://primary.example.com/","https://mirror.example.com"],"apiKey":"legacy-key","enableSlowFallback":true}
+                """;
+
+            var restored = STJson.Deserialize<DirectDownloadSettings>(json);
+
+            Assert.That(restored.Urls, Is.EqualTo("https://primary.example.com\nhttps://mirror.example.com"));
+            Assert.That(restored.BaseUrl, Is.EqualTo("https://primary.example.com"));
+            Assert.That(restored.ApiKey, Is.EqualTo("legacy-key"));
+            Assert.That(restored.EnableSlowFallback, Is.True);
+            Assert.That(STJson.ToJson(restored), Does.Contain("\"urls\": \"https://primary.example.com\\nhttps://mirror.example.com\""));
+        }
+
+        [Test]
+        public void should_reject_non_string_entries_in_legacy_url_arrays()
+        {
+            const string json = """
+                {"urls":["https://primary.example.com",7]}
+                """;
+
+            Assert.Throws<System.Text.Json.JsonException>(() => STJson.Deserialize<DirectDownloadSettings>(json));
+        }
+
         [TestCase(null, false, false, Description = "neither API key nor fallback is invalid")]
         [TestCase("real-key", false, true, Description = "API-only is valid")]
         [TestCase(null, true, true, Description = "fallback-only is valid")]

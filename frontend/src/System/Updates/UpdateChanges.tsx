@@ -14,7 +14,7 @@ function UpdateChanges(props: UpdateChangesProps) {
     return null;
   }
 
-  const uniqueChanges = [...new Set(changes)];
+  const uniqueChanges = Array.from(new Set(changes));
 
   return (
     <div>

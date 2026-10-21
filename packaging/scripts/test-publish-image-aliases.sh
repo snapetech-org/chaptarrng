@@ -69,16 +69,36 @@ release_workflow="$repo_root/.github/workflows/release.yml"
 package_workflow="$repo_root/.github/workflows/release-distribution.yml"
 chocolatey_publish_script="$repo_root/packaging/scripts/publish-chocolatey-packages.ps1"
 build_workflow="$repo_root/.github/workflows/build.yml"
+readiness_gate="$repo_root/packaging/scripts/require-release-readiness.sh"
 
 grep -Fq 'STANDARD_IMAGE: ghcr.io/snapetech-org/chaptarrng' "$docker_workflow"
 grep -Fq 'REGISTRY: ghcr.io' "$docker_workflow"
 grep -Fq 'registry: ${{ env.REGISTRY }}' "$docker_workflow"
 grep -Fq 'image="${STANDARD_IMAGE}"' "$docker_workflow"
+grep -Fq 'tags+=("$image:$branch")' "$docker_workflow"
+grep -Fq 'tags+=("$image:master")' "$docker_workflow"
+grep -Fq 'tags+=("$image:latest")' "$docker_workflow"
+grep -Fq 'tags+=("$image:stable")' "$docker_workflow"
 grep -Fq 'SOURCE_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build.outputs.digest }}' "$docker_workflow"
 grep -Fq 'subject-name: ${{ env.STANDARD_IMAGE }}' "$docker_workflow"
-grep -Fq 'legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == ' "$release_workflow"
-grep -Fq 'PUBLISH_LEGACY_ALIASES: ${{ inputs.legacy_bridge_enabled }}' "$docker_workflow"
+grep -Fq 'legacy_bridge_enabled: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == ' "$release_workflow"
+grep -Fq "PUBLISH_LEGACY_ALIASES: \${{ inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}" "$docker_workflow"
 grep -Fq 'PUBLISH_GHCR_ALIASES: false' "$docker_workflow"
+for workflow in "$release_workflow" "$docker_workflow" "$package_workflow"; do
+  grep -Fq 'run: ./packaging/scripts/require-release-readiness.sh' "$workflow" || {
+    echo "Retirement release-readiness gate is missing from $workflow." >&2
+    exit 1
+  }
+done
+if CHAPTARRNG_RELEASE_READY=false BOOKSHELFNG_RELEASE_READY=true bash "$readiness_gate"; then
+  echo "The retirement release-readiness gate accepted a disabled value." >&2
+  exit 1
+fi
+if CHAPTARRNG_RELEASE_READY=true BOOKSHELFNG_RELEASE_READY=false bash "$readiness_gate"; then
+  echo "The retirement release-readiness gate accepted incomplete BookshelfNG readiness." >&2
+  exit 1
+fi
+CHAPTARRNG_RELEASE_READY=true BOOKSHELFNG_RELEASE_READY=true bash "$readiness_gate"
 grep -Fq 'name: Dispatch personal-account BookshelfNG GHCR bridge' "$release_workflow"
 grep -Fq 'repositories: bookshelfng-ghcr-release-bridge' "$release_workflow"
 grep -Fq 'permission-contents: write' "$release_workflow"
@@ -89,7 +109,7 @@ grep -Fq 'legacy_bridge_enabled:' "$package_workflow"
 grep -Fq 'REQUESTED_LEGACY_BRIDGE: ${{ inputs.legacy_bridge_enabled }}' "$package_workflow"
 grep -Fq 'MIGRATION_BRIDGE_GATE: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED || ' "$package_workflow"
 grep -Fq 'legacy_bridge_enabled=false' "$package_workflow"
-grep -Fq 'if [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true && "${MIGRATION_BRIDGE_GATE,,}" == true ]]' "$package_workflow"
+grep -Fq 'if [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true && "${MIGRATION_BRIDGE_GATE,,}" == true && "${BOOKSHELFNG_RELEASE_READY,,}" == true ]]' "$package_workflow"
 grep -Fq 'needs.release-target.outputs.legacy_bridge_enabled' "$package_workflow"
 grep -Fq 'LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}' "$package_workflow"
 grep -Fq 'pkg_bases=(chaptarrng-bin)' "$package_workflow"
@@ -155,6 +175,7 @@ printf '%s\t%s\n' \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:master "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:stable "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:latest "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:main "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:master "$dockerhub_source" \
@@ -170,6 +191,7 @@ printf '%s\t%s\n' \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:master "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:stable "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:latest "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:main "$dockerhub_source" \
   docker.io/snapetech/bookshelfng:master "$dockerhub_source" \
@@ -184,7 +206,8 @@ dockerhub_source="docker.io/snapetech/chaptarrng:1.2.3"
 printf '%s\t%s\n' \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
-  docker.io/snapetech/chaptarrng:master "$dockerhub_source" > "$work/expected-standard-dockerhub.log"
+  docker.io/snapetech/chaptarrng:master "$dockerhub_source" \
+  docker.io/snapetech/chaptarrng:stable "$dockerhub_source" > "$work/expected-standard-dockerhub.log"
 cmp "$work/expected-standard-dockerhub.log" "$work/publish.log"
 grep -Fq 'Docker Hub BookshelfNG aliases: skipped because the migration bridge is disabled.' "$work/summary.md"
 [[ "$(wc -l < "$work/skopeo.log")" -eq 2 ]]
@@ -193,14 +216,14 @@ if run_aliases false 'sha256:deadbeef' "$manifest" true true > /dev/null 2>&1; t
   echo 'A legacy tag with a different published digest was accepted.' >&2
   exit 1
 fi
-[[ "$(wc -l < "$work/publish.log")" -eq 3 ]]
+[[ "$(wc -l < "$work/publish.log")" -eq 5 ]]
 grep -Fq "expected $digest" "$work/summary.md"
 
 if run_aliases true "$digest" '{"schemaVersion":3}' true true > /dev/null 2>&1; then
   echo 'A Docker Hub manifest with a different digest was accepted.' >&2
   exit 1
 fi
-[[ "$(wc -l < "$work/publish.log")" -eq 3 ]]
+[[ "$(wc -l < "$work/publish.log")" -eq 5 ]]
 grep -Fq 'Docker Hub version mirror digest was' "$work/summary.md"
 
 echo 'Legacy image alias tests passed.'

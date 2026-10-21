@@ -11,11 +11,20 @@ namespace NzbDrone.Core.ImportLists.Goodreads
         public GoodreadsBookshelfImportListSettingsValidator()
         {
             RuleFor(c => c.UserId)
-                .NotEmpty()
-                .WithMessage("Goodreads user ID is required");
-            RuleFor(c => c.UserId)
-                .Must(GoodreadsUserIdParser.IsValidUserId)
+                .Must(userId => userId.IsNullOrWhiteSpace() || GoodreadsUserIdParser.IsValidUserId(userId))
                 .WithMessage("Goodreads user ID must be a numeric ID (or a profile URL containing it)");
+            RuleFor(c => c)
+                .Must(settings => !settings.UserId.IsNullOrWhiteSpace() ||
+                                  (!settings.AccessToken.IsNullOrWhiteSpace() && !settings.AccessTokenSecret.IsNullOrWhiteSpace()))
+                .WithMessage("Goodreads user ID or existing OAuth credentials are required");
+            RuleFor(c => c.AccessToken)
+                .NotEmpty()
+                .When(c => !c.AccessTokenSecret.IsNullOrWhiteSpace())
+                .WithMessage("Goodreads access token is required when an OAuth secret is configured");
+            RuleFor(c => c.AccessTokenSecret)
+                .NotEmpty()
+                .When(c => !c.AccessToken.IsNullOrWhiteSpace())
+                .WithMessage("Goodreads OAuth secret is required when an access token is configured");
             RuleFor(c => c.BookshelfIds).NotEmpty();
             RuleFor(c => c.RefreshIntervalMinutes)
                 .GreaterThanOrEqualTo(GoodreadsBookshelfImportListSettings.MinimumRefreshIntervalMinutes)
@@ -24,11 +33,11 @@ namespace NzbDrone.Core.ImportLists.Goodreads
         }
     }
 
-    public class GoodreadsBookshelfImportListSettings : IGoodreadsDualMediaImportListSettings
+    public class GoodreadsBookshelfImportListSettings : GoodreadsSettingsBase<GoodreadsBookshelfImportListSettings>, IGoodreadsDualMediaImportListSettings
     {
         public const int MinimumRefreshIntervalMinutes = 15;
 
-        private static readonly GoodreadsBookshelfImportListSettingsValidator Validator = new();
+        private static readonly GoodreadsBookshelfImportListSettingsValidator SettingsValidator = new();
 
         public GoodreadsBookshelfImportListSettings()
         {
@@ -38,14 +47,6 @@ namespace NzbDrone.Core.ImportLists.Goodreads
             MonitorEbooks = true;
             RefreshIntervalMinutes = 720;
         }
-
-        public string BaseUrl { get; set; }
-
-        [FieldDefinition(0,
-            Label = "User ID or URL",
-            HelpText = "Numeric Goodreads user ID (from your profile URL), or a full profile URL. Shelves must be public.",
-            Placeholder = "12345678 or https://www.goodreads.com/user/show/12345678")]
-        public string UserId { get; set; }
 
         [FieldDefinition(1, Label = "Bookshelves", Type = FieldType.Bookshelf)]
         public IEnumerable<string> BookshelfIds { get; set; }
@@ -92,14 +93,16 @@ namespace NzbDrone.Core.ImportLists.Goodreads
         [FieldDefinition(13, Label = "Refresh Interval (Minutes)", Type = FieldType.Number, HelpText = "How often these shelves are checked for new books, in minutes (minimum 15). Short intervals mean more requests to Goodreads.", Advanced = true)]
         public int RefreshIntervalMinutes { get; set; }
 
-        public NzbDroneValidationResult Validate()
+        protected override AbstractValidator<GoodreadsBookshelfImportListSettings> Validator => SettingsValidator;
+
+        public new NzbDroneValidationResult Validate()
         {
             if (!UserId.IsNullOrWhiteSpace() && GoodreadsUserIdParser.TryParse(UserId, out var normalized))
             {
                 UserId = normalized;
             }
 
-            return new NzbDroneValidationResult(Validator.Validate(this));
+            return base.Validate();
         }
     }
 }

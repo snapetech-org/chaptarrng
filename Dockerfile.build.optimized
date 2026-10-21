@@ -14,7 +14,7 @@ RUN npx --yes playwright@1.63.0 install --only-shell chromium
 FROM sandreas/mp4v2:2.1.1@sha256:c186cccc63b69a428be6a60359c29aff84bfacbd8597a4237038c7ccd7628a2d AS mp4v2
 
 ###### deps stage ######
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS deps
+FROM mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa AS deps
 WORKDIR /src
 
 # Copy Node + Yarn from the official Node image (avoids curl|bash installers).
@@ -76,7 +76,9 @@ RUN mkdir -p /app/UI && cp -r _output/UI/* /app/UI/
 RUN test -s /app/UI/index.html
 
 ###### runtime stage ######
-FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/aspnet@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4
+FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/aspnet:10.0.13-noble@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac
+RUN dotnet --list-runtimes | grep -Fq 'Microsoft.NETCore.App 10.0.13' \
+    && dotnet --list-runtimes | grep -Fq 'Microsoft.AspNetCore.App 10.0.13'
 # Copy Playwright Chromium from the browser stage
 COPY --from=browser /ms-playwright /ms-playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
