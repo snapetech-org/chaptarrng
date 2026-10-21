@@ -13,6 +13,7 @@ installation choices.
 
 ## Features and integrations
 
+- [Media moves](MEDIA_MOVES.md): preview and move registered files between author folders.
 - [Author metadata refresh](AUTHOR_METADATA_REFRESH.md): freshness rules, book-added behavior, and Hardcover request pacing.
 - [Fork feature guide](FORK_FEATURES.md): ChaptarrNG capabilities, compatibility notes, and retirement matrix.
 - [SeerrNG integration](SEERRNG_INTEGRATION.md): discovery, supported API routes, service-key restrictions, and validation.
