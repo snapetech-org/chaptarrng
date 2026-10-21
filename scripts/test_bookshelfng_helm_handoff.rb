@@ -174,6 +174,8 @@ assert(release_distribution.match?(/publish-legacy-helm-bridge:[\s\S]*?vars\.CHA
        "Helm publisher is not gated by both retirement readiness variables")
 assert(release_workflow.include?("vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'"),
        "release workflow no longer passes both readiness gates to legacy publishers")
+assert(release_workflow.include?("publish_legacy_bridge:") && release_workflow.include?("default: false"),
+       "legacy bridge publication is not an explicit opt-in on the release workflow")
 assert(docker_workflow.include?("inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'"),
        "legacy Docker aliases are not gated by both retirement readiness variables")
 

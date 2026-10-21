@@ -81,7 +81,7 @@ grep -Fq 'tags+=("$image:latest")' "$docker_workflow"
 grep -Fq 'tags+=("$image:stable")' "$docker_workflow"
 grep -Fq 'SOURCE_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build.outputs.digest }}' "$docker_workflow"
 grep -Fq 'subject-name: ${{ env.STANDARD_IMAGE }}' "$docker_workflow"
-grep -Fq 'legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == ' "$release_workflow"
+grep -Fq 'legacy_bridge_enabled: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == ' "$release_workflow"
 grep -Fq "PUBLISH_LEGACY_ALIASES: \${{ inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}" "$docker_workflow"
 grep -Fq 'PUBLISH_GHCR_ALIASES: false' "$docker_workflow"
 for workflow in "$release_workflow" "$docker_workflow" "$package_workflow"; do
