@@ -16,6 +16,7 @@ for rid in linux-x86 freebsd-x64; do
     "$artifact_root/runtimes" \
     "$artifact_root/sdk/sdk/10.0.402" \
     "$artifact_root/sdk/packs/Microsoft.NETCore.App.Ref" \
+    "$dotnet_root/packs/Microsoft.NETCore.App.Ref" \
     "$runtime_source/host/fxr/10.0.12" \
     "$runtime_source/shared/Microsoft.NETCore.App/10.0.12" \
     "$aspnet_source/shared/Microsoft.AspNetCore.App/10.0.12" \
@@ -34,6 +35,9 @@ DOTNET
   printf 'aspnet %s\n' "$rid" > "$aspnet_source/shared/Microsoft.AspNetCore.App/10.0.12/aspnet.marker"
   printf 'sdk %s\n' "$rid" > "$artifact_root/sdk/sdk/10.0.402/sdk.marker"
   printf 'pack %s\n' "$rid" > "$artifact_root/sdk/packs/Microsoft.NETCore.App.Ref/pack.marker"
+  printf 'existing pack %s\n' "$rid" > "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker"
+  touch -d '@946684800' "$artifact_root/sdk/packs/Microsoft.NETCore.App.Ref/pack.marker"
+  touch -d '@946771200' "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker"
 
   tar --mode=0555 --mtime='@946684800' -czf "$artifact_root/runtimes/$rid-runtime.tar.gz" \
     -C "$runtime_source" host shared
@@ -78,6 +82,11 @@ DOTNET
   assert_marker "aspnet $rid" "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12/aspnet.marker"
   assert_marker "sdk $rid" "$dotnet_root/sdk/10.0.402/sdk.marker"
   assert_marker "pack $rid" "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker"
+  pack_mtime="$(stat -c '%Y' "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker")"
+  if (( pack_mtime <= 1577836800 )); then
+    echo "Runtime-pack installation restored stale package timestamps: $dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker." >&2
+    exit 1
+  fi
 done
 
-echo 'Extra-platform runtime packs install without changing existing .NET directory permissions.'
+echo 'Extra-platform runtime packs install without changing existing directory permissions or preserving stale package timestamps.'
