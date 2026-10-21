@@ -440,10 +440,16 @@ feature-parity and migration-readiness gate. See the
 [migration guide](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers)
 and [Goodreads API deprecation notice](https://www.goodreads.com/topic/show/21788520-api-deprecation).
 
-The importer also detects BookshelfNG's MyAnonaMouse `useFreeleechWedge=2`
-(`Required`) value, which ChaptarrNG normalizes to `Never`. Preview identifies
-the row and setting and blocks apply until the behavior difference is resolved;
-it does not silently alter the source.
+The current source candidate preserves BookshelfNG's MyAnonaMouse
+`useFreeleechWedge=2` (`Required`) value. ChaptarrNG now offers the same choice,
+requests a wedge for eligible releases, and fails the grab if MAM does not
+return a usable torrent rather than retrying unwedged. Live MAM account
+acceptance remains open.
+
+The host environment bridge also carries forward legacy Readarr and Audioarr
+configuration when the matching Chaptarr value is unset. It preserves the
+configured metadata catalog URL and optional Direct Download Chromium
+executable override while leaving primary catalog selection explicit.
 
 The candidate ports BookshelfNG's legacy `AudiobookshelfMetadata` OPF
 consumer as ChaptarrNG's distinct `LegacyAudiobookshelfMetadata` provider.

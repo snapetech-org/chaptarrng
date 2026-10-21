@@ -559,9 +559,26 @@ namespace NzbDrone.Core.Configuration
 
         public string MetadataServerUrl
         {
-            get { return GetValue("MetadataServerUrl", "https://api2.chaptarr.com"); }
+            get
+            {
+                return ResolveMetadataServerUrl(
+                    GetValue("MetadataServerUrl", string.Empty),
+                    Environment.GetEnvironmentVariable("METADATA_URL"));
+            }
 
             set { SetValue("MetadataServerUrl", value); }
+        }
+
+        internal static string ResolveMetadataServerUrl(string configuredValue, string legacyEnvironmentValue)
+        {
+            if (!string.IsNullOrWhiteSpace(configuredValue))
+            {
+                return configuredValue;
+            }
+
+            return !string.IsNullOrWhiteSpace(legacyEnvironmentValue)
+                ? legacyEnvironmentValue
+                : "https://api2.chaptarr.com";
         }
 
         public string HardcoverApiToken
@@ -780,13 +797,13 @@ namespace NzbDrone.Core.Configuration
 
         public string GitHubOwner
         {
-            get { return GetValue("GitHubOwner", "chaptarr"); }
+            get { return GetValue("GitHubOwner", "snapetech-org"); }
             set { SetValue("GitHubOwner", value); }
         }
 
         public string GitHubRepo
         {
-            get { return GetValue("GitHubRepo", "chaptarr"); }
+            get { return GetValue("GitHubRepo", "chaptarrng"); }
             set { SetValue("GitHubRepo", value); }
         }
 

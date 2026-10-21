@@ -32,6 +32,7 @@ namespace NzbDrone.Core.Download.Clients.Direct
                 var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
                 await using var browser = await playwright.Chromium.LaunchAsync(new()
                 {
+                    ExecutablePath = ResolveChromiumExecutablePath(Environment.GetEnvironmentVariable("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH")),
                     Headless = true,
                     Args = new[]
                     {
@@ -80,6 +81,7 @@ namespace NzbDrone.Core.Download.Clients.Direct
                 playwright = await Microsoft.Playwright.Playwright.CreateAsync();
                 browser = await playwright.Chromium.LaunchAsync(new()
                 {
+                    ExecutablePath = ResolveChromiumExecutablePath(Environment.GetEnvironmentVariable("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH")),
                     Headless = true,
                     Args = new[]
                     {
@@ -223,6 +225,11 @@ namespace NzbDrone.Core.Download.Clients.Direct
 
             uri = resolved;
             return true;
+        }
+
+        internal static string ResolveChromiumExecutablePath(string legacyEnvironmentValue)
+        {
+            return string.IsNullOrWhiteSpace(legacyEnvironmentValue) ? null : legacyEnvironmentValue;
         }
 
         private static string Redact(string url)

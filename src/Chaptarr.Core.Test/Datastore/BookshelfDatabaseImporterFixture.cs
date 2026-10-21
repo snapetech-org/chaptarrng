@@ -109,6 +109,46 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_map_saved_bookshelf_metadata_source_to_chaptarr_metadata_server_url()
+        {
+            const string metadataUrl = "https://legacy-metadata.example/catalog";
+            AddConfigValue("MetadataSource", metadataUrl);
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataServerUrl';"), Is.EqualTo(metadataUrl));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataSource';"), Is.EqualTo(metadataUrl),
+                    "the legacy setting should remain available for migration audit and rollback");
+                Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'MetadataSource';"), Is.EqualTo(metadataUrl),
+                    "the immutable source backup should retain the original legacy setting");
+            });
+        }
+
+        [Test]
+        public void should_preserve_explicit_chaptarr_metadata_server_url_over_bookshelf_metadata_source()
+        {
+            AddConfigValue("MetadataSource", "https://legacy-metadata.example/catalog");
+            AddConfigValue("MetadataServerUrl", "https://configured-chaptarr.example/catalog");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataServerUrl';"), Is.EqualTo("https://configured-chaptarr.example/catalog"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MetadataSource';"), Is.EqualTo("https://legacy-metadata.example/catalog"));
+            });
+        }
+
+        [Test]
         public void should_report_unmapped_provider_settings_in_preview_and_refuse_to_apply_them()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))
@@ -159,16 +199,14 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(11));
+                Assert.That(preview.ImportReport.BlockingIssues, Has.Count.EqualTo(10));
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("FixturePluginIndexer/FixturePluginSettings", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
                     issue.Contains("Torznab/TorznabSettings", StringComparison.Ordinal) &&
                     issue.Contains("legacyIndexerSecret", StringComparison.Ordinal)), Is.True);
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue =>
-                    issue.Contains("row 136: MyAnonaMouse/MyAnonaMouseSettings", StringComparison.Ordinal) &&
-                    issue.Contains("useFreeleechWedge", StringComparison.Ordinal) &&
-                    issue.Contains("Required maps to Chaptarr Never", StringComparison.Ordinal)), Is.True,
-                    "a lossy legacy required-wedge setting must be reported and block apply");
+                    issue.Contains("row 136: MyAnonaMouse/MyAnonaMouseSettings", StringComparison.Ordinal)), Is.False,
+                    "the legacy Required wedge option has equivalent behavior in ChaptarrNG");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-indexer-secret", StringComparison.Ordinal)), Is.False,
                     "provider settings and credentials must not be included in the report");
                 Assert.That(preview.ImportReport.BlockingIssues.Any(issue => issue.Contains("fixture-required-mam-secret", StringComparison.Ordinal)), Is.False,
@@ -459,6 +497,37 @@ namespace Chaptarr.Core.Test.Datastore
                 new MigrationContext(MigrationType.Main),
                 DatabaseType.SQLite);
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books;"), Is.EqualTo(2), "a restart must not repeat the conversion");
+        }
+
+        [Test]
+        public void should_preserve_required_mam_freeleech_wedge_settings_during_conversion()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = "UPDATE Indexers SET Settings = @settings WHERE Id = 120;";
+                command.Parameters.AddWithValue("@settings", "{\"baseUrl\":\"https://www.myanonamouse.net\",\"mamId\":\"fixture-token\",\"searchType\":2,\"useFreeleechWedge\":2}");
+                Assert.That(command.ExecuteNonQuery(), Is.EqualTo(1));
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+            var targetSettings = NzbDrone.Common.Serializer.STJson.Deserialize<MyAnonaMouseSettings>(
+                QueryScalar<string>(_sourcePath, "SELECT Settings FROM Indexers WHERE Id = 120;"));
+            var backupSettings = NzbDrone.Common.Serializer.STJson.Deserialize<MyAnonaMouseSettings>(
+                QueryScalar<string>(backupPath, "SELECT Settings FROM Indexers WHERE Id = 120;"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(targetSettings.UseFreeleechWedge, Is.EqualTo((int)MyAnonaMouseFreeleechWedgeAction.Required),
+                    "the converted ChaptarrNG configuration must retain Required");
+                Assert.That(backupSettings.UseFreeleechWedge, Is.EqualTo((int)MyAnonaMouseFreeleechWedgeAction.Required),
+                    "the preserved BookshelfNG backup must retain Required");
+            });
         }
 
         [Test]

@@ -9,6 +9,7 @@ using NzbDrone.Common.Cloud;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
+using NzbDrone.Core.Configuration;
 
 namespace NzbDrone.Core.Update
 {
@@ -21,24 +22,27 @@ namespace NzbDrone.Core.Update
     public class GitHubUpdatePackageProvider : IGitHubUpdatePackageProvider
     {
         // Default to the Snapetech-maintained ChaptarrNG repository
-        private const string DefaultOwner = "snapetech";
+        private const string DefaultOwner = "snapetech-org";
         private const string DefaultRepo = "chaptarrng";
         private static readonly string[] Sha256AssetSuffixes = { ".sha256", ".sha256sum", ".sha256.txt", ".sha256sums", ".sha256sums.txt" };
 
         private readonly IHttpClient _httpClient;
         private readonly IHttpRequestBuilderFactory _gitHubRequestBuilder;
         private readonly IPlatformInfo _platformInfo;
+        private readonly IConfigService _configService;
         private readonly Logger _logger;
 
         public GitHubUpdatePackageProvider(
             IHttpClient httpClient,
             IChaptarrCloudRequestBuilder requestBuilder,
             IPlatformInfo platformInfo,
+            IConfigService configService,
             Logger logger)
         {
             _httpClient = httpClient;
             _gitHubRequestBuilder = requestBuilder.GitHubApi;
             _platformInfo = platformInfo;
+            _configService = configService;
             _logger = logger;
         }
 
@@ -110,15 +114,20 @@ namespace NzbDrone.Core.Update
 
         private List<GitHubRelease> GetReleases()
         {
-            var owner = DefaultOwner;
-            var repo = DefaultRepo;
-
             var request = _gitHubRequestBuilder.Create()
-                .Resource($"repos/{owner}/{repo}/releases")
+                .Resource(BuildReleasesResource(_configService.GitHubOwner, _configService.GitHubRepo))
                 .Build();
 
             var response = _httpClient.Get<List<GitHubRelease>>(request);
             return response.Resource;
+        }
+
+        internal static string BuildReleasesResource(string owner, string repo)
+        {
+            owner = string.IsNullOrWhiteSpace(owner) ? DefaultOwner : owner.Trim();
+            repo = string.IsNullOrWhiteSpace(repo) ? DefaultRepo : repo.Trim();
+
+            return $"repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(repo)}/releases";
         }
 
         private UpdatePackage ConvertToUpdatePackage(GitHubRelease release)

@@ -22,8 +22,6 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
     public class MyAnonaMouseSettings : ITorrentIndexerSettings
     {
         private static readonly MyAnonaMouseSettingsValidator Validator = new MyAnonaMouseSettingsValidator();
-        private const int LegacyRequiredWedgeAction = 2;
-        private int _useFreeleechWedge;
 
         public MyAnonaMouseSettings()
         {
@@ -56,13 +54,7 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
         public bool MamSsl { get; set; }
 
         [FieldDefinition(2, Type = FieldType.Select, Label = "Freeleech Wedges", SelectOptions = typeof(MyAnonaMouseFreeleechWedgeAction), HelpText = "Follow your MAM site preference, or ask MAM to apply a personal freeleech wedge when grabbing an eligible torrent. Prefer Wedge falls back to a normal download if MAM cannot apply one.")]
-        public int UseFreeleechWedge
-        {
-            get => _useFreeleechWedge;
-            set => _useFreeleechWedge = value == LegacyRequiredWedgeAction
-                ? (int)MyAnonaMouseFreeleechWedgeAction.Never
-                : value;
-        }
+        public int UseFreeleechWedge { get; set; }
 
         [FieldDefinition(3, Type = FieldType.Checkbox, Label = "Only Use Wedges for Audiobooks", HelpText = "Do not request a wedge for ebook torrents. Chaptarr also avoids requesting wedges for torrents already marked free, personal freeleech, or VIP.")]
         public bool UseFreeleechOnlyForAudiobooks { get; set; }
@@ -250,7 +242,7 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
         [FieldOption(Label = "Prefer Wedge", Hint = "Request a personal freeleech wedge when eligible, then fall back to a normal download if unavailable")]
         Preferred = 1,
 
-        [Obsolete("MAM's zero-wedge response is not documented well enough to guarantee required-wedge behavior.")]
+        [FieldOption(Label = "Require Wedge", Hint = "Fail the grab if MAM cannot apply the required personal freeleech wedge")]
         Required = 2,
     }
 }

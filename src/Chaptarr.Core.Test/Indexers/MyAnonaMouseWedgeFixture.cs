@@ -6,13 +6,17 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Chaptarr.Http.ClientSchema;
+using FluentValidation.Results;
 using Newtonsoft.Json;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
 using NUnit.Framework;
 using NzbDrone.Common.Http;
+using NzbDrone.Core.Download;
+using NzbDrone.Core.Exceptions;
 using NzbDrone.Core.Indexers;
+using NzbDrone.Core.MediaFiles.TorrentInfo;
 using NzbDrone.Core.Indexers.MyAnonaMouse;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
@@ -54,6 +58,63 @@ namespace Chaptarr.Core.Test.Indexers
                 }
 
                 throw new NotImplementedException(targetMethod?.Name);
+            }
+        }
+
+        private class TorrentFileInfoReaderProxy : DispatchProxy
+        {
+            public string Hash { get; set; } = "fixture-torrent-hash";
+
+            protected override object Invoke(MethodInfo targetMethod, object[] args)
+            {
+                if (targetMethod?.Name == nameof(ITorrentFileInfoReader.GetHashFromTorrentFile))
+                {
+                    return Hash;
+                }
+
+                throw new NotImplementedException(targetMethod?.Name);
+            }
+        }
+
+        private sealed class TestableTorrentClient : TorrentClientBase<MyAnonaMouseSettings>
+        {
+            public string AddedHash { get; private set; }
+
+            public TestableTorrentClient(ITorrentFileInfoReader reader)
+                : base(reader, null, null, null, null, null, LogManager.GetCurrentClassLogger())
+            {
+            }
+
+            public override string Name => "Fixture torrent client";
+
+            protected override string AddFromMagnetLink(RemoteBook remoteBook, string hash, string magnetLink)
+            {
+                AddedHash = hash;
+                return hash;
+            }
+
+            protected override string AddFromTorrentFile(RemoteBook remoteBook, string hash, string filename, byte[] fileContent)
+            {
+                AddedHash = hash;
+                return hash;
+            }
+
+            public override IEnumerable<DownloadClientItem> GetItems()
+            {
+                return Array.Empty<DownloadClientItem>();
+            }
+
+            public override void RemoveItem(DownloadClientItem item, bool deleteData)
+            {
+            }
+
+            public override DownloadClientInfo GetStatus()
+            {
+                return new DownloadClientInfo();
+            }
+
+            protected override void Test(List<ValidationFailure> failures)
+            {
             }
         }
 
@@ -184,21 +245,165 @@ namespace Chaptarr.Core.Test.Indexers
         }
 
         [Test]
-        public void legacy_required_value_should_not_reenable_wedge_use()
+        public void legacy_required_value_should_remain_enabled_for_bookshelf_compatibility()
         {
             var settings = new MyAnonaMouseSettings { UseFreeleechWedge = 2 };
 
-            Assert.That(settings.UseFreeleechWedge, Is.EqualTo((int)MyAnonaMouseFreeleechWedgeAction.Never));
+            Assert.That(settings.UseFreeleechWedge, Is.EqualTo((int)MyAnonaMouseFreeleechWedgeAction.Required));
         }
 
         [Test]
-        public void required_wedge_should_not_be_offered_in_the_client_schema()
+        public void required_wedge_should_be_offered_in_the_client_schema()
         {
             var getSelectOptions = typeof(SchemaBuilder).GetMethod("GetSelectOptions", BindingFlags.NonPublic | BindingFlags.Static);
 
             var options = (List<SelectOption>)getSelectOptions?.Invoke(null, new object[] { typeof(MyAnonaMouseFreeleechWedgeAction) });
 
-            Assert.That(options?.Select(option => option.Value), Is.EqualTo(new[] { 0, 1 }));
+            Assert.That(options?.Select(option => option.Value), Is.EqualTo(new[] { 0, 1, 2 }));
+        }
+
+        [Test]
+        public void required_wedge_should_be_requested_for_eligible_audiobooks_and_fallback_url_should_remove_it()
+        {
+            var indexer = CreateIndexer(new MyAnonaMouseSettings
+            {
+                UseFreeleechWedge = (int)MyAnonaMouseFreeleechWedgeAction.Required,
+                UseFreeleechOnlyForAudiobooks = true
+            });
+
+            var request = indexer.GetDownloadRequest(EligibleAudiobookUrl());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(indexer.IsRequiredDownloadFallback(request.Url.FullUri), Is.True);
+                Assert.That(request.Url.Query, Does.Contain("fl"));
+                Assert.That(indexer.GetFallbackDownloadUrl(request.Url.FullUri), Does.Not.Contain("fl"));
+            });
+        }
+
+        [Test]
+        public async Task required_wedge_should_fail_without_unwedged_retry_when_mam_does_not_return_a_torrent()
+        {
+            var client = CreateClient(request => new HttpResponse(
+                request,
+                new HttpHeader { ContentType = "text/html" },
+                "Unable to apply wedge",
+                HttpStatusCode.OK));
+            var clientState = (IndexerHttpClientProxy)(object)client;
+            var indexer = CreateIndexer(new MyAnonaMouseSettings
+            {
+                UseFreeleechWedge = (int)MyAnonaMouseFreeleechWedgeAction.Required,
+                UseFreeleechOnlyForAudiobooks = true
+            }, client);
+            var request = indexer.GetDownloadRequest(EligibleAudiobookUrl());
+
+            Assert.ThrowsAsync<HttpException>(async () => await indexer.ExecuteDownloadRequestAsync(request));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(clientState.Requests, Has.Count.EqualTo(1));
+                Assert.That(clientState.Requests.Single(), Does.Contain("fl"));
+            });
+        }
+
+        [Test]
+        public async Task required_wedge_failure_should_reach_the_download_client_and_not_fall_back_to_a_magnet()
+        {
+            var client = CreateClient(request => new HttpResponse(
+                request,
+                new HttpHeader { ContentType = "text/html" },
+                "Unable to apply wedge",
+                HttpStatusCode.OK));
+            var clientState = (IndexerHttpClientProxy)(object)client;
+            var indexer = CreateIndexer(new MyAnonaMouseSettings
+            {
+                UseFreeleechWedge = (int)MyAnonaMouseFreeleechWedgeAction.Required
+            }, client);
+            var torrentClient = new TestableTorrentClient(DispatchProxy.Create<ITorrentFileInfoReader, TorrentFileInfoReaderProxy>());
+            var remoteBook = new RemoteBook
+            {
+                Release = new TorrentInfo
+                {
+                    Title = "Fixture release",
+                    DownloadUrl = EligibleAudiobookUrl(),
+                    MagnetUrl = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789"
+                }
+            };
+
+            Assert.ThrowsAsync<ReleaseUnavailableException>(async () => await torrentClient.Download(remoteBook, indexer));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(clientState.Requests, Has.Count.EqualTo(1));
+                Assert.That(clientState.Requests.Single(), Does.Contain("fl"));
+                Assert.That(torrentClient.AddedHash, Is.Null);
+            });
+        }
+
+        [Test]
+        public async Task required_wedge_should_not_block_magnet_grabs_for_releases_that_are_not_wedge_eligible()
+        {
+            var indexer = CreateIndexer(new MyAnonaMouseSettings
+            {
+                UseFreeleechWedge = (int)MyAnonaMouseFreeleechWedgeAction.Required,
+                UseFreeleechOnlyForAudiobooks = true
+            });
+            var torrentClient = new TestableTorrentClient(DispatchProxy.Create<ITorrentFileInfoReader, TorrentFileInfoReaderProxy>());
+            var remoteBook = new RemoteBook
+            {
+                Release = new TorrentInfo
+                {
+                    Title = "Fixture ebook",
+                    DownloadUrl = "https://www.myanonamouse.net/tor/download.php?tid=43&canUseToken=true&isAudiobook=false",
+                    MagnetUrl = "magnet:?xt=urn:btih:0123456789012345678901234567890123456789"
+                }
+            };
+
+            var hash = await torrentClient.Download(remoteBook, indexer);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(hash, Is.Not.Null.And.Not.Empty);
+                Assert.That(torrentClient.AddedHash, Is.EqualTo(hash));
+            });
+        }
+
+        [Test]
+        public async Task preferred_wedge_http_failure_should_retry_without_fl_through_the_download_client()
+        {
+            var client = DispatchProxy.Create<IIndexerHttpClient, IndexerHttpClientProxy>();
+            var clientState = (IndexerHttpClientProxy)(object)client;
+            clientState.Responses.Enqueue(request => throw new WebException("simulated wedge request failure"));
+            clientState.Responses.Enqueue(request => new HttpResponse(
+                request,
+                new HttpHeader { ContentType = "application/x-bittorrent" },
+                Encoding.ASCII.GetBytes(MinimalTorrent),
+                HttpStatusCode.OK));
+            var indexer = CreateIndexer(new MyAnonaMouseSettings
+            {
+                UseFreeleechWedge = (int)MyAnonaMouseFreeleechWedgeAction.Preferred,
+                UseFreeleechOnlyForAudiobooks = true
+            }, client);
+            var torrentClient = new TestableTorrentClient(DispatchProxy.Create<ITorrentFileInfoReader, TorrentFileInfoReaderProxy>());
+            var remoteBook = new RemoteBook
+            {
+                Release = new TorrentInfo
+                {
+                    Title = "Fixture release",
+                    DownloadUrl = EligibleAudiobookUrl()
+                }
+            };
+
+            var hash = await torrentClient.Download(remoteBook, indexer);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(hash, Is.EqualTo("fixture-torrent-hash"));
+                Assert.That(torrentClient.AddedHash, Is.EqualTo("fixture-torrent-hash"));
+                Assert.That(clientState.Requests, Has.Count.EqualTo(2));
+                Assert.That(clientState.Requests[0], Does.Contain("fl"));
+                Assert.That(clientState.Requests[1], Does.Not.Contain("fl"));
+            });
         }
 
         [Test]

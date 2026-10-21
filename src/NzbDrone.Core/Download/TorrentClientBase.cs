@@ -68,7 +68,14 @@ namespace NzbDrone.Core.Download
                 magnetUrl = torrentInfo.MagnetUrl;
             }
 
-            if (PreferTorrentFile)
+            var downloadFallback = indexer as IIndexerDownloadFallback;
+            var requiredIndexerFallbackUrl = torrentUrl.IsNotNullOrWhiteSpace() && downloadFallback != null
+                ? indexer.GetDownloadRequest(torrentUrl)?.Url?.FullUri
+                : null;
+            var requireIndexerFallbackSuccess = !string.IsNullOrWhiteSpace(requiredIndexerFallbackUrl) &&
+                                                downloadFallback.IsRequiredDownloadFallback(requiredIndexerFallbackUrl);
+
+            if (PreferTorrentFile || requireIndexerFallbackSuccess)
             {
                 if (torrentUrl.IsNotNullOrWhiteSpace())
                 {
@@ -78,7 +85,7 @@ namespace NzbDrone.Core.Download
                     }
                     catch (Exception ex)
                     {
-                        if (magnetUrl.IsNullOrWhiteSpace())
+                        if (requireIndexerFallbackSuccess || magnetUrl.IsNullOrWhiteSpace())
                         {
                             throw;
                         }
@@ -89,6 +96,11 @@ namespace NzbDrone.Core.Download
 
                 if (magnetUrl.IsNotNullOrWhiteSpace())
                 {
+                    if (requireIndexerFallbackSuccess)
+                    {
+                        throw new ReleaseUnavailableException(remoteBook.Release, "A required MyAnonamouse freeleech wedge cannot be applied to a magnet link");
+                    }
+
                     try
                     {
                         return DownloadFromMagnetUrl(remoteBook, indexer, magnetUrl);
@@ -143,12 +155,14 @@ namespace NzbDrone.Core.Download
         private async Task<string> DownloadFromWebUrl(RemoteBook remoteBook, IIndexer indexer, string torrentUrl, bool useIndexerRequestBuilder = true)
         {
             byte[] torrentFile = null;
+            var attemptedDownloadUrl = torrentUrl;
 
             try
             {
                 var request = indexer != null && useIndexerRequestBuilder
                     ? indexer.GetDownloadRequest(torrentUrl)
                     : new HttpRequest(torrentUrl);
+                attemptedDownloadUrl = request.Url.FullUri;
 
                 // Debug logging for MAM authentication
                 if (request.Headers.ContainsKey("Cookie"))
@@ -241,6 +255,18 @@ namespace NzbDrone.Core.Download
             }
             catch (HttpException ex)
             {
+                var fallbackUrl = (indexer as IIndexerDownloadFallback)?.GetFallbackDownloadUrl(attemptedDownloadUrl);
+                if (fallbackUrl.IsNotNullOrWhiteSpace())
+                {
+                    if (((IIndexerDownloadFallback)indexer).IsRequiredDownloadFallback(attemptedDownloadUrl))
+                    {
+                        throw new ReleaseUnavailableException(remoteBook.Release, "Unable to use the required MyAnonamouse freeleech wedge");
+                    }
+
+                    _logger.Debug(ex, "MyAnonamouse wedge request failed; retrying without the wedge");
+                    return await DownloadFromWebUrl(remoteBook, indexer, fallbackUrl).ConfigureAwait(false);
+                }
+
                 if (ex.Response.StatusCode == HttpStatusCode.NotFound)
                 {
                     _logger.ErrorSafe(ex, "Downloading torrent file for book '{0}' failed since it no longer exists ({1})", remoteBook.Release.Title, torrentUrl);
@@ -269,6 +295,18 @@ namespace NzbDrone.Core.Download
             }
             catch (WebException ex)
             {
+                var fallbackUrl = (indexer as IIndexerDownloadFallback)?.GetFallbackDownloadUrl(attemptedDownloadUrl);
+                if (fallbackUrl.IsNotNullOrWhiteSpace())
+                {
+                    if (((IIndexerDownloadFallback)indexer).IsRequiredDownloadFallback(attemptedDownloadUrl))
+                    {
+                        throw new ReleaseUnavailableException(remoteBook.Release, "Unable to use the required MyAnonamouse freeleech wedge");
+                    }
+
+                    _logger.Debug(ex, "MyAnonamouse wedge request failed; retrying without the wedge");
+                    return await DownloadFromWebUrl(remoteBook, indexer, fallbackUrl).ConfigureAwait(false);
+                }
+
                 _logger.ErrorSafe(ex, "Downloading torrent file for release '{0}' failed ({1})", remoteBook.Release.Title, torrentUrl);
 
                 throw new ReleaseDownloadException(remoteBook.Release, "Downloading torrent failed", ex);

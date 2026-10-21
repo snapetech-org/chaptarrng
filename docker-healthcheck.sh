@@ -2,8 +2,8 @@
 set -eu
 
 config_file="${CHAPTARR_CONFIG_FILE:-/config/config.xml}"
-port="${Chaptarr__Server__Port:-${CHAPTARR__SERVER__PORT:-}}"
-url_base="${Chaptarr__Server__UrlBase:-}"
+port="${Chaptarr__Server__Port:-${CHAPTARR__SERVER__PORT:-${Readarr__Server__Port:-${READARR__SERVER__PORT:-${Audioarr__Server__Port:-${AUDIOARR__SERVER__PORT:-}}}}}}"
+url_base="${Chaptarr__Server__UrlBase:-${CHAPTARR__SERVER__URLBASE:-${Readarr__Server__UrlBase:-${READARR__SERVER__URLBASE:-${Audioarr__Server__UrlBase:-${AUDIOARR__SERVER__URLBASE:-}}}}}}"
 
 if [ -r "$config_file" ]; then
     if [ -z "$port" ]; then

@@ -99,6 +99,45 @@ run_case 'explicit deployment port wins' bash -c '
   [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
 ' _ "$test_root" "$defaults"
 
+run_case 'legacy Readarr port wins over the compatibility default' bash -c '
+  set -euo pipefail
+  DATA_DIR="$1/readarr-port"
+  mkdir -p "$DATA_DIR"
+  CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+  Readarr__Server__Port=9123
+  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT CHAPTARR_DEFAULT_PORT
+  . "$2"
+  [[ "$Readarr__Server__Port" == 9123 ]]
+  [[ -z "${Chaptarr__Server__Port:-}" ]]
+  [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
+' _ "$test_root" "$defaults"
+
+run_case 'uppercase legacy Readarr port wins over the compatibility default' bash -c '
+  set -euo pipefail
+  DATA_DIR="$1/readarr-uppercase-port"
+  mkdir -p "$DATA_DIR"
+  CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+  READARR__SERVER__PORT=9124
+  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT CHAPTARR_DEFAULT_PORT
+  . "$2"
+  [[ "$READARR__SERVER__PORT" == 9124 ]]
+  [[ -z "${Chaptarr__Server__Port:-}" ]]
+  [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
+' _ "$test_root" "$defaults"
+
+run_case 'legacy Audioarr port wins over the compatibility default' bash -c '
+  set -euo pipefail
+  DATA_DIR="$1/audioarr-port"
+  mkdir -p "$DATA_DIR"
+  CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+  AUDIOARR__SERVER__PORT=9133
+  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT CHAPTARR_DEFAULT_PORT
+  . "$2"
+  [[ "$AUDIOARR__SERVER__PORT" == 9133 ]]
+  [[ -z "${Chaptarr__Server__Port:-}" ]]
+  [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
+' _ "$test_root" "$defaults"
+
 run_case 'standard ChaptarrNG image defaults remain unchanged' bash -c '
   set -euo pipefail
   DATA_DIR="$1/standard"
@@ -125,6 +164,33 @@ run_case 'health check honors uppercase explicit port' bash -c '
   export PATH="$1/bin:$PATH"
   sh "$2"
   grep -Fq "http://127.0.0.1:9123/ping" "$WGET_CAPTURE"
+' _ "$test_root" "$repo_root/docker-healthcheck.sh"
+
+run_case 'health check honors legacy Readarr port and URL base' bash -c '
+  set -euo pipefail
+  export CHAPTARR_CONFIG_FILE="$1/missing-config.xml"
+  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT Readarr__Server__Port READARR__SERVER__PORT Audioarr__Server__Port AUDIOARR__SERVER__PORT
+  unset Chaptarr__Server__UrlBase CHAPTARR__SERVER__URLBASE Readarr__Server__UrlBase READARR__SERVER__URLBASE Audioarr__Server__UrlBase AUDIOARR__SERVER__URLBASE
+  export Readarr__Server__Port=9124
+  export Readarr__Server__UrlBase=/bookshelf
+  export CHAPTARR_DEFAULT_PORT=8787
+  export WGET_CAPTURE="$1/wget-legacy-readarr.args"
+  export PATH="$1/bin:$PATH"
+  sh "$2"
+  grep -Fq "http://127.0.0.1:9124/bookshelf/ping" "$WGET_CAPTURE"
+' _ "$test_root" "$repo_root/docker-healthcheck.sh"
+
+run_case 'health check honors uppercase legacy Audioarr port' bash -c '
+  set -euo pipefail
+  export CHAPTARR_CONFIG_FILE="$1/missing-config.xml"
+  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT Readarr__Server__Port READARR__SERVER__PORT Audioarr__Server__Port AUDIOARR__SERVER__PORT
+  unset Chaptarr__Server__UrlBase CHAPTARR__SERVER__URLBASE Readarr__Server__UrlBase READARR__SERVER__URLBASE Audioarr__Server__UrlBase AUDIOARR__SERVER__URLBASE
+  export AUDIOARR__SERVER__PORT=9133
+  export CHAPTARR_DEFAULT_PORT=8787
+  export WGET_CAPTURE="$1/wget-legacy-audioarr.args"
+  export PATH="$1/bin:$PATH"
+  sh "$2"
+  grep -Fq "http://127.0.0.1:9133/ping" "$WGET_CAPTURE"
 ' _ "$test_root" "$repo_root/docker-healthcheck.sh"
 
 printf 'All Docker BookshelfNG compatibility default checks passed.\n'

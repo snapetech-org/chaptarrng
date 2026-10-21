@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using NzbDrone.Core.Configuration;
 
 namespace NzbDrone.Core.Datastore
 {
@@ -21,15 +22,9 @@ namespace NzbDrone.Core.Datastore
                 .AddEnvironmentVariables()
                 .Build();
 
+            var compatibleConfig = LegacyConfigurationCompatibility.AddFallbackSections(config);
             var postgresOptions = new PostgresOptions();
-            config.GetSection("Chaptarr:Postgres").Bind(postgresOptions);
-
-            if (string.IsNullOrWhiteSpace(postgresOptions.Host))
-            {
-                // Rebrand compatibility (Readarr/AudioArr → Chaptarr): accept legacy section names/env vars.
-                config.GetSection("Readarr:Postgres").Bind(postgresOptions);
-                config.GetSection("Audioarr:Postgres").Bind(postgresOptions);
-            }
+            compatibleConfig.GetSection("Chaptarr:Postgres").Bind(postgresOptions);
 
             return postgresOptions;
         }

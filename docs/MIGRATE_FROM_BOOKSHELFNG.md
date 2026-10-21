@@ -227,6 +227,30 @@ contains the old diagnostics module marker. See the
 [SeerrNG integration guide](SEERRNG_INTEGRATION.md), and
 [optional diagnostics guide](OPTIONAL_DIAGNOSTICS.md).
 
+The host also carries forward the old `Readarr__...` and `Audioarr__...`
+configuration sections for app, authentication, server, logging, update, and
+PostgreSQL settings. A value already set under `Chaptarr__...` takes precedence
+field by field; unset Chaptarr values fall back to `Readarr__...`, then
+`Audioarr__...`. This lets deployments keep their existing environment while
+they switch images or packages. The legacy Docker aliases recognize an old
+custom `Readarr__Server__Port` or `Audioarr__Server__Port` before adding the
+BookshelfNG-compatible default of `8787`. The container health check uses the
+same legacy port and URL-base values, so it probes the application listener
+after the image switch.
+
+The optional Playwright browser fallback used by the Direct Download indexer
+also honors `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`, so deployments with a
+system-installed Chromium can keep their existing executable override.
+
+When ChaptarrNG has no saved metadata-server URL, it also honors the legacy
+`METADATA_URL` environment variable for its Readarr-compatible Metadata API
+catalog. During database conversion, a saved BookshelfNG `MetadataSource` URL
+is copied to ChaptarrNG's `MetadataServerUrl`; an existing saved
+`MetadataServerUrl` takes precedence. The original `MetadataSource` row remains
+in the converted database and the source backup. This setting does not change
+the primary metadata provider or make native Hardcover fall back automatically
+when a request fails.
+
 The source candidate also reads BookshelfNG's `BOOKSHELF_OIDC_*` environment
 variables when the corresponding ChaptarrNG OIDC setting is empty. This keeps
 the issuer, client ID and secret, scopes, email allow-lists, allow-any-verified
@@ -250,10 +274,12 @@ migration does not treat BookLore as BookOrbit. The candidate adds BookOrbit as
 a separate Book Dock destination. Configure and test that separate connection
 in **Settings > Connect** after an approved migration.
 
-One MyAnonaMouse value is not equivalent: BookshelfNG's `useFreeleechWedge=2`
-(`Required`) is normalized to `Never` by ChaptarrNG. Preview now identifies the
-provider row and setting, and blocks apply until that behavior difference is
-resolved. The source database remains unchanged.
+The MyAnonaMouse `useFreeleechWedge=2` (`Required`) option is preserved during
+conversion and remains selectable in ChaptarrNG. Eligible releases request the
+personal freeleech wedge; if MAM does not return a usable torrent for that
+request, the grab fails as unavailable instead of retrying without the wedge.
+This matches BookshelfNG's setting and download behavior. Live account
+acceptance remains part of the provider migration rehearsal.
 
 Provider configuration is preserved only when the implementation, contract,
 and every populated saved settings field match the target provider. The

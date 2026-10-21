@@ -111,15 +111,6 @@ namespace NzbDrone.Host
                                 .ConfigureServices(services =>
                                 {
                                     services.Configure<PostgresOptions>(config.GetSection("Chaptarr:Postgres"));
-                                    services.PostConfigure<PostgresOptions>(o =>
-                                    {
-                                        if (string.IsNullOrWhiteSpace(o.Host))
-                                        {
-                                            // Rebrand compatibility (Readarr/AudioArr → Chaptarr): accept legacy section names/env vars.
-                                            config.GetSection("Readarr:Postgres").Bind(o);
-                                            config.GetSection("Audioarr:Postgres").Bind(o);
-                                        }
-                                    });
                                     services.Configure<AppOptions>(config.GetSection("Chaptarr:App"));
                                     services.Configure<AuthOptions>(config.GetSection("Chaptarr:Auth"));
                                     services.Configure<ServerOptions>(config.GetSection("Chaptarr:Server"));
@@ -212,15 +203,6 @@ namespace NzbDrone.Host
                 .ConfigureServices(services =>
                 {
                     services.Configure<PostgresOptions>(config.GetSection("Chaptarr:Postgres"));
-                    services.PostConfigure<PostgresOptions>(o =>
-                    {
-                        if (string.IsNullOrWhiteSpace(o.Host))
-                        {
-                            // Rebrand compatibility (Readarr/AudioArr → Chaptarr): accept legacy section names/env vars.
-                            config.GetSection("Readarr:Postgres").Bind(o);
-                            config.GetSection("Audioarr:Postgres").Bind(o);
-                        }
-                    });
                     services.Configure<AppOptions>(config.GetSection("Chaptarr:App"));
                     services.Configure<AuthOptions>(config.GetSection("Chaptarr:Auth"));
                     services.Configure<ServerOptions>(config.GetSection("Chaptarr:Server"));
@@ -328,11 +310,13 @@ namespace NzbDrone.Host
 
             try
             {
-                return new ConfigurationBuilder()
+                var configuration = new ConfigurationBuilder()
                     .AddXmlFile(configPath, optional: true, reloadOnChange: false)
                     .AddInMemoryCollection(new List<KeyValuePair<string, string>> { new("dataProtectionFolder", appFolder.GetDataProtectionPath()) })
                     .AddEnvironmentVariables()
                     .Build();
+
+                return LegacyConfigurationCompatibility.AddFallbackSections(configuration);
             }
             catch (InvalidDataException ex)
             {

@@ -28,7 +28,6 @@ namespace NzbDrone.Core.Datastore
     public static class BookshelfDatabaseImporter
     {
         private const int SupportedSourceMigration = 158;
-        private const int BookshelfRequiredMamFreeleechWedge = 2;
         private static readonly IReadOnlyDictionary<string, string> CompatibleIndexerContracts =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -1390,10 +1389,6 @@ namespace NzbDrone.Core.Datastore
                 string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase);
             var settingsIssues = hasCompatibleImplementation
                 ? FindUnsupportedSettingsFields(GetString(sourceRow, "Settings"), expectedContract, implementation)
-                    .Concat(FindNonEquivalentSettingsValues(GetString(sourceRow, "Settings"), implementation))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(field => field, StringComparer.OrdinalIgnoreCase)
-                    .ToArray()
                 : Array.Empty<string>();
             var missingOAuthSettings = hasCompatibleImplementation
                 ? FindMissingGoodreadsOAuthSettings(GetString(sourceRow, "Settings"), implementation, configContract)
@@ -1415,39 +1410,6 @@ namespace NzbDrone.Core.Datastore
             }
 
             unsupported.Add($"row {GetInt(sourceRow, "Id")}: {sourceImplementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}{settingsDisposition}");
-        }
-
-        private static string[] FindNonEquivalentSettingsValues(string settingsJson, string implementation)
-        {
-            if (!implementation.Equals("MyAnonaMouse", StringComparison.OrdinalIgnoreCase) ||
-                string.IsNullOrWhiteSpace(settingsJson))
-            {
-                return Array.Empty<string>();
-            }
-
-            JObject settings;
-            try
-            {
-                settings = JObject.Parse(settingsJson);
-            }
-            catch (JsonException)
-            {
-                // The settings-contract check already reports invalid JSON.
-                return Array.Empty<string>();
-            }
-
-            var wedgeSetting = settings.GetValue("useFreeleechWedge", StringComparison.OrdinalIgnoreCase);
-            if (wedgeSetting == null ||
-                (wedgeSetting.Type != JTokenType.Integer && wedgeSetting.Type != JTokenType.String) ||
-                !int.TryParse(wedgeSetting.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var wedgeAction) ||
-                wedgeAction != BookshelfRequiredMamFreeleechWedge)
-            {
-                return Array.Empty<string>();
-            }
-
-            // Chaptarr deliberately normalizes BookshelfNG's Required value to Never. Do not
-            // apply that behavior change silently during a BookshelfNG database conversion.
-            return new[] { "useFreeleechWedge (BookshelfNG Required maps to Chaptarr Never)" };
         }
 
         private static string[] FindMissingGoodreadsOAuthSettings(string settingsJson, string implementation, string configContract)
@@ -1767,6 +1729,8 @@ namespace NzbDrone.Core.Datastore
             const string legacyHardcoverTokenKey = "hardcoverauth";
             const string chaptarrHardcoverTokenKey = "hardcoverapitoken";
             const string chaptarrHardcoverEnabledKey = "hardcoverenabled";
+            const string legacyMetadataSourceKey = "metadatasource";
+            const string chaptarrMetadataServerUrlKey = "metadataserverurl";
 
             var configRows = ReadRows(source, "Config").ToList();
             var sourceCount = configRows.Count;
@@ -1781,6 +1745,8 @@ namespace NzbDrone.Core.Datastore
             var legacyHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverEnabledRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverEnabledKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var legacyMetadataSourceRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMetadataSourceKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var chaptarrMetadataServerUrlRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrMetadataServerUrlKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var autoInitializeAuthorPathsRows = configRows
                 .Where(row => string.Equals(GetString(row, "Key"), "AutoInitializeFormatSpecificAuthorPaths", StringComparison.OrdinalIgnoreCase))
                 .ToList();
@@ -1798,6 +1764,11 @@ namespace NzbDrone.Core.Datastore
             if (chaptarrHardcoverEnabledRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate Hardcover mode settings; conversion stopped before promotion.");
+            }
+
+            if (legacyMetadataSourceRows.Count > 1 || chaptarrMetadataServerUrlRows.Count > 1)
+            {
+                throw new InvalidDataException("BookshelfNG config contains duplicate metadata-server settings; conversion stopped before promotion.");
             }
 
             if (autoInitializeAuthorPathsRows.Count > 1)
@@ -1940,6 +1911,37 @@ namespace NzbDrone.Core.Datastore
                 hardcoverModeDisposition = "BookshelfNG's native Hardcover runtime mode was copied to ChaptarrNG HardcoverEnabled";
             }
 
+            var metadataServerUrlDisposition = "no saved metadata-server URL was present; ChaptarrNG's configured environment or default URL applies";
+            var legacyMetadataSource = legacyMetadataSourceRows.SingleOrDefault();
+            var chaptarrMetadataServerUrl = chaptarrMetadataServerUrlRows.SingleOrDefault();
+            if (chaptarrMetadataServerUrl != null && !string.IsNullOrWhiteSpace(GetString(chaptarrMetadataServerUrl, "Value")))
+            {
+                metadataServerUrlDisposition = "an explicit ChaptarrNG MetadataServerUrl was preserved; the legacy MetadataSource row was retained";
+            }
+            else if (legacyMetadataSource != null && !string.IsNullOrWhiteSpace(GetString(legacyMetadataSource, "Value")))
+            {
+                var mappedMetadataServerUrl = GetString(legacyMetadataSource, "Value").Trim();
+                if (chaptarrMetadataServerUrl != null)
+                {
+                    chaptarrMetadataServerUrl["Value"] = mappedMetadataServerUrl;
+                }
+                else
+                {
+                    var mappedMetadataServerSetting = new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["Key"] = "MetadataServerUrl",
+                        ["Value"] = mappedMetadataServerUrl
+                    };
+                    if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+                    {
+                        mappedMetadataServerSetting["Id"] = checked(++nextGeneratedConfigId);
+                    }
+                    configRows.Add(mappedMetadataServerSetting);
+                }
+
+                metadataServerUrlDisposition = "BookshelfNG MetadataSource was copied to ChaptarrNG MetadataServerUrl; the original legacy row was retained";
+            }
+
             var authorPathSettingDisposition = "no BookshelfNG format-specific author path setting was saved; ChaptarrNG's disabled default applies";
             if (autoInitializeAuthorPathsRows.SingleOrDefault() is { } autoInitializeAuthorPathsRow)
             {
@@ -1989,7 +1991,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Config", sourceCount, 0, sourceCount, 0, 0,
-                "saved configuration is copied with compatible fields; " + matchSettingDisposition + "; " + hardcoverTokenDisposition + "; " + hardcoverModeDisposition + "; " + authorPathSettingDisposition);
+                "saved configuration is copied with compatible fields; " + matchSettingDisposition + "; " + hardcoverTokenDisposition + "; " + hardcoverModeDisposition + "; " + metadataServerUrlDisposition + "; " + authorPathSettingDisposition);
         }
 
         private static void MapBookshelfNewAuthorRoot(
