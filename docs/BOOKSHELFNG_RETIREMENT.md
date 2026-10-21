@@ -29,7 +29,7 @@ paths under the moved directory and fetches Goodreads series imports page by
 page. Focused backend/migration fixtures pass 11/11, configuration persistence
 1/1, Goodreads pagination 5/5, Calibre proxy/series 6/6, Hardcover
 metadata/search 45/45, book-file move planning 15/15, and author-move path
-coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and ShellCheck checks. Exact-head [Build 39546916729](https://github.com/snapetech-org/chaptarrng/actions/runs/39546916729) for `031b118e` has passed PostgreSQL migration plus Linux and macOS; Windows is still running.
+coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and ShellCheck checks. The application code remains `031b118e`. The previous [Build 39546916729](https://github.com/snapetech-org/chaptarrng/actions/runs/39546916729) passed PostgreSQL, Linux, and macOS but was canceled during Windows testing after a docs update; exact-head status for current `main` is on the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml).
 The source is not in public `.977`.
 
 The canonical
