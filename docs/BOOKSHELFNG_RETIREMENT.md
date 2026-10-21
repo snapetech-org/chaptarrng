@@ -49,19 +49,27 @@ review. No runtime retirement is approved. Representative operator data and roll
 fulfillment, SeerrNG workflows, installed update-channel handoff, and operator
 acceptance remain open. Keep BookshelfNG in service.
 
-The refreshed schema-v4 audit compares BookshelfNG source
-`2811718076d84777a1b1132e4e5d2abd21231229` with ChaptarrNG `main`
-`34076e58620dda1bf4dee5506b30a9d4c71348ce`: 1,119 changed paths, 98 reviewed
-mappings, and 818 dispositions (177 retained, 135 equivalent, 266 ported, and
-240 non-runtime retirements). Another 301 paths remain open (71 unmapped and
-230 requiring semantic review). The audit tests pass 31/31; these per-path
-decisions organize review and do not establish runtime parity.
+The latest schema-v4 audit compares BookshelfNG source
+`2811718076d84777a1b1132e4e5d2abd21231229` with ChaptarrNG target
+`4d9c4b2db0f438f05d81fb109aa6c32924ec5e85`: 1,119 changed paths, 102 reviewed
+mappings, and 856 dispositions (177 retained, 143 equivalent, 297 ported, and
+239 repository-only retirements). Another 263 paths remain open (66 without
+mapped targets and 197 requiring semantic review). The audit suite passes
+31/31; path decisions do not establish runtime parity or migration acceptance.
+
+The AUR and RPM source package paths now map to ChaptarrNG's legacy identity
+templates. Their local package rehearsals used synthetic migration data;
+representative data, live feed handoff, and real-systemd acceptance remain
+open.
 
 Standalone archive work now covers all ten BookshelfNG runtime identifiers in
 the ChaptarrNG source release matrix. Linux x86 and FreeBSD use pinned custom
-.NET runtime packs. A separate workflow builds and verifies every archive
-without publishing; that exact-head run is pending. The public `v0.9.977`
-assets remain unchanged, and no release or channel handoff is authorized.
+.NET runtime packs. Exact-head Build [39573719771](https://github.com/snapetech-org/chaptarrng/actions/runs/39573719771)
+passed. No-publication standalone validation
+[39573719493](https://github.com/snapetech-org/chaptarrng/actions/runs/39573719493)
+is still running the Linux x86 and FreeBSD runtime-pack job. The public
+`v0.9.977` assets remain unchanged, and no release or channel handoff is
+authorized.
 
 The current migration fix is ChaptarrNG commit
 `c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`. It maps legacy
