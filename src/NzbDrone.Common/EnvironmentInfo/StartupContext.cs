@@ -81,7 +81,8 @@ namespace NzbDrone.Common.EnvironmentInfo
 
                 if (Args.ContainsKey(APPDATA))
                 {
-                    args = "/data=" + Args[APPDATA];
+                    var dataPath = Args[APPDATA];
+                    args = "/data=" + (dataPath.Contains(' ') ? $"\"{dataPath}\"" : dataPath);
                 }
 
                 if (Flags.Contains(NO_BROWSER))

@@ -549,16 +549,19 @@ class UnmappedFilesTable extends Component {
 
     const hasPreviewEntries = (sendLogsPreview?.totalEntries || 0) > 0;
     const sendDisabled = isFetchingSendLogsPreview || !!sendLogsPreviewError || !hasPreviewEntries;
-    const sendLogsMediaType = sendLogsPreview?.mediaType === 'audiobook' ?
-      translate('Audiobooks') :
-      sendLogsPreview?.mediaType === 'ebook' ?
-        translate('Ebooks') :
-        sendLogsPreview?.mediaType;
-    const sendLogsScope = sendLogsPreview?.scope === 'all' ?
-      translate('All') :
-      sendLogsPreview?.scope === 'selected' ?
-        translate('Selected') :
-        sendLogsPreview?.scope;
+    let sendLogsMediaType = sendLogsPreview?.mediaType;
+    if (sendLogsMediaType === 'audiobook') {
+      sendLogsMediaType = translate('Audiobooks');
+    } else if (sendLogsMediaType === 'ebook') {
+      sendLogsMediaType = translate('Ebooks');
+    }
+
+    let sendLogsScope = sendLogsPreview?.scope;
+    if (sendLogsScope === 'all') {
+      sendLogsScope = translate('All');
+    } else if (sendLogsScope === 'selected') {
+      sendLogsScope = translate('Selected');
+    }
 
     return (
       <Modal
@@ -774,6 +777,7 @@ class UnmappedFilesTable extends Component {
       onSortPress,
       isRefreshingFiles,
       isRetryMatching,
+      fetchUnmappedFiles,
       onRefreshUnmappedFilesPress,
       onRetryUnmappedMatchPress,
       ...otherProps
@@ -786,6 +790,7 @@ class UnmappedFilesTable extends Component {
     } = this.state;
 
     const filteredItems = this.getFilteredItems();
+    const isFileActionDisabled = !isPopulated || isFetching || !!error || !filteredItems.length;
 
     // Calculate stats for all items and filtered items
     const totalFiles = items.length;
@@ -842,7 +847,7 @@ class UnmappedFilesTable extends Component {
               iconName={icons.RESCAN}
               title={refreshFilesTitle}
               aria-label={refreshFilesTitle}
-              isDisabled={isPopulated && !error && !filteredItems.length}
+              isDisabled={isFileActionDisabled}
               isSpinning={isRefreshingFiles}
               onPress={() => {
                 onRefreshUnmappedFilesPress(selectedMediaType, this.buildUnmappedFilesSelection());
@@ -853,7 +858,7 @@ class UnmappedFilesTable extends Component {
               iconName={icons.SEARCH}
               title={retryMatchTitle}
               aria-label={retryMatchTitle}
-              isDisabled={isPopulated && !error && !filteredItems.length}
+              isDisabled={isFileActionDisabled}
               isSpinning={isRetryMatching}
               onPress={() => {
                 onRetryUnmappedMatchPress(selectedMediaType, this.buildUnmappedFilesSelection());
@@ -913,6 +918,23 @@ class UnmappedFilesTable extends Component {
           {
             isFetching && !isPopulated &&
               <LoadingIndicator />
+          }
+
+          {
+            error && !isFetching &&
+              <Alert
+                kind={kinds.DANGER}
+                role="alert"
+              >
+                {translate('UnmappedFilesLoadFailed')}{' '}
+                <Button
+                  kind={kinds.PRIMARY}
+                  size="small"
+                  onPress={fetchUnmappedFiles}
+                >
+                  {translate('Retry')}
+                </Button>
+              </Alert>
           }
 
           {

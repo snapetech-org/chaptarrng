@@ -5,4 +5,4 @@ area: seerrng
 action: none
 breaking: false
 ---
-ChaptarrNG now lists every known edition of a book with its narrators, production, and length, and compares narrators across a whole series, so SeerrNG can offer narration choices and a second performance alongside the first.
+ChaptarrNG book details now has an Editions and Narrations tab listing known editions, narrators, production, duration, abridgement, language, publisher, and selected or owned status. Details the metadata does not state appear as not provided, never guessed. SeerrNG can also use the edition catalog and series narration APIs to offer narration choices and a second performance alongside the first.

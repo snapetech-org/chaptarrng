@@ -57,11 +57,18 @@ namespace NzbDrone.Core.MediaFiles
 
             // Ensure BookFiles collection is loaded
             var existingFiles = localBook.Book.BookFiles ?? new List<BookFile>();
+            var filesToReplace = existingFiles.Where(file => MediaFileExtensions.AreCompatibleFormats(file.Quality?.Quality ?? Quality.Unknown,
+                                                                                                        file.Path,
+                                                                                                        bookFile.Quality?.Quality ?? Quality.Unknown,
+                                                                                                        localBook.Path))
+                                              .ToList();
 
             // Last-line quality guard: an approved import (e.g. an edition
             // switch) must never destroy files that outrank the incoming one
-            // in the author's profile. Decision specs compare within an
-            // edition; this is the only place that sees the actual deletion.
+            // in the author's profile. Only files of a compatible media type
+            // and ebook container are replacement candidates. Decision specs
+            // compare within an edition; this is the only place that sees the
+            // actual deletion.
             var guardProfileId = localBook.Book?.MediaType == Books.BookMediaType.Ebook
                 ? localBook.Author?.EbookQualityProfileId
                 : localBook.Author?.AudiobookQualityProfileId;
@@ -71,7 +78,7 @@ namespace NzbDrone.Core.MediaFiles
                 if (guardProfile != null)
                 {
                     var comparer = new QualityModelComparer(guardProfile);
-                    var betterExisting = existingFiles.FirstOrDefault(f => f.Quality != null && comparer.Compare(f.Quality, bookFile.Quality) > 0);
+                    var betterExisting = filesToReplace.FirstOrDefault(f => f.Quality != null && comparer.Compare(f.Quality, bookFile.Quality) > 0);
                     if (betterExisting != null)
                     {
                         throw new System.InvalidOperationException(
@@ -107,7 +114,7 @@ namespace NzbDrone.Core.MediaFiles
                 throw new RootFolderNotFoundException($"Root folder '{rootFolderPath}' was not found.");
             }
 
-            foreach (var file in existingFiles)
+            foreach (var file in filesToReplace)
             {
                 var bookFilePath = file.Path;
                 var subfolder = rootFolderPath.GetRelativePath(_diskProvider.GetParentFolder(bookFilePath));

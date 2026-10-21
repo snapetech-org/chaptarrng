@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 
 namespace NzbDrone.Core.Datastore
@@ -25,7 +25,7 @@ namespace NzbDrone.Core.Datastore
         private const int SupportedMapVersion = 1;
 
         public static IReadOnlyDictionary<int, BookshelfMediaChoice> Load(
-            SqliteConnection source,
+            DbConnection source,
             string sourceDatabasePath)
         {
             var required = FindRequiredMappings(source);
@@ -116,22 +116,22 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
-        private static List<ReviewBook> FindRequiredMappings(SqliteConnection source)
+        private static List<ReviewBook> FindRequiredMappings(DbConnection source)
         {
             using var command = source.CreateCommand();
             command.CommandText = @"
-                SELECT b.Id,
-                       COALESCE(b.Title, ''),
-                       COALESCE(am.Name, ''),
-                       b.Monitored,
-                       COUNT(e.Id),
-                       COUNT(DISTINCT CASE WHEN e.Id IS NOT NULL THEN CASE WHEN COALESCE(e.IsEbook, 0) = 1 THEN 1 ELSE 0 END END),
-                       SUM(CASE WHEN e.Monitored = 1 THEN 1 ELSE 0 END)
-                FROM Books b
-                LEFT JOIN AuthorMetadata am ON am.Id = b.AuthorMetadataId
-                LEFT JOIN Editions e ON e.BookId = b.Id
-                GROUP BY b.Id
-                ORDER BY b.Id;";
+                SELECT b.""Id"",
+                       COALESCE(b.""Title"", ''),
+                       COALESCE(am.""Name"", ''),
+                       b.""Monitored"",
+                       COUNT(e.""Id""),
+                       COUNT(DISTINCT CASE WHEN e.""Id"" IS NOT NULL THEN CASE WHEN COALESCE(e.""IsEbook"", FALSE) = TRUE THEN 1 ELSE 0 END END),
+                       SUM(CASE WHEN e.""Monitored"" = TRUE THEN 1 ELSE 0 END)
+                FROM ""Books"" b
+                LEFT JOIN ""AuthorMetadata"" am ON am.""Id"" = b.""AuthorMetadataId""
+                LEFT JOIN ""Editions"" e ON e.""BookId"" = b.""Id""
+                GROUP BY b.""Id"", b.""Title"", am.""Name"", b.""Monitored""
+                ORDER BY b.""Id"";";
 
             var result = new List<ReviewBook>();
             using var reader = command.ExecuteReader();

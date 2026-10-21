@@ -21,7 +21,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
         {
             var command = conn.CreateCommand();
             command.Transaction = tran;
-            command.CommandText = query;
+            command.CommandText = query; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- callers pass migration-authored fixed SQL; dynamic values are added as parameters.
 
             return command;
         }

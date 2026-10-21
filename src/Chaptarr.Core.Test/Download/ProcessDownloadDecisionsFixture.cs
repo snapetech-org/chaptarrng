@@ -60,6 +60,35 @@ namespace Chaptarr.Core.Test.Download
             });
         }
 
+        [Test]
+        public async Task existing_torrent_should_be_skipped_without_adding_it_to_pending()
+        {
+            var downloadService = new RecordingDownloadService
+            {
+                DownloadException = new ExistingTorrentFoundException(
+                    "Test client",
+                    new DownloadClientItem { DownloadId = "abcdef123456", Title = "Already queued" })
+            };
+            var pending = new RecordingPendingReleaseService();
+            var subject = new ProcessDownloadDecisions(
+                downloadService,
+                new IdentityPrioritizer(),
+                pending,
+                LogManager.GetLogger("ProcessDownloadDecisionsFixture"));
+            var decision = BuildDecision(
+                new Book { Id = 5792, Title = "Book", MediaType = BookMediaType.Audiobook },
+                "Book release",
+                Quality.MP3);
+
+            var result = await subject.ProcessDecision(decision, null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.EqualTo(ProcessedDecisionResult.Skipped));
+                Assert.That(pending.Added, Is.Empty);
+            });
+        }
+
         private static DownloadDecision BuildDecision(Book book, string title, Quality quality)
         {
             var author = new Author { Id = 38, Name = "Joe Abercrombie" };
@@ -83,10 +112,21 @@ namespace Chaptarr.Core.Test.Download
         private sealed class RecordingDownloadService : IDownloadService
         {
             public List<RemoteBook> Downloaded { get; } = new();
+            public Exception DownloadException { get; set; }
 
             public Task DownloadReport(RemoteBook remoteBook, int? downloadClientId)
             {
+                if (DownloadException != null)
+                {
+                    return Task.FromException(DownloadException);
+                }
+
                 Downloaded.Add(remoteBook);
+                return Task.CompletedTask;
+            }
+
+            public Task AdoptExistingTorrent(RemoteBook remoteBook, int? downloadClientId)
+            {
                 return Task.CompletedTask;
             }
         }
@@ -96,6 +136,11 @@ namespace Chaptarr.Core.Test.Download
             public Task DownloadReport(RemoteBook remoteBook, int? downloadClientId)
             {
                 throw new MamUnsatisfiedSlotsUnavailableException("MAM safety pause");
+            }
+
+            public Task AdoptExistingTorrent(RemoteBook remoteBook, int? downloadClientId)
+            {
+                throw new NotSupportedException();
             }
         }
 
