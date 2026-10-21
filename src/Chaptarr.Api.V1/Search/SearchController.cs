@@ -11,9 +11,10 @@ using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.MetadataSource;
-using NzbDrone.Core.MetadataSource.BookInfo;
 using NzbDrone.Core.Organizer;
 using NzbDrone.Common.Instrumentation;
+using AdditionalMetadataSources = NzbDrone.Core.MetadataSource.BookInfo.AdditionalMetadataSources;
+using ProviderSearchResult = NzbDrone.Core.MetadataSource.BookInfo.ProviderSearchResult;
 
 namespace Chaptarr.Api.V1.Search
 {
@@ -95,10 +96,10 @@ namespace Chaptarr.Api.V1.Search
         {
             var isAudiobookProvider = string.Equals(provider, "audible", StringComparison.OrdinalIgnoreCase);
             var id = 1;
-            foreach (var result in results)
+            foreach (var searchResult in results)
             {
-                var preferredAuthorId = (result as ProviderSearchResult)?.PreferredAuthorId;
-                result = (result as ProviderSearchResult)?.Entity ?? result;
+                var preferredAuthorId = (searchResult as ProviderSearchResult)?.PreferredAuthorId;
+                var result = (searchResult as ProviderSearchResult)?.Entity ?? searchResult;
 
                 var resource = new SearchResource();
                 resource.Id = id++;

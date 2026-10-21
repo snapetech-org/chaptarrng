@@ -2617,7 +2617,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                         return BuildAdditionalSearchResults(new[] { book });
                     }
 
-                    return SearchNativeHardcoverEntities(title);
+                    return SearchNativeHardcoverEntities(title, includeConfiguredSources: true);
                 }
 
                 if (_hardcoverSearchClient == null)
@@ -3003,7 +3003,11 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             return Tuple.Create(authorId, book, authors);
         }
 
-        private List<object> SearchNativeHardcoverEntities(string query, BookMediaType? mediaType = null)
+        private List<object> SearchNativeHardcoverEntities(
+            string query,
+            BookMediaType? mediaType = null,
+            bool includeConfiguredSources = false,
+            bool getAllEditions = false)
         {
             if (_hardcoverMetadataProxy?.IsConfigured != true)
             {
@@ -3031,7 +3035,40 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 }
             }
 
-            return BuildAdditionalSearchResults(books);
+            if (includeConfiguredSources)
+            {
+                if (IsMetadataApiEnabled())
+                {
+                    try
+                    {
+                        books.AddRange(SearchMetadataApiCatalog(query, getAllEditions, mediaType));
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.Warn(exception, "Metadata API catalog search failed for {0}", query?.ReplaceLineEndings(""));
+                    }
+                }
+
+                try
+                {
+                    var supplementalBooks = _additionalBookMetadataProxy.Search(query) ?? new List<Book>();
+                    if (mediaType.HasValue)
+                    {
+                        supplementalBooks.ForEach(book => book.MediaType = mediaType.Value);
+                    }
+
+                    books.AddRange(supplementalBooks);
+                }
+                catch (Exception exception)
+                {
+                    _logger.Warn(exception, "Supplemental catalog search failed for {0}", query?.ReplaceLineEndings(""));
+                }
+            }
+
+            ApplySearchMetadataPreferences(books);
+            return BuildAdditionalSearchResults(books
+                .Where(book => book != null && !string.IsNullOrWhiteSpace(GetBookKey(book)))
+                .DistinctBy(GetBookKey));
         }
 
         private static bool HasHardcoverWorkPrefix(string value)
@@ -3301,9 +3338,15 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     q = slug;
                 }
 
-                if (_hardcoverMetadataProxy?.IsNativeEnabled == true && !HasExplicitNonHardcoverProviderPrefix(trimmed ?? string.Empty))
+                if (preferMetadataApi &&
+                    _hardcoverMetadataProxy?.IsNativeEnabled == true &&
+                    !HasExplicitNonHardcoverProviderPrefix(trimmed ?? string.Empty))
                 {
-                    var nativeBooks = SearchNativeHardcoverEntities(q, mediaType).OfType<Book>().ToList();
+                    var nativeBooks = SearchNativeHardcoverEntities(
+                        q,
+                        mediaType,
+                        includeConfiguredSources: true,
+                        getAllEditions: getAllEditions).OfType<Book>().ToList();
                     if (!getAllEditions)
                     {
                         nativeBooks.ForEach(book => book.Editions = (book.Editions ?? new List<Edition>()).Take(1).ToList());
