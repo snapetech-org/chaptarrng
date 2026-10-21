@@ -445,6 +445,7 @@ class RootFolders extends Component {
             kind={canBackfill ? kinds.PRIMARY : kinds.DEFAULT}
             title={translate('BackfillAuthorRootFoldersTitle')}
             message={this.renderAuthorRootBackfillPreview()}
+            hideCancelButton={!canBackfill}
             confirmLabel={canBackfill ?
               translate('FillMissingAuthorRoots') :
               translate('Close')}

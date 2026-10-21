@@ -249,6 +249,7 @@ test('author root backfill reviews the dry-run counts and only runs after confir
   const previewModal = findElement(component.render(), RootFolders.ConfirmModal);
   assert.equal(previewModal.props.title, 'BackfillAuthorRootFoldersTitle');
   assert.equal(previewModal.props.confirmLabel, 'FillMissingAuthorRoots');
+  assert.equal(previewModal.props.hideCancelButton, false);
 
   const previewText = collectText(component.renderAuthorRootBackfillPreview()).join(' ');
   assert.match(previewText, /BackfillAuthorRootFoldersSummary\(2,5\)/);
@@ -278,6 +279,7 @@ test('author root backfill cannot run when the preview has no eligible authors',
 
   const previewModal = findElement(component.render(), RootFolders.ConfirmModal);
   assert.equal(previewModal.props.confirmLabel, 'Close');
+  assert.equal(previewModal.props.hideCancelButton, true);
 
   component.onConfirmAuthorRootBackfill();
 
@@ -302,6 +304,7 @@ test('author root backfill cannot run when the preview count is invalid', () => 
 
     const previewModal = findElement(component.render(), RootFolders.ConfirmModal);
     assert.equal(previewModal.props.confirmLabel, 'Close');
+    assert.equal(previewModal.props.hideCancelButton, true);
 
     component.onConfirmAuthorRootBackfill();
 
