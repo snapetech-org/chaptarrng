@@ -78,7 +78,6 @@ namespace Chaptarr.Core.Test.Parser
             var author = new Author { Id = 1, Name = "Jane Austen" };
             var book = new Book { Id = 2, AuthorId = author.Id, Title = "Unknown Catalog Title" };
             var edition = new Edition { Id = 3, Book = book, BookId = book.Id, Title = "The Hobbit", Monitored = true };
-            book.Editions = new List<Edition> { edition };
 
             var result = CreateService(70, author, new List<Book>(), new List<Edition> { edition })
                 .ParseBookTitleFuzzy("Jane Austen - The Hobbit");
