@@ -860,6 +860,30 @@ and the container network was disabled, so this does not validate media file
 access, provider calls, SeerrNG workflows, an image or package switch, rollback
 on an installed service, or full BookshelfNG feature parity.
 
+## StartOS `/init` and populated-database rehearsal (2026-10-21)
+
+A local Linux/amd64 `bookshelf-hardcover` image built from ChaptarrNG commit
+[`2d6124e2`](https://github.com/snapetech-org/chaptarrng/commit/2d6124e2) was
+run through a wrapper with `ENTRYPOINT ["/init"]` and `CMD []`, matching the
+StartOS command that invokes `/init` without arguments. The isolated
+containers had no network and mounted task-scoped copies at `/config`,
+`/books`, and `/downloads`. Two copied populated BookshelfNG SQLite databases
+converted from schema 158 to ChaptarrNG schema 121 during normal startup.
+
+The no-argument run preserved the source config's port `8787`, Forms
+authentication, and API key. `/ping` returned HTTP 200, the Docker
+health-check command passed, SQLite integrity was `ok`, and there were zero
+foreign-key violations. An unauthenticated `/api/v1/system/status` request
+returned HTTP 401. The original source database snapshot remained unchanged.
+Built image metadata exposed only `8787/tcp` for both compatibility targets;
+a standard image build exposed only `8789/tcp`.
+
+This exercises the Linux image and copied data only. The `/books` and
+`/downloads` mounts were empty, the container network was disabled, and the
+StartOS package was not built or installed on a device. It does not validate
+media access, provider calls, package update, StartOS backup/restore, or
+rollback on an installed StartOS service.
+
 ## Historical populated-database rehearsal (2026-10-14)
 
 The ordinary Linux/amd64 ChaptarrNG image was exercised against an isolated
