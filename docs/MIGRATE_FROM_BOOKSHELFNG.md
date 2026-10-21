@@ -361,10 +361,14 @@ all-format retry using RetryUnmappedMatch and unmappedFiles.scope=all; see the
 ## Matching setting compatibility
 
 The published ChaptarrNG `v0.9.977` converter preserves the legacy
-`BookImportMinimumMatchPercent` row but does not apply it. Current source reads
-the retained value for BookshelfNG's fuzzy RSS-title fallback. When the source
-has no explicit `BookMatchingStrictness`, migration also maps the closest
-policy band:
+`BookImportMinimumMatchPercent` row but does not apply it to candidate
+acceptance. Current source keeps the value active for BookshelfNG's fuzzy
+RSS-title fallback and enables a migrated-install compatibility gate for
+candidate scoring and acceptance. The gate uses the saved threshold, or
+BookshelfNG's 70% default when that setting was never saved. Fresh ChaptarrNG
+installs leave the compatibility gate disabled. When the source has no
+explicit `BookMatchingStrictness`, migration also maps a saved legacy threshold
+to the closest policy band:
 
 | BookshelfNG percentage | ChaptarrNG mode |
 | --- | --- |
@@ -372,14 +376,15 @@ policy band:
 | 67–82 | Balanced |
 | 83–99 | Strict |
 
-An explicit ChaptarrNG mode takes precedence for strictness-based release and
-file-import matching; the numeric value remains active only for the compatible
-fuzzy RSS-title fallback. The migration report states both dispositions. Values
-outside 50–99 stop conversion before promotion. The strictness mapping remains
-lossy because the applications use different release-title and import-scoring
-algorithms. Review behavior on converted data; do not treat the mapping as an
-exact recreation of all BookshelfNG matching. This source change is not in
-`.977` while the release freeze remains active.
+An explicit ChaptarrNG mode is preserved and remains an additional matching
+safety policy; it does not disable the migrated numeric score gate. The
+compatibility scorer ports BookshelfNG's weighted author, title, identifier,
+year, language, publisher, narrator, format, and preferred-edition signals.
+ChaptarrNG's newer identity-proof and ambiguity checks still apply, so the
+combined decision pipeline is not identical in every case. Review matching on
+converted data before cutover. The migration report states both dispositions;
+values outside 50–99 stop conversion before promotion. This source change is
+not in `.977` while the release freeze remains active.
 
 ## New author format paths
 
