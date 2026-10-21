@@ -107,6 +107,12 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: python3 scripts/test_workflow_runner_policy.py
 
+    - name: Test candidate BookshelfNG Debian bridge package
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-deb-bridge-test
+      run: bash packaging/scripts/test-build-bookshelfng-deb-bridge.sh
+
     - name: Test BookshelfNG host migration helper
       if: matrix.os == 'ubuntu-latest'
       run: |

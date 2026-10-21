@@ -20,6 +20,7 @@ For current BookshelfNG migration and legacy-channel acceptance status, see
 
 | Channel | New ChaptarrNG install | Existing BookshelfNG identity | Data path during upgrade |
 | --- | --- | --- | --- |
+| Debian / Ubuntu `.deb` | No ChaptarrNG `.deb` is currently published | Candidate package keeps `bookshelfng` | `/var/lib/bookshelfng` |
 | Arch AUR | `chaptarrng-bin` | `bookshelfng-bin` | `/var/lib/bookshelfng` |
 | Fedora COPR | `slskdn/chaptarrng` | `slskdn/bookshelfng` | `/var/lib/bookshelfng` |
 | Chocolatey | `chaptarrng` | `bookshelfng` | `%ProgramData%\BookshelfNG\data` |
@@ -30,6 +31,20 @@ Legacy package recipes keep the old package identity, service name, and data
 path so a package upgrade can start the normal ChaptarrNG database migration.
 They are a bridge candidate, not proof that every existing install can be
 upgraded safely.
+
+The Debian candidate recipe and local package builder are in
+`packaging/legacy/debian/` and
+`packaging/scripts/build-bookshelfng-deb-bridge.sh`. The builder consumes the
+standard Linux x64 release archive and produces a `.deb` under the old package
+identity. A package-content contract test checks the payload paths and service
+identity and mocks the maintainer-script stop/start handoff. A local candidate
+build used the checksum-verified public ChaptarrNG `v0.9.977` Linux x64 archive;
+inspection of the public BookshelfNG `0.4.21.71-1` package confirmed the Debian
+package identity and `/etc/bookshelfng/bookshelfng.env` conffile. The candidate
+has not been installed through apt/dpkg against that package, exercised with a
+real systemd service, or published to a GitHub Release or Ubuntu PPA. Keep this
+channel disabled until those checks and representative-data rollback
+acceptance pass.
 
 ## Standalone archive coverage
 
@@ -55,6 +70,7 @@ validated or that platform is explicitly retired.
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
 | --- | --- | --- | --- |
+| Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; a local `bookshelfng` candidate built from the public ChaptarrNG archive and matches the old package identity/conffile contract | Run an isolated dpkg upgrade/downgrade from the actual public package, verify service handoff and data preservation, then validate the PPA/direct-download update path; no candidate is published |
 | AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
