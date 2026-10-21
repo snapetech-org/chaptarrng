@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import Label from 'Components/Label';
+import Button from 'Components/Link/Button';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import Table from 'Components/Table/Table';
@@ -14,8 +15,8 @@ const columns = [
   { name: 'title', label: () => translate('Title'), isVisible: true, isSortable: false },
   { name: 'narrators', label: () => translate('EditionNarrators'), isVisible: true, isSortable: false },
   { name: 'production', label: () => translate('EditionProduction'), isVisible: true, isSortable: false },
-  { name: 'abridgement', label: () => translate('EditionAbridgement'), isVisible: true, isSortable: false },
   { name: 'duration', label: () => translate('Duration'), isVisible: true, isSortable: false },
+  { name: 'abridgement', label: () => translate('EditionAbridgement'), isVisible: true, isSortable: false },
   { name: 'language', label: () => translate('Language'), isVisible: true, isSortable: false },
   { name: 'publisher', label: () => translate('Publisher'), isVisible: true, isSortable: false },
   { name: 'status', label: () => translate('Status'), isVisible: true, isSortable: false }
@@ -26,14 +27,24 @@ export function formatDuration(seconds) {
     return null;
   }
 
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
+  const totalMinutes = Math.max(1, Math.round(seconds / 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
   return `${hours}h ${String(minutes).padStart(2, '0')}m`;
 }
 
-function NotProvided() {
-  return <span className={styles.unknown}>{translate('EditionNotProvided')}</span>;
+function UnknownValue({ notApplicable = false }) {
+  return (
+    <span className={styles.unknown}>
+      {translate(notApplicable ? 'EditionNotApplicable' : 'EditionNotProvided')}
+    </span>
+  );
 }
+
+UnknownValue.propTypes = {
+  notApplicable: PropTypes.bool
+};
 
 function productionLabel(production) {
   if (production === 'full-cast') {
@@ -52,35 +63,54 @@ function abridgementLabel(abridged) {
 }
 
 function BookEditionCatalog({ bookId }) {
-  const [state, setState] = useState({ isFetching: true, error: false, items: [] });
+  const [state, setState] = useState({ bookId, isFetching: true, error: false, items: [] });
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    let isCurrent = true;
+
     const { request, abortRequest } = createAjaxRequest({
       url: `/book/${bookId}/editions/catalog`,
       dataType: 'json'
     });
 
-    setState({ isFetching: true, error: false, items: [] });
-    request.done((items) => setState({ isFetching: false, error: false, items: items || [] }));
-    request.fail((xhr) => {
-      if (xhr.aborted) {
+    setState({ bookId, isFetching: true, error: false, items: [] });
+    request.done((items) => {
+      if (!isCurrent) {
         return;
       }
 
-      setState({ isFetching: false, error: true, items: [] });
+      setState({ bookId, isFetching: false, error: false, items: items || [] });
+    });
+    request.fail((xhr) => {
+      if (!isCurrent || xhr.aborted) {
+        return;
+      }
+
+      setState({ bookId, isFetching: false, error: true, items: [] });
     });
 
-    return abortRequest;
-  }, [bookId]);
+    return () => {
+      isCurrent = false;
+      abortRequest();
+    };
+  }, [bookId, retryCount]);
 
   const { isFetching, error, items } = state;
 
-  if (isFetching) {
+  if (state.bookId !== bookId || isFetching) {
     return <LoadingIndicator />;
   }
 
   if (error) {
-    return <div className={styles.message} role="alert">{translate('EditionCatalogFailed')}</div>;
+    return (
+      <div className={styles.message} role="alert">
+        <span>{translate('EditionCatalogFailed')}</span>
+        <Button onPress={() => setRetryCount((count) => count + 1)}>
+          {translate('Retry')}
+        </Button>
+      </div>
+    );
   }
 
   if (!items.length) {
@@ -93,32 +123,34 @@ function BookEditionCatalog({ bookId }) {
       <Table columns={columns}>
         <TableBody>
           {items.map((edition) => {
-            const duration = formatDuration(edition.durationSeconds);
             const production = edition.isEbook ? null : productionLabel(edition.production);
+            const duration = edition.isEbook ? null : formatDuration(edition.durationSeconds);
             const abridgement = edition.isEbook ? null : abridgementLabel(edition.abridged);
 
             return (
               <TableRow key={edition.editionId}>
-                <TableRowCell className={styles.title}>{edition.title}</TableRowCell>
+                <TableRowCell className={styles.title}>
+                  {edition.title || <UnknownValue />}
+                </TableRowCell>
                 <TableRowCell className={styles.narrators}>
                   {edition.narrators && edition.narrators.length ?
                     edition.narrators.join(', ') :
-                    <NotProvided />}
+                    <UnknownValue />}
                 </TableRowCell>
                 <TableRowCell className={styles.production}>
-                  {production || <NotProvided />}
-                </TableRowCell>
-                <TableRowCell className={styles.abridgement}>
-                  {abridgement || <NotProvided />}
+                  {production || <UnknownValue notApplicable={edition.isEbook} />}
                 </TableRowCell>
                 <TableRowCell className={styles.duration}>
-                  {duration || <NotProvided />}
+                  {duration || <UnknownValue notApplicable={edition.isEbook} />}
+                </TableRowCell>
+                <TableRowCell className={styles.abridgement}>
+                  {abridgement || <UnknownValue notApplicable={edition.isEbook} />}
                 </TableRowCell>
                 <TableRowCell className={styles.language}>
-                  {edition.language || <NotProvided />}
+                  {edition.language || <UnknownValue />}
                 </TableRowCell>
                 <TableRowCell className={styles.publisher}>
-                  {edition.publisher || <NotProvided />}
+                  {edition.publisher || <UnknownValue />}
                 </TableRowCell>
                 <TableRowCell className={styles.status}>
                   {edition.monitored && <Label kind="primary">{translate('EditionSelected')}</Label>}

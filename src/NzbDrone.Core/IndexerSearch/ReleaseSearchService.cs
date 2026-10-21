@@ -22,6 +22,7 @@ namespace NzbDrone.Core.IndexerSearch
         Task<List<DownloadDecision>> BookSearch(Book book, bool missingOnly, bool userInvokedSearch, bool interactiveSearch, bool allowUnmonitored = false);
         Task<List<DownloadDecision>> BookSearch(Book book, List<Book> authorCatalog, bool missingOnly, bool userInvokedSearch, bool interactiveSearch, bool allowUnmonitored = false);
         Task<List<DownloadDecision>> AuthorSearch(int authorId, bool missingOnly, bool userInvokedSearch, bool interactiveSearch);
+        Task<List<DownloadDecision>> SeriesSearch(int seriesId, int authorId, bool userInvokedSearch, bool interactiveSearch);
     }
 
     public class ReleaseSearchService : ISearchForReleases
@@ -31,6 +32,8 @@ namespace NzbDrone.Core.IndexerSearch
         private readonly IIndexerFactory _indexerFactory;
         private readonly IBookService _bookService;
         private readonly IAuthorService _authorService;
+        private readonly ISeriesService _seriesService;
+        private readonly ISeriesBookLinkService _seriesBookLinkService;
         private readonly IMakeDownloadDecision _makeDownloadDecision;
         private readonly Logger _logger;
 
@@ -39,11 +42,15 @@ namespace NzbDrone.Core.IndexerSearch
                                 IAuthorService authorService,
                                 IEditionSelector editionSelector,
                                 IMakeDownloadDecision makeDownloadDecision,
-                                Logger logger)
+                                Logger logger,
+                                ISeriesService seriesService = null,
+                                ISeriesBookLinkService seriesBookLinkService = null)
         {
             _indexerFactory = indexerFactory;
             _bookService = bookService;
             _authorService = authorService;
+            _seriesService = seriesService;
+            _seriesBookLinkService = seriesBookLinkService;
             _makeDownloadDecision = makeDownloadDecision;
             _logger = logger;
         }
@@ -82,6 +89,56 @@ namespace NzbDrone.Core.IndexerSearch
 
             var searchSpec = Get<AuthorSearchCriteria>(author, books, authorCatalog, userInvokedSearch, interactiveSearch);
             return await Dispatch(indexer => indexer.Fetch(searchSpec), searchSpec);
+        }
+
+        public async Task<List<DownloadDecision>> SeriesSearch(int seriesId, int authorId, bool userInvokedSearch, bool interactiveSearch)
+        {
+            var series = _seriesService?.GetSeries(seriesId);
+            var author = _authorService.GetAuthor(authorId);
+
+            if (series == null || author == null || _seriesBookLinkService == null)
+            {
+                return new List<DownloadDecision>();
+            }
+
+            // Series links are local and the legacy foreign-author filter is no longer
+            // supported. Restrict the links to this author through the local catalog below.
+            var links = _seriesBookLinkService.GetLinksBySeries(seriesId);
+            var positions = links
+                .GroupBy(link => link.BookId)
+                .ToDictionary(group => group.Key, group => group.Min(link => link.SeriesPosition > 0 ? link.SeriesPosition : int.MaxValue));
+
+            var authorCatalog = _bookService.GetBooksByAuthor(author.Id);
+            var books = authorCatalog
+                .Where(book => positions.ContainsKey(book.Id) && book.MediaType == series.MediaType)
+                .OrderBy(book => positions[book.Id])
+                .ToList();
+
+            books = FilterBooksByConfiguredMediaProfiles(author, books);
+
+            if (books.Count == 0)
+            {
+                return new List<DownloadDecision>();
+            }
+
+            var searchSpec = Get<BookSearchCriteria>(author, books, authorCatalog, userInvokedSearch, interactiveSearch, false);
+            searchSpec.BookTitle = series.Title;
+
+            var decisions = await Dispatch(indexer => indexer.Fetch(searchSpec), searchSpec);
+
+            foreach (var decision in decisions)
+            {
+                if (decision?.RemoteBook == null)
+                {
+                    continue;
+                }
+
+                decision.RemoteBook.Author = author;
+                decision.RemoteBook.Books = books;
+                decision.RemoteBook.DownloadAllowed = true;
+            }
+
+            return DeDupeDecisions(decisions);
         }
 
         public Task<List<DownloadDecision>> BookSearch(Book book, bool missingOnly, bool userInvokedSearch, bool interactiveSearch, bool allowUnmonitored = false)

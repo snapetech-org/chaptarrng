@@ -13,6 +13,7 @@ import Scroller from 'Components/Scroller/Scroller';
 import Table from 'Components/Table/Table';
 import TableBody from 'Components/Table/TableBody';
 import { kinds, scrollDirections } from 'Helpers/Props';
+import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
 import FileBrowserRow from './FileBrowserRow';
 import styles from './FileBrowserModalContent.css';
@@ -70,6 +71,10 @@ class FileBrowserModalContent extends Component {
 
   onRowPress = (path) => {
     this.props.onFetchPaths(path);
+  };
+
+  onRetryPress = () => {
+    this.props.onFetchPaths(this.props.currentPath);
   };
 
   onOkPress = () => {
@@ -137,10 +142,13 @@ class FileBrowserModalContent extends Component {
             scrollDirection={scrollDirections.BOTH}
           >
             {
-              !!error &&
-                <div>
-                  {translate('ErrorLoadingContents')}
-                </div>
+              !!error && !isFetching &&
+                <Alert kind={kinds.DANGER} role="alert">
+                  <div>{getErrorMessage(error, translate('ErrorLoadingContents'))}</div>
+                  <Button size="small" onPress={this.onRetryPress}>
+                    {translate('Retry')}
+                  </Button>
+                </Alert>
             }
 
             {

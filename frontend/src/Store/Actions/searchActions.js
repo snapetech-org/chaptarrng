@@ -107,7 +107,16 @@ export const UPDATE_SERIES_ENRICHMENT = 'search/UPDATE_SERIES_ENRICHMENT';
 export const getSearchResults = createThunk(GET_SEARCH_RESULTS);
 export const addAuthor = createThunk(ADD_AUTHOR);
 export const addBook = createThunk(ADD_BOOK);
-export const clearSearchResults = createAction(CLEAR_SEARCH_RESULTS);
+export const clearSearchResults = () => {
+  currentSearchRequestId++;
+
+  if (abortCurrentRequest) {
+    abortCurrentRequest();
+    abortCurrentRequest = null;
+  }
+
+  return { type: CLEAR_SEARCH_RESULTS };
+};
 export const resetAddState = createAction(RESET_ADD_STATE);
 export const setAuthorAddDefault = createAction(SET_AUTHOR_ADD_DEFAULT);
 export const setBookAddDefault = createAction(SET_BOOK_ADD_DEFAULT);

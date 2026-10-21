@@ -104,7 +104,8 @@ class HardcoverApiKeyModal extends Component {
         isSaving: false,
         saveError: errorMessage
       });
-      this.props.onConnectionFailure?.();
+
+      this.props.onConnectionFailure?.(xhr);
     });
   };
 

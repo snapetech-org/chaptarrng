@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import Button from 'Components/Link/Button';
 import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate, { translateWithFallback } from 'Utilities/String/translate';
 import styles from './ErrorPage.css';
@@ -12,10 +13,14 @@ function ErrorPage(props) {
     authorError,
     customFiltersError,
     tagsError,
+    languagesError,
     qualityProfilesError,
     metadataProfilesError,
+    importListsError,
+    indexerFlagsError,
     uiSettingsError,
-    systemStatusError
+    systemStatusError,
+    onRetryPress
   } = props;
 
   let errorMessage = translateWithFallback('ErrorPageLoadFailed', 'Failed to load Chaptarr');
@@ -45,6 +50,11 @@ function ErrorPage(props) {
       tagsError,
       translateWithFallback('ErrorPageTagsUnavailable', 'Failed to load tags from API')
     );
+  } else if (languagesError) {
+    errorMessage = getErrorMessage(
+      languagesError,
+      translateWithFallback('ErrorPageLanguagesUnavailable', 'Failed to load languages from API')
+    );
   } else if (qualityProfilesError) {
     errorMessage = getErrorMessage(
       qualityProfilesError,
@@ -54,6 +64,16 @@ function ErrorPage(props) {
     errorMessage = getErrorMessage(
       metadataProfilesError,
       translateWithFallback('ErrorPageMetadataProfilesUnavailable', 'Failed to load metadata profiles from API')
+    );
+  } else if (importListsError) {
+    errorMessage = getErrorMessage(
+      importListsError,
+      translateWithFallback('ErrorPageImportListsUnavailable', 'Failed to load import lists from API')
+    );
+  } else if (indexerFlagsError) {
+    errorMessage = getErrorMessage(
+      indexerFlagsError,
+      translateWithFallback('ErrorPageIndexerFlagsUnavailable', 'Failed to load indexer flags from API')
     );
   } else if (uiSettingsError) {
     errorMessage = getErrorMessage(
@@ -73,6 +93,15 @@ function ErrorPage(props) {
         {errorMessage}
       </div>
 
+      {
+        isLocalStorageSupported &&
+          <div className={styles.retry}>
+            <Button onPress={onRetryPress}>
+              {translateWithFallback('Retry', 'Retry')}
+            </Button>
+          </div>
+      }
+
       <div className={styles.version}>
         {translate('ErrorPageVersion', { version })}
       </div>
@@ -87,10 +116,14 @@ ErrorPage.propTypes = {
   authorError: PropTypes.object,
   customFiltersError: PropTypes.object,
   tagsError: PropTypes.object,
+  languagesError: PropTypes.object,
   qualityProfilesError: PropTypes.object,
   metadataProfilesError: PropTypes.object,
+  importListsError: PropTypes.object,
+  indexerFlagsError: PropTypes.object,
   uiSettingsError: PropTypes.object,
-  systemStatusError: PropTypes.object
+  systemStatusError: PropTypes.object,
+  onRetryPress: PropTypes.func.isRequired
 };
 
 export default ErrorPage;

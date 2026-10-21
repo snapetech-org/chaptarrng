@@ -89,6 +89,28 @@ namespace Chaptarr.Core.Test.Books
         }
 
         [Test]
+        public void single_author_refresh_can_rescan_after_metadata_freshness_gate_skips_remote_refresh()
+        {
+            var root = @"C:\library".AsOsAgnostic();
+            var authorPath = Path.Combine(root, "Recent Author");
+            var author = new Author { Id = 7, Name = "Recent Author", Path = authorPath };
+            var queue = new StubCommandQueueManager();
+            var subject = CreateSubject(
+                new[] { author },
+                new[] { new RootFolder { Id = 1, Path = root, FolderType = FolderType.Mixed } },
+                Array.Empty<BookFile>(),
+                queue,
+                new StubEventAggregator());
+
+            subject.Execute(new RefreshAuthorCommand(author.Id, refreshMetadata: false, rescanFolders: true)
+            {
+                RescanWhenMetadataUnchanged = true
+            });
+
+            Assert.That(queue.Pushed.OfType<RescanFoldersCommand>().Single().Folders, Is.EqualTo(new[] { authorPath }));
+        }
+
+        [Test]
         public void new_author_refresh_scans_only_its_computed_folder_without_mapped_files()
         {
             var root = @"C:\library".AsOsAgnostic();

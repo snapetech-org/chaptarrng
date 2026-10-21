@@ -24,6 +24,7 @@ import OrganizePreviewModalConnector from 'Organize/OrganizePreviewModalConnecto
 import RetagPreviewModalConnector from 'Retag/RetagPreviewModalConnector';
 import translate from 'Utilities/String/translate';
 import BookDetailsHeaderConnector from './BookDetailsHeaderConnector';
+import BookRelatedFormats from './BookRelatedFormats';
 import BookChaptersTable from './Chapters/BookChaptersTable';
 import BookEditionCatalog from './Editions/BookEditionCatalog';
 import BookMatchProvenanceTable from './Matching/BookMatchProvenanceTable';
@@ -349,6 +350,14 @@ class BookDetails extends Component {
           </SwipeHeaderConnector>
 
           <div className={styles.contentContainer}>
+            <BookRelatedFormats
+              bookId={id}
+              mediaType={mediaType === 'ebook' ? 'ebook' : 'audiobook'}
+              title={title}
+              book={this.props.bookRecord}
+              author={author}
+            />
+
             {
               !isPopulated && !bookFilesError &&
                 <LoadingIndicator />
@@ -523,6 +532,7 @@ class BookDetails extends Component {
 
 BookDetails.propTypes = {
   id: PropTypes.number.isRequired,
+  bookRecord: PropTypes.object.isRequired,
   titleSlug: PropTypes.string.isRequired,
   title: PropTypes.string.isRequired,
   seriesTitle: PropTypes.string,

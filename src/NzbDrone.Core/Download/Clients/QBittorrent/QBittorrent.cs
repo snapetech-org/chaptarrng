@@ -142,6 +142,12 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
             return true;
         }
 
+        private static bool IsConflictResponse(DownloadClientException exception)
+        {
+            return exception.InnerException is HttpException httpException &&
+                   httpException.Response?.StatusCode == HttpStatusCode.Conflict;
+        }
+
         protected override string AddFromMagnetLink(RemoteBook remoteBook, string hash, string magnetLink)
         {
             if (!Proxy.GetConfig(Settings).DhtEnabled && !magnetLink.Contains("&tr="))
@@ -160,14 +166,15 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
             {
                 Proxy.AddTorrentFromUrl(magnetLink, addHasSetShareLimits && setShareLimits ? remoteBook.SeedConfiguration : null, Settings, category);
             }
-            catch (DownloadClientException ex) when (ex.InnerException is HttpException httpException && httpException.Response.StatusCode is HttpStatusCode.Conflict)
-            {
-                throw new DownloadClientRejectedReleaseException(remoteBook.Release, "qBittorrent rejected the magnet link due to a conflict", ex);
-            }
             catch (DownloadClientException ex)
             {
                 if (!TryAdoptExistingTorrent(remoteBook, hash, category, ex))
                 {
+                    if (IsConflictResponse(ex))
+                    {
+                        throw new DownloadClientRejectedReleaseException(remoteBook.Release, "qBittorrent rejected the magnet link due to a conflict", ex);
+                    }
+
                     throw;
                 }
             }
@@ -232,14 +239,15 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
             {
                 Proxy.AddTorrentFromFile(filename, fileContent, addHasSetShareLimits ? remoteBook.SeedConfiguration : null, Settings, category);
             }
-            catch (DownloadClientException ex) when (ex.InnerException is HttpException httpException && httpException.Response.StatusCode is HttpStatusCode.Conflict)
-            {
-                throw new DownloadClientRejectedReleaseException(remoteBook.Release, "qBittorrent rejected the torrent file due to a conflict", ex);
-            }
             catch (DownloadClientException ex)
             {
                 if (!TryAdoptExistingTorrent(remoteBook, hash, category, ex))
                 {
+                    if (IsConflictResponse(ex))
+                    {
+                        throw new DownloadClientRejectedReleaseException(remoteBook.Release, "qBittorrent rejected the torrent file due to a conflict", ex);
+                    }
+
                     throw;
                 }
             }

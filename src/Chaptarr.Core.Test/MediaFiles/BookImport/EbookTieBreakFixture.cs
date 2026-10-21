@@ -273,5 +273,47 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
             Assert.That(match, Is.Not.Null);
             Assert.That(match.EditionId, Is.EqualTo(2), "the highest matching configured weight must beat the BM25 fallback");
         }
+
+        [Test]
+        public void audiobook_matching_should_use_the_audiobook_metadata_profile_preferences()
+        {
+            var candidates = new List<EditionFtsMatch>
+            {
+                new EditionFtsMatch { EditionId = 1, BookId = 1, EditionTitle = "Some Book", EditionFormat = "AAC", BookTitle = "Some Book", AuthorId = 25, AuthorName = "Test Author", ReleaseDate = new DateTime(2020, 1, 1), ReadingFormatId = 2, MatchScore = 8.0 },
+                new EditionFtsMatch { EditionId = 2, BookId = 1, EditionTitle = "Some Book", EditionFormat = "MP3", BookTitle = "Some Book", AuthorId = 25, AuthorName = "Test Author", ReleaseDate = new DateTime(2020, 1, 1), ReadingFormatId = 2, MatchScore = 8.0 }
+            };
+            var author = new Author
+            {
+                Id = 25,
+                Name = "Test Author",
+                AudiobookMetadataProfile = new NzbDrone.Core.Profiles.Metadata.MetadataProfile
+                {
+                    PreferredEditionTerms = "2|mp3"
+                },
+                EbookMetadataProfile = new NzbDrone.Core.Profiles.Metadata.MetadataProfile
+                {
+                    PreferredEditionTerms = "2|aac"
+                }
+            };
+            var book = new Book { Id = 1, Author = author, MediaType = BookMediaType.Audiobook };
+            var bookService = DispatchProxy.Create<IBookService, StubBookServiceProxy>();
+            ((StubBookServiceProxy)(object)bookService).Book = book;
+            var sut = CreateSut(candidates, bookService);
+
+            var file = new DiscoveredFileWithMetadata
+            {
+                Path = "/audiobooks/Test Author/Some Book/Some Book.m4b",
+                AllTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "TITLE", new List<string> { "Some Book" } },
+                    { "YEAR", new List<string> { "2020" } }
+                }
+            };
+
+            var match = sut.HolyGrailMatchFile(file, BookMediaType.Audiobook, restrictToAuthorId: 25);
+
+            Assert.That(match, Is.Not.Null);
+            Assert.That(match.EditionId, Is.EqualTo(2), "the ebook profile preference must not override audiobook profile preferences");
+        }
     }
 }

@@ -12,6 +12,10 @@ import SeriesNarratorMatrix from './SeriesNarratorMatrix';
 import styles from './SeriesDetails.css';
 
 class SeriesDetails extends Component {
+  onRefreshPress = () => {
+    // Implement refresh logic
+  };
+
   render() {
     const {
       title,
@@ -68,9 +72,6 @@ class SeriesDetails extends Component {
     );
   }
 
-  onRefreshPress = () => {
-    // Implement refresh logic
-  };
 }
 
 SeriesDetails.propTypes = {

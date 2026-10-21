@@ -48,7 +48,9 @@ function createMapStateToProps() {
           isSmallScreen: dimensions.isSmallScreen,
           uiSettings,
           hideSeries: true,
-          hasRootFolder
+          hasRootFolder,
+          authorId: author?.id || 0,
+          authorName: author?.authorName || ''
         };
       }
 
@@ -73,7 +75,9 @@ function createMapStateToProps() {
           isSmallScreen: dimensions.isSmallScreen,
           uiSettings,
           hideSeries: true,
-          hasRootFolder
+          hasRootFolder,
+          authorId: author?.id || 0,
+          authorName: author?.authorName || ''
         };
       }
 
@@ -167,7 +171,9 @@ function createMapStateToProps() {
         isSmallScreen: dimensions.isSmallScreen,
         uiSettings,
         hideSeries,
-        hasRootFolder
+        hasRootFolder,
+        authorId: author?.id || 0,
+        authorName: author?.authorName || ''
       };
     }
   );
@@ -223,6 +229,7 @@ class AuthorDetailsSeriesConnector extends Component {
 
 AuthorDetailsSeriesConnector.propTypes = {
   authorId: PropTypes.number.isRequired,
+  authorName: PropTypes.string,
   toggleBooksMonitored: PropTypes.func.isRequired,
   setSeriesTableOption: PropTypes.func.isRequired,
   dispatchSetSeriesSort: PropTypes.func.isRequired,

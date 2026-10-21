@@ -34,6 +34,9 @@ namespace NzbDrone.Core.Books.Calibre
                 .ThenByDescending(x => Tokenize(x.Series.Value.Title).Intersect(bookTokens).Any() ? 1 : 0)
                 .ThenByDescending(x => x.IsPrimary)
                 .ThenBy(x => x.SeriesPosition)
+                .ThenBy(x => x.Series.Value.Title, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.Series.Value.Title, StringComparer.Ordinal)
+                .ThenBy(x => x.SeriesId)
                 .FirstOrDefault();
         }
 

@@ -55,13 +55,18 @@ class PageHeader extends Component {
         <div className={styles.logoContainer}>
           <Link
             className={styles.logoLink}
+            aria-label={translate('ChaptarrLogoAlt')}
             to={'/'}
           >
             <img
               className={styles.logo}
               src={`${window.Chaptarr.urlBase}/Content/Images/chaptarr-logo.svg`}
-              alt={translate('ChaptarrLogoAlt')}
+              alt=""
+              aria-hidden="true"
             />
+            <span className={styles.brandName}>
+              {'Chaptarr'}<span className={styles.brandMark}>{'NG'}</span>
+            </span>
           </Link>
         </div>
 

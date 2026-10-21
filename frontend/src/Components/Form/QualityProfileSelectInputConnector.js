@@ -69,13 +69,14 @@ class QualityProfileSelectInputConnector extends Component {
     const {
       name,
       value,
-      includeNone
+      includeNone,
+      noneValue
     } = this.props;
 
     const values = this.getSelectValues();
 
     // Don't auto-select if includeNone is true and value is explicitly set
-    if (includeNone && (value === null || value === undefined || value === 'none')) {
+    if (includeNone && (value === null || value === undefined || value === noneValue)) {
       return;
     }
 
@@ -101,7 +102,8 @@ class QualityProfileSelectInputConnector extends Component {
       includeNoChangeDisabled = true,
       includeMixed,
       includeNone,
-      noneLabel
+      noneLabel,
+      noneDisabled = false
     } = this.props;
 
     const { profiles } = this.state;
@@ -116,7 +118,8 @@ class QualityProfileSelectInputConnector extends Component {
     if (includeNone) {
       values.unshift({
         key: 'none',
-        value: noneLabel || translate('None')
+        value: noneLabel || translate('None'),
+        isDisabled: noneDisabled
       });
     }
 
@@ -143,8 +146,10 @@ class QualityProfileSelectInputConnector extends Component {
   // Listeners
 
   onChange = ({ name, value }) => {
-    if (value === 'noChange' || value === 'none') {
+    if (value === 'noChange') {
       this.props.onChange({ name, value });
+    } else if (value === 'none') {
+      this.props.onChange({ name, value: this.props.noneValue });
     } else {
       this.props.onChange({ name, value: parseInt(value) });
     }
@@ -155,10 +160,13 @@ class QualityProfileSelectInputConnector extends Component {
 
   render() {
     const { isFetching } = this.state;
+    const { includeNone, noneValue, value } = this.props;
+    const selectValue = includeNone && (value == null || value === noneValue) ? 'none' : value;
 
     return (
       <SelectInput
         {...this.props}
+        value={selectValue}
         values={this.getSelectValues()}
         onChange={this.onChange}
         isDisabled={this.props.isDisabled || isFetching}
@@ -180,6 +188,8 @@ QualityProfileSelectInputConnector.propTypes = {
   includeMixed: PropTypes.bool.isRequired,
   includeNone: PropTypes.bool.isRequired,
   noneLabel: PropTypes.string,
+  noneDisabled: PropTypes.bool,
+  noneValue: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   profileType: PropTypes.string,
   onChange: PropTypes.func.isRequired
 };
@@ -187,7 +197,8 @@ QualityProfileSelectInputConnector.propTypes = {
 QualityProfileSelectInputConnector.defaultProps = {
   includeNoChange: false,
   includeMixed: false,
-  includeNone: false
+  includeNone: false,
+  noneValue: 'none'
 };
 
 export default connect()(QualityProfileSelectInputConnector);

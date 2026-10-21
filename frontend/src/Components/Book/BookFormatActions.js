@@ -54,33 +54,39 @@ function BookFormatAction(props) {
     canAdd,
     size,
     showAddActions,
+    showLabels,
     onAdd
   } = props;
 
   const icon = getMediaTypeIcon(mediaType);
   const label = getMediaTypeLabel(mediaType);
+  const visibleLabel = translate(mediaType === 'ebook' ? 'EbookLabel' : 'AudiobookLabel');
   const safeInstances = instances || [];
 
   if (safeInstances.length === 1) {
     const instance = safeInstances[0];
+    const openTitle = translate('OpenFormatOfTitle', { format: label, title });
+    const existingFormatClassName = showLabels ? `${styles.existingFormat} ${styles.withLabel}` : styles.existingFormat;
 
     return (
       <Link
-        className={styles.existingFormat}
+        className={existingFormatClassName}
         to={`/book/${instance.id}`}
-        title={translate('OpenFormatOfTitle', { format: label, title })}
+        aria-label={openTitle}
+        title={openTitle}
         onMouseDown={stopMouseDown}
         onPress={stopEvent}
       >
-        <Icon
-          name={icon}
-          size={size}
-        />
+        <span className={styles.iconContainer}>
+          <Icon name={icon} size={size} />
+        </span>
+        {showLabels ? <span className={styles.formatLabel}>{visibleLabel}</span> : null}
       </Link>
     );
   }
 
   if (safeInstances.length > 1) {
+    const existingFormatClassName = showLabels ? `${styles.existingFormat} ${styles.withLabel}` : styles.existingFormat;
     const body = (
       <div className={styles.instanceList}>
         {
@@ -89,6 +95,10 @@ function BookFormatAction(props) {
               key={instance.id}
               className={styles.instanceLink}
               to={`/book/${instance.id}`}
+              aria-label={translate('OpenFormatOfTitle', {
+                format: label,
+                title: getInstanceLabel(instance, mediaType)
+              })}
               onMouseDown={stopMouseDown}
               onPress={stopEvent}
             >
@@ -104,15 +114,16 @@ function BookFormatAction(props) {
         anchor={
           <button
             type="button"
-            className={styles.existingFormat}
+            className={existingFormatClassName}
+            aria-label={translate('FormatCopies', { count: safeInstances.length, format: label })}
             title={translate('OpenFormatOfTitle', { format: label, title })}
             onMouseDown={stopMouseDown}
           >
-            <Icon
-              name={icon}
-              size={size}
-            />
-            <span className={styles.badge}>{safeInstances.length}</span>
+            <span className={styles.iconContainer}>
+              <Icon name={icon} size={size} />
+              <span className={styles.badge}>{safeInstances.length}</span>
+            </span>
+            {showLabels ? <span className={styles.formatLabel}>{visibleLabel}</span> : null}
           </button>
         }
         title={translate('FormatCopies', { count: safeInstances.length, format: label })}
@@ -131,10 +142,12 @@ function BookFormatAction(props) {
   const addTitle = canAdd ?
     translate('AddAsFormat', { format: label }) :
     translate('CannotAddFormatMissingProviderIds', { format: label });
+  const addFormatClassName = canAdd ? styles.addFormat : styles.unavailableFormat;
 
   return (
     <Link
-      className={canAdd ? styles.addFormat : styles.unavailableFormat}
+      className={showLabels ? `${addFormatClassName} ${styles.withLabel}` : addFormatClassName}
+      aria-label={addTitle}
       title={addTitle}
       isDisabled={!canAdd}
       onMouseDown={stopMouseDown}
@@ -146,15 +159,15 @@ function BookFormatAction(props) {
         }
       }}
     >
-      <Icon
-        name={icon}
-        size={size}
-      />
-      <Icon
-        className={styles.addBadge}
-        name={icons.ADD}
-        size={10}
-      />
+      <span className={styles.iconContainer}>
+        <Icon name={icon} size={size} />
+        <Icon
+          className={styles.addBadge}
+          name={icons.ADD}
+          size={10}
+        />
+      </span>
+      {showLabels ? <span className={styles.formatLabel}>{visibleLabel}</span> : null}
     </Link>
   );
 }
@@ -167,6 +180,7 @@ function BookFormatActions(props) {
     canAdd,
     size,
     showAddActions,
+    showLabels,
     onAdd
   } = props;
 
@@ -183,6 +197,7 @@ function BookFormatActions(props) {
         canAdd={canAdd}
         size={size}
         showAddActions={showAddActions}
+        showLabels={showLabels}
         onAdd={onAdd}
       />
       <BookFormatAction
@@ -192,6 +207,7 @@ function BookFormatActions(props) {
         canAdd={canAdd}
         size={size}
         showAddActions={showAddActions}
+        showLabels={showLabels}
         onAdd={onAdd}
       />
     </div>
@@ -205,6 +221,7 @@ BookFormatAction.propTypes = {
   canAdd: PropTypes.bool.isRequired,
   size: PropTypes.number.isRequired,
   showAddActions: PropTypes.bool.isRequired,
+  showLabels: PropTypes.bool.isRequired,
   onAdd: PropTypes.func
 };
 
@@ -215,6 +232,7 @@ BookFormatActions.propTypes = {
   canAdd: PropTypes.bool.isRequired,
   size: PropTypes.number,
   showAddActions: PropTypes.bool,
+  showLabels: PropTypes.bool,
   onAdd: PropTypes.func
 };
 
@@ -222,7 +240,8 @@ BookFormatActions.defaultProps = {
   localAudiobookBooks: [],
   localEbookBooks: [],
   size: 18,
-  showAddActions: true
+  showAddActions: true,
+  showLabels: false
 };
 
 export default BookFormatActions;

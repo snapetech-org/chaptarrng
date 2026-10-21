@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -273,12 +274,23 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
         private object BuildJsonSearchPayload(string searchText, int? startNumber = null, int? perPage = null, SearchCriteriaBase searchCriteria = null, bool includeDescription = true)
         {
             var browseLanguages = BuildBrowseLanguages(searchCriteria);
+            var searchType = Settings.SearchType switch
+            {
+                (int)MyAnonaMouseSearchType.All => "all",
+                (int)MyAnonaMouseSearchType.Active => "active",
+                (int)MyAnonaMouseSearchType.Freeleech => "fl",
+                (int)MyAnonaMouseSearchType.FreeleechOrVip => "fl-VIP",
+                (int)MyAnonaMouseSearchType.Vip => "VIP",
+                (int)MyAnonaMouseSearchType.NotVip => "nVIP",
+                null => Settings.MinimumSeeders > 0 ? "active" : "all",
+                _ => "all"
+            };
 
             var torrentParams = new Dictionary<string, object>
             {
                 ["text"] = searchText ?? "",
-                ["srchIn"] = new[] { "title", "author", "narrator", "series", "tags" },
-                ["searchType"] = Settings.MinimumSeeders > 0 ? "active" : "all",
+                ["srchIn"] = BuildSearchFields(),
+                ["searchType"] = searchType,
                 ["searchIn"] = "torrents",
                 ["cat"] = new[] { "0" },
                 ["main_cat"] = BuildMainCategories(searchCriteria),
@@ -310,6 +322,28 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
             return payload;
         }
 
+        private List<string> BuildSearchFields()
+        {
+            var fields = new List<string> { "title", "author", "narrator" };
+            if (Settings.SearchInSeries)
+            {
+                fields.Add("series");
+            }
+
+            fields.Add("tags");
+            if (Settings.SearchInDescription)
+            {
+                fields.Add("description");
+            }
+
+            if (Settings.SearchInFilenames)
+            {
+                fields.Add("filenames");
+            }
+
+            return fields;
+        }
+
         private static string[] BuildMainCategories(SearchCriteriaBase searchCriteria)
         {
             var mediaType = SearchMediaTypeHelper.GetRequestedMediaType(searchCriteria);
@@ -324,6 +358,15 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
 
         private List<string> BuildBrowseLanguages(SearchCriteriaBase searchCriteria)
         {
+            var configuredLanguages = Settings.SearchLanguages?
+                .Distinct()
+                .Select(language => language.ToString(CultureInfo.InvariantCulture))
+                .ToList();
+            if (configuredLanguages?.Count > 0)
+            {
+                return configuredLanguages;
+            }
+
             if (!TryGetProfileLanguagePolicy(
                     searchCriteria,
                     out var profileLanguages,

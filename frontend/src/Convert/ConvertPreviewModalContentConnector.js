@@ -41,6 +41,15 @@ class ConvertPreviewModalContentConnector extends Component {
   //
   // Listeners
 
+  onRetryPress = () => {
+    const {
+      authorId,
+      bookId
+    } = this.props;
+
+    this.props.fetchConvertPreview({ authorId, bookId });
+  };
+
   onConvertPress = (files) => {
     this.props.executeCommand({
       name: commandNames.CONVERT_BOOK_FILES,
@@ -59,6 +68,7 @@ class ConvertPreviewModalContentConnector extends Component {
     return (
       <ConvertPreviewModalContent
         {...this.props}
+        onRetryPress={this.onRetryPress}
         onConvertPress={this.onConvertPress}
       />
     );
