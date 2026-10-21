@@ -50,12 +50,18 @@ fulfillment, SeerrNG workflows, installed update-channel handoff, and operator
 acceptance remain open. Keep BookshelfNG in service.
 
 The refreshed schema-v4 audit compares BookshelfNG source
-`2811718076d84777a1b1132e4e5d2abd21231229` with ChaptarrNG candidate
-`232e630eb6c711168e91543242397b0e8e4c1cf1`: 1,119 changed paths, 98 reviewed
-mappings, and 785 dispositions (177 retained, 135 equivalent, 261 ported, and
-212 non-runtime retirements). Another 334 paths remain open (84 unmapped and
-250 requiring semantic review). The audit tests pass 31/31; these per-path
+`2811718076d84777a1b1132e4e5d2abd21231229` with ChaptarrNG `main`
+`9da8a4f27dc5c3a11d41d19b09933f70e4929612`: 1,119 changed paths, 98 reviewed
+mappings, and 818 dispositions (177 retained, 135 equivalent, 266 ported, and
+240 non-runtime retirements). Another 301 paths remain open (71 unmapped and
+230 requiring semantic review). The audit tests pass 31/31; these per-path
 decisions organize review and do not establish runtime parity.
+
+Standalone archive work now covers all ten BookshelfNG runtime identifiers in
+the ChaptarrNG source release matrix. Linux x86 and FreeBSD use pinned custom
+.NET runtime packs. A separate workflow builds and verifies every archive
+without publishing; that exact-head run is pending. The public `v0.9.977`
+assets remain unchanged, and no release or channel handoff is authorized.
 
 The current migration fix is ChaptarrNG commit
 `c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`. It maps legacy

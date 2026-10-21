@@ -32,6 +32,7 @@ installation choices.
 - [HTTP security](HTTP_SECURITY.md): API keys, proxy trust, CORS, and request limits.
 - [Validation engine](development/validation-engine.md): local and hosted checks, progress, and validation receipts.
 - [ImageSharp build license](development/imagesharp-license.md): source-build license requirements.
+- [Standalone archive builds](development/standalone-archives.md): supported runtime IDs, custom runtime packs, and no-publication validation.
 - [Setup experience contract](development/setup-experience-contract.md): Quickstart flow and completion rules.
 - [Localization roadmap](localization-roadmap.md): supported locales and translation priorities.
 - [API identity and lifecycle](API_IDENTITY_AND_LIFECYCLE.md): Readarr-compatible identity and command lifecycle.

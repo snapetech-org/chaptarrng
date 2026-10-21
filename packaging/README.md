@@ -31,6 +31,20 @@ path so a package upgrade can start the normal ChaptarrNG database migration.
 They are a bridge candidate, not proof that every existing install can be
 upgraded safely.
 
+## Standalone archive coverage
+
+The published `v0.9.977` archives cover `linux-x64`, `linux-arm64`, and
+`win-x64`. The current source release workflow now covers the full BookshelfNG
+archive matrix: `linux-x64`, `linux-x86`, `linux-arm64`, `linux-musl-x64`,
+`linux-musl-arm64`, `freebsd-x64`, `osx-x64`, `osx-arm64`, `win-x64`, and
+`win-x86`. Linux x86 and FreeBSD use separately built, pinned .NET runtime
+packs. A no-publication validation workflow builds and verifies all ten
+candidate archives; its exact-head result is still pending. These assets are
+not public until a later release is approved. Keep BookshelfNG in service
+until the full migration and channel acceptance gates close.
+Keep the BookshelfNG installation in service until a replacement channel is
+validated or that platform is explicitly retired.
+
 ## Public status
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |

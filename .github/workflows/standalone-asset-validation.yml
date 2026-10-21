@@ -1,0 +1,180 @@
+name: Validate standalone release assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/standalone-asset-validation.yml'
+      - '.github/workflows/release.yml'
+      - 'packaging/scripts/build-standalone.sh'
+      - 'packaging/scripts/build-extra-platform-runtime-packs.sh'
+      - 'packaging/scripts/install-extra-platform-runtime-packs.sh'
+      - 'packaging/scripts/check-standalone-rids.py'
+      - 'src/**'
+      - 'frontend/**'
+      - 'package.json'
+      - 'yarn.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Build frontend once
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+
+    - name: Verify archive runtime ID matrices
+      run: python3 packaging/scripts/check-standalone-rids.py
+
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 26.10.0
+        package-manager-cache: false
+
+    - name: Build frontend
+      run: |
+        npm install --global yarn@1.22.22
+        yarn install --frozen-lockfile
+        yarn build
+
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: standalone-validation-ui
+        path: _output/UI/**
+        retention-days: 1
+        if-no-files-found: error
+
+  extra-platform-runtimes:
+    name: Build Linux x86 and FreeBSD runtime packs
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      with:
+        dotnet-version: |
+          10.0.110
+          10.0.111
+          10.0.402
+
+    - name: Build pinned extra-platform runtime packs
+      env:
+        DOTNETVERSION: 10.0.402
+        DOTNET_ROOT: /usr/share/dotnet
+        PLATFORM_RUNTIME_WORK_DIR: ${{ runner.temp }}/chaptarrng-platform-runtime-work
+        PLATFORM_RUNTIME_PACKS_OUTPUT: ${{ runner.temp }}/chaptarrng-platform-runtime-packs
+      run: bash packaging/scripts/build-extra-platform-runtime-packs.sh
+
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: chaptarrng-platform-runtime-packs
+        path: ${{ runner.temp }}/chaptarrng-platform-runtime-packs/**
+        retention-days: 1
+        if-no-files-found: error
+
+  extra-standalone:
+    name: Build and verify ${{ matrix.rid }} archive
+    needs: [frontend, extra-platform-runtimes]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [linux-x86, freebsd-x64]
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+
+    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      with:
+        name: standalone-validation-ui
+        path: _output/UI
+
+    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      with:
+        name: chaptarrng-platform-runtime-packs
+        path: ${{ runner.temp }}/platform-runtime-packs
+
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      with:
+        dotnet-version: 10.0.402
+
+    - name: Require ImageSharp build license
+      env:
+        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+      run: test -n "$SIXLABORS_LICENSE_KEY"
+
+    - name: Build standalone application archive
+      env:
+        CUSTOM_RUNTIME_PACKS_DIR: ${{ runner.temp }}/platform-runtime-packs/packages
+        DOTNET_ROOT: /usr/share/dotnet
+        DOTNETVERSION: 10.0.402
+        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+      run: bash packaging/scripts/build-standalone.sh 0.0.0 "${{ matrix.rid }}" "$RUNNER_TEMP/release-assets"
+
+    - name: Verify archive and checksum sidecar
+      env:
+        RID: ${{ matrix.rid }}
+      run: |
+        set -euo pipefail
+        asset="ChaptarrNG-0.0.0-${RID}.tar.gz"
+        tar -tzf "$RUNNER_TEMP/release-assets/$asset" >/dev/null
+        (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")
+
+  standalone:
+    name: Build and verify ${{ matrix.rid }} archive
+    needs: frontend
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [linux-x64, linux-arm64, linux-musl-x64, linux-musl-arm64, osx-x64, osx-arm64, win-x64, win-x86]
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+
+    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      with:
+        name: standalone-validation-ui
+        path: _output/UI
+
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      with:
+        dotnet-version: 10.0.402
+
+    - name: Require ImageSharp build license
+      env:
+        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+      run: test -n "$SIXLABORS_LICENSE_KEY"
+
+    - name: Build standalone application archive
+      env:
+        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+      run: bash packaging/scripts/build-standalone.sh 0.0.0 "${{ matrix.rid }}" "$RUNNER_TEMP/release-assets"
+
+    - name: Verify archive and checksum sidecar
+      env:
+        RID: ${{ matrix.rid }}
+      run: |
+        set -euo pipefail
+        if [[ "$RID" == win-* ]]; then
+          asset="ChaptarrNG-0.0.0-${RID}.zip"
+          unzip -t "$RUNNER_TEMP/release-assets/$asset" >/dev/null
+        else
+          asset="ChaptarrNG-0.0.0-${RID}.tar.gz"
+          tar -tzf "$RUNNER_TEMP/release-assets/$asset" >/dev/null
+          if [[ "$RID" == linux-* || "$RID" == osx-* ]]; then
+            tar -tzf "$RUNNER_TEMP/release-assets/$asset" \
+              | grep -Fxq 'ChaptarrNG/scripts/bookshelfng-to-chaptarrng.sh'
+          fi
+        fi
+        (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")

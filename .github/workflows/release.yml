@@ -294,14 +294,49 @@ jobs:
           SOURCE_REPOSITORY: ${{ github.repository }}
         run: bash packaging/scripts/dispatch-ghcr-release-bridge.sh
 
+  platform-runtime-packs:
+    name: Build Linux x86 and FreeBSD .NET 10 runtime packs
+    needs: release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ needs.release.outputs.sha }}
+        persist-credentials: false
+
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      with:
+        dotnet-version: |
+          10.0.110
+          10.0.111
+          10.0.402
+
+    - name: Build pinned extra-platform runtime packs
+      env:
+        DOTNETVERSION: 10.0.402
+        DOTNET_ROOT: /usr/share/dotnet
+        PLATFORM_RUNTIME_WORK_DIR: ${{ runner.temp }}/chaptarrng-platform-runtime-work
+        PLATFORM_RUNTIME_PACKS_OUTPUT: ${{ runner.temp }}/chaptarrng-platform-runtime-packs
+      run: bash packaging/scripts/build-extra-platform-runtime-packs.sh
+
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: chaptarrng-platform-runtime-packs
+        path: ${{ runner.temp }}/chaptarrng-platform-runtime-packs/**
+        retention-days: 1
+        if-no-files-found: error
+
   standalone-assets:
     name: Build ${{ matrix.rid }} standalone release asset
-    needs: release
+    needs: [release, platform-runtime-packs]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        rid: [linux-x64, linux-arm64, win-x64]
+        rid: [linux-x64, linux-arm64, linux-musl-x64, linux-musl-arm64, osx-x64, osx-arm64, win-x64, win-x86, linux-x86, freebsd-x64]
     permissions:
       contents: read
     steps:
@@ -327,6 +362,12 @@ jobs:
       with:
         dotnet-version: 10.0.402
 
+    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      if: ${{ matrix.rid == 'linux-x86' || matrix.rid == 'freebsd-x64' }}
+      with:
+        name: chaptarrng-platform-runtime-packs
+        path: ${{ runner.temp }}/platform-runtime-packs
+
     - name: Require ImageSharp build license
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
@@ -335,6 +376,9 @@ jobs:
     - name: Build standalone application archive
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+        CUSTOM_RUNTIME_PACKS_DIR: ${{ runner.temp }}/platform-runtime-packs/packages
+        DOTNET_ROOT: /usr/share/dotnet
+        DOTNETVERSION: 10.0.402
         VERSION: ${{ needs.release.outputs.version }}
         RID: ${{ matrix.rid }}
       run: bash packaging/scripts/build-standalone.sh "$VERSION" "$RID" "$RUNNER_TEMP/release-assets"
@@ -351,7 +395,7 @@ jobs:
         else
           asset="ChaptarrNG-${VERSION}-${RID}.tar.gz"
           tar -tzf "$RUNNER_TEMP/release-assets/$asset" >/dev/null
-          if [[ "$RID" == linux-* ]]; then
+          if [[ "$RID" == linux-* || "$RID" == osx-* ]]; then
             tar -tzf "$RUNNER_TEMP/release-assets/$asset" \
               | grep -Fxq 'ChaptarrNG/scripts/bookshelfng-to-chaptarrng.sh'
           fi
