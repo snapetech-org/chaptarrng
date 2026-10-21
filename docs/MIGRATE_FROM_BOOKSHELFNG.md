@@ -791,6 +791,62 @@ passed Linux, Windows, and PostgreSQL migration jobs for source commit
 The current exact-head result is recorded at the top of this guide. No release
 or compatibility bridge was published.
 
+## Populated SQLite migration and restore rehearsal (2026-10-21)
+
+The ChaptarrNG `main` candidate at
+[`69abed74`](https://github.com/snapetech-org/chaptarrng/commit/69abed74de74250c5ad3f6bed2c0c762dbcd813f)
+passed preview, explicit migration, restore preview, and rollback against
+isolated SQLite snapshots from two populated BookshelfNG installations. Both
+sources were at migration 158 and used Hardcover mode. Each preview covered 39
+source tables with no blocking issues; the import report accounted for every
+source row, including the command, provider-health, scheduled-task, and
+migration-history state that ChaptarrNG intentionally recreates.
+
+Each explicit apply reached ChaptarrNG schema 121, passed SQLite integrity and
+foreign-key checks, and retained a BookshelfNG source backup. The saved
+Hardcover token was present under `HardcoverApiToken` with the expected
+`Bearer ` prefix normalization, and `HardcoverEnabled` remained true. Restore
+preview and apply passed for both copies. The restored database and retained
+backup matched the original snapshots by table definitions and all table row
+contents; integrity checks passed and no foreign-key violations were present.
+The original snapshots remained byte-unchanged. The live BookshelfNG services
+were left running and continued to answer `/ping`.
+
+This establishes populated SQLite conversion and database rollback for these
+two data sets on the current source candidate. Normal startup on fresh copies
+of the same snapshots is recorded below. Filesystem or media processing, live
+provider behavior, SeerrNG workflows, PostgreSQL operator data, and installed
+package, image, Helm, or Unraid handoffs remain unvalidated. The public
+`v0.9.977` release was not the tested candidate; publication and compatibility
+bridges remain frozen.
+
+## Populated SQLite normal startup and configuration preservation (2026-10-21)
+
+A Linux x64 candidate built from ChaptarrNG `main` at
+[`69abed74`](https://github.com/snapetech-org/chaptarrng/commit/69abed74de74250c5ad3f6bed2c0c762dbcd813f)
+was started against fresh, isolated copies of both populated source snapshots.
+Each container had no network access, mounted only its copied `/config`, and
+used the source's `HARDCOVER=true` setting. ChaptarrNG automatically converted
+each BookshelfNG database from migration 158 to schema 121 during normal
+startup.
+
+The audiobook copy returned `/ping` HTTP 200 on its saved port 8788 after 102
+seconds. The ebook copy returned HTTP 200 on its saved port 8787 after 105
+seconds. Both converted databases passed SQLite integrity checks and had zero
+foreign-key violations. Their original `config.xml` files retained
+`AuthenticationMethod=Forms`, `AuthenticationRequired=Enabled`, and the same
+API key values after startup; no credential value is recorded here. A request
+to `/api/v1/system/status` without an API key returned HTTP 401 on the
+converted audiobook copy. The original source snapshots stayed byte-unchanged,
+and both live BookshelfNG services remained up and answered `/ping` with HTTP
+200.
+
+This verifies normal startup and configuration preservation for these two
+isolated SQLite snapshots. The configured library directories were not mounted
+and the container network was disabled, so this does not validate media file
+access, provider calls, SeerrNG workflows, an image or package switch, rollback
+on an installed service, or full BookshelfNG feature parity.
+
 ## Historical populated-database rehearsal (2026-10-14)
 
 The ordinary Linux/amd64 ChaptarrNG image was exercised against an isolated

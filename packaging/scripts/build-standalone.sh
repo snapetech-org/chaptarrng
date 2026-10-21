@@ -61,33 +61,8 @@ mkdir -p "$bundle"
 
 if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
   custom_nuget_config="$work/platform-runtime.NuGet.config"
-  python3 - "$runtime_packs" src/NuGet.config "$custom_nuget_config" <<'PY'
-from pathlib import Path
-import sys
-import xml.etree.ElementTree as ET
-
-runtime_packs, source_config, output_config = map(Path, sys.argv[1:])
-tree = ET.parse(source_config)
-root = tree.getroot()
-sources = root.find("packageSources")
-mapping = root.find("packageSourceMapping")
-if sources is None or mapping is None:
-    raise SystemExit("The source NuGet config must define package sources and source mapping")
-
-source_name = "chaptarr-extra-runtime-packs"
-if any(source.get("key") == source_name for source in sources.findall("add")):
-    raise SystemExit("The custom runtime source is already present")
-ET.SubElement(sources, "add", {"key": source_name, "value": str(runtime_packs)})
-package_source = ET.SubElement(mapping, "packageSource", {"key": source_name})
-for package_pattern in (
-    "Microsoft.NETCore.App.Host.*",
-    "Microsoft.NETCore.App.Runtime.*",
-    "Microsoft.AspNetCore.App.Runtime.*",
-):
-    ET.SubElement(package_source, "package", {"pattern": package_pattern})
-
-tree.write(output_config, encoding="utf-8", xml_declaration=True)
-PY
+  python3 packaging/scripts/create-standalone-nuget-config.py \
+    "$runtime_packs" src/NuGet.config "$custom_nuget_config" "$rid"
   # The custom Linux x86 and FreeBSD runtime packs are pinned to 10.0.12.
   restore_sources=(
     "-p:RestoreConfigFile=$custom_nuget_config"

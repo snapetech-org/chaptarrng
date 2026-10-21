@@ -40,9 +40,13 @@ The current source remains unpublished; `v0.9.977` predates these changes.
 The canonical
 [audit report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)
 records exact source and target revisions, path dispositions, and remaining
-review. No runtime retirement is approved. Representative operator data and rollback, provider
-fulfillment, SeerrNG workflows, installed update-channel handoff, and operator
-acceptance remain open. Keep BookshelfNG in service.
+review. A private rehearsal on current ChaptarrNG `main` has now passed preview,
+migration, restore preview, and rollback for two populated migration-158 SQLite
+snapshots; see the [rehearsal record](MIGRATE_FROM_BOOKSHELFNG.md#populated-sqlite-migration-and-restore-rehearsal-2026-10-21).
+This closes conversion and database rollback evidence for those two data sets.
+No runtime retirement is approved. Broader normal-startup acceptance, feature
+parity, provider fulfillment, SeerrNG workflows, installed update-channel
+handoff, and operator acceptance remain open. Keep BookshelfNG in service.
 
 The current source and target pins, disposition counts, and remaining path
 review live in the canonical BookshelfNG
@@ -69,6 +73,16 @@ and pins custom-runtime publishing to 10.0.12; focused checks pass locally, and
 hosted validation is pending. The matrix creates only temporary CI artifacts; no
 release, package, image, or migration bridge is published. Keep BookshelfNG in
 service until the full migration and channel acceptance gates close.
+
+The next exact-head archive run,
+[39628741566](https://github.com/snapetech-org/chaptarrng/actions/runs/39628741566),
+exposed two additional build defects: the runtime installer replaced the Linux
+x64 SDK host with the Linux x86 or FreeBSD apphost, and the custom NuGet mapping
+routed every RID's runtime packages to a local feed that contains only those
+two targets. The source now preserves the SDK host and maps only the three
+runtime package IDs for the selected RID. The focused installer and mapping
+tests pass, and local Linux x86 and FreeBSD x64 archives built with valid
+checksums; hosted exact-head confirmation is pending.
 The current path ledger records the candidate Debian bridge at its exact pinned
 source and target revisions. The published `v0.9.977` assets remain unchanged;
 no compatibility package, release, or channel handoff is authorized.
@@ -509,6 +523,16 @@ acceptance remain open.
   Ambiguous format review, PostgreSQL operator data, other source shapes,
   complete feature parity, installed rollback, and channel acceptance remain
   open.
+
+  On 2026-10-21, normal startup also passed on separate copies of two populated
+  BookshelfNG SQLite snapshots using the Linux candidate built from `main`
+  commit `69abed74`. Automatic conversion reached schema 121; `/ping` returned
+  HTTP 200 on the saved audiobook and ebook ports, and both databases passed
+  integrity and foreign-key checks. The copied `config.xml` retained Forms
+  authentication, required authentication, and each existing API key. This is
+  isolated startup evidence only; no media roots were mounted and no installed
+  service, package, image, or provider handoff was tested. See the
+  [migration guide](MIGRATE_FROM_BOOKSHELFNG.md#populated-sqlite-normal-startup-and-configuration-preservation-2026-10-21).
 - BookshelfNG `main` at `6e1a62e12` now exposes
   `GET /api/v1/book/{id}/editions/catalog` and advertises `editionCatalog` for
   SeerrNG edition cards. ChaptarrNG `main` now includes the matching route and
@@ -697,7 +721,7 @@ and follow the
 | Docker / GHCR | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same published multi-architecture image digest. | Legacy aliases remain unchanged. The current ChaptarrNG source candidate builds separate compatibility targets: `latest`, `main`, and `hardcover` preserve native Hardcover mode; `softcover` preserves Goodreads mode. Local BuildKit target checks and hosted alias/bridge regression scripts pass, and the exact Linux binary passed a synthetic provider-mode migration and rollback rehearsal. The GHCR image build, manifests, and alias dispatch were not run or published; the bridge stays disabled. Pinned version tags and digests need an operator change. |
 | AUR | `chaptarrng-bin 0.9.977-1` is published. | `bookshelfng-bin 0.4.21.71-1` remains public. A local `.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and active systemd service handoff checks. The test used a network-isolated Arch container and a synthetic migration-158 database; representative operator data and host-specific settings remain open. |
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |
-| Chocolatey | The `.977` package built and the hosted BookshelfNG-to-ChaptarrNG upgrade smoke passed, but Chocolatey returned HTTP 403 on publish; the live feed has no `chaptarrng` entry. | The [Chocolatey feed](https://community.chocolatey.org/packages/bookshelfng) still lists BookshelfNG `0.4.21.70`; its final GitHub release is `0.4.21.71`. The legacy package identity was not submitted because the bridge is disabled. |
+| Chocolatey | `chaptarrng 0.9.973` is moderator-approved, but `.977` is not on the feed. The approved package installs the ChaptarrNG service under `%ProgramData%\ChaptarrNG\data`; it does not hand off BookshelfNG's existing service/data identity. An earlier `.977` legacy-bridge push returned HTTP 403. | The [Chocolatey feed](https://community.chocolatey.org/packages/bookshelfng) still lists BookshelfNG `0.4.21.70`; its final GitHub release is `0.4.21.71`. The `bookshelfng` identity bridge remains unpublished. |
 | Unraid | The ChaptarrNG template is maintained separately. | The legacy-template handoff is in [BookshelfNG Unraid PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5); its XML and settings-preservation check passed, but the Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
 | Helm | A same-name compatibility chart is in ChaptarrNG `main`; its versioned publisher targets the existing BookshelfNG OCI chart identity and requires both release-readiness gates, the migration bridge gate, and an explicit bridge request. The publisher has not run during the freeze. | Local build and chart contract checks cover the preserved release, StatefulSet, Service, selectors, port, `/config` mount, PVC, both provider modes, and pinned image. No chart is published; installed PVC upgrade, GitOps sync, and rollback remain open. Existing installs can keep the same chart source after acceptance, while pinned/offline archives need a manual update. |
 | Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, Flatpak, AppImage, standalone installers, third-party catalogs, pinned/offline installs, and manually managed services do not all have a tested identity-preserving bridge. |
@@ -767,16 +791,19 @@ authorized while these gates remain open. The remaining work is:
    upgrades through install, conversion, restart, backup retention, and
    rollback. The local Fedora RPM transaction rehearsal proves package/file
    handling only; validate a live COPR/DNF handoff if that identity is kept.
-3. Resolve the Chocolatey HTTP 403; the `.977` COPR build is verified. The
-   old-identity RPM package transaction was rehearsed locally, but the legacy
-   COPR repo currently has no packages and no live DNF handoff was tested;
-   verify each published package checksum or image digest against the tested
-   artifact.
+3. Update the approved Chocolatey `chaptarrng 0.9.973` package to `.977` and
+   resolve the HTTP 403 for the legacy `bookshelfng` bridge. The `.977` COPR
+   build is verified. The old-identity RPM package transaction was rehearsed
+   locally, but the legacy COPR repo currently has no packages and no live DNF
+   handoff was tested; verify each published package checksum or image digest
+   against the tested artifact.
 4. Decide and document handoffs for historical channels that cannot be
    redirected. Preserve a manual migration path for pinned and offline installs.
-5. Run the final migration against representative operator data, review every
-   ambiguous media choice, and verify external clients against the converted
-   library before enabling automatic aliases.
+5. Review unresolved media records from the populated SQLite rehearsals and
+   verify normal startup and external clients against the converted library
+   before enabling automatic aliases. Preview/apply/restore on two populated
+   SQLite snapshots is recorded in the [migration guide](MIGRATE_FROM_BOOKSHELFNG.md#populated-sqlite-migration-and-restore-rehearsal-2026-10-21);
+   this does not validate each user-facing workflow or package channel.
 
 The conversion preview, source-side archive helper, synthetic conversion checks, and package templates are present. A populated migration-158 SQLite copy has now completed apply and rollback with the public image, but an in-place deployment cutover, full feature parity, all legacy package publications, and a universal automatic update path are not established. See the
 [BookshelfNG operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)

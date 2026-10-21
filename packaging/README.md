@@ -105,7 +105,7 @@ validated or that platform is explicitly retired.
 | Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; an isolated dpkg upgrade/downgrade to the candidate and back preserved a modified conffile and data canary | Validate dependency resolution, real systemd startup, database migration/restore, and the PPA/direct-download update path; no candidate is published |
 | AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
-| Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
+| Chocolatey | `chaptarrng 0.9.973` is moderator-approved; the `.977` update is not on the feed and the earlier `.977` bridge push returned HTTP 403. The approved `.973` package uses the ChaptarrNG service and `%ProgramData%\ChaptarrNG\data`, so it is not an in-place BookshelfNG handoff. | Public `bookshelfng 0.4.21.70` remains | Update the standard `chaptarrng` package to `.977`, then publish a `bookshelfng` identity bridge that retains the legacy service/data path; validate populated-data migration and rollback |
 | Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode. | Validate all three manifests and old-alias digest routing on exact-head CI before enabling the bridge |
 | Helm | A same-name chart and versioned publisher target the existing BookshelfNG OCI identity. Both release-readiness gates, the migration bridge gate, and an explicit bridge opt-in are required. Local build/render and hosted resource-identity checks pass. | No chart is published; the BookshelfNG OCI chart remains unchanged. Existing installs can keep the same chart source after acceptance. | Test a real PVC/GitOps upgrade and rollback before publishing or switching existing installations |
 
@@ -126,12 +126,13 @@ checks do not establish publisher authorization or channel acceptance; no
 Launchpad PPA bridge is configured.
 
 The `v0.9.977` release and standard image were published successfully. The
-ChaptarrNG Chocolatey package built and passed its package-transition smoke,
-but Chocolatey rejected the publish with HTTP 403. The workflow reported
-publisher credentials as configured; the feed rejection still needs to be
-resolved before a public ChaptarrNG package exists. The legacy BookshelfNG
-identity was not submitted because the migration bridge is disabled. No
-credential value is recorded here.
+Chocolatey `chaptarrng 0.9.973` package was approved on October 20, 2026. It
+installs the `ChaptarrNG` service and uses `%ProgramData%\ChaptarrNG\data`, so
+it is a standard ChaptarrNG install, not a handoff from the existing
+BookshelfNG service and data directory. The `.977` package page is not on the
+feed; an earlier `.977` bridge push returned HTTP 403. The `bookshelfng`
+identity bridge remains unpublished while the migration bridge is disabled.
+No credential value is recorded here.
 
 The release workflow validated source RPMs for both identities and triggered
 the standard ChaptarrNG COPR webhook for `0.9.977-1`. COPR reports the build
@@ -265,8 +266,9 @@ and rollback are accepted or the channel is explicitly retired. See the
   upgrade in a disposable Windows system. Preserve service settings and data
   paths, retain the source backup, and verify rollback without losing later
   writes.
-- Resolve Chocolatey HTTP 403 authorization, publish the `chaptarrng` identity,
-  and confirm its public checksum matches the tested package.
+- Update the approved Chocolatey `chaptarrng` package to `.977`, then resolve
+  the legacy `bookshelfng` bridge's HTTP 403, publish that identity bridge, and
+  confirm public checksums match the tested packages.
 - Publish and validate the migration-1-to-13 alias fix before recommending
   `.977` for databases earlier than migration 14.
 - Verify old GHCR/Docker Hub destinations, credentials, and per-platform

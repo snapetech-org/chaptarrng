@@ -46,6 +46,15 @@ fail closed unless both `CHAPTARRNG_RELEASE_READY=true` and
 gate closes. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)
 and [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) before switching.
 
+On 2026-10-21, the current source candidate passed migration, database
+rollback, and normal-startup rehearsals against two isolated, populated
+BookshelfNG SQLite snapshots. Both startup copies auto-converted to schema
+121 and returned `/ping` 200 on their saved ports, 8788 and 8787. Their saved
+Forms authentication, required-auth setting, and API keys remained unchanged.
+This covers these data sets only; feature parity, live providers, and installed
+channel acceptance remain open. See the
+[rehearsal record](docs/MIGRATE_FROM_BOOKSHELFNG.md#populated-sqlite-migration-and-restore-rehearsal-2026-10-21).
+
 Current `main` accepts raw SQLite Bookshelf backup uploads with `.db` or legacy
 `.xml` filename suffixes; the content must still be SQLite. It also contains the
 BookshelfNG migration and installer work, and a combined Bookshelf **Formats**

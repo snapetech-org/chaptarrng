@@ -29,6 +29,14 @@ for rid in linux-x86 freebsd-x64; do
 [[ "${1:-}" == --info ]]
 DOTNET
   chmod 0755 "$dotnet_root/dotnet"
+  cp "$dotnet_root/dotnet" "$work/$rid-sdk-dotnet"
+
+  cat > "$runtime_source/dotnet" <<'TARGET_DOTNET'
+#!/usr/bin/env bash
+echo 'target runtime apphost must not replace the SDK host' >&2
+exit 99
+TARGET_DOTNET
+  chmod 0755 "$runtime_source/dotnet"
 
   printf 'runtime %s\n' "$rid" > "$runtime_source/host/fxr/10.0.12/hostfxr.marker"
   printf 'framework %s\n' "$rid" > "$runtime_source/shared/Microsoft.NETCore.App/10.0.12/framework.marker"
@@ -40,7 +48,7 @@ DOTNET
   touch -d '@946771200' "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker"
 
   tar --mode=0555 --mtime='@946684800' -czf "$artifact_root/runtimes/$rid-runtime.tar.gz" \
-    -C "$runtime_source" host shared
+    -C "$runtime_source" .
   tar --mode=0555 --mtime='@946684800' -czf "$artifact_root/runtimes/$rid-aspnetcore-shared.tar.gz" \
     -C "$aspnet_source/shared/Microsoft.AspNetCore.App/10.0.12" .
 
@@ -57,6 +65,11 @@ DOTNET
   done
 
   DOTNETVERSION=10.0.402 bash "$install_script" "$rid" "$artifact_root" "$dotnet_root" >/dev/null
+
+  if ! cmp -s "$work/$rid-sdk-dotnet" "$dotnet_root/dotnet"; then
+    echo "Runtime-pack installation replaced the SDK host executable: $dotnet_root/dotnet." >&2
+    exit 1
+  fi
 
   for directory in \
     "$dotnet_root/host/fxr/10.0.12" \

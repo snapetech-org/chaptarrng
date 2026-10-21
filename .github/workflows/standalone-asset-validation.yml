@@ -12,6 +12,8 @@ on:
       - 'packaging/scripts/test-copy-dotnet-sdk-reference-packs.sh'
       - 'packaging/scripts/install-extra-platform-runtime-packs.sh'
       - 'packaging/scripts/test-install-extra-platform-runtime-packs.sh'
+      - 'packaging/scripts/create-standalone-nuget-config.py'
+      - 'packaging/scripts/test-create-standalone-nuget-config.sh'
       - 'packaging/scripts/prepare-writable-dotnet-root.sh'
       - 'packaging/scripts/test-prepare-writable-dotnet-root.sh'
       - 'packaging/scripts/check-standalone-rids.py'
@@ -34,6 +36,8 @@ jobs:
         persist-credentials: false
     - name: Test Linux x86 and FreeBSD runtime pack installation
       run: bash packaging/scripts/test-install-extra-platform-runtime-packs.sh
+    - name: Test extra-platform NuGet source mapping
+      run: bash packaging/scripts/test-create-standalone-nuget-config.sh
     - name: Test writable .NET SDK root preparation
       run: bash packaging/scripts/test-prepare-writable-dotnet-root.sh
     - name: Test SDK reference-pack collection across servicing versions

@@ -12,7 +12,12 @@ case "$rid" in
 esac
 
 mkdir -p "$dotnet_root"
-tar --no-overwrite-dir -xzf "$artifact_root/runtimes/$rid-runtime.tar.gz" -C "$dotnet_root"
+# The target runtime archive contains its own `dotnet` apphost. Extracting it
+# into the SDK root replaces the Linux x64 SDK host with a Linux x86 or FreeBSD
+# binary, so subsequent SDK commands cannot start. Keep the build host intact;
+# self-contained publish gets the target runtime from the local NuGet packs.
+tar --no-overwrite-dir --exclude='./dotnet' --exclude='dotnet' \
+    -xzf "$artifact_root/runtimes/$rid-runtime.tar.gz" -C "$dotnet_root"
 mkdir -p "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12"
 tar --no-overwrite-dir -xzf "$artifact_root/runtimes/$rid-aspnetcore-shared.tar.gz" \
     -C "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12"
