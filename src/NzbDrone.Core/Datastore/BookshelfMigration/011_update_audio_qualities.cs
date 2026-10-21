@@ -1,5 +1,5 @@
 // Source: BookshelfNG main-v0.4.21.71 (3fad9427d167ed69d30ca6ed55f40262c2846487), GPL-3.0.
-// This isolated copy upgrades a disposable BookshelfNG SQLite snapshot before import.
+// This isolated copy upgrades a disposable BookshelfNG source snapshot before import.
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
