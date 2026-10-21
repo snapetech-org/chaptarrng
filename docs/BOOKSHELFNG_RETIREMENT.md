@@ -27,10 +27,11 @@ when ChaptarrNG defaults are empty. Existing authors and files are untouched.
 Current source also restores whole-author move updates, paginates Goodreads
 series imports, and improves Manual Import's author, book, edition, and quality
 selectors with empty-state guidance, retry, stale-choice protection, and
-disabled submission when no quality options exist. The frontend CJS suite
-passes 104/104 locally, and focused migration, metadata, move, and CLI checks
+disabled submission when no quality options exist. Add New and narrator search
+failures also announce errors and provide retry actions. The frontend CJS suite
+passes 108/108 locally, and focused migration, metadata, move, and CLI checks
 are recorded below. Application code is at
-[`c47cf8cb`](https://github.com/snapetech-org/chaptarrng/commit/c47cf8cb78fcffde3f5114242b86125ef735ab16).
+[`2f33460c`](https://github.com/snapetech-org/chaptarrng/commit/2f33460c62599ce2ade010edb4fd963d2af030f7).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). The source is not in public `.977`.
 
 The canonical

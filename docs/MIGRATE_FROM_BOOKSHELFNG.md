@@ -21,9 +21,10 @@
 > paginates Goodreads series imports, and improves Manual Import's author, book,
 > edition, and quality selectors with empty-state guidance, retry, stale-choice
 > protection, and disabled submission when quality choices are empty. The
-> frontend CJS suite passes 104/104 locally. Focused migration, metadata, move,
+> Add New search and narrator-discovery failures also announce errors and offer
+> retry. The frontend CJS suite passes 108/108 locally. Focused migration, metadata, move,
 > and CLI checks are listed in the retirement status. Application code is at
-> [`c47cf8cb`](https://github.com/snapetech-org/chaptarrng/commit/c47cf8cb78fcffde3f5114242b86125ef735ab16).
+> [`2f33460c`](https://github.com/snapetech-org/chaptarrng/commit/2f33460c62599ce2ade010edb4fd963d2af030f7).
 > Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Current source remains unpublished. The source also
 > preserves BookshelfNG's optional
 > `MoveExtraFilesOnRename` setting, exposes it in Media Management, and includes
