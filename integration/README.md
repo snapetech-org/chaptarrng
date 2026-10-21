@@ -40,6 +40,33 @@ are not valid media and do not exercise M4B decoding or merging. A separate
 tool-enabled importer test validates synthetic multipart M4B creation and
 fallback; it does not use representative operator files.
 
+### Expanded BookshelfNG migration fixture
+
+The seed helper's `--expanded-fixture` option keeps the SeerrNG smoke's default
+small fixture unchanged and adds a larger source for explicit migration
+rehearsals. It creates four authors, six works, nine editions, four empty
+placeholder files, alternate audiobook and ebook editions, a work with no
+editions, an unselected mixed-format work, history, series, a `Readarr` metadata
+sidecar, provider settings, and fake credentials. The media files are not
+decodable content, and the fixture never contacts those providers.
+
+Create empty task-scoped directories, then run:
+
+```sh
+python3 integration/prepare-bookshelfng-smoke.py \
+  --expanded-fixture \
+  --config /tmp/chaptarrng-migration/config \
+  --library /tmp/chaptarrng-migration/library \
+  --schema src/Chaptarr.Core.Test/Datastore/Fixtures/BookshelfNG.Schema.158.sql \
+  --seed src/Chaptarr.Core.Test/Datastore/Fixtures/BookshelfNG.PopulatedMigration158.sql
+```
+
+The helper refuses non-empty config or library directories. Use the operator
+migration guide's explicit preview, apply, and restore commands against this
+disposable config directory; do not point it at an installed appdata directory.
+Detailed results from a multi-record preview/apply/rollback run are recorded in
+the [migration fixture evidence](../docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
+
 ## Real-tool M4B importer check
 
 The Linux build workflow builds `integration/Dockerfile.m4b-test` and runs
@@ -60,9 +87,14 @@ acquisition. Representative audiobooks and restart/resume remain open. The
 later exact-head Build [39292223717](https://github.com/snapetech-org/chaptarrng/actions/runs/39292223717)
 on application-code commit `b7e900d4` passed all three platform suites and the
 Linux pinned-tool M4B smoke, confirming these synthetic checks on that code
-snapshot. PR #131 remains draft; see its
-[live checks](https://github.com/snapetech-org/chaptarrng/pull/131) for the
-current head.
+snapshot. PR #131 merged to `main` on 2026-10-20. Its exact-head Build
+[39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native
+runner receipt checks. This is source and synthetic validation only; the
+separate GHAS Semgrep OSS findings and remaining acceptance gates are recorded
+in the [retirement status](../docs/BOOKSHELFNG_RETIREMENT.md). Representative
+audiobooks and restart/resume remain open, and release publication stays
+frozen.
 
 After building the test assembly as in `.github/workflows/build.yml`, run it
 locally with:
@@ -131,6 +163,24 @@ validates synthetic processing and fallback only. This is synthetic
 source-build evidence; it does not establish operator-data acceptance,
 representative M4B compatibility, pre-14 schemas, PostgreSQL operator data, or
 installed channel/rollback acceptance. No release or bridge was published.
+
+## Exact-head artifact migration and SeerrNG smoke (2026-10-20)
+
+Build [39394240337](https://github.com/snapetech-org/chaptarrng/actions/runs/39394240337)
+passed Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
+reconciliation. The Windows job passed the migration installer upgrade and
+rollback smoke. Its Linux artifact ran from application snapshot
+`29852b1334ee049e30de84b44806932a3e9364f4`. The checked-in schema-158
+BookshelfNG fixture converted on normal startup to schema 121, and the retained
+schema-158 backup and converted database both passed SQLite integrity checks.
+
+SeerrNG `ce632a6e6834fe094eb24ceda9b8a388472cc23e` read both migrated formats
+through `ReadarrAPI`, checked their Hardcover identities, exercised the
+restricted/global API-key boundary, and ran the synthetic pending-import
+create/poll/cancel lifecycle. This does not test real media, successful
+provider fulfillment, operator records, PostgreSQL operator data, or installed
+rollback. The `.m4b` and `.epub` fixture files are placeholders. No release or
+bridge was published.
 
 ## Earlier source-build request-lifecycle run (2026-10-19)
 

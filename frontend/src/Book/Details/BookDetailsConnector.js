@@ -243,6 +243,7 @@ function createMapStateToProps() {
 
         return {
           ...book,
+          bookRecord: book,
           shortDateFormat: uiSettings.shortDateFormat,
           author,
           calibrePreview: buildCalibrePreview(book, author, selectedEdition),
@@ -424,6 +425,7 @@ class BookDetailsConnector extends Component {
 
 BookDetailsConnector.propTypes = {
   id: PropTypes.number,
+  bookRecord: PropTypes.object,
   fetchRootFolders: PropTypes.func.isRequired,
   anyReleaseOk: PropTypes.bool,
   isRefreshing: PropTypes.bool.isRequired,

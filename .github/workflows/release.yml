@@ -3,6 +3,12 @@ name: Release
 # Manual only. Releases are cut from the maintained stable main branch.
 on:
   workflow_dispatch:
+    inputs:
+      publish_legacy_bridge:
+        description: Publish BookshelfNG Debian, package, image, and Helm identities after all migration acceptance gates pass.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -32,7 +38,13 @@ jobs:
     - name: Require retirement release readiness
       env:
         CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+        BOOKSHELFNG_RELEASE_READY: ${{ vars.BOOKSHELFNG_RELEASE_READY }}
       run: ./packaging/scripts/require-release-readiness.sh
+
+    - name: Validate Discord release destination before publishing
+      env:
+        DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+      run: bash packaging/scripts/validate-release-publisher-config.sh discord
 
   validate:
     needs: preflight
@@ -264,12 +276,12 @@ jobs:
     with:
       sha: ${{ needs.release.outputs.sha }}
       branch: ${{ github.ref_name }}
-      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
+      legacy_bridge_enabled: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
 
   dispatch-legacy-ghcr:
     name: Dispatch personal-account BookshelfNG GHCR bridge
     needs: [release, docker, publish-release]
-    if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
+    if: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -294,14 +306,49 @@ jobs:
           SOURCE_REPOSITORY: ${{ github.repository }}
         run: bash packaging/scripts/dispatch-ghcr-release-bridge.sh
 
+  platform-runtime-packs:
+    name: Build Linux x86 and FreeBSD .NET 10 runtime packs
+    needs: release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ needs.release.outputs.sha }}
+        persist-credentials: false
+
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      with:
+        dotnet-version: |
+          10.0.110
+          10.0.111
+          10.0.402
+
+    - name: Build pinned extra-platform runtime packs
+      env:
+        DOTNETVERSION: 10.0.402
+        DOTNET_ROOT: /usr/share/dotnet
+        PLATFORM_RUNTIME_WORK_DIR: ${{ runner.temp }}/chaptarrng-platform-runtime-work
+        PLATFORM_RUNTIME_PACKS_OUTPUT: ${{ runner.temp }}/chaptarrng-platform-runtime-packs
+      run: bash packaging/scripts/build-extra-platform-runtime-packs.sh
+
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: chaptarrng-platform-runtime-packs
+        path: ${{ runner.temp }}/chaptarrng-platform-runtime-packs/**
+        retention-days: 1
+        if-no-files-found: error
+
   standalone-assets:
     name: Build ${{ matrix.rid }} standalone release asset
-    needs: release
+    needs: [release, platform-runtime-packs]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        rid: [linux-x64, linux-arm64, win-x64]
+        rid: [linux-x64, linux-arm64, linux-musl-x64, linux-musl-arm64, osx-x64, osx-arm64, win-x64, win-x86, linux-x86, freebsd-x64]
     permissions:
       contents: read
     steps:
@@ -327,6 +374,12 @@ jobs:
       with:
         dotnet-version: 10.0.402
 
+    - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      if: ${{ matrix.rid == 'linux-x86' || matrix.rid == 'freebsd-x64' }}
+      with:
+        name: chaptarrng-platform-runtime-packs
+        path: ${{ runner.temp }}/platform-runtime-packs
+
     - name: Require ImageSharp build license
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
@@ -335,6 +388,9 @@ jobs:
     - name: Build standalone application archive
       env:
         SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+        CUSTOM_RUNTIME_PACKS_DIR: ${{ runner.temp }}/platform-runtime-packs/packages
+        DOTNET_ROOT: /usr/share/dotnet
+        DOTNETVERSION: 10.0.402
         VERSION: ${{ needs.release.outputs.version }}
         RID: ${{ matrix.rid }}
       run: bash packaging/scripts/build-standalone.sh "$VERSION" "$RID" "$RUNNER_TEMP/release-assets"
@@ -351,6 +407,10 @@ jobs:
         else
           asset="ChaptarrNG-${VERSION}-${RID}.tar.gz"
           tar -tzf "$RUNNER_TEMP/release-assets/$asset" >/dev/null
+          if [[ "$RID" == linux-* || "$RID" == osx-* ]]; then
+            tar -tzf "$RUNNER_TEMP/release-assets/$asset" \
+              | grep -Fx 'ChaptarrNG/scripts/bookshelfng-to-chaptarrng.sh' >/dev/null
+          fi
         fi
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")
 
@@ -425,11 +485,26 @@ jobs:
         name: chaptarrng-rpm-source
         path: ${{ runner.temp }}/release-assets
 
+    - name: Build the gated BookshelfNG Debian package asset
+      if: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
+      env:
+        VERSION: ${{ needs.release.outputs.version }}
+        ARCHIVE_PATH: ${{ runner.temp }}/release-assets/ChaptarrNG-${{ needs.release.outputs.version }}-linux-x64.tar.gz
+        OUTPUT_DIR: ${{ runner.temp }}/bookshelfng-deb-bridge
+      run: |
+        set -euo pipefail
+        archive="$(basename "$ARCHIVE_PATH")"
+        (cd "$(dirname "$ARCHIVE_PATH")" && sha256sum --check "$archive.sha256")
+        bash packaging/scripts/build-bookshelfng-deb-bridge.sh
+        cp "$OUTPUT_DIR"/bookshelfng_*.deb "$RUNNER_TEMP/release-assets/"
+        cp "$OUTPUT_DIR"/bookshelfng_*.deb.sha256 "$RUNNER_TEMP/release-assets/"
+
     - name: Verify and attach release assets
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: ${{ needs.release.outputs.tag }}
         VERSION: ${{ needs.release.outputs.version }}
+        LEGACY_BRIDGE_ENABLED: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
       run: |
         set -euo pipefail
         release_state="$(gh release view "$TAG" --json isDraft --jq '.isDraft')"
@@ -451,6 +526,11 @@ jobs:
         legacy_srpm="bookshelfng-${VERSION}-1.src.rpm"
         test -s "$RUNNER_TEMP/release-assets/$legacy_srpm"
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$legacy_srpm.sha256")
+        if [[ "$LEGACY_BRIDGE_ENABLED" == true ]]; then
+          legacy_deb="bookshelfng_${VERSION}-1_amd64.deb"
+          test -s "$RUNNER_TEMP/release-assets/$legacy_deb"
+          (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$legacy_deb.sha256")
+        fi
         mapfile -d '' release_files < <(find "$RUNNER_TEMP/release-assets" -mindepth 1 -maxdepth 1 -type f -print0)
         ((${#release_files[@]} > 0))
         gh release upload "$TAG" "${release_files[@]}" --clobber
@@ -477,14 +557,15 @@ jobs:
           --latest
 
   publish-packages:
-    needs: [release, publish-release]
+    needs: [release, docker, publish-release]
     uses: ./.github/workflows/release-distribution.yml
     permissions:
       contents: read
+      packages: write
     with:
       tag: ${{ needs.release.outputs.tag }}
       version: ${{ needs.release.outputs.version }}
-      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' }}
+      legacy_bridge_enabled: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
     secrets:
       AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
       COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}

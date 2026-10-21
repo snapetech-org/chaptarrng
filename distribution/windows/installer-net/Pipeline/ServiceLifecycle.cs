@@ -64,6 +64,14 @@ public static class ServiceLifecycle
         return key?.GetValue("ObjectName") as string ?? "LocalSystem";
     }
 
+    public static int GetBookshelfServiceStartType()
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(
+            $@"SYSTEM\CurrentControlSet\Services\{BookshelfServiceName}",
+            writable: false);
+        return key?.GetValue("Start") is int startType ? startType : 2;
+    }
+
     public static string GetBookshelfDataDirectory()
     {
         var imagePath = GetImagePath(BookshelfServiceName);
@@ -290,6 +298,27 @@ public static class ServiceLifecycle
         }
 
         return !IsServiceRegistrationPresent(serviceName);
+    }
+
+    public static async Task<bool> SetStartTypeAsync(
+        string serviceName,
+        string startType,
+        IProgress<LogLine> log,
+        CancellationToken ct = default)
+    {
+        var exit = await ProcessStreamer.RunAsync(
+            "sc.exe",
+            new[] { "config", serviceName, "start=", startType },
+            null,
+            log,
+            ct).ConfigureAwait(false);
+        if (exit != 0)
+        {
+            log.Report(new LogLine(LogStream.Stderr, $"[service] sc.exe config {serviceName} start= {startType} exited {exit}."));
+            return false;
+        }
+
+        return true;
     }
 
     public static async Task<bool> PollForRunningAsync(

@@ -7,6 +7,11 @@ if (args.Contains("--windows-service-round-trip", StringComparer.OrdinalIgnoreCa
     return await WindowsServiceRoundTrip.RunAsync();
 }
 
+if (args.Contains("--windows-service-round-trip-worker", StringComparer.OrdinalIgnoreCase))
+{
+    return await WindowsServiceRoundTrip.RunWorkerAsync();
+}
+
 var dataDirectory = Path.Combine(Path.GetTempPath(), $"chaptarr-installer-smoke-{Guid.NewGuid():N}");
 Directory.CreateDirectory(dataDirectory);
 

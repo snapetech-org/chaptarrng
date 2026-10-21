@@ -9,6 +9,7 @@ require "yaml"
 ROOT = File.expand_path("..", __dir__)
 CHART = File.join(ROOT, "charts", "bookshelfng")
 DIGEST = "sha256:#{"0" * 64}"
+BRIDGE_VERSION = "1.2.3"
 
 def run_helm(*args)
   stdout, stderr, status = Open3.capture3("helm", *args)
@@ -18,6 +19,14 @@ end
 def render(*overrides)
   run_helm(
     "template", "bookshelfng", CHART,
+    "--namespace", "bookshelf-test",
+    *overrides
+  )
+end
+
+def render_chart(chart, *overrides)
+  Open3.capture3(
+    "helm", "template", "bookshelfng", chart,
     "--namespace", "bookshelf-test",
     *overrides
   )
@@ -108,6 +117,68 @@ Dir.mktmpdir("bookshelfng-helm-package-") do |directory|
   assert(Dir.glob(File.join(directory, "bookshelfng-*.tgz")).length == 1, "chart package was not produced")
 end
 
+Dir.mktmpdir("bookshelfng-helm-bridge-build-") do |directory|
+  build_output = File.join(directory, "output")
+  build_script = File.join(ROOT, "packaging", "scripts", "build-bookshelfng-helm-bridge.sh")
+  build_env = {
+    "VERSION" => BRIDGE_VERSION,
+    "IMAGE_DIGEST" => DIGEST,
+    "OUTPUT_DIR" => build_output
+  }
+  build_stdout, build_stderr, build_status = Open3.capture3(build_env, "bash", build_script)
+  assert(build_status.success?, "versioned chart bridge build failed: #{build_stdout}\n#{build_stderr}")
+
+  package_path = File.join(build_output, "bookshelfng-#{BRIDGE_VERSION}.tgz")
+  assert(File.file?(package_path), "versioned chart bridge package is missing")
+  chart_metadata, chart_error, chart_status = run_helm("show", "chart", package_path)
+  assert(chart_status.success?, "versioned chart metadata could not be read: #{chart_error}")
+  assert(chart_metadata.include?("name: bookshelfng") && chart_metadata.include?("version: #{BRIDGE_VERSION}"),
+         "versioned chart identity or version changed")
+
+  chart_values, values_error, values_status = run_helm("show", "values", package_path)
+  assert(values_status.success?, "versioned chart values could not be read: #{values_error}")
+  assert(chart_values.include?("repository: ghcr.io/snapetech-org/chaptarrng"),
+         "versioned chart does not use the standard ChaptarrNG repository")
+  assert(chart_values.include?("digest: \"#{DIGEST}\""), "versioned chart image digest is not pinned")
+
+  chart_readme, readme_error, readme_status = run_helm("show", "readme", package_path)
+  assert(readme_status.success?, "versioned chart guide could not be read: #{readme_error}")
+  assert(chart_readme.include?("oci://ghcr.io/snapetech/bookshelfng/bookshelfng"),
+         "versioned chart guide lost the existing OCI chart identity")
+  assert(chart_readme.include?("--reuse-values"), "versioned chart guide does not preserve existing release values")
+  assert(chart_readme.include?("--version #{BRIDGE_VERSION}") && chart_readme.include?(DIGEST),
+         "versioned chart guide has unresolved or incorrect release values")
+
+  %w[hardcover softcover].each do |provider_mode|
+    package_args = [
+      "--set", "bookshelfMigration.confirmed=true",
+      "--set", "bookshelfMigration.providerMode=#{provider_mode}",
+      "--set-string", "image.digest=#{DIGEST}"
+    ]
+    rendered, render_error, render_status = render_chart(package_path, *package_args)
+    assert(render_status.success?, "packaged chart failed to render for #{provider_mode}: #{render_error}")
+    assert(rendered.include?("image: \"ghcr.io/snapetech-org/chaptarrng@#{DIGEST}\""),
+           "packaged chart did not pin the ChaptarrNG image for #{provider_mode}")
+    assert(rendered.include?("claimName: bookshelfng-config"),
+           "packaged chart did not preserve the legacy PVC for #{provider_mode}")
+  end
+end
+
+release_distribution = File.read(File.join(ROOT, ".github", "workflows", "release-distribution.yml"))
+release_workflow = File.read(File.join(ROOT, ".github", "workflows", "release.yml"))
+docker_workflow = File.read(File.join(ROOT, ".github", "workflows", "docker-publish.yml"))
+assert(release_distribution.include?("MIGRATION_BRIDGE_GATE,,}") &&
+       release_distribution.include?("BOOKSHELFNG_RELEASE_READY,,}"),
+       "package retry workflow no longer requires both legacy bridge readiness gates")
+assert(release_distribution.match?(/publish-legacy-helm-bridge:[\s\S]*?vars\.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true'[\s\S]*?vars\.BOOKSHELFNG_RELEASE_READY == 'true'/),
+       "Helm publisher is not gated by both retirement readiness variables")
+assert(release_workflow.include?("vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'"),
+       "release workflow no longer passes both readiness gates to legacy publishers")
+assert(release_workflow.include?("publish_legacy_bridge:") && release_workflow.include?("default: false"),
+       "legacy bridge publication is not an explicit opt-in on the release workflow")
+assert(docker_workflow.include?("inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'"),
+       "legacy Docker aliases are not gated by both retirement readiness variables")
+
 [
   ["missing explicit approval", ["--set", "bookshelfMigration.providerMode=hardcover", "--set-string", "image.digest=#{DIGEST}"], /confirmed must be true/],
   ["missing provider mode", ["--set", "bookshelfMigration.confirmed=true", "--set-string", "image.digest=#{DIGEST}"], /providerMode must explicitly match/],
@@ -130,4 +201,4 @@ custom_container = custom_stateful_set.dig("spec", "template", "spec", "containe
 assert(custom_container["image"] == "registry.example/chaptarrng@#{DIGEST}", "explicit image mirror was not rendered")
 
 legacy_status = legacy_compared ? "exact legacy chart specs matched" : "legacy resource identity contract verified"
-puts "BookshelfNG Helm handoff contract passed: chart package, #{legacy_status}, digest pin, and fail-closed inputs verified."
+puts "BookshelfNG Helm handoff contract passed: #{legacy_status}, versioned bridge package, both provider modes, release gates, digest pin, and fail-closed inputs verified."

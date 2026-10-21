@@ -32,55 +32,185 @@ ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag
 is the current published release. It includes the migration and rollback
 tools for BookshelfNG SQLite, plus the embedded source migration chain. The
 BookshelfNG helper creates an appdata archive before it runs the tools.
-ChaptarrNG also initializes new author format paths from configured defaults,
-a behavior released in `v0.9.974`; explicit roots and existing authors are
-left alone. The next version bump is not a release: publication is frozen
+The source includes a Docker handoff helper; future Linux standalone archives
+will include it after a release is approved.
+ChaptarrNG `v0.9.974` through the published `.977` initializes new-author
+format paths from configured defaults. Current `main` adds the requested
+disabled-by-default switch for this behavior; it also preserves the saved
+setting and BookshelfNG ebook/audiobook root defaults during migration. The
+new switch is source-only and is not in `.977`. The next version bump is not a release: publication is frozen
 until the BookshelfNG migration, rollback, feature-parity, and install-channel
 acceptance gates are closed. The merged release and distribution workflows
-fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
-remains unset. Read the
-[migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before switching.
+fail closed unless both `CHAPTARRNG_RELEASE_READY=true` and
+`BOOKSHELFNG_RELEASE_READY=true`. They must remain false until every retirement
+gate closes. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)
+and [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) before switching.
 
-The BookshelfNG Windows WPF installer still installs BookshelfNG. ChaptarrNG's
-draft migration candidate includes an unpublished transactional WPF handoff
-installer. It keeps the existing `Readarr` data directory, asks for provider
-mode, retains a verified backup, previews before apply, then switches to the
-`Chaptarr` service and checks local health. It supports one SQLite database
-under the standard `NT AUTHORITY\LocalService` account and fails closed on
-custom service accounts, PostgreSQL, or multiple databases. A read-only
+Current `main` accepts raw SQLite Bookshelf backup uploads with `.db` or legacy
+`.xml` filename suffixes; the content must still be SQLite. It also contains the
+BookshelfNG migration and installer work, and a combined Bookshelf **Formats**
+view that groups audiobook and ebook records only when they share a recognized
+work-level provider ID. Each record keeps its own details, progress, and
+monitoring; bulk monitoring applies to both formats. Separately, the Books
+index's **Both** filter lists audiobook and ebook records as separate rows,
+with status, monitoring, and quality profiles scoped to each record's format.
+These additions are not in `v0.9.977`. The runtime feature commit is
+`c75ecbb37c5708441219887f7180d5ab10ee194d`; current source code is on
+[ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main).
+Current main also offers announced load errors with Retry across activity and
+library lists, Manual Import, File Browser, book-file details and quality
+lookup, Calendar, backup lists, Wanted pages, author history, and conversion
+settings. Startup errors identify the failed data source and retry failed setup
+requests when browser storage is available. The frontend CJS suite passes
+122/122 on this source; these changes
+are not in `.977`.
+It also lets operators preview
+eligible existing authors and skip reasons under Settings > Media Management >
+Root Folders, then separately confirm filling missing format paths. The command
+rechecks current settings, preserves manual paths, queues author refreshes, and
+does not move book files. Author profile reset controls are disabled when the
+selected root has no configured default, protecting explicit profiles. It
+reuses matching local
+catalog books during add, preserves an explicitly selected manual edition,
+and resolves bare numeric Hardcover/Goodreads IDs through the Readarr facade
+before title search. Author edit actions from book rows now open the editor
+with the row's audiobook or ebook format. The current UI pass adds accessible
+ChaptarrNG branding, a responsive search and sidebar, slate-and-purple dark
+colors, and visible keyboard focus. Source-only updates also add visible retry
+actions to the Editions and Narrations panels and tighten the SeerrNG service
+key: it can read audiobook-scoped narrator comparisons and set a preferred
+narrator only with the non-overriding payload. Ebook-scoped narrator access
+and unrelated or administrative routes stay denied.
+Goodreads series imports now fetch all pages while preserving duplicate
+filtering and configured import limits. Focused checks pass author/migration
+11/11, configuration persistence 1/1, format-profile refresh 5/5, Calibre
+language 4/4, Calibre proxy/series 6/6, Hardcover metadata/search 45/45,
+book-file move planning 15/15, Goodreads pagination 5/5, and author-move path
+coverage 3/3. All three migration CLI helpers pass Bash syntax, help, and
+ShellCheck checks. Manual Import author, book, edition, and quality selectors
+explain empty states, retry failed loads, hide stale choices, and block empty
+quality submission. Add New provider-search failures announce the error and
+offer Retry in search-as-you-type mode; interactive release search does the
+same. Narrator discovery errors announce the failure and can be retried without
+stale errors during loading. Organize, retag, and convert preview failures show
+available error details and Retry. Manual Import hides stale rows and disables
+Import after a preview error; File Browser can retry the current directory. Activity lists, author history,
+book-edit edition and book-file detail/quality loading, Calendar, backup lists,
+Wanted pages, and conversion settings also retry after load errors. The frontend
+CJS regression suite passes 122/122 locally. These application
+changes are on [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
+Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Earlier matrix results predate the latest picker changes;
+follow the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml)
+for the exact current head. These source changes remain unpublished.
+Current `main` also applies the author freshness policy to book-added events
+while retaining the author-scoped folder rescan, even when metadata is skipped
+or unchanged. This behavior is present in the current source. See the
+[author metadata refresh guide](docs/AUTHOR_METADATA_REFRESH.md). This source
+update is not in `v0.9.977`.
+
+The HTTP security controls remain source-only: explicit trusted proxies and
+CORS origins, per-client request limits, a bounded body size, query-key
+controls, and a restricted SeerrNG key with route-level authorization. Existing
+`BOOKSHELF_SEERRNG_API_KEY` values remain accepted only when
+`CHAPTARR__AUTH__SEERRAPIKEY` is unset. The restore route retains its separate
+1 GiB upload limit. The restricted key's narrator routes require
+`mediaType=audiobook`; the preference update also requires
+`overrideExisting=false`. See [HTTP security settings](docs/HTTP_SECURITY.md)
+and the [SeerrNG integration contract](docs/SEERRNG_INTEGRATION.md).
+
+ChaptarrNG application snapshot `3254c15b5e964dae513c6d16758e8b749a77db4b`
+passed exact-head Build
+[39387591772](https://github.com/snapetech-org/chaptarrng/actions/runs/39387591772)
+on Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
+reconciliation. Security analysis, Semgrep CE, Trivy, dependency submission,
+and push checks passed; the release-note contract was skipped for that
+docs-only source update. The merged code remains unpublished and is not
+approved for operator cutover.
+
+The HTTP security controls and regression fixtures entered `main` in
+`29852b13`. The first exact-head run on `36623faf` found missing test imports
+and an incorrect attribute property. Follow-up `aac32822` fixed the imports;
+its Build exposed that request-size metadata is an explicit interface, now
+handled in `29852b13`. Exact-head Build
+[39394240337](https://github.com/snapetech-org/chaptarrng/actions/runs/39394240337)
+passed Linux, macOS, Windows, PostgreSQL migrations, and native-runner receipt
+reconciliation. Security analysis, Semgrep CE, Trivy, and dependency submission
+also passed. The release-note contract was skipped because no release was
+prepared. These source-only changes are not in `.977`, and the release freeze
+remains in force.
+
+The exact-head Linux artifact passed a populated synthetic migration and
+SeerrNG smoke: normal startup converted the checked-in BookshelfNG schema-158
+fixture to schema 121 and retained an integrity-checked source backup;
+SeerrNG read both migrated formats and verified provider identities, restricted
+key access, and the pending-import cancel lifecycle. The `.m4b` and `.epub`
+files are placeholders, so this does not establish media processing or
+operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM_BOOKSHELFNG.md#exact-head-artifact-migration-and-seerrng-smoke-2026-10-20).
+
+The exact BookshelfNG inventory, revision pins, path dispositions, and open
+review count are maintained in the canonical
+[consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
+Path-level records are not proof of behavior or feature parity; no runtime
+feature has been approved for retirement.
+
+BookshelfNG audit-tool commit `9fcc0aea` passed Build
+[39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595).
+Its docs-only main head `c63eb848` passed its push and security checks. Unraid
+main `296caed2` passed CI
+[39387608787](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39387608787)
+and package-sync, security, and release-note checks. Unraid transition PR
+[#5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5) remains draft
+at `1261a9f8`; its exact-head build, template, package-sync, dependency,
+release-note, Semgrep, and Trivy checks passed. Publication jobs were skipped.
+The real Community Applications update/rollback path and representative-data
+migration/rollback remain open.
+
+The release freeze remains in force. BookshelfNG issue [#144](https://github.com/snapetech-org/bookshelfng/issues/144)
+remains open, and BookshelfNG must stay in service until representative data,
+rollback, feature parity, provider workflows, update-channel handoff, and
+operator acceptance are complete. No release or compatibility bridge was
+published.
+
+The BookshelfNG Windows WPF installer still installs BookshelfNG. ChaptarrNG
+`main` contains an unpublished transactional WPF handoff installer. It keeps
+the existing `Readarr` data directory, asks for provider mode, retains a
+verified backup, previews before apply, then switches to the `Chaptarr`
+service and checks local health. It supports one SQLite database under the
+standard `NT AUTHORITY\LocalService` account and fails closed on custom
+service accounts, PostgreSQL, or multiple databases. A read-only SQLite
 `PRAGMA data_version` guard stays open through preview review and rejects any
 committed source change before apply. Raw database, WAL, and rollback-journal
 fingerprints remain diagnostics because SQLite may change WAL bytes without a
 committed database update; the rebuildable `-shm` index is ignored.
 
-The Windows handoff candidate in draft ChaptarrNG PR #131 uses the actual
-installer to preserve the BookshelfNG service identity, data directory, and
-verified backup. It uses a read-only SQLite `PRAGMA data_version` guard
+The Windows handoff candidate added by merged ChaptarrNG PR #131 uses the
+actual installer to preserve the BookshelfNG service identity, data directory,
+and verified backup. It uses a read-only SQLite `PRAGMA data_version` guard
 through preview review and rejects committed source changes before apply.
 Raw file fingerprints are diagnostic and are captured outside the guard
-lifetime. Draft ChaptarrNG PR #131 is at code head
-7ff38a58530814d73da280b297eb3ed215bd2c83. Exact-head Build
-[39365402673](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402673)
-passed Linux, macOS, Windows, and PostgreSQL migration jobs. The Windows
-installer service round-trip, deferred service cleanup, and selected
-data-directory check passed. Linux tests, the pinned-tool M4B smoke, and CI
-artifact build passed. Native-runner receipt reconciliation is still queued.
-Security Analysis
-[39365402528](https://github.com/snapetech-org/chaptarrng/actions/runs/39365402528),
-Trivy, Python, JavaScript/TypeScript, and Actions CodeQL analyses plus NuGet submission passed;
-C# CodeQL remains pending. PR #131 is still draft. These are
-synthetic and CI-artifact checks only; representative operator data, semantic
-parity, installed rollback, and installer/update-channel acceptance remain
-open. The public release is still v0.9.977; do not use the candidate for
-production cutover.
-The installer remains unpublished; do not use it for production cutover.
+lifetime. PR #131 merged on 2026-10-20 as
+`d2bcba7953a14d2d726f47005a660314cc5e4c26`, from code head
+`87c57a2bffd25a5ecbda40b9c63fd6d82993c54d`. Exact-head Build
+[39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961)
+passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
+native-runner receipt checks. CodeQL, security analysis, Trivy, Semgrep
+Community, dependency review, NuGet, and Helm checks passed. Disposable-fork
+validation was skipped by its gate. The separate GHAS Semgrep OSS check failed
+with 12 SQL-format findings and three fixture-path warnings; those findings
+were reviewed and are not being reported as a clean check. These are source
+and synthetic checks only; representative operator data, semantic parity,
+installed rollback, and installer/update-channel acceptance remain open. The
+public release is still `v0.9.977`; the installer remains unpublished, and
+BookshelfNG must stay in service until cutover is approved.
 
 Helm has a source-only, fail-closed handoff chart at
 [`charts/bookshelfng`](charts/bookshelfng/README.md). It keeps the existing
 release, StatefulSet, Service, selector, PVC, and `/config` identities, but no
-chart or migration image has been published for cutover. Existing Helm users
-will need to change chart source after the retirement gates close; the legacy
-BookshelfNG OCI chart has not been redirected.
+chart has been published for cutover. A versioned publisher now targets the
+existing BookshelfNG OCI chart identity after both release-readiness gates,
+the migration bridge gate, and an explicit bridge opt-in pass. Existing Helm
+users can keep the same chart source after acceptance; an installed PVC
+upgrade, GitOps sync, and rollback still need validation.
 
 The unpublished migration candidate includes BookshelfNG's Hardcover
 public-list and reading-status provider, plus compatibility ports for its
@@ -93,13 +223,25 @@ issuing new developer keys and has announced API retirement, so live provider
 behavior remains an acceptance gate. These changes are not in published
 `v0.9.977`; keep BookshelfNG in service while the release freeze remains.
 
-Draft PR #131 also adds restore support for supported BookshelfNG backup ZIPs:
+Merged PR #131 also adds restore support for supported BookshelfNG backup ZIPs:
 the database is staged and the archive remains unchanged. Normal startup runs
 the validated conversion and retains the BookshelfNG source database for
 rollback. If conversion fails, startup restores the previous ChaptarrNG
 database; after success, it removes that temporary `.pre-restore` copy. This
 source candidate is not in `v0.9.977` and does not authorize cutover.
 Earlier PR #131 code head 6f57d355 passed exact-head Build run [39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613) on Linux, macOS, Windows, PostgreSQL migration, and release-note validation.
+
+Current `main` also accepts raw `.db` and `.xml` legacy backup uploads. The
+`.xml` suffix is a legacy filename; uploaded content still has to be SQLite.
+ChaptarrNG validates SQLite integrity and supported database lineage before
+staging the file. This compatibility change is unreleased and is not in
+`v0.9.977`.
+
+The current migration candidate also restores BookshelfNG's optional
+**Move Extra Files on Rename** setting. It preserves the setting through
+migration and backups, and moves only configured loose files when no book
+media remains in the old folder. This source change is unpublished and is not
+approved for operator cutover.
 
 The retirement candidate also adds portable encrypted `.enc` export and
 restore compatible with BookshelfNG's BKSENC01 format. ChaptarrNG's existing
@@ -148,16 +290,15 @@ dependency review
 and NuGet submission
 [39292213603](https://github.com/snapetech-org/chaptarrng/actions/runs/39292213603)
 passed. Disposable-fork validation was skipped by its external-fork gate.
-This validates application code only. PR #131 remains draft; see its
-[live checks](https://github.com/snapetech-org/chaptarrng/pull/131) for the
-current head. Representative data, semantic parity, installed rollback, and
-channel acceptance remain open. No release or bridge was published.
+This validates application code only. PR #131 later merged on 2026-10-20;
+representative data, semantic parity, installed rollback, and channel
+acceptance remain open. No release or bridge was published.
 
 **Candidate code CI (2026-10-19):** ChaptarrNG PR #131 code commit `12f290bd` passed [Build 39256254892](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254892): Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks passed. CodeQL, [security scan 39256254713](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254713), [dependency review 39256254710](https://github.com/snapetech-org/chaptarrng/actions/runs/39256254710), and [NuGet submission 39256277391](https://github.com/snapetech-org/chaptarrng/actions/runs/39256277391) passed. Disposable-fork validation was skipped by its external-fork gate. This is source validation, not migration or release acceptance.
 
 **SeerrNG pending-request lifecycle probe (2026-10-19):** On the isolated Linux candidate from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), SeerrNG's real `ReadarrAPI` (`b810153c`) submitted an ebook request for a synthetic work whose author was unavailable. `addBook` received a pending ID, `getPendingAuthorImport` read it, `cancelPendingAuthorImport` cancelled it, and a second poll observed the expected terminal cancellation state: `OverallStatus=Failed` with `LastError=Cancelled by user`. The cancelled record remains queryable rather than being removed. This proves request creation, polling, and cancellation across the adapter/API boundary. It used a disposable database and synthetic IDs; provider-success behavior, retries, availability, history, migrated records, production settings, full SeerrNG operator workflow, and operator acceptance remain open. The tested app artifact is code snapshot `0612cb4c`; PR commit `d9713604` added the repeatable helper and docs, and the intervening app change is Calibre selector tie-breaking rather than a SeerrNG API change. The probe is now repeatable through `integration/seerrng-request-lifecycle.mjs` and is wired after the authorization smoke in `integration/seerrng-smoke.compose.yml`. On 2026-10-19, both scripts passed when run against the isolated artifact from Build 39239940373 and SeerrNG source `b810153c`; `node --check`, Prettier, and Compose configuration validation also passed. The earlier Compose invocation used a temporary runtime image with `--no-build`. A follow-up source-build run on 2026-10-19 built the candidate through the checked-in `Dockerfile.build` from PR head `7cfb5d87` and passed both scripts after the harness prepared its disposable `/books` volume as UID/GID `99:100`. Successful fulfillment, retries, availability/history, converted records, saved operator settings, and acceptance remain open.
 
-**Populated migration-to-SeerrNG source smoke (2026-10-19):** ChaptarrNG candidate `12f290bd` built from the checked-in `Dockerfile.build` and converted a disposable, populated BookshelfNG migration-158 SQLite fixture during normal startup. The fixture is shared with the importer tests and includes one author, one mixed-format book, an audiobook edition, an ebook edition, and tiny synthetic `.m4b`/`.epub` placeholders. ChaptarrNG retained and validated the schema-158 source backup, converted the target to schema 121, and persisted `HardcoverEnabled=true` from the source's `HARDCOVER=true` mode. SeerrNG's real `ReadarrAPI` at commit `fdc439aa9` then read both migrated audiobook and ebook records, checked their Hardcover identities, verified the restricted service-key boundary, and completed the pending add/poll/cancel lifecycle. The local run reported `0.9.978.0`; importer tests passed 43/43, `node --check`, Prettier, and Compose configuration validation passed. This closes the earlier empty-library-only smoke gap for this synthetic migration path. The fixture's `.m4b`/`.epub` files are placeholders; a separate real-tool importer check passed six synthetic multipart M4B cases on candidate `12f290bd`, and Linux CI now runs that check in a pinned tool image. It verifies synthetic merge output and fallback. Later PR #131 tests verify embedded-chapter preservation during Move/Copy imports and TagLib writes; representative audiobooks and restart/resume remain unverified. Private operator records, pre-migration-14 schemas, PostgreSQL operator data, live provider responses, full SeerrNG workflows, installed rollback, and release/channel handoff remain open. No release or bridge was published; PR #131 remains draft and the freeze stays in force.
+**Populated migration-to-SeerrNG source smoke (2026-10-19):** ChaptarrNG candidate `12f290bd` built from the checked-in `Dockerfile.build` and converted a disposable, populated BookshelfNG migration-158 SQLite fixture during normal startup. The fixture is shared with the importer tests and includes one author, one mixed-format book, an audiobook edition, an ebook edition, and tiny synthetic `.m4b`/`.epub` placeholders. ChaptarrNG retained and validated the schema-158 source backup, converted the target to schema 121, and persisted `HardcoverEnabled=true` from the source's `HARDCOVER=true` mode. SeerrNG's real `ReadarrAPI` at commit `fdc439aa9` then read both migrated audiobook and ebook records, checked their Hardcover identities, verified the restricted service-key boundary, and completed the pending add/poll/cancel lifecycle. The local run reported `0.9.978.0`; importer tests passed 43/43, `node --check`, Prettier, and Compose configuration validation passed. This closes the earlier empty-library-only smoke gap for this synthetic migration path. The fixture's `.m4b`/`.epub` files are placeholders; a separate real-tool importer check passed six synthetic multipart M4B cases on candidate `12f290bd`, and Linux CI now runs that check in a pinned tool image. It verifies synthetic merge output and fallback. Later PR #131 tests verify embedded-chapter preservation during Move/Copy imports and TagLib writes; representative audiobooks and restart/resume remain unverified. Private operator records, pre-migration-14 schemas, PostgreSQL operator data, live provider responses, full SeerrNG workflows, installed rollback, and release/channel handoff remain open. PR #131 merged on 2026-10-20, but no release or bridge was published and the freeze stays in force.
 
 Until those gates close, the published converter is for read-only preview
 only. Do not apply a conversion or start ChaptarrNG against BookshelfNG's
@@ -211,9 +352,12 @@ The retirement candidate now also carries BookshelfNG's legacy
 `AudiobookshelfMetadata` OPF writer as Chaptarr's distinct
 `LegacyAudiobookshelfMetadata` provider. It maps both legacy provider and
 sidecar IDs while preserving rows only for an exact `NullConfig` contract.
-Unknown metadata providers and sidecar consumers block apply. Source-level
-importer and metadata fixtures cover this mapping; representative operator
-libraries and release readiness remain unverified.
+The current source additionally maps legacy
+`MetadataFiles.Consumer=Readarr` author sidecars to that consumer; importer
+fixtures and the released-binary synthetic rehearsal cover the mapping. The
+public `.977` release does not include it. Unknown metadata providers and
+sidecar consumers still block apply. Representative operator libraries and
+release readiness remain unverified.
 
 A fresh copy of the restored database also opened in the BookshelfNG
 `hardcover` image on a Docker network with no external access; its configured
@@ -252,7 +396,7 @@ validation artifacts only and published no release. Docs-only checkpoint
 [39199730309](https://github.com/snapetech-org/chaptarrng/actions/runs/39199730309),
 including all three platform builds, PostgreSQL, CodeQL, security/dependency,
 NuGet, release-note, and receipt checks. It did not change application code.
-Draft ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
+Merged ChaptarrNG [PR #131](https://github.com/snapetech-org/chaptarrng/pull/131)
 contains older SQLite and one-schema PostgreSQL migration support, native
 Hardcover identity handling, BookOrbit Book Dock, SeerrNG edition-catalog
 compatibility with the new Editions and Narrations book-details tab, and
@@ -315,7 +459,9 @@ change is in public `.977`. Representative M4B media, restart/resume, full featu
 The same release-frozen retirement candidate adds format-aware media moves
 through `/api/v1/author/media-move`: preview and confirm a single author or a
 bulk selection, review registered sidecars and destination conflicts, then
-queue the move. Only files registered in ChaptarrNG move; untracked files and
+queue the move. Single-author and bulk command-line wrappers use the same
+preview-token flow; see the [media-move guide](docs/MEDIA_MOVES.md). Only files
+registered in ChaptarrNG move; untracked files and
 author-wide extras stay in place. The candidate includes regression coverage
 for format isolation, shared-root and format-root sidecars, traversal,
 untracked-file safety, conflicts, and stale sources. Exact-head run
@@ -324,7 +470,7 @@ passed on earlier head 2c0401fc, including Windows tests after its native-path f
 fix. The feature remains unpublished and representative-library, cross-device,
 partial-failure rollback, and channel acceptance remain open.
 
-The current retirement work branch also ports BookshelfNG's native Hardcover
+The merged retirement source also ports BookshelfNG's native Hardcover
 metadata client and maps a saved `HardcoverAuth` setting to
 `HardcoverApiToken`. It preserves the existing `HARDCOVER_AUTH` and
 `HARDCOVER_API_KEY` environment options and routes Hardcover work, author, and
@@ -340,9 +486,10 @@ present. Exact-head run
 passed on the earlier PR #131 code snapshot 2c0401fc. An earlier integrated code snapshot
 8b4c6e23 passed platform and PostgreSQL validation in run
 [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341),
-but the candidate remains unsupported for operator data until semantic review,
+but the merged source remains unsupported for operator data until semantic review,
 representative conversion and rollback,
-feature parity, and channel acceptance are complete. PR #131 remains draft.
+feature parity, and channel acceptance are complete. PR #131 merged on
+2026-10-20; the release freeze remains active.
 See the [retirement status and channel matrix](docs/BOOKSHELFNG_RETIREMENT.md)
 for the current release and acceptance gates.
 
@@ -358,7 +505,8 @@ runtime, while source builds require the .NET 10 SDK.
 - **Narration and edition choices for SeerrNG:** `GET /api/v1/book/{id}/editions/catalog` lists every known edition with narrators, solo or full-cast, abridged or unabridged, length, language, and library state, and `GET /api/v1/series/narrators/matrix` compares narrators across every volume of a series, including editions that are not monitored. The existing wanted-edition endpoint tracks a second performance alongside the first. Unstated details stay unknown. See the [SeerrNG integration guide](docs/SEERRNG_INTEGRATION.md#narration-and-edition-choices).
 - **Restricted service access:** ChaptarrNG `0.9.941` and later can use a SeerrNG-only API key for supported book requests, searches, library status, and pending imports without granting global administration or destructive access.
 - **Standalone additions maintained here:** An optional built-in indexer and download client can search configured ebook sources, use API-key downloads, and optionally fall back to browser-assisted links. Full backup archives can use passphrase-based authenticated encryption; the direct Chaptarr project separately offers encryption for quick-start settings backups.
-- **Safer list and file workflows:** Preview an import list's next sync, inspect durable per-list sync history, and review manual-import matching evidence. Book-file downloads are limited to configured roots; imports check destinations before writing, extract supported archives, and can merge or convert multipart audiobooks with progress and cancellation. New multi-part releases can remain as separate book files.
+- **Safer list and file workflows:** Preview an import list's next sync, inspect durable per-list sync history, and review manual-import matching evidence. Book-file downloads are limited to configured roots; imports check destinations before writing, extract supported archives, and can merge or convert multipart audiobooks with progress and cancellation. New multi-part releases can remain as separate book files. See [multipart audiobook merging](docs/AUDIOBOOK_M4B_MERGING.md) for the legacy settings and release limits.
+- **Cross-format library views:** The Books index can show audiobooks and ebooks together, labels each record by format, and keeps monitoring actions scoped to that record. Bookshelf's **Formats** view groups records only when they share a recognized work-level provider ID; book details link formats by the same safe identity. These additions are not in published `v0.9.977`.
 - **More metadata and library connections:** RanobeDB adds light-novel ebook metadata; Audible searches can use a selected marketplace. Metadata profiles can rank edition terms and choose preferred series. AudioBookShelf, Calibre, Grimmory, and BookLore BookDrop provide optional library connections; BookOrbit Book Dock is in the unpublished retirement candidate; Emby/Jellyfin can refresh after an import.
 - **Search and library maintenance:** Indexers can run optional recurring searches for missing monitored books. MyAnonaMouse health reports explain when stale account status blocks grabs. Operators can preview and backfill missing author root folders without moving files.
 - **Operations and automation:** An optional MQTT gateway publishes library snapshots and lifecycle events, including Home Assistant discovery. A separate Prometheus listener exposes low-cardinality metrics. The full-library API supports paging, large library views use paged reads, and long author deletions run in the background.
@@ -367,6 +515,7 @@ runtime, while source builds require the .NET 10 SDK.
 
 The [fork feature guide](docs/FORK_FEATURES.md) covers the additions and their
 limits. Dedicated guides explain [import-list preview and history](docs/IMPORT_LIST_SYNC.md),
+[media moves](docs/MEDIA_MOVES.md), [author metadata refresh](docs/AUTHOR_METADATA_REFRESH.md),
 [external library connections](docs/EXTERNAL_LIBRARY_INTEGRATIONS.md),
 [MQTT and canonical events](docs/MQTT_GATEWAY.md), and
 [Prometheus metrics](docs/PROMETHEUS_METRICS.md). The
@@ -397,7 +546,7 @@ See the [SeerrNG Bookshelf backend guide](https://github.com/snapetech-org/seerr
 
 ### Organization
 * **Dual Media Libraries** - You can have separate root folders for audiobooks and eBooks or choose to have your eBooks placed alongside your audiobooks
-* **Format-specific author paths** - New authors inherit missing audiobook and ebook roots from configured defaults; explicit roots remain unchanged, and existing authors or files are not modified
+* **Format-specific author paths** - When enabled, the default-off setting initializes missing audiobook and ebook roots for new authors; explicit roots and existing authors or files remain unchanged
 * **Matching** - Match audiobook and eBook files using tags, folders, and release metadata
 * **Series Management** - Automatically organize books by series
 * **Metadata Profiles** - Control allowed languages, rank preferred edition terms, and choose the series name used in filenames and generated metadata. Stronger match evidence remains authoritative.
@@ -445,7 +594,7 @@ marketplace.
 
 ## Getting Started
 
-> **Docker is the primary maintained installation.** Releases also include standalone Linux and Windows archives, with package-manager feeds available on selected platforms. Publication and upgrade coverage varies by channel; check the [package status](packaging/README.md) before choosing one. For a BookshelfNG move, start with the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md).
+> **Docker is the primary maintained installation.** Releases also include standalone Linux and Windows archives, with package-manager feeds available on selected platforms. Publication and upgrade coverage varies by channel; check the [package status](packaging/README.md) before choosing one. For a BookshelfNG move, start with the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md). The [unmapped-files guide](docs/UNMAPPED_FILES.md) covers match retries.
 
 ChaptarrNG uses ImageSharp to resize cover images. ImageSharp 4 requires a
 valid Six Labors license when building this direct dependency from source.
@@ -572,7 +721,7 @@ for the behavior and safety limits.
 
 During an ebook search, Chaptarr checks the configured URLs from top to bottom. It prefers the book ISBN when one is available, then falls back to the monitored edition title. A URL is selected only after it returns a supported response with usable ebook results. Chaptarr moves to the next URL when the current one is unsafe, unavailable, times out, returns an unsupported response, or produces no usable result. It stops after the first successful URL and does not probe later entries for that search.
 
-Each request has a bounded timeout and response-size limit. Redirects are followed only after every destination passes the same URL safety checks, and redirect chains are bounded. Search results are limited to recognized ebook file types and carry the normalized title, format, size, ISBN when available, and a direct download URL. A search fails with an actionable error when every configured URL fails or returns no usable result.
+Each request has a bounded timeout and response-size limit. Redirects are followed only after every destination passes the same URL safety checks, and redirect chains are bounded. Catalog searches request EPUB, KEPUB, MOBI, AZW3, and PDF results; mirror sources can provide other importer-supported ebook types. Search results carry the normalized title, format, size, ISBN when available, and a direct download URL. A search fails with an actionable error when every configured URL fails or returns no usable result.
 
 #### Ebook-only limitation
 
@@ -652,6 +801,7 @@ dotnet _output/publish/Chaptarr.Console.dll
 Note: the inherited assembly is named `Chaptarr.dll` on Linux/macOS and `Chaptarr.Console.dll` on Windows.
 
 ## Documentation
+- [Documentation index](docs/README.md): migration, features, operations, and development guides
 - [Setup experience contract](docs/development/setup-experience-contract.md): evolve Quickstart in place for ChaptarrNG's ebook and audiobook workflow
 - [UI localization roadmap](docs/localization-roadmap.md): current locale order, translated high-use strings, and remaining catalog work
 
@@ -676,11 +826,10 @@ ChaptarrNG is a community project, and we welcome contributions! Please see [CON
 
 ## Bug Reports & Features
 
-Found a bug or have a feature request? Please open an issue on GitHub with:
-- Clear description of the issue/feature
-- Steps to reproduce (for bugs)
-- Logs if applicable
-- Your environment details
+Found a bug or have a feature request? Open an issue on GitHub with the steps
+to reproduce it, the expected behavior, and your environment details. See
+[Reporting issues](docs/REPORTING_ISSUES.md) for useful log excerpts and
+privacy guidance before attaching logs.
 
 ## Security
 

@@ -562,6 +562,66 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_preserve_opt_in_format_specific_author_paths_and_map_their_roots()
+        {
+            AddConfigValue("AutoInitializeFormatSpecificAuthorPaths", "true");
+            AddConfigValue("NewAuthorEbookRootFolderPath", "/library/ebooks");
+            AddConfigValue("NewAuthorAudiobookRootFolderPath", "/library/audiobooks");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'AutoInitializeFormatSpecificAuthorPaths';"), Is.EqualTo("true"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'DefaultEbookRootFolderPath';"), Is.EqualTo("/library/ebooks"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'DefaultAudiobookRootFolderPath';"), Is.EqualTo("/library/audiobooks"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'NewAuthorEbookRootFolderPath';"), Is.EqualTo("/library/ebooks"));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'NewAuthorAudiobookRootFolderPath';"), Is.EqualTo("/library/audiobooks"));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'DefaultAudiobookRootFolderPath';"), Is.Zero);
+            });
+        }
+
+        [Test]
+        public void should_not_apply_bookshelf_author_root_overrides_when_auto_initialization_is_disabled()
+        {
+            AddConfigValue("AutoInitializeFormatSpecificAuthorPaths", "false");
+            AddConfigValue("NewAuthorEbookRootFolderPath", "/library/ebooks");
+            AddConfigValue("NewAuthorAudiobookRootFolderPath", "/library/audiobooks");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'AutoInitializeFormatSpecificAuthorPaths';"), Is.EqualTo("false"));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Config WHERE Key = 'DefaultEbookRootFolderPath';"), Is.Zero);
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Config WHERE Key = 'DefaultAudiobookRootFolderPath';"), Is.Zero);
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'NewAuthorEbookRootFolderPath';"), Is.EqualTo("/library/ebooks"));
+            });
+        }
+
+        [Test]
+        public void should_keep_explicit_chaptarr_author_root_defaults_over_bookshelf_values()
+        {
+            AddConfigValue("AutoInitializeFormatSpecificAuthorPaths", "true");
+            AddConfigValue("NewAuthorEbookRootFolderPath", "/library/ebooks");
+            AddConfigValue("DefaultEbookRootFolderPath", "/custom/ebooks");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'DefaultEbookRootFolderPath';"), Is.EqualTo("/custom/ebooks"));
+        }
+
+        [Test]
         public void should_migrate_a_saved_bookshelf_hardcover_token_to_the_chaptarr_setting()
         {
             AddConfigValue("HardcoverAuth", "Bearer fixture-hardcover-token");
@@ -635,6 +695,19 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo("70"));
                 Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.Zero);
             });
+        }
+
+        [Test]
+        public void should_preserve_the_move_extra_files_on_rename_setting()
+        {
+            AddConfigValue("MoveExtraFilesOnRename", "true");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'MoveExtraFilesOnRename';"), Is.EqualTo("true"));
         }
 
         [Test]
@@ -1227,6 +1300,8 @@ namespace Chaptarr.Core.Test.Datastore
                     VALUES (63, 20, 'AudioBookShelf', 0, 'unmapped.opf', '2026-01-05', 30, 50, 'opf');
                     INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
                     VALUES (67, 20, 'AudiobookshelfMetadata', 0, 'legacy-consumer.opf', '2026-01-05', 30, 50, 'opf');
+                    INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
+                    VALUES (68, 20, 'Readarr', 1, 'author-metadata.json', '2026-01-05', NULL, NULL, '.json');
                     INSERT INTO Metadata (Id, Enable, Name, Implementation, Settings, ConfigContract)
                     VALUES (101, 1, 'Legacy OPF sidecars', 'AudiobookshelfMetadata', '{}', 'NullConfig');
                     INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
@@ -1248,6 +1323,8 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 63;"), Is.EqualTo("LegacyAudiobookshelfMetadata"));
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 67;"), Is.EqualTo("LegacyAudiobookshelfMetadata"),
                     "the provider-name sidecar alias must win over Chaptarr's case-insensitive AudioBookShelf provider ID");
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Consumer FROM MetadataFiles WHERE Id = 68;"), Is.EqualTo("LegacyAudiobookshelfMetadata"),
+                    "the legacy Readarr author-sidecar consumer must remain tracked by the compatible OPF metadata consumer");
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Metadata WHERE Id = 101 AND Enable = 1 AND Implementation = 'LegacyAudiobookshelfMetadata' AND ConfigContract = 'NullConfig';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 94 AND BookId = 30 AND EditionId IS NULL AND Data LIKE '%\"FileId\":\"50\"%';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
@@ -1653,7 +1730,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new SqliteConnection(ConnectionStringFor(databasePath));
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- sql is fixed fixture query text authored in this test.
             return (T)Convert.ChangeType(command.ExecuteScalar(), typeof(T));
         }
 
@@ -1662,7 +1739,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new SqliteConnection(ConnectionStringFor(databasePath));
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- sql is fixed fixture query text authored in this test.
             using var reader = command.ExecuteReader();
             var rows = new System.Collections.Generic.List<object>();
             while (reader.Read()) rows.Add(reader.GetValue(0));

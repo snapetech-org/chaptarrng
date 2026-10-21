@@ -169,7 +169,7 @@ namespace Chaptarr.Core.Test.Datastore
         {
             using var connection = Open(path);
             using var command = connection.CreateCommand();
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- sql is fixed fixture setup authored in this test.
             command.ExecuteNonQuery();
         }
 

@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import Label from 'Components/Label';
+import Button from 'Components/Link/Button';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import Table from 'Components/Table/Table';
@@ -62,35 +63,54 @@ function abridgementLabel(abridged) {
 }
 
 function BookEditionCatalog({ bookId }) {
-  const [state, setState] = useState({ isFetching: true, error: false, items: [] });
+  const [state, setState] = useState({ bookId, isFetching: true, error: false, items: [] });
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    let isCurrent = true;
+
     const { request, abortRequest } = createAjaxRequest({
       url: `/book/${bookId}/editions/catalog`,
       dataType: 'json'
     });
 
-    setState({ isFetching: true, error: false, items: [] });
-    request.done((items) => setState({ isFetching: false, error: false, items: items || [] }));
-    request.fail((xhr) => {
-      if (xhr.aborted) {
+    setState({ bookId, isFetching: true, error: false, items: [] });
+    request.done((items) => {
+      if (!isCurrent) {
         return;
       }
 
-      setState({ isFetching: false, error: true, items: [] });
+      setState({ bookId, isFetching: false, error: false, items: items || [] });
+    });
+    request.fail((xhr) => {
+      if (!isCurrent || xhr.aborted) {
+        return;
+      }
+
+      setState({ bookId, isFetching: false, error: true, items: [] });
     });
 
-    return abortRequest;
-  }, [bookId]);
+    return () => {
+      isCurrent = false;
+      abortRequest();
+    };
+  }, [bookId, retryCount]);
 
   const { isFetching, error, items } = state;
 
-  if (isFetching) {
+  if (state.bookId !== bookId || isFetching) {
     return <LoadingIndicator />;
   }
 
   if (error) {
-    return <div className={styles.message} role="alert">{translate('EditionCatalogFailed')}</div>;
+    return (
+      <div className={styles.message} role="alert">
+        <span>{translate('EditionCatalogFailed')}</span>
+        <Button onPress={() => setRetryCount((count) => count + 1)}>
+          {translate('Retry')}
+        </Button>
+      </div>
+    );
   }
 
   if (!items.length) {

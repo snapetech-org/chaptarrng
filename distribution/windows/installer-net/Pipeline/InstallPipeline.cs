@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.ServiceProcess;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -28,6 +29,8 @@ public static class InstallPipeline
         string? stagingDirectory = null;
         string? previousBinDirectory = null;
         var serviceStopped = false;
+        var bookshelfWasRunning = false;
+        int? bookshelfServiceStartType = null;
 
         try
         {
@@ -64,6 +67,13 @@ public static class InstallPipeline
 
             ui.Log($"[pipeline] BookshelfNG service data directory: {dataDirectory}");
             ui.Log($"[pipeline] Provider identity mode selected: {providerMode.Value}");
+            var initialServiceStatus = ServiceLifecycle.TryGetStatus(ServiceLifecycle.BookshelfServiceName);
+            if (initialServiceStatus is not (ServiceControllerStatus.Running or ServiceControllerStatus.Stopped))
+            {
+                return Failure("The Readarr service is changing state; wait for it to reach RUNNING or STOPPED before migrating.", null);
+            }
+            bookshelfWasRunning = initialServiceStatus == ServiceControllerStatus.Running;
+            bookshelfServiceStartType = ServiceLifecycle.GetBookshelfServiceStartType();
             ui.SetStep("Stopping BookshelfNG...", "The service must be stopped before the database backup and migration.");
             ct.ThrowIfCancellationRequested();
             if (!await ServiceLifecycle.StopAsync(
@@ -84,8 +94,19 @@ public static class InstallPipeline
                 backup.Path,
                 dataDirectory,
                 providerMode.Value.ToString(),
-                BackupService.GetPreviousVersion(dataDirectory));
+                BackupService.GetPreviousVersion(dataDirectory),
+                bookshelfServiceStartType.Value,
+                bookshelfWasRunning);
             ui.Log($"[pipeline] Verified rollback backup recorded at {backup.Path}");
+
+            if (!await ServiceLifecycle.SetStartTypeAsync(
+                    ServiceLifecycle.BookshelfServiceName,
+                    "disabled",
+                    log,
+                    ct).ConfigureAwait(false))
+            {
+                throw new InvalidOperationException("The stopped BookshelfNG service could not be disabled during migration.");
+            }
 
             stagingDirectory = await PayloadExtractor.ExtractToStagingDirectoryAsync(
                 dataDirectory,
@@ -146,14 +167,6 @@ public static class InstallPipeline
             previousBinDirectory = PayloadExtractor.ReplaceBinDirectory(dataDirectory, stagingDirectory, log);
             stagingDirectory = null;
 
-            if (!await ServiceLifecycle.DeleteAsync(
-                    ServiceLifecycle.BookshelfServiceName,
-                    log,
-                    ct).ConfigureAwait(false))
-            {
-                throw new InvalidOperationException("The Readarr service registration could not be removed.");
-            }
-
             var installedConsole = Path.Combine(dataDirectory, "bin", "Chaptarr.Console.exe");
             if (!File.Exists(installedConsole))
             {
@@ -207,23 +220,32 @@ public static class InstallPipeline
                 }
             }
 
+            var serviceCleanupScheduled = ServiceCleanupRunner.ScheduleLegacyServiceCleanup(dataDirectory, ui);
+            if (!serviceCleanupScheduled)
+            {
+                ui.LogError("[installer] The stopped Readarr service remains disabled so it cannot start beside ChaptarrNG. The installer could not schedule its removal after this window closes; restore remains available.");
+            }
+
             PayloadExtractor.TryDeleteDirectory(previousBinDirectory);
             serviceStopped = false;
             ui.SetProgressPercent(100);
             ui.SetStep(
                 "Migration complete.",
-                $"ChaptarrNG is running with the BookshelfNG data directory. The verified rollback backup is retained at {backup.Path}");
+                $"ChaptarrNG is running with the BookshelfNG data directory. The verified rollback backup is retained at {backup.Path}. " +
+                (serviceCleanupScheduled
+                    ? "The disabled Readarr service will be removed after this installer closes."
+                    : "Readarr remains disabled; use Restore BookshelfNG if you need to revert."));
             return new InstallOutcome(true, backup.Path, null);
         }
         catch (OperationCanceledException)
         {
-            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, serviceStopped, "Migration cancelled.")
+            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, "Migration cancelled.")
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             ui.LogError($"[pipeline] {ex.GetType().Name}: {ex.Message}");
-            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, serviceStopped, ex.Message)
+            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, ex.Message)
                 .ConfigureAwait(false);
         }
         finally
@@ -258,7 +280,9 @@ public static class InstallPipeline
                 record.BackupPath,
                 record.DataDirectory,
                 log,
-                CancellationToken.None).ConfigureAwait(false);
+                CancellationToken.None,
+                record.BookshelfServiceStartType,
+                record.BookshelfServiceWasRunning).ConfigureAwait(false);
             if (exit != 0)
             {
                 return Failure($"Rollback failed with exit code {exit}. The backup is still available at {record.BackupPath}.", record.BackupPath);
@@ -283,6 +307,8 @@ public static class InstallPipeline
         string? backupPath,
         string? previousBinDirectory,
         bool serviceStopped,
+        bool bookshelfWasRunning,
+        int? bookshelfServiceStartType,
         string reason)
     {
         ui.LogError($"[pipeline] {reason}");
@@ -297,14 +323,16 @@ public static class InstallPipeline
 
         if (backupPath is null)
         {
-            var started = await ServiceLifecycle.StartAsync(
-                ServiceLifecycle.BookshelfServiceName,
-                log,
-                VerifyRunningTimeout,
-                CancellationToken.None).ConfigureAwait(false);
+            var started = !bookshelfWasRunning || await ServiceLifecycle.StartAsync(
+                    ServiceLifecycle.BookshelfServiceName,
+                    log,
+                    VerifyRunningTimeout,
+                    CancellationToken.None).ConfigureAwait(false);
             return Failure(
                 started
-                    ? reason + " The original BookshelfNG service was restarted."
+                    ? reason + (bookshelfWasRunning
+                        ? " The original BookshelfNG service was restarted."
+                        : " BookshelfNG was already stopped and remains stopped.")
                     : reason + " BookshelfNG did not restart; start Readarr manually and check the Windows Event Viewer.",
                 null);
         }
@@ -315,7 +343,9 @@ public static class InstallPipeline
                 backupPath,
                 dataDirectory,
                 log,
-                CancellationToken.None).ConfigureAwait(false);
+                CancellationToken.None,
+                bookshelfServiceStartType,
+                bookshelfWasRunning).ConfigureAwait(false);
             if (exit == 0)
             {
                 RecordRollbackTimestamp(ui);

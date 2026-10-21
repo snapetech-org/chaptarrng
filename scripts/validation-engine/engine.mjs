@@ -86,18 +86,43 @@ function digestFile(relative, { text = false } = {}) {
   return text ? sha256GitText(content) : hash(content);
 }
 
+function globMatches(pattern, value) {
+  const memo = new Map();
+  const match = (patternIndex, valueIndex) => {
+    const key = `${patternIndex}:${valueIndex}`;
+    if (memo.has(key)) return memo.get(key);
+
+    let result;
+    if (patternIndex === pattern.length) {
+      result = valueIndex === value.length;
+    } else if (pattern[patternIndex] === '*' && pattern[patternIndex + 1] === '*') {
+      if (pattern[patternIndex + 2] === '/') {
+        result = match(patternIndex + 3, valueIndex);
+        for (let index = valueIndex; !result && index < value.length; index += 1) {
+          if (value[index] === '/') result = match(patternIndex + 3, index + 1);
+        }
+      } else {
+        result = match(patternIndex + 2, valueIndex) ||
+          (valueIndex < value.length && match(patternIndex, valueIndex + 1));
+      }
+    } else if (pattern[patternIndex] === '*') {
+      result = match(patternIndex + 1, valueIndex) ||
+        (valueIndex < value.length && value[valueIndex] !== '/' && match(patternIndex, valueIndex + 1));
+    } else {
+      result = valueIndex < value.length && pattern[patternIndex] === value[valueIndex] &&
+        match(patternIndex + 1, valueIndex + 1);
+    }
+
+    memo.set(key, result);
+    return result;
+  };
+
+  return match(0, 0);
+}
+
+// Preserve the inventory's .test call shape without compiling config into a regular expression.
 export function globRegex(pattern) {
-  let expression = '^';
-  for (let index = 0; index < pattern.length; index += 1) {
-    const char = pattern[index];
-    if (char === '*' && pattern[index + 1] === '*') {
-      index += 1;
-      if (pattern[index + 1] === '/') { index += 1; expression += '(?:.*/)?'; }
-      else expression += '.*';
-    } else if (char === '*') expression += '[^/]*';
-    else expression += char.replace(/[|\\{}()[\]^$+?.]/g, '\\$&');
-  }
-  return new RegExp(`${expression}$`);
+  return { test: (value) => globMatches(pattern, value) };
 }
 
 export function discoverInventory(files = repoFiles()) {
@@ -152,8 +177,16 @@ function inspectRuntime(runtime) {
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
   const version = output.split(/\r?\n/, 1)[0] ?? '';
   const available = !result.error && result.status === 0;
-  const compatible = available && new RegExp(runtime.versionPattern).test(version);
+  const compatible = available && matchesVersionPattern(runtime.versionPattern, version);
   return { command: runtime.command, expected: runtime.versionPattern, version, available, compatible, exitCode: result.status };
+}
+
+function matchesVersionPattern(pattern, version) {
+  if (!pattern.startsWith('^')) return false;
+
+  const exact = pattern.endsWith('$');
+  const literal = pattern.slice(1, exact ? -1 : undefined).replaceAll('\\.', '.');
+  return exact ? version === literal : version.startsWith(literal);
 }
 
 function inheritedToolchainEnvironment(inherited = process.env) {
@@ -393,10 +426,20 @@ function terminate(child) {
 }
 
 export function parseNodeTestSummary(output) {
-  const read = (name) => {
-    const match = [...output.matchAll(new RegExp(`^# ${name} (\\d+)\\s*$`, 'gm'))].at(-1);
-    return match ? Number(match[1]) : null;
-  };
+  const counts = new Map();
+  for (const match of output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)\s*$/gm)) {
+    counts.set(match[1], Number(match[2]));
+  }
+  const read = (name) => counts.get(name) ?? null;
+  const failedTestNames = [];
+  for (const match of output.matchAll(/^[ \t]*not ok \d+ - (.+?)\s*$/gm)) {
+    const name = match[1].trim();
+    // TAP diagnostics can include assertion values and paths. Keep only the
+    // authored test title, and exclude separators that could carry a path.
+    if (name.length <= 240 && /^[A-Za-z0-9][A-Za-z0-9 _().,:+'-]*$/.test(name)) {
+      failedTestNames.push(name);
+    }
+  }
   const summary = {
     total: read('tests'),
     passed: read('pass'),
@@ -410,7 +453,12 @@ export function parseNodeTestSummary(output) {
       summary.passed + summary.failed + summary.cancelled + summary.skipped + summary.todo !== summary.total) {
     throw new Error('Node TAP summary has missing, invalid, zero, or inconsistent case counts');
   }
-  return { ...summary, inconclusive: summary.todo };
+  return {
+    ...summary,
+    inconclusive: summary.todo,
+    failedTestNames: failedTestNames.slice(0, 100),
+    failedTestNamesTruncated: failedTestNames.length > 100,
+  };
 }
 
 function decodeNUnitXmlText(value) {
@@ -948,6 +996,9 @@ export async function runTask(task, runRoot, testSpec = null) {
       failedCases = summary.failed;
       skippedCases = summary.skipped;
       inconclusiveCases = summary.inconclusive;
+      failedTestNames = summary.failedTestNames;
+      failedTestNamesTruncated = summary.failedTestNamesTruncated;
+      failedTestDetails = failedTestNames.map((name) => ({ name }));
       if (summary.cancelled > 0) summaryError = `Node TAP reported ${summary.cancelled} cancelled cases`;
     } catch (error) { summaryError = error.message; }
   } else {
@@ -967,7 +1018,8 @@ export async function runTask(task, runRoot, testSpec = null) {
     durationMs: Date.now() - started,
     exitCode: exit.code,
     signal: exit.signal,
-    error: exit.error?.message ?? summaryError ?? (artifactsChanged ? 'compiled test artifact changed during execution' : null) ?? logError,
+    error: exit.error?.message ?? summaryError ?? (artifactsChanged ? 'compiled test artifact changed during execution' : null) ?? logError ??
+      (failedCases > 0 ? `${failedCases} test case${failedCases === 1 ? '' : 's'} failed` : null),
     timedOut,
     outputBytes,
     logSha256: hash(readFileSync(logPath)),
@@ -1160,7 +1212,15 @@ async function main(argv = process.argv.slice(2)) {
     requireTrustedLocalTestSandbox();
   }
   const result = await execute(plan);
-  process.stdout.write(`${JSON.stringify({ repository: validation.repository, status: result.receipt.status, totals: result.receipt.totals, evidenceDirectory: result.runRoot }, null, 2)}\n`);
+  const failedTasks = result.receipt.tasks.filter((task) => task.status === 'failed').map((task) => ({
+    taskId: task.taskId,
+    error: task.error,
+    failedTestNames: task.failedTestNames,
+    failedTestDetails: task.failedTestDetails,
+    failedTestNamesTruncated: task.failedTestNamesTruncated,
+    failedTestDetailsTruncated: task.failedTestDetailsTruncated,
+  }));
+  process.stdout.write(`${JSON.stringify({ repository: validation.repository, status: result.receipt.status, totals: result.receipt.totals, failedTasks, evidenceDirectory: result.runRoot }, null, 2)}\n`);
   return result.exitCode;
 }
 

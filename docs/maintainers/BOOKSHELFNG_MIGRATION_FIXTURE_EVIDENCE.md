@@ -1,6 +1,119 @@
 # BookshelfNG migration fixture evidence
 
-**Reviewed:** 2026-10-19. This file covers synthetic fixtures and one private
+## Expanded multi-record source-build rehearsal (2026-10-21)
+
+The optional `--expanded-fixture` mode in
+[`integration/prepare-bookshelfng-smoke.py`](../../integration/prepare-bookshelfng-smoke.py)
+extends the shared BookshelfNG schema-158 fixture without changing the smaller
+SeerrNG smoke default. This local Linux publish used the current `main`
+worktree at `3094b0ab`, .NET SDK `10.0.402`, and reported ChaptarrNG
+`0.9.978.0-Release-chaptarr-dev-chaptarr`. It was a source build, not a public
+release artifact. The worktree also carried local uncommitted source edits, so
+this is local behavioral evidence rather than exact-head hosted CI evidence.
+The expanded fixture helper is now committed in `380454f5`.
+
+The source had 39 tables and passed SQLite integrity and foreign-key checks.
+It contained four authors, six works, nine editions, four placeholder files,
+two sidecars, four history rows, three download-history rows, two series, three
+series links, provider configurations, and fake credentials. The works covered
+mixed audiobook/ebook media, selected and alternate editions in both formats,
+an audiobook with two narrators, a work with no edition rows, an unselected
+mixed-format work, and an unmonitored audiobook. The placeholder files are not
+valid media. The fixture values were synthetic and no external provider was
+called.
+
+With `HARDCOVER=true HARDCOVER_NATIVE=true`:
+
+- **Preview:** passed. `readarr.db` retained the same SHA-256 before and after
+  preview; all source table counts and the logical SQLite dump were unchanged.
+  Integrity was `ok`, there were no foreign-key errors, and no stage, snapshot,
+  migration-copy, or conversion-backup files remained. The review sidecar was
+  generated for the two unresolved works.
+- **Apply guard:** running `-migrate-bookshelf` without
+  `-confirm-bookshelf-service-stopped` was rejected with the required
+  confirmation error.
+- **Apply:** passed with explicit stopped-service confirmation. The target
+  reached schema 121, passed integrity and foreign-key checks, and contained
+  four authors, nine books, nine editions, and four files. The retained
+  schema-158 backup had the same logical SQLite dump and all 39 table row
+  counts as the source. The mixed-format source work split into format-scoped
+  records; the two unresolved works remained unmonitored in both catalogs.
+- **Mapped records:** all six provider setting objects retained every source
+  field for the fixture indexers, download client, Goodreads list, and BookLore
+  notification. Native Hardcover identities, format roots, file paths,
+  alternate-edition monitoring, history, series links, profiles, users, tags,
+  blocklist rows, and both sidecars were present in the expected target counts.
+  `MetadataFiles.Consumer=Readarr` mapped to
+  `LegacyAudiobookshelfMetadata`.
+- **Restore preview:** passed and left the target and retained source backup
+  byte-identical to their pre-preview hashes.
+- **Rollback:** passed. The restored `readarr.db` matched the retained
+  BookshelfNG backup byte-for-byte, and its logical dump, all 39 table counts,
+  schema 158, integrity, and foreign-key checks matched the starting source.
+  The schema-121 ChaptarrNG database was retained separately with nine books
+  and clean integrity and foreign-key checks.
+- **Fail-closed case:** a disposable copy with two monitored audiobook
+  editions for one work was rejected before promotion. The source hash and
+  schema 158 remained unchanged, integrity and foreign-key checks passed, and
+  no stage or backup file remained.
+
+This is stronger synthetic SQLite evidence, not operator-data acceptance. It
+does not prove full BookshelfNG feature parity, PostgreSQL operator-data
+conversion, provider fulfillment, installed rollback, or update-channel
+handoff. The existing release freeze and operator acceptance gates remain in
+force; the public latest remains `v0.9.977`, no release or compatibility
+bridge was published, and this rehearsal does not approve a BookshelfNG cutover.
+
+## Released BookshelfNG fixture against current ChaptarrNG candidate (2026-10-21)
+
+This rehearsal used the public BookshelfNG `main-v0.4.21.71` Linux x64 archive
+and the Linux artifact from ChaptarrNG Build
+[39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854),
+built from commit `c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`. The archive
+checksum was verified before the released Readarr binary created and served a
+deterministic synthetic Hardcover library. The ChaptarrNG artifact hashes were
+`b31763c3c0412fabdf22a7c5c31b3a1b05a884a8d85701055018d74df7fde3cc`
+(apphost) and
+`07689c53c6c942a67a68248ffca91fb38ca75642b4b0e7e904f088b7912fd8a3`
+(`Chaptarr.Core.dll`). Exact-head Build
+[39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854)
+completed successfully on Linux, Windows, macOS, and PostgreSQL; native-runner
+receipt reconciliation passed. The release-note contract was skipped for this
+internal fix.
+
+The fixture contained linked author/book records, ebook and audiobook editions
+and files, an extra file, a metadata sidecar, series, user, notification,
+history, download history, blocklist, roots, tag, and settings. It reproduced a
+real compatibility gap: `MetadataFiles.Consumer=Readarr` was rejected by
+preview/apply. ChaptarrNG commit `c2535e71` now maps that legacy consumer to
+`LegacyAudiobookshelfMetadata`; the importer regression fixture covers it.
+
+With `HARDCOVER=true HARDCOVER_NATIVE=true`, preview exited successfully,
+reported the sidecar as one retained row with no unsupported consumer, and
+left the source database hash unchanged. Explicit apply exited successfully;
+the target reached schema 121 with SQLite integrity `ok` and zero foreign-key
+errors. It retained 1 author, 2 books, 2 editions, 2 book files, 1 metadata
+file, 1 series, 2 series-book links, 2 roots, 1 history row, 1 download-history
+row, and 1 blocklist row. The author identity remained `HardcoverAuthorId=hc:9001`,
+and the sidecar mapped to `LegacyAudiobookshelfMetadata` with type 1.
+
+The retained BookshelfNG backup's raw SQLite file hash differs from the source
+hash because checkpointing/WAL normalization changes the file representation.
+Its logical SQLite dump, all 39 table row counts, and schema 158 match the
+source exactly; integrity is `ok` and there are no foreign-key errors. This is
+logical database equivalence, not byte-for-byte identity.
+
+Restore preview exited successfully and did not change either database. Explicit
+rollback exited successfully and restored `readarr.db` to the retained backup's
+hash. The restored source database has the original logical dump and row counts,
+schema 158, integrity `ok`, and zero foreign-key errors; ChaptarrNG's schema-121
+database remains separately backed up. These results establish one successful
+released-binary SQLite round trip for synthetic data. They do not establish
+representative operator-data acceptance, PostgreSQL operator-data support,
+provider fulfillment, complete semantic parity, or installed-channel handoff.
+
+**Reviewed:** 2026-10-21. ChaptarrNG PR #131 merged to `main` on 2026-10-20;
+the public release remains `v0.9.977`. This file covers synthetic fixtures and one private
 populated migration-158 snapshot tested on a disposable copy. This is
 maintainer evidence, not approval to cut over operator data.
 
@@ -26,7 +139,7 @@ unchanged, and apply refuses any remaining unsupported provider before
 promotion. Reports contain row IDs, implementation/contract names, and
 unsupported field names, never saved values or credentials.
 
-- ChaptarrNG source: draft PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131). The populated rehearsal below is one fixture run; it does not stand in for representative-data acceptance.
+- ChaptarrNG source: merged PR [#131](https://github.com/snapetech-org/chaptarrng/pull/131), merge commit `d2bcba7953a14d2d726f47005a660314cc5e4c26`. The populated rehearsal below is one fixture run; it does not stand in for representative-data acceptance.
 - Earlier integrated code snapshot `8b4c6e23` passed Linux, macOS, Windows, PostgreSQL migration, release-note, and runner-receipt checks in Build run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341). CodeQL, dependency review, security scan, and NuGet submission also passed. Those hosted checks do not rerun the private populated-data rehearsal or expand its scope.
 - Earlier exact-head Build run
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
@@ -40,7 +153,7 @@ unsupported field names, never saved values or credentials.
   [39198708193](https://github.com/snapetech-org/chaptarrng/actions/runs/39198708193),
   including Linux, macOS, and Windows, PostgreSQL fixtures, release-note,
   CodeQL, dependency/security, NuGet, and runner-receipt checks. It did not
-  change application code. PR #131 remains draft; these checks do not authorize
+  change application code. PR #131 later merged; these checks do not authorize
   operator cutover.
 - Documentation-only checkpoint `ddec3e81` passed exact-head hosted run
   [39199730309](https://github.com/snapetech-org/chaptarrng/actions/runs/39199730309),
@@ -179,7 +292,7 @@ remaining acceptance gates.
 
 ## Legacy BookshelfNG backup ZIP restore candidate
 
-Draft PR #131 adds source-lineage validation that allows the standard restore
+Merged PR #131 adds source-lineage validation that allows the standard restore
 flow to stage a recognized BookshelfNG database extracted from a legacy
 `readarr_backup_*.zip`. Normal startup then upgrades a disposable copy and
 converts it through the existing row-accounted workflow; the archive remains
@@ -326,4 +439,4 @@ the Linux build workflow. Real provider responses, operator records, pre-14
 schemas, PostgreSQL operator data, successful SeerrNG fulfillment, installed
 rollback, and update channels remain unvalidated. It is local synthetic
 evidence; no public image, release, package, or channel alias was published.
-PR #131 remains draft and the release freeze remains active.
+PR #131 merged on 2026-10-20; the release freeze remains active.

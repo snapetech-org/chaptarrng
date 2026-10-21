@@ -28,6 +28,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Payload\Chaptarr.payload.zip" LogicalName="ChaptarrNG.Installer.Payload.Chaptarr.payload.zip" />
     <EmbeddedResource Include="upgrade-helpers\rollback.ps1" LogicalName="rollback.ps1" />
+    <EmbeddedResource Include="upgrade-helpers\finalize-service-handoff.ps1" LogicalName="finalize-service-handoff.ps1" />
   </ItemGroup>
 
 </Project>

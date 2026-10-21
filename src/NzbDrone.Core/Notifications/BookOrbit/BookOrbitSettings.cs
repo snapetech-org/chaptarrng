@@ -24,13 +24,13 @@ namespace NzbDrone.Core.Notifications.BookOrbit
             BaseUrl = "http://localhost:3000";
         }
 
-        [FieldDefinition(0, Label = "Base URL")]
+        [FieldDefinition(0, Label = "Base URL", HelpText = "BookOrbitBaseUrlHelpText")]
         public string BaseUrl { get; set; }
 
-        [FieldDefinition(1, Label = "Username", Privacy = PrivacyLevel.UserName)]
+        [FieldDefinition(1, Label = "Username", Privacy = PrivacyLevel.UserName, HelpText = "BookOrbitUsernameHelpText")]
         public string Username { get; set; }
 
-        [FieldDefinition(2, Label = "Password", Type = FieldType.Password, Privacy = PrivacyLevel.Password)]
+        [FieldDefinition(2, Label = "Password", Type = FieldType.Password, Privacy = PrivacyLevel.Password, HelpText = "BookOrbitPasswordHelpText")]
         public string Password { get; set; }
 
         public NzbDroneValidationResult Validate()

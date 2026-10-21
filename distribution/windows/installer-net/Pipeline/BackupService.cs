@@ -36,6 +36,12 @@ public static class BackupService
             return $"This installer supports the standard BookshelfNG LocalService account only. The Readarr service uses '{serviceAccount}'; use the manual migration path so its service identity and media permissions can be preserved.";
         }
 
+        var serviceStartType = ServiceLifecycle.GetBookshelfServiceStartType();
+        if (serviceStartType is not (2 or 3 or 4))
+        {
+            return $"The Readarr service uses unsupported Windows start type {serviceStartType}; use the manual migration path so its service startup policy can be preserved.";
+        }
+
         var configPath = Path.Combine(dataDirectory, "config.xml");
         var databasePath = Path.Combine(dataDirectory, "readarr.db");
         if (!File.Exists(configPath))

@@ -171,6 +171,10 @@ class InteractiveImportModalContentConnector extends Component {
     });
   };
 
+  onRetryPress = () => {
+    this.refetchItems();
+  };
+
   onPathFallbackChange = ({ value }) => {
     const { mediaManagementSettings } = this.props;
 
@@ -324,6 +328,7 @@ class InteractiveImportModalContentConnector extends Component {
         onFilterExistingFilesChange={this.onFilterExistingFilesChange}
         onReplaceExistingFilesChange={this.onReplaceExistingFilesChange}
         onImportModeChange={this.onImportModeChange}
+        onRetryPress={this.onRetryPress}
         onPathFallbackChange={this.onPathFallbackChange}
         onImportSelectedPress={this.onImportSelectedPress}
       />

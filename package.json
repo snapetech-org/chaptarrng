@@ -23,7 +23,8 @@
     "stylelint-windows": "stylelint \"frontend/**/*.css\" --config frontend/.stylelintrc"
   },
   "sideEffects": [
-    "**/*.css"
+    "**/*.css",
+    "frontend/src/polyfills.js"
   ],
   "repository": {
     "type": "git",

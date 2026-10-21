@@ -209,6 +209,28 @@ namespace Chaptarr.Core.Test.Indexers
         }
 
         [Test]
+        public async Task grab_time_resolver_should_resolve_kepub_file_link_when_no_api_key()
+        {
+            var transport = new DirectDownloadTestHttp();
+            transport.AddRoute(
+                url => url == "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
+                    request,
+                    System.Net.HttpStatusCode.OK,
+                    "<html><body><a href=\"https://files.example/harry-potter.kepub?download=1\">Mirror</a></body></html>",
+                    "text/html; charset=utf-8")));
+
+            var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
+
+            var resolved = await resolver.TryResolveAsync(
+                "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                null,
+                "CatalogPage");
+
+            Assert.That(resolved, Is.EqualTo("https://files.example/harry-potter.kepub?download=1"));
+        }
+
+        [Test]
         public async Task grab_time_resolver_should_resolve_aa_slow_download_link()
         {
             var transport = new DirectDownloadTestHttp();

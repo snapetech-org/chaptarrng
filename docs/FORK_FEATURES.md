@@ -8,12 +8,55 @@ Readarr. The fork was created on August 31, 2026 from the parent repository's
 This guide covers the published feature set through
 [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 and the additional feature and maintenance work present in the current fork
-checkout. The source comparison below was refreshed on 2026-10-17; release and
-migration evidence is dated separately. The [changelog](../CHANGELOG.md) is
-the record of released changes. The parent comparison is Chaptarr's `develop`
+checkout. The source comparison below describes the repository snapshot stated in each
+section; release and migration evidence is dated separately. The
+[changelog](../CHANGELOG.md) is the record of released changes. The parent comparison is Chaptarr's `develop`
 branch at
 [`e67374f`](https://github.com/Chaptarr/chaptarr/commit/e67374f), which is in
 ChaptarrNG `main`'s history.
+
+## BookshelfNG consolidation status — 2026-10-21
+
+ChaptarrNG PR #131 is merged to `main`. Current source is on
+[ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main).
+It includes the BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114)
+setting for new-author format paths, disabled by default, and migration support
+that carries the saved flag and maps configured ebook/audiobook roots to
+ChaptarrNG defaults when those defaults are empty. Existing author paths and
+files are not changed. The feature remains source-only; public ChaptarrNG
+`.977` predates the toggle. The latest source also restores whole-author move
+updates for ebook and audiobook paths under the moved directory.
+
+The revision-pinned BookshelfNG path audit and its remaining review are
+maintained in the canonical
+[BookshelfNG consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
+The Calibre proxy review found legacy operations retained and new path lookup,
+selected-field updates, stable series selection, and no-op write avoidance;
+focused proxy/series tests pass 6/6. Live Calibre server authentication and
+version compatibility remain unverified. The book-file move service preserves
+the legacy organization, move, and copy flows through an explicit destination
+plan; its focused fixture passes 15/15. Path classifications do not establish
+runtime parity, and no runtime feature is approved for retirement.
+
+Focused author/migration fixtures pass 11/11, configuration persistence 1/1,
+Goodreads pagination 5/5, format-profile refresh 5/5, Calibre language 4/4,
+Calibre proxy/series 6/6, Hardcover metadata/search 45/45, book-file move
+planning 15/15, and author-move path coverage 3/3. All three migration CLI
+helpers pass Bash syntax, help, and ShellCheck checks. Manual Import selector
+empty states, retries, and stale-choice handling, Add New and interactive
+search recovery, narrator and media-preview retry, Manual Import and File
+Browser recovery, and retry for activity lists, author history, book-edit edition
+loading, book-file detail and quality loading, Calendar, backups, Wanted pages,
+conversion settings, and startup-error recovery pass in the 122/122 frontend CJS
+suite. Current application source is on
+[ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
+Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Publication remains frozen; no release, package, image, installer,
+or migration bridge was published. Representative operator-data migration and
+rollback, provider and SeerrNG workflows, representative media and restart
+recovery, installed update-channel handoff, and operator acceptance remain open. Keep BookshelfNG in service and do not
+start ChaptarrNG against BookshelfNG appdata. See the
+[retirement status](BOOKSHELFNG_RETIREMENT.md) and
+[migration guide](MIGRATE_FROM_BOOKSHELFNG.md).
 
 **Migration update (2026-10-18).** ChaptarrNG `v0.9.977` is the latest
 published release. It includes the BookshelfNG converter and rollback
@@ -26,13 +69,18 @@ its CI validation passes. Retirement acceptance remains separate from standard
 ChaptarrNG release publication.
 BookshelfNG `0.4.21.71` is published as the final source release; its issue
 #114 request is closed, and it includes the source-side appdata archive helper.
-ChaptarrNG `v0.9.974` and later initialize missing format-specific roots for
-new authors; explicit roots and existing authors or files are left alone. See
+ChaptarrNG adds opt-in initialization of missing format-specific paths for new
+authors in Settings > Media Management > New Author Folders. It is disabled by
+default; explicit roots and existing authors or files are left alone. Migration
+preserves the opt-in setting and maps its saved format roots to ChaptarrNG's
+per-format defaults. See
 the [operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
 and [retirement status page](BOOKSHELFNG_RETIREMENT.md). The `.977` release
 supports the final migration-158 SQLite schema. Populated synthetic migration
 coverage exercises conversion and rollback; this is not real older-schema
-operator data. PostgreSQL source conversion remains unsupported, and successful
+operator data. Public `.977` does not support PostgreSQL source conversion. The merged
+ChaptarrNG `main` candidate adds migration-158 PostgreSQL source support, but
+representative populated-data and rollback acceptance remain open. Successful
 database conversion does not complete feature parity or legacy-channel
 handoff. ChaptarrNG AUR `.977` is published and COPR reports successful builds
 for Fedora 43/44/45 and Rawhide x86_64. The Chocolatey package passed build and
@@ -72,7 +120,7 @@ the current complete path count. Upstream PR [#114](https://github.com/Chaptarr/
 which preserves media type during scoped book lookup, remains open. The broader
 upstream issue/PR audit remains incomplete.
 
-The BookshelfNG consolidation is in ChaptarrNG main; the standard image uses the same executable for fresh and migrated installs. The Editions and Narrations API first landed in BookshelfNG commit 6e1a62e12, and the current consolidation inventory pins BookshelfNG source at `2222f4542929a48022f9769acd9a1c5f652b8730`. ChaptarrNG main includes the matching book-details tab, series narrator comparison, and editionCatalog capability. Earlier candidate code snapshot 8b4c6e23 integrated those features and passed its own cross-platform and security checks. Application-code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and release-note contract. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These checks do not establish operator-data or update-channel acceptance. BookshelfNG issue #114 (new-author paths) is closed and already covered by ChaptarrNG v0.9.974+; issue #144 (retirement) remains open.
+The BookshelfNG consolidation is in ChaptarrNG main; the standard image uses the same executable for fresh and migrated installs. The Editions and Narrations API first landed in BookshelfNG commit 6e1a62e12. The current BookshelfNG path inventory, exact revisions, dispositions, and review maps are maintained in the [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md). Exact audit counts, revision pins, dispositions, and evidence are recorded in the consolidation report. These path-level decisions do not prove feature parity, and no runtime feature is approved for retirement. The audit suite passes 31/31 tests; BookshelfNG audit-tool Build [39386658595](https://github.com/snapetech-org/bookshelfng/actions/runs/39386658595) and mirrored Unraid main CI [39387608787](https://github.com/snapetech-org/bookshelfng-unraid/actions/runs/39387608787) passed. ChaptarrNG main includes the matching book-details tab, series narrator comparison, and editionCatalog capability. Earlier candidate code snapshot 8b4c6e23 integrated those features and passed its own cross-platform and security checks. Application-code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and release-note contract. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. On 2026-10-19, the Linux artifact from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373) also passed `scripts/chaptarrng-integration-smoke.mjs`: the restricted key read capabilities and an empty paged library, was denied `/config/host` and unrelated `/command`, and the global key was accepted for `/config/host`. This is empty-library API and authorization evidence, not a converted-data or full workflow pass. These checks do not establish operator-data or update-channel acceptance. BookshelfNG issue #114 is closed. Published ChaptarrNG v0.9.974–v0.9.977 automatically initialized missing new-author paths; current `main` now has the requested disabled-by-default setting and imports its saved value. This change is unpublished while retirement acceptance remains open. Issue #144 remains open.
 ChaptarrNG's upstream PR #114 is a separate issue
 and remains open. ChaptarrNG's own
 repository has no open issues or pull requests. The converter,
@@ -466,11 +514,19 @@ developer keys are no longer issued, so live account acceptance remains open.
 The migration candidate maps BookshelfNG's legacy OPF metadata provider and
 sidecar IDs to ChaptarrNG's `LegacyAudiobookshelfMetadata` consumer while
 preserving file references; unknown metadata providers or consumer IDs block
-apply. See the [migration provider notes](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers).
+apply. The current migration source also maps legacy
+`MetadataFiles.Consumer=Readarr` author sidecars to this consumer; that alias
+is not in public `v0.9.977`. A released-binary synthetic round trip passed, but
+operator-data and installed-channel acceptance remain open. See the
+[migration provider notes](MIGRATE_FROM_BOOKSHELFNG.md#provider-configuration-blockers)
+and [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 
 | Capability or change | Current ChaptarrNG scope | Evidence required before upstream retirement |
 | --- | --- | --- |
 | BookshelfNG conversion and rollback | Standard image preview, apply, automatic startup conversion, retained source backup, rollback, per-format monitored-edition preservation, and an unmonitored dual-catalog fallback with a private review file; current `main` also embeds the SQLite upgrade chain through migration 158 | Publish the older-schema support; validate recognized historical schemas on real data, review follow-up, source rows, identities, settings, populated rollback, and each installation channel. |
+| Related audiobook and ebook records | Current source adds book-detail links to records with a matching work-level provider ID; same-format and unrelated records are excluded. Not in published `v0.9.977`. | Verify matching and mismatched identifiers, duplicate records, missing counterparts, and behavior on representative converted data. |
+| Books index Both filter | Lists audiobook and ebook records as separate rows with a format badge; status, monitoring controls, and quality profiles use each row's media type. Bulk edits apply to each selected record. Not in published `v0.9.977`. | Verify paging, custom filters, sorting, per-format profiles, monitoring labels, selected-row edits, and reload persistence across both formats. |
+| Combined Bookshelf Formats view | Current source loads ebooks and audiobooks together, groups only when recognized Hardcover, Goodreads, or Open Library work IDs match, and retains separate details, progress, and monitoring for each record. Bulk monitoring applies to both formats. Not in published `v0.9.977`. | Check aliases, mismatched and missing IDs, duplicate editions, reload and retry behavior, and bulk/per-book monitoring on a representative library. |
 | RanobeDB light-novel search and metadata | Read-only catalog search, stored work/release IDs, request pacing, and source-content limits | Preserve catalog behavior, identity, rate limits, licensing boundaries, and failure handling. |
 | Audible marketplace selection | US, UK, France, Germany, Italy, Spain, Canada, Australia, India, Japan, and Brazil storefronts for search and ASIN lookup | Preserve marketplace configuration, defaults, language headers, and result identity. |
 | Metadata profile filters and edition ranking | Genre exclusions/autocomplete; ISBN/ASIN missing-value filters; weighted edition terms; preferred series; language-change refresh; and filename, tag, Calibre, and AudioBookShelf consumers | Preserve profile migration/serialization, ranking order, missing-evidence behavior, refresh semantics, series consumers, and manual-review boundaries. |
@@ -526,8 +582,10 @@ in both catalogs without monitoring and writes a private review file. `v0.9.977`
 aggregate-only diagnostics module. The public `.977` converter still rejects
 pre-migration-14 databases. PR #126 merged the version-aware source fix and
 migration-1 rollback fixture into `main`; its Linux, macOS, Windows, and
-PostgreSQL migration checks passed. The fix is in `main`; standard
-ChaptarrNG releases are not gated by BookshelfNG retirement acceptance.
+PostgreSQL migration checks passed. The fix is in `main`. ChaptarrNG
+publication remains frozen under the BookshelfNG retirement gate.
+The upstream-retirement matrix below tracks the separate, later ChaptarrNG to
+Chaptarr scope.
 
 <a id="chaptarrng-retirement-blockers"></a>
 
@@ -545,16 +603,16 @@ upstream release must pass behavioral, data, security, and packaging checks.
 
 | Combined capability family | ChaptarrNG features to retain | BookshelfNG contribution to the consolidated product | Upstream Chaptarr retirement gate |
 | --- | --- | --- | --- |
-| SeerrNG API and request lifecycle | Capability discovery; format/provider identity; format-scoped routes; paged library scans; pending-import status/retry/cancel; restricted SeerrNG key; scoped lookup media-type fix in upstream PR #114 (still open on 2026-10-19) | Readarr-compatible format routes, format-specific availability, and existing client settings and identities | The scoped lookup fix remains open in upstream Chaptarr PR #114 (checked 2026-10-19). The candidate's source-built migration smoke now verifies conversion of a synthetic migration-158 fixture, both migrated formats through SeerrNG's API, provider identity, capability/key checks, and pending request add/poll/cancel. This does not prove representative operator data, successful provider fulfillment, retries, availability/history, unchanged production settings, proxy deployments, or channel handoff. A pending-import engine alone is not the client contract. |
+| SeerrNG API and request lifecycle | Capability discovery; format/provider identity; format-scoped routes; paged library scans; pending-import status/retry/cancel; restricted SeerrNG key; scoped lookup media-type fix in [upstream PR #114](https://github.com/Chaptarr/chaptarr/pull/114) (still open on 2026-10-20) | Readarr-compatible format routes, format-specific availability, and existing client settings and identities | The scoped lookup fix remains open in upstream Chaptarr PR #114 (checked 2026-10-20). The candidate's source-built migration smoke now verifies conversion of a synthetic migration-158 fixture, both migrated formats through SeerrNG's API, provider identity, capability/key checks, and pending request add/poll/cancel. This does not prove representative operator data, successful provider fulfillment, retries, availability/history, unchanged production settings, proxy deployments, or channel handoff. A pending-import engine alone is not the client contract. |
 | Metadata providers and identity | Chaptarr's resolver, V5 pipeline, and provider-specific identities; RanobeDB light-novel provider and Audible marketplace selection | Native Hardcover client and controls; selectable supplemental catalogs; per-field source choices; Goodreads/Readarr continuity and qualified IDs | Keep both identity models resolvable or provide tested migration/adapter behavior; preserve provider choice, credentials, caches, rate-limit handling, and refresh policy. |
 | Matching, recovery, and edition preferences | Narrator/publisher-aware matching; metadata-profile filters, weighted edition terms, preferred series, and language-change refresh; alternate-edition fallback, manual-match provenance, and import recovery | Cross-catalog unmapped recovery; normalized title/identifier search; configurable thresholds; weighted edition terms; preferred series; narrator tags and evidence | Preserve candidate ranking, identity constraints, missing-data neutrality, ambiguity handling, manual review, and no-false-match/no-delete behavior with the original edge cases. |
 | Format records, profiles, and storage | ChaptarrNG's media-specific models, roots, and standalone ebook/audiobook workflows | Multiple compatible formats on a book; format-specific folders and profile overrides; previewable moves and extra-file handling | Preserve file-to-book relationships, profile fallback, paths, move previews, collisions, and sibling-format isolation; convert existing data without moving media unexpectedly. |
-| Audiobook processing and tags | Native conversion, multipart handling, part-number tokens, preserved M4B chapters, and AudioBookShelf metadata/cover propagation | Opt-in M4B merge behavior, chapter/part semantics, and BookshelfNG's byte-preserving MPEG-4 `chpl` TagLib patch | PR #129 merged the opt-in merge setting, tagged track order/titles, conservative conversion fallback, and move/copy source handling. Embedded-chapter tests found that a successful profile-based multipart M4B merge left source tracks behind in Move mode; fixture isolation alone did not fix it. PR #131 commit `c4fa8125` fixes source cleanup after successful profile merges while Copy mode retains originals. Exact-head Build [39288736177](https://github.com/snapetech-org/chaptarrng/actions/runs/39288736177) passed Linux's full suite and pinned-tool M4B checks, PostgreSQL migration smoke, and release-note contract. Windows build and full test steps passed; macOS was cancelled before starting, so the cross-platform matrix is incomplete. CodeQL, security, dependency review, and NuGet checks passed. Representative media and restart/resume remain open, and the implementation is not in public `.977`. |
-| Acquisition and download safety | Built-in Direct Download indexer/client, staged state, API-key downloads, browser fallback, redirect validation, scheduled missing-book search, MyAnonaMouse account-health warnings, and safe import recovery | Existing-torrent adoption/seeding preservation and BookshelfNG-specific source ordering, transfer recovery, and client compatibility | ChaptarrNG PR #131 application-code snapshot `0612cb4c` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), including Linux, macOS, Windows, PostgreSQL migration, and runner-receipt checks. Regression coverage includes ordered source fallback, legacy URL-array settings, API-key preservation/redaction, durable state across restart, interrupted-transfer handling, browser fallback recovery, redirect-hop validation, private-address rejection, and redirect-body clearing. The row remains open for representative client/source configurations, installed-state handoff, torrent wrong-category/seeding behavior, destination ownership, and architecture-specific browser deployment acceptance. |
+| Audiobook processing and tags | Native conversion, multipart handling, part-number tokens, preserved M4B chapters, and AudioBookShelf metadata/cover propagation | Opt-in M4B merge behavior, chapter/part semantics, and BookshelfNG's byte-preserving MPEG-4 `chpl` TagLib patch | PR #129 merged the opt-in merge setting, tagged track order/titles, conservative conversion fallback, and move/copy source handling. Embedded-chapter tests found that a successful profile-based multipart M4B merge left source tracks behind in Move mode; fixture isolation alone did not fix it. PR #131 commit `c4fa8125` fixes source cleanup after successful profile merges while Copy mode retains originals. Earlier Build [39288736177](https://github.com/snapetech-org/chaptarrng/actions/runs/39288736177) passed Linux's full suite and pinned-tool M4B checks; macOS was cancelled before runner acquisition on that earlier candidate. PR #131 later merged, and exact-head Build [39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961) passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks. Representative media and restart/resume remain open, and the implementation is not in public `.977`. |
+| Acquisition and download safety | Built-in Direct Download indexer/client, staged state, API-key downloads, browser fallback, redirect validation, scheduled missing-book search, MyAnonaMouse account-health warnings, safe import recovery, and interactive adoption of a matching torrent already in the selected client | Existing-torrent adoption/seeding preservation and BookshelfNG-specific source ordering, transfer recovery, and client compatibility | ChaptarrNG PR #131 application-code snapshot `0612cb4c` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), including Linux, macOS, Windows, PostgreSQL migration, and runner-receipt checks. Regression coverage includes ordered source fallback, legacy URL-array settings, API-key preservation/redaction, durable state across restart, interrupted-transfer handling, browser fallback recovery, redirect-hop validation, private-address rejection, and redirect-body clearing. The current working tree now includes hash-based torrent detection, explicit adoption, and queue tracking without a second download. The row remains open for representative client/source configurations, installed-state handoff, wrong-category and seeding behavior, destination ownership, and architecture-specific browser deployment acceptance. |
 | Standalone integrations and privacy | ChaptarrNG standalone app; Calibre Content Server conversion/push, AudioBookShelf and Grimmory metadata propagation, BookLore BookDrop upload, Emby/Jellyfin library refresh integrations, and an optional aggregate-only diagnostics plugin | BookLore BookDrop, Calibre, MyAnonamouse, Audiobookshelf sidecars, and optional aggregate-only diagnostics | Preserve every integration and its settings/data contract; verify BookDrop streaming and recovery; diagnostics stays off without an explicit opt-in. Migration preserves an existing BookshelfNG opt-in only when both the legacy enable flag and archived optional-module marker are present. |
 | Operational events, observability, and import-list history | Optional MQTT/Home Assistant gateway and canonical lifecycle events; low-cardinality Prometheus metrics; durable import-list sync preview/history | Optional aggregate-only diagnostics and existing release/validation workflows | Preserve opt-in defaults, event contracts, metric cardinality/security, import-list cursors, preview semantics, and historical records; verify restart and failure behavior. |
-| Backup, authentication, and security | Encrypted full-backup archives; API-key controls, login throttling, response redaction, update verification, and request hardening | Encrypted portable backups; legacy API/query-key aliases; trusted-proxy and request-limit behavior; Bookshelf secrets and existing credentials | Restore existing ChaptarrNG and Bookshelf archives; preserve credentials and rollback; keep restrictions at least as strong and never log secrets. |
-| Library browsing, performance, and operator workflow | Server-paged views and full-library API paging with totals; large-library query and cache improvements; root-folder backfill; managed file downloads; mobile accessibility; per-folder progress; cancellation safeguards | Previewable media moves, bulk moves, and extra-file handling | Preserve page completeness and order, root containment, no-file-move backfill, bounded memory/query behavior, responsive workflows, cancellation, and progress on representative large libraries. |
+| Backup, authentication, and security | Encrypted full-backup archives; API-key controls, login throttling, response redaction, update verification, and request hardening | Encrypted portable backups; legacy API/query-key aliases; explicit trusted-proxy and CORS allowlists; per-client request limits; bounded body size; request correlation header; Bookshelf secrets and existing credentials | Current `main` ports the BookshelfNG proxy, CORS, rate-limit, request-size, request-ID, and API-key query-control behavior. `CHAPTARR__AUTH__ALLOWAPIKEYQUERY=false` disables `?apikey=`; the legacy `BOOKSHELF_ALLOW_API_KEY_QUERY=false` value remains supported when the ChaptarrNG option is unset. `CHAPTARR__AUTH__SEERRAPIKEY` takes precedence over the legacy `BOOKSHELF_SEERRNG_API_KEY`; the restricted SeerrNG credential cannot read global configuration or health endpoints and must scope history/file reads to one book. General request bodies default to 16 MiB (1–128 MiB configurable); the backup restore route keeps its separate 1 GiB upload limit. These source changes are not in `.977`. Validate configured proxies/origins and representative backup restores before cutover; preserve credentials and rollback, keep restrictions at least as strong, and never log secrets. |
+| Library browsing, performance, and operator workflow | Server-paged views and full-library API paging with totals; large-library query and cache improvements; root-folder backfill; managed file downloads; mobile accessibility; per-folder progress; cancellation safeguards | Previewable media moves, bulk moves, CLI helpers, and extra-file handling; see [Media moves](MEDIA_MOVES.md) | Preserve page completeness and order, root containment, no-file-move backfill, bounded memory/query behavior, responsive workflows, cancellation, and progress on representative large libraries. |
 | Release, package, and update channels | ChaptarrNG image at `ghcr.io/snapetech-org/chaptarrng`, Unraid identity, gated BookshelfNG aliases, and retired YunoHost publishing; a fail-closed same-name Helm chart candidate preserves BookshelfNG workload and PVC identities | BookshelfNG GHCR/Docker Hub tags, Unraid template, native installers, Linux package channels, Helm, and legacy update behavior | Preserve each retained channel or record an explicit maintainer decision to retire it; test historical installs, upgrades, package/image/service/data identities, and rollback. Helm still needs a published chart-source handoff plus installed PVC/GitOps upgrade and rollback acceptance. No single redirect reaches every installed copy. |
 | Localization | Twelve additional language catalogs, including Indonesian and Traditional Chinese, AudioBookShelf translations, locale metadata, English fallback, and locale-aware workflows | No separate BookshelfNG locale feature was identified; inherited keys remain in the source-path audit | Keep all supported strings, fallback behavior, and locale selection; complete native-speaker review and run translation-key and rendered-UI checks against the released upstream build. |
 | Data, database, and API compatibility | Existing ChaptarrNG databases, configuration, local IDs, SeerrNG links, migration-158 SQLite import/rollback, older SQLite upgrade candidate, paged library API, and PostgreSQL TLS settings | BookshelfNG databases/configuration and their provider identities, local IDs, settings, histories, and files | Keep each source recoverable; preserve identities and references; prove older-schema rollback, upgrade, restart, TLS validation, and populated-database behavior. |
@@ -598,13 +656,15 @@ coverage does not prove older-schema behavior on real data, PostgreSQL source
 conversion, populated real-data rollback, every provider/settings/client
 contract, semantic feature parity, or compatibility with every installation
 channel. Each capability and applicable upgrade, rollback, and redirect path
-remains an independent replacement consideration. These migration gaps do not
-block standard ChaptarrNG releases.
+remains an independent replacement consideration. The current retirement
+release freeze applies to standard ChaptarrNG releases as well as legacy
+bridges until the acceptance gates close.
 
-Standard releases publish the ChaptarrNG identities. Old BookshelfNG package
-IDs and mutable image aliases remain untouched unless the shared
-`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` repository variable is explicitly set to
-`true` by a maintainer.
+Standard ChaptarrNG releases require both `CHAPTARRNG_RELEASE_READY` and
+`BOOKSHELFNG_RELEASE_READY`. Publishing old BookshelfNG package IDs, image
+aliases, or the Helm chart additionally requires
+`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED=true` and an explicit bridge opt-in. The
+legacy bridge remains disabled.
 
 ## What would allow replacement
 

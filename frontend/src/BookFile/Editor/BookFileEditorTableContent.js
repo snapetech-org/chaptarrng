@@ -2,6 +2,7 @@ import reduceRight from 'lodash/reduceRight';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Alert from 'Components/Alert';
+import Button from 'Components/Link/Button';
 import SelectInput from 'Components/Form/SelectInput';
 import SpinnerButton from 'Components/Link/SpinnerButton';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
@@ -98,6 +99,7 @@ class BookFileEditorTableContent extends Component {
       error,
       items,
       qualities,
+      onRetryPress,
       dispatchDeleteBookFile,
       ...otherProps
     } = this.props;
@@ -130,7 +132,12 @@ class BookFileEditorTableContent extends Component {
 
         {
           !isFetching && error ?
-            <Alert kind={kinds.DANGER}>{error}</Alert> :
+            <Alert kind={kinds.DANGER} role="alert">
+              <div>{error}</div>
+              <Button size="small" onPress={onRetryPress}>
+                {translate('Retry')}
+              </Button>
+            </Alert> :
             null
         }
 
@@ -191,7 +198,7 @@ class BookFileEditorTableContent extends Component {
                   name="quality"
                   value="selectQuality"
                   values={qualityOptions}
-                  isDisabled={!hasSelectedFiles}
+                  isDisabled={!hasSelectedFiles || Boolean(error)}
                   onChange={this.onQualityChange}
                 />
               </div>
@@ -217,7 +224,8 @@ BookFileEditorTableContent.propTypes = {
   isDeleting: PropTypes.bool.isRequired,
   isFetching: PropTypes.bool.isRequired,
   isPopulated: PropTypes.bool.isRequired,
-  error: PropTypes.object,
+  error: PropTypes.string,
+  onRetryPress: PropTypes.func.isRequired,
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   qualities: PropTypes.arrayOf(PropTypes.object).isRequired,
   onDeletePress: PropTypes.func.isRequired,

@@ -252,6 +252,31 @@ namespace Chaptarr.Core.Test.Backup
             });
         }
 
+        [TestCase(".db")]
+        [TestCase(".xml")]
+        public void should_validate_and_stage_a_supported_bookshelf_database_from_a_raw_backup(string extension)
+        {
+            var backupPath = Path.Combine(_tempFolder, $"bookshelf_backup{extension}");
+            CreateBookshelfDatabase(backupPath);
+            _subject = CreateSubject(new DatabaseRestorationService(new TestDiskProvider(new FileSystem()), _appFolderInfo));
+
+            _subject.Restore(backupPath);
+
+            var restoredConnectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = _appFolderInfo.GetDatabaseRestore(),
+                Mode = SqliteOpenMode.ReadOnly,
+                Pooling = false
+            }.ToString();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(restoredConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(File.Exists(_appFolderInfo.GetDatabaseRestore()), Is.True);
+                Assert.That(File.Exists(backupPath), Is.False);
+            });
+        }
+
         private static void CreateBookshelfDatabase(string path)
         {
             var assembly = Assembly.GetExecutingAssembly();

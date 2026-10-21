@@ -13,6 +13,7 @@ using NzbDrone.Core.MetadataSource.BookInfo;
 using NzbDrone.Core.MetadataSource.Hardcover;
 using Moq;
 using SearchJsonResource = NzbDrone.Core.MetadataSource.Goodreads.SearchJsonResource;
+using IGoodreadsSearchProxy = NzbDrone.Core.MetadataSource.Goodreads.IGoodreadsSearchProxy;
 
 namespace Chaptarr.Core.Test.MetadataSource.BookInfo
 {
@@ -135,7 +136,9 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
 
         private static (BookInfoProxy Proxy, ConfigServiceProxy Config) CreateProxy(
             IHardcoverSearchClient hardcoverSearchClient,
-            IHardcoverMetadataProxy hardcoverMetadataProxy = null)
+            IHardcoverMetadataProxy hardcoverMetadataProxy = null,
+            IAdditionalBookMetadataProxy additionalBookMetadataProxy = null,
+            IGoodreadsSearchProxy goodreadsSearchProxy = null)
         {
             var configService = DispatchProxy.Create<IConfigService, ConfigServiceProxy>();
             var config = (ConfigServiceProxy)configService;
@@ -144,16 +147,20 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 configService,
                 new MetadataServerHealthService(logger),
                 logger);
-            var additionalMetadataProxy = new Mock<IAdditionalBookMetadataProxy>();
-            additionalMetadataProxy.Setup(x => x.ApplyFieldSourcePreferences(It.IsAny<Book>()))
-                .Returns<Book>(book => book);
-            additionalMetadataProxy.Setup(x => x.ApplyAuthorImageSourcePreference(It.IsAny<Author>(), It.IsAny<Book>()))
-                .Returns<Author, Book>((author, _) => author);
+            if (additionalBookMetadataProxy == null)
+            {
+                var additionalMetadataProxy = new Mock<IAdditionalBookMetadataProxy>();
+                additionalMetadataProxy.Setup(x => x.ApplyFieldSourcePreferences(It.IsAny<Book>()))
+                    .Returns<Book>(book => book);
+                additionalMetadataProxy.Setup(x => x.ApplyAuthorImageSourcePreference(It.IsAny<Author>(), It.IsAny<Book>()))
+                    .Returns<Author, Book>((author, _) => author);
+                additionalBookMetadataProxy = additionalMetadataProxy.Object;
+            }
 
             var proxy = new BookInfoProxy(
                 httpClient: null,
                 cachedHttpClient: null,
-                goodreadsSearchProxy: null,
+                goodreadsSearchProxy: goodreadsSearchProxy,
                 hardcoverSearchClient: hardcoverSearchClient,
                 audibleCatalogProxy: null,
                 authorService: Mock.Of<IAuthorService>(service => service.FindByProviderId(It.IsAny<string>(), It.IsAny<string>()) == null),
@@ -164,7 +171,7 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 logger: logger,
                 cacheManager: new CacheManager(),
                 metadataServerHealthGate: healthGate,
-                additionalBookMetadataProxy: additionalMetadataProxy.Object,
+                additionalBookMetadataProxy: additionalBookMetadataProxy,
                 hardcoverMetadataProxy: hardcoverMetadataProxy);
 
             return (proxy, config);
@@ -184,7 +191,7 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             });
             var (proxy, _) = CreateProxy(client);
 
-            Assert.That(proxy.SearchForNewEntity(" Matt Dinniman "), Has.Count.EqualTo(1));
+            Assert.That(proxy.SearchForNewEntity(" Matt Dinniman ", "hardcover"), Has.Count.EqualTo(1));
             Assert.That(proxy.SearchForNewEntity("matt dinniman", "hardcover"), Has.Count.EqualTo(1));
 
             Assert.That(client.CallCount, Is.EqualTo(1));
@@ -359,6 +366,57 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 Assert.That(books, Has.Count.EqualTo(1));
                 Assert.That(authors, Has.Count.EqualTo(1));
                 Assert.That(books.Single().HardcoverBookId, Is.EqualTo("hc:101"));
+            });
+        }
+
+        [Test]
+        public void should_include_configured_supplemental_catalogs_in_native_hardcover_search()
+        {
+            var nativeProvider = new NativeHardcoverMetadataProxy();
+            var additionalMetadataProxy = new Mock<IAdditionalBookMetadataProxy>();
+            additionalMetadataProxy.Setup(x => x.Search("Native Book"))
+                .Returns(new List<Book> { new() { Title = "Supplemental Book" } });
+            additionalMetadataProxy.Setup(x => x.ApplyFieldSourcePreferences(It.IsAny<Book>()))
+                .Returns<Book>(book => book);
+            additionalMetadataProxy.Setup(x => x.ApplyAuthorImageSourcePreference(It.IsAny<Author>(), It.IsAny<Book>()))
+                .Returns<Author, Book>((author, _) => author);
+            var (proxy, _) = CreateProxy(
+                new RecordingHardcoverSearchClient(() => new List<object>()),
+                nativeProvider,
+                additionalMetadataProxy.Object);
+
+            var results = proxy.SearchForNewEntity("Native Book", "hardcover");
+
+            Assert.That(results.OfType<Book>().Select(book => book.Title), Does.Contain("Supplemental Book"));
+        }
+
+        [Test]
+        public void should_keep_an_explicit_goodreads_search_out_of_native_hardcover_mode()
+        {
+            var nativeProvider = new NativeHardcoverMetadataProxy();
+            var goodreadsSearchProxy = new Mock<IGoodreadsSearchProxy>();
+            goodreadsSearchProxy.Setup(x => x.Search("native book"))
+                .Returns(new List<SearchJsonResource>());
+            var additionalMetadataProxy = new Mock<IAdditionalBookMetadataProxy>();
+            additionalMetadataProxy.Setup(x => x.Search(It.IsAny<string>()))
+                .Returns(new List<Book>());
+            additionalMetadataProxy.Setup(x => x.ApplyFieldSourcePreferences(It.IsAny<Book>()))
+                .Returns<Book>(book => book);
+            additionalMetadataProxy.Setup(x => x.ApplyAuthorImageSourcePreference(It.IsAny<Author>(), It.IsAny<Book>()))
+                .Returns<Author, Book>((author, _) => author);
+            var (proxy, _) = CreateProxy(
+                new RecordingHardcoverSearchClient(() => new List<object>()),
+                nativeProvider,
+                additionalMetadataProxy.Object,
+                goodreadsSearchProxy.Object);
+
+            var results = proxy.SearchForNewEntity("Native Book", "goodreads");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(results, Is.Empty);
+                Assert.That(goodreadsSearchProxy.Invocations, Has.Count.EqualTo(1));
+                Assert.That(nativeProvider.WorkLookups, Is.Zero);
             });
         }
 

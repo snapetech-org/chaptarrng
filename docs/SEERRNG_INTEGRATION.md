@@ -9,6 +9,15 @@ availability statistics. It also advertises `editionCatalog` for clients that
 show a person the known editions and audiobook performances available for a
 book.
 
+One ChaptarrNG instance can serve both ebook and audiobook entries. Configure
+the SeerrNG services to use the same ChaptarrNG URL and dedicated service key,
+then select the correct media type and root folder for each entry. ChaptarrNG
+keeps format-specific library paths, monitoring, and profiles separate. Do not
+point two ChaptarrNG instances at one SQLite database; separate BookshelfNG
+databases require separate migrations because the migration tool does not
+merge histories, profiles, or settings. See the
+[BookshelfNG migration guide](MIGRATE_FROM_BOOKSHELFNG.md).
+
 For a broader overview of maintained behavior beyond the shared Chaptarr base,
 see [ChaptarrNG fork changes and upstream replacement criteria](./FORK_FEATURES.md).
 Chaptarr's current development branch has its own pending-import subsystem;
@@ -26,13 +35,14 @@ multiple narrator names alone do not imply a full-cast production. Facade
 requests receive the edition ID for the selected provider dialect.
 
 **Availability:** current ChaptarrNG source includes the edition catalog,
-series narrator matrix, and wanted-edition variant capability. The migration
-candidate also returns provider IDs in the selected facade dialect, proxies
-remote cover URLs, and derives ownership from the media-file service. Public
-ChaptarrNG `v0.9.977` predates these endpoints. PR #131 remains a draft, and
-release publication stays frozen until the BookshelfNG retirement gates pass.
+series narrator matrix, and wanted-edition variant capability. The merged
+migration source also returns provider IDs in the selected facade dialect,
+proxies remote cover URLs, and derives ownership from the media-file service. Public
+ChaptarrNG `v0.9.977` predates these endpoints. PR #131 merged to `main` on
+2026-10-20; release publication stays frozen until the BookshelfNG retirement
+gates pass.
 
-The PR #131 candidate also adds an **Editions and Narrations** tab to the book
+Merged PR #131 also adds an **Editions and Narrations** tab to the book
 details page. It lists known editions with narrators, production, duration,
 abridgement, language, publisher, and selected/file-owned status. Metadata
 that does not state a value is shown as not provided rather than inferred.
@@ -45,9 +55,9 @@ translation, type, targeted ESLint, and Stylelint checks pass. Exact-head Build
 run [39205452341](https://github.com/snapetech-org/chaptarrng/actions/runs/39205452341)
 passed Linux, macOS, Windows, PostgreSQL migration, release-note, and
 runner-receipt checks; CodeQL, dependency review, security scan, and NuGet
-submission also passed. The UI is source-only in public `v0.9.977`, and the
-candidate remains draft while operator-data, full SeerrNG workflow, rollback,
-and channel acceptance remain open.
+submission also passed. The UI is source-only in public `v0.9.977`. PR #131 is
+merged, but operator-data, full SeerrNG workflow, rollback, and channel
+acceptance remain open, so release publication stays frozen.
 
 **Prior PR #131 application-code validation (2026-10-19):** snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed [Build 39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract. [CodeQL 39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), [security 39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), [NuGet 39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and [dependency review 39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. The SeerrNG adapter and request-route unit suite at source commit `b810153c` passed 4 files / 283 tests. The built Linux artifact also passed the earlier empty-library API and service-key smoke. The populated source-build check for later code is recorded below.
 
@@ -61,18 +71,42 @@ manager, then use its value as the API key in SeerrNG under **Settings →
 Services → Bookshelf**. Keep the regular ChaptarrNG API key separate; it keeps
 its full administrative access.
 
+`CHAPTARR__AUTH__SEERRAPIKEY` takes precedence. If it is unset, ChaptarrNG
+also accepts the legacy `BOOKSHELF_SEERRNG_API_KEY`, so existing container
+environment settings can survive a drop-in migration. Remove the old variable
+to revoke that fallback; set the new value explicitly to rotate the key.
+
 The SeerrNG credential can inspect book libraries, profiles, queue and history,
-look up books and authors, add books, update an individual book, run a single
-book search, read pending author imports, and cancel a pending author import.
+root folders, book files, edition catalogs, audiobook narrator comparisons,
+and command status; look up books and authors; add books; update an individual
+book; run a single book search; set a series narrator without overriding
+existing book values; and read or cancel pending author imports.
 It can access the native `/api/v1` routes and the advertised
 `/readarr/{dialect}/{mediaType}/api/v1` compatibility routes. Media covers are
 available so the SeerrNG UI can display book artwork.
 
-The credential cannot change global settings, delete books or authors, delete
-files, run other commands, or use author media-move operations. Those routes
-remain available only through the regular API key or an administrator session.
+The narrator matrix requires the single `mediaType=audiobook` query value. The
+series narrator preference update also requires that media type and accepts
+only `narrator`, `applyToAllBooks=true`, and `overrideExisting=false`. This
+keeps the dedicated service credential from changing ebook-scoped narrator
+state or overwriting an existing preference. SeerrNG's format-scoped Chaptarr
+adapter supplies the audiobook query value for these requests.
+
+The credential cannot read or change global settings or API-key endpoints,
+delete books or authors, delete files, run other commands, or use author
+media-move operations. This includes `/config/host`, `/config/hardcover`,
+`/config/development`, and `/system/health`. Book-file and history reads must
+include one positive `bookId`. Those routes remain available only through the
+regular API key or an administrator session.
 SeerrNG's standard request, search, status, and pending-import workflows use
 the restricted route set.
+
+Both credentials can use the `X-Api-Key` or `Authorization: Bearer` header.
+For Readarr-compatible clients, `?apikey=` remains enabled by default. Set
+`CHAPTARR__AUTH__ALLOWAPIKEYQUERY=false` to reject it; if that setting is
+unset, `BOOKSHELF_ALLOW_API_KEY_QUERY=false` remains honored during migration.
+SignalR's `access_token` query parameter is unaffected. Prefer a header over a
+URL when possible; see [HTTP security settings](HTTP_SECURITY.md).
 
 For older ChaptarrNG releases, use the regular API key. The separate service
 key is an additive option and does not change existing authentication.
@@ -214,7 +248,7 @@ absent, so older ChaptarrNG versions keep working.
 | Capability flag | Endpoint | Purpose |
 | --- | --- | --- |
 | `editionCatalog` | `GET /api/v1/book/{id}/editions/catalog` | Every known edition with narrators, production, abridgement, length, language, publisher, release date, cover, whether it is the monitored selection, and whether a file exists |
-| `seriesNarratorMatrix` | `GET /api/v1/series/narrators/matrix?title=…&authorId=…` | For each narrator: the volumes they cover, the volumes missing, and the volumes already owned; for each volume: the narrators known across all editions |
+| `seriesNarratorMatrix` | `GET /api/v1/series/narrators/matrix?title=…&authorId=…&mediaType=audiobook` | For each narrator: the volumes they cover, the volumes missing, and the volumes already owned; for each volume: the narrators known across all editions |
 | `wantedEditionVariants` | `POST /api/v1/book/{id}/editions/wanted` with `asNewVariant: true` | Track the chosen narration alongside the current selection instead of replacing it |
 
 Fields the metadata does not state are reported as `unknown` (`production`,
@@ -223,5 +257,7 @@ is `full-cast` when the edition is flagged GraphicAudio or its own text says
 full cast or dramatized, `solo` for exactly one narrator, and otherwise
 `unknown`.
 
-`PUT /api/v1/series/{seriesId}/narrators/preferred` (already available) makes one
-narrator the series preference; SeerrNG uses it for **Collect With**.
+`PUT /api/v1/series/{seriesId}/narrators/preferred?mediaType=audiobook`
+(already available) makes one narrator the series preference; SeerrNG uses it
+for **Collect With**. The dedicated service key allows only the request that
+leaves existing book narrator values unchanged.

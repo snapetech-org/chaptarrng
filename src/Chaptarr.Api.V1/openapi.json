@@ -1493,6 +1493,46 @@
         }
       }
     },
+    "/api/v1/book/{bookId}/related-formats": {
+      "get": {
+        "tags": [
+          "Book"
+        ],
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookRelatedFormatsResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookRelatedFormatsResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookRelatedFormatsResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/book/{bookId}/siblings": {
       "get": {
         "tags": [
@@ -1857,6 +1897,92 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PagedBookApiResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/book/shelf/authors": {
+      "get": {
+        "tags": [
+          "Book"
+        ],
+        "parameters": [
+          {
+            "name": "mediaType",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "audiobook",
+                "ebook",
+                "both"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookshelfAuthorCountResource"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/book/shelf": {
+      "get": {
+        "tags": [
+          "Book"
+        ],
+        "parameters": [
+          {
+            "name": "authorIds",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          },
+          {
+            "name": "mediaType",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "audiobook",
+                "ebook",
+                "both"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookResource"
+                  }
                 }
               }
             }
@@ -9927,6 +10053,14 @@
               "type": "boolean",
               "default": false
             }
+          },
+          {
+            "name": "seriesId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         ],
         "responses": {
@@ -13860,6 +13994,13 @@
             "type": "string",
             "nullable": true
           },
+          "workProviderIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
           "ranobeDbBookId": {
             "type": "string",
             "nullable": true
@@ -14035,6 +14176,45 @@
         },
         "additionalProperties": false
       },
+      "BookRelatedFormatResource": {
+        "type": "object",
+        "properties": {
+          "bookId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mediaType": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "narrator": {
+            "type": "string",
+            "nullable": true
+          },
+          "disambiguation": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BookRelatedFormatsResource": {
+        "type": "object",
+        "properties": {
+          "formats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookRelatedFormatResource"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "BookResourcePagingResource": {
         "type": "object",
         "properties": {
@@ -14199,6 +14379,20 @@
           },
           "monitored": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BookshelfAuthorCountResource": {
+        "type": "object",
+        "properties": {
+          "authorId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bookCount": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false
@@ -17051,6 +17245,9 @@
           "autoAddMissingAuthorsFromCompletedDownloads": {
             "type": "boolean"
           },
+          "autoInitializeFormatSpecificAuthorPaths": {
+            "type": "boolean"
+          },
           "defaultAudiobookRootFolderPath": {
             "type": "string",
             "nullable": true
@@ -17089,6 +17286,9 @@
           "extraFileExtensions": {
             "type": "string",
             "nullable": true
+          },
+          "moveExtraFilesOnRename": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -19395,6 +19595,9 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          },
+          "adoptExistingTorrent": {
+            "type": "boolean"
           },
           "downloadClient": {
             "type": "string",

@@ -290,7 +290,7 @@ const actionHandlers = {
     });
     
     // Remove duplicates within the page
-    const uniqueIds = [...new Set(ids)];
+    const uniqueIds = Array.from(new Set(ids));
     
     // Clean up old queries before updating
     const cleanedState = cleanupOldQueries(state);

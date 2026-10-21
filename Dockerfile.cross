@@ -73,9 +73,10 @@ RUN mkdir -p /app/UI && cp -r _output/UI/* /app/UI/
 RUN test -s /app/UI/index.html
 
 ###### runtime stage ######
-# Keep the cross-platform runtime on the exact .NET patch tag. MCR advertises
-# an index digest for this image but currently rejects requests by that digest.
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.12 AS runtime
+# Pin the cross-platform runtime to the patch shipped with SDK 10.0.402.
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.13-noble@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac AS runtime
+RUN dotnet --list-runtimes | grep -Fq 'Microsoft.NETCore.App 10.0.13' \
+    && dotnet --list-runtimes | grep -Fq 'Microsoft.AspNetCore.App 10.0.13'
 
 # Copy Playwright Chromium from the browser stage
 COPY --from=browser /ms-playwright /ms-playwright

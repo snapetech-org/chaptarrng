@@ -1,0 +1,112 @@
+using System.Collections.Generic;
+using Chaptarr.Api.V1.Books;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Moq;
+using NLog;
+using NUnit.Framework;
+using NzbDrone.Core.AuthorStats;
+using NzbDrone.Core.Books;
+using NzbDrone.Core.Validation;
+
+namespace Chaptarr.Core.Test.Api
+{
+    [TestFixture]
+    public class BookControllerPagedResourceFixture
+    {
+        [Test]
+        public void should_return_the_requested_page_and_full_library_count()
+        {
+            var bookService = new Mock<IBookService>();
+            bookService
+                .Setup(service => service.GetBooksPaged(150, 100, "cleanTitle", "ASC", false, null, null, null, null, null))
+                .Returns(new PagedBookResource
+                {
+                    Records = new List<Book>(),
+                    TotalCount = 321,
+                    Offset = 150,
+                    PageSize = 100
+                });
+
+            var controller = CreateController(bookService.Object);
+
+            var action = controller.GetBooksPaged(offset: 150, pageSize: 100);
+            var result = action.Result as OkObjectResult;
+            Assert.That(result, Is.Not.Null);
+            var page = (PagedBookApiResource)result!.Value!;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(page.Offset, Is.EqualTo(150));
+                Assert.That(page.PageSize, Is.EqualTo(100));
+                Assert.That(page.TotalCount, Is.EqualTo(321));
+                Assert.That(page.Records, Is.Empty);
+            });
+
+            bookService.Verify(service => service.GetBooksPaged(150, 100, "cleanTitle", "ASC", false, null, null, null, null, null), Times.Once);
+        }
+
+        [Test]
+        public void should_accept_the_configured_maximum_page_size_and_reject_larger_requests()
+        {
+            var bookService = new Mock<IBookService>();
+            bookService
+                .Setup(service => service.GetBooksPaged(0, 1000, "cleanTitle", "ASC", false, null, null, null, null, null))
+                .Returns(new PagedBookResource
+                {
+                    Records = new List<Book>(),
+                    TotalCount = 0,
+                    Offset = 0,
+                    PageSize = 1000
+                });
+
+            var controller = CreateController(bookService.Object);
+            var accepted = controller.GetBooksPaged(offset: 0, pageSize: 1000).Result as OkObjectResult;
+            Assert.That(accepted, Is.Not.Null);
+            Assert.That(((PagedBookApiResource)accepted!.Value!).PageSize, Is.EqualTo(1000));
+
+            var rejected = controller.GetBooksPaged(offset: 0, pageSize: 1001).Result as BadRequestObjectResult;
+            Assert.That(rejected, Is.Not.Null);
+            bookService.Verify(service => service.GetBooksPaged(0, 1000, "cleanTitle", "ASC", false, null, null, null, null, null), Times.Once);
+        }
+
+        private static BookController CreateController(IBookService bookService)
+        {
+            var seriesLinks = new Mock<ISeriesBookLinkService>();
+            seriesLinks.Setup(service => service.GetLinksByBook(It.IsAny<List<int>>()))
+                .Returns(new List<SeriesBookLink>());
+
+            var authorStatistics = new Mock<IAuthorStatisticsService>();
+            authorStatistics.Setup(service => service.AuthorStatistics(It.IsAny<string>()))
+                .Returns(new List<AuthorStatistics>());
+
+            return new BookController(
+                authorService: null,
+                bookService: bookService,
+                addBookService: null,
+                editionService: null,
+                editionSelector: null,
+                seriesBookLinkService: seriesLinks.Object,
+                authorStatisticsService: authorStatistics.Object,
+                mediaFileService: null,
+                coverMapper: null,
+                mediaCoverProxy: null,
+                upgradableSpecification: null,
+                signalRBroadcaster: null,
+                commandQueueManager: null,
+                eventAggregator: null,
+                metadataProfileService: null,
+                qualityProfileService: null,
+                rootFolderService: null,
+                qualityProfileExistsValidator: new QualityProfileExistsValidator(null),
+                metadataProfileExistsValidator: new MetadataProfileExistsValidator(null),
+                logger: LogManager.GetCurrentClassLogger())
+            {
+                ControllerContext = new ControllerContext
+                {
+                    HttpContext = new DefaultHttpContext()
+                }
+            };
+        }
+    }
+}
