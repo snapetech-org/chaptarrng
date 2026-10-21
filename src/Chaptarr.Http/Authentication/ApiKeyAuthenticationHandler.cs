@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NzbDrone.Common.Options;
 using NzbDrone.Core.Configuration;
 
 namespace Chaptarr.Http.Authentication
@@ -29,16 +30,22 @@ namespace Chaptarr.Http.Authentication
         private readonly string _apiKey;
         private readonly byte[] _apiKeyBytes;
         private readonly byte[] _seerrApiKeyBytes;
+        private readonly bool _allowApiKeyQuery;
 
         public ApiKeyAuthenticationHandler(IOptionsMonitor<ApiKeyAuthenticationOptions> options,
             ILoggerFactory logger,
             UrlEncoder encoder,
-            IConfigFileProvider config)
+            IConfigFileProvider config,
+            IOptions<AuthOptions> authOptions)
             : base(options, logger, encoder)
         {
             _apiKey = config.ApiKey;
             _apiKeyBytes = Encoding.UTF8.GetBytes(_apiKey ?? string.Empty);
-            _seerrApiKeyBytes = Encoding.UTF8.GetBytes(config.SeerrApiKey ?? string.Empty);
+            var seerrApiKey = config.SeerrApiKey ??
+                              Environment.GetEnvironmentVariable("BOOKSHELF_SEERRNG_API_KEY");
+            _seerrApiKeyBytes = Encoding.UTF8.GetBytes(seerrApiKey ?? string.Empty);
+            _allowApiKeyQuery = authOptions.Value.AllowApiKeyQuery ??
+                                !string.Equals(Environment.GetEnvironmentVariable("BOOKSHELF_ALLOW_API_KEY_QUERY"), "false", StringComparison.OrdinalIgnoreCase);
         }
 
         private string ParseApiKey()
@@ -71,7 +78,8 @@ namespace Chaptarr.Http.Authentication
             }
 
             // Backward compatible: query-string token support.
-            if (Request.Query.TryGetValue(Options.QueryName, out var queryValue))
+            if ((!string.Equals(Options.QueryName, "apikey", StringComparison.OrdinalIgnoreCase) || _allowApiKeyQuery) &&
+                Request.Query.TryGetValue(Options.QueryName, out var queryValue))
             {
                 return queryValue.FirstOrDefault();
             }

@@ -13,6 +13,14 @@ namespace Chaptarr.Api.V1.Config
         public WriteBookTagsType WriteBookTags { get; set; }
         public bool UpdateCovers { get; set; }
         public bool EmbedMetadata { get; set; }
+        // Legacy BookshelfNG fields retained so older clients can read and write
+        // catalog selection and configured metadata-server settings.
+        public string HardcoverAuth { get; set; }
+        public bool HasHardcoverAuth { get; set; }
+        public bool HardcoverAuthFromEnvironment { get; set; }
+        public bool ClearHardcoverAuth { get; set; }
+        public bool? EnableHardcover { get; set; }
+        public bool? EnableMetadataApi { get; set; }
         public bool? EnableGoogleBooks { get; set; }
         public bool? EnableLoc { get; set; }
         public bool? EnableGutendex { get; set; }
@@ -61,6 +69,8 @@ namespace Chaptarr.Api.V1.Config
         public static MetadataProviderConfigResource ToResource(IConfigService model)
         {
             var environmentSources = AdditionalMetadataSources.GetEnvironmentSourceOverride();
+            var hardcoverAuthFromEnvironment = Environment.GetEnvironmentVariable("HARDCOVER_AUTH");
+            var hardcoverApiKeyFromEnvironment = Environment.GetEnvironmentVariable("HARDCOVER_API_KEY");
             var googleBooksApiKeyFromEnvironment = Environment.GetEnvironmentVariable("GOOGLE_BOOKS_API_KEY");
             var europeanaApiKeyFromEnvironment = Environment.GetEnvironmentVariable("EUROPEANA_API_KEY");
             var apifyActorFromEnvironment = Environment.GetEnvironmentVariable("HARDCOVER_APIFY_GOODREADS_ACTOR");
@@ -71,6 +81,9 @@ namespace Chaptarr.Api.V1.Config
             var europeanaApiKey = EffectiveValue(europeanaApiKeyFromEnvironment, model.EuropeanaApiKey);
             var apifyActor = EffectiveValue(apifyActorFromEnvironment, model.ApifyGoodreadsActor);
             var apifyToken = EffectiveValue(apifyTokenFromEnvironment, model.ApifyToken);
+            var nativeHardcoverEnabled =
+                string.Equals(Environment.GetEnvironmentVariable("HARDCOVER"), "true", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Environment.GetEnvironmentVariable("HARDCOVER_NATIVE"), "false", StringComparison.OrdinalIgnoreCase);
             var configuredSources = AdditionalMetadataSources.GetConfiguredRuntimeSources(
                 environmentSources,
                 model.MetadataCatalogSources,
@@ -81,7 +94,7 @@ namespace Chaptarr.Api.V1.Config
                 europeanaApiKey,
                 apifyActor,
                 apifyToken,
-                null);
+                nativeHardcoverEnabled ? AdditionalMetadataSources.Hardcover : AdditionalMetadataSources.MetadataApi);
 
             return new MetadataProviderConfigResource
             {
@@ -91,6 +104,15 @@ namespace Chaptarr.Api.V1.Config
                 WriteBookTags = model.WriteBookTags,
                 UpdateCovers = model.UpdateCovers,
                 EmbedMetadata = model.EmbedMetadata,
+                HardcoverAuth = string.Empty,
+                HasHardcoverAuth = !string.IsNullOrWhiteSpace(EffectiveValue(
+                    hardcoverAuthFromEnvironment,
+                    EffectiveValue(hardcoverApiKeyFromEnvironment, model.HardcoverApiToken))),
+                HardcoverAuthFromEnvironment = !string.IsNullOrWhiteSpace(hardcoverAuthFromEnvironment) ||
+                    !string.IsNullOrWhiteSpace(hardcoverApiKeyFromEnvironment),
+                ClearHardcoverAuth = false,
+                EnableHardcover = configuredSources.Contains(AdditionalMetadataSources.Hardcover),
+                EnableMetadataApi = configuredSources.Contains(AdditionalMetadataSources.MetadataApi),
                 EnableGoogleBooks = configuredSources.Contains("googlebooks"),
                 EnableLoc = configuredSources.Contains("loc"),
                 EnableGutendex = configuredSources.Contains("gutendex"),

@@ -67,6 +67,15 @@ class SelectBookModalContentConnector extends Component {
     this.props.setInteractiveImportBooksSort({ sortKey, sortDirection });
   };
 
+  onRetryPress = () => {
+    const {
+      authorId,
+      mediaType
+    } = this.props;
+
+    this.props.fetchInteractiveImportBooks({ authorId, mediaType });
+  };
+
   onBookSelect = (bookId) => {
     const book = find(this.props.items, { id: bookId });
 
@@ -100,6 +109,7 @@ class SelectBookModalContentConnector extends Component {
         {...this.props}
         onSortPress={this.onSortPress}
         onBookSelect={this.onBookSelect}
+        onRetryPress={this.onRetryPress}
       />
     );
   }

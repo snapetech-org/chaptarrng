@@ -164,7 +164,7 @@ class BookIndexTable extends Component {
 BookIndexTable.propTypes = {
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   columns: PropTypes.arrayOf(PropTypes.object).isRequired,
-  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook']),
+  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook', 'both']),
   sortKey: PropTypes.string,
   sortDirection: PropTypes.oneOf(sortDirections.all),
   jumpToCharacter: PropTypes.string,

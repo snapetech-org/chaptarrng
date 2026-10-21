@@ -19,15 +19,15 @@ function MediaTypeToggle(props) {
   const ebookDisabled = !hasEbookRootFolder;
   const bothDisabled = includeBoth && (audiobookDisabled || ebookDisabled);
 
-  const effectiveMediaType = (!includeBoth && selectedMediaType === 'both')
-    ? 'audiobook'
-    : selectedMediaType;
+  const effectiveMediaType = (!includeBoth && selectedMediaType === 'both') ?
+    'audiobook' :
+    selectedMediaType;
 
   const options = [
     {
       key: 'audiobook',
       label: translate('Audiobooks'),
-      icon: <span className={styles.icon}>🎧</span>,
+      icon: <span className={styles.icon} aria-hidden="true">🎧</span>,
       isDisabled: audiobookDisabled
     },
     includeBoth ? {
@@ -39,7 +39,7 @@ function MediaTypeToggle(props) {
     {
       key: 'ebook',
       label: translate('Ebooks'),
-      icon: <span className={styles.icon}>📖</span>,
+      icon: <span className={styles.icon} aria-hidden="true">📖</span>,
       isDisabled: ebookDisabled
     }
   ].filter(Boolean);
@@ -49,6 +49,7 @@ function MediaTypeToggle(props) {
       <SegmentedToggle
         value={effectiveMediaType}
         options={options}
+        ariaLabel={translate('Format')}
         onChange={onMediaTypeChange}
       />
       {children}

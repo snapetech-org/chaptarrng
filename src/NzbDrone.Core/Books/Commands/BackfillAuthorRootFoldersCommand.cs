@@ -9,6 +9,8 @@ namespace NzbDrone.Core.Books.Commands
     /// </summary>
     public class BackfillAuthorRootFoldersCommand : Command
     {
+        public override string CompletionMessage => "Author root folder backfill completed";
+
         public BackfillAuthorRootFoldersCommand()
         {
             Trigger = CommandTrigger.Manual;

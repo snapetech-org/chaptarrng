@@ -44,7 +44,8 @@ namespace Chaptarr.Core.Test.Books
         {
             var author = new Author { Name = "A", AudiobookRootFolderPath = "/audiobooks" };
 
-            BuildService().ApplyDefaultRootFoldersOnAdd(author, AudioAndEbook);
+            BuildService(ConfigServiceTestProxy.Create(autoInitializeFormatSpecificAuthorPaths: true))
+                .ApplyDefaultRootFoldersOnAdd(author, AudioAndEbook);
 
             Assert.That(author.AudiobookRootFolderPath, Is.EqualTo("/audiobooks"));
             Assert.That(author.EbookRootFolderPath, Is.EqualTo("/ebooks"));
@@ -55,7 +56,8 @@ namespace Chaptarr.Core.Test.Books
         {
             var author = new Author { Name = "A", EbookRootFolderPath = "/ebooks" };
 
-            BuildService().ApplyDefaultRootFoldersOnAdd(author, AudioAndEbook);
+            BuildService(ConfigServiceTestProxy.Create(autoInitializeFormatSpecificAuthorPaths: true))
+                .ApplyDefaultRootFoldersOnAdd(author, AudioAndEbook);
 
             Assert.That(author.AudiobookRootFolderPath, Is.EqualTo("/audiobooks"));
             Assert.That(author.EbookRootFolderPath, Is.EqualTo("/ebooks"));
@@ -66,10 +68,23 @@ namespace Chaptarr.Core.Test.Books
         {
             var author = new Author { Name = "A", AudiobookRootFolderPath = "/custom-audio", EbookRootFolderPath = "/custom-ebook" };
 
-            BuildService().ApplyDefaultRootFoldersOnAdd(author, AudioAndEbook);
+            BuildService(ConfigServiceTestProxy.Create(autoInitializeFormatSpecificAuthorPaths: true))
+                .ApplyDefaultRootFoldersOnAdd(author, AudioAndEbook);
 
             Assert.That(author.AudiobookRootFolderPath, Is.EqualTo("/custom-audio"));
             Assert.That(author.EbookRootFolderPath, Is.EqualTo("/custom-ebook"));
+        }
+
+        [Test]
+        public void should_leave_missing_format_roots_unassigned_when_automatic_initialization_is_disabled()
+        {
+            var config = ConfigServiceTestProxy.Create(autoInitializeFormatSpecificAuthorPaths: false);
+            var author = new Author { Name = "A", AudiobookRootFolderPath = "/audiobooks" };
+
+            BuildService(config).ApplyDefaultRootFoldersOnAdd(author, AudioAndEbook);
+
+            Assert.That(author.AudiobookRootFolderPath, Is.EqualTo("/audiobooks"));
+            Assert.That(author.EbookRootFolderPath, Is.Null.Or.Empty);
         }
 
         [Test]
@@ -83,7 +98,8 @@ namespace Chaptarr.Core.Test.Books
             };
             var author = new Author { Name = "A", EbookRootFolderPath = "/ebooks" };
 
-            BuildService().ApplyDefaultRootFoldersOnAdd(author, rootFolders);
+            BuildService(ConfigServiceTestProxy.Create(autoInitializeFormatSpecificAuthorPaths: true))
+                .ApplyDefaultRootFoldersOnAdd(author, rootFolders);
 
             Assert.That(author.AudiobookRootFolderPath, Is.Null.Or.Empty);
         }
@@ -97,7 +113,7 @@ namespace Chaptarr.Core.Test.Books
                 new RootFolder { Id = 2, Path = "/audio-b", FolderType = FolderType.Audiobook },
                 new RootFolder { Id = 3, Path = "/ebooks", FolderType = FolderType.Ebook }
             };
-            var config = ConfigServiceTestProxy.Create();
+            var config = ConfigServiceTestProxy.Create(autoInitializeFormatSpecificAuthorPaths: true);
             ((ConfigServiceTestProxy)config).DefaultAudiobookRootFolderPath = "/audio-b";
             var author = new Author { Name = "A", EbookRootFolderPath = "/ebooks" };
 
@@ -167,6 +183,11 @@ namespace Chaptarr.Core.Test.Books
                 if (targetMethod.Name == "get_" + nameof(IConfigService.DefaultAudiobookRootFolderPath))
                 {
                     return "/audiobooks-configured";
+                }
+
+                if (targetMethod.Name == "get_" + nameof(IConfigService.AutoInitializeFormatSpecificAuthorPaths))
+                {
+                    return true;
                 }
 
                 return targetMethod.ReturnType != typeof(void) && targetMethod.ReturnType.IsValueType

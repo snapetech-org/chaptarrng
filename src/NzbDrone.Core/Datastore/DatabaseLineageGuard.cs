@@ -105,7 +105,17 @@ namespace NzbDrone.Core.Datastore
                 return DatabaseLineage.Empty;
             }
 
-            var tables = GetTables(connection, databaseType);
+            return Detect(connection, databaseType);
+        }
+
+        public static DatabaseLineage Detect(DbConnection connection, DatabaseType databaseType, DbTransaction transaction = null)
+        {
+            if (connection == null)
+            {
+                return DatabaseLineage.Empty;
+            }
+
+            var tables = GetTables(connection, databaseType, transaction);
             if (tables.Count == 0)
             {
                 return DatabaseLineage.Empty;
@@ -116,7 +126,7 @@ namespace NzbDrone.Core.Datastore
                 return DatabaseLineage.Unsupported;
             }
 
-            var authorColumns = GetColumns(connection, databaseType, "Authors");
+            var authorColumns = GetColumns(connection, databaseType, "Authors", transaction);
             if (authorColumns.Contains("AudiobookRootFolderPath") && authorColumns.Contains("EbookRootFolderPath"))
             {
                 return DatabaseLineage.Chaptarr;
@@ -124,7 +134,7 @@ namespace NzbDrone.Core.Datastore
 
             if (tables.Contains("AuthorMetadata") && tables.Contains("Books"))
             {
-                var bookColumns = GetColumns(connection, databaseType, "Books");
+                var bookColumns = GetColumns(connection, databaseType, "Books", transaction);
                 if (authorColumns.Contains("AuthorMetadataId") &&
                     bookColumns.Contains("AuthorMetadataId") &&
                     bookColumns.Contains("ForeignBookId"))
@@ -139,9 +149,10 @@ namespace NzbDrone.Core.Datastore
             return DatabaseLineage.Unsupported;
         }
 
-        private static HashSet<string> GetTables(DbConnection connection, DatabaseType databaseType)
+        private static HashSet<string> GetTables(DbConnection connection, DatabaseType databaseType, DbTransaction transaction = null)
         {
             using var command = connection.CreateCommand();
+            command.Transaction = transaction;
             command.CommandText = databaseType == DatabaseType.SQLite
                 ? "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';"
                 : "SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() AND table_type = 'BASE TABLE';";
@@ -156,12 +167,23 @@ namespace NzbDrone.Core.Datastore
             return tables;
         }
 
-        private static HashSet<string> GetColumns(DbConnection connection, DatabaseType databaseType, string tableName)
+        private static HashSet<string> GetColumns(DbConnection connection, DatabaseType databaseType, string tableName, DbTransaction transaction = null)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = databaseType == DatabaseType.SQLite
-                ? $"PRAGMA table_info(\"{tableName}\");"
-                : "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @tableName;";
+            command.Transaction = transaction;
+            if (databaseType == DatabaseType.SQLite)
+            {
+                command.CommandText = tableName switch
+                {
+                    "Authors" => "PRAGMA table_info(\"Authors\");",
+                    "Books" => "PRAGMA table_info(\"Books\");",
+                    _ => throw new ArgumentOutOfRangeException(nameof(tableName), tableName, "Only lineage tables may be inspected.")
+                };
+            }
+            else
+            {
+                command.CommandText = "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = @tableName;";
+            }
 
             if (databaseType == DatabaseType.PostgreSQL)
             {

@@ -1,5 +1,5 @@
 import { createSelector, createSelectorCreator, lruMemoize } from 'reselect';
-import hasDifferentItemsOrOrder from 'Utilities/Object/hasDifferentItemsOrOrder';
+import clientSideCollectionEqual from 'Utilities/Object/clientSideCollectionEqual.cjs';
 import createBooksClientSideCollectionSelector from './createBooksClientSideCollectionSelector';
 
 function createUnoptimizedSelector(uiSection) {
@@ -28,17 +28,9 @@ function createUnoptimizedSelector(uiSection) {
   );
 }
 
-function bookListEqual(a, b) {
-  // Reselect equality functions must return true when the inputs are EQUAL
-  // (reuse the cached result). hasDifferentItemsOrOrder returns true when
-  // they DIFFER, so it must be negated here or filtering/sorting reuses the
-  // stale unfiltered collection.
-  return !hasDifferentItemsOrOrder(a, b);
-}
-
 const createBookEqualSelector = createSelectorCreator(
   lruMemoize,
-  bookListEqual
+  clientSideCollectionEqual
 );
 
 function createBookClientSideCollectionItemsSelector(uiSection) {

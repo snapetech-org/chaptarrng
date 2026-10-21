@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 
@@ -110,6 +112,30 @@ namespace NzbDrone.Core.MediaFiles
         public static bool IsSingleFileBookContainer(string extension)
         {
             return _singleFileBookContainerSet.Contains(extension);
+        }
+
+        public static bool AreCompatibleFormats(Quality existingQuality,
+                                                string existingPath,
+                                                Quality incomingQuality,
+                                                string incomingPath)
+        {
+            var existingIsAudio = IsAudioFormat(existingQuality, existingPath);
+            var incomingIsAudio = IsAudioFormat(incomingQuality, incomingPath);
+
+            if (existingIsAudio || incomingIsAudio)
+            {
+                return existingIsAudio && incomingIsAudio;
+            }
+
+            return string.Equals(Path.GetExtension(existingPath),
+                                 Path.GetExtension(incomingPath),
+                                 StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAudioFormat(Quality quality, string path)
+        {
+            return QualityMediaTypeHelper.IsAudiobookQuality(quality) ||
+                   QualityMediaTypeHelper.GetMediaTypeFromPath(path) == BookMediaType.Audiobook;
         }
 
         private static Quality GetMatroskaAudioQuality(MediaInfoModel mediaInfo)

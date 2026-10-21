@@ -287,7 +287,8 @@ export const actionHandlers = handleThunks({
   [RESTORE_BACKUP]: function(getState, payload, dispatch) {
     const {
       id,
-      file
+      file,
+      passphrase
     } = payload;
 
     dispatch(set({
@@ -316,6 +317,9 @@ export const actionHandlers = handleThunks({
         method: 'POST',
         processData: false,
         contentType: false,
+        headers: passphrase ? {
+          'X-Bookshelf-Backup-Passphrase': passphrase
+        } : undefined,
         data: formData
       };
     } else {

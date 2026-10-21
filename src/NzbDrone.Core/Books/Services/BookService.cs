@@ -399,7 +399,7 @@ namespace NzbDrone.Core.Books
             var selectedEdition = SelectMonitoredEditionForInsert(editions, newBook.MediaType);
             if (selectedEdition != null)
             {
-                _editionService.SetMonitored(selectedEdition, false); // false = not manual selection, this is automatic import
+                _editionService.SetMonitored(selectedEdition, selectedEdition.ManualAdd);
                 newBook.ForeignEditionId = selectedEdition.ForeignEditionId;
             }
 

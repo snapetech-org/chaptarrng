@@ -61,7 +61,7 @@ namespace Chaptarr.Api.V1.Books
                 });
             }
 
-            term = ReadarrFacadeProviderIdTranslator.NormalizeWorkTerm(term, facadeContext);
+            term = ReadarrFacadeProviderIdTranslator.NormalizeLookupTerm(term, facadeContext);
 
             var requestedMediaType = MediaTypeParameterParser.ParseOptional(mediaType);
 
