@@ -109,15 +109,7 @@ jobs:
         COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}
         BOOKSHELFNG_COPR_WEBHOOK_URL: ${{ secrets.BOOKSHELFNG_COPR_WEBHOOK_URL }}
         CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
-      run: |
-        if [[ -n "$AUR_SSH_KEY" ]]; then
-          echo 'aur=true' >> "$GITHUB_OUTPUT"
-        else
-          echo 'aur=false' >> "$GITHUB_OUTPUT"
-        fi
-        [[ -n "$COPR_WEBHOOK_URL" ]] && echo 'copr=true' >> "$GITHUB_OUTPUT" || echo 'copr=false' >> "$GITHUB_OUTPUT"
-        [[ -n "$BOOKSHELFNG_COPR_WEBHOOK_URL" ]] && echo 'bookshelfng_copr=true' >> "$GITHUB_OUTPUT" || echo 'bookshelfng_copr=false' >> "$GITHUB_OUTPUT"
-        [[ -n "$CHOCOLATEY_API_KEY" ]] && echo 'chocolatey=true' >> "$GITHUB_OUTPUT" || echo 'chocolatey=false' >> "$GITHUB_OUTPUT"
+      run: bash packaging/scripts/validate-release-publisher-config.sh publishers
 
   build-aur:
     name: Validate new and legacy AUR recipes

@@ -41,6 +41,11 @@ jobs:
         BOOKSHELFNG_RELEASE_READY: ${{ vars.BOOKSHELFNG_RELEASE_READY }}
       run: ./packaging/scripts/require-release-readiness.sh
 
+    - name: Validate Discord release destination before publishing
+      env:
+        DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+      run: bash packaging/scripts/validate-release-publisher-config.sh discord
+
   validate:
     needs: preflight
     uses: ./.github/workflows/build.yml
