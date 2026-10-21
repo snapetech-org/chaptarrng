@@ -1,7 +1,8 @@
 # Native package channels
 
 Status checked 2026-10-21. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
-is the latest published release. GitHub Release archives are the payload for
+is the latest published release; [main](https://github.com/snapetech-org/chaptarrng/tree/main) includes a candidate-
+only BookshelfNG Debian bridge builder. GitHub Release archives are the payload for
 native packages; the standard ChaptarrNG container is built separately from
 the same application source and migration code. Package recipes add service
 and filesystem integration. See the
@@ -40,11 +41,14 @@ identity. A package-content contract test checks the payload paths and service
 identity and mocks the maintainer-script stop/start handoff. A local candidate
 build used the checksum-verified public ChaptarrNG `v0.9.977` Linux x64 archive;
 inspection of the public BookshelfNG `0.4.21.71-1` package confirmed the Debian
-package identity and `/etc/bookshelfng/bookshelfng.env` conffile. The candidate
-has not been installed through apt/dpkg against that package, exercised with a
-real systemd service, or published to a GitHub Release or Ubuntu PPA. Keep this
-channel disabled until those checks and representative-data rollback
-acceptance pass.
+package identity and `/etc/bookshelfng/bookshelfng.env` conffile. An isolated
+dpkg transaction upgraded that actual `.71` package to the candidate and
+downgraded back, preserving an edited environment file and data canary. The
+transaction bypassed dependency checks and mocked systemd; it did not run the
+application or convert a database. There is no apt repository update path, and
+the candidate has not been exercised on a real systemd host or published to a
+GitHub Release or Ubuntu PPA. Keep this channel disabled until those checks and
+representative-data rollback acceptance pass.
 
 ## Standalone archive coverage
 
@@ -70,7 +74,7 @@ validated or that platform is explicitly retired.
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
 | --- | --- | --- | --- |
-| Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; a local `bookshelfng` candidate built from the public ChaptarrNG archive and matches the old package identity/conffile contract | Run an isolated dpkg upgrade/downgrade from the actual public package, verify service handoff and data preservation, then validate the PPA/direct-download update path; no candidate is published |
+| Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; an isolated dpkg upgrade/downgrade to the candidate and back preserved a modified conffile and data canary | Validate dependency resolution, real systemd startup, database migration/restore, and the PPA/direct-download update path; no candidate is published |
 | AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |

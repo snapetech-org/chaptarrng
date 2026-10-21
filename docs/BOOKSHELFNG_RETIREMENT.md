@@ -1,12 +1,16 @@
 # BookshelfNG retirement status
 
 **Reviewed:** 2026-10-21. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977`
-remain the latest published releases. ChaptarrNG source changes are on
-[main](https://github.com/snapetech-org/chaptarrng/tree/main); no release, package, image, installer, or
-migration bridge has been published. Release publication remains frozen, and
-the source and distribution publishers remain fail-closed with their readiness
-variables unset. This is the current handoff summary for moving BookshelfNG
-users to ChaptarrNG. The detailed feature inventory remains in the
+remain the latest public app releases. ChaptarrNG main is
+([current source](https://github.com/snapetech-org/chaptarrng/tree/main))
+and now contains a candidate-only Debian bridge builder. Its local dpkg
+round-trip passed against the public BookshelfNG `.71` package and preserved a
+modified config and data canary; systemd and dependency checks were mocked.
+No compatibility package or migration bridge has been published. Release
+publication remains frozen, and the source and distribution publishers remain
+fail-closed with their readiness variables unset. This is the current handoff
+summary for moving BookshelfNG users to ChaptarrNG. The detailed feature
+inventory remains in the
 [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
 The exact revision-pinned path audit stays canonical in BookshelfNG's
@@ -73,11 +77,12 @@ runtime-pack build is still running. The earlier attempt
 finished with failures in those two archive jobs because GNU tar tried to
 change metadata on existing shared .NET directories. The installer now uses
 `--no-overwrite-dir`, and the targeted permission test passes. Current
-ChaptarrNG `main` is `ac9d0f67`, which includes this fix; its Build workflow is
-[39582456911](https://github.com/snapetech-org/chaptarrng/actions/runs/39582456911).
-The audit target below remains deliberately pinned to `4d9c4b2d`; these
-newer source changes do not alter its path dispositions. Public `v0.9.977`
-assets remain unchanged, and no release or channel handoff is authorized.
+ChaptarrNG `main` includes that fix and the candidate Debian bridge; the current
+source is on [main](https://github.com/snapetech-org/chaptarrng/tree/main).
+The audit target below remains pinned to `4d9c4b2d` and is historical. Changes
+after that target, including the Debian bridge, have not been reviewed in the
+path ledger. Public `v0.9.977` assets remain unchanged, and no release or
+channel handoff is authorized.
 
 The current migration fix is ChaptarrNG commit
 `c2535e712aa7c1ecbf29347a7e1e9d477bb870e3`. It maps legacy
@@ -675,7 +680,7 @@ and follow the
 
 | Channel | Published ChaptarrNG state | BookshelfNG handoff state |
 | --- | --- | --- |
-| Debian / Ubuntu `.deb` and PPA | No ChaptarrNG package is published. | A candidate `bookshelfng` Debian package recipe and builder now install the ChaptarrNG release payload while retaining the service, environment file, and `/var/lib/bookshelfng` data path. A local build from the public `.977` archive and inspection of the checksum-verified BookshelfNG `.71` `.deb` confirm the package identity and conffile contract. dpkg upgrade/downgrade, live systemd handoff, PPA source publication, and representative-data rollback remain open. |
+| Debian / Ubuntu `.deb` and PPA | No ChaptarrNG package is published. | A candidate `bookshelfng` Debian package recipe and builder install the ChaptarrNG release payload while retaining the service, environment file, and `/var/lib/bookshelfng` data path. An isolated dpkg round-trip upgraded the actual public BookshelfNG `.71` package to the local candidate and back, preserving an edited conffile and data canary. Dependency checks and systemd were mocked; live service startup, database migration/restore, PPA publication, and representative-data rollback remain open. |
 | Docker / GHCR | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same published multi-architecture image digest. | Legacy aliases remain unchanged. The current ChaptarrNG source candidate builds separate compatibility targets: `latest`, `main`, and `hardcover` preserve native Hardcover mode; `softcover` preserves Goodreads mode. Local BuildKit target checks and hosted alias/bridge regression scripts pass, and the exact Linux binary passed a synthetic provider-mode migration and rollback rehearsal. The GHCR image build, manifests, and alias dispatch were not run or published; the bridge stays disabled. Pinned version tags and digests need an operator change. |
 | AUR | `chaptarrng-bin 0.9.977-1` is published. | `bookshelfng-bin 0.4.21.71-1` remains public. A local `.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and active systemd service handoff checks. The test used a network-isolated Arch container and a synthetic migration-158 database; representative operator data and host-specific settings remain open. |
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |

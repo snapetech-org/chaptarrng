@@ -43,6 +43,47 @@ grep -Fxq '/etc/bookshelfng/bookshelfng.env' "$task_root/control/conffiles"
 grep -Fq 'systemctl stop bookshelfng.service' "$task_root/control/preinst"
 grep -Fq 'systemd-tmpfiles --create /usr/lib/tmpfiles.d/bookshelfng.conf' "$task_root/control/postinst"
 
+legacy_root="$task_root/legacy-package"
+mkdir -p "$legacy_root/DEBIAN" "$legacy_root/usr/lib/bookshelfng" \
+  "$legacy_root/usr/bin" "$legacy_root/etc/bookshelfng" \
+  "$legacy_root/lib/systemd/system" "$legacy_root/usr/lib/sysusers.d" \
+  "$legacy_root/usr/lib/tmpfiles.d"
+cat > "$legacy_root/DEBIAN/control" <<'CONTROL'
+Package: bookshelfng
+Version: 0.4.21.71-1
+Architecture: amd64
+Maintainer: BookshelfNG package test <noreply@example.invalid>
+Description: synthetic published BookshelfNG package fixture
+CONTROL
+printf '/etc/bookshelfng/bookshelfng.env\n' > "$legacy_root/DEBIAN/conffiles"
+cat > "$legacy_root/DEBIAN/postinst" <<'POSTINST'
+#!/bin/sh
+set -e
+if command -v systemd-tmpfiles >/dev/null 2>&1; then
+  systemd-tmpfiles --create /usr/lib/tmpfiles.d/bookshelfng.conf || true
+fi
+if [ "$1" = configure ] && command -v deb-systemd-invoke >/dev/null 2>&1; then
+  deb-systemd-invoke start bookshelfng.service || true
+fi
+POSTINST
+chmod 0755 "$legacy_root/DEBIAN/postinst"
+printf '#!/bin/sh\nexit 0\n' > "$legacy_root/usr/lib/bookshelfng/Readarr"
+chmod 0755 "$legacy_root/usr/lib/bookshelfng/Readarr"
+printf 'legacy config\n' > "$legacy_root/etc/bookshelfng/bookshelfng.env"
+printf '[Service]\nExecStart=/usr/lib/bookshelfng/Readarr\n' \
+  > "$legacy_root/lib/systemd/system/bookshelfng.service"
+printf 'u bookshelfng - BookshelfNG /var/lib/bookshelfng /usr/sbin/nologin\n' \
+  > "$legacy_root/usr/lib/sysusers.d/bookshelfng.conf"
+printf 'd /var/lib/bookshelfng 0750 bookshelfng bookshelfng -\n' \
+  > "$legacy_root/usr/lib/tmpfiles.d/bookshelfng.conf"
+ln -s ../lib/bookshelfng/Readarr "$legacy_root/usr/bin/bookshelfng"
+dpkg-deb --root-owner-group --build "$legacy_root" "$task_root/bookshelfng_0.4.21.71-1_amd64.deb"
+
+OLD_DEB="$task_root/bookshelfng_0.4.21.71-1_amd64.deb" \
+NEW_DEB="$package" \
+TASK_SCRATCH_DIR="$task_root/dpkg-roundtrip" \
+  bash "$repo_root/packaging/scripts/test-bookshelfng-deb-roundtrip.sh"
+
 mkdir -p "$task_root/mock-bin" "$task_root/root"
 cat > "$task_root/mock-bin/mock-command" <<'MOCK'
 #!/bin/sh
