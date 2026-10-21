@@ -159,6 +159,28 @@ namespace Chaptarr.Core.Test.Api
         }
 
         [Test]
+        public void should_include_author_and_editions_in_remote_lookup_results()
+        {
+            var controller = new BookLookupController(
+                searchProxy: new SearchProxyStub(),
+                coverMapper: new CoverMapperStub(),
+                bookService: null,
+                editionService: null,
+                mediaFileService: null,
+                mediaCoverProxy: new MediaCoverProxyStub(),
+                providerAliasService: null);
+
+            var result = controller.Search("hobbit").Value;
+
+            Assert.That(result, Has.Count.EqualTo(1));
+            Assert.That(result[0].Author, Is.Not.Null);
+            Assert.That(result[0].Author.ForeignAuthorId, Is.EqualTo("gr:456"));
+            Assert.That(result[0].Editions, Has.Count.EqualTo(1));
+            Assert.That(result[0].Editions[0].ForeignEditionId, Is.EqualTo("gr:789"));
+            Assert.That(result[0].Editions[0].Monitored, Is.True);
+        }
+
+        [Test]
         public void should_normalize_work_terms_by_readarr_facade_dialect_only()
         {
             var native = ReadarrFacadeProviderIdTranslator.NormalizeLookupTerm("work:123", null);

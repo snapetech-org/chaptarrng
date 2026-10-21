@@ -247,7 +247,16 @@ collect_platform_artifacts() {
         Microsoft.NETCore.App.Host.freebsd-x64.10.0.12.nupkg \
         Microsoft.NETCore.App.Runtime.freebsd-x64.10.0.12.nupkg \
         Microsoft.AspNetCore.App.Runtime.freebsd-x64.10.0.12.nupkg
-    freebsd_runtime_path="$(tar -tzf "$freebsd_archive" | grep -E '^assets/Release/Runtime/[^/]+/dotnet-runtime-10\.0\.12-freebsd-x64\.tar\.gz$' | head -1)"
+    freebsd_runtime_path="$(
+      tar -tzf "$freebsd_archive" |
+        awk '
+          /^assets\/Release\/Runtime\/[^/]+\/dotnet-runtime-10\.0\.12-freebsd-x64\.tar\.gz$/ {
+            if (!found) first = $0
+            found = 1
+          }
+          END { if (found) print first }
+        '
+    )"
     [ -n "$freebsd_runtime_path" ] || die "Pinned FreeBSD archive is missing its .NET runtime tarball"
     tar -xzf "$freebsd_archive" -C "$work_root" "$freebsd_runtime_path"
     freebsd_runtime_archive="$work_root/$freebsd_runtime_path"
@@ -262,11 +271,8 @@ collect_platform_artifacts() {
     done
 
     cp -a "$dotnet_root/sdk/$app_sdk" "$output_root/sdk/sdk/"
-    for pack in Microsoft.NETCore.App.Ref Microsoft.AspNetCore.App.Ref; do
-        [ -d "$dotnet_root/packs/$pack/10.0.12" ] || die "SDK $app_sdk is missing $pack/10.0.12"
-        mkdir -p "$output_root/sdk/packs/$pack"
-        cp -a "$dotnet_root/packs/$pack/10.0.12" "$output_root/sdk/packs/$pack/"
-    done
+    bash "$repo_root/packaging/scripts/copy-dotnet-sdk-reference-packs.sh" \
+        "$dotnet_root" "$output_root/sdk/packs"
     if [ -d "$dotnet_root/sdk-manifests/10.0.400" ]; then
         mkdir -p "$output_root/sdk/sdk-manifests"
         cp -a "$dotnet_root/sdk-manifests/10.0.400" "$output_root/sdk/sdk-manifests/"

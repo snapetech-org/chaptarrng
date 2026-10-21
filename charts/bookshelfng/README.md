@@ -36,8 +36,9 @@ operationally accepted.
 
 ## Future cutover shape
 
-After the release and channel gates close, obtain the chart from the approved
-ChaptarrNG release checkout and keep the existing release name and namespace.
+After the release and channel gates close, use the versioned chart published to
+the existing `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` identity. Keep
+the existing release name and namespace.
 First record the release and its values, stop BookshelfNG, take an independent
 backup or storage snapshot, and complete the approved migration preview and
 rollback rehearsal on a copy. Confirm the source provider mode and obtain the
@@ -47,7 +48,8 @@ The in-place upgrade will have this form; replace the placeholders with the
 existing release details and the approved provider-specific digest:
 
 ```sh
-helm upgrade bookshelfng ./charts/bookshelfng \
+helm upgrade bookshelfng oci://ghcr.io/snapetech/bookshelfng/bookshelfng \
+  --version <approved-chaptarrng-version> \
   --namespace <existing-namespace> \
   --reuse-values \
   --set-string image.repository=ghcr.io/snapetech-org/chaptarrng \
@@ -61,12 +63,14 @@ select the matching image digest. With `--reuse-values`, explicitly override
 both `image.repository` and `image.digest`; older chart values otherwise retain
 the legacy image repository. Review the rendered manifests before applying.
 
-This chart lives in the ChaptarrNG repository. Existing installations using
-`oci://ghcr.io/snapetech/bookshelfng/bookshelfng` must change their chart
-source to an approved ChaptarrNG chart release; the legacy OCI chart has not
-been redirected. Pinned/offline chart archives also need a manual chart and
-image update. No Helm chart artifact is published while the retirement freeze
-is active.
+This chart source lives in the ChaptarrNG repository. Its release workflow has
+a publisher for the existing OCI identity, gated by both
+`CHAPTARRNG_RELEASE_READY` and `BOOKSHELFNG_RELEASE_READY`, as well as
+`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` and an explicit bridge request. No chart
+artifact is published while the retirement freeze is active. Once the gates
+close, existing installations can upgrade the same chart source and preserve
+their release name, namespace, and PVC; pinned/offline chart archives still
+need a manual chart and image update.
 
 ## Local validation
 

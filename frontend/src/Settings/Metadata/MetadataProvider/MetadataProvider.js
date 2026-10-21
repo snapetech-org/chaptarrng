@@ -78,6 +78,8 @@ const audibleMarketplaceOptions = [
 }));
 
 const metadataCatalogSources = [
+  { id: 'metadata-api', name: 'enableMetadataApi', label: 'MetadataApiCatalog', help: 'MetadataApiCatalogSourceHelp', fieldPreference: false },
+  { id: 'hardcover', name: 'enableHardcover', label: 'Hardcover', help: 'HardcoverCatalogSourceHelp', fieldPreference: false },
   { id: 'openlibrary', name: 'enableOpenLibrary', label: 'OpenLibrary', help: 'OpenLibrarySourceHelp', fieldPreference: true },
   { id: 'googlebooks', name: 'enableGoogleBooks', label: 'GoogleBooks', help: 'GoogleBooksSourceHelp', fieldPreference: true },
   { id: 'loc', name: 'enableLoc', label: 'LibraryOfCongress', help: 'LocSourceHelp', fieldPreference: true },

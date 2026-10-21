@@ -36,6 +36,17 @@ The output directory contains runtime packages, SDK metadata, and the install
 helper. Keep those paths separate from user data and remove only the exact
 task-scoped paths after their consumers finish.
 
+The SDK's reference packs can have a newer servicing version than the pinned
+runtime sources. The pack builder copies the SDK's installed reference-pack
+versions, while the Linux x86 and FreeBSD standalone publish explicitly targets
+runtime `10.0.12` to match the custom runtime packages.
+
+The runtime-pack installer merges files into the SDK already installed on the
+runner. It preserves file modes and symlinks but deliberately does not restore
+ownership or source timestamps, which may be unsupported for shared SDK files.
+`packaging/scripts/test-install-extra-platform-runtime-packs.sh` covers an
+overlapping pack file so the copy path is checked against a preexisting SDK.
+
 ## Build a standalone archive
 
 Build the frontend first so `_output/UI/index.html` exists. The archive builder

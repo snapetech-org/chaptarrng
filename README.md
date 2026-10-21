@@ -41,8 +41,9 @@ setting and BookshelfNG ebook/audiobook root defaults during migration. The
 new switch is source-only and is not in `.977`. The next version bump is not a release: publication is frozen
 until the BookshelfNG migration, rollback, feature-parity, and install-channel
 acceptance gates are closed. The merged release and distribution workflows
-fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
-remains unset. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)
+fail closed unless both `CHAPTARRNG_RELEASE_READY=true` and
+`BOOKSHELFNG_RELEASE_READY=true`. They must remain false until every retirement
+gate closes. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)
 and [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) before switching.
 
 Current `main` accepts raw SQLite Bookshelf backup uploads with `.db` or legacy
@@ -205,9 +206,11 @@ BookshelfNG must stay in service until cutover is approved.
 Helm has a source-only, fail-closed handoff chart at
 [`charts/bookshelfng`](charts/bookshelfng/README.md). It keeps the existing
 release, StatefulSet, Service, selector, PVC, and `/config` identities, but no
-chart or migration image has been published for cutover. Existing Helm users
-will need to change chart source after the retirement gates close; the legacy
-BookshelfNG OCI chart has not been redirected.
+chart has been published for cutover. A versioned publisher now targets the
+existing BookshelfNG OCI chart identity after both release-readiness gates,
+the migration bridge gate, and an explicit bridge opt-in pass. Existing Helm
+users can keep the same chart source after acceptance; an installed PVC
+upgrade, GitOps sync, and rollback still need validation.
 
 The unpublished migration candidate includes BookshelfNG's Hardcover
 public-list and reading-status provider, plus compatibility ports for its
@@ -502,7 +505,7 @@ runtime, while source builds require the .NET 10 SDK.
 - **Narration and edition choices for SeerrNG:** `GET /api/v1/book/{id}/editions/catalog` lists every known edition with narrators, solo or full-cast, abridged or unabridged, length, language, and library state, and `GET /api/v1/series/narrators/matrix` compares narrators across every volume of a series, including editions that are not monitored. The existing wanted-edition endpoint tracks a second performance alongside the first. Unstated details stay unknown. See the [SeerrNG integration guide](docs/SEERRNG_INTEGRATION.md#narration-and-edition-choices).
 - **Restricted service access:** ChaptarrNG `0.9.941` and later can use a SeerrNG-only API key for supported book requests, searches, library status, and pending imports without granting global administration or destructive access.
 - **Standalone additions maintained here:** An optional built-in indexer and download client can search configured ebook sources, use API-key downloads, and optionally fall back to browser-assisted links. Full backup archives can use passphrase-based authenticated encryption; the direct Chaptarr project separately offers encryption for quick-start settings backups.
-- **Safer list and file workflows:** Preview an import list's next sync, inspect durable per-list sync history, and review manual-import matching evidence. Book-file downloads are limited to configured roots; imports check destinations before writing, extract supported archives, and can merge or convert multipart audiobooks with progress and cancellation. New multi-part releases can remain as separate book files.
+- **Safer list and file workflows:** Preview an import list's next sync, inspect durable per-list sync history, and review manual-import matching evidence. Book-file downloads are limited to configured roots; imports check destinations before writing, extract supported archives, and can merge or convert multipart audiobooks with progress and cancellation. New multi-part releases can remain as separate book files. See [multipart audiobook merging](docs/AUDIOBOOK_M4B_MERGING.md) for the legacy settings and release limits.
 - **Cross-format library views:** The Books index can show audiobooks and ebooks together, labels each record by format, and keeps monitoring actions scoped to that record. Bookshelf's **Formats** view groups records only when they share a recognized work-level provider ID; book details link formats by the same safe identity. These additions are not in published `v0.9.977`.
 - **More metadata and library connections:** RanobeDB adds light-novel ebook metadata; Audible searches can use a selected marketplace. Metadata profiles can rank edition terms and choose preferred series. AudioBookShelf, Calibre, Grimmory, and BookLore BookDrop provide optional library connections; BookOrbit Book Dock is in the unpublished retirement candidate; Emby/Jellyfin can refresh after an import.
 - **Search and library maintenance:** Indexers can run optional recurring searches for missing monitored books. MyAnonaMouse health reports explain when stale account status blocks grabs. Operators can preview and backfill missing author root folders without moving files.
@@ -512,6 +515,7 @@ runtime, while source builds require the .NET 10 SDK.
 
 The [fork feature guide](docs/FORK_FEATURES.md) covers the additions and their
 limits. Dedicated guides explain [import-list preview and history](docs/IMPORT_LIST_SYNC.md),
+[media moves](docs/MEDIA_MOVES.md), [author metadata refresh](docs/AUTHOR_METADATA_REFRESH.md),
 [external library connections](docs/EXTERNAL_LIBRARY_INTEGRATIONS.md),
 [MQTT and canonical events](docs/MQTT_GATEWAY.md), and
 [Prometheus metrics](docs/PROMETHEUS_METRICS.md). The

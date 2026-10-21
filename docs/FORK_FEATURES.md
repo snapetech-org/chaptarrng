@@ -656,13 +656,15 @@ coverage does not prove older-schema behavior on real data, PostgreSQL source
 conversion, populated real-data rollback, every provider/settings/client
 contract, semantic feature parity, or compatibility with every installation
 channel. Each capability and applicable upgrade, rollback, and redirect path
-remains an independent replacement consideration. These migration gaps do not
-block standard ChaptarrNG releases.
+remains an independent replacement consideration. The current retirement
+release freeze applies to standard ChaptarrNG releases as well as legacy
+bridges until the acceptance gates close.
 
-Standard releases publish the ChaptarrNG identities. Old BookshelfNG package
-IDs and mutable image aliases remain untouched unless the shared
-`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` repository variable is explicitly set to
-`true` by a maintainer.
+Standard ChaptarrNG releases require both `CHAPTARRNG_RELEASE_READY` and
+`BOOKSHELFNG_RELEASE_READY`. Publishing old BookshelfNG package IDs, image
+aliases, or the Helm chart additionally requires
+`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED=true` and an explicit bridge opt-in. The
+legacy bridge remains disabled.
 
 ## What would allow replacement
 

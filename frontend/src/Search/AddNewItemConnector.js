@@ -19,9 +19,13 @@ function createMapStateToProps() {
     (search, existingAuthorsCount, location, hardcoverConfig, metadataProviderConfig) => {
       const { params } = parseUrl(location.search);
       const { isPopulated, error, item } = hardcoverConfig;
+      const metadataProviderItem = metadataProviderConfig?.item || {};
+      const isLegacyHardcoverCatalogEnabled = metadataProviderConfig?.isPopulated &&
+        !metadataProviderConfig.error && metadataProviderItem.enableHardcover?.value;
+      const hasHardcoverToken = item?.hasToken || metadataProviderItem.hasHardcoverAuth?.value;
       const isHardcoverConfigured = (!isPopulated && !error) ?
         null :
-        !!(item?.enabled && item?.hasToken);
+        !!((item?.enabled || isLegacyHardcoverCatalogEnabled) && hasHardcoverToken);
 
       return {
         ...search,

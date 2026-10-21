@@ -97,6 +97,13 @@ jobs:
         bash packaging/scripts/test-publish-image-aliases.sh
         bash packaging/scripts/test-dispatch-ghcr-release-bridge.sh
         bash packaging/scripts/test-release-readiness-gate.sh
+        bash packaging/scripts/test-bookshelfng-deb-publish-gate.sh
+
+    - name: Test release publisher configuration preflight
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TMPDIR: ${{ runner.temp }}
+      run: bash packaging/scripts/test-release-publisher-config.sh
 
     - name: Test Chocolatey legacy package publish gate
       if: matrix.os == 'windows-latest'
@@ -106,6 +113,12 @@ jobs:
     - name: Test hosted runner policy
       if: matrix.os == 'ubuntu-latest'
       run: python3 scripts/test_workflow_runner_policy.py
+
+    - name: Test candidate BookshelfNG Debian bridge package
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-deb-bridge-test
+      run: bash packaging/scripts/test-build-bookshelfng-deb-bridge.sh
 
     - name: Test BookshelfNG host migration helper
       if: matrix.os == 'ubuntu-latest'
@@ -251,7 +264,8 @@ jobs:
         dotnet-version: 10.0.402
 
     - name: Cache NuGet packages
-      if: runner.os == 'Windows'
+      # Manual release dispatch can select a branch; do not let those builds write shared cache entries.
+      if: runner.os == 'Windows' && github.event_name != 'workflow_dispatch'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.nuget/packages

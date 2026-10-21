@@ -139,7 +139,7 @@ namespace NzbDrone.Core.Instrumentation
                 connection.Open();
                 using (var sqlCommand = connection.CreateCommand())
                 {
-                    sqlCommand.CommandText = INSERT_COMMAND;
+                    sqlCommand.CommandText = INSERT_COMMAND; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- fixed SQL command; all log fields are bound as parameters below.
                     sqlCommand.Parameters.Add(new NpgsqlParameter("Message", DbType.String) { Value = log.Message });
                     sqlCommand.Parameters.Add(new NpgsqlParameter("Time", DbType.DateTime) { Value = log.Time.ToUniversalTime() });
                     sqlCommand.Parameters.Add(new NpgsqlParameter("Logger", DbType.String) { Value = log.Logger });
@@ -159,7 +159,7 @@ namespace NzbDrone.Core.Instrumentation
                 connection.Open();
                 using (var sqlCommand = connection.CreateCommand())
                 {
-                    sqlCommand.CommandText = INSERT_COMMAND;
+                    sqlCommand.CommandText = INSERT_COMMAND; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- fixed SQL command; all log fields are bound as parameters below.
                     sqlCommand.Parameters.Add(new SqliteParameter("Message", DbType.String) { Value = log.Message });
                     sqlCommand.Parameters.Add(new SqliteParameter("Time", DbType.DateTime) { Value = log.Time.ToUniversalTime() });
                     sqlCommand.Parameters.Add(new SqliteParameter("Logger", DbType.String) { Value = log.Logger });

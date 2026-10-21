@@ -40,6 +40,33 @@ are not valid media and do not exercise M4B decoding or merging. A separate
 tool-enabled importer test validates synthetic multipart M4B creation and
 fallback; it does not use representative operator files.
 
+### Expanded BookshelfNG migration fixture
+
+The seed helper's `--expanded-fixture` option keeps the SeerrNG smoke's default
+small fixture unchanged and adds a larger source for explicit migration
+rehearsals. It creates four authors, six works, nine editions, four empty
+placeholder files, alternate audiobook and ebook editions, a work with no
+editions, an unselected mixed-format work, history, series, a `Readarr` metadata
+sidecar, provider settings, and fake credentials. The media files are not
+decodable content, and the fixture never contacts those providers.
+
+Create empty task-scoped directories, then run:
+
+```sh
+python3 integration/prepare-bookshelfng-smoke.py \
+  --expanded-fixture \
+  --config /tmp/chaptarrng-migration/config \
+  --library /tmp/chaptarrng-migration/library \
+  --schema src/Chaptarr.Core.Test/Datastore/Fixtures/BookshelfNG.Schema.158.sql \
+  --seed src/Chaptarr.Core.Test/Datastore/Fixtures/BookshelfNG.PopulatedMigration158.sql
+```
+
+The helper refuses non-empty config or library directories. Use the operator
+migration guide's explicit preview, apply, and restore commands against this
+disposable config directory; do not point it at an installed appdata directory.
+Detailed results from a multi-record preview/apply/rollback run are recorded in
+the [migration fixture evidence](../docs/maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
+
 ## Real-tool M4B importer check
 
 The Linux build workflow builds `integration/Dockerfile.m4b-test` and runs

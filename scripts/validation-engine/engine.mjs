@@ -86,18 +86,43 @@ function digestFile(relative, { text = false } = {}) {
   return text ? sha256GitText(content) : hash(content);
 }
 
+function globMatches(pattern, value) {
+  const memo = new Map();
+  const match = (patternIndex, valueIndex) => {
+    const key = `${patternIndex}:${valueIndex}`;
+    if (memo.has(key)) return memo.get(key);
+
+    let result;
+    if (patternIndex === pattern.length) {
+      result = valueIndex === value.length;
+    } else if (pattern[patternIndex] === '*' && pattern[patternIndex + 1] === '*') {
+      if (pattern[patternIndex + 2] === '/') {
+        result = match(patternIndex + 3, valueIndex);
+        for (let index = valueIndex; !result && index < value.length; index += 1) {
+          if (value[index] === '/') result = match(patternIndex + 3, index + 1);
+        }
+      } else {
+        result = match(patternIndex + 2, valueIndex) ||
+          (valueIndex < value.length && match(patternIndex, valueIndex + 1));
+      }
+    } else if (pattern[patternIndex] === '*') {
+      result = match(patternIndex + 1, valueIndex) ||
+        (valueIndex < value.length && value[valueIndex] !== '/' && match(patternIndex, valueIndex + 1));
+    } else {
+      result = valueIndex < value.length && pattern[patternIndex] === value[valueIndex] &&
+        match(patternIndex + 1, valueIndex + 1);
+    }
+
+    memo.set(key, result);
+    return result;
+  };
+
+  return match(0, 0);
+}
+
+// Preserve the inventory's .test call shape without compiling config into a regular expression.
 export function globRegex(pattern) {
-  let expression = '^';
-  for (let index = 0; index < pattern.length; index += 1) {
-    const char = pattern[index];
-    if (char === '*' && pattern[index + 1] === '*') {
-      index += 1;
-      if (pattern[index + 1] === '/') { index += 1; expression += '(?:.*/)?'; }
-      else expression += '.*';
-    } else if (char === '*') expression += '[^/]*';
-    else expression += char.replace(/[|\\{}()[\]^$+?.]/g, '\\$&');
-  }
-  return new RegExp(`${expression}$`);
+  return { test: (value) => globMatches(pattern, value) };
 }
 
 export function discoverInventory(files = repoFiles()) {
@@ -152,8 +177,16 @@ function inspectRuntime(runtime) {
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim();
   const version = output.split(/\r?\n/, 1)[0] ?? '';
   const available = !result.error && result.status === 0;
-  const compatible = available && new RegExp(runtime.versionPattern).test(version);
+  const compatible = available && matchesVersionPattern(runtime.versionPattern, version);
   return { command: runtime.command, expected: runtime.versionPattern, version, available, compatible, exitCode: result.status };
+}
+
+function matchesVersionPattern(pattern, version) {
+  if (!pattern.startsWith('^')) return false;
+
+  const exact = pattern.endsWith('$');
+  const literal = pattern.slice(1, exact ? -1 : undefined).replaceAll('\\.', '.');
+  return exact ? version === literal : version.startsWith(literal);
 }
 
 function inheritedToolchainEnvironment(inherited = process.env) {
@@ -393,10 +426,11 @@ function terminate(child) {
 }
 
 export function parseNodeTestSummary(output) {
-  const read = (name) => {
-    const match = [...output.matchAll(new RegExp(`^# ${name} (\\d+)\\s*$`, 'gm'))].at(-1);
-    return match ? Number(match[1]) : null;
-  };
+  const counts = new Map();
+  for (const match of output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)\s*$/gm)) {
+    counts.set(match[1], Number(match[2]));
+  }
+  const read = (name) => counts.get(name) ?? null;
   const failedTestNames = [];
   for (const match of output.matchAll(/^[ \t]*not ok \d+ - (.+?)\s*$/gm)) {
     const name = match[1].trim();

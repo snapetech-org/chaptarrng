@@ -1730,7 +1730,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new SqliteConnection(ConnectionStringFor(databasePath));
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- sql is fixed fixture query text authored in this test.
             return (T)Convert.ChangeType(command.ExecuteScalar(), typeof(T));
         }
 
@@ -1739,7 +1739,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new SqliteConnection(ConnectionStringFor(databasePath));
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = sql;
+            command.CommandText = sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- sql is fixed fixture query text authored in this test.
             using var reader = command.ExecuteReader();
             var rows = new System.Collections.Generic.List<object>();
             while (reader.Read()) rows.Add(reader.GetValue(0));

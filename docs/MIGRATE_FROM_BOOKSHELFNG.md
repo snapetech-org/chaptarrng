@@ -980,25 +980,27 @@ mutable tag only affects a later pull or container recreation.
 ### Helm chart handoff
 
 ChaptarrNG's [`charts/bookshelfng`](../charts/bookshelfng/README.md) is a
-source-only, fail-closed compatibility-chart candidate under PR #131. It keeps
-the legacy chart and Kubernetes resource identities, including the release
-name, StatefulSet selector, Service, port `8787`, `/config` mount, and default
-PVC name. It requires an explicit migration confirmation, the source's
-Hardcover/Softcover mode, and an approved immutable ChaptarrNG image digest.
-Local Helm lint and rendered-resource contract checks pass; an installed PVC
-upgrade, GitOps sync, and chart rollback have not been tested.
+source-only, fail-closed compatibility chart in ChaptarrNG `main`. It keeps the
+legacy chart and Kubernetes resource identities, including the release name,
+StatefulSet selector, Service, port `8787`, `/config` mount, and default PVC
+name. It requires explicit migration confirmation, the source's
+Hardcover/Softcover mode, and an immutable ChaptarrNG image digest. The release
+workflow now contains a versioned chart publisher for the existing OCI chart
+identity, but both release-readiness gates, the migration bridge gate, and an
+explicit bridge request are required; the publisher has not run and no chart
+artifact is available during the freeze.
 
-The candidate has no published OCI chart or image and does not authorize a live
-cutover. The existing `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` chart
-is unchanged. After all migration and channel acceptance gates close, existing
-Helm users will need to change the chart source to a published ChaptarrNG
-chart, keeping the same release name, namespace, values, and PVC. Pinned chart
-archives need a manual update. See the chart guide for the future command
-shape; do not use it against live BookshelfNG data during the release freeze.
+An installed PVC upgrade, GitOps sync, and chart rollback have not been tested,
+so this does not authorize a live cutover. After all migration and channel
+acceptance gates close, Helm users can upgrade from the same
+`oci://ghcr.io/snapetech/bookshelfng/bookshelfng` source while keeping the
+existing release name, namespace, values, and PVC. Pinned chart archives need a
+manual update. See the chart guide for the command shape; do not use it against
+live BookshelfNG data during the release freeze.
 
 BookshelfNG's in-app updater still uses its existing upstream update service;
 Snapetech cannot redirect that service. The practical handoff paths are a
-manual image/package/chart-source change or a separately validated
+manual image/package/chart-version change or a separately validated
 legacy-identity bridge.
 The bridge must preserve each channel's app-data path and service settings and
 must be tested as an upgrade, including startup conversion and rollback, before
