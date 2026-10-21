@@ -21,6 +21,14 @@ on:
       - 'frontend/**'
       - 'package.json'
       - 'yarn.lock'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/standalone-asset-validation.yml'
+      - 'packaging/scripts/install-extra-platform-runtime-packs.sh'
+      - 'packaging/scripts/test-install-extra-platform-runtime-packs.sh'
+      - 'packaging/scripts/create-standalone-nuget-config.py'
+      - 'packaging/scripts/test-create-standalone-nuget-config.sh'
   workflow_dispatch:
 
 permissions:
@@ -44,6 +52,7 @@ jobs:
       run: bash packaging/scripts/test-copy-dotnet-sdk-reference-packs.sh
 
   frontend:
+    if: github.event_name != 'pull_request'
     name: Build frontend once
     runs-on: ubuntu-latest
     steps:
@@ -73,6 +82,7 @@ jobs:
         if-no-files-found: error
 
   extra-platform-runtimes:
+    if: github.event_name != 'pull_request'
     name: Build Linux x86 and FreeBSD runtime packs
     runs-on: ubuntu-22.04
     timeout-minutes: 360
@@ -104,6 +114,7 @@ jobs:
         if-no-files-found: error
 
   extra-standalone:
+    if: github.event_name != 'pull_request'
     name: Build and verify ${{ matrix.rid }} archive
     needs: [frontend, extra-platform-runtimes]
     runs-on: ubuntu-latest
@@ -160,6 +171,7 @@ jobs:
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")
 
   standalone:
+    if: github.event_name != 'pull_request'
     name: Build and verify ${{ matrix.rid }} archive
     needs: frontend
     runs-on: ubuntu-latest

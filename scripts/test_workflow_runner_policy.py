@@ -69,7 +69,8 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("github.event.changes.body != null", release_notes)
         self.assertIn("github.event.action != 'edited'", build)
         self.assertIn("github.event.action != 'edited'", migrations)
-        self.assertIn("github.event.action == 'edited' && 'metadata' || 'source'", source)
+        self.assertIn("group: build-${{ github.run_id }}-${{ github.run_attempt }}", source)
+        self.assertIn("cancel-in-progress: false", source)
 
     def test_release_note_check_fetches_the_pr_head_after_merge(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
