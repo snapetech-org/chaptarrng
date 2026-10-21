@@ -47,6 +47,7 @@ namespace Chaptarr.Core.Test.Parser
 
             Assert.That(result, Is.Not.Null);
             Assert.That(result.AuthorName, Is.EqualTo("Frank Herbert"));
+            Assert.That(result.AuthorTitleInfo.Title, Is.EqualTo("Frank Herbert"));
             Assert.That(result.BookTitle, Is.EqualTo("The Mote in God's Eye"));
         }
 

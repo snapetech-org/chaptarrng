@@ -375,11 +375,10 @@ namespace NzbDrone.Core.Parser
                     return null;
                 }
 
-                var authorName = author.Name == "Various Authors" ? "VA" : author.Name.RemoveAccent();
                 var result = new ParsedBookInfo
                 {
                     AuthorName = author.Name,
-                    AuthorTitleInfo = GetAuthorTitleInfo(authorName),
+                    AuthorTitleInfo = GetAuthorTitleInfo(author.Name),
                     BookTitle = book.Title
                 };
 
