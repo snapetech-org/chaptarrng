@@ -5,4 +5,4 @@ area: downloads
 action: none
 breaking: false
 ---
-Direct Download catalog searches now include KEPUB, MOBI, and AZW3 ebooks alongside EPUB and PDF results.
+Direct Download catalog searches and detail-page link resolution now support KEPUB, MOBI, and AZW3 ebooks alongside EPUB and PDF results.
