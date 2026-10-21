@@ -685,7 +685,7 @@ class EditRootFolderModalContent extends Component {
                 </FieldSet>
 
                 {
-                  SHOW_CALIBRE_UI &&
+                  SHOW_CALIBRE_UI && supportsEbookDefaults &&
                     <FieldSet legend={translate('CalibreSettings')}>
                       <Alert>
                         {translate('CalibreNotCalibreWeb')}

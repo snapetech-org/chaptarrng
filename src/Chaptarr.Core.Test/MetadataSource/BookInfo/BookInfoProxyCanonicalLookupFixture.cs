@@ -295,7 +295,8 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             var mapper = typeof(BookInfoProxy).GetMethod("MapEdition", BindingFlags.Static | BindingFlags.NonPublic);
             var edition = (Edition)mapper.Invoke(null, new object[]
             {
-                new NzbDrone.Core.MetadataSource.BookInfo.BookResource { ForeignId = 12345, Title = "Legacy Edition" }
+                new NzbDrone.Core.MetadataSource.BookInfo.BookResource { ForeignId = 12345, Title = "Legacy Edition" },
+                "goodreads"
             });
 
             Assert.Multiple(() =>

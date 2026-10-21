@@ -34,7 +34,7 @@ namespace Chaptarr.Api.V1.Config
                 resource.EnableEuropeana,
                 resource.EnableApifyGoodreads
             };
-            var runtimeSourceValues = new[] { resource.EnableOpenLibrary };
+            var runtimeSourceValues = new[] { resource.EnableOpenLibrary, resource.EnableHardcover, resource.EnableMetadataApi };
             var sources = new List<string>();
 
             AddSource(resource.EnableGoogleBooks, "googlebooks", sources);
@@ -45,6 +45,8 @@ namespace Chaptarr.Api.V1.Config
             AddSource(resource.EnableEuropeana, "europeana", sources);
             AddSource(resource.EnableApifyGoodreads, "apify-goodreads", sources);
             AddSource(resource.EnableOpenLibrary, AdditionalMetadataSources.OpenLibrary, sources);
+            AddSource(resource.EnableHardcover, AdditionalMetadataSources.Hardcover, sources);
+            AddSource(resource.EnableMetadataApi, AdditionalMetadataSources.MetadataApi, sources);
 
             var dictionary = new Dictionary<string, object>
             {
@@ -98,6 +100,18 @@ namespace Chaptarr.Api.V1.Config
             SaveSecret(dictionary, "EuropeanaApiKey", resource.EuropeanaApiKey, resource.ClearEuropeanaApiKey);
             SaveSecret(dictionary, "ApifyToken", resource.ApifyToken, resource.ClearApifyToken);
 
+            if (!resource.HardcoverAuthFromEnvironment)
+            {
+                if (resource.ClearHardcoverAuth)
+                {
+                    dictionary["HardcoverApiToken"] = string.Empty;
+                }
+                else if (!string.IsNullOrWhiteSpace(resource.HardcoverAuth))
+                {
+                    dictionary["HardcoverApiToken"] = NormalizeHardcoverToken(resource.HardcoverAuth);
+                }
+            }
+
             if (!resource.ApifyGoodreadsActorFromEnvironment)
             {
                 SaveSecret(dictionary, "ApifyGoodreadsActor", resource.ApifyGoodreadsActor, resource.ClearApifyGoodreadsActor);
@@ -142,6 +156,14 @@ namespace Chaptarr.Api.V1.Config
             {
                 dictionary[configKey] = inputValue;
             }
+        }
+
+        private static string NormalizeHardcoverToken(string value)
+        {
+            var token = value.Trim();
+            return token.StartsWith("Bearer ", global::System.StringComparison.OrdinalIgnoreCase)
+                ? token.Substring(7).Trim()
+                : token;
         }
     }
 }

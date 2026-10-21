@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using NzbDrone.Common.Extensions;
@@ -77,6 +78,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
         }
 
         [FieldDefinition(0, Type = FieldType.TextArea, Label = "URLs", HelpText = "Enter one http:// or https:// URL per line. Chaptarr preserves the configured order and uses it for deterministic fallback.")]
+        [JsonConverter(typeof(DirectDownloadUrlConfigurationConverter))]
         public string Urls
         {
             get => _urls;
@@ -157,6 +159,50 @@ namespace NzbDrone.Core.Indexers.DirectDownload
         private static string NormalizeWhitespace(string value)
         {
             return value?.Trim();
+        }
+    }
+
+    public sealed class DirectDownloadUrlConfigurationConverter : JsonConverter<string>
+    {
+        public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                return reader.GetString();
+            }
+
+            if (reader.TokenType == JsonTokenType.Null)
+            {
+                return null;
+            }
+
+            if (reader.TokenType != JsonTokenType.StartArray)
+            {
+                throw new JsonException("Direct download URLs must be a string or a list of strings.");
+            }
+
+            var urls = new List<string>();
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndArray)
+                {
+                    return string.Join("\n", urls);
+                }
+
+                if (reader.TokenType != JsonTokenType.String)
+                {
+                    throw new JsonException("Direct download URL entries must be strings.");
+                }
+
+                urls.Add(reader.GetString());
+            }
+
+            throw new JsonException("Direct download URL list is incomplete.");
+        }
+
+        public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value);
         }
     }
 }

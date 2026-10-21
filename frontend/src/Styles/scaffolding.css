@@ -11,12 +11,17 @@
 *:focus {
   outline: none;
 }
+
+*:focus-visible {
+  outline: 2px solid var(--focusColor, #5d9cec);
+  outline-offset: 2px;
+}
 /* stylelint-enable */
 
 html,
 body {
   color: var(--textColor);
-  font-family: 'Roboto', 'open sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  font-family: var(--defaultFontFamily);
 }
 
 body {

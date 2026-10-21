@@ -34,7 +34,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
             var supported = false;
             foreach (var searchTerm in DirectDownloadSearchTerms.Build(request))
             {
-                var searchUri = new Uri(baseUri, $"search?q={HttpUtility.UrlEncode(searchTerm)}&ext=epub,pdf&lang=en,de");
+                var searchUri = new Uri(baseUri, $"search?q={HttpUtility.UrlEncode(searchTerm)}&ext=epub,kepub,mobi,azw3,pdf&lang=en,de");
                 var response = await _reader.GetAsync(searchUri, request);
                 var unwrapped = UnwrapHtmlComments(response.Content);
                 var matches = ResultRegex.Matches(unwrapped);
@@ -171,9 +171,20 @@ namespace NzbDrone.Core.Indexers.DirectDownload
         private static string ResolveExtension(string meta, string filename)
         {
             var lowerFilename = filename?.ToLowerInvariant() ?? string.Empty;
-            foreach (var extension in DirectDownloadReleaseFactory.AllowedExtensions)
+
+            var filenameExtension = System.IO.Path.GetExtension(lowerFilename)?.TrimStart('.') ?? string.Empty;
+            if (DirectDownloadReleaseFactory.AllowedExtensions.Contains(filenameExtension))
             {
-                if (meta.IndexOf(extension, StringComparison.OrdinalIgnoreCase) >= 0 || lowerFilename.EndsWith('.' + extension, StringComparison.OrdinalIgnoreCase))
+                return filenameExtension;
+            }
+
+            foreach (var extension in DirectDownloadReleaseFactory.AllowedExtensions
+                         .OrderByDescending(value => value.Length)
+                         .ThenBy(value => value, StringComparer.Ordinal))
+            {
+                if (Regex.IsMatch(meta ?? string.Empty,
+                        $"(?<![a-z0-9]){Regex.Escape(extension)}(?![a-z0-9])",
+                        RegexOptions.IgnoreCase))
                 {
                     return extension;
                 }

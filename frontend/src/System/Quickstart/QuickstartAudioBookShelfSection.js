@@ -149,11 +149,12 @@ class QuickstartAudioBookShelfSection extends Component {
     if (markSectionInteracted) {
       markSectionInteracted({ section: 'audioBookShelf' });
     }
+
   };
 
-  onTestConnectionFailure = () => {
+  onTestConnectionFailure = (error) => {
     this.setState({ connectionStatus: 'failed' });
-    this.props.onConnectionTestFailure?.();
+    this.props.onConnectionTestFailure?.(error);
   };
 
   //
@@ -208,7 +209,7 @@ class QuickstartAudioBookShelfSection extends Component {
               {buttonText}
             </button>
           </div>
-          <div className={styles.quickstartConnectionStatus}>
+          <div className={styles.quickstartConnectionStatus} aria-live="polite">
             {translate(statusKey)}
           </div>
 
@@ -261,7 +262,7 @@ class QuickstartAudioBookShelfSection extends Component {
             {buttonText}
           </button>
         </div>
-        <div className={styles.quickstartConnectionStatus}>
+        <div className={styles.quickstartConnectionStatus} aria-live="polite">
           {translate(statusKey)}
         </div>
 

@@ -316,7 +316,7 @@ namespace Chaptarr.Core.Test.Extras.Metadata
             });
             var subject = CreateSubject(disk, consumer);
 
-            subject.MoveFilesAfterRename(BuildAuthor(), new List<BookFile> { BuildBookFile() });
+            subject.MoveFilesAfterRename(BuildAuthor(), new List<BookFile> { BuildBookFile() }, new List<RenamedBookFile>());
 
             Assert.Multiple(() =>
             {

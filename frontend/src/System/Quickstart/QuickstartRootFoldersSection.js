@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
 import Card from 'Components/Card';
+import MediaTypeToggle from 'Components/Form/MediaTypeToggle';
 import Icon from 'Components/Icon';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import MediaTypeScope from 'Components/MediaTypeScope';
@@ -13,20 +14,10 @@ import EditRootFolderModalConnector from 'Settings/MediaManagement/RootFolder/Ed
 import { deleteRootFolder, fetchRootFolders, setRootFolderValue } from 'Store/Actions/settingsActions';
 import translate from 'Utilities/String/translate';
 import QuickstartSection from './QuickstartSection';
+import { hasRootFolderForScope } from './QuickstartSetupUtils';
 import styles from './Quickstart.css';
 import rootFolderStyles from './QuickstartRootFolders.css';
-
-function getFolderTypeForScope(scope) {
-  if (scope === 'audiobook') {
-    return FolderType.Audiobook;
-  }
-
-  if (scope === 'ebook') {
-    return FolderType.Ebook;
-  }
-
-  return FolderType.Mixed;
-}
+import setupStyles from './QuickstartSetup.css';
 
 class QuickstartRootFoldersSection extends Component {
   constructor(props, context) {
@@ -34,10 +25,10 @@ class QuickstartRootFoldersSection extends Component {
 
     this.state = {
       isAddRootFolderModalOpen: false,
+      newRootFolderScope: props.mediaScope || null,
       editFolderId: null,
       isDeleteRootFolderModalOpen: false,
-      deleteRootFolderId: null,
-      scopeSelectionError: false
+      deleteRootFolderId: null
     };
   }
 
@@ -52,37 +43,41 @@ class QuickstartRootFoldersSection extends Component {
     }
   }
 
-  onAddRootFolder = () => {
-    const {
-      rootFolderScope,
-      setRootFolderValue: setRootFolderValueAction
-    } = this.props;
-
-    if (!rootFolderScope) {
-      this.setState({ scopeSelectionError: true });
-      return;
+  componentDidUpdate(prevProps) {
+    if (prevProps.mediaScope !== this.props.mediaScope && this.props.mediaScope) {
+      this.setState({ newRootFolderScope: this.props.mediaScope });
     }
+  }
 
-    const folderType = getFolderTypeForScope(rootFolderScope);
-    const includesAudiobooks = rootFolderScope === 'audiobook' || rootFolderScope === 'both';
-    const includesEbooks = rootFolderScope === 'ebook' || rootFolderScope === 'both';
+  onAddRootFolder = () => {
+    const { setRootFolderValue: setRootFolderValueAction } = this.props;
+    const { newRootFolderScope } = this.state;
+    let folderType = FolderType.Audiobook;
+
+    if (newRootFolderScope === 'both') {
+      folderType = FolderType.Mixed;
+    } else if (newRootFolderScope === 'ebook') {
+      folderType = FolderType.Ebook;
+    }
 
     setRootFolderValueAction({ name: 'name', value: translate('MediaLibrary') });
     setRootFolderValueAction({ name: 'folderType', value: folderType });
-    setRootFolderValueAction({ name: 'audiobookMonitored', value: includesAudiobooks });
-    setRootFolderValueAction({ name: 'audiobookMonitorExistingMode', value: 'all' });
-    setRootFolderValueAction({ name: 'audiobookMonitorNewItems', value: 'all' });
-    setRootFolderValueAction({ name: 'ebookMonitored', value: includesEbooks });
-    setRootFolderValueAction({ name: 'ebookMonitorExistingMode', value: 'all' });
-    setRootFolderValueAction({ name: 'ebookMonitorNewItems', value: 'all' });
+
+    if (newRootFolderScope !== 'ebook') {
+      setRootFolderValueAction({ name: 'audiobookMonitored', value: true });
+      setRootFolderValueAction({ name: 'audiobookMonitorExistingMode', value: 'all' });
+      setRootFolderValueAction({ name: 'audiobookMonitorNewItems', value: 'all' });
+    }
+
+    if (newRootFolderScope !== 'audiobook') {
+      setRootFolderValueAction({ name: 'ebookMonitored', value: true });
+      setRootFolderValueAction({ name: 'ebookMonitorExistingMode', value: 'all' });
+      setRootFolderValueAction({ name: 'ebookMonitorNewItems', value: 'all' });
+    }
+
     setRootFolderValueAction({ name: 'defaultTags', value: [] });
 
-    this.setState({ isAddRootFolderModalOpen: true, scopeSelectionError: false });
-  };
-
-  onRootFolderScopeChange = (event) => {
-    this.props.onRootFolderScopeChange(event.target.value);
-    this.setState({ scopeSelectionError: false });
+    this.setState({ isAddRootFolderModalOpen: true });
   };
 
   onEditFolder = (folderId) => {
@@ -90,6 +85,10 @@ class QuickstartRootFoldersSection extends Component {
       isAddRootFolderModalOpen: true,
       editFolderId: folderId
     });
+  };
+
+  onNewRootFolderScopeChange = (newRootFolderScope) => {
+    this.setState({ newRootFolderScope });
   };
 
   onModalClose = () => {
@@ -130,16 +129,13 @@ class QuickstartRootFoldersSection extends Component {
   };
 
   render() {
-    const {
-      rootFoldersState,
-      rootFolderScope
-    } = this.props;
+    const { rootFoldersState, mediaScope } = this.props;
     const {
       isAddRootFolderModalOpen,
+      newRootFolderScope,
       editFolderId,
       isDeleteRootFolderModalOpen,
-      deleteRootFolderId,
-      scopeSelectionError
+      deleteRootFolderId
     } = this.state;
     const { isFetching, isPopulated, items } = rootFoldersState;
 
@@ -160,56 +156,19 @@ class QuickstartRootFoldersSection extends Component {
 
     const rootFoldersArray = items || [];
     const hasRootFolders = rootFoldersArray.length > 0;
+    const hasRootFoldersForScope = hasRootFolderForScope(rootFoldersArray, mediaScope);
     const deleteFolder = rootFoldersArray.find((folder) => folder.id === deleteRootFolderId);
     return (
       <QuickstartSection
         sectionKey="rootFolders"
         title={translate('QuickstartRootFoldersTitle')}
-        isComplete={hasRootFolders}
+        isComplete={hasRootFoldersForScope}
       >
         {!hasRootFolders && (
           <div className={styles.sectionDescription}>
             {translate('QuickstartRootFoldersDescription')}
           </div>
         )}
-
-        <fieldset className={rootFolderStyles.rootFolderScopePrompt}>
-          <legend className={styles.sectionDescription}>
-            {translate('QuickstartRootFolderScopeLabel')}
-          </legend>
-          <div className={rootFolderStyles.rootFolderScopeOptions}>
-            {[
-              ['audiobook', 'QuickstartRootFolderScopeAudio'],
-              ['ebook', 'QuickstartRootFolderScopeEbook'],
-              ['both', 'QuickstartRootFolderScopeBoth']
-            ].map(([value, labelKey]) => (
-              <label
-                key={value}
-                className={rootFolderStyles.rootFolderScopeOption}
-              >
-                <input
-                  type="radio"
-                  name="quickstartRootFolderScope"
-                  value={value}
-                  checked={rootFolderScope === value}
-                  onChange={this.onRootFolderScopeChange}
-                />
-                <span>{translate(labelKey)}</span>
-              </label>
-            ))}
-          </div>
-          <div className={rootFolderStyles.rootFolderScopeHelp}>
-            {translate('QuickstartRootFolderScopeHelp')}
-          </div>
-          {scopeSelectionError && (
-            <div
-              className={rootFolderStyles.rootFolderScopeError}
-              role="alert"
-            >
-              {translate('QuickstartRootFolderScopeRequired')}
-            </div>
-          )}
-        </fieldset>
 
         <div className={rootFolderStyles.rootFoldersContainer}>
           <div className={rootFolderStyles.rootFoldersStack}>
@@ -270,24 +229,41 @@ class QuickstartRootFoldersSection extends Component {
               );
             })}
 
-            <Card
-              className={rootFolderStyles.addRootFolderCard}
-              onPress={this.onAddRootFolder}
-            >
-              <div className={rootFolderStyles.addRootFolderContent}>
-                <Icon
-                  name={icons.ADD}
-                  size={20}
-                />
-                <span>{translate('AddRootFolder')}</span>
-              </div>
-            </Card>
+            <div className={setupStyles.rootFolderScopeChooser}>
+              {newRootFolderScope ? (
+                <>
+                  <div className={styles.sectionDescription}>
+                    {translate('QuickstartNewRootFolderScopeDescription')}
+                  </div>
+                  <MediaTypeToggle
+                    selectedMediaType={newRootFolderScope}
+                    onMediaTypeChange={this.onNewRootFolderScopeChange}
+                    includeBoth={true}
+                  />
+                  <Card
+                    className={rootFolderStyles.addRootFolderCard}
+                    onPress={this.onAddRootFolder}
+                  >
+                    <div className={rootFolderStyles.addRootFolderContent}>
+                      <Icon
+                        name={icons.ADD}
+                        size={20}
+                      />
+                      <span>{translate('AddRootFolder')}</span>
+                    </div>
+                  </Card>
+                </>
+              ) : (
+                <div className={styles.sectionDescription}>
+                  {translate('QuickstartSelectFormatsFirst')}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         <EditRootFolderModalConnector
           id={editFolderId || 0}
-          folderType={editFolderId ? undefined : getFolderTypeForScope(rootFolderScope)}
           isOpen={isAddRootFolderModalOpen}
           onModalClose={this.onModalClose}
           onDeleteRootFolderPress={this.onDeleteRootFolderPress}
@@ -309,9 +285,8 @@ class QuickstartRootFoldersSection extends Component {
 }
 
 QuickstartRootFoldersSection.propTypes = {
+  mediaScope: PropTypes.oneOf(['audiobook', 'ebook', 'both']),
   rootFoldersState: PropTypes.object.isRequired,
-  rootFolderScope: PropTypes.oneOf(['audiobook', 'ebook', 'both', null]),
-  onRootFolderScopeChange: PropTypes.func.isRequired,
   fetchRootFolders: PropTypes.func.isRequired,
   setRootFolderValue: PropTypes.func.isRequired,
   deleteRootFolder: PropTypes.func.isRequired,

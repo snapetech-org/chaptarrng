@@ -8,6 +8,8 @@ updates:
       day: monday
       time: "09:00"
       timezone: America/Regina
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     groups:
       npm-security-updates:
@@ -29,6 +31,8 @@ updates:
       day: monday
       time: "09:00"
       timezone: America/Regina
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     groups:
       nuget-security-updates:
@@ -50,6 +54,8 @@ updates:
       day: monday
       time: "09:00"
       timezone: America/Regina
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     groups:
       actions-minor-patch:
@@ -67,6 +73,8 @@ updates:
       day: monday
       time: "09:00"
       timezone: America/Regina
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
 
   - package-ecosystem: docker-compose
@@ -76,4 +84,6 @@ updates:
       day: monday
       time: "09:00"
       timezone: America/Regina
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10

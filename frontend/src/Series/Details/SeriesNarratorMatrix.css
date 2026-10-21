@@ -7,9 +7,16 @@
   color: var(--darkGray);
 }
 
+.message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .list {
   display: grid;
   gap: 8px;
+
   margin: 8px 0 0;
   padding: 0;
   list-style: none;

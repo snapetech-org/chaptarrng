@@ -36,11 +36,12 @@ class QuickstartHardcoverSection extends Component {
     if (markSectionInteracted) {
       markSectionInteracted({ section: 'hardcover' });
     }
+
   };
 
-  onConnectionFailure = () => {
+  onConnectionFailure = (error) => {
     this.setState({ connectionStatus: 'failed' });
-    this.props.onConnectionTestFailure?.();
+    this.props.onConnectionTestFailure?.(error);
   };
 
   //
@@ -109,7 +110,7 @@ class QuickstartHardcoverSection extends Component {
               {renderButtonContent()}
             </button>
           </div>
-          <div className={styles.quickstartConnectionStatus}>
+          <div className={styles.quickstartConnectionStatus} aria-live="polite">
             {translate(statusKey)}
           </div>
 
@@ -156,7 +157,7 @@ class QuickstartHardcoverSection extends Component {
             {renderButtonContent()}
           </button>
         </div>
-        <div className={styles.quickstartConnectionStatus}>
+        <div className={styles.quickstartConnectionStatus} aria-live="polite">
           {translate(statusKey)}
         </div>
 
