@@ -250,7 +250,7 @@
   "AutomaticallySwitchEdition": "Automatically Switch Edition",
   "Back": "Back",
   "BackToQuickstart": "Back to Quickstart",
-  "BackfillAuthorRootFoldersHelpText": "Preview authors with one format root folder assigned. Chaptarr can use the current default root for the other format. This assigns paths and refreshes authors; it does not move book files.",
+  "BackfillAuthorRootFoldersHelpText": "Preview authors with one format root folder assigned. Chaptarr can use the current default root for the other format. When you confirm, Chaptarr rechecks current settings, assigns missing paths, and refreshes authors; it does not move book files.",
   "BackfillAuthorRootFoldersSkippedManuallyOverridden": "{0} skipped because those settings were changed manually.",
   "BackfillAuthorRootFoldersSkippedNoDefault": "{0} skipped because no default root folder is configured.",
   "BackfillAuthorRootFoldersSkippedNoProfile": "{0} skipped because the missing format has no quality profile.",

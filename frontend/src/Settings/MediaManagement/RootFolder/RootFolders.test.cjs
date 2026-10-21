@@ -58,14 +58,22 @@ function loadRootFolders(ajaxRequest) {
     return null;
   }
 
+  function SpinnerButton() {
+    return null;
+  }
+
+  function ConfirmModal() {
+    return null;
+  }
+
   const modules = {
     'prop-types': PropTypes,
     react: React,
     'Components/FieldSet': Stub,
     'Components/Icon': Stub,
     'Components/Link/Button': Stub,
-    'Components/Link/SpinnerButton': Stub,
-    'Components/Modal/ConfirmModal': Stub,
+    'Components/Link/SpinnerButton': SpinnerButton,
+    'Components/Modal/ConfirmModal': ConfirmModal,
     'Components/Page/PageSectionContent': Stub,
     'Components/Table/Table': Stub,
     'Components/Table/TableBody': Stub,
@@ -76,7 +84,9 @@ function loadRootFolders(ajaxRequest) {
     },
     'Utilities/Array/sortByName': (items) => items,
     'Utilities/createAjaxRequest': ajaxRequest,
-    'Utilities/String/translate': (key, args) => args ? `${key}(${args.join(',')})` : key,
+    'Utilities/String/translate': (key, args) => {
+      return args ? `${key}(${args.join(',')})` : key;
+    },
     './EditRootFolderModalConnector': Stub,
     './RootFolder': Stub,
     './RootFolders.css': new Proxy({}, { get: () => '' })
@@ -92,7 +102,11 @@ function loadRootFolders(ajaxRequest) {
     }
   }, { filename: filePath });
 
-  return module.exports.default || module.exports;
+  const RootFolders = module.exports.default || module.exports;
+  RootFolders.SpinnerButton = SpinnerButton;
+  RootFolders.ConfirmModal = ConfirmModal;
+
+  return RootFolders;
 }
 
 function findElement(tree, type) {
@@ -109,6 +123,29 @@ function findElement(tree, type) {
 
   for (const child of childList) {
     const match = findElement(child, type);
+
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+}
+
+function findElementWithProp(tree, name, value) {
+  if (!tree || typeof tree !== 'object') {
+    return null;
+  }
+
+  if (tree.props?.[name] === value) {
+    return tree;
+  }
+
+  const children = tree.props?.children;
+  const childList = Array.isArray(children) ? children : [children];
+
+  for (const child of childList) {
+    const match = findElementWithProp(child, name, value);
 
     if (match) {
       return match;
@@ -182,6 +219,10 @@ test('author root backfill reviews the dry-run counts and only runs after confir
 
   component.onReviewAuthorRootBackfillPress();
 
+  const spinnerButton = findElement(component.render(), RootFolders.SpinnerButton);
+  assert.equal(spinnerButton.props.children, 'ReviewMissingAuthorRoots');
+  assert.equal(spinnerButton.props.isSpinning, true);
+
   assert.deepEqual(JSON.parse(JSON.stringify(ajax.requestOptions())), {
     url: '/author/editor/backfill-roots?dryRun=true',
     method: 'POST',
@@ -202,6 +243,10 @@ test('author root backfill reviews the dry-run counts and only runs after confir
   assert.equal(component.state.backfillPreview.updated, 2);
   assert.equal(backfillCount, 0);
 
+  const previewModal = findElement(component.render(), RootFolders.ConfirmModal);
+  assert.equal(previewModal.props.title, 'BackfillAuthorRootFoldersTitle');
+  assert.equal(previewModal.props.confirmLabel, 'FillMissingAuthorRoots');
+
   const previewText = collectText(component.renderAuthorRootBackfillPreview()).join(' ');
   assert.match(previewText, /BackfillAuthorRootFoldersSummary\(2,5\)/);
   assert.match(previewText, /BackfillAuthorRootFoldersHelpText/);
@@ -220,6 +265,10 @@ test('author root backfill cannot run when the preview has no eligible authors',
 
   component.state.backfillPreview = { candidates: 2, updated: 0 };
   component.state.isBackfillPreviewModalOpen = true;
+
+  const previewModal = findElement(component.render(), RootFolders.ConfirmModal);
+  assert.equal(previewModal.props.confirmLabel, 'Close');
+
   component.onConfirmAuthorRootBackfill();
 
   assert.equal(backfillCount, 0);
@@ -237,4 +286,7 @@ test('author root backfill shows a retryable preview error', async () => {
 
   assert.equal(component.state.isPreviewingAuthorRoots, false);
   assert.equal(component.state.backfillPreviewError, 'UnableToLoadAuthorRootFolderBackfillPreview');
+
+  const error = findElementWithProp(component.render(), 'role', 'alert');
+  assert.ok(error);
 });
