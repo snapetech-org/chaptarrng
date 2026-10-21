@@ -73,8 +73,10 @@ namespace Chaptarr.Core.Test.Http
                 url => url == destinationUrl,
                 request => Task.FromResult(new HttpResponse(request, new HttpHeader(), new byte[0])));
 
-            Assert.ThrowsAsync<WebException>(async () => await transport.CreateClient().ExecuteAsync(CreateRequest()));
+            var exception = Assert.ThrowsAsync<WebException>(async () => await transport.CreateClient().ExecuteAsync(CreateRequest()));
 
+            Assert.That(exception.Status, Is.EqualTo(WebExceptionStatus.ProtocolError));
+            Assert.That(exception.Message, Does.Not.Contain("reader"));
             Assert.That(transport.RequestedUrls, Is.EqualTo(new[] { SourceUrl }));
         }
 

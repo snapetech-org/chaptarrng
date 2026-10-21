@@ -108,7 +108,24 @@ namespace NzbDrone.Common.Http
                     }
 
                     var sourceUrl = redirectRequest.Url;
-                    var nextUrl = sourceUrl + new HttpUri(location);
+                    if (!Uri.TryCreate((Uri)sourceUrl, location, out var resolvedLocation) ||
+                        !resolvedLocation.IsAbsoluteUri ||
+                        !string.IsNullOrEmpty(resolvedLocation.UserInfo))
+                    {
+                        // Redirect locations can contain credentials; never include the value in the error.
+                        throw new WebException("Redirect target is invalid or contains URL credentials.", WebExceptionStatus.ProtocolError);
+                    }
+
+                    HttpUri nextUrl;
+                    try
+                    {
+                        nextUrl = sourceUrl + new HttpUri(location);
+                    }
+                    catch (ArgumentException)
+                    {
+                        // Do not echo malformed Location values; they may contain credentials.
+                        throw new WebException("Redirect target is invalid or unsupported.", WebExceptionStatus.ProtocolError);
+                    }
 
                     EnsureSafeRedirectTarget(nextUrl);
 
