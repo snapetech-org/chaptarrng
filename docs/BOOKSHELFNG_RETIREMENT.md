@@ -44,10 +44,13 @@ Fresh ChaptarrNG installs leave that compatibility gate disabled. The mapped
 `BookMatchingStrictness` remains an additional safety policy, and ChaptarrNG's
 newer identity and ambiguity checks mean the combined decision pipeline is not
 identical in every case. Focused matching, importer, and RSS regression tests
-passed 68/68 locally. The PostgreSQL fixture now asserts the compatibility
-marker and preserved source backup, but all eight database-backed cases skipped
-locally because `CHAPTARRNG_POSTGRES_TEST_CONNECTION` is unset. Hosted exact-head
-validation remains pending. The current source is unpublished; `v0.9.977`
+passed 68/68 locally. All eight PostgreSQL migration fixture cases also passed
+against an isolated local PostgreSQL 16 container; coverage includes normal
+startup, source schemas 1, 13, 22, 33, and 158, restore, and rejection of newer
+or view-based sources. The fixture verifies the compatibility marker and
+preserved BookshelfNG backup. This remains synthetic migration evidence, not
+operator-data acceptance. Hosted cross-platform exact-head and standalone-asset
+validation remain pending. The current source is unpublished; `v0.9.977`
 predates these changes and the retirement release freeze remains active.
 
 The canonical
