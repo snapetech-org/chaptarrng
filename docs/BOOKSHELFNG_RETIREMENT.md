@@ -597,17 +597,27 @@ ChaptarrNG releases. ChaptarrNG refuses multiple non-empty legacy candidates
 instead of guessing or merging. Independently operated BookshelfNG instances
 can be migrated one at a time with separate appdata directories; co-located
 databases need their ownership and settings resolved before separate copies can
-be migrated. A PostgreSQL
-migration-158 candidate is now in the merged source; it does not
-support older PostgreSQL schemas. The candidate remains unaccepted for operator data; see the [PostgreSQL migration notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). A private populated migration-158 SQLite snapshot completed preview, apply, and rollback with public `.977` on Linux/amd64 on 2026-10-18. That proved structural conversion and rollback only; it did not validate native Hardcover identity. The separate 2026-10-19 candidate rehearsal with explicit Hardcover mode passed the same four-step path on a disposable copy and restored the source database byte-for-byte from its retained backup. Neither run resolves ambiguous media classifications, PostgreSQL acceptance, feature parity, or installation-channel handoff; details are in the [operator guide](MIGRATE_FROM_BOOKSHELFNG.md).
+be migrated. Current `main` also supports PostgreSQL source conversion and
+upgrades supported older source schemas on a disposable snapshot. Local
+PostgreSQL 17 fixtures cover versions 1, 13, 22, 33, and 158; these are
+synthetic and do not establish operator-data acceptance. See the
+[PostgreSQL migration notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). A private
+populated migration-158 SQLite snapshot completed preview, apply, and rollback
+with public `.977` on Linux/amd64 on 2026-10-18. That proved structural
+conversion and rollback only; it did not validate native Hardcover identity.
+The separate 2026-10-19 candidate rehearsal with explicit Hardcover mode passed
+the same four-step path on a disposable copy and restored the source database
+byte-for-byte from its retained backup. Neither run resolves ambiguous media
+classifications, PostgreSQL operator-data acceptance, feature parity, or
+installation-channel handoff; details are in the [operator guide](MIGRATE_FROM_BOOKSHELFNG.md).
 The SQLite path stages a native database, accounts for source rows, checks
 SQLite integrity and foreign keys, and promotes only after validation. Preview
 does not modify the source. Apply and rollback are explicit operations, and
 normal startup can run the same converter when it finds a supported source
-database. The merged PostgreSQL candidate uses temporary schemas and
-transactional promotion, checks row accounting and both schema lineages, and
-retains the original tables in a backup schema. The exact-head PostgreSQL
-fixture passed all 4 migration cases in run
+database. The merged PostgreSQL candidate upgrades older sources only on
+temporary schemas, checks row accounting and both schema lineages, and retains
+the original tables in a backup schema. Local PostgreSQL 17 fixtures passed
+8/8 on 2026-10-21; a prior hosted exact-head fixture passed all 4 migration cases in run
 [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100),
 including rollback and normal-startup conversion with backup retention; this
 remains synthetic evidence. Operator-data acceptance remains open; see the
@@ -667,9 +677,12 @@ converter does not include the later `main` fix, and no follow-up release is
 available while the release freeze is active. The published `.977` converter
 does not accept PostgreSQL databases or merge two populated BookshelfNG
 databases from one appdata directory. Independently operated instances can be
-migrated separately with isolated appdata directories. The separate work-branch PostgreSQL candidate supports only one
-migration-158 source schema and must not be used by operators until its
-acceptance gates close. The
+migrated separately with isolated appdata directories. Current `main` also
+upgrades supported older PostgreSQL source schemas on a disposable snapshot
+before conversion; local PostgreSQL 17 fixtures cover source versions 1, 13,
+22, 33, and 158. This candidate remains unreleased and must not be used by
+operators until representative-data conversion, independent backup and restore,
+and rollback acceptance gates close. The
 BookshelfNG helper archives appdata, but
 media/download volumes and settings stored outside appdata need separate
 handling. Keep the BookshelfNG service stopped, retain an independent backup,

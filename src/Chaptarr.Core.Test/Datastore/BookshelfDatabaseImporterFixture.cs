@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -677,10 +678,16 @@ namespace Chaptarr.Core.Test.Datastore
             });
         }
 
-        [Test]
-        public void should_translate_the_legacy_match_threshold_and_retain_its_original_value()
+        [TestCase(50, "aggressive")]
+        [TestCase(66, "aggressive")]
+        [TestCase(67, "balanced")]
+        [TestCase(70, "balanced")]
+        [TestCase(82, "balanced")]
+        [TestCase(83, "strict")]
+        [TestCase(99, "strict")]
+        public void should_translate_legacy_match_threshold_boundaries_and_retain_the_original_value(int threshold, string expectedMode)
         {
-            AddConfigValue("bookimportminimummatchpercent", "70");
+            AddConfigValue("bookimportminimummatchpercent", threshold.ToString(CultureInfo.InvariantCulture));
 
             new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
                 _sourceConnectionString,
@@ -690,9 +697,9 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.EqualTo("balanced"));
-                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo("70"));
-                Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo("70"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.EqualTo(expectedMode));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo(threshold.ToString(CultureInfo.InvariantCulture)));
+                Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo(threshold.ToString(CultureInfo.InvariantCulture)));
                 Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.Zero);
             });
         }
@@ -943,43 +950,14 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        [TestCase(47, "migration history cannot be upgraded by the bundled migration chain")]
-        [TestCase(159, "outside the bundled migration chain (1-158)")]
-        public void should_reject_a_bookshelf_schema_outside_the_embedded_migration_chain(int unsupportedVersion, string expectedMessage)
-        {
-            using (var source = new SqliteConnection(_sourceConnectionString))
-            {
-                source.Open();
-                using var command = source.CreateCommand();
-                command.CommandText = "UPDATE VersionInfo SET Version = @version WHERE Version = 158;";
-                command.Parameters.AddWithValue("@version", unsupportedVersion);
-                Assert.That(command.ExecuteNonQuery(), Is.EqualTo(1));
-            }
-
-            var before = File.ReadAllBytes(_sourcePath);
-            var exception = Assert.Throws<InvalidDataException>(() => new MigrationController(
-                LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
-                    _sourceConnectionString,
-                    new MigrationContext(MigrationType.Main),
-                    DatabaseType.SQLite));
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(exception.Message, Does.Contain(expectedMessage));
-                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
-                Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
-                Assert.That(Directory.GetFiles(_directory, "*.bookshelf-migrate-*.db"), Is.Empty);
-            });
-        }
-
         [Test]
-        public void should_reject_a_bookshelf_schema_with_missing_migration_history()
+        public void should_reject_a_bookshelf_schema_newer_than_the_embedded_migration_chain()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))
             {
                 source.Open();
                 using var command = source.CreateCommand();
-                command.CommandText = "DELETE FROM VersionInfo WHERE Version = 22;";
+                command.CommandText = "UPDATE VersionInfo SET Version = 159 WHERE Version = 158;";
                 Assert.That(command.ExecuteNonQuery(), Is.EqualTo(1));
             }
 
@@ -992,7 +970,7 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(exception.Message, Does.Contain("missing: 22"));
+                Assert.That(exception.Message, Does.Contain("outside the bundled migration chain (1-158)"));
                 Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelf-migrate-*.db"), Is.Empty);

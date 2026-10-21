@@ -332,11 +332,8 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        [TestCase(47, "migration history cannot be upgraded by the bundled migration chain")]
-        [TestCase(159, "outside the bundled migration chain")]
-        public void should_reject_a_postgres_source_outside_the_bundled_migration_chain_without_changing_its_tables(
-            int unsupportedVersion,
-            string expectedMessage)
+        [Test]
+        public void should_reject_a_newer_postgres_source_without_changing_its_tables()
         {
             var sourceConnectionString = BuildConnectionString(_baseConnectionString, _sourceSchema);
             MigrateBookshelfSourceToLatest(sourceConnectionString);
@@ -344,8 +341,7 @@ namespace Chaptarr.Core.Test.Datastore
             {
                 connection.Open();
                 using var command = connection.CreateCommand();
-                command.CommandText = "UPDATE \"VersionInfo\" SET \"Version\" = @version WHERE \"Version\" = 158;";
-                command.Parameters.AddWithValue("version", unsupportedVersion);
+                command.CommandText = "UPDATE \"VersionInfo\" SET \"Version\" = 159 WHERE \"Version\" = 158;";
                 Assert.That(command.ExecuteNonQuery(), Is.EqualTo(1));
             }
 
@@ -361,45 +357,9 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(exception.Message, Does.Contain(expectedMessage));
+                Assert.That(exception.Message, Does.Contain("schema version 159 is outside the bundled migration chain"));
                 Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
-                Assert.That(ReadScalarInt(sourceConnectionString, "SELECT MAX(\"Version\") FROM \"VersionInfo\";"), Is.EqualTo(unsupportedVersion));
-                var newSchemas = GetSchemaNames(_baseConnectionString).Except(_schemasBefore, StringComparer.Ordinal).ToArray();
-                Assert.That(newSchemas.Any(schema => schema.StartsWith("bookshelf_snapshot_", StringComparison.Ordinal)), Is.False);
-                Assert.That(newSchemas.Any(schema => schema.StartsWith("chaptarr_stage_", StringComparison.Ordinal)), Is.False);
-                Assert.That(newSchemas.Any(schema => schema.StartsWith("bookshelfng_backup_", StringComparison.Ordinal)), Is.False);
-            });
-        }
-
-        [Test]
-        public void should_reject_a_postgres_source_with_an_unrecognized_migration_in_its_history()
-        {
-            var sourceConnectionString = BuildConnectionString(_baseConnectionString, _sourceSchema);
-            MigrateBookshelfSourceToLatest(sourceConnectionString);
-            using (var connection = new NpgsqlConnection(sourceConnectionString))
-            {
-                connection.Open();
-                using var command = connection.CreateCommand();
-                command.CommandText = @"INSERT INTO ""VersionInfo"" (""Version"", ""AppliedOn"", ""Description"")
-                    VALUES (47, CURRENT_TIMESTAMP, 'unbundled fixture migration');";
-                command.ExecuteNonQuery();
-            }
-
-            var controller = new MigrationController(
-                LogManager.GetLogger(nameof(BookshelfPostgresDatabaseConverterFixture)),
-                null,
-                new TestAppFolderInfo(_temporaryDirectory));
-            var exception = Assert.Throws<InvalidDataException>(() => controller.MigrateBookshelf(
-                sourceConnectionString,
-                new MigrationContext(MigrationType.Main),
-                DatabaseType.PostgreSQL,
-                previewOnly: true));
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(exception.Message, Does.Contain("unrecognized: 47"));
-                Assert.That(ReadScalarInt(sourceConnectionString, "SELECT MAX(\"Version\") FROM \"VersionInfo\";"), Is.EqualTo(158));
-                Assert.That(DatabaseLineageGuard.Detect(sourceConnectionString, DatabaseType.PostgreSQL), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(ReadScalarInt(sourceConnectionString, "SELECT MAX(\"Version\") FROM \"VersionInfo\";"), Is.EqualTo(159));
                 var newSchemas = GetSchemaNames(_baseConnectionString).Except(_schemasBefore, StringComparer.Ordinal).ToArray();
                 Assert.That(newSchemas.Any(schema => schema.StartsWith("bookshelf_snapshot_", StringComparison.Ordinal)), Is.False);
                 Assert.That(newSchemas.Any(schema => schema.StartsWith("chaptarr_stage_", StringComparison.Ordinal)), Is.False);

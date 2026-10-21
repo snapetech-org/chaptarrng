@@ -22,12 +22,14 @@ with dynamic typing and the released BookshelfNG SQLite schema already uses
 type. The isolated migration runner also includes BookshelfNG’s SQLite table
 rebuild processor for its older alter, rename, and drop-column migrations.
 
-The embedded chain recognizes its actual migration history (versions 1–46 and
-158), not every integer in that numeric range. The importer verifies that every
-recorded migration belongs to the chain and that no earlier migration is
-missing before applying pending migrations to a disposable copy. Unknown,
-incomplete, or newer histories fail closed. The automatic compatibility path
-does not rewrite or normalize the original database before it is retained.
+The embedded fork-specific migration classes are versions 1–46 and 158. The
+BookshelfNG `VersionInfo` table also records migrations shared with its
+upstream, so valid source databases can contain version rows that are not
+defined in this isolated namespace. The importer checks that a migration
+history exists and that its maximum version is between 1 and 158; it does not
+compare every history row with the fork-specific class list. Older schemas are
+upgraded only on the disposable snapshot, and the original database is retained
+unchanged for rollback.
 
 The PostgreSQL converter stages native Chaptarr tables in a temporary schema,
 retains the source tables in a backup schema after promotion, and provides
