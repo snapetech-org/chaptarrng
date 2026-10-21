@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Chaptarr.Core.Test;
+using Moq;
 using NLog;
 using NUnit.Framework;
 using NzbDrone.Core.Books;
@@ -60,7 +61,11 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
             }
         }
 
-        private static FileMatchingService CreateService(IEnumerable<EditionFtsMatch> candidates, IEnumerable<Book> books)
+        private static FileMatchingService CreateService(
+            IEnumerable<EditionFtsMatch> candidates,
+            IEnumerable<Book> books,
+            bool bookshelfMatchCompatibility = false,
+            IEditionService editionService = null)
         {
             var logger = LogManager.GetCurrentClassLogger();
             var authorService = DispatchProxy.Create<IAuthorService, AuthorServiceProxy>();
@@ -77,13 +82,13 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                 commandQueue: null,
                 authorFolderMatchingService: null,
                 rootFolderService: null,
-                configService: ConfigServiceTestProxy.Create(),
+                configService: ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: bookshelfMatchCompatibility),
                 authorService: authorService,
                 eventAggregator: null,
                 authorLibraryService: null,
                 editionFtsRepository: new StubEditionFtsRepository(candidates),
                 bookService: bookService,
-                editionService: null,
+                editionService: editionService,
                 editionRepository: null,
                 mediaInfoExtractor: null,
                 logger: logger);
@@ -280,6 +285,36 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
             var match = svc.HolyGrailMatchFile(File("Slat to the Sea", durationSeconds: 3610), BookMediaType.Audiobook, restrictToAuthorId: 41);
 
             Assert.That(match, Is.Null);
+        }
+
+        [Test]
+        public void should_apply_the_saved_bookshelf_minimum_only_to_converted_installations()
+        {
+            var candidate = Candidate(1, 1, "The Hobbit", durationSeconds: 3600);
+            var book = new Book
+            {
+                Id = 1,
+                AuthorId = 41,
+                Title = "The Hobbit",
+                MediaType = BookMediaType.Audiobook,
+                Author = new Author { Id = 41, Name = "J.R.R. Tolkien" }
+            };
+            var file = File("The Hobbit", durationSeconds: 3600);
+            file.AllTags.Remove("ARTIST");
+
+            var editionService = new Mock<IEditionService>();
+            editionService.Setup(service => service.GetEditions(It.IsAny<IEnumerable<int>>()))
+                .Returns(new List<Edition> { new Edition { Id = 1, BookId = 1, Title = "The Hobbit" } });
+
+            var compatibleService = CreateService(
+                new[] { candidate },
+                new[] { book },
+                bookshelfMatchCompatibility: true,
+                editionService: editionService.Object);
+            var normalService = CreateService(new[] { candidate }, new[] { book });
+
+            Assert.That(normalService.HolyGrailMatchFile(file, BookMediaType.Audiobook, restrictToAuthorId: 41), Is.Not.Null);
+            Assert.That(compatibleService.HolyGrailMatchFile(file, BookMediaType.Audiobook, restrictToAuthorId: 41), Is.Null);
         }
     }
 }

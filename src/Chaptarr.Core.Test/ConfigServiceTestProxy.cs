@@ -9,6 +9,7 @@ namespace Chaptarr.Core.Test
     {
         public BookMatchingStrictness BookMatchingStrictness { get; set; } = BookMatchingStrictness.Balanced;
         public int BookImportMinimumMatchPercent { get; set; } = 70;
+        public bool BookshelfMatchCompatibility { get; set; }
         public bool UsePathAsTagsFallback { get; set; } = true;
         public bool AutoAddMissingAuthorsFromCompletedDownloads { get; set; }
         public bool AutoInitializeFormatSpecificAuthorPaths { get; set; }
@@ -43,6 +44,17 @@ namespace Chaptarr.Core.Test
             if (targetMethod?.Name == "set_BookImportMinimumMatchPercent")
             {
                 BookImportMinimumMatchPercent = (int)args[0];
+                return null;
+            }
+
+            if (targetMethod?.Name == "get_BookshelfMatchCompatibility")
+            {
+                return BookshelfMatchCompatibility;
+            }
+
+            if (targetMethod?.Name == "set_BookshelfMatchCompatibility")
+            {
+                BookshelfMatchCompatibility = (bool)args[0];
                 return null;
             }
 
@@ -198,7 +210,8 @@ namespace Chaptarr.Core.Test
                                             bool autoAddMissingAuthorsFromCompletedDownloads = false,
                                             string defaultAudiobookRootFolderPath = "",
                                             string defaultEbookRootFolderPath = "",
-                                            bool autoInitializeFormatSpecificAuthorPaths = false)
+                                            bool autoInitializeFormatSpecificAuthorPaths = false,
+                                            bool bookshelfMatchCompatibility = false)
         {
             var service = DispatchProxy.Create<IConfigService, ConfigServiceTestProxy>();
             ((ConfigServiceTestProxy)service).BookMatchingStrictness = strictness;
@@ -208,6 +221,7 @@ namespace Chaptarr.Core.Test
             ((ConfigServiceTestProxy)service).DefaultAudiobookRootFolderPath = defaultAudiobookRootFolderPath;
             ((ConfigServiceTestProxy)service).DefaultEbookRootFolderPath = defaultEbookRootFolderPath;
             ((ConfigServiceTestProxy)service).AutoInitializeFormatSpecificAuthorPaths = autoInitializeFormatSpecificAuthorPaths;
+            ((ConfigServiceTestProxy)service).BookshelfMatchCompatibility = bookshelfMatchCompatibility;
             return service;
         }
     }

@@ -698,9 +698,28 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.Multiple(() =>
             {
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.EqualTo(expectedMode));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfMatchCompatibility';"), Is.EqualTo("true"));
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo(threshold.ToString(CultureInfo.InvariantCulture)));
                 Assert.That(QueryScalar<string>(backupPath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo(threshold.ToString(CultureInfo.InvariantCulture)));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'BookshelfMatchCompatibility';"), Is.Zero);
                 Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.Zero);
+            });
+        }
+
+        [Test]
+        public void should_preserve_the_default_bookshelf_match_threshold_when_it_was_not_saved()
+        {
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+            var backupPath = Directory.GetFiles(_directory, "readarr.db.bookshelfng-backup-*.db").Single();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfMatchCompatibility';"), Is.EqualTo("true"));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Config WHERE Key = 'BookImportMinimumMatchPercent';"), Is.Zero);
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM Config WHERE Key = 'BookshelfMatchCompatibility';"), Is.Zero);
             });
         }
 
@@ -731,8 +750,23 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.Multiple(() =>
             {
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookmatchingstrictness';"), Is.EqualTo("strict"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfMatchCompatibility';"), Is.EqualTo("true"));
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'bookimportminimummatchpercent';"), Is.EqualTo("50"));
             });
+        }
+
+        [Test]
+        public void should_preserve_an_explicit_bookshelf_match_compatibility_override()
+        {
+            AddConfigValue("bookimportminimummatchpercent", "70");
+            AddConfigValue("BookshelfMatchCompatibility", "false");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfMatchCompatibility';"), Is.EqualTo("false"));
         }
 
         [Test]

@@ -1725,6 +1725,7 @@ namespace NzbDrone.Core.Datastore
         {
             const string legacyMatchKey = "bookimportminimummatchpercent";
             const string chaptarrStrictnessKey = "bookmatchingstrictness";
+            const string chaptarrMatchCompatibilityKey = "bookshelfmatchcompatibility";
             const string legacyHardcoverTokenKey = "hardcoverauth";
             const string chaptarrHardcoverTokenKey = "hardcoverapitoken";
             const string chaptarrHardcoverEnabledKey = "hardcoverenabled";
@@ -1738,6 +1739,7 @@ namespace NzbDrone.Core.Datastore
                 .Max();
             var legacyRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMatchKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var strictnessRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrStrictnessKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var matchCompatibilityRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrMatchCompatibilityKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var legacyHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverEnabledRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverEnabledKey, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -1745,7 +1747,7 @@ namespace NzbDrone.Core.Datastore
                 .Where(row => string.Equals(GetString(row, "Key"), "AutoInitializeFormatSpecificAuthorPaths", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            if (legacyRows.Count > 1 || strictnessRows.Count > 1)
+            if (legacyRows.Count > 1 || strictnessRows.Count > 1 || matchCompatibilityRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate match settings; conversion stopped before promotion.");
             }
@@ -1765,7 +1767,7 @@ namespace NzbDrone.Core.Datastore
                 throw new InvalidDataException("BookshelfNG config contains duplicate format-specific author path settings; conversion stopped before promotion.");
             }
 
-            var matchSettingDisposition = "no BookshelfNG numeric match threshold was present; ChaptarrNG defaults apply, including 70% for the fuzzy RSS-title fallback";
+            var matchSettingDisposition = "no BookshelfNG numeric match threshold was saved; the BookshelfNG default 70% remains active for fuzzy RSS-title fallback and candidate acceptance";
             var existingStrictnessValue = strictnessRows.SingleOrDefault() is { } strictnessRow
                 ? GetString(strictnessRow, "Value")
                 : null;
@@ -1794,8 +1796,8 @@ namespace NzbDrone.Core.Datastore
                 }
 
                 matchSettingDisposition = legacyRows.Count == 0
-                    ? $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' was preserved"
-                    : $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' was preserved for strictness-based matching; the BookshelfNG numeric threshold remains active only for the compatible fuzzy RSS-title fallback";
+                    ? $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' was preserved; the BookshelfNG default numeric threshold of 70% remains active for fuzzy RSS-title fallback and candidate acceptance"
+                    : $"explicit ChaptarrNG matching mode '{existingStrictnessValue}' was preserved; the BookshelfNG numeric threshold remains active for fuzzy RSS-title fallback and candidate acceptance";
             }
             else if (legacyPercent.HasValue && legacyMappedStrictness.HasValue)
             {
@@ -1818,7 +1820,26 @@ namespace NzbDrone.Core.Datastore
                     configRows.Add(mappedStrictness);
                 }
 
-                matchSettingDisposition = $"BookshelfNG BookImportMinimumMatchPercent={legacyPercent.Value.ToString(CultureInfo.InvariantCulture)} remains active for the compatible fuzzy RSS-title fallback and was also mapped to ChaptarrNG BookMatchingStrictness='{mappedValue}' for strictness-based matching; the latter is a closest-policy translation, not an equivalent implementation of BookshelfNG's weighted import-distance algorithm.";
+                matchSettingDisposition = $"BookshelfNG BookImportMinimumMatchPercent={legacyPercent.Value.ToString(CultureInfo.InvariantCulture)} remains active for fuzzy RSS-title fallback and candidate acceptance, and was also mapped to ChaptarrNG BookMatchingStrictness='{mappedValue}' for its additional safety rules.";
+            }
+
+            if (matchCompatibilityRows.Count == 0)
+            {
+                var compatibilitySetting = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["Key"] = "BookshelfMatchCompatibility",
+                    ["Value"] = "true"
+                };
+                if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+                {
+                    compatibilitySetting["Id"] = checked(++nextGeneratedConfigId);
+                }
+                configRows.Add(compatibilitySetting);
+            }
+            else if (matchCompatibilityRows.Count == 1 &&
+                     !bool.TryParse(GetString(matchCompatibilityRows[0], "Value"), out _))
+            {
+                throw new InvalidDataException("BookshelfNG BookshelfMatchCompatibility must be true or false; conversion stopped before promotion.");
             }
 
             var hardcoverTokenDisposition = "no saved Hardcover token was present";

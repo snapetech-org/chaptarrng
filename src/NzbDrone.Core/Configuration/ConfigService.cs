@@ -318,6 +318,13 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("BookImportMinimumMatchPercent", value); }
         }
 
+        public bool BookshelfMatchCompatibility
+        {
+            get { return GetValueBoolean("BookshelfMatchCompatibility", false); }
+
+            set { SetValue("BookshelfMatchCompatibility", value); }
+        }
+
         public bool UsePathAsTagsFallback
         {
             get { return GetValueBoolean("UsePathAsTagsFallback", true); }

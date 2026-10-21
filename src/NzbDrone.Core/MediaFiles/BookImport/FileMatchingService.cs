@@ -6587,6 +6587,39 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     return null;
                 }
 
+                var useBookshelfMatchCompatibility = _configService?.BookshelfMatchCompatibility == true;
+                var bookshelfMinimumMatchPercent = _configService?.BookImportMinimumMatchPercent ?? 70;
+                var bookshelfEditionsById = new Dictionary<int, Edition>();
+                if (useBookshelfMatchCompatibility)
+                {
+                    if (bookshelfMinimumMatchPercent < 50 || bookshelfMinimumMatchPercent > 99 || _editionService == null)
+                    {
+                        RecordPhaseRejection(
+                            "BOOKSHELF_MATCH_CONFIGURATION_INVALID",
+                            "The migrated BookshelfNG match threshold is invalid or edition metadata is unavailable");
+                        return null;
+                    }
+
+                    try
+                    {
+                        var editionIds = ftsResults
+                            .Where(candidate => candidate != null && candidate.EditionId > 0)
+                            .Select(candidate => candidate.EditionId)
+                            .Distinct()
+                            .ToList();
+                        bookshelfEditionsById = (_editionService.GetEditions(editionIds) ?? new List<Edition>())
+                            .Where(edition => edition != null)
+                            .GroupBy(edition => edition.Id)
+                            .ToDictionary(group => group.Key, group => group.First());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "[HOLY-GRAIL][{0}] Could not load edition metadata required by BookshelfNG match compatibility", phase);
+                        RecordPhaseRejection("BOOKSHELF_MATCH_METADATA_UNAVAILABLE");
+                        return null;
+                    }
+                }
+
                 _logger.Debug("[HOLY-GRAIL][{0}] Got {1} FTS results, validating evidence and leftovers...", phase, ftsResults.Count);
                 if (IsMatchingTraceEnabled())
                 {
@@ -7635,6 +7668,37 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         audiobookDurationMatches,
                         audiobookRepresentativeTitleMatch,
                         audiobookUndistinguishedEditionFallback);
+                    if (useBookshelfMatchCompatibility)
+                    {
+                        if (!bookshelfEditionsById.TryGetValue(result.EditionId, out var legacyEdition))
+                        {
+                            RecordCandidateRejection(result, "BOOKSHELF_MATCH_METADATA_UNAVAILABLE", "candidate edition metadata was not available");
+                            return null;
+                        }
+
+                        var candidateBookForLegacyScore = TryGetBookCached(result.BookId, booksById);
+                        var localTrackTags = groupMemberTags?.Count > 0
+                            ? groupMemberTags
+                            : new[] { allTags };
+                        var preferredEditionTerms = candidateBookForLegacyScore?.Author?.GetMetadataProfileFor(mediaType)?.PreferredEditionTerms;
+                        var legacyMatchPercent = BookshelfMatchCompatibilityScorer.GetMatchPercent(
+                            localTrackTags,
+                            result,
+                            legacyEdition,
+                            candidateBookForLegacyScore,
+                            mediaType,
+                            preferredEditionTerms);
+                        if (legacyMatchPercent < bookshelfMinimumMatchPercent)
+                        {
+                            RecordCandidateRejection(
+                                result,
+                                "BOOKSHELF_MATCH_THRESHOLD",
+                                $"legacy score={legacyMatchPercent:F1}% minimum={bookshelfMinimumMatchPercent}%");
+                            return null;
+                        }
+
+                        scoredCandidate.BookshelfMatchPercent = legacyMatchPercent;
+                    }
                     scoredCandidate.HasDurationProof = audiobookDurationMatches;
                     scoredCandidate.HasDirectEditionTitleProof = HasStrongDirectEditionTitleEvidence(directEditionEvidence);
                     scoredCandidate.HasBookTitleEvidenceProof = hasBookTitleEvidenceProof ||
@@ -8044,6 +8108,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             private sealed class ScoredCandidate
             {
                 public EditionFtsMatch Match { get; set; }
+                public double? BookshelfMatchPercent { get; set; }
                 public int LeftoverCount { get; set; }
                 public IReadOnlyList<string> Leftovers { get; set; } = Array.Empty<string>();
                 public int NarratorTier { get; set; }
@@ -9708,6 +9773,15 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             /// </summary>
             private static int CompareScoredCandidates(ScoredCandidate a, ScoredCandidate b, BookMediaType mediaType)
             {
+                if (a?.BookshelfMatchPercent.HasValue == true && b?.BookshelfMatchPercent.HasValue == true)
+                {
+                    var legacyCompare = a.BookshelfMatchPercent.Value.CompareTo(b.BookshelfMatchPercent.Value);
+                    if (legacyCompare != 0)
+                    {
+                        return legacyCompare;
+                    }
+                }
+
                 return mediaType == BookMediaType.Ebook
                     ? CompareEbookScoredCandidates(a, b)
                     : CompareAudiobookScoredCandidates(a, b);

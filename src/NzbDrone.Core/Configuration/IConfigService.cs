@@ -43,6 +43,7 @@ namespace NzbDrone.Core.Configuration
         AllowFingerprinting AllowFingerprinting { get; set; }
         BookMatchingStrictness BookMatchingStrictness { get; set; }
         int BookImportMinimumMatchPercent { get; set; }
+        bool BookshelfMatchCompatibility { get; set; }
         bool UsePathAsTagsFallback { get; set; }
         bool AutoAddMissingAuthorsFromCompletedDownloads { get; set; }
         bool AutoInitializeFormatSpecificAuthorPaths { get; set; }
