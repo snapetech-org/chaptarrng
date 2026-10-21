@@ -15,38 +15,33 @@ branch at
 [`e67374f`](https://github.com/Chaptarr/chaptarr/commit/e67374f), which is in
 ChaptarrNG `main`'s history.
 
-## BookshelfNG consolidation status — 2026-10-20
+## BookshelfNG consolidation status — 2026-10-21
 
-ChaptarrNG PR #131 is merged to `main`. The current application code snapshot is
-`55f6ae1a2eac79e2af4ae9a7a2d92cd827ab5ad1`; runtime application code includes
-the related-format book actions and combined Bookshelf **Formats** view from
-`c75ecbb37c5708441219887f7180d5ab10ee194d`, plus a Books index **Both** filter
-that keeps status, monitoring, and quality profiles scoped to each record's
-format. Edition-catalog and series-narrator panels expose retry actions after
-failed requests. The restricted SeerrNG key accepts audiobook-scoped narrator
-queries and only non-overriding narrator preference updates. Exact-head Build
-[39474807076](https://github.com/snapetech-org/chaptarrng/actions/runs/39474807076)
-passed Linux, Windows, and PostgreSQL migration jobs. Windows passed installer
-fingerprint, upgrade/rollback service, cleanup, and selected-data-directory
-checks. The macOS job was cancelled before runner setup on both attempts, so
-there is no macOS result. CodeQL, Security Analysis, Semgrep CE, Trivy, and
-dependency submission passed. The UI shell adds accessible ChaptarrNG branding,
-responsive search/sidebar styling, a slate-and-purple dark theme, and visible
-keyboard focus. Focused lint, type-check, translation checks, and the
-production frontend build pass; repository-wide lint remains red on findings
-outside the changed files.
+ChaptarrNG PR #131 is merged to `main`. Current source head is
+[`83f66c36`](https://github.com/snapetech-org/chaptarrng/commit/83f66c36b4de225b63c5be833516ac571459a144). It includes the BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114)
+setting for new-author format paths, disabled by default, and migration support
+that carries the saved flag and maps configured ebook/audiobook roots to
+ChaptarrNG defaults when those defaults are empty. Existing author paths and
+files are not changed. The feature is source-only; public ChaptarrNG `.977`
+predates the toggle.
 
-BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public
-releases. No release or compatibility bridge was published; release readiness
-variables remain unset. Keep BookshelfNG in service and do not apply migration
-or start ChaptarrNG against BookshelfNG appdata.
+The refreshed BookshelfNG audit covers 732 post-fork commits (723 absent from
+upstream), 1,119 paths, 83 reviewed mappings, and 663 dispositions (177
+retained, 132 equivalent, 183 ported, and 171 non-runtime retirements). Another
+456 paths remain open (137 unmapped and 319 requiring semantic review). The
+canonical path-level report and evidence are maintained in the
+[BookshelfNG consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
+Path classifications do not establish runtime parity, and no runtime feature
+is approved for retirement.
 
-The refreshed BookshelfNG inventory covers 679 post-fork commits and 1,116
-paths. See the linked consolidation report for current path dispositions and
-unresolved review. No runtime feature is approved for retirement; path-level
-decisions do not prove feature parity. Representative operator data and
-rollback, provider fulfillment, representative media, installed update-channel
-handoff, and operator acceptance remain open. See the
+Focused backend and migration fixtures pass 11/11. Exact-head Build
+[39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684) is in progress; exact-head
+NuGet submission, Semgrep CE, Security Analysis, and Trivy passed. Publication
+remains frozen; no release, package, image, installer, or migration bridge was
+published. Representative operator-data migration and rollback, provider and
+SeerrNG workflows, representative media and restart recovery, installed
+update-channel handoff, and operator acceptance remain open. Keep BookshelfNG
+in service and do not start ChaptarrNG against BookshelfNG appdata. See the
 [retirement status](BOOKSHELFNG_RETIREMENT.md) and
 [migration guide](MIGRATE_FROM_BOOKSHELFNG.md).
 

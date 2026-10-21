@@ -34,9 +34,11 @@ tools for BookshelfNG SQLite, plus the embedded source migration chain. The
 BookshelfNG helper creates an appdata archive before it runs the tools.
 The source includes a Docker handoff helper; future Linux standalone archives
 will include it after a release is approved.
-ChaptarrNG also initializes new author format paths from configured defaults,
-a behavior released in `v0.9.974`; explicit roots and existing authors are
-left alone. The next version bump is not a release: publication is frozen
+ChaptarrNG `v0.9.974` through the published `.977` initializes new-author
+format paths from configured defaults. Current `main` adds the requested
+disabled-by-default switch for this behavior; it also preserves the saved
+setting and BookshelfNG ebook/audiobook root defaults during migration. The
+new switch is source-only and is not in `.977`. The next version bump is not a release: publication is frozen
 until the BookshelfNG migration, rollback, feature-parity, and install-channel
 acceptance gates are closed. The merged release and distribution workflows
 fail closed unless `CHAPTARRNG_RELEASE_READY=true`; that repository variable
@@ -53,7 +55,7 @@ index's **Both** filter lists audiobook and ebook records as separate rows,
 with status, monitoring, and quality profiles scoped to each record's format.
 These additions are not in `v0.9.977`. The runtime feature commit is
 `c75ecbb37c5708441219887f7180d5ab10ee194d`; current source code is at
-`f30dcec8c882c0169a544eee337f1d628e76e5d4`. It also lets operators preview
+`83f66c36b4de225b63c5be833516ac571459a144`. It also lets operators preview
 eligible existing authors and skip reasons under Settings > Media Management >
 Root Folders, then separately confirm filling missing format paths. The command
 rechecks current settings, preserves manual paths, queues author refreshes, and
@@ -70,19 +72,19 @@ actions to the Editions and Narrations panels and tighten the SeerrNG service
 key: it can read audiobook-scoped narrator comparisons and set a preferred
 narrator only with the non-overriding payload. Ebook-scoped narrator access
 and unrelated or administrative routes stay denied.
-Exact-head Build
-[39520269403](https://github.com/snapetech-org/chaptarrng/actions/runs/39520269403)
-passed Linux, Windows, and macOS build/test jobs, PostgreSQL migration smoke,
-and native-runner receipt reconciliation. Security Analysis, Semgrep CE,
-Trivy, and NuGet submission passed; no CodeQL run is attached to this source
-commit, and the release-note contract was skipped on the main push. Local
-frontend CJS tests pass 57/57, typecheck and translation-key checks pass, and
-the root-folder stylesheet passes Stylelint. Regression tests cover local
-edition preservation, raw Hardcover facade lookup, row-format author editing,
-missing-profile defaults, and backfill preview/confirmation, retry, pending
-dialog, and invalid-count handling. This validation does not authorize a
-release or production cutover.
-
+Current exact-head Build
+[39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
+is in progress. Hosted frontend regression tests and type-checks have passed;
+the PostgreSQL migration job passed, and platform backend tests plus Windows
+installer checks are running. Focused local backend and migration fixtures pass
+11/11. Exact-head Security Analysis, Semgrep CE, Trivy, and NuGet submission
+passed. Prior exact-head Build [39520269403](https://github.com/snapetech-org/chaptarrng/actions/runs/39520269403)
+passed Linux, Windows, macOS, PostgreSQL migration smoke, and native-runner
+receipt reconciliation; that is historical evidence, not a result for the
+current head. The current source remains unpublished. Regression tests cover
+local edition preservation, raw Hardcover facade lookup, row-format author
+editing, missing-profile defaults, and backfill preview/confirmation, retry,
+pending dialog, and invalid-count handling.
 Current `main` also applies the author freshness policy to book-added events
 while retaining the author-scoped folder rescan, even when metadata is skipped
 or unchanged. The exact-head run above includes this change. See the
@@ -128,8 +130,9 @@ key access, and the pending-import cancel lifecycle. The `.m4b` and `.epub`
 files are placeholders, so this does not establish media processing or
 operator-data acceptance. See the [current migration evidence](docs/MIGRATE_FROM_BOOKSHELFNG.md#exact-head-artifact-migration-and-seerrng-smoke-2026-10-20).
 
-The BookshelfNG inventory covers 679 post-fork commits and 1,116 changed
-paths. Its reviewed dispositions and unresolved paths are summarized in the
+The current BookshelfNG inventory covers 732 post-fork commits (723 absent
+from upstream), 1,119 changed paths, 83 reviewed mappings, 663 dispositions,
+and 456 open paths (137 unmapped and 319 requiring semantic review). The
 [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
 Path-level records are not proof of behavior or feature parity; no runtime
 feature has been approved for retirement.

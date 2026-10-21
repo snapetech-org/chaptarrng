@@ -13,7 +13,7 @@ representative library, or installed build.
 | --- | --- | --- |
 | Get a new instance ready | System > Quickstart checks format roots, profiles, indexers, clients, and optional integrations. It has direct setup flows for MyAnonamouse and Hardcover and shows Calibre and AudioBookShelf when relevant. Settings now groups destinations by Library, Search, Connect, General, and System, with Quickstart linked from both Settings and System. | Walk through a clean setup on desktop and mobile, including missing roots, an empty indexer list, and a failed provider test. |
 | Choose the default format for new items | Add New dialogs share a saved default format. Users can change it in Settings > UI or with **Set as default** in an add dialog; individual items can still override it. | Verify persistence after reload and confirm author, book, and series dialogs all start with the saved value. |
-| Set how new authors get format folders | Settings > Media Management > New Author Folders has an opt-in switch for initializing missing ebook and audiobook paths from their matching default roots. It is off by default. Migration preserves the saved flag and maps BookshelfNG's configured new-author roots to ChaptarrNG's per-format defaults; explicit ChaptarrNG values take precedence. Existing author paths and files are unchanged. | Verify the toggle saves and reloads, each chosen format keeps its explicit root, unselected formats stay unassigned when disabled, and existing authors and files are untouched. Check both migrated enabled and disabled settings with configured roots. |
+| Set how new authors get format folders | Settings > Media Management > New Author Folders has an opt-in switch for initializing missing ebook and audiobook paths from their matching default roots. It is off by default. Migration preserves the saved flag and maps BookshelfNG's configured new-author roots to ChaptarrNG's per-format defaults; explicit ChaptarrNG values take precedence. Existing author paths and files are unchanged. This follows [BookshelfNG issue #114](https://github.com/snapetech-org/bookshelfng/issues/114). | Verify the toggle saves and reloads, each chosen format keeps its explicit root, unselected formats stay unassigned when disabled, and existing authors and files are untouched. Check both migrated enabled and disabled settings with configured roots. |
 | Add an author, book, or series | All three flows support audiobook, ebook, or both where relevant; root folders and quality profiles are visible first, with monitoring, metadata, and tags under **More options**. Missing setup links to Quickstart. Root-folder loading failures show a retry. Author profile editors can apply each format's current root-folder quality and metadata profiles; the help text clarifies this copies the current defaults and later changes require applying them again. A missing default is identified and its reset is unavailable. | Exercise each format, both formats, saved defaults, one-item overrides, profile reset for one format while preserving the other, missing roots/profiles/defaults, existing-author book adds, and add failures. |
 | Fill a missing format root on existing authors | Settings > Media Management > Root Folders offers a read-only preview and skip reasons, then separate confirmation. It rechecks current settings, fills only eligible missing paths, queues author refreshes, and never moves book files. Failed preview or queue requests remain retryable; the dialog cannot be dismissed while queueing, duplicate submissions are ignored, fresh previews clear stale queue errors, and invalid or inconsistent counts cannot dispatch an update. | Check zero-candidate and skipped states, eligible updates, manual overrides, missing defaults/profiles, malformed counts, queue failure/retry, and that files stay in place. |
 | Find a title in the catalog | Add New has provider selection, result filtering, and submit-to-search by default; Search as you type is optional. Query changes and clearing cancel stale requests. | Check first search, Enter, repeated same-query search, preference persistence, provider errors, and clearing during a slow request. |
@@ -86,17 +86,11 @@ through the adapter. A separate HTTP regression probe for the bare numeric
 Hardcover ID fix resolved `2459845` through both audiobook and ebook facades and
 returned the canonical `hc:2459845` identity.
 
-Local validation on 2026-10-20 used a preview based on current `main` snapshot
-`ac85470a`, with the new-author folder setting included. The Core suite rebuilt
-from source and passed 4,515 tests; 15 were skipped and none failed. It used
-.NET SDK 10.0.401 and the existing gitignored Six Labors license file; this
-repository pins SDK 10.0.402, which is not installed here. The frontend CJS
-suite passed 86/86, including a check that the setting is visible when advanced
-settings are off and defaults to opt-in off. `yarn
-typecheck`, the translation-key check, and focused ESLint on the changed UI and
-test files passed. The production frontend build completed with 22 CSS-order
-warnings. The profile-reset interaction has CJS coverage; this pass adds no
-separate backend profile-reset test.
+Historical local validation on 2026-10-20 used a preview based on `ac85470a`.
+The Core suite passed 4,515 tests with 15 skipped. The frontend CJS suite passed
+86/86, typecheck and translation checks passed, focused ESLint passed, and the
+production frontend build completed with 22 CSS-order warnings. That preview's
+new-author setting behavior predates the final disabled-by-default contract.
 
 An additional source-build UI smoke used a fresh temporary data directory on
 2026-10-20. In Settings > Media Management, the new-author folder switch was
@@ -109,7 +103,23 @@ loopback, used temporary local Forms credentials, and was removed after the
 check. No real library or provider was configured; author-root selection and
 preservation remain covered by the Core fixtures above.
 
-Hosted Build [39530495818](https://github.com/snapetech-org/chaptarrng/actions/runs/39530495818) validated the earlier `4bdee4a1` code changes; hosted CI has not yet run for this preview branch.
+A later local validation on `codex/bookshelf-parity-completion-20261021`, based
+on `e3759f7a`, passed the full Core suite (4,515 passed, 15 skipped), frontend
+CJS (87/87), typecheck, translation-key validation, focused ESLint, and a
+production frontend build with 22 CSS-order warnings. A fresh source-built
+instance reached the first-run account gate; browser save/reload of the toggle
+and author creation remain unverified because no credentials were created and
+authentication was not weakened.
+
+The final migration commit `83f66c36` has focused author and importer coverage
+(11/11); the additional `ConfigServiceAutoInitializeFormatSpecificAuthorPathsFixture`
+passes 1/1 and verifies the production default is off, the choice persists, and
+the Media Management API resource reflects it. Hosted Build
+[39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
+is still in progress on this source head. Frontend regression tests/typechecks
+and PostgreSQL migration have passed; platform backend tests and Windows
+installer checks remain in progress. No release or migration bridge is
+published.
 A production UI was checked in Chromium 154 against the disposable migrated
 fixture before the latest profile-reset, missing-default, and failure-feedback
 changes; that browser run predates this setting. In Books,

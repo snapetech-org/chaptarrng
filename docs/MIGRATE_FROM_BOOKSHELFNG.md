@@ -1,6 +1,6 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Release status (2026-10-20).** ChaptarrNG `v0.9.977` remains the latest
+> **Release status (2026-10-21).** ChaptarrNG `v0.9.977` remains the latest
 > public release. Releases are frozen until the BookshelfNG retirement gates
 > close. Keep BookshelfNG in service; do not apply migration, install a bridge,
 > or start ChaptarrNG against BookshelfNG appdata.
@@ -12,12 +12,18 @@
 > [ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main),
 > but remains unpublished and is not approved for cutover.
 >
-> The current source candidate also preserves BookshelfNG's optional
+> Current ChaptarrNG `main` at [`83f66c36`](https://github.com/snapetech-org/chaptarrng/commit/83f66c36b4de225b63c5be833516ac571459a144)
+> also implements BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114):
+> the author-path initialization setting is opt-in and disabled by default.
+> Migration carries the saved choice and maps configured ebook/audiobook roots
+> to ChaptarrNG defaults when those defaults are empty. Existing author paths and
+> files are untouched. This change is source-only; exact-head Build
+> [39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
+> is in progress. The source also preserves BookshelfNG's optional
 > `MoveExtraFilesOnRename` setting, exposes it in Media Management, and includes
 > it in settings backups. When enabled, it moves only configured loose files
-> after all renamed book media leaves the old folder. Exact-head hosted checks
-> are required for this change. No release, package, image, or migration bridge
-> has been published. Representative operator data, rollback, provider
+> after all renamed book media leaves the old folder. No release, package,
+> image, or migration bridge has been published. Representative operator data, rollback, provider
 > behavior, and installed update-channel acceptance remain open. See the
 > [BookshelfNG retirement issue](https://github.com/snapetech-org/bookshelfng/issues/144)
 > and [operator migration guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
