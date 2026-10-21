@@ -20,25 +20,26 @@ or migration acceptance.
 
 ChaptarrNG PR #131 merged to `main` as
 `d2bcba7953a14d2d726f47005a660314cc5e4c26`. Current source head is
-`0c8bc86d5af8dd3aa639bb9b1f827a9e6365a7d6`. Runtime application code includes
+`ce9b4bfe06abb271b37c0330c3ca26ec5e6d41e1`. Runtime application code includes
 the related-format book actions and combined Bookshelf **Formats** view from
 `c75ecbb37c5708441219887f7180d5ab10ee194d`, plus the Books index **Both**
 filter with per-record format status, monitoring, and quality profiles. The
 latest changes reuse an existing matching catalog book during local add,
 preserve an explicit manual edition selection, resolve bare numeric
 Hardcover/Goodreads lookup IDs through the Readarr facade, and pass the
-selected row format into the author editor. Focused regression tests cover local
-add and provider lookup; the row-format wiring is compiled in the hosted build,
-with no dedicated UI assertion.
+selected row format into the author editor. Root Folders now offers a
+read-only preview and separate confirmation for filling eligible existing
+author paths; confirmation rechecks current settings, queues refreshes, and
+does not move files. Author profile reset is unavailable when a selected root
+has no configured default. Frontend regression tests cover row-format editing,
+missing defaults, preview/confirmation, empty results, and retryable errors.
 
 Exact-head Build
-[39512434958](https://github.com/snapetech-org/chaptarrng/actions/runs/39512434958)
-passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
-receipt reconciliation. Windows also passed migration-installer fingerprint,
-service upgrade/rollback, cleanup, and selected-data-directory checks.
-Security Analysis, Semgrep CE, Trivy, CodeQL, and NuGet submission passed. The
-release-note contract was skipped because no release was prepared. The current
-source is unpublished and does not approve production cutover.
+[39519231702](https://github.com/snapetech-org/chaptarrng/actions/runs/39519231702)
+is still in progress. Security Analysis, Semgrep CE, Trivy, and NuGet
+submission passed; CodeQL is in progress. Local frontend CJS tests pass 55/55,
+typecheck and translation-key checks pass, and changed CSS passes Stylelint.
+The current source is unpublished and does not approve production cutover.
 
 BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public
 releases. No release, package, image, installer, or migration bridge was

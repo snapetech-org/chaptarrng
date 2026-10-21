@@ -55,16 +55,16 @@ point ChaptarrNG at its `/config` directory or apply the published `.977`
 converter to BookshelfNG appdata.
 
 The current ChaptarrNG source candidate is
-[`0c8bc86d`](https://github.com/snapetech-org/chaptarrng/commit/0c8bc86d5af8dd3aa639bb9b1f827a9e6365a7d6).
+[`ce9b4bfe`](https://github.com/snapetech-org/chaptarrng/commit/ce9b4bfe06abb271b37c0330c3ca26ec5e6d41e1).
 Exact-head Build
-[`39512434958`](https://github.com/snapetech-org/chaptarrng/actions/runs/39512434958)
-passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
-receipt reconciliation. Windows also passed migration-installer fingerprint,
-upgrade/rollback, cleanup, and selected-data-directory checks. Security
-Analysis, Semgrep CE, Trivy, CodeQL, and NuGet submission passed. The current
-source adds local-add edition preservation, numeric Hardcover/Goodreads
-facade lookup, and row-format-aware author editing; it is not in the
-published image. BookshelfNG issue
+[`39519231702`](https://github.com/snapetech-org/chaptarrng/actions/runs/39519231702)
+is still in progress. Security Analysis, Semgrep CE, Trivy, and NuGet
+submission passed; CodeQL is running. Local frontend tests pass 55/55, and
+typecheck, translation-key validation, and changed CSS lint pass. Current
+source includes a preview/confirm flow for missing author roots, safe profile
+reset controls, local-add edition preservation, numeric Hardcover/Goodreads
+facade lookup, and row-format-aware author editing. It is not in the published
+image. BookshelfNG issue
 [#144](https://github.com/snapetech-org/bookshelfng/issues/144) remains open,
 and the legacy Unraid handoff [PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5)
 is still a draft. Community Applications update/rollback and

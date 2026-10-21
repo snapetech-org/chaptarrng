@@ -51,7 +51,13 @@ index's **Both** filter lists audiobook and ebook records as separate rows,
 with status, monitoring, and quality profiles scoped to each record's format.
 These additions are not in `v0.9.977`. The runtime feature commit is
 `c75ecbb37c5708441219887f7180d5ab10ee194d`; current source code is at
-`0c8bc86d5af8dd3aa639bb9b1f827a9e6365a7d6`. It also reuses matching local
+`ce9b4bfe06abb271b37c0330c3ca26ec5e6d41e1`. It also lets operators preview
+eligible existing authors and skip reasons under Settings > Media Management >
+Root Folders, then separately confirm filling missing format paths. The command
+rechecks current settings, preserves manual paths, queues author refreshes, and
+does not move book files. Author profile reset controls are disabled when the
+selected root has no configured default, protecting explicit profiles. It
+reuses matching local
 catalog books during add, preserves an explicitly selected manual edition,
 and resolves bare numeric Hardcover/Goodreads IDs through the Readarr facade
 before title search. Author edit actions from book rows now open the editor
@@ -63,16 +69,14 @@ key: it can read audiobook-scoped narrator comparisons and set a preferred
 narrator only with the non-overriding payload. Ebook-scoped narrator access
 and unrelated or administrative routes stay denied.
 Exact-head Build
-[39512434958](https://github.com/snapetech-org/chaptarrng/actions/runs/39512434958)
-passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
-receipt reconciliation. Windows also passed the BookshelfNG installer
-fingerprint, upgrade/rollback, cleanup, and selected-data-directory checks.
-CodeQL, Security Analysis, Semgrep CE, Trivy, and NuGet submission passed; the
-release-note contract was skipped because no release was prepared. Focused
-regression fixtures cover local edition preservation and raw Hardcover facade
-lookup; a reducer fixture also protects duplicate book IDs in paged results. The
-row-format handoff into the author editor is included in the hosted cross-platform
-build, but has no dedicated UI assertion. This validation does not authorize a
+[39519231702](https://github.com/snapetech-org/chaptarrng/actions/runs/39519231702)
+is validating this source snapshot; the exact-head Build is still in progress.
+Security Analysis, Semgrep CE, Trivy, and NuGet submission have passed, while
+CodeQL is still running. Local frontend CJS tests pass 55/55, typecheck and
+translation-key checks pass, and the root-folder stylesheet passes Stylelint.
+Regression tests cover local edition preservation, raw Hardcover facade
+lookup, row-format author editing, missing-profile defaults, and backfill
+preview/confirmation/error handling. This validation does not authorize a
 release or production cutover.
 
 Current `main` also applies the author freshness policy to book-added events

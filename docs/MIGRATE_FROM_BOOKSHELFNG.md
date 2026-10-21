@@ -17,20 +17,22 @@
 > exact migration-158 SQLite schema. Its pre-upgrade check rejects schemas
 > before migration 14; upgrade those installations to the final BookshelfNG
 > `0.4.21.71` release first. The current migration candidate code head is
-> `0c8bc86d5af8dd3aa639bb9b1f827a9e6365a7d6`. It includes the migration and
+> `ce9b4bfe06abb271b37c0330c3ca26ec5e6d41e1`. It includes the migration and
 > installer work, Books index Both filter, combined Bookshelf Formats view,
 > audiobook-scoped SeerrNG narrator operations, visible retry actions, and the
 > responsive ChaptarrNG UI. It also preserves manual edition choices on local
 > book adds, resolves bare numeric Hardcover/Goodreads IDs through the
-> Readarr facade, and passes each book row's format to the author editor. Exact-head Build
-> [39512434958](https://github.com/snapetech-org/chaptarrng/actions/runs/39512434958)
-> passed Linux, Mac Intel, Windows, PostgreSQL migrations, and native-runner
-> receipt reconciliation. Windows also passed migration-installer fingerprint,
-> service upgrade/rollback, cleanup, and selected-data-directory checks.
-> CodeQL, Security Analysis, Semgrep CE, Trivy, and NuGet submission passed;
-> the release-note contract was skipped because no release was prepared. The
-> current code remains unpublished and is not approved for operator cutover
-> during the release freeze.
+> Readarr facade, and passes each book row's format to the author editor. Root
+> Folders provides a read-only preview and separate confirmation for filling
+> eligible existing-author format paths; confirmation rechecks settings and
+> queues refreshes without moving files. Profile reset is disabled when the
+> selected root has no configured default. Exact-head Build
+> [39519231702](https://github.com/snapetech-org/chaptarrng/actions/runs/39519231702)
+> is still in progress. Security Analysis, Semgrep CE, Trivy, and NuGet
+> submission have passed; CodeQL is in progress. Local frontend tests pass
+> 55/55, typecheck and translation-key checks pass, and changed CSS passes
+> Stylelint. The current code remains unpublished and is not approved for
+> operator cutover during the release freeze.
 > **Provider identity warning:** `.977` maps bare numeric source IDs to
 > Goodreads regardless of `HARDCOVER`. A database from the native Hardcover
 > BookshelfNG mode can therefore pass integrity checks while acquiring the
