@@ -174,6 +174,15 @@ fallback when the new key is unset. This source change is not in the public
 freeze and production acceptance gates remain in force. See the
 [HTTP security settings](HTTP_SECURITY.md).
 
+The same candidate now maps BookshelfNG's `BOOKSHELF_OIDC_*` environment
+settings into ChaptarrNG when saved ChaptarrNG OIDC values are empty. It
+preserves the provider credentials, scopes, allow-lists, explicit
+allow-any-verified choice, private-issuer setting, and a validated HTTPS
+`/signin-oidc` callback. Without an allow-list or the explicit
+allow-any-verified option, sign-in is denied, matching BookshelfNG's default.
+This source-only compatibility change is not in `.977`; preserve the variables
+through any deployment migration and keep the release freeze in place.
+
 Current ChaptarrNG `main` also accepts raw `.db` and `.xml` BookshelfNG backup
 uploads. The `.xml` suffix is a legacy filename; the contents must still be a
 SQLite database. Before staging, ChaptarrNG checks SQLite integrity and
@@ -723,6 +732,7 @@ and follow the
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |
 | Chocolatey | `chaptarrng 0.9.973` is moderator-approved, but `.977` is not on the feed. The approved package installs the ChaptarrNG service under `%ProgramData%\ChaptarrNG\data`; it does not hand off BookshelfNG's existing service/data identity. An earlier `.977` legacy-bridge push returned HTTP 403. | The [Chocolatey feed](https://community.chocolatey.org/packages/bookshelfng) still lists BookshelfNG `0.4.21.70`; its final GitHub release is `0.4.21.71`. The `bookshelfng` identity bridge remains unpublished. |
 | Unraid | The ChaptarrNG template is maintained separately. | The legacy-template handoff is in [BookshelfNG Unraid PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5); its XML and settings-preservation check passed, but the Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
+| StartOS | No ChaptarrNG update is published. | The parked `bookshelfng-startos` package still pins `docker.io/snapetech/bookshelfng:hardcover-v0.4.21.37`; it keeps package ID `bookshelfng`, backs up `main`, `books`, and `downloads`, mounts `/config`, `/books`, and `/downloads`, exposes `8787`, and starts `/init`. ChaptarrNG `v0.9.977` uses `/entrypoint.sh`, defaults to `8789`, and does not convert native Hardcover IDs. Preserve the package identity and volumes, adapt the container contract and provider mode, then verify update, backup, and rollback on a StartOS device. No handoff has been tested or published. |
 | Helm | A same-name compatibility chart is in ChaptarrNG `main`; its versioned publisher targets the existing BookshelfNG OCI chart identity and requires both release-readiness gates, the migration bridge gate, and an explicit bridge request. The publisher has not run during the freeze. | Local build and chart contract checks cover the preserved release, StatefulSet, Service, selectors, port, `/config` mount, PVC, both provider modes, and pinned image. No chart is published; installed PVC upgrade, GitOps sync, and rollback remain open. Existing installs can keep the same chart source after acceptance, while pinned/offline archives need a manual update. |
 | Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, Flatpak, AppImage, standalone installers, third-party catalogs, pinned/offline installs, and manually managed services do not all have a tested identity-preserving bridge. |
 
@@ -787,7 +797,7 @@ authorized while these gates remain open. The remaining work is:
 2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
    passes; validate older-schema support on representative operator data,
    then validate
-   old-identity AUR, COPR, Chocolatey, Helm, container, and Unraid
+   old-identity AUR, COPR, Chocolatey, Helm, StartOS, container, and Unraid
    upgrades through install, conversion, restart, backup retention, and
    rollback. The local Fedora RPM transaction rehearsal proves package/file
    handling only; validate a live COPR/DNF handoff if that identity is kept.
@@ -798,7 +808,8 @@ authorized while these gates remain open. The remaining work is:
    handoff was tested; verify each published package checksum or image digest
    against the tested artifact.
 4. Decide and document handoffs for historical channels that cannot be
-   redirected. Preserve a manual migration path for pinned and offline installs.
+   redirected, including StartOS, Cloudron, and Co-op Cloud. Preserve a manual
+   migration path for pinned and offline installs.
 5. Review unresolved media records from the populated SQLite rehearsals and
    verify normal startup and external clients against the converted library
    before enabling automatic aliases. Preview/apply/restore on two populated

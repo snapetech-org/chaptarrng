@@ -26,6 +26,7 @@ For current BookshelfNG migration and legacy-channel acceptance status, see
 | Fedora COPR | `slskdn/chaptarrng` | `slskdn/bookshelfng` | `/var/lib/bookshelfng` |
 | Chocolatey | `chaptarrng` | `bookshelfng` | `%ProgramData%\BookshelfNG\data` |
 | Docker | `ghcr.io/snapetech-org/chaptarrng` | Legacy image aliases | Existing `/config` mount |
+| StartOS | No ChaptarrNG package update is published | `bookshelfng-startos` keeps package ID `bookshelfng` | `/config`, `/books`, `/downloads` |
 | Helm | ChaptarrNG `charts/bookshelfng` with a versioned publisher for the existing OCI identity; unpublished while the release freeze is active | `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` | Same Helm release, namespace, `/config` PVC, and volume name |
 
 Legacy package recipes keep the old package identity, service name, and data
@@ -250,11 +251,20 @@ validated image/package identity bridge, or operators must change their install
 source. Debian/PPA, Flatpak/AppImage, Helm, third-party catalogs, and
 pinned/offline installs need an explicit handoff or retirement decision.
 
-The BookshelfNG Cloudron and StartOS packages still reference their legacy
-`.37` image, and no ChaptarrNG update has been tested for either package.
-The Co-op Cloud recipe remains an unsubmitted draft. These package definitions
-must not be pointed at ChaptarrNG until their data identity, update behavior,
-and rollback are accepted or the channel is explicitly retired. See the
+The BookshelfNG StartOS package is parked at
+`docker.io/snapetech/bookshelfng:hardcover-v0.4.21.37`. Its wrapper keeps the
+`bookshelfng` package identity, backs up the `main`, `books`, and `downloads`
+volumes, mounts `/config`, `/books`, and `/downloads`, exposes port `8787`, and
+starts `/init`. ChaptarrNG `v0.9.977` uses a different container entrypoint and
+default port, and does not convert native Hardcover IDs. A StartOS handoff must
+preserve the package ID and volumes, adapt the entrypoint and port, preserve
+provider identity, and pass upgrade, backup, and rollback checks on a StartOS
+device. No such update has been tested or published.
+
+The BookshelfNG Cloudron package also remains on its legacy `.37` image, with
+no tested ChaptarrNG update. The Co-op Cloud recipe remains an unsubmitted
+draft. Keep these channels parked until their data identity, update behavior,
+and rollback are accepted or each channel is explicitly retired. See the
 [BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
 
 ## Work required before enabling the legacy bridge

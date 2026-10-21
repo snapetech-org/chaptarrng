@@ -325,7 +325,9 @@ namespace Chaptarr.Http.Authentication
                     options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
 
                     var discoveryUrl = options.MetadataAddress ?? options.Authority;
-                    options.RequireHttpsMetadata = isConfigured && !IsLoopbackHttpUrl(discoveryUrl);
+                    options.RequireHttpsMetadata = isConfigured &&
+                                                  !IsLoopbackHttpUrl(discoveryUrl) &&
+                                                  !BookshelfOidcEnvironmentSettings.AllowPrivateIssuer;
 
                     HttpProxySettings proxySettings = null;
                     Exception proxyConfigurationError = null;
@@ -354,8 +356,18 @@ namespace Chaptarr.Http.Authentication
                             maxConnectionsPerServer: 12)
                         : new ConfigurationErrorHttpMessageHandler(proxyConfigurationError);
 
+                    var legacyRedirectUri = BookshelfOidcEnvironmentSettings.GetRedirectUri();
                     options.Events = new OpenIdConnectEvents
                     {
+                        OnRedirectToIdentityProvider = context =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(legacyRedirectUri))
+                            {
+                                context.ProtocolMessage.RedirectUri = legacyRedirectUri;
+                            }
+
+                            return System.Threading.Tasks.Task.CompletedTask;
+                        },
                         OnTicketReceived = context => HandleOidcTicketReceived(context, configFileProvider),
                         OnRemoteFailure = context =>
                         {
@@ -572,16 +584,21 @@ namespace Chaptarr.Http.Authentication
                 }
             }
 
-            if (allowedEmails.Count > 0 && !allowedEmails.Contains(email.ToLowerInvariant()))
+            if (!allowAnyVerifiedUser)
             {
-                return OidcUserNotAllowedFailure;
-            }
+                if (!requiresTrustedEmail)
+                {
+                    return OidcUserNotAllowedFailure;
+                }
 
-            if (allowedDomains.Count > 0)
-            {
-                var at = email.LastIndexOf('@');
-                var domain = at >= 0 && at < email.Length - 1 ? email[(at + 1)..] : string.Empty;
-                if (string.IsNullOrWhiteSpace(domain) || !allowedDomains.Contains(domain.ToLowerInvariant()))
+                var normalizedEmail = email.ToLowerInvariant();
+                var at = normalizedEmail.LastIndexOf('@');
+                var domain = at >= 0 && at < normalizedEmail.Length - 1
+                    ? normalizedEmail[(at + 1)..]
+                    : string.Empty;
+                var emailAllowed = allowedEmails.Contains(normalizedEmail);
+                var domainAllowed = !string.IsNullOrWhiteSpace(domain) && allowedDomains.Contains(domain);
+                if (!emailAllowed && !domainAllowed)
                 {
                     return OidcUserNotAllowedFailure;
                 }
@@ -611,6 +628,22 @@ namespace Chaptarr.Http.Authentication
                                  principal?.FindFirst("sub")?.Value ??
                                  "0";
                 identity.AddClaim(new Claim("identifier", identifier));
+            }
+
+            var issuer = principal?.FindFirst("iss")?.Value;
+            var subject = principal?.FindFirst("sub")?.Value ??
+                          principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrWhiteSpace(issuer) && !string.IsNullOrWhiteSpace(subject))
+            {
+                if (!identity.HasClaim(c => c.Type == "oidc_issuer"))
+                {
+                    identity.AddClaim(new Claim("oidc_issuer", issuer));
+                }
+
+                if (!identity.HasClaim(c => c.Type == "oidc_subject"))
+                {
+                    identity.AddClaim(new Claim("oidc_subject", subject));
+                }
             }
 
             if (!identity.HasClaim(c => c.Type == "AuthType"))
@@ -738,6 +771,14 @@ namespace Chaptarr.Http.Authentication
             if (!scopes.Contains("openid", StringComparer.OrdinalIgnoreCase))
             {
                 scopes.Insert(0, "openid");
+            }
+
+            // BookshelfNG always requested email because its admission policy is
+            // based on verified email addresses, even when operators supplied a
+            // custom scope list.
+            if (!scopes.Contains("email", StringComparer.OrdinalIgnoreCase))
+            {
+                scopes.Add("email");
             }
 
             return scopes;

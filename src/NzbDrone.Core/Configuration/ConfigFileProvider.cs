@@ -272,17 +272,28 @@ namespace NzbDrone.Core.Configuration
             }
         }
 
-        public string OidcAuthority => GetValue("OidcAuthority", string.Empty).Trim();
-        public string OidcClientId => GetValue("OidcClientId", string.Empty).Trim();
-        public string OidcClientSecret => GetValue("OidcClientSecret", string.Empty);
-        public string OidcScopes => GetValue("OidcScopes", "openid profile email").Trim();
-        public string OidcAllowedEmails => GetValue("OidcAllowedEmails", string.Empty).Trim();
-        public string OidcAllowedEmailDomains => GetValue("OidcAllowedEmailDomains", string.Empty).Trim();
+        public string OidcAuthority => GetBookshelfOidcSetting("OidcAuthority", BookshelfOidcEnvironmentSettings.Authority).Trim();
+        public string OidcClientId => GetBookshelfOidcSetting("OidcClientId", BookshelfOidcEnvironmentSettings.ClientId).Trim();
+        public string OidcClientSecret => GetBookshelfOidcSetting("OidcClientSecret", BookshelfOidcEnvironmentSettings.ClientSecret);
+        public string OidcScopes => GetBookshelfOidcSetting("OidcScopes", BookshelfOidcEnvironmentSettings.Scopes, "openid profile email").Trim();
+        public string OidcAllowedEmails => GetBookshelfOidcSetting("OidcAllowedEmails", BookshelfOidcEnvironmentSettings.AllowedEmails).Trim();
+        public string OidcAllowedEmailDomains => GetBookshelfOidcSetting("OidcAllowedEmailDomains", BookshelfOidcEnvironmentSettings.AllowedEmailDomains).Trim();
         public bool OidcRequireEmailVerified => GetValueBoolean("OidcRequireEmailVerified", true);
-        public bool OidcAllowAnyVerifiedUser => GetValueBoolean("OidcAllowAnyVerifiedUser", false);
+        public bool OidcAllowAnyVerifiedUser => BookshelfOidcEnvironmentSettings.ResolveBoolean(
+            GetValue("OidcAllowAnyVerifiedUser", string.Empty, persist: false),
+            BookshelfOidcEnvironmentSettings.AllowAnyVerifiedUser,
+            false);
 
         public string PlexAuthUserId => GetValue("PlexAuthUserId", string.Empty).Trim();
         public string PlexAuthUsername => GetValue("PlexAuthUsername", string.Empty).Trim();
+
+        private string GetBookshelfOidcSetting(string key, string environmentVariable, string defaultValue = "")
+        {
+            return BookshelfOidcEnvironmentSettings.Resolve(
+                GetValue(key, string.Empty, persist: false),
+                environmentVariable,
+                defaultValue);
+        }
 
         public string Branch => NormalizeReleaseBranch(_updateOptions.Branch ?? GetValue("Branch", "main"));
 

@@ -25,6 +25,10 @@ namespace Chaptarr.Core.Test.Http.Authentication
             "HandleOidcTicketReceived",
             BindingFlags.NonPublic | BindingFlags.Static);
 
+        private static readonly MethodInfo ParseOidcScopesMethod = typeof(AuthenticationBuilderExtensions).GetMethod(
+            "ParseOidcScopes",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
         private class ConfigFileProviderProxy : DispatchProxy
         {
             public string AllowedEmails { get; set; } = string.Empty;
@@ -99,6 +103,25 @@ namespace Chaptarr.Core.Test.Http.Authentication
         }
 
         [Test]
+        public void should_reject_any_user_when_no_allowlist_or_public_access_is_configured()
+        {
+            var failure = Validate(BuildPrincipal("alice@example.com", "true"), ConfigFileProviderProxy.Create());
+
+            Assert.That(failure, Is.EqualTo("User is not allowed to sign in."));
+        }
+
+        [Test]
+        public void should_preserve_issuer_and_subject_claims_for_an_accepted_identity()
+        {
+            var principal = BuildPrincipal("alice@example.com", "true", "https://issuer.example.com");
+            var failure = Validate(principal, ConfigFileProviderProxy.Create(allowAnyVerifiedUser: true));
+
+            Assert.That(failure, Is.Null);
+            Assert.That(principal.FindFirst("oidc_issuer")?.Value, Is.EqualTo("https://issuer.example.com"));
+            Assert.That(principal.FindFirst("oidc_subject")?.Value, Is.EqualTo("subject-1"));
+        }
+
+        [Test]
         public void should_reject_unverified_allow_any_user()
         {
             var failure = Validate(BuildPrincipal("alice@example.com", "false"), ConfigFileProviderProxy.Create(allowAnyVerifiedUser: true));
@@ -167,6 +190,17 @@ namespace Chaptarr.Core.Test.Http.Authentication
             Assert.That(context.Principal.FindFirst("auth_stamp")?.Value, Is.EqualTo("test-stamp"));
         }
 
+        [TestCase("profile groups", new[] { "openid", "profile", "groups", "email" })]
+        [TestCase("openid profile email", new[] { "openid", "profile", "email" })]
+        public void should_include_email_scope_for_legacy_scope_settings(string configuredScopes, string[] expected)
+        {
+            var actual = (System.Collections.Generic.IEnumerable<string>)ParseOidcScopesMethod.Invoke(
+                null,
+                new object[] { configuredScopes });
+
+            CollectionAssert.AreEqual(expected, actual);
+        }
+
         private static void ReceiveTicket(TicketReceivedContext context, IConfigFileProvider configFileProvider)
         {
             ((Task)TicketReceivedMethod.Invoke(null, new object[] { context, configFileProvider })).GetAwaiter().GetResult();
@@ -188,11 +222,16 @@ namespace Chaptarr.Core.Test.Http.Authentication
             return (string)ValidateMethod.Invoke(null, new object[] { principal, configFileProvider });
         }
 
-        private static ClaimsPrincipal BuildPrincipal(string email, string emailVerified = null)
+        private static ClaimsPrincipal BuildPrincipal(string email, string emailVerified = null, string issuer = null)
         {
             var identity = new ClaimsIdentity("oidc");
             identity.AddClaim(new Claim(ClaimTypes.Email, email));
             identity.AddClaim(new Claim("sub", "subject-1"));
+
+            if (issuer != null)
+            {
+                identity.AddClaim(new Claim("iss", issuer));
+            }
 
             if (emailVerified != null)
             {

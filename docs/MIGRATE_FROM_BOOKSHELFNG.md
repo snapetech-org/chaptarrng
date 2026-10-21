@@ -227,6 +227,18 @@ contains the old diagnostics module marker. See the
 [SeerrNG integration guide](SEERRNG_INTEGRATION.md), and
 [optional diagnostics guide](OPTIONAL_DIAGNOSTICS.md).
 
+The source candidate also reads BookshelfNG's `BOOKSHELF_OIDC_*` environment
+variables when the corresponding ChaptarrNG OIDC setting is empty. This keeps
+the issuer, client ID and secret, scopes, email allow-lists, allow-any-verified
+choice, and private-issuer behavior when the deployment carries its existing
+environment forward. A saved non-empty ChaptarrNG value takes precedence. The
+legacy callback override is accepted only as an HTTPS URL ending in
+`/signin-oidc`; otherwise ChaptarrNG uses its normal callback URL. Keep these
+variables in the deployment definition because the appdata archive does not
+include them. This source-only compatibility change is not in public `.977`,
+and OIDC denies sign-in unless an allow-list or the explicit
+allow-any-verified setting is configured.
+
 ### Provider configuration blockers
 
 Provider rows are copied only when ChaptarrNG has the same implementation and
@@ -1042,6 +1054,15 @@ disabled: existing BookshelfNG package IDs and mutable image aliases do not
 currently redirect to ChaptarrNG. Pinned tags, digests, offline installs, and
 third-party deployment definitions always require an operator update. A
 mutable tag only affects a later pull or container recreation.
+
+The parked StartOS package is still BookshelfNG package ID `bookshelfng` and
+pins its `.37` native-Hardcover image. Its wrapper expects port `8787` and
+starts `/init`; ChaptarrNG `v0.9.977` uses `/entrypoint.sh`, defaults to port
+`8789`, and does not convert native Hardcover IDs. There is no tested StartOS
+handoff yet. Keep that package on BookshelfNG until a ChaptarrNG wrapper
+preserves the package identity, mounted and backed-up volumes, provider mode,
+and update rollback, then passes upgrade and restore checks on a StartOS device.
+See the [channel status](../packaging/README.md#package-identities).
 
 ### Helm chart handoff
 
