@@ -2625,7 +2625,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     throw new NzbDroneClientException(HttpStatusCode.ServiceUnavailable, "Hardcover search is unavailable");
                 }
 
-                if (!_configService.HardcoverEnabled || string.IsNullOrWhiteSpace(_configService.HardcoverApiToken))
+                var hardcoverToken = GetConfiguredHardcoverApiToken();
+                if ((!_configService.HardcoverEnabled && !IsHardcoverCatalogEnabled()) || string.IsNullOrWhiteSpace(hardcoverToken))
                 {
                     throw new NzbDroneClientException(HttpStatusCode.ServiceUnavailable, "Hardcover search failed");
                 }
@@ -2634,7 +2635,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 {
                     _logger.DebugSafe($"[BookInfoProxy] Searching Hardcover for: '{title}'");
 
-                    var cacheKey = BuildHardcoverSearchCacheKey(title, _configService.HardcoverApiToken);
+                    var cacheKey = BuildHardcoverSearchCacheKey(title, hardcoverToken);
                     var rawHc = _hardcoverSearchCache.Find(cacheKey);
 
                     if (rawHc?.Any() != true)
@@ -3315,6 +3316,21 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     ? SearchMetadataApiCatalog(q, getAllEditions, mediaType)
                     : Search(q, getAllEditions, mediaType);
                 ApplySearchMetadataPreferences(primaryResults);
+
+                if (preferMetadataApi && IsHardcoverCatalogEnabled() && _hardcoverMetadataProxy?.IsConfigured == true)
+                {
+                    try
+                    {
+                        var hardcoverResults = SearchNativeHardcoverEntities(q, mediaType).OfType<Book>().ToList();
+                        ApplySearchMetadataPreferences(hardcoverResults);
+                        primaryResults.AddRange(hardcoverResults);
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.Warn(exception, "Hardcover catalog search failed for {0}", q?.ReplaceLineEndings(""));
+                    }
+                }
+
                 var supplementalResults = _additionalBookMetadataProxy.Search(q);
                 ApplySearchMetadataPreferences(supplementalResults);
                 supplementalResults.ForEach(supplementalBook =>
@@ -3325,7 +3341,10 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     }
                 });
 
-                return primaryResults.Concat(supplementalResults).ToList();
+                return primaryResults.Concat(supplementalResults)
+                    .Where(book => book != null && !string.IsNullOrWhiteSpace(GetBookKey(book)))
+                    .DistinctBy(GetBookKey)
+                    .ToList();
             }
             catch (HttpException ex)
             {
@@ -3341,7 +3360,17 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
         private bool IsMetadataApiEnabled()
         {
-            var sources = AdditionalMetadataSources.GetConfiguredRuntimeSources(
+            return GetConfiguredMetadataCatalogSources().Contains(AdditionalMetadataSources.MetadataApi);
+        }
+
+        private bool IsHardcoverCatalogEnabled()
+        {
+            return GetConfiguredMetadataCatalogSources().Contains(AdditionalMetadataSources.Hardcover);
+        }
+
+        private HashSet<string> GetConfiguredMetadataCatalogSources()
+        {
+            return AdditionalMetadataSources.GetConfiguredRuntimeSources(
                 AdditionalMetadataSources.GetEnvironmentSourceOverride(),
                 _configService.MetadataCatalogSources,
                 _configService.IsDefined("MetadataCatalogSources"),
@@ -3351,9 +3380,28 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 null,
                 null,
                 null,
-                _hardcoverMetadataProxy?.IsNativeEnabled == true ? null : AdditionalMetadataSources.MetadataApi);
+                _hardcoverMetadataProxy?.IsNativeEnabled == true
+                    ? AdditionalMetadataSources.Hardcover
+                    : AdditionalMetadataSources.MetadataApi);
+        }
 
-            return sources.Contains(AdditionalMetadataSources.MetadataApi);
+        private string GetConfiguredHardcoverApiToken()
+        {
+            var environmentToken = Environment.GetEnvironmentVariable("HARDCOVER_AUTH");
+            if (string.IsNullOrWhiteSpace(environmentToken))
+            {
+                environmentToken = Environment.GetEnvironmentVariable("HARDCOVER_API_KEY");
+            }
+
+            var token = string.IsNullOrWhiteSpace(environmentToken) ? _configService.HardcoverApiToken : environmentToken;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return string.Empty;
+            }
+
+            return token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                ? token.Substring(7).Trim()
+                : token.Trim();
         }
 
         private List<Book> SearchMetadataApiCatalog(string query, bool getAllEditions, BookMediaType? mediaType)

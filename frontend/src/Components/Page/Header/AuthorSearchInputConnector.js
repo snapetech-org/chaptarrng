@@ -15,7 +15,11 @@ function createMapStateToProps() {
       let isHardcoverConfigured = null;
 
       if (isPopulated || error) {
-        isHardcoverConfigured = !!(item?.enabled && item?.hasToken);
+        const metadataProviderItem = metadataProviderConfig?.item || {};
+        const legacyCatalogEnabled = metadataProviderConfig?.isPopulated &&
+          !metadataProviderConfig.error && metadataProviderItem.enableHardcover?.value;
+        const hasHardcoverToken = item?.hasToken || metadataProviderItem.hasHardcoverAuth?.value;
+        isHardcoverConfigured = !!((item?.enabled || legacyCatalogEnabled) && hasHardcoverToken);
       }
 
       return {

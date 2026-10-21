@@ -42,6 +42,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         // does not provide supplemental per-field metadata through this proxy.
         private static readonly HashSet<string> CatalogSources = new HashSet<string>(AdditionalSources, StringComparer.OrdinalIgnoreCase)
         {
+            Hardcover,
             MetadataApi
         };
 

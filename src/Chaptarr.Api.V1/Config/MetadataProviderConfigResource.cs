@@ -14,7 +14,7 @@ namespace Chaptarr.Api.V1.Config
         public bool UpdateCovers { get; set; }
         public bool EmbedMetadata { get; set; }
         // Legacy BookshelfNG fields retained so older clients can read and write
-        // the native Hardcover and configured metadata-server settings.
+        // catalog selection and configured metadata-server settings.
         public string HardcoverAuth { get; set; }
         public bool HasHardcoverAuth { get; set; }
         public bool HardcoverAuthFromEnvironment { get; set; }
@@ -94,7 +94,7 @@ namespace Chaptarr.Api.V1.Config
                 europeanaApiKey,
                 apifyActor,
                 apifyToken,
-                nativeHardcoverEnabled ? null : AdditionalMetadataSources.MetadataApi);
+                nativeHardcoverEnabled ? AdditionalMetadataSources.Hardcover : AdditionalMetadataSources.MetadataApi);
 
             return new MetadataProviderConfigResource
             {
@@ -111,7 +111,7 @@ namespace Chaptarr.Api.V1.Config
                 HardcoverAuthFromEnvironment = !string.IsNullOrWhiteSpace(hardcoverAuthFromEnvironment) ||
                     !string.IsNullOrWhiteSpace(hardcoverApiKeyFromEnvironment),
                 ClearHardcoverAuth = false,
-                EnableHardcover = model.HardcoverEnabled || nativeHardcoverEnabled,
+                EnableHardcover = configuredSources.Contains(AdditionalMetadataSources.Hardcover),
                 EnableMetadataApi = configuredSources.Contains(AdditionalMetadataSources.MetadataApi),
                 EnableGoogleBooks = configuredSources.Contains("googlebooks"),
                 EnableLoc = configuredSources.Contains("loc"),

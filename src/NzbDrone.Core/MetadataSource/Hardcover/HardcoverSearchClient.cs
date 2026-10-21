@@ -11,6 +11,7 @@ using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Exceptions;
+using NzbDrone.Core.MetadataSource.BookInfo;
 using NzbDrone.Common.Instrumentation;
 
 namespace NzbDrone.Core.MetadataSource.Hardcover
@@ -91,6 +92,46 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
             _logger = LogManager.GetCurrentClassLogger();
         }
 
+        private bool IsHardcoverCatalogEnabled()
+        {
+            var sources = AdditionalMetadataSources.GetConfiguredRuntimeSources(
+                AdditionalMetadataSources.GetEnvironmentSourceOverride(),
+                _configService.MetadataCatalogSources,
+                _configService.IsDefined("MetadataCatalogSources"),
+                _configService.AdditionalMetadataSources,
+                _configService.IsDefined("AdditionalMetadataSources"),
+                null,
+                null,
+                null,
+                null,
+                null);
+
+            return sources.Contains(AdditionalMetadataSources.Hardcover);
+        }
+
+        private string GetConfiguredApiToken()
+        {
+            var token = Environment.GetEnvironmentVariable("HARDCOVER_AUTH");
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                token = Environment.GetEnvironmentVariable("HARDCOVER_API_KEY");
+            }
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                token = _configService.HardcoverApiToken;
+            }
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return string.Empty;
+            }
+
+            return token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                ? token.Substring(7).Trim()
+                : token.Trim();
+        }
+
         public List<object> Search(string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
@@ -98,7 +139,8 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
                 return new List<object>();
             }
 
-            if (!_configService.HardcoverEnabled || string.IsNullOrEmpty(_configService.HardcoverApiToken))
+            var token = GetConfiguredApiToken();
+            if ((!_configService.HardcoverEnabled && !IsHardcoverCatalogEnabled()) || string.IsNullOrEmpty(token))
             {
                 _logger.Debug("Hardcover search skipped - not enabled or no token configured");
                 return null;
@@ -172,7 +214,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
                 request.SetContent(jsonContent);
 
                 // Add Authorization AFTER building to avoid duplication
-                request.Headers.Add("Authorization", $"Bearer {_configService.HardcoverApiToken}");
+                request.Headers.Add("Authorization", $"Bearer {GetConfiguredApiToken()}");
 
                 var response = ExecuteWithRetry(request, out var failureDetail);
                 if (response == null)
@@ -874,7 +916,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
 
                     request.Method = HttpMethod.Post;
                     request.SetContent(jsonContent);
-                    request.Headers.Add("Authorization", $"Bearer {_configService.HardcoverApiToken}");
+                    request.Headers.Add("Authorization", $"Bearer {GetConfiguredApiToken()}");
 
                     var response = ExecuteWithRetry(request);
                     if (response == null || response.HasHttpError || string.IsNullOrWhiteSpace(response.Content))
@@ -1246,7 +1288,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
 
                 request.Method = HttpMethod.Post;
                 request.SetContent(jsonContent);
-                request.Headers.Add("Authorization", $"Bearer {_configService.HardcoverApiToken}");
+                request.Headers.Add("Authorization", $"Bearer {GetConfiguredApiToken()}");
 
                 var response = ExecuteWithRetry(request);
                 if (response == null || response.HasHttpError || string.IsNullOrWhiteSpace(response.Content))

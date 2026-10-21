@@ -34,7 +34,7 @@ namespace Chaptarr.Api.V1.Config
                 resource.EnableEuropeana,
                 resource.EnableApifyGoodreads
             };
-            var runtimeSourceValues = new[] { resource.EnableOpenLibrary, resource.EnableMetadataApi };
+            var runtimeSourceValues = new[] { resource.EnableOpenLibrary, resource.EnableHardcover, resource.EnableMetadataApi };
             var sources = new List<string>();
 
             AddSource(resource.EnableGoogleBooks, "googlebooks", sources);
@@ -45,6 +45,7 @@ namespace Chaptarr.Api.V1.Config
             AddSource(resource.EnableEuropeana, "europeana", sources);
             AddSource(resource.EnableApifyGoodreads, "apify-goodreads", sources);
             AddSource(resource.EnableOpenLibrary, AdditionalMetadataSources.OpenLibrary, sources);
+            AddSource(resource.EnableHardcover, AdditionalMetadataSources.Hardcover, sources);
             AddSource(resource.EnableMetadataApi, AdditionalMetadataSources.MetadataApi, sources);
 
             var dictionary = new Dictionary<string, object>
@@ -98,11 +99,6 @@ namespace Chaptarr.Api.V1.Config
             SaveSecret(dictionary, "GoogleBooksApiKey", resource.GoogleBooksApiKey, resource.ClearGoogleBooksApiKey);
             SaveSecret(dictionary, "EuropeanaApiKey", resource.EuropeanaApiKey, resource.ClearEuropeanaApiKey);
             SaveSecret(dictionary, "ApifyToken", resource.ApifyToken, resource.ClearApifyToken);
-
-            if (resource.EnableHardcover.HasValue)
-            {
-                dictionary["HardcoverEnabled"] = resource.EnableHardcover.Value;
-            }
 
             if (!resource.HardcoverAuthFromEnvironment)
             {

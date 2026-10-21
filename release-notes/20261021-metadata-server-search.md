@@ -5,4 +5,4 @@ area: metadata
 action: none
 breaking: false
 ---
-Add New can search the configured metadata server for books and authors. Choosing Metadata Server preserves the candidate's author ID when adding a book, including catalogs without Hardcover IDs.
+Add New can search the configured metadata server for books and authors. Catalog settings now expose Metadata API and Hardcover searches with environment-backed Hardcover credentials, and Metadata Server results keep each candidate's author ID when adding a book.
