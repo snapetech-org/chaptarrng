@@ -293,7 +293,9 @@ test('author root backfill prevents duplicate queueing and keeps a retry after q
 
   component.onConfirmAuthorRootBackfill();
   component.onConfirmAuthorRootBackfill();
+  component.onBackfillPreviewModalClose();
   assert.equal(backfillCount, 0);
+  assert.equal(component.state.isBackfillPreviewModalOpen, true);
 
   await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -303,6 +305,15 @@ test('author root backfill prevents duplicate queueing and keeps a retry after q
   assert.equal(component.state.isSubmittingAuthorRootBackfill, false);
   const previewModal = findElement(component.render(), RootFolders.ConfirmModal);
   assert.ok(findElementWithProp(previewModal.props.message, 'role', 'alert'));
+
+  component.onBackfillPreviewModalClose();
+  assert.equal(component.state.isBackfillPreviewModalOpen, false);
+
+  component.onReviewAuthorRootBackfillPress();
+  assert.equal(component.state.backfillCommandError, null);
+  ajax.resolve({ candidates: 3, updated: 2 });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(component.state.isBackfillPreviewModalOpen, true);
 
   component.onConfirmAuthorRootBackfill();
   await new Promise((resolve) => setTimeout(resolve, 0));

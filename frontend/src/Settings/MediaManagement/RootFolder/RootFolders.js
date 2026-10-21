@@ -122,7 +122,8 @@ class RootFolders extends Component {
     this.setState({
       isPreviewingAuthorRoots: true,
       backfillPreview: null,
-      backfillPreviewError: null
+      backfillPreviewError: null,
+      backfillCommandError: null
     });
 
     this._backfillPreviewRequest = createAjaxRequest({
@@ -158,6 +159,10 @@ class RootFolders extends Component {
   };
 
   onBackfillPreviewModalClose = () => {
+    if (this.state.isSubmittingAuthorRootBackfill || this.props.isBackfillingAuthorRootFolders) {
+      return;
+    }
+
     this.setState({ isBackfillPreviewModalOpen: false });
   };
 
