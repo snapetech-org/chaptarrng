@@ -1,0 +1,18 @@
+services:
+  bookshelfng:
+    image: ${CHAPTARRNG_COMPAT_IMAGE:-ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover}
+    container_name: bookshelfng
+    restart: unless-stopped
+    environment:
+      CHAPTARR__SERVER__PORT: "8787"
+    ports:
+      - "127.0.0.1:8787:8787/tcp"
+    volumes:
+      - bookshelfng-config:/config
+      - bookshelfng-books:/books
+      - bookshelfng-downloads:/downloads
+
+volumes:
+  bookshelfng-config:
+  bookshelfng-books:
+  bookshelfng-downloads:

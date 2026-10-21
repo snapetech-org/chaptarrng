@@ -767,7 +767,12 @@ and follow the
 | Unraid | The ChaptarrNG template is maintained separately. | The legacy-template handoff is in [BookshelfNG Unraid PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5); its XML and settings-preservation check passed, but the Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
 | StartOS | No ChaptarrNG update is published. | The parked `bookshelfng-startos` package still pins `docker.io/snapetech/bookshelfng:hardcover-v0.4.21.37`; it keeps package ID `bookshelfng`, backs up `main`, `books`, and `downloads`, mounts `/config`, `/books`, and `/downloads`, exposes `8787`, and starts `/init`. A local Linux/amd64 production-image candidate from commit `2d6124e2` was exercised through a wrapper that invoked `/init` with no arguments and no CMD. With network disabled and task-scoped copies of populated BookshelfNG databases, it converted schema 158 to 121, retained saved port `8787`, Forms authentication, and the API key, returned `/ping` HTTP 200, passed the image health check, and passed SQLite integrity and foreign-key checks. Docker image metadata exposes only `8787/tcp` for the Bookshelf target. This is image and copied-database evidence only: `/books` and `/downloads` were empty, and no StartOS package build, device install/update, backup, or rollback was tested. The local amd64 BuildKit syntax check for linux/arm64 passed, but a full aarch64 image build could not execute because this host has no arm64 emulator. The StartOS ARM64 image build remains open. The package remains on the BookshelfNG image, and no handoff has been published. |
 | Helm | A same-name compatibility chart is in ChaptarrNG `main`; its versioned publisher targets the existing BookshelfNG OCI chart identity and requires both release-readiness gates, the migration bridge gate, and an explicit bridge request. The publisher has not run during the freeze. | Local build and chart contract checks cover the preserved release, StatefulSet, Service, selectors, port, `/config` mount, PVC, both provider modes, and pinned image. No chart is published; installed PVC upgrade, GitOps sync, and rollback remain open. Existing installs can keep the same chart source after acceptance, while pinned/offline archives need a manual update. |
-| Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, Flatpak, AppImage, standalone installers, third-party catalogs, pinned/offline installs, and manually managed services do not all have a tested identity-preserving bridge. |
+| AppImage | ChaptarrNG Linux x64 standalone archives are available. | Source-only launcher candidate keeps desktop ID `com.snapetech.bookshelfng`, `$XDG_DATA_HOME/bookshelfng`, and launches `Chaptarr` with the legacy data path. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper; use `.978` or newer. AppImage construction, upgrade, migration, and rollback are untested. |
+| Flatpak | ChaptarrNG Linux x64 standalone archives are available. | Source-only manifest keeps app ID `com.snapetech.BookshelfNG`, desktop launcher, and sandbox config path `bookshelfng`; updates use Flatpak. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper; use `.978` or newer. Flatpak build, installed update, migration, and rollback are untested. |
+| Cloudron | No ChaptarrNG package update is published. | Source-only manifest and Dockerfile preserve app ID `tech.snapetech.bookshelfng`, `/config`, `/books`, `/downloads`, port `8787`, and `/ping`; no accepted Cloudron build, version feed, install/update, or rollback exists. |
+| Co-op Cloud | No ChaptarrNG recipe is accepted upstream. | Source-only recipe candidate preserves the `bookshelfng` stack volumes, mount paths, Traefik port, and candidate image variable. Maintainer acceptance, real Swarm update, backup, and rollback are open. |
+| Self-hosting catalogs | ChaptarrNG has a manual Compose candidate. | The candidate preserves the `bookshelfng` container and volume identities. CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other catalog records live in external repositories and have not been updated or accepted. |
+| Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, BookshelfNG's in-app updater, pinned/offline installs, and manually managed services still need an approved update path or explicit retirement decision. |
 
 Release, image, and package publishing require both
 `CHAPTARRNG_RELEASE_READY` and `BOOKSHELFNG_RELEASE_READY`. The legacy package,
@@ -840,15 +845,17 @@ authorized while these gates remain open. The remaining work is:
    locally, but the legacy COPR repo currently has no packages and no live DNF
    handoff was tested; verify each published package checksum or image digest
    against the tested artifact.
-4. Decide and document handoffs for historical channels that cannot be
-   redirected, including StartOS, Cloudron, and Co-op Cloud. Preserve a manual
-   migration path for pinned and offline installs.
+4. Build the AppImage and Flatpak candidates and test installed updates,
+   migration, backup, and rollback. Update and validate the external StartOS
+   package, Cloudron feed, Co-op Cloud recipe collection, and supported catalog
+   entries after a digest is published. Preserve a tested manual migration path
+   for pinned and offline installs.
 5. Review unresolved media records from the populated SQLite rehearsals and
    verify normal startup and external clients against the converted library
    before enabling automatic aliases. Preview/apply/restore on two populated
    SQLite snapshots is recorded in the [migration guide](MIGRATE_FROM_BOOKSHELFNG.md#populated-sqlite-migration-and-restore-rehearsal-2026-10-21);
    this does not validate each user-facing workflow or package channel.
 
-The conversion preview, source-side archive helper, synthetic conversion checks, and package templates are present. A populated migration-158 SQLite copy has now completed apply and rollback with the public image, but an in-place deployment cutover, full feature parity, all legacy package publications, and a universal automatic update path are not established. See the
+The conversion preview, source-side archive helper, synthetic conversion checks, and package templates are present. Source-only AppImage, Flatpak, Cloudron, Co-op Cloud, and catalog candidates now preserve their legacy identities and data paths. A populated migration-158 SQLite copy has completed apply and rollback with the public image, but the new channels remain unbuilt or unaccepted; an in-place deployment cutover, full feature parity, all legacy package publications, and a universal automatic update path are not established. See the
 [BookshelfNG operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
 and the linked parity roadmap for the detailed evidence ledger.

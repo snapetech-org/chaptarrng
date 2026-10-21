@@ -26,6 +26,11 @@ For current BookshelfNG migration and legacy-channel acceptance status, see
 | Fedora COPR | `slskdn/chaptarrng` | `slskdn/bookshelfng` | `/var/lib/bookshelfng` |
 | Chocolatey | `chaptarrng` | `bookshelfng` | `%ProgramData%\BookshelfNG\data` |
 | Docker | `ghcr.io/snapetech-org/chaptarrng` | Legacy image aliases | Existing `/config` mount |
+| AppImage | ChaptarrNG standalone Linux x64 archive | Candidate keeps desktop file ID `com.snapetech.bookshelfng` | `$XDG_DATA_HOME/bookshelfng` |
+| Flatpak | ChaptarrNG standalone Linux x64 archive | Candidate keeps app ID `com.snapetech.BookshelfNG` | Flatpak config path `bookshelfng` |
+| Cloudron | Candidate manifest in `packaging/legacy/cloudron/` | Keeps app ID `tech.snapetech.bookshelfng` | `/config`, `/books`, `/downloads` |
+| Co-op Cloud | Candidate recipe in `packaging/legacy/coop-cloud/bookshelfng/` | Keeps recipe and volume identities `bookshelfng` | `/config`, `/books`, `/downloads` |
+| Self-hosting catalogs | Candidate Compose service in `packaging/legacy/catalogs/` | Keeps container name and named volumes `bookshelfng` | `/config`, `/books`, `/downloads` |
 | StartOS | No ChaptarrNG package update is published | `bookshelfng-startos` keeps package ID `bookshelfng` | `/config`, `/books`, `/downloads` |
 | Helm | ChaptarrNG `charts/bookshelfng` with a versioned publisher for the existing OCI identity; unpublished while the release freeze is active | `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` | Same Helm release, namespace, `/config` PVC, and volume name |
 
@@ -250,8 +255,9 @@ use. See the [Windows migration procedure](../docs/MIGRATE_FROM_BOOKSHELFNG.md#w
 BookshelfNG's in-app updater still checks its existing upstream update service,
 which ChaptarrNG cannot redirect. Automatic migration must therefore use a
 validated image/package identity bridge, or operators must change their install
-source. Debian/PPA, Flatpak/AppImage, Helm, third-party catalogs, and
-pinned/offline installs need an explicit handoff or retirement decision.
+source. Debian/PPA, AppImage, Flatpak, Helm, Cloudron, Co-op Cloud, third-party
+catalogs, and pinned/offline installs still need an accepted channel update or
+an explicit retirement decision.
 
 The BookshelfNG StartOS package is parked at
 `docker.io/snapetech/bookshelfng:hardcover-v0.4.21.37`. Its wrapper keeps the
@@ -267,11 +273,40 @@ package itself remains unchanged and needs an update to a released compatibility
 image, followed by install, upgrade, backup, and rollback checks on a StartOS
 device. No handoff has been tested or published.
 
-The BookshelfNG Cloudron package also remains on its legacy `.37` image, with
-no tested ChaptarrNG update. The Co-op Cloud recipe remains an unsubmitted
-draft. Keep these channels parked until their data identity, update behavior,
-and rollback are accepted or each channel is explicitly retired. See the
+ChaptarrNG now carries source-only AppImage, Flatpak, Cloudron, Co-op Cloud,
+and self-hosting catalog candidates. The candidates retain the old desktop/app
+IDs, BookshelfNG data directories, Cloudron package ID, container name, port,
+and volume names. They are not published or accepted, and each installation
+channel still needs a built candidate, exact digest or artifact, upgrade
+testing, backup, and rollback. StartOS package source remains in the external
+`bookshelfng-startos` repository and also needs an update and device acceptance.
+See the [legacy channel candidates](legacy/README.md) and
 [BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
+
+## Legacy AppImage, Flatpak, Cloudron, and catalog candidates
+
+The AppImage launcher preserves `$XDG_DATA_HOME/bookshelfng`; the Flatpak
+manifest preserves app ID `com.snapetech.BookshelfNG`, its desktop launcher,
+and its sandbox config path. Both launch Chaptarr with the old data directory
+so the normal startup migration sees the existing database and settings. Their
+default provider mode matches the legacy standalone launcher's Goodreads
+behavior; operators whose source used native Hardcover IDs can set
+`HARDCOVER=true` before launch. Updates use each package channel: replace the
+AppImage file or update the Flatpak bundle.
+
+Cloudron keeps app ID `tech.snapetech.bookshelfng`, port `8787`, `/ping`, and
+all three persistent directories. The Compose candidates keep the `bookshelfng`
+container or named volume identities and the same port and mount paths. Those
+container files default to the source-only compatibility image target; replace
+it with the exact published image digest before accepting an update. Third-party
+catalog listings remain owned by their maintainers and are unchanged.
+
+The local AppImage and Flatpak build helper is available, but actual package
+builds, Cloudron package generation, the canonical Co-op Cloud recipe review,
+and catalog-specific update and rollback flows have not been accepted. Keep the old installation in service until that channel has
+passed its acceptance checks or has an explicit retirement decision. The
+StartOS package candidate and external repository boundary are documented in
+[`legacy/startos/README.md`](legacy/startos/README.md).
 
 ## Work required before enabling the legacy bridge
 
@@ -291,8 +326,12 @@ and rollback are accepted or each channel is explicitly retired. See the
   manifest digests before changing any mutable image aliases.
 - Complete the separate [BookshelfNG feature-parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md),
   or explicitly accept and document the behavior that will not move.
-- Decide which BookshelfNG install channels will be retired without a redirect,
-  especially its upstream in-app updater and unsupported third-party channels.
+- Build and accept the AppImage and Flatpak packages; generate the Cloudron
+  version metadata from its accepted build; update the external StartOS
+  package, canonical Co-op Cloud recipe, and supported catalog records to a
+  verified immutable digest. Run each channel's installed update, backup, and
+  rollback checks. Record explicit retirement decisions for unsupported
+  channels and preserve a documented manual path for pinned/offline installs.
 
 The database conversion and published-image migration smoke test are complete
 for the supported schema. The published BookshelfNG identity bridges and full

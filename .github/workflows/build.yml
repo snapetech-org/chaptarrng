@@ -336,6 +336,20 @@ jobs:
       shell: bash
       run: bash scripts/test-sync-unraid-package.sh
 
+    - name: Verify BookshelfNG legacy distribution contracts
+      run: node --test packaging/scripts/test-bookshelf-legacy-channels.mjs
+
+    - name: Verify Linux desktop-candidate staging
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        bash -n packaging/scripts/prepare-bookshelf-desktop-candidates.sh \
+          packaging/scripts/build-bookshelf-desktop-candidates.sh \
+          packaging/scripts/test-prepare-bookshelf-desktop-candidates.sh \
+          packaging/scripts/test-build-bookshelf-desktop-candidates.sh
+        bash packaging/scripts/test-prepare-bookshelf-desktop-candidates.sh
+        bash packaging/scripts/test-build-bookshelf-desktop-candidates.sh
+
     - name: Test
       id: validation
       env:
