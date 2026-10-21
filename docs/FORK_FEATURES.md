@@ -18,7 +18,7 @@ ChaptarrNG `main`'s history.
 ## BookshelfNG consolidation status — 2026-10-21
 
 ChaptarrNG PR #131 is merged to `main`. Current source head is
-[`83f66c36`](https://github.com/snapetech-org/chaptarrng/commit/83f66c36b4de225b63c5be833516ac571459a144). It includes the BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114)
+[`4b7f6da4`](https://github.com/snapetech-org/chaptarrng/commit/4b7f6da47b1607905c01c6e3f74a4fd544d1a395). It includes the BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114)
 setting for new-author format paths, disabled by default, and migration support
 that carries the saved flag and maps configured ebook/audiobook roots to
 ChaptarrNG defaults when those defaults are empty. Existing author paths and
@@ -34,9 +34,14 @@ canonical path-level report and evidence are maintained in the
 Path classifications do not establish runtime parity, and no runtime feature
 is approved for retirement.
 
-Focused backend and migration fixtures pass 11/11. Exact-head Build
-[39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684) is in progress; exact-head
-NuGet submission, Semgrep CE, Security Analysis, and Trivy passed. Publication
+Focused backend and migration fixtures pass 11/11; the follow-up configuration
+test passes 1/1. Build
+[39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
+for `83f66c36` passed Linux and PostgreSQL but was cancelled on macOS and Windows
+when the follow-up was pushed. Build
+[39536365519](https://github.com/snapetech-org/chaptarrng/actions/runs/39536365519)
+for `4b7f6da4` is in progress. Security Analysis, Trivy, Semgrep CE, and NuGet dependency submission
+passed. Publication
 remains frozen; no release, package, image, installer, or migration bridge was
 published. Representative operator-data migration and rollback, provider and
 SeerrNG workflows, representative media and restart recovery, installed

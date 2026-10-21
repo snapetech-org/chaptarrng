@@ -12,14 +12,16 @@
 > [ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main),
 > but remains unpublished and is not approved for cutover.
 >
-> Current ChaptarrNG `main` at [`83f66c36`](https://github.com/snapetech-org/chaptarrng/commit/83f66c36b4de225b63c5be833516ac571459a144)
+> Current ChaptarrNG `main` at [`4b7f6da4`](https://github.com/snapetech-org/chaptarrng/commit/4b7f6da47b1607905c01c6e3f74a4fd544d1a395)
 > also implements BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114):
 > the author-path initialization setting is opt-in and disabled by default.
 > Migration carries the saved choice and maps configured ebook/audiobook roots
 > to ChaptarrNG defaults when those defaults are empty. Existing author paths and
-> files are untouched. This change is source-only; exact-head Build
-> [39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
-> is in progress. The source also preserves BookshelfNG's optional
+> files are untouched. This change is source-only. The Build for runtime commit
+> `4b7f6da4` is running at
+> [39536365519](https://github.com/snapetech-org/chaptarrng/actions/runs/39536365519);
+> Security Analysis, Semgrep CE, Trivy, and NuGet dependency submission
+> passed. The source also preserves BookshelfNG's optional
 > `MoveExtraFilesOnRename` setting, exposes it in Media Management, and includes
 > it in settings backups. When enabled, it moves only configured loose files
 > after all renamed book media leaves the old folder. No release, package,

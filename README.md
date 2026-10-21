@@ -55,7 +55,7 @@ index's **Both** filter lists audiobook and ebook records as separate rows,
 with status, monitoring, and quality profiles scoped to each record's format.
 These additions are not in `v0.9.977`. The runtime feature commit is
 `c75ecbb37c5708441219887f7180d5ab10ee194d`; current source code is at
-`83f66c36b4de225b63c5be833516ac571459a144`. It also lets operators preview
+`4b7f6da47b1607905c01c6e3f74a4fd544d1a395`. It also lets operators preview
 eligible existing authors and skip reasons under Settings > Media Management >
 Root Folders, then separately confirm filling missing format paths. The command
 rechecks current settings, preserves manual paths, queues author refreshes, and
@@ -72,19 +72,15 @@ actions to the Editions and Narrations panels and tighten the SeerrNG service
 key: it can read audiobook-scoped narrator comparisons and set a preferred
 narrator only with the non-overriding payload. Ebook-scoped narrator access
 and unrelated or administrative routes stay denied.
-Current exact-head Build
-[39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
-is in progress. Hosted frontend regression tests and type-checks have passed;
-the PostgreSQL migration job passed, and platform backend tests plus Windows
-installer checks are running. Focused local backend and migration fixtures pass
-11/11. Exact-head Security Analysis, Semgrep CE, Trivy, and NuGet submission
-passed. Prior exact-head Build [39520269403](https://github.com/snapetech-org/chaptarrng/actions/runs/39520269403)
-passed Linux, Windows, macOS, PostgreSQL migration smoke, and native-runner
-receipt reconciliation; that is historical evidence, not a result for the
-current head. The current source remains unpublished. Regression tests cover
-local edition preservation, raw Hardcover facade lookup, row-format author
-editing, missing-profile defaults, and backfill preview/confirmation, retry,
-pending dialog, and invalid-count handling.
+Build [39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
+for the author-path implementation at `83f66c36` passed Linux and PostgreSQL
+migration checks; macOS and Windows were cancelled when follow-up commit
+`4b7f6da4` added configuration-persistence coverage. Build
+[39536365519](https://github.com/snapetech-org/chaptarrng/actions/runs/39536365519)
+for `4b7f6da4` is in progress across platforms. Focused author and migration
+fixtures pass 11/11; the new configuration test passes 1/1. Security Analysis
+Trivy and Semgrep passed; NuGet dependency submission passed. The
+current source remains unpublished.
 Current `main` also applies the author freshness policy to book-added events
 while retaining the author-scoped folder rescan, even when metadata is skipped
 or unchanged. The exact-head run above includes this change. See the

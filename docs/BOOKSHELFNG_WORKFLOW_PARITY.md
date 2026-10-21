@@ -111,15 +111,19 @@ instance reached the first-run account gate; browser save/reload of the toggle
 and author creation remain unverified because no credentials were created and
 authentication was not weakened.
 
-The final migration commit `83f66c36` has focused author and importer coverage
-(11/11); the additional `ConfigServiceAutoInitializeFormatSpecificAuthorPathsFixture`
-passes 1/1 and verifies the production default is off, the choice persists, and
-the Media Management API resource reflects it. Hosted Build
+The author-path implementation commit `83f66c36` passed focused author and
+importer coverage (11/11). Follow-up test commit `4b7f6da4` adds
+`ConfigServiceAutoInitializeFormatSpecificAuthorPathsFixture`; it passes 1/1 and
+verifies the production default is off, the choice persists, and the Media
+Management API resource reflects it. Build
 [39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
-is still in progress on this source head. Frontend regression tests/typechecks
-and PostgreSQL migration have passed; platform backend tests and Windows
-installer checks remain in progress. No release or migration bridge is
-published.
+for `83f66c36` passed Linux and PostgreSQL migration checks but was cancelled on
+macOS and Windows when the follow-up was pushed. Build
+[39536365519](https://github.com/snapetech-org/chaptarrng/actions/runs/39536365519)
+for `4b7f6da4` is in progress on all platforms. Security Analysis, Semgrep CE, Trivy, and NuGet dependency
+submission passed. No release or migration
+bridge is published.
+
 A production UI was checked in Chromium 154 against the disposable migrated
 fixture before the latest profile-reset, missing-default, and failure-feedback
 changes; that browser run predates this setting. In Books,

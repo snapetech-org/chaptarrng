@@ -2,7 +2,7 @@
 
 **Reviewed:** 2026-10-21. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977`
 remain the latest published releases. ChaptarrNG `main` is at
-[`83f66c36`](https://github.com/snapetech-org/chaptarrng/commit/83f66c36b4de225b63c5be833516ac571459a144); no release, package, image, installer, or
+[`4b7f6da4`](https://github.com/snapetech-org/chaptarrng/commit/4b7f6da47b1607905c01c6e3f74a4fd544d1a395); no release, package, image, installer, or
 migration bridge has been published. Release publication remains frozen, and
 the source and distribution publishers remain fail-closed with their readiness
 variables unset. This is the current handoff summary for moving BookshelfNG
@@ -20,14 +20,18 @@ or migration acceptance.
 
 **Current source and audit status — 2026-10-21**
 
-ChaptarrNG `main` at `83f66c36` implements BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114) as an
+ChaptarrNG `main` at `4b7f6da4` implements BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114) as an
 opt-in, disabled-by-default setting. Migration preserves the saved choice and
 maps BookshelfNG's configured ebook/audiobook roots to ChaptarrNG defaults
 when ChaptarrNG defaults are empty. Existing authors and files are untouched.
 This source change is not in public `.977`. Focused backend and migration
-fixtures pass 11/11. Exact-head Build
-[39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684) remains in progress;
-dependency submission, Semgrep, security analysis, and Trivy passed.
+fixtures pass 11/11, and the follow-up configuration-persistence test passes
+1/1. Build [39535222684](https://github.com/snapetech-org/chaptarrng/actions/runs/39535222684)
+for `83f66c36` passed Linux and PostgreSQL but was cancelled on macOS and Windows
+when the follow-up was pushed. Build
+[39536365519](https://github.com/snapetech-org/chaptarrng/actions/runs/39536365519)
+for `4b7f6da4` is in progress. Security Analysis, Semgrep CE, Trivy, and NuGet dependency
+submission passed.
 
 The canonical audit covers 732 post-fork commits (723 absent from upstream),
 1,119 changed paths, 83 reviewed mappings, and 663 dispositions (177 retained,
@@ -169,7 +173,7 @@ The current BookshelfNG path inventory, exact revisions, dispositions, and
 review maps are maintained in the
 [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md).
 The current ledger now covers 732 reachable post-fork commits and 1,119 changed
-paths, pinned to ChaptarrNG `83f66c36`. It records 663 dispositions and 456
+paths, pinned to ChaptarrNG `4b7f6da4`. It records 663 dispositions and 456
 open paths; these are path-level decisions, not proof of feature behavior. No
 runtime feature has been approved for retirement. The old contributor wiki stub is covered by
 ChaptarrNG's guide, and the obsolete Readarr Azure Pipelines definition is
@@ -494,7 +498,7 @@ acceptance remain open.
   cross-device, partial-failure rollback, and channel acceptance remain open.
 - BookshelfNG `0.4.21.71` is published as the final source release.
 - BookshelfNG issue [#114](https://github.com/snapetech-org/bookshelfng/issues/114) requests an opt-in, disabled-by-default
-  new-author path setting. ChaptarrNG `main` at `83f66c36` now provides it in
+  new-author path setting. ChaptarrNG `main` at `4b7f6da4` now provides it in
   Settings > Media Management. When enabled, it initializes missing format
   roots for new authors only. Migration carries the saved flag and maps the
   BookshelfNG format roots to ChaptarrNG defaults when those defaults are
