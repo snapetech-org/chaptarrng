@@ -1,6 +1,6 @@
 # Native package channels
 
-Status checked 2026-10-19. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
+Status checked 2026-10-21. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 is the latest published release. GitHub Release archives are the payload for
 native packages; the standard ChaptarrNG container is built separately from
 the same application source and migration code. Package recipes add service
@@ -24,7 +24,7 @@ For current BookshelfNG migration and legacy-channel acceptance status, see
 | Fedora COPR | `slskdn/chaptarrng` | `slskdn/bookshelfng` | `/var/lib/bookshelfng` |
 | Chocolatey | `chaptarrng` | `bookshelfng` | `%ProgramData%\BookshelfNG\data` |
 | Docker | `ghcr.io/snapetech-org/chaptarrng` | Legacy image aliases | Existing `/config` mount |
-| Helm | ChaptarrNG `charts/bookshelfng` (source candidate; unpublished) | `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` | Same Helm release, namespace, `/config` PVC, and volume name |
+| Helm | ChaptarrNG `charts/bookshelfng` with a versioned publisher for the existing OCI identity; unpublished while the release freeze is active | `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` | Same Helm release, namespace, `/config` PVC, and volume name |
 
 Legacy package recipes keep the old package identity, service name, and data
 path so a package upgrade can start the normal ChaptarrNG database migration.
@@ -39,9 +39,10 @@ archive matrix: `linux-x64`, `linux-x86`, `linux-arm64`, `linux-musl-x64`,
 `linux-musl-arm64`, `freebsd-x64`, `osx-x64`, `osx-arm64`, `win-x64`, and
 `win-x86`. Linux x86 and FreeBSD use separately built, pinned .NET runtime
 packs. A no-publication validation workflow builds and verifies all ten
-candidate archives; its exact-head result is still pending. These assets are
-not public until a later release is approved. Keep BookshelfNG in service
-until the full migration and channel acceptance gates close.
+candidate archives. The hosted runtime-pack permission regression now passes;
+the full exact-head archive matrix is still running. These assets are not
+public until a later release is approved. Keep BookshelfNG in service until the
+full migration and channel acceptance gates close.
 Keep the BookshelfNG installation in service until a replacement channel is
 validated or that platform is explicitly retired.
 
@@ -53,7 +54,7 @@ validated or that platform is explicitly retired.
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
 | Chocolatey | `.977` built and passed the hosted BookshelfNG-to-ChaptarrNG upgrade smoke, but the push returned HTTP 403; the live feed has no `chaptarrng` entry | Public `bookshelfng 0.4.21.70` remains | Resolve publisher authorization, publish the new identity, then test the old identity with real package data and rollback |
 | Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode. | Validate all three manifests and old-alias digest routing on exact-head CI before enabling the bridge |
-| Helm | A same-name chart candidate keeps existing resource and PVC identities and requires explicit approval, provider mode, and image digest. Local render checks pass. | The BookshelfNG OCI chart remains unchanged; no ChaptarrNG chart is published. | Test a real PVC/GitOps upgrade and rollback, then publish only after retirement gates close; current users need a chart-source change |
+| Helm | A same-name chart and versioned publisher target the existing BookshelfNG OCI identity. Both release-readiness gates, the migration bridge gate, and an explicit bridge opt-in are required. Local build/render and hosted resource-identity checks pass. | No chart is published; the BookshelfNG OCI chart remains unchanged. Existing installs can keep the same chart source after acceptance. | Test a real PVC/GitOps upgrade and rollback before publishing or switching existing installations |
 
 Core release validation passed on Linux, macOS, Windows, and PostgreSQL. The
 Windows Chocolatey build and package-transition smoke also passed: it
@@ -76,8 +77,9 @@ succeeded for Fedora 43, 44, 45, and Rawhide x86_64. The
 legacy BookshelfNG COPR trigger was skipped because the migration bridge is
 disabled. The ChaptarrNG AUR
 identity was published at `0.9.977-1`; the BookshelfNG AUR identity was not
-updated. The `CHAPTARRNG_MIGRATION_BRIDGE_ENABLED` Actions variable is `false`,
-so old package IDs and image aliases do not redirect to ChaptarrNG.
+updated. The legacy package and image bridges remain disabled. Re-enabling
+them requires both release-readiness gates, the migration bridge gate, and an
+explicit bridge opt-in.
 
 The current legacy COPR repository metadata contains no package entries for
 Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 transaction test

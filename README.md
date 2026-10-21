@@ -206,9 +206,11 @@ BookshelfNG must stay in service until cutover is approved.
 Helm has a source-only, fail-closed handoff chart at
 [`charts/bookshelfng`](charts/bookshelfng/README.md). It keeps the existing
 release, StatefulSet, Service, selector, PVC, and `/config` identities, but no
-chart or migration image has been published for cutover. Existing Helm users
-will need to change chart source after the retirement gates close; the legacy
-BookshelfNG OCI chart has not been redirected.
+chart has been published for cutover. A versioned publisher now targets the
+existing BookshelfNG OCI chart identity after both release-readiness gates,
+the migration bridge gate, and an explicit bridge opt-in pass. Existing Helm
+users can keep the same chart source after acceptance; an installed PVC
+upgrade, GitOps sync, and rollback still need validation.
 
 The unpublished migration candidate includes BookshelfNG's Hardcover
 public-list and reading-status provider, plus compatibility ports for its
