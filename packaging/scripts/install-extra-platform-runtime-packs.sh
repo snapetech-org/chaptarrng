@@ -12,9 +12,10 @@ case "$rid" in
 esac
 
 mkdir -p "$dotnet_root"
-tar -xzf "$artifact_root/runtimes/$rid-runtime.tar.gz" -C "$dotnet_root"
+tar --no-overwrite-dir -xzf "$artifact_root/runtimes/$rid-runtime.tar.gz" -C "$dotnet_root"
 mkdir -p "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12"
-tar -xzf "$artifact_root/runtimes/$rid-aspnetcore-shared.tar.gz" -C "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12"
+tar --no-overwrite-dir -xzf "$artifact_root/runtimes/$rid-aspnetcore-shared.tar.gz" \
+    -C "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12"
 
 mkdir -p "$dotnet_root/sdk" "$dotnet_root/packs"
 cp -a "$artifact_root/sdk/sdk/$sdk_version" "$dotnet_root/sdk/"
