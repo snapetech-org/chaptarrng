@@ -198,7 +198,7 @@ class BookFileEditorTableContent extends Component {
                   name="quality"
                   value="selectQuality"
                   values={qualityOptions}
-                  isDisabled={!hasSelectedFiles}
+                  isDisabled={!hasSelectedFiles || Boolean(error)}
                   onChange={this.onQualityChange}
                 />
               </div>

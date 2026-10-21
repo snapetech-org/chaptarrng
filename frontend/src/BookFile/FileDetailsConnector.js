@@ -52,7 +52,7 @@ class FileDetailsConnector extends Component {
     } = this.props;
 
     const item = find(items, { id });
-    const errorMessage = getErrorMessage(error, translate('UnableToLoadManualImportItems'));
+    const errorMessage = getErrorMessage(error, translate('LoadingBookFilesFailed'));
 
     if (error && !isFetching) {
       return (

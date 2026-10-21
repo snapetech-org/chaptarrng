@@ -110,7 +110,10 @@ function loadComponent(componentPath) {
         return { __esModule: true, default: (key) => key };
       }
       if (moduleName === 'Utilities/Table/getSelectedIds') {
-        return { __esModule: true, default: () => [] };
+        return {
+          __esModule: true,
+          default: (selectedState) => Object.keys(selectedState).filter((id) => selectedState[id]).map(Number)
+        };
       }
       if (moduleName === 'Utilities/Table/removeOldSelectedState') {
         return { __esModule: true, default: () => ({}) };
@@ -208,19 +211,23 @@ test('book file quality load failure is announced and can be retried', () => {
   const component = new BookFileEditor({
     isDeleting: false,
     isFetching: false,
-    isPopulated: false,
+    isPopulated: true,
     error: 'Quality profiles are unavailable',
-    items: [],
+    items: [{ id: 7 }],
     qualities: [],
     onDeletePress() {},
     onQualityChange() {},
     onRetryPress: () => retries++,
     dispatchDeleteBookFile() {}
   });
-  const alert = findElements(component.render(), (element) => element.type === 'Alert' && element.props.role === 'alert')[0];
+  component.state.selectedState = { 7: true };
+  const output = component.render();
+  const alert = findElements(output, (element) => element.type === 'Alert' && element.props.role === 'alert')[0];
   const retryButton = findElements(alert, (element) => element.type === 'Button')[0];
+  const qualitySelect = findElements(output, (element) => element.props?.name === 'quality')[0];
 
   assert.match(getText(alert), /Quality profiles are unavailable/);
+  assert.equal(qualitySelect.props.isDisabled, true);
   retryButton.props.onPress();
   assert.equal(retries, 1);
 });
@@ -242,6 +249,15 @@ test('manual import file details load failure retries the selected book file', (
   retryButton.props.onPress();
   assert.equal(requests.length, 1);
   assert.equal(requests[0].id, 27);
+
+  const fallback = new FileDetails({
+    items: [],
+    id: 28,
+    isFetching: false,
+    error: {},
+    fetchBookFiles() {}
+  }).render();
+  assert.match(getText(fallback), /LoadingBookFilesFailed/);
 });
 
 test('conversion settings load failure exposes the server error and retries', () => {
