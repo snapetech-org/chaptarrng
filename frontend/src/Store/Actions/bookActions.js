@@ -13,6 +13,7 @@ import dayjs from 'Utilities/Date/dayjsSetup';
 import coerceMonitoredBoolean from 'Utilities/Monitoring/coerceMonitoredBoolean';
 import translate from 'Utilities/String/translate';
 import { removeItem, set, update, updateItem } from './baseActions';
+import createBookMonitoringFailureAction from './createBookMonitoringFailureAction';
 import createHandleActions from './Creators/createHandleActions';
 import createRemoveItemHandler from './Creators/createRemoveItemHandler';
 import createSaveProviderHandler from './Creators/createSaveProviderHandler';
@@ -165,7 +166,10 @@ export const sortPredicates = {
   },
 
   monitored: function(item, _direction, selectedMediaType) {
-    const mediaType = (selectedMediaType || item.mediaType || '').toString().toLowerCase() === 'ebook' ? 'ebook' : 'audiobook';
+    const selectedType = (selectedMediaType || '').toString().toLowerCase();
+    const mediaType = selectedType === 'ebook' || selectedType === 'audiobook' ?
+      selectedType :
+      item.mediaType;
     const isMonitored = mediaType === 'ebook' ? item.ebookMonitored : item.audiobookMonitored;
 
     return isMonitored ? 1 : 0;
@@ -745,6 +749,7 @@ export const actionHandlers = handleThunks({
     });
 
     promise.catch((xhr) => {
+      dispatch(createBookMonitoringFailureAction(xhr));
       dispatch(updateItem({
         id: bookId,
         section: bookSection,
@@ -835,6 +840,7 @@ export const actionHandlers = handleThunks({
     });
 
     promise.catch((xhr) => {
+      dispatch(createBookMonitoringFailureAction(xhr));
       dispatch(batchActions(
         bookIds.map((bookId) => {
           return updateItem({

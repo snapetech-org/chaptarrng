@@ -119,14 +119,20 @@ function EditImportListModalContent(props) {
   const isDualMediaImportList = isHardcoverLibraryImportList || isGoodreadsDualMediaImportList;
 
   const [hardcoverIdentity, setHardcoverIdentity] = useState(null);
+  const [hardcoverIdentityStatus, setHardcoverIdentityStatus] = useState('idle');
   const [hardcoverIdentityReload, setHardcoverIdentityReload] = useState(0);
   const [isHardcoverApiKeyModalOpen, setIsHardcoverApiKeyModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isHardcoverLibraryImportList) {
       setHardcoverIdentity(null);
+      setHardcoverIdentityStatus('idle');
       return;
     }
+
+    let isCurrentRequest = true;
+    setHardcoverIdentity(null);
+    setHardcoverIdentityStatus('loading');
 
     const request = createAjaxRequest({
       url: '/config/hardcover',
@@ -134,19 +140,30 @@ function EditImportListModalContent(props) {
     });
 
     request.request.done((data) => {
+      if (!isCurrentRequest) {
+        return;
+      }
+
       setHardcoverIdentity({
         enabled: !!data?.enabled,
         hasToken: !!data?.hasToken,
         username: data?.username || '',
         avatarUrl: data?.avatarUrl || ''
       });
+      setHardcoverIdentityStatus('ready');
     });
 
     request.request.fail(() => {
+      if (!isCurrentRequest) {
+        return;
+      }
+
       setHardcoverIdentity(null);
+      setHardcoverIdentityStatus('error');
     });
 
     return () => {
+      isCurrentRequest = false;
       request.abortRequest();
     };
   }, [isHardcoverLibraryImportList, hardcoverIdentityReload]);
@@ -456,22 +473,59 @@ function EditImportListModalContent(props) {
       return null;
     }
 
-    const isConnected = hardcoverIdentity?.hasToken === true;
-    const isMissingToken = hardcoverIdentity?.hasToken === false;
+    const isLoading = hardcoverIdentityStatus === 'idle' || hardcoverIdentityStatus === 'loading';
+    const hasConnectionError = hardcoverIdentityStatus === 'error';
+    const isConnected = hardcoverIdentityStatus === 'ready' &&
+      hardcoverIdentity?.enabled === true &&
+      hardcoverIdentity?.hasToken === true;
+    const isMissingToken = hardcoverIdentityStatus === 'ready' && !isConnected;
     const hasUsername = !!hardcoverIdentity?.username;
-    let alertKind = kinds.INFO;
-    if (!isConnected && isMissingToken) {
-      alertKind = kinds.WARNING;
-    }
 
     return (
       <>
-        <Alert
-          kind={alertKind}
-          className={styles.hardcoverInfo}
-        >
-          {
-            isConnected && hasUsername ?
+        <div className={styles.hardcoverStatus}>
+          {isLoading ? (
+            <Alert
+              className={styles.hardcoverStatusAlert}
+              kind={kinds.INFO}
+              role="status"
+            >
+              <div className={styles.hardcoverStatusLoading}>
+                <LoadingIndicator
+                  className={styles.hardcoverInlineLoading}
+                  size={18}
+                />
+                <span>{translate('CheckingHardcoverConnection')}</span>
+              </div>
+            </Alert>
+          ) : null}
+
+          {hasConnectionError ? (
+            <Alert
+              className={styles.hardcoverStatusAlert}
+              kind={kinds.DANGER}
+              role="alert"
+            >
+              <div className={styles.hardcoverStatusError}>
+                <span>{translate('UnableToCheckHardcoverConnection')}</span>
+                <Button
+                  kind={kinds.DEFAULT}
+                  onPress={() => {
+                    setHardcoverIdentityStatus('loading');
+                    setHardcoverIdentityReload((x) => x + 1);
+                  }}
+                >
+                  {translate('Retry')}
+                </Button>
+              </div>
+            </Alert>
+          ) : null}
+
+          {isConnected ? (
+            <Alert
+              className={styles.hardcoverStatusAlert}
+              kind={kinds.SUCCESS}
+            >
               <div className={styles.hardcoverIdentityRow}>
                 {hardcoverIdentity.avatarUrl && (
                   <img
@@ -481,18 +535,40 @@ function EditImportListModalContent(props) {
                   />
                 )}
                 <div className={styles.hardcoverIdentityText}>
-                  <strong>{hardcoverIdentity.username}</strong>
+                  {translate('HardcoverConnectedStatus')}
+                  {hasUsername ? (
+                    <>
+                      <span>{' — '}</span>
+                      <strong>{hardcoverIdentity.username}</strong>
+                    </>
+                  ) : null}
                 </div>
-              </div> :
-              null
-          }
-
-          {isMissingToken ? (
-            <div>
-              {translate('ImportListHardcoverDisabled')}
-            </div>
+              </div>
+            </Alert>
           ) : null}
 
+          {isMissingToken ? (
+            <Alert
+              className={styles.hardcoverStatusAlert}
+              kind={kinds.WARNING}
+            >
+              <div>{translate('ImportListHardcoverDisabled')}</div>
+              <div className={styles.hardcoverConnectActions}>
+                <Button
+                  kind={kinds.PRIMARY}
+                  onPress={() => setIsHardcoverApiKeyModalOpen(true)}
+                >
+                  {translate('ConnectHardcover')}
+                </Button>
+              </div>
+            </Alert>
+          ) : null}
+        </div>
+
+        <Alert
+          className={styles.hardcoverInfo}
+          kind={kinds.INFO}
+        >
           <div>
             {translate('ImportListHardcoverTrackingExplainerPrefix')} <strong>{translate('Book')}</strong> {translate('ImportListHardcoverTrackingExplainerMid')} <strong>{translate('Edition')}</strong> {translate('ImportListHardcoverTrackingExplainerSuffix')}
           </div>
@@ -502,17 +578,6 @@ function EditImportListModalContent(props) {
           <div>
             {translate('ImportListHardcoverOwnedExplainerPrefix')} <strong>{translate('Audiobooks')}</strong> {translate('ImportListHardcoverOwnedExplainerMid')} <strong>{translate('Ebooks')}</strong>{translate('ImportListHardcoverOwnedExplainerSuffix')}
           </div>
-
-          {isMissingToken ? (
-            <div className={styles.hardcoverConnectActions}>
-              <Button
-                kind={kinds.PRIMARY}
-                onPress={() => setIsHardcoverApiKeyModalOpen(true)}
-              >
-                {translate('ConnectHardcover')}
-              </Button>
-            </div>
-          ) : null}
         </Alert>
 
         <HardcoverApiKeyModal

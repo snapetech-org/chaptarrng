@@ -1,5 +1,8 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import Alert from 'Components/Alert';
+import FormGroup from 'Components/Form/FormGroup';
+import FormLabel from 'Components/Form/FormLabel';
 import TextInput from 'Components/Form/TextInput';
 import Icon from 'Components/Icon';
 import Button from 'Components/Link/Button';
@@ -18,6 +21,15 @@ function getErrorMessage(error) {
   }
 
   return error.responseJSON.message;
+}
+
+function isBookshelfEncryptedBackup(file) {
+  const filename = file && file.name ? file.name.toLowerCase() : '';
+  return filename.endsWith('.enc') && !filename.endsWith('.zip.enc');
+}
+
+function isValidPassphrase(passphrase) {
+  return passphrase.length >= 16 && new TextEncoder().encode(passphrase).length <= 4096;
 }
 
 function getStepIconProps(isExecuting, hasExecuted, error) {
@@ -59,6 +71,7 @@ class RestoreBackupModalContent extends Component {
     this.state = {
       file: null,
       path: '',
+      passphrase: '',
       isRestored: false,
       isRestarted: false,
       isReloading: false
@@ -95,8 +108,24 @@ class RestoreBackupModalContent extends Component {
   onPathChange = ({ value, files }) => {
     this.setState({
       file: files[0],
-      path: value
+      path: value,
+      passphrase: ''
     });
+  };
+
+  onPassphraseChange = ({ value }) => {
+    this.setState({
+      passphrase: value
+    });
+  };
+
+  onModalClose = () => {
+    this.setState({
+      file: null,
+      path: '',
+      passphrase: ''
+    });
+    this.props.onModalClose();
   };
 
   onRestorePress = () => {
@@ -105,9 +134,15 @@ class RestoreBackupModalContent extends Component {
       onRestorePress
     } = this.props;
 
+    const {
+      file,
+      passphrase
+    } = this.state;
+
     onRestorePress({
       id,
-      file: this.state.file
+      file,
+      passphrase
     });
   };
 
@@ -120,12 +155,13 @@ class RestoreBackupModalContent extends Component {
       name,
       isRestoring,
       restoreError,
-      isRestarting,
-      onModalClose
+      isRestarting
     } = this.props;
 
     const {
       path,
+      file,
+      passphrase,
       isRestored,
       isRestarted,
       isReloading
@@ -133,13 +169,14 @@ class RestoreBackupModalContent extends Component {
 
     const isRestoreDisabled = (
       (!id && !path) ||
+      (isBookshelfEncryptedBackup(file) && !isValidPassphrase(passphrase)) ||
       isRestoring ||
       isRestarting ||
       isReloading
     );
 
     return (
-      <ModalContent onModalClose={onModalClose}>
+      <ModalContent onModalClose={this.onModalClose}>
         <ModalHeader>
           {translate('RestoreBackup')}
         </ModalHeader>
@@ -157,6 +194,30 @@ class RestoreBackupModalContent extends Component {
                 value={path}
                 onChange={this.onPathChange}
               />
+          }
+
+          {
+            isBookshelfEncryptedBackup(file) &&
+              <>
+                <Alert kind={kinds.INFO}>
+                  {translate('EncryptedBackupRestoreHelpText')}
+                </Alert>
+
+                <FormGroup>
+                  <FormLabel name="restoreBackupPassphrase">
+                    {translate('SettingsBackupPassphrase')}
+                  </FormLabel>
+                  <TextInput
+                    id="restoreBackupPassphrase"
+                    name="passphrase"
+                    type="password"
+                    autoComplete="current-password"
+                    maxLength={4096}
+                    value={passphrase}
+                    onChange={this.onPassphraseChange}
+                  />
+                </FormGroup>
+              </>
           }
 
           <div className={styles.steps}>
@@ -206,7 +267,7 @@ class RestoreBackupModalContent extends Component {
             {translate('RestartReloadNote')}
           </div>
 
-          <Button onPress={onModalClose}>
+          <Button onPress={this.onModalClose}>
             {translate('Cancel')}
           </Button>
 

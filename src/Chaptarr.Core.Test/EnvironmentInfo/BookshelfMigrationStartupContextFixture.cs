@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using NzbDrone.Common;
 using NzbDrone.Common.EnvironmentInfo;
 
 namespace Chaptarr.Core.Test.EnvironmentInfo
@@ -26,6 +27,24 @@ namespace Chaptarr.Core.Test.EnvironmentInfo
             Assert.That(context.RestoreBookshelf, Is.EqualTo(restore));
             Assert.That(context.PreviewBookshelfRestore, Is.EqualTo(previewRestore));
             Assert.That(context.ConfirmBookshelfServiceStopped, Is.EqualTo(confirmServiceStopped));
+        }
+
+        [Test]
+        public void should_preserve_a_data_path_with_spaces_for_service_installation()
+        {
+            var context = new StartupContext("-data=\"C:\\ProgramData\\Readarr Libraries\"", "-nobrowser");
+
+            Assert.That(context.PreservedArguments, Is.EqualTo("/data=\"C:\\ProgramData\\Readarr Libraries\" /nobrowser"));
+        }
+
+        [Test]
+        public void should_quote_the_service_image_path_as_a_single_windows_argument()
+        {
+            Assert.That(
+                ServiceProvider.BuildServiceImagePathArgument(
+                    "C:\\Program Files\\Chaptarr\\Chaptarr.Console.exe",
+                    "/data=\"C:\\ProgramData\\Readarr Libraries\" /nobrowser"),
+                Is.EqualTo("\"\\\"C:\\Program Files\\Chaptarr\\Chaptarr.Console.exe\\\" /data=\\\"C:\\ProgramData\\Readarr Libraries\\\" /nobrowser\""));
         }
     }
 }

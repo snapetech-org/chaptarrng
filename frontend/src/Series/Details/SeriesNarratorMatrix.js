@@ -1,43 +1,68 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import Label from 'Components/Label';
+import Button from 'Components/Link/Button';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
 import styles from './SeriesNarratorMatrix.css';
 
 function SeriesNarratorMatrix({ title, authorId }) {
-  const [state, setState] = useState({ isFetching: true, error: false, matrix: null });
+  const [state, setState] = useState({
+    title,
+    authorId,
+    isFetching: true,
+    error: false,
+    matrix: null
+  });
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    let isCurrent = true;
     const query = authorId ? `&authorId=${authorId}` : '';
     const { request, abortRequest } = createAjaxRequest({
       url: `/series/narrators/matrix?title=${encodeURIComponent(title)}${query}`,
       dataType: 'json'
     });
 
-    setState({ isFetching: true, error: false, matrix: null });
-    request.done((matrix) => setState({ isFetching: false, error: false, matrix }));
+    setState({ title, authorId, isFetching: true, error: false, matrix: null });
+    request.done((matrix) => {
+      if (!isCurrent) {
+        return;
+      }
+
+      setState({ title, authorId, isFetching: false, error: false, matrix });
+    });
     request.fail((xhr) => {
-      if (xhr.aborted) {
+      if (!isCurrent || xhr.aborted) {
         return;
       }
 
       // A series with no audiobook editions is not an error worth showing.
-      setState({ isFetching: false, error: xhr.status !== 404, matrix: null });
+      setState({ title, authorId, isFetching: false, error: xhr.status !== 404, matrix: null });
     });
 
-    return abortRequest;
-  }, [title, authorId]);
+    return () => {
+      isCurrent = false;
+      abortRequest();
+    };
+  }, [title, authorId, retryCount]);
 
   const { isFetching, error, matrix } = state;
 
-  if (isFetching) {
+  if (state.title !== title || state.authorId !== authorId || isFetching) {
     return <LoadingIndicator />;
   }
 
   if (error) {
-    return <div className={styles.message} role="alert">{translate('NarratorComparisonFailed')}</div>;
+    return (
+      <div className={styles.message} role="alert">
+        <span>{translate('NarratorComparisonFailed')}</span>
+        <Button onPress={() => setRetryCount((count) => count + 1)}>
+          {translate('Retry')}
+        </Button>
+      </div>
+    );
   }
 
   if (!matrix || !matrix.narrators.length) {

@@ -77,6 +77,10 @@ class SelectQualityModalContentConnector extends Component {
     this.props.onModalClose(true);
   };
 
+  onRetryPress = () => {
+    this.props.dispatchFetchQualityProfileSchema();
+  };
+
   //
   // Render
 
@@ -85,6 +89,7 @@ class SelectQualityModalContentConnector extends Component {
       <SelectQualityModalContent
         {...this.props}
         onQualitySelect={this.onQualitySelect}
+        onRetryPress={this.onRetryPress}
       />
     );
   }

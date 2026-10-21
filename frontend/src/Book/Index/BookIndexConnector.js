@@ -5,9 +5,8 @@ import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
 import * as commandNames from 'Commands/commandNames';
 import withScrollPosition from 'Components/withScrollPosition';
-import { setSelectedMediaType } from 'Store/Actions/appActions';
 import { clearBooks, fetchBooks } from 'Store/Actions/bookActions';
-import { saveBookEditor, setBookFilter, setBookSort, setBookTableOption, setBookView } from 'Store/Actions/bookIndexActions';
+import { saveBookEditor, setBookFilter, setBookMediaType, setBookSort, setBookTableOption, setBookView } from 'Store/Actions/bookIndexActions';
 import * as bookInfiniteScrollActions from 'Store/Actions/bookInfiniteScrollActions';
 import { executeCommand } from 'Store/Actions/commandActions';
 import { selectQueryBooks } from 'Store/Reducers/bookInfiniteScrollReducer';
@@ -27,7 +26,7 @@ function createMapStateToProps() {
     createCommandExecutingSelector(commandNames.CUTOFF_UNMET_BOOK_SEARCH),
     createCommandExecutingSelector(commandNames.MISSING_BOOK_SEARCH),
     createDimensionsSelector(),
-    (state) => state.app.selectedMediaType,
+    (state) => state.bookIndex.selectedMediaType,
     (state) => state.bookInfiniteScroll,
     (
       book,
@@ -97,22 +96,25 @@ function createMapDispatchToProps(dispatch, props) {
     },
 
     onRefreshBookPress(items) {
-      dispatch(executeCommand({
+      return dispatch(executeCommand({
         name: commandNames.BULK_REFRESH_BOOK,
-        bookIds: items
+        bookIds: items,
+        suppressStartErrorMessage: true
       }));
     },
 
     onRssSyncPress() {
-      dispatch(executeCommand({
-        name: commandNames.RSS_SYNC
+      return dispatch(executeCommand({
+        name: commandNames.RSS_SYNC,
+        suppressStartErrorMessage: true
       }));
     },
 
     onSearchPress(items) {
-      dispatch(executeCommand({
+      return dispatch(executeCommand({
         name: commandNames.BOOK_SEARCH,
-        bookIds: items
+        bookIds: items,
+        suppressStartErrorMessage: true
       }));
     },
 
@@ -125,8 +127,7 @@ function createMapDispatchToProps(dispatch, props) {
     },
 
     onMediaTypeChange(mediaType) {
-      // Update global selected media type
-      dispatch(setSelectedMediaType({ mediaType }));
+      dispatch(setBookMediaType({ mediaType }));
 
       // Clear existing books to prevent transient mixing
       dispatch(clearBooks());
@@ -144,7 +145,7 @@ class BookIndexConnector extends Component {
 
     if (this.needsClientSideBooks()) {
       this.props.dispatchFetchBooks({
-        mediaType: selectedMediaType || 'audiobook',
+        mediaType: getBookIndexQuery(this.props, selectedMediaType).queryParams.filters.mediaType,
         include: 'author'
       });
     }
@@ -157,7 +158,10 @@ class BookIndexConnector extends Component {
 
     if (needsClientSideBooks &&
         (!previouslyNeededClientSideBooks || prevProps.selectedMediaType !== selectedMediaType)) {
-      this.props.dispatchFetchBooks({ mediaType: selectedMediaType, include: 'author' });
+      this.props.dispatchFetchBooks({
+        mediaType: getBookIndexQuery(this.props, selectedMediaType).queryParams.filters.mediaType,
+        include: 'author'
+      });
     }
   }
 
@@ -200,7 +204,7 @@ BookIndexConnector.propTypes = {
   isSmallScreen: PropTypes.bool.isRequired,
   view: PropTypes.string.isRequired,
   isPopulated: PropTypes.bool.isRequired,
-  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook']).isRequired,
+  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook', 'both']).isRequired,
   useClientSideBooks: PropTypes.bool.isRequired,
   bookTotalCount: PropTypes.number,
   dispatchSetBookView: PropTypes.func.isRequired,

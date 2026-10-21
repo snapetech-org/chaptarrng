@@ -20,12 +20,20 @@ with dynamic typing and the released BookshelfNG SQLite schema already uses
 type. The isolated migration runner also includes BookshelfNG’s SQLite table
 rebuild processor for its older alter, rename, and drop-column migrations.
 
-Only a BookshelfNG database with the expected Bookshelf lineage and a schema
-version no newer than migration 158 is eligible. The migration runner upgrades
-the disposable copy; the importer then validates its final table set and
-version. Unknown/newer schemas and PostgreSQL sources fail closed. The
+This embedded migration chain applies to SQLite source databases. It upgrades
+recognized schemas 1–158 on a disposable copy before the importer validates
+the final table set and version. Unknown/newer schemas fail closed. The
 automatic compatibility path does not rewrite or normalize the original
 database before it is retained.
+
+A separate PostgreSQL converter candidate is in development. It does not run
+this SQLite migration chain and accepts only a current migration-158
+BookshelfNG PostgreSQL schema. It stages native Chaptarr tables in a temporary
+schema, retains the source tables in a backup schema after promotion, and has
+preview and rollback routes. The candidate is not supported by a published
+release; its hosted populated-data test, rollback evidence, and operator-data
+acceptance are still open. See
+[`docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md`](../../../../docs/BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
 
 When updating this embedded migration chain, keep the original source tag and
 commit recorded above, review SQLite-specific behavior, and extend the

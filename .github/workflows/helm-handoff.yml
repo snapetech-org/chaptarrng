@@ -1,0 +1,48 @@
+name: BookshelfNG Helm handoff
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/helm-handoff.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/release-distribution.yml"
+      - "charts/bookshelfng/**"
+      - "packaging/scripts/build-bookshelfng-helm-bridge.sh"
+      - "packaging/scripts/publish-bookshelfng-helm-bridge.sh"
+      - "scripts/test_bookshelfng_helm_handoff.rb"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/helm-handoff.yml"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/release-distribution.yml"
+      - "charts/bookshelfng/**"
+      - "packaging/scripts/build-bookshelfng-helm-bridge.sh"
+      - "packaging/scripts/publish-bookshelfng-helm-bridge.sh"
+      - "scripts/test_bookshelfng_helm_handoff.rb"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  helm-handoff:
+    name: Render and verify in-place resource identity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v3.20.0
+
+      - name: Lint compatibility chart
+        run: >-
+          helm lint charts/bookshelfng
+          --set bookshelfMigration.confirmed=true
+          --set bookshelfMigration.providerMode=hardcover
+          --set-string image.digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+
+      - name: Verify stable resources and fail-closed inputs
+        run: ruby scripts/test_bookshelfng_helm_handoff.rb

@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using NLog;
 using NUnit.Framework;
 using NzbDrone.Common.Composition;
+using NzbDrone.Core.Books.Commands;
 using NzbDrone.Core.IndexerSearch;
 using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.Messaging.Commands;
@@ -124,6 +125,20 @@ namespace Chaptarr.Core.Test.Commands
             Assert.That(((MissingBookSearchCommand)queue.PushedCommand).MediaType, Is.Null);
         }
 
+        [TestCase("MoveAuthorMedia")]
+        [TestCase("MoveAuthorMediaBatch")]
+        public void author_media_move_commands_should_require_the_preview_validated_endpoint(string commandName)
+        {
+            var queue = new StubCommandQueue();
+            var body = $"{{\"name\":\"{commandName}\"}}";
+            var controller = CreateController(queue, body);
+
+            var exception = Assert.Throws<BadRequestException>(() => controller.StartCommand(new CommandResource { Name = commandName }));
+
+            Assert.That(exception.Content.ToString(), Does.Contain("preview-validated"));
+            Assert.That(queue.WasPushed, Is.False);
+        }
+
         private static CommandController CreateController(StubCommandQueue queue, string body)
         {
             var controller = new CommandController(
@@ -133,7 +148,9 @@ namespace Chaptarr.Core.Test.Commands
                 {
                     typeof(RenameAuthorCommand),
                     typeof(MissingBookSearchCommand),
-                    typeof(CutoffUnmetBookSearchCommand)
+                    typeof(CutoffUnmetBookSearchCommand),
+                    typeof(MoveAuthorMediaCommand),
+                    typeof(MoveAuthorMediaBatchCommand)
                 }),
                 LogManager.GetCurrentClassLogger());
 

@@ -137,7 +137,30 @@ namespace Chaptarr.Api.V1.Indexers
                     throw new NzbDroneClientException(HttpStatusCode.NotFound, "Unable to parse books in the release");
                 }
 
-                await _downloadService.DownloadReport(remoteBook, release.DownloadClientId);
+                if (release.AdoptExistingTorrent)
+                {
+                    await _downloadService.AdoptExistingTorrent(remoteBook, release.DownloadClientId);
+                }
+                else
+                {
+                    await _downloadService.DownloadReport(remoteBook, release.DownloadClientId);
+                }
+            }
+            catch (ExistingTorrentFoundException ex)
+            {
+                return Conflict(new
+                {
+                    code = "existingTorrent",
+                    message = ex.Message
+                });
+            }
+            catch (ExistingTorrentNotFoundException ex)
+            {
+                return Conflict(new
+                {
+                    code = "existingTorrentUnavailable",
+                    message = ex.Message
+                });
             }
             catch (DownloadClientRejectedReleaseException ex)
             {
@@ -175,11 +198,21 @@ namespace Chaptarr.Api.V1.Indexers
         }
 
         [HttpGet]
-        public async Task<object> GetReleases(int? bookId, int? authorId, bool bypassFilters = false)
+        public async Task<object> GetReleases(int? bookId, int? authorId, bool bypassFilters = false, int? seriesId = null)
         {
             if (bookId.HasValue)
             {
                 return await GetBookReleases(int.Parse(Request.Query["bookId"]), bypassFilters);
+            }
+
+            if (seriesId.HasValue)
+            {
+                if (!authorId.HasValue)
+                {
+                    throw new NzbDroneClientException(HttpStatusCode.BadRequest, "An authorId is required when searching for a series pack");
+                }
+
+                return await GetSeriesReleases(seriesId.Value, authorId.Value, bypassFilters);
             }
 
             if (authorId.HasValue)
@@ -269,6 +302,37 @@ namespace Chaptarr.Api.V1.Indexers
             catch (Exception ex)
             {
                 _logger.Error(ex, "Author search failed");
+                throw new NzbDroneClientException(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
+        private async Task<object> GetSeriesReleases(int seriesId, int authorId, bool bypassFilters = false)
+        {
+            try
+            {
+                var decisions = await _releaseSearchService.SeriesSearch(seriesId, authorId, true, true);
+                var prioritizedDecisions = _prioritizeDownloadDecision.PrioritizeDecisions(decisions);
+                var (results, hiddenResults, filterSummary) = MapDecisionsForInteractiveSearchWithSummary(prioritizedDecisions, bypassFilters);
+
+                if (filterSummary.FilteredCount > 0)
+                {
+                    _logger.Debug("SERIES_SEARCH_FILTER_SUMMARY: {0}", filterSummary.SummaryText);
+                    if (filterSummary.FilterWarnings.Any())
+                    {
+                        _logger.Debug("FILTER_WARNINGS: [{0}]", string.Join(", ", filterSummary.FilterWarnings));
+                    }
+                }
+
+                return new ReleaseSearchResponse
+                {
+                    Releases = results,
+                    HiddenReleases = hiddenResults,
+                    FilterSummary = filterSummary
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Series pack search failed");
                 throw new NzbDroneClientException(HttpStatusCode.InternalServerError, ex.Message);
             }
         }

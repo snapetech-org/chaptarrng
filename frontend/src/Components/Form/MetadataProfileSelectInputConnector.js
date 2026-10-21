@@ -73,6 +73,10 @@ class MetadataProfileSelectInputConnector extends Component {
       value
     } = this.props;
 
+    if (this.props.includeRootFolderDefault && value == null) {
+      return;
+    }
+
     if (value === 'noChange' || value === 'mixed') {
       return;
     }
@@ -97,7 +101,10 @@ class MetadataProfileSelectInputConnector extends Component {
       includeNoChange,
       includeNoChangeDisabled = true,
       includeMixed,
-      includeNone
+      includeNone,
+      includeRootFolderDefault,
+      rootFolderDefaultLabel,
+      rootFolderDefaultDisabled = false
     } = this.props;
 
     const { profiles } = this.state;
@@ -112,6 +119,14 @@ class MetadataProfileSelectInputConnector extends Component {
         value: metadataProfile.name
       };
     });
+
+    if (includeRootFolderDefault) {
+      values.unshift({
+        key: 'rootFolderDefault',
+        value: rootFolderDefaultLabel || translate('UseRootFolderDefaults'),
+        isDisabled: rootFolderDefaultDisabled
+      });
+    }
 
     if (includeNone && noneProfile) {
       values.push({
@@ -148,6 +163,11 @@ class MetadataProfileSelectInputConnector extends Component {
       return;
     }
 
+    if (value === 'rootFolderDefault') {
+      this.props.onChange({ name, value: null });
+      return;
+    }
+
     this.props.onChange({ name, value: parseInt(value) });
   };
 
@@ -155,13 +175,14 @@ class MetadataProfileSelectInputConnector extends Component {
   // Render
 
   render() {
-    const { value } = this.props;
+    const { value, includeRootFolderDefault } = this.props;
     const { isFetching } = this.state;
+    const selectValue = includeRootFolderDefault && value == null ? 'rootFolderDefault' : value ?? '';
 
     return (
       <SelectInput
         {...this.props}
-        value={value ?? ''}
+        value={selectValue}
         values={this.getSelectValues()}
         onChange={this.onChange}
         isDisabled={this.props.isDisabled || isFetching}
@@ -182,6 +203,9 @@ MetadataProfileSelectInputConnector.propTypes = {
   includeNoChangeDisabled: PropTypes.bool,
   includeMixed: PropTypes.bool.isRequired,
   includeNone: PropTypes.bool.isRequired,
+  includeRootFolderDefault: PropTypes.bool,
+  rootFolderDefaultLabel: PropTypes.string,
+  rootFolderDefaultDisabled: PropTypes.bool,
   profileType: PropTypes.string,
   onChange: PropTypes.func.isRequired
 };

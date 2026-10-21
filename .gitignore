@@ -89,6 +89,7 @@ build.log
 
 # SQL dumps
 *.sql
+!src/Chaptarr.Core.Test/Datastore/Fixtures/BookshelfNG.PopulatedMigration158.sql
 !src/Chaptarr.Core.Test/Datastore/Fixtures/BookshelfNG.Schema.158.sql
 
 # Databases

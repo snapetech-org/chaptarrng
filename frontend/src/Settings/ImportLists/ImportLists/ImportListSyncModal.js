@@ -13,7 +13,28 @@ import translate from 'Utilities/String/translate';
 import styles from './ImportListSyncModal.css';
 
 function getErrorMessage(xhr) {
-  return xhr?.responseJSON?.message || xhr?.responseJSON?.detail || xhr?.statusText || translate('RequestFailed');
+  const responseJson = xhr?.responseJSON;
+  if (Array.isArray(responseJson)) {
+    const messages = responseJson
+      .map((error) => error?.errorMessage || error?.message || (typeof error === 'string' ? error : null))
+      .filter((message) => typeof message === 'string' && message.trim().length)
+      .map((message) => message.trim());
+
+    if (messages.length) {
+      return messages.join(' ');
+    }
+  }
+
+  if (typeof responseJson === 'string') {
+    return responseJson;
+  }
+
+  return responseJson?.message ||
+    responseJson?.detail ||
+    responseJson?.error ||
+    (xhr?.status && xhr?.statusText ? `${xhr.status} ${xhr.statusText}` : null) ||
+    xhr?.statusText ||
+    translate('RequestFailed');
 }
 
 function formatDuration(durationMilliseconds) {
@@ -33,6 +54,11 @@ class ImportListSyncModal extends Component {
       previewError: null,
       preview: null
     };
+
+    this._historyRequest = null;
+    this._previewRequest = null;
+    this._isFetchingHistory = false;
+    this._isPreviewing = false;
   }
 
   componentDidMount() {
@@ -48,32 +74,77 @@ class ImportListSyncModal extends Component {
     }
 
     if (prevProps.isOpen && !this.props.isOpen) {
-      this._historyRequest?.abortRequest();
-      this._previewRequest?.abortRequest();
+      this.cancelRequests();
+      this.setState({
+        isLoadingHistory: false,
+        historyError: null,
+        isPreviewing: false,
+        previewError: null,
+        preview: null
+      });
     }
   }
 
   componentWillUnmount() {
-    this._historyRequest?.abortRequest();
-    this._previewRequest?.abortRequest();
+    this.cancelRequests();
   }
 
-  fetchHistory = () => {
+  cancelRequests = () => {
+    const historyRequest = this._historyRequest;
+    const previewRequest = this._previewRequest;
+
+    this._historyRequest = null;
+    this._previewRequest = null;
+    this._isFetchingHistory = false;
+    this._isPreviewing = false;
+
+    historyRequest?.abortRequest();
+    previewRequest?.abortRequest();
+  };
+
+  fetchHistory = (force = false) => {
     const { id } = this.props;
 
+    if (this._isFetchingHistory && !force) {
+      return;
+    }
+
+    if (this._isFetchingHistory && force) {
+      const previousRequest = this._historyRequest;
+      this._historyRequest = null;
+      this._isFetchingHistory = false;
+      previousRequest?.abortRequest();
+    }
+
+    this._isFetchingHistory = true;
     this.setState({ isLoadingHistory: true, historyError: null });
 
-    this._historyRequest = createAjaxRequest({
+    const request = createAjaxRequest({
       url: `/importlist/${id}/history`,
       dataType: 'json'
     });
+    this._historyRequest = request;
 
-    this._historyRequest.request.done((history) => {
+    request.request.done((history) => {
+      if (this._historyRequest !== request) {
+        return;
+      }
+
+      this._historyRequest = null;
+      this._isFetchingHistory = false;
       this.setState({ history: history || [], isLoadingHistory: false });
     });
 
-    this._historyRequest.request.fail((xhr) => {
+    request.request.fail((xhr) => {
+      if (this._historyRequest !== request) {
+        return;
+      }
+
+      this._historyRequest = null;
+      this._isFetchingHistory = false;
+
       if (xhr?.aborted) {
+        this.setState({ isLoadingHistory: false });
         return;
       }
 
@@ -84,27 +155,47 @@ class ImportListSyncModal extends Component {
   onPreviewPress = () => {
     const { id } = this.props;
 
+    if (this._isPreviewing || !this.props.isOpen) {
+      return;
+    }
+
+    this._isPreviewing = true;
     this.setState({ isPreviewing: true, previewError: null, preview: null });
 
-    this._previewRequest = createAjaxRequest({
+    const request = createAjaxRequest({
       url: `/importlist/${id}/preview`,
       method: 'POST',
       data: '{}',
       dataType: 'json'
     });
+    this._previewRequest = request;
 
-    this._previewRequest.request.done((preview) => {
+    request.request.done((preview) => {
+      if (this._previewRequest !== request) {
+        return;
+      }
+
+      this._previewRequest = null;
+      this._isPreviewing = false;
       this.setState({ preview, isPreviewing: false });
-      this.fetchHistory();
+      this.fetchHistory(true);
     });
 
-    this._previewRequest.request.fail((xhr) => {
+    request.request.fail((xhr) => {
+      if (this._previewRequest !== request) {
+        return;
+      }
+
+      this._previewRequest = null;
+      this._isPreviewing = false;
+
       if (xhr?.aborted) {
+        this.setState({ isPreviewing: false });
         return;
       }
 
       this.setState({ previewError: getErrorMessage(xhr), isPreviewing: false });
-      this.fetchHistory();
+      this.fetchHistory(true);
     });
   };
 
@@ -122,6 +213,13 @@ class ImportListSyncModal extends Component {
       return null;
     }
 
+    let summaryTitle = 'ImportListSyncHistory';
+    if (sync.result === 'preview') {
+      summaryTitle = 'PreviewComplete';
+    } else if (sync.result === 'failed') {
+      summaryTitle = 'PreviewFailed';
+    }
+
     const counts = [
       ['ProcessedItems', sync.processedCount],
       ['NewItems', sync.newCount],
@@ -135,7 +233,7 @@ class ImportListSyncModal extends Component {
     return (
       <div className={styles.summary}>
         <div className={styles.summaryTitle}>
-          {translate(sync.result === 'preview' ? 'PreviewComplete' : sync.result === 'failed' ? 'PreviewFailed' : 'ImportListSyncHistory')}
+          {translate(summaryTitle)}
           {sync.failureStage ? ` — ${translate('FailureStage')}: ${sync.failureStage}` : null}
         </div>
         <div className={styles.counts}>
@@ -146,13 +244,20 @@ class ImportListSyncModal extends Component {
   }
 
   renderHistoryRow(sync) {
-    const resultLabel = sync.result === 'succeeded'
-      ? 'SyncSucceeded'
-      : sync.result === 'failed'
-        ? 'SyncFailed'
-        : sync.result === 'preview'
-          ? 'PreviewComplete'
-          : 'SyncRunning';
+    const resultLabels = {
+      succeeded: 'SyncSucceeded',
+      failed: 'SyncFailed',
+      preview: 'PreviewComplete'
+    };
+    const resultLabel = resultLabels[sync.result] || 'SyncRunning';
+    let historyState = null;
+    if (sync.failureStage) {
+      historyState = `${translate('FailureStage')}: ${sync.failureStage}`;
+    } else if (sync.providerStateCommitted) {
+      historyState = translate('ProviderStateCommitted');
+    } else if (sync.dryRun) {
+      historyState = translate('DryRunNoProviderCommit');
+    }
 
     return (
       <div className={styles.historyRow} key={sync.id}>
@@ -163,15 +268,14 @@ class ImportListSyncModal extends Component {
           {translate('ProcessedItems')}: {sync.processedCount}, {translate('NewItems')}: {sync.newCount}, {translate('ChangedItems')}: {sync.changedCount}
         </div>
         <div className={styles.historyState}>
-          {sync.failureStage ? `${translate('FailureStage')}: ${sync.failureStage}` : null}
-          {sync.providerStateCommitted ? translate('ProviderStateCommitted') : sync.dryRun ? translate('DryRunNoProviderCommit') : null}
+          {historyState}
         </div>
       </div>
     );
   }
 
   render() {
-    const { id, name, isOpen, onModalClose } = this.props;
+    const { name, isOpen, onModalClose } = this.props;
     const {
       isLoadingHistory,
       historyError,
@@ -201,12 +305,33 @@ class ImportListSyncModal extends Component {
               </Button>
             </div>
 
-            {previewError ? <div className={styles.error}>{previewError}</div> : null}
+            {previewError ? (
+              <div className={styles.error} role="alert">
+                <span>{previewError}</span>
+                <Button
+                  size={sizes.SMALL}
+                  onPress={this.onPreviewPress}
+                >
+                  {translate('Retry')}
+                </Button>
+              </div>
+            ) : null}
             {this.renderSyncSummary(preview)}
 
             <h3 className={styles.historyTitle}>{translate('History')}</h3>
             {isLoadingHistory ? <LoadingIndicator /> : null}
-            {historyError ? <div className={styles.error}>{historyError}</div> : null}
+            {historyError ? (
+              <div className={styles.error} role="alert">
+                <span>{historyError}</span>
+                <Button
+                  size={sizes.SMALL}
+                  isDisabled={isLoadingHistory}
+                  onPress={() => this.fetchHistory()}
+                >
+                  {translate('Retry')}
+                </Button>
+              </div>
+            ) : null}
             {!isLoadingHistory && !historyError && history.length === 0 ? (
               <div className={styles.empty}>{translate('NoImportListSyncHistory')}</div>
             ) : null}
