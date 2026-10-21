@@ -26,7 +26,9 @@ can override the callback when it is an absolute HTTPS URL ending in
 
 Use **Allowed Emails** or **Allowed Email Domains** to control who can sign in.
 An empty admission policy denies OIDC sign-in unless **Allow Any Verified OIDC
-User** is explicitly enabled. `email_verified=true` is required by default;
+User** is explicitly enabled. `email_verified=true` is always required and the
+legacy `OidcRequireEmailVerified` setting can no longer disable that policy;
+the Security settings page shows this rule as enforced and read-only.
 allow-any admission also requires a verified email. Group claims do not grant
 roles, and OIDC does not silently link a different local account by email.
 

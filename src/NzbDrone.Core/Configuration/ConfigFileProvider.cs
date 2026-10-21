@@ -278,7 +278,9 @@ namespace NzbDrone.Core.Configuration
         public string OidcScopes => GetBookshelfOidcSetting("OidcScopes", BookshelfOidcEnvironmentSettings.Scopes, "openid profile email").Trim();
         public string OidcAllowedEmails => GetBookshelfOidcSetting("OidcAllowedEmails", BookshelfOidcEnvironmentSettings.AllowedEmails).Trim();
         public string OidcAllowedEmailDomains => GetBookshelfOidcSetting("OidcAllowedEmailDomains", BookshelfOidcEnvironmentSettings.AllowedEmailDomains).Trim();
-        public bool OidcRequireEmailVerified => GetValueBoolean("OidcRequireEmailVerified", true);
+        // Retained as a read-only compatibility setting. OIDC admission always
+        // requires an affirmative email_verified claim.
+        public bool OidcRequireEmailVerified => true;
         public bool OidcAllowAnyVerifiedUser => BookshelfOidcEnvironmentSettings.ResolveBoolean(
             GetValue("OidcAllowAnyVerifiedUser", string.Empty, persist: false),
             BookshelfOidcEnvironmentSettings.AllowAnyVerifiedUser,

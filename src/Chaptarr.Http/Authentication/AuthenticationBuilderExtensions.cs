@@ -567,7 +567,7 @@ namespace Chaptarr.Http.Authentication
             var allowedDomains = ParseCsvToSet(configFileProvider.OidcAllowedEmailDomains);
             var requiresTrustedEmail = allowedEmails.Count > 0 || allowedDomains.Count > 0;
             var allowAnyVerifiedUser = configFileProvider.OidcAllowAnyVerifiedUser;
-            var requiresVerifiedEmail = configFileProvider.OidcRequireEmailVerified || allowAnyVerifiedUser;
+            const bool requiresVerifiedEmail = true;
 
             var identity = principal?.Identity as ClaimsIdentity;
             var email = GetOidcEmail(principal);
@@ -591,10 +591,6 @@ namespace Chaptarr.Http.Authentication
                     return OidcVerifiedEmailRequiredFailure;
                 }
 
-                if (requiresTrustedEmail)
-                {
-                    Logger.Warn("OIDC identity provider did not emit an email_verified claim while an email/domain allow-list is configured. Missing verification claims are allowed because OidcRequireEmailVerified is false.");
-                }
             }
 
             if (!allowAnyVerifiedUser)
