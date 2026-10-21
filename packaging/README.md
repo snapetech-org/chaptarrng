@@ -49,12 +49,18 @@ and downgraded back. Both dpkg and apt transactions preserved an edited
 `/etc/bookshelfng/bookshelfng.env` and a data canary. The apt transaction
 resolved real Debian dependencies, including `libicu76` and
 `ca-certificates`; it installed the CA bundle and completed without a conffile
-prompt. The isolated dpkg transaction bypassed dependency checks and mocked
-systemd. The apt container did not run systemd, ChaptarrNG, or a database
-migration. There is no apt repository update path; the candidate has not been
-exercised on a real systemd host or published to a GitHub Release or Ubuntu
-PPA. Keep this channel disabled until those checks and representative-data
-rollback acceptance pass.
+prompt. A separate Debian Trixie systemd-container rehearsal started the
+actual `.71` service from a fresh data directory, upgraded it to the local
+`.977` candidate, and confirmed the active service restarted and returned
+`/ping` successfully. The run exercised the previously active but disabled
+unit case. It then restored the pre-upgrade data copy, downgraded to `.71`, and
+confirmed that service returned `/ping` again. Edited config and data canaries
+survived both transactions. This was not populated BookshelfNG operator data;
+the candidate started against the `.71` package's fresh empty database. The
+isolated dpkg transaction bypassed dependency checks and mocked systemd. There
+is no apt repository update path; the candidate has not been exercised on a
+real host or published to a GitHub Release or Ubuntu PPA. Keep this channel
+disabled until representative-data rollback and channel acceptance pass.
 
 The stable release workflow now attaches the legacy `.deb` and checksum only
 after an explicit bridge request and when the migration and both release

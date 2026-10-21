@@ -14,8 +14,14 @@ fi
 
 if [ "$1" = configure ]; then
   was_active="$run_dir/bookshelfng-package-was-active"
-  if [ -z "${2:-}" ] || [ -e "$was_active" ]; then
+  if [ -e "$was_active" ]; then
     rm -f "$was_active"
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl start bookshelfng.service || true
+    elif command -v deb-systemd-invoke >/dev/null 2>&1; then
+      deb-systemd-invoke start bookshelfng.service || true
+    fi
+  elif [ -z "${2:-}" ]; then
     if command -v deb-systemd-invoke >/dev/null 2>&1; then
       deb-systemd-invoke start bookshelfng.service || true
     elif command -v systemctl >/dev/null 2>&1; then

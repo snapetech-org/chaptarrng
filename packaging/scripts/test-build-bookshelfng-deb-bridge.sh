@@ -147,14 +147,19 @@ if test -e "$task_root/root/run/bookshelfng-package-was-active"; then
   exit 1
 fi
 stop_line="$(grep -n 'systemctl stop bookshelfng.service' "$CALL_LOG" | cut -d: -f1)"
-start_line="$(grep -n 'deb-systemd-invoke start bookshelfng.service' "$CALL_LOG" | cut -d: -f1)"
+start_line="$(grep -n 'systemctl start bookshelfng.service' "$CALL_LOG" | cut -d: -f1)"
 test -n "$stop_line" && test -n "$start_line" && test "$stop_line" -lt "$start_line"
+if grep -Fq 'deb-systemd-invoke start bookshelfng.service' "$CALL_LOG"; then
+  echo 'The active-service upgrade used the Debian helper, which skips disabled units.' >&2
+  exit 1
+fi
 
 : > "$CALL_LOG"
 export MOCK_SERVICE_ACTIVE=0
 sh "$task_root/control/preinst" upgrade 0.9.977-1
 sh "$task_root/control/postinst" configure 0.4.21.71-1
-if grep -Fq 'deb-systemd-invoke start bookshelfng.service' "$CALL_LOG"; then
+if grep -Fq 'deb-systemd-invoke start bookshelfng.service' "$CALL_LOG" \
+  || grep -Fq 'systemctl start bookshelfng.service' "$CALL_LOG"; then
   echo 'The bridge restarted a BookshelfNG service that was inactive before upgrade.' >&2
   exit 1
 fi
