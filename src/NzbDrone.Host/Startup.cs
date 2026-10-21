@@ -26,6 +26,7 @@ using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Instrumentation;
 using NzbDrone.Common.Processes;
 using NzbDrone.Common.Serializer;
+using NzbDrone.Core.Authentication;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Instrumentation;
@@ -257,6 +258,7 @@ namespace NzbDrone.Host
                               ISingleInstancePolicy singleInstancePolicy,
                               InitializeLogger initializeLogger,
                               ReconfigureLogging reconfigureLogging,
+                              FirstRunAuthenticationSetup firstRunAuthenticationSetup,
                               IAppFolderFactory appFolderFactory,
                               IProvidePidFile pidFileProvider,
                               IConfigFileProvider configFileProvider,
@@ -282,6 +284,14 @@ namespace NzbDrone.Host
 
             dbTarget.Register();
             SchemaBuilder.Initialize(container);
+            firstRunAuthenticationSetup.EnsureInitialAccountSetup();
+
+            if (configFileProvider.AuthenticationMethod == AuthenticationType.None &&
+                configFileProvider.BindAddress != "127.0.0.1" && configFileProvider.BindAddress != "::1" &&
+                configFileProvider.BindAddress != "localhost")
+            {
+                NLog.LogManager.GetLogger("Security").Warn("Authentication is disabled while ChaptarrNG is bound to a non-loopback address. The UI initialization endpoint exposes the API key to authenticated UI sessions; enable Forms or Basic authentication before exposing this listener.");
+            }
 
             if (OsInfo.IsNotWindows)
             {
