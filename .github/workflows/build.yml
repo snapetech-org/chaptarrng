@@ -539,9 +539,71 @@ jobs:
         retention-days: 7
         if-no-files-found: error
 
+  docker-compatibility-build:
+    name: Docker (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: runtime
+            cache-scope: runtime
+          - target: bookshelf-softcover
+            cache-scope: bookshelf-softcover
+          - target: bookshelf-hardcover
+            cache-scope: bookshelf-hardcover
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+    - name: Check whether the Six Labors build secret is available
+      id: license
+      env:
+        LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
+        EVENT_NAME: ${{ github.event_name }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -n "$LICENSE_KEY" ]]; then
+          echo 'configured=true' >> "$GITHUB_OUTPUT"
+        elif [[ "$EVENT_NAME" == 'pull_request' ]]; then
+          echo 'configured=false' >> "$GITHUB_OUTPUT"
+          echo 'Docker image builds are skipped for pull requests without the private image-build license.' >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo '::error::SIXLABORS_LICENSE_KEY is required for Docker image validation outside pull requests.'
+          exit 1
+        fi
+
+    - name: Set up QEMU for target-platform runtime steps
+      if: steps.license.outputs.configured == 'true'
+      uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      with:
+        image: tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
+        platforms: arm,arm64
+
+    - name: Set up Docker Buildx
+      if: steps.license.outputs.configured == 'true'
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+
+    - name: Build image for all published architectures without pushing
+      if: steps.license.outputs.configured == 'true'
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+      with:
+        context: .
+        file: ./Dockerfile.cross
+        target: ${{ matrix.target }}
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
+        push: false
+        cache-from: type=gha,scope=bookshelfng-${{ matrix.cache-scope }}
+        cache-to: type=gha,scope=bookshelfng-${{ matrix.cache-scope }},mode=max
+        secrets: |
+          SIXLABORS_LICENSE_KEY=${{ secrets.SIXLABORS_LICENSE_KEY }}
+
   validation-reconcile:
     name: Reconcile native runner receipts
-    needs: [build, postgres-migrations]
+    needs: [build, postgres-migrations, docker-compatibility-build]
     runs-on: ubuntu-latest
     permissions:
       contents: read
