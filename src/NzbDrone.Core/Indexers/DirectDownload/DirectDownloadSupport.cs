@@ -62,6 +62,8 @@ namespace NzbDrone.Core.Indexers.DirectDownload
 
     internal static class DirectDownloadReleaseFactory
     {
+        private const int EbookCategoryId = 7020;
+
         public static readonly ISet<string> AllowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "epub", "kepub", "mobi", "azw3", "pdf", "djvu", "cbz", "cbr", "fb2", "txt"
@@ -96,6 +98,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
                 InfoUrl = infoUrl,
                 DownloadUrl = downloadUrl,
                 CommentUrl = infoUrl,
+                Categories = new List<int> { EbookCategoryId },
                 Container = extension,
                 DownloadProtocol = DownloadProtocol.Direct,
                 Source = family.ToString()

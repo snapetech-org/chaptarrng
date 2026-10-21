@@ -247,6 +247,7 @@ namespace Chaptarr.Core.Test.Indexers
             Assert.That(result.SelectedFamily, Is.EqualTo(DirectDownloadSourceFamily.CatalogPage));
             Assert.That(result.Releases, Has.Count.EqualTo(1));
             Assert.That(result.Releases.Single().Title, Does.EndWith($"[{expectedExtension}]"));
+            Assert.That(result.Releases.Single().Categories, Is.EqualTo(new[] { 7020 }));
             var catalogRequest = transport.RequestedUrls.Single(url => url.StartsWith("https://primary.example/search", StringComparison.Ordinal));
             Assert.That(Uri.UnescapeDataString(catalogRequest), Does.Contain("ext=epub,kepub,mobi,azw3,pdf"));
         }
