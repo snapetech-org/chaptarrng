@@ -247,7 +247,16 @@ collect_platform_artifacts() {
         Microsoft.NETCore.App.Host.freebsd-x64.10.0.12.nupkg \
         Microsoft.NETCore.App.Runtime.freebsd-x64.10.0.12.nupkg \
         Microsoft.AspNetCore.App.Runtime.freebsd-x64.10.0.12.nupkg
-    freebsd_runtime_path="$(tar -tzf "$freebsd_archive" | grep -E '^assets/Release/Runtime/[^/]+/dotnet-runtime-10\.0\.12-freebsd-x64\.tar\.gz$' | head -1)"
+    freebsd_runtime_path="$(
+      tar -tzf "$freebsd_archive" |
+        awk '
+          /^assets\/Release\/Runtime\/[^/]+\/dotnet-runtime-10\.0\.12-freebsd-x64\.tar\.gz$/ {
+            if (!found) first = $0
+            found = 1
+          }
+          END { if (found) print first }
+        '
+    )"
     [ -n "$freebsd_runtime_path" ] || die "Pinned FreeBSD archive is missing its .NET runtime tarball"
     tar -xzf "$freebsd_archive" -C "$work_root" "$freebsd_runtime_path"
     freebsd_runtime_archive="$work_root/$freebsd_runtime_path"

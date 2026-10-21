@@ -174,7 +174,7 @@ jobs:
           tar -tzf "$RUNNER_TEMP/release-assets/$asset" >/dev/null
           if [[ "$RID" == linux-* || "$RID" == osx-* ]]; then
             tar -tzf "$RUNNER_TEMP/release-assets/$asset" \
-              | grep -Fxq 'ChaptarrNG/scripts/bookshelfng-to-chaptarrng.sh'
+              | grep -Fx 'ChaptarrNG/scripts/bookshelfng-to-chaptarrng.sh' >/dev/null
           fi
         fi
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")
