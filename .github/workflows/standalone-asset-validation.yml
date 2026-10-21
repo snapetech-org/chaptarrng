@@ -8,7 +8,10 @@ on:
       - '.github/workflows/release.yml'
       - 'packaging/scripts/build-standalone.sh'
       - 'packaging/scripts/build-extra-platform-runtime-packs.sh'
+      - 'packaging/scripts/copy-dotnet-sdk-reference-packs.sh'
+      - 'packaging/scripts/test-copy-dotnet-sdk-reference-packs.sh'
       - 'packaging/scripts/install-extra-platform-runtime-packs.sh'
+      - 'packaging/scripts/test-install-extra-platform-runtime-packs.sh'
       - 'packaging/scripts/check-standalone-rids.py'
       - 'src/**'
       - 'frontend/**'
@@ -20,6 +23,18 @@ permissions:
   contents: read
 
 jobs:
+  verify-runtime-pack-install:
+    name: Preserve existing .NET directory permissions
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Test Linux x86 and FreeBSD runtime pack installation
+      run: bash packaging/scripts/test-install-extra-platform-runtime-packs.sh
+    - name: Test SDK reference-pack collection across servicing versions
+      run: bash packaging/scripts/test-copy-dotnet-sdk-reference-packs.sh
+
   frontend:
     name: Build frontend once
     runs-on: ubuntu-latest
@@ -174,7 +189,7 @@ jobs:
           tar -tzf "$RUNNER_TEMP/release-assets/$asset" >/dev/null
           if [[ "$RID" == linux-* || "$RID" == osx-* ]]; then
             tar -tzf "$RUNNER_TEMP/release-assets/$asset" \
-              | grep -Fxq 'ChaptarrNG/scripts/bookshelfng-to-chaptarrng.sh'
+              | grep -Fx 'ChaptarrNG/scripts/bookshelfng-to-chaptarrng.sh' >/dev/null
           fi
         fi
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")

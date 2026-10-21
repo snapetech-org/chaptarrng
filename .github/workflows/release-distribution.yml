@@ -33,7 +33,7 @@ on:
         required: true
         type: string
       legacy_bridge_enabled:
-        description: Also publish BookshelfNG package identities after all migration gates pass; requires the repository bridge variable.
+        description: Also publish BookshelfNG package identities after retirement acceptance; requires both release-readiness repository variables.
         required: false
         default: false
         type: boolean
@@ -58,6 +58,7 @@ jobs:
     - name: Require retirement release readiness
       env:
         CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
+        BOOKSHELFNG_RELEASE_READY: ${{ vars.BOOKSHELFNG_RELEASE_READY }}
       run: ./packaging/scripts/require-release-readiness.sh
 
     - id: target
@@ -69,16 +70,17 @@ jobs:
         REF: ${{ github.ref }}
         REQUESTED_LEGACY_BRIDGE: ${{ inputs.legacy_bridge_enabled }}
         MIGRATION_BRIDGE_GATE: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED || 'false' }}
+        BOOKSHELFNG_RELEASE_READY: ${{ vars.BOOKSHELFNG_RELEASE_READY || 'false' }}
       run: |
         set -euo pipefail
         [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]
         [[ "$TAG" == "v${VERSION}" ]]
         [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
         legacy_bridge_enabled=false
-        if [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true && "${MIGRATION_BRIDGE_GATE,,}" == true ]]; then
+        if [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true && "${MIGRATION_BRIDGE_GATE,,}" == true && "${BOOKSHELFNG_RELEASE_READY,,}" == true ]]; then
           legacy_bridge_enabled=true
         elif [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true ]]; then
-          echo 'Legacy BookshelfNG package publishing was requested, but CHAPTARRNG_MIGRATION_BRIDGE_ENABLED is not true; legacy publishing remains disabled.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Legacy BookshelfNG publishing was requested, but both CHAPTARRNG_MIGRATION_BRIDGE_ENABLED and BOOKSHELFNG_RELEASE_READY must be true; legacy publishing remains disabled.' >> "$GITHUB_STEP_SUMMARY"
         fi
         if [[ "$EVENT_NAME" == workflow_dispatch && "$REF" != refs/heads/main ]]; then
           echo 'Package retries must run from main.' >&2
@@ -107,15 +109,7 @@ jobs:
         COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}
         BOOKSHELFNG_COPR_WEBHOOK_URL: ${{ secrets.BOOKSHELFNG_COPR_WEBHOOK_URL }}
         CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
-      run: |
-        if [[ -n "$AUR_SSH_KEY" ]]; then
-          echo 'aur=true' >> "$GITHUB_OUTPUT"
-        else
-          echo 'aur=false' >> "$GITHUB_OUTPUT"
-        fi
-        [[ -n "$COPR_WEBHOOK_URL" ]] && echo 'copr=true' >> "$GITHUB_OUTPUT" || echo 'copr=false' >> "$GITHUB_OUTPUT"
-        [[ -n "$BOOKSHELFNG_COPR_WEBHOOK_URL" ]] && echo 'bookshelfng_copr=true' >> "$GITHUB_OUTPUT" || echo 'bookshelfng_copr=false' >> "$GITHUB_OUTPUT"
-        [[ -n "$CHOCOLATEY_API_KEY" ]] && echo 'chocolatey=true' >> "$GITHUB_OUTPUT" || echo 'chocolatey=false' >> "$GITHUB_OUTPUT"
+      run: bash packaging/scripts/validate-release-publisher-config.sh publishers
 
   build-aur:
     name: Validate new and legacy AUR recipes
@@ -483,10 +477,57 @@ jobs:
         test -s "$RUNNER_TEMP/copr-bookshelfng-response.txt"
         echo "COPR accepted the ${TAG} legacy package build trigger."
 
+  publish-legacy-helm-bridge:
+    name: Publish the BookshelfNG Helm chart identity
+    needs: [release-target]
+    if: needs.release-target.outputs.legacy_bridge_enabled == 'true' && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ inputs.tag }}
+        persist-credentials: false
+
+    - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+      with:
+        version: v3.20.0
+
+    - name: Inspect the standard ChaptarrNG release image
+      id: image
+      env:
+        VERSION: ${{ needs.release-target.outputs.version }}
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install --yes --no-install-recommends skopeo
+        image="ghcr.io/snapetech-org/chaptarrng:${VERSION}"
+        digest="$(skopeo inspect --format '{{.Digest}}' "docker://${image}")"
+        [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+        echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+    - name: Build and validate the versioned legacy chart
+      env:
+        VERSION: ${{ needs.release-target.outputs.version }}
+        IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        OUTPUT_DIR: ${{ runner.temp }}/bookshelfng-helm-bridge
+      run: bash packaging/scripts/build-bookshelfng-helm-bridge.sh
+
+    - name: Publish the chart to the existing OCI identity
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_ACTOR: ${{ github.actor }}
+        VERSION: ${{ needs.release-target.outputs.version }}
+        IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        CHART_PACKAGE: ${{ runner.temp }}/bookshelfng-helm-bridge/bookshelfng-${{ needs.release-target.outputs.version }}.tgz
+      run: bash packaging/scripts/publish-bookshelfng-helm-bridge.sh
+
   distribution-summary:
     name: Report package channel results
     if: always()
-    needs: [release-target, credentials, build-aur, publish-aur, build-chocolatey, publish-chocolatey, trigger-copr, trigger-legacy-copr]
+    needs: [release-target, credentials, build-aur, publish-aur, build-chocolatey, publish-chocolatey, trigger-copr, trigger-legacy-copr, publish-legacy-helm-bridge]
     runs-on: ubuntu-latest
     steps:
     - name: Write channel results
@@ -502,6 +543,7 @@ jobs:
         LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}
         CHOCOLATEY_BUILD: ${{ needs.build-chocolatey.result }}
         CHOCOLATEY_PUSH: ${{ needs.publish-chocolatey.result }}
+        LEGACY_HELM_PUBLISH: ${{ needs.publish-legacy-helm-bridge.result }}
       run: |
         {
           echo '### ChaptarrNG package channels'
@@ -509,6 +551,7 @@ jobs:
           echo "- ChaptarrNG COPR publisher configured: ${COPR_CONFIGURED}; trigger: ${COPR_TRIGGER}"
           echo "- Legacy bookshelfng COPR bridge configured: ${LEGACY_COPR_CONFIGURED}; trigger: ${LEGACY_COPR_TRIGGER}"
           echo "- Chocolatey package build: ${CHOCOLATEY_BUILD}; publisher configured: ${CHOCOLATEY_CONFIGURED}; push: ${CHOCOLATEY_PUSH}"
+          echo "- Legacy BookshelfNG Helm chart publish: ${LEGACY_HELM_PUBLISH}"
           echo "- BookshelfNG legacy package bridge enabled: ${LEGACY_BRIDGE_ENABLED:-false}"
           if [[ "${LEGACY_BRIDGE_ENABLED:-false}" == true ]]; then
             echo 'The legacy package bridge is enabled; eligible old identities use the same standard ChaptarrNG release assets.'

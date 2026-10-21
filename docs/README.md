@@ -13,6 +13,7 @@ installation choices.
 
 ## Features and integrations
 
+- [Multipart audiobook merging](AUDIOBOOK_M4B_MERGING.md): legacy settings, conversion behavior, fallback, and current acceptance limits.
 - [Media moves](MEDIA_MOVES.md): preview and move registered files between author folders.
 - [Unmapped files](UNMAPPED_FILES.md): retry matching after catalog or metadata changes.
 - [Author metadata refresh](AUTHOR_METADATA_REFRESH.md): freshness rules, book-added behavior, and Hardcover request pacing.

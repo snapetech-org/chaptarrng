@@ -38,7 +38,13 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             OpenLibrary
         };
 
-        private static readonly HashSet<string> CatalogSources = new HashSet<string>(AdditionalSources, StringComparer.OrdinalIgnoreCase);
+        // The configured metadata server participates in catalog search, but it
+        // does not provide supplemental per-field metadata through this proxy.
+        private static readonly HashSet<string> CatalogSources = new HashSet<string>(AdditionalSources, StringComparer.OrdinalIgnoreCase)
+        {
+            Hardcover,
+            MetadataApi
+        };
 
         // These sources can be fetched by AdditionalBookMetadataProxy and can
         // therefore be used for per-field ISBN-matched metadata preferences.
