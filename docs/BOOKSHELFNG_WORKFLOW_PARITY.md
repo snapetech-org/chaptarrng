@@ -84,29 +84,9 @@ through the adapter. A separate HTTP regression probe for the bare numeric
 Hardcover ID fix resolved `2459845` through both audiobook and ebook facades and
 returned the canonical `hc:2459845` identity.
 
-On the `c0aabe44` source snapshot, the full Chaptarr Core suite passed with
-4,496 tests passed, 15 skipped, and no failures; focused book-lookup and
-edition-selection tests passed 11/11. On the current source worktree, the
-frontend CJS suite passed 85/85, including per-format profile resets,
-missing-default protection, root-backfill preview and confirmation, malformed
-count rejection, duplicate-submit and pending-dismiss protection, queue-failure
-retry, stale-error clearing, row-format author editing, visible monitoring
-failures and retries, Hardcover connection status, import-list preview/history
-retries, paged book IDs and mass-search confirmation recovery, bulk-action
-retries, queue-start notifications for individual refresh/search actions, late
-action-response guards after navigation and remounts, release notes, and stale
-responses in book overviews, editions, narrator comparisons, and delete-
-confirmation details.
-Small-screen book cards skip hidden summary
-requests and fetch them again when returning to desktop. Typecheck and
-translation-key checks passed. The production frontend build completed with 22
-CSS-order warnings. Focused ESLint and Stylelint passed for changed UI, action,
-and test files. Linting the paged-book reducer still reports 66 existing style
-errors elsewhere in that file; the changed line introduces none. The focused
-backend profile-reset test is added, but could not be run locally: this checkout
-pins .NET SDK 10.0.402, only 10.0.401 is installed, and the local build-license
-configuration is absent.
+The full Chaptarr Core suite was rebuilt from the `8c9dc0c0` source snapshot and passed with 4,506 tests passed, 15 skipped, and no failures. The run used the installed .NET SDK 10.0.401 and the available licensed ImageSharp build configuration; the repository pins SDK 10.0.402, which is not installed here. The frontend CJS suite passed 85/85 on the same source, including per-format profile resets, missing-default protection, root-backfill preview and confirmation, malformed count rejection, duplicate-submit and pending-dismiss protection, queue-failure retry, stale-error clearing, row-format author editing, visible monitoring failures and retries, Hardcover connection status, import-list preview/history retries, paged book IDs and mass-search confirmation recovery, bulk-action retries, queue-start notifications for individual refresh/search actions, late action-response guards after navigation and remounts, release notes, and stale responses in book overviews, editions, narrator comparisons, and delete-confirmation details. The no-op root-backfill dialog shows one **Close** footer action. Small-screen book cards skip hidden summary requests and fetch them again when returning to desktop. Typecheck and translation-key checks passed. The production frontend build completed with 22 CSS-order warnings. Focused ESLint and Stylelint passed for changed UI, action, and test files. Linting the paged-book reducer still reports 66 existing style errors elsewhere in that file; the changed line introduces none. The frontend profile-reset interaction has CJS coverage; no dedicated backend profile-reset test was added in this pass.
 
+These local checks are tied to source snapshot `8c9dc0c0`. Hosted Build [39530495818](https://github.com/snapetech-org/chaptarrng/actions/runs/39530495818) is validating the `4bdee4a1` code changes; the local test report above remains tied to `8c9dc0c0`.
 A production UI was checked in Chromium 154 against the disposable migrated
 fixture before the latest profile-reset, missing-default, and failure-feedback
 changes. In Books,
@@ -125,9 +105,13 @@ These checks cover synthetic integration and user-facing rendering, not every
 workflow in the table. No live metadata provider or download client was
 configured, so real acquisition and import acceptance remains open.
 
-The Root Folders author-root backfill modal has focused component coverage for
-its read-only preview, confirmation gate, empty result, and retryable error,
-but it has not yet received a browser review.
+The production frontend bundle from source snapshot `8c9dc0c0` was also reviewed
+in headless Chromium 154 at a 1440-pixel viewport against a disposable local
+database. Settings > Media Management > Review missing author roots opened the
+preview, showed the zero-author empty state, and exposed one **Close** footer
+action; the browser reported no page errors. Eligible, skipped, and retry states
+remain covered by component tests rather than a browser run with seeded author
+records.
 
 The combined shelf is a presentation over ChaptarrNG's separate audiobook and
 ebook records. It does not turn them into one database record or combine their
