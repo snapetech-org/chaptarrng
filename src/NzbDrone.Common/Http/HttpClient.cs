@@ -42,6 +42,14 @@ namespace NzbDrone.Common.Http
     public class HttpClient : IHttpClient
     {
         private const int MaxRedirects = 5;
+        private static readonly HashSet<string> SensitiveCrossOriginRedirectHeaders = new (StringComparer.OrdinalIgnoreCase)
+        {
+            "Authorization",
+            "Cookie",
+            "Cookie2",
+            "Proxy-Authorization",
+            "Set-Cookie"
+        };
 
         private readonly Logger _logger;
         private readonly IRateLimitService _rateLimitService;
@@ -81,29 +89,38 @@ namespace NzbDrone.Common.Http
 
             if (request.AllowAutoRedirect && response.HasHttpRedirect)
             {
-                // A streamed body may already be consumed and disposed by the dispatcher.
-                // Never replay it to another endpoint, especially with upload credentials.
-                if (request.Content != null)
-                {
-                    throw new WebException("Automatic redirects are not supported for streamed request bodies.", WebExceptionStatus.ProtocolError);
-                }
-
                 var autoRedirectChain = new List<string> { request.Url.ToString() };
 
                 do
                 {
+                    var redirectRequest = response.Request ?? request;
+                    // A streamed body may already be consumed and disposed by the dispatcher.
+                    // Never replay it to another endpoint, especially with upload credentials.
+                    if (redirectRequest.Content != null)
+                    {
+                        throw new WebException("Automatic redirects are not supported for streamed request bodies.", WebExceptionStatus.ProtocolError);
+                    }
+
                     var location = response.Headers.GetSingleValue("Location");
                     if (location.IsNullOrWhiteSpace())
                     {
-                        throw new WebException($"Redirect response from {request.Url} is missing a Location header.", WebExceptionStatus.ProtocolError);
+                        throw new WebException($"Redirect response from {redirectRequest.Url} is missing a Location header.", WebExceptionStatus.ProtocolError);
                     }
 
-                    var nextUrl = request.Url + new HttpUri(location);
+                    var sourceUrl = redirectRequest.Url;
+                    var nextUrl = sourceUrl + new HttpUri(location);
 
                     EnsureSafeRedirectTarget(nextUrl);
 
+                    if (IsCrossOriginRedirect(sourceUrl, nextUrl) && HasSensitiveRequestData(redirectRequest, nextUrl, cookieContainer))
+                    {
+                        throw new WebException("Refusing to redirect a request containing credentials, cookies, or a body to another origin", WebExceptionStatus.ProtocolError);
+                    }
+
+                    request = redirectRequest;
+
                     // 302 or 303 should default to GET on redirect even if POST on original
-                    if (RequestRequiresForceGet(response.StatusCode, response.Request.Method))
+                    if (RequestRequiresForceGet(response.StatusCode, redirectRequest.Method))
                     {
                         request.Method = HttpMethod.Get;
                         request.ContentData = null;
@@ -182,6 +199,45 @@ namespace NzbDrone.Common.Http
         private static bool IsCloudMetadataTarget(HttpUri url)
         {
             return CloudMetadataTargetPolicy.IsBlocked(url?.Host);
+        }
+
+        private static bool IsCrossOriginRedirect(HttpUri source, HttpUri destination)
+        {
+            var sourceUri = (Uri)source;
+            var destinationUri = (Uri)destination;
+
+            return !string.Equals(sourceUri.Scheme, destinationUri.Scheme, StringComparison.OrdinalIgnoreCase) ||
+                   !string.Equals(sourceUri.IdnHost, destinationUri.IdnHost, StringComparison.OrdinalIgnoreCase) ||
+                   sourceUri.Port != destinationUri.Port;
+        }
+
+        private static bool HasSensitiveRequestData(HttpRequest request, HttpUri destination, CookieContainer cookieContainer)
+        {
+            if (request.Credentials != null ||
+                request.Content != null ||
+                request.ContentData != null ||
+                request.Cookies.Count != 0 ||
+                !string.IsNullOrEmpty(((Uri)request.Url).UserInfo) ||
+                !string.IsNullOrEmpty(((Uri)destination).UserInfo) ||
+                cookieContainer.GetCookieHeader((Uri)request.Url).IsNotNullOrWhiteSpace() ||
+                cookieContainer.GetCookieHeader((Uri)destination).IsNotNullOrWhiteSpace())
+            {
+                return true;
+            }
+
+            return request.Headers.Any(header => IsSensitiveRedirectHeader(header.Key));
+        }
+
+        private static bool IsSensitiveRedirectHeader(string name)
+        {
+            return SensitiveCrossOriginRedirectHeaders.Contains(name) ||
+                   name.Contains("auth", StringComparison.OrdinalIgnoreCase) ||
+                   name.Contains("token", StringComparison.OrdinalIgnoreCase) ||
+                   name.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
+                   name.Contains("password", StringComparison.OrdinalIgnoreCase) ||
+                   name.Contains("credential", StringComparison.OrdinalIgnoreCase) ||
+                   name.Contains("cookie", StringComparison.OrdinalIgnoreCase) ||
+                   (name.Contains("api", StringComparison.OrdinalIgnoreCase) && name.Contains("key", StringComparison.OrdinalIgnoreCase));
         }
 
         public HttpResponse Execute(HttpRequest request)
