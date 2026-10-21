@@ -16,12 +16,11 @@ on:
 # nothing reaches users until release.yml is run by hand; docker-publish.yml is
 # workflow_call-only, so no run started here can push an image.
 
-# One live run per PR and per branch: a newer push supersedes the older run, so a
-# batch of merges costs one build of the combined result rather than one each.
-# Release-called runs are never cancelled - that would silently drop the gate.
+# Keep every validation run attached to its own commit. A newer push must not
+# cancel a build that is already checking an earlier candidate.
 concurrency:
-  group: build-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref_name }}-${{ github.event.action == 'edited' && 'metadata' || 'source' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+  group: build-${{ github.run_id }}-${{ github.run_attempt }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
