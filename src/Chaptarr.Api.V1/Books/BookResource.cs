@@ -38,6 +38,7 @@ namespace Chaptarr.Api.V1.Books
         public string GoodreadsBookId { get; set; }
         public string GoodreadsWorkId { get; set; }
         public string OpenLibraryWorkId { get; set; }
+        public List<string> WorkProviderIds { get; set; }
         public string RanobeDbBookId { get; set; }
         public string GoogleBooksId { get; set; }
         public string AdditionalMetadataProviderId { get; set; }
@@ -202,6 +203,7 @@ namespace Chaptarr.Api.V1.Books
                 GoodreadsBookId = BookEditionIdentity.GetGoodreadsEditionProviderId(model),
                 GoodreadsWorkId = model.GoodreadsWorkId,
                 OpenLibraryWorkId = model.OpenLibraryWorkId,
+                WorkProviderIds = WorkIdMatcher.GetWorkProviderIds(model).ToList(),
                 RanobeDbBookId = model.RanobeDbBookId,
                 GoogleBooksId = BookEditionIdentity.GetGoogleBooksEditionId(model),
                 AdditionalMetadataProviderId = model.AdditionalMetadataProviderId,

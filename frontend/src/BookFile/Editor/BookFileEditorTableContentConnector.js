@@ -8,6 +8,7 @@ import { deleteBookFile, deleteBookFiles, setBookFilesSort, updateBookFiles } fr
 import { fetchQualityProfileSchema } from 'Store/Actions/settingsActions';
 import createAuthorSelector from 'Store/Selectors/createAuthorSelector';
 import createClientSideCollectionSelector from 'Store/Selectors/createClientSideCollectionSelector';
+import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import getQualities from 'Utilities/Quality/getQualities';
 import translate from 'Utilities/String/translate';
 import BookFileEditorTableContent from './BookFileEditorTableContent';
@@ -21,7 +22,7 @@ function createSchemaSelector() {
       let error = null;
 
       if (qualityProfiles.schemaError) {
-        error = translate('UnableToLoadQualities');
+        error = getErrorMessage(qualityProfiles.schemaError, translate('UnableToLoadQualities'));
       }
 
       return {
@@ -170,6 +171,10 @@ class BookFileEditorTableContentConnector extends Component {
     this.props.dispatchUpdateBookFiles({ bookFileIds, quality });
   };
 
+  onRetryPress = () => {
+    this.props.dispatchFetchQualityProfileSchema();
+  };
+
   //
   // Render
 
@@ -183,6 +188,7 @@ class BookFileEditorTableContentConnector extends Component {
     return (
       <BookFileEditorTableContent
         {...otherProps}
+        onRetryPress={this.onRetryPress}
         onQualityChange={this.onQualityChange}
       />
     );

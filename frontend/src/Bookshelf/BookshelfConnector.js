@@ -3,15 +3,32 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
 import { setSelectedMediaType } from 'Store/Actions/appActions';
-import { clearBookshelf, fetchBookshelfAuthors, saveBookshelf, setBookshelfFilter, setBookshelfSort } from 'Store/Actions/bookshelfActions';
+import {
+  clearBookshelf,
+  fetchBookshelfAuthors,
+  saveBookshelf,
+  setBookshelfFilter,
+  setBookshelfMediaType,
+  setBookshelfSort
+} from 'Store/Actions/bookshelfActions';
 import createAuthorClientSideCollectionItemsSelector from 'Store/Selectors/createAuthorClientSideCollectionItemsSelector';
 import createDimensionsSelector from 'Store/Selectors/createDimensionsSelector';
 import Bookshelf from './Bookshelf';
 
+function getSelectedBookshelfMediaType(state) {
+  const bookshelfMediaType = state.bookshelf.selectedMediaType;
+
+  if (bookshelfMediaType === 'audiobook' || bookshelfMediaType === 'ebook' || bookshelfMediaType === 'both') {
+    return bookshelfMediaType;
+  }
+
+  return state.app.selectedMediaType === 'ebook' ? 'ebook' : 'audiobook';
+}
+
 function createMapStateToProps() {
   return createSelector(
     (state) => state.bookshelf,
-    (state) => state.app.selectedMediaType || 'audiobook',
+    getSelectedBookshelfMediaType,
     createAuthorClientSideCollectionItemsSelector('bookshelf'),
     createDimensionsSelector(),
     (bookshelf, selectedMediaType, author, dimensionsState) => {
@@ -43,6 +60,7 @@ function createMapStateToProps() {
 const mapDispatchToProps = {
   setBookshelfSort,
   setBookshelfFilter,
+  setBookshelfMediaType,
   setSelectedMediaType,
   clearBookshelf,
   fetchBookshelfAuthors,
@@ -88,7 +106,16 @@ class BookshelfConnector extends Component {
   };
 
   onMediaTypeChange = (mediaType) => {
+    if (mediaType === 'both') {
+      this.props.setBookshelfMediaType({ mediaType });
+      return;
+    }
+
     this.props.setSelectedMediaType({ mediaType });
+  };
+
+  onRetryPress = () => {
+    this.fetchAuthorBookCounts();
   };
 
   onUpdateSelectedPress = (payload) => {
@@ -105,6 +132,7 @@ class BookshelfConnector extends Component {
         onSortPress={this.onSortPress}
         onFilterSelect={this.onFilterSelect}
         onMediaTypeChange={this.onMediaTypeChange}
+        onRetryPress={this.onRetryPress}
         onUpdateSelectedPress={this.onUpdateSelectedPress}
       />
     );
@@ -112,9 +140,10 @@ class BookshelfConnector extends Component {
 }
 
 BookshelfConnector.propTypes = {
-  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook']).isRequired,
+  selectedMediaType: PropTypes.oneOf(['audiobook', 'ebook', 'both']).isRequired,
   setBookshelfSort: PropTypes.func.isRequired,
   setBookshelfFilter: PropTypes.func.isRequired,
+  setBookshelfMediaType: PropTypes.func.isRequired,
   setSelectedMediaType: PropTypes.func.isRequired,
   clearBookshelf: PropTypes.func.isRequired,
   fetchBookshelfAuthors: PropTypes.func.isRequired,

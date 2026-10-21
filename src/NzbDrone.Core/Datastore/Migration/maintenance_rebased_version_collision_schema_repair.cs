@@ -4,9 +4,11 @@ using System.Data;
 using Dapper;
 using FluentMigrator;
 using FluentMigrator.Builders.IfDatabase;
+using Microsoft.Data.Sqlite;
 using NLog;
 using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Datastore.Migration.Framework;
+using Npgsql;
 
 namespace NzbDrone.Core.Datastore.Migration
 {
@@ -27,7 +29,7 @@ namespace NzbDrone.Core.Datastore.Migration
                 return;
             }
 
-            if (!Schema.Table("VersionInfo").Exists())
+            if (!VersionInfoTableExists())
             {
                 // Fresh installs haven't created VersionInfo yet.
                 return;
@@ -140,6 +142,44 @@ namespace NzbDrone.Core.Datastore.Migration
             });
 
             return applied;
+        }
+
+        private bool VersionInfoTableExists()
+        {
+            var exists = false;
+
+            Execute.WithConnection((connection, transaction) =>
+            {
+                if (connection is NpgsqlConnection)
+                {
+                    // FluentMigrator's schema probe can resolve a table outside the
+                    // selected search_path schema. A staged Bookshelf conversion
+                    // must only inspect the VersionInfo table in its target schema.
+                    exists = connection.QuerySingle<bool>(@"
+                        SELECT to_regclass(format('%I.%I', current_schema(), @quotedName)) IS NOT NULL
+                            OR to_regclass(format('%I.%I', current_schema(), @unquotedName)) IS NOT NULL;",
+                        new { quotedName = "VersionInfo", unquotedName = "versioninfo" },
+                        transaction);
+                    return;
+                }
+
+                if (connection is SqliteConnection)
+                {
+                    exists = connection.QuerySingle<bool>(@"
+                        SELECT EXISTS (
+                            SELECT 1
+                              FROM sqlite_master
+                             WHERE type = 'table'
+                               AND name = @tableName COLLATE NOCASE);",
+                        new { tableName = "VersionInfo" },
+                        transaction);
+                    return;
+                }
+
+                throw new InvalidOperationException($"Unsupported migration database provider '{connection.GetType().Name}'.");
+            });
+
+            return exists;
         }
 
         private static IEnumerable<long> QueryVersions(IDbConnection connection, IDbTransaction transaction)

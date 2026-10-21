@@ -6,7 +6,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { runInNewContext } from 'node:vm';
-import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, runTask, runTaskPool, sha256GitText } from './engine.mjs';
+import { createPlan, createShortTemporaryPathAlias, currentRepoFiles, discoverInventory, formatValidationProgress, globRegex, isolatedChildEnvironment, parseNodeTestSummary, parseNUnitSummary, parseSmokeDiagnosticMarker, parseNUnitSummaryMarker, runTask, runTaskPool, sha256GitText } from './engine.mjs';
 import { validation } from './config.mjs';
 
 function withEnvironmentVariable(name, value, action) {
@@ -317,9 +317,10 @@ test('NUnit receipt extracts a safe exception type and method from the failure b
       name: 'Fixture.sqlite_failure',
       exceptionType: 'Microsoft.Data.Sqlite.SqliteException',
       stackFrame: 'Chaptarr.Core.Datastore.BookshelfDatabaseConverter.Convert',
+      sourceLine: 42,
     },
   ]);
-  assert.doesNotMatch(JSON.stringify(summary), /secret database path|C:\\\\private|Converter.cs|line 42/);
+  assert.doesNotMatch(JSON.stringify(summary), /secret database path|C:\\\\private|Converter.cs/);
 });
 
 test('NUnit SQLite receipt prefers an application frame and exports only safe SQLite diagnostics', () => {
@@ -333,17 +334,234 @@ test('NUnit SQLite receipt prefers an application frame and exports only safe SQ
       name: 'Fixture.sqlite_open_failure',
       exceptionType: 'Microsoft.Data.Sqlite.SqliteException',
       stackFrame: 'NzbDrone.Core.Datastore.BookshelfDatabaseConverter.Convert',
+      sourceLine: 42,
       sqliteErrorCode: 1,
       sqliteErrorKind: 'missing-column',
     },
   ]);
-  assert.doesNotMatch(JSON.stringify(summary), /SecretData|no such column|C:\\\\private|Converter.cs|line 42/);
+  assert.doesNotMatch(JSON.stringify(summary), /SecretData|no such column|C:\\\\private|Converter.cs/);
+});
+
+test('NUnit JSON marker keeps only bounded diagnostic fields in PostgreSQL receipts', () => {
+  const marker = JSON.stringify({
+    total: 2,
+    passed: 1,
+    failed: 1,
+    skipped: 0,
+    inconclusive: 0,
+    result: 'Failed',
+    failedTestNames: ['NzbDrone.Core.Test.Datastore.Fixture.should_fail'],
+    failedTestNamesTruncated: false,
+    failedTestDetails: [{
+      name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
+      exceptionType: 'System.InvalidOperationException',
+      stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+      sourceLine: 74,
+      message: 'private database error',
+      path: 'C:\\private\\source.db',
+    }],
+    failedTestDetailsTruncated: false,
+  });
+  const summary = parseNUnitSummaryMarker(`VALIDATION_NUNIT_SUMMARY=${marker}`);
+
+  assert.deepEqual(summary, {
+    total: 2,
+    passed: 1,
+    failed: 1,
+    skipped: 0,
+    inconclusive: 0,
+    result: 'Failed',
+    failedTestNames: ['NzbDrone.Core.Test.Datastore.Fixture.should_fail'],
+    failedTestNamesTruncated: false,
+    failedTestDetails: [{
+      name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
+      exceptionType: 'System.InvalidOperationException',
+      stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+      sourceLine: 74,
+    }],
+    failedTestDetailsTruncated: false,
+  });
+  assert.doesNotMatch(JSON.stringify(summary), /private database error|source\.db/);
+});
+
+test('NUnit JSON marker rejects malformed totals and drops path-bearing test names', () => {
+  assert.throws(() => parseNUnitSummaryMarker('VALIDATION_NUNIT_SUMMARY={"total":0}'), /invalid case counts/);
+  assert.throws(() => parseNUnitSummaryMarker(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify({
+    total: 2,
+    passed: 1,
+    failed: 0,
+    skipped: 0,
+    inconclusive: 0,
+  })}`), /invalid case counts/);
+  assert.throws(() => parseNUnitSummaryMarker('VALIDATION_NUNIT_SUMMARY=null'), /not an object/);
+  const summary = parseNUnitSummaryMarker(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify({
+    total: 1,
+    passed: 0,
+    failed: 1,
+    skipped: 0,
+    inconclusive: 0,
+    failedTestNames: ['C:\\private\\Fixture.test'],
+    failedTestDetails: [{ name: 'C:\\private\\Fixture.test', exceptionType: 'System.InvalidOperationException' }],
+  })}`);
+  assert.deepEqual(summary.failedTestNames, []);
+  assert.deepEqual(summary.failedTestDetails, []);
+});
+
+test('NUnit JSON marker accepts only a bounded positive source line number', () => {
+  for (const sourceLine of [0, -1, 1.5, 1_000_001, '42', '/private/source.cs:line 42']) {
+    const summary = parseNUnitSummaryMarker(`VALIDATION_NUNIT_SUMMARY=${JSON.stringify({
+      total: 1,
+      passed: 0,
+      failed: 1,
+      skipped: 0,
+      inconclusive: 0,
+      failedTestDetails: [{ name: 'Fixture.should_fail', sourceLine }],
+    })}`);
+    assert.deepEqual(summary.failedTestDetails, [{ name: 'Fixture.should_fail' }]);
+  }
+});
+
+test('smoke diagnostic marker keeps only whitelisted result metadata', () => {
+  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"unexpected-result-file-count","resultFileCount":0}'), {
+    stage: 'result-reporting',
+    reason: 'unexpected-result-file-count',
+    resultFileCount: 0,
+  });
+  assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"/private/path","resultFileCount":0}'), /invalid/);
+  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"invalid-result-xml","resultFileCount":1,"path":"/private/path"}'), {
+    stage: 'result-reporting',
+    reason: 'invalid-result-xml',
+    resultFileCount: 1,
+  });
+  assert.deepEqual(parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":false,"exceptionType":"DryIoc.ContainerException","exceptionTypes":["DryIoc.ContainerException","System.InvalidOperationException"],"startupFrames":["DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException","DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException","DryIoc.Interpreter.InterpretAndUnwrapExceptions"]}'), {
+    stage: 'application-startup',
+    reason: 'application-not-ready',
+    resultFileCount: 0,
+    readinessTimeoutSeconds: 300,
+    processExited: false,
+    exceptionType: 'DryIoc.ContainerException',
+    exceptionTypes: ['DryIoc.ContainerException', 'System.InvalidOperationException'],
+    startupFrames: ['DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException', 'DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException', 'DryIoc.Interpreter.InterpretAndUnwrapExceptions'],
+  });
+  assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"exceptionTypes":["/private/path"]}'), /exception types are invalid/);
+  assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"startupFrames":["/private/path"]}'), /startup frames are invalid/);
+  const oversizedMarker = `VALIDATION_SMOKE_DIAGNOSTIC=${JSON.stringify({
+    stage: 'application-startup',
+    reason: 'application-not-ready',
+    resultFileCount: 0,
+    padding: 'x'.repeat(4097),
+  })}`;
+  assert.throws(() => parseSmokeDiagnosticMarker(oversizedMarker), /too large/);
+  assert.throws(() => parseSmokeDiagnosticMarker('VALIDATION_SMOKE_DIAGNOSTIC={"stage":"result-reporting","reason":"application-not-ready","resultFileCount":0}'), /stage and reason/);
+});
+
+test('task receipts retain safe PostgreSQL smoke startup diagnostics', async (t) => {
+  const runRoot = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-postgres-diagnostic-'));
+  t.after(() => rmSync(runRoot, { recursive: true, force: true }));
+  const marker = 'VALIDATION_SMOKE_DIAGNOSTIC={"stage":"application-startup","reason":"application-not-ready","resultFileCount":0,"readinessTimeoutSeconds":300,"processExited":true,"exceptionType":"DryIoc.ContainerException","exceptionTypes":["DryIoc.ContainerException","System.InvalidOperationException"],"startupFrames":["DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException"]}\n';
+  const spec = {
+    id: 'postgres-migrations-smoke',
+    resultFormat: 'nunit-summary-json',
+    command: [process.execPath, '-e', `process.stdout.write(${JSON.stringify(marker)}); process.exitCode = 1;`],
+    timeoutSeconds: 10,
+  };
+
+  const receipt = await runTask({ id: spec.id }, runRoot, spec);
+  assert.equal(receipt.status, 'failed');
+  assert.equal(receipt.error, 'NUnit summary was missing or invalid');
+  assert.deepEqual(receipt.smokeDiagnostic, {
+    stage: 'application-startup',
+    reason: 'application-not-ready',
+    resultFileCount: 0,
+    readinessTimeoutSeconds: 300,
+    processExited: true,
+    exceptionType: 'DryIoc.ContainerException',
+    exceptionTypes: ['DryIoc.ContainerException', 'System.InvalidOperationException'],
+    startupFrames: ['DryIoc.Interpreter.TryInterpretSingletonAndUnwrapContainerException'],
+  });
+  assert.doesNotMatch(JSON.stringify(receipt), /private\/path/);
+});
+
+test('task receipts retain safe PostgreSQL NUnit details without raw messages or paths', async (t) => {
+  const runRoot = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-postgres-summary-'));
+  t.after(() => rmSync(runRoot, { recursive: true, force: true }));
+  const marker = `VALIDATION_NUNIT_SUMMARY=${JSON.stringify({
+    total: 1,
+    passed: 0,
+    failed: 1,
+    skipped: 0,
+    inconclusive: 0,
+    result: 'Failed',
+    failedTestNames: ['NzbDrone.Core.Test.Datastore.Fixture.should_fail'],
+    failedTestDetails: [{
+      name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
+      exceptionType: 'System.InvalidOperationException',
+      stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+      message: 'private database error',
+      path: 'C:\\private\\source.db',
+    }],
+  })}\n`;
+  const spec = {
+    id: 'postgres-migrations-smoke',
+    resultFormat: 'nunit-summary-json',
+    command: [process.execPath, '-e', `process.stdout.write(${JSON.stringify(marker)}); process.exitCode = 1;`],
+    timeoutSeconds: 10,
+  };
+
+  const receipt = await runTask({ id: spec.id }, runRoot, spec);
+  assert.equal(receipt.status, 'failed');
+  assert.equal(receipt.activeCases, 1);
+  assert.equal(receipt.failedCases, 1);
+  assert.equal(receipt.error, 'NUnit reported Failed');
+  assert.deepEqual(receipt.failedTestDetails, [{
+    name: 'NzbDrone.Core.Test.Datastore.Fixture.should_fail',
+    exceptionType: 'System.InvalidOperationException',
+    stackFrame: 'NzbDrone.Core.Datastore.BookshelfPostgresDatabaseConverter.Convert',
+  }]);
+  assert.doesNotMatch(JSON.stringify(receipt), /private database error|source\.db/);
 });
 
 test('Node TAP summary accounts for pass, fail, skip, todo, and cancelled cases', () => {
   assert.deepEqual(parseNodeTestSummary(
     '# tests 7\n# pass 3\n# fail 1\n# cancelled 1\n# skipped 1\n# todo 1\n',
-  ), { total: 7, passed: 3, failed: 1, cancelled: 1, skipped: 1, todo: 1, inconclusive: 1 });
+  ), {
+    total: 7,
+    passed: 3,
+    failed: 1,
+    cancelled: 1,
+    skipped: 1,
+    todo: 1,
+    inconclusive: 1,
+    failedTestNames: [],
+    failedTestNamesTruncated: false,
+  });
+});
+
+test('Node TAP receipts keep safe failed test names and discard diagnostic values and paths', () => {
+  const summary = parseNodeTestSummary(`not ok 2 - catalog refresh keeps existing author\n  ---\n  error: 'secret expected value at /private/worktree'\n  ...\nnot ok 4 - /private/worktree/credential.json\n  ---\n  error: 'secret token'\n  ...\n1..4\n# tests 4\n# pass 2\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n`);
+
+  assert.deepEqual(summary.failedTestNames, ['catalog refresh keeps existing author']);
+  assert.equal(summary.failedTestNamesTruncated, false);
+  assert.doesNotMatch(JSON.stringify(summary), /secret expected value|secret token|private/);
+});
+
+test('Node task receipts carry safe failure names and omit raw TAP diagnostics', async (t) => {
+  const runRoot = mkdtempSync(path.join(os.tmpdir(), 'chaptarr-validation-node-summary-'));
+  t.after(() => rmSync(runRoot, { recursive: true, force: true }));
+  const output = `not ok 1 - safe authored test title\n  ---\n  error: 'private value at /private/source'\n  ...\n1..1\n# tests 1\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n`;
+  const spec = {
+    id: 'engine-contract-tests',
+    resultFormat: 'node-test',
+    command: [process.execPath, '-e', `process.stdout.write(${JSON.stringify(output)}); process.exitCode = 1;`],
+    timeoutSeconds: 10,
+  };
+
+  const receipt = await runTask({ id: spec.id }, runRoot, spec);
+  assert.equal(receipt.status, 'failed');
+  assert.equal(receipt.error, '1 test case failed');
+  assert.deepEqual(receipt.failedTestNames, ['safe authored test title']);
+  assert.deepEqual(receipt.failedTestDetails, [{ name: 'safe authored test title' }]);
+  assert.doesNotMatch(JSON.stringify(receipt), /private value|private/);
 });
 
 test('Node TAP summary refuses missing and inconsistent case totals', () => {
@@ -638,6 +856,7 @@ test('test-only planning distinguishes local and hosted tasks regardless of ambi
   assert.ok(engineContractTask);
   assert.equal(engineContractTask.command.includes('--test-concurrency=2'), true);
   assert.equal(engineContractTask.shortTemporaryPath, true);
+  assert.ok(validation.tasks.find((task) => task.id === 'dotnet-core-tests').nodeIds.includes('chaptarr-osx-X64'));
 
   const localPlan = withEnvironmentVariable('GITHUB_ACTIONS', undefined, () =>
     withEnvironmentVariable('VALIDATION_NODE_ID', undefined, () =>

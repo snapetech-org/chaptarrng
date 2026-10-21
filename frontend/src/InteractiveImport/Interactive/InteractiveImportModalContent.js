@@ -14,6 +14,7 @@ import values from 'lodash/values';
 import without from 'lodash/without';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import Alert from 'Components/Alert';
 import FormInputGroup from 'Components/Form/FormInputGroup';
 import SelectInput from 'Components/Form/SelectInput';
 import Icon from 'Components/Icon';
@@ -320,6 +321,7 @@ class InteractiveImportModalContent extends Component {
       importMode,
       mediaManagementSettings,
       interactiveImportErrorMessage,
+      onRetryPress,
       onSortPress,
       onPathFallbackChange,
       onModalClose
@@ -476,12 +478,17 @@ class InteractiveImportModalContent extends Component {
           }
 
           {
-            error &&
-              <div>{errorMessage}</div>
+            error && !isFetching &&
+              <Alert kind={kinds.DANGER} role="alert">
+                <div>{errorMessage}</div>
+                <Button size="small" onPress={onRetryPress}>
+                  {translate('Retry')}
+                </Button>
+              </Alert>
           }
 
           {
-            isPopulated && !!items.length && !isFetching ?
+            isPopulated && !!items.length && !isFetching && !error ?
               <div className={styles.matchSummary}>
                 <Label kind={kinds.SUCCESS}>{translate('ManualImportReadyNowLocalCount', { count: readyNowCount })}</Label>
                 <Label kind={kinds.INFO}>{translate('ManualImportWillAddFromMetadataCount', { count: willAddCount })}</Label>
@@ -491,7 +498,7 @@ class InteractiveImportModalContent extends Component {
           }
 
           {
-            isPopulated && !!items.length && !isFetching &&
+            isPopulated && !!items.length && !isFetching && !error &&
               <Table
                 columns={columns}
                 horizontalScroll={true}
@@ -525,7 +532,7 @@ class InteractiveImportModalContent extends Component {
           }
 
           {
-            isPopulated && !items.length && !isFetching &&
+            isPopulated && !items.length && !isFetching && !error &&
               translate('InteractiveImportNoFilesFoundInFolder')
           }
         </ModalBody>
@@ -577,7 +584,7 @@ class InteractiveImportModalContent extends Component {
 
             <Button
               kind={kinds.SUCCESS}
-              isDisabled={isSaving || !selectedIds.length || !!invalidSelectedIds.length || inconsistentBookReleases}
+              isDisabled={isSaving || isFetching || !!error || !selectedIds.length || !!invalidSelectedIds.length || inconsistentBookReleases}
               onPress={this.onImportSelectedPress}
             >
               {translate('Import')}
@@ -660,6 +667,7 @@ InteractiveImportModalContent.propTypes = {
   sortDirection: PropTypes.string,
   mediaManagementSettings: PropTypes.object.isRequired,
   interactiveImportErrorMessage: PropTypes.string,
+  onRetryPress: PropTypes.func.isRequired,
   onSortPress: PropTypes.func.isRequired,
   onFilterExistingFilesChange: PropTypes.func.isRequired,
   onReplaceExistingFilesChange: PropTypes.func.isRequired,

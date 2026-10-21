@@ -191,6 +191,7 @@ export function isShippedReleaseNoteChanged(file, head, cwd = process.cwd()) {
     shippedContent = execFileSync('git', ['show', tag + ':' + file], {
       cwd,
       encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
     });
   } catch {
     return false;
@@ -283,10 +284,47 @@ export function injectCuratedNotes(changelog, curatedNotes) {
 }
 
 export function hasExplicitNoReleaseNote(body) {
+  const withoutComments = body.replace(/<!--[\s\S]*?(?:-->|$)/gu, '');
+  const visibleLines = [];
+  let fenceCharacter = null;
+  let fenceLength = 0;
+
+  for (const line of withoutComments.split(/\r?\n/u)) {
+    if (fenceCharacter) {
+      const closingFence = line.match(/^[\t ]*(`+|~+)[\t ]*$/u);
+      if (
+        closingFence &&
+        closingFence[1][0] === fenceCharacter &&
+        closingFence[1].length >= fenceLength
+      ) {
+        fenceCharacter = null;
+        fenceLength = 0;
+      }
+      continue;
+    }
+
+    const openingFence = line.match(/^[\t ]*(`{3,}|~{3,})/u);
+    if (openingFence) {
+      fenceCharacter = openingFence[1][0];
+      fenceLength = openingFence[1].length;
+      continue;
+    }
+
+    visibleLines.push(line);
+  }
+
+  const visibleBody = visibleLines.join('\n');
+  const bodyWithoutUncheckedOptions = visibleBody.replace(
+    /^[\t ]*-[\t ]*\[[\t ]\][^\n]*$/gimu,
+    ''
+  );
+
   return (
-    /release-note\s*:\s*none/iu.test(body) ||
-    /release-note-none-codeql-action/iu.test(body) ||
-    /-\s*\[x\][^\n]*(?:internal-only|no user-facing release note)/iu.test(body)
+    /^[\t ]*release-note:[\t ]+none[\t ]*$/imu.test(bodyWithoutUncheckedOptions) ||
+    /^[\t ]*release-note-none-codeql-action[\t ]*$/imu.test(bodyWithoutUncheckedOptions) ||
+    /^[\t ]*-[\t ]*\[x\][^\n]*(?:internal-only|no user-facing release note)[^\n]*$/imu.test(
+      bodyWithoutUncheckedOptions
+    )
   );
 }
 

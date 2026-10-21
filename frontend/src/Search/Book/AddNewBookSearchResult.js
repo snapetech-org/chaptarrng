@@ -15,6 +15,7 @@ import formatDurationMinutes from 'Utilities/Date/formatDurationMinutes';
 import stripHtml from 'Utilities/String/stripHtml';
 import translate from 'Utilities/String/translate';
 import AddNewBookModal from './AddNewBookModal';
+import { shouldShowMissingCatalogIdentityHelp } from './AddNewBookSearchResult.cjs';
 import styles from './AddNewBookSearchResult.css';
 
 const columnPadding = parseInt(dimensions.authorIndexColumnPadding);
@@ -195,6 +196,11 @@ class AddNewBookSearchResult extends Component {
       ...ebookInstances
     ];
     const hasLocalBook = localInstances.length > 0;
+    const showMissingIdentityHelp = shouldShowMissingCatalogIdentityHelp(
+      canAdd,
+      audiobookInstances,
+      ebookInstances
+    );
 
     const linkProps = getRowLinkProps(hasLocalBook, localInstances, canAdd, this.onPress);
 
@@ -256,14 +262,14 @@ class AddNewBookSearchResult extends Component {
                 />
 
                 {
-                  canAdd ?
-                    null :
+                  showMissingIdentityHelp ?
                     <Icon
                       className={styles.notAddableIcon}
                       name={icons.BAN}
                       size={28}
                       title={translate('BookNotAddableMissingProviderIds')}
-                    />
+                    /> :
+                    null
                 }
 
                 {
@@ -282,6 +288,14 @@ class AddNewBookSearchResult extends Component {
                 }
               </div>
             </div>
+
+            {
+              showMissingIdentityHelp ?
+                <div className={styles.notAddableMessage}>
+                  {translate('BookNotAddableMissingProviderIdsHelpText')}
+                </div> :
+                null
+            }
 
             {
               !!authorName &&

@@ -248,7 +248,7 @@ namespace Chaptarr.Core.Test.Datastore
         {
             using var connection = Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "EXPLAIN QUERY PLAN " + sql;
+            command.CommandText = "EXPLAIN QUERY PLAN " + sql; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- sql is a fixture-authored query used only to inspect its query plan.
 
             // Unbound parameters plan as NULL, which is enough to see which indexes are used.
             var plan = new List<string>();

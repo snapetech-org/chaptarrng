@@ -12,50 +12,65 @@ set -euo pipefail
 [[ "$1" == api && "$2" == --method && "$3" == POST && "$4" == --input ]]
 payload="$5"
 [[ "$6" == repos/snapetech/bookshelfng-ghcr-release-bridge/dispatches ]]
-jq --arg expected_digest "$EXPECTED_DIGEST" -e '.event_type == "chaptarrng-release" and
+jq --arg expected_digest "$EXPECTED_DIGEST" \
+  --arg expected_softcover_digest "$EXPECTED_SOFTCOVER_DIGEST" \
+  --arg expected_hardcover_digest "$EXPECTED_HARDCOVER_DIGEST" -e '.event_type == "chaptarrng-release" and
   .client_payload.version == "1.2.3" and
   .client_payload.source_sha == "0123456789abcdef0123456789abcdef01234567" and
   .client_payload.image_digest == $expected_digest and
+  .client_payload.softcover_image_digest == $expected_softcover_digest and
+  .client_payload.hardcover_image_digest == $expected_hardcover_digest and
   .client_payload.source_repository == "snapetech-org/chaptarrng"' "$payload" >/dev/null
 cp "$payload" "$CAPTURED_PAYLOAD"
 MOCK_GH
 chmod 0700 "$work/bin/gh"
 
 valid_digest="sha256:$(printf x | sha256sum | cut -d ' ' -f1)"
+valid_softcover_digest="sha256:$(printf softcover | sha256sum | cut -d ' ' -f1)"
+valid_hardcover_digest="sha256:$(printf hardcover | sha256sum | cut -d ' ' -f1)"
 PATH="$work/bin:$PATH" \
   RUNNER_TEMP="$work/runner" \
   GITHUB_STEP_SUMMARY="$work/summary.md" \
   CAPTURED_PAYLOAD="$work/payload.json" \
   EXPECTED_DIGEST="$valid_digest" \
+  EXPECTED_SOFTCOVER_DIGEST="$valid_softcover_digest" \
+  EXPECTED_HARDCOVER_DIGEST="$valid_hardcover_digest" \
   GH_TOKEN='test-token' \
   VERSION=1.2.3 \
   SOURCE_SHA=0123456789abcdef0123456789abcdef01234567 \
   IMAGE_DIGEST="$valid_digest" \
+  BOOKSHELF_SOFTCOVER_DIGEST="$valid_softcover_digest" \
+  BOOKSHELF_HARDCOVER_DIGEST="$valid_hardcover_digest" \
   SOURCE_REPOSITORY=snapetech-org/chaptarrng \
   bash "$repo_root/packaging/scripts/dispatch-ghcr-release-bridge.sh"
 
-grep -Fq "Dispatched BookshelfNG GHCR alias bridge for ChaptarrNG 1.2.3 at $valid_digest" "$work/summary.md"
+grep -Fq "Dispatched BookshelfNG GHCR alias bridge for ChaptarrNG 1.2.3; softcover $valid_softcover_digest, Hardcover $valid_hardcover_digest" "$work/summary.md"
 
-for input in invalid_version invalid_sha invalid_digest invalid_repository; do
+for input in invalid_version invalid_sha invalid_digest invalid_softcover_digest invalid_hardcover_digest invalid_repository; do
   version=1.2.3
   sha=0123456789abcdef0123456789abcdef01234567
   digest="$valid_digest"
+  softcover_digest="$valid_softcover_digest"
+  hardcover_digest="$valid_hardcover_digest"
   repository=snapetech-org/chaptarrng
   case "$input" in
     invalid_version) version=1.2 ;;
     invalid_sha) sha=not-a-commit ;;
     invalid_digest) digest=latest ;;
+    invalid_softcover_digest) softcover_digest=latest ;;
+    invalid_hardcover_digest) hardcover_digest=latest ;;
     invalid_repository) repository=attacker/repo ;;
   esac
   if PATH="$work/bin:$PATH" RUNNER_TEMP="$work/runner" GITHUB_STEP_SUMMARY="$work/summary.md" \
     GH_TOKEN='test-token' VERSION="$version" SOURCE_SHA="$sha" IMAGE_DIGEST="$digest" \
+    BOOKSHELF_SOFTCOVER_DIGEST="$softcover_digest" BOOKSHELF_HARDCOVER_DIGEST="$hardcover_digest" \
     SOURCE_REPOSITORY="$repository" bash "$repo_root/packaging/scripts/dispatch-ghcr-release-bridge.sh" >/dev/null 2>&1; then
     echo "The dispatch accepted $input." >&2
     exit 1
   fi
 done
 
-if rg -q 'CHAPTARRNG_AUTOMATION_APP_PRIVATE_KEY|GH_TOKEN|token' "$work/payload.json"; then
+if grep -Eq 'CHAPTARRNG_AUTOMATION_APP_PRIVATE_KEY|GH_TOKEN|token' "$work/payload.json"; then
   echo 'The dispatch payload contains credential material.' >&2
   exit 1
 fi

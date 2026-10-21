@@ -106,6 +106,8 @@ namespace NzbDrone.Core.Datastore
                     return new BookshelfDatabaseConversionResult(null, importReport, previewOnly: true);
                 }
 
+                importReport.ThrowIfBlockingIssues();
+
                 // Retain a consistent SQLite backup before touching the source file or its WAL.
                 File.Move(snapshotPath, backupPath);
                 backupRetained = true;
@@ -595,8 +597,33 @@ namespace NzbDrone.Core.Datastore
     public sealed class BookshelfDatabaseImportReport
     {
         private readonly Dictionary<string, BookshelfDatabaseTableImportResult> _tables = new(StringComparer.Ordinal);
+        private readonly List<string> _blockingIssues = new();
 
         public IReadOnlyDictionary<string, BookshelfDatabaseTableImportResult> Tables => _tables;
+        public IReadOnlyList<string> BlockingIssues => _blockingIssues;
+
+        public void AddBlockingIssue(string issue)
+        {
+            if (string.IsNullOrWhiteSpace(issue))
+            {
+                throw new ArgumentException("A blocking issue description is required.", nameof(issue));
+            }
+
+            if (!_blockingIssues.Contains(issue, StringComparer.Ordinal))
+            {
+                _blockingIssues.Add(issue);
+            }
+        }
+
+        public void ThrowIfBlockingIssues()
+        {
+            if (_blockingIssues.Count > 0)
+            {
+                throw new InvalidDataException(
+                    "BookshelfNG migration cannot be applied until the following blocking settings are mapped: " +
+                    string.Join("; ", _blockingIssues) + ". Run -preview-bookshelf-migration to review the source without changing it.");
+            }
+        }
 
         public void RecordTable(
             string sourceTable,

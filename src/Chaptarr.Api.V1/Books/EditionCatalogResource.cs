@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using NzbDrone.Common.Extensions;
+using Chaptarr.Http.Middleware;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.MediaCover;
 
 namespace Chaptarr.Api.V1.Books
 {
@@ -43,39 +44,50 @@ namespace Chaptarr.Api.V1.Books
 
         public static List<string> NarratorsOf(Edition edition)
         {
-            var names = edition.NarratorNames?.Where(n => n.IsNotNullOrWhiteSpace()).Select(n => n.Trim()).ToList();
-            if (names != null && names.Any())
+            var names = edition.NarratorNames?.Where(name => !string.IsNullOrWhiteSpace(name)).ToArray();
+            if (names == null || names.Length == 0)
             {
-                return names.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                names = new[] { edition.Narrator };
             }
 
-            return (edition.Narrator ?? string.Empty)
-                .Split(new[] { ',', ';', '&' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(n => n.Trim())
-                .Where(n => n.Length > 0)
+            return names
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .SelectMany(name => name.Split(new[] { ',', ';', '&' }, StringSplitOptions.RemoveEmptyEntries))
+                .Select(name => name.Trim())
+                .Where(name => name.Length > 0)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
 
         public static string ProductionOf(Edition edition, IReadOnlyCollection<string> narrators)
         {
-            var hints = string.Join(" ", new[] { edition.Title, edition.Subtitle, edition.EditionInfo, edition.Disambiguation, edition.AudioProductionType });
+            var hints = string.Join(" ", new[]
+            {
+                edition.Title,
+                edition.Subtitle,
+                edition.EditionInfo,
+                edition.Disambiguation,
+                edition.AudioProductionType
+            });
+
             if (edition.IsGraphicAudio || FullCast.IsMatch(hints))
             {
                 return "full-cast";
             }
 
-            if (narrators.Count == 1)
-            {
-                return "solo";
-            }
-
-            return narrators.Count >= 6 ? "full-cast" : "unknown";
+            return narrators.Count == 1 ? "solo" : "unknown";
         }
 
         public static string AbridgementOf(Edition edition)
         {
-            var hints = string.Join(" ", new[] { edition.Title, edition.Subtitle, edition.EditionInfo, edition.Disambiguation });
+            var hints = string.Join(" ", new[]
+            {
+                edition.Title,
+                edition.Subtitle,
+                edition.EditionInfo,
+                edition.Disambiguation
+            });
+
             if (Unabridged.IsMatch(hints))
             {
                 return "unabridged";
@@ -86,13 +98,21 @@ namespace Chaptarr.Api.V1.Books
 
         public static EditionCatalogResource ToCatalogResource(this Edition edition)
         {
+            return edition.ToCatalogResource(edition.BookFiles?.Any() == true, null);
+        }
+
+        public static EditionCatalogResource ToCatalogResource(
+            this Edition edition,
+            bool owned,
+            ReadarrFacadeContext facadeContext)
+        {
             var narrators = NarratorsOf(edition);
-            var cover = edition.Images?.FirstOrDefault(i => i.CoverType == NzbDrone.Core.MediaCover.MediaCoverTypes.Cover);
+            var cover = edition.Images?.FirstOrDefault(image => image.CoverType == MediaCoverTypes.Cover);
 
             return new EditionCatalogResource
             {
                 EditionId = edition.Id,
-                ForeignEditionId = edition.ForeignEditionId,
+                ForeignEditionId = ReadarrFacadeEditionIdentity.BuildForeignEditionId(edition, facadeContext),
                 Title = edition.Title,
                 Language = edition.Language,
                 Format = edition.EditionFormat ?? edition.Format,
@@ -103,9 +123,9 @@ namespace Chaptarr.Api.V1.Books
                 DurationSeconds = edition.DurationSeconds,
                 Publisher = edition.Publisher,
                 ReleaseDate = edition.ReleaseDate,
-                ImageUrl = cover?.RemoteUrl ?? cover?.Url,
+                ImageUrl = cover?.Url,
                 Monitored = edition.Monitored,
-                Owned = edition.BookFiles?.Any() == true
+                Owned = owned
             };
         }
     }

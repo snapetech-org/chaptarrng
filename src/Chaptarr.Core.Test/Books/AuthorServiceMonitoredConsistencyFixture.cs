@@ -101,9 +101,9 @@ namespace Chaptarr.Core.Test.Books
         {
             private readonly List<RootFolder> _rootFolders;
 
-            public StubRootFolderService()
+            public StubRootFolderService(IEnumerable<RootFolder> rootFolders = null)
             {
-                _rootFolders = new List<RootFolder>
+                _rootFolders = rootFolders?.ToList() ?? new List<RootFolder>
                 {
                     new RootFolder { Id = 1, Path = "/audiobooks", FolderType = FolderType.Audiobook },
                     new RootFolder { Id = 2, Path = "/ebooks", FolderType = FolderType.Ebook }
@@ -430,6 +430,76 @@ namespace Chaptarr.Core.Test.Books
                 Assert.That(author.EbookMonitorNewItems, Is.EqualTo(NewItemMonitorTypes.New));
                 Assert.That(author.EbookRootFolderPath, Is.EqualTo("/ebooks/manual"));
                 Assert.That(repository.LastUpdatedAuthor, Is.Not.Null);
+            });
+        }
+
+        [Test]
+        public void update_author_should_apply_current_root_defaults_when_format_profiles_are_cleared()
+        {
+            var audiobookRoot = new RootFolder
+            {
+                Id = 1,
+                Path = "/audiobooks",
+                FolderType = FolderType.Audiobook
+            };
+            audiobookRoot.SetAudiobookSettings(new MediaTypeSettings
+            {
+                QualityProfileId = 10,
+                MetadataProfileId = 20
+            });
+
+            var ebookRoot = new RootFolder
+            {
+                Id = 2,
+                Path = "/ebooks",
+                FolderType = FolderType.Ebook
+            };
+            ebookRoot.SetEbookSettings(new MediaTypeSettings
+            {
+                QualityProfileId = 30,
+                MetadataProfileId = 40
+            });
+
+            var storedAuthor = new Author
+            {
+                Id = 8,
+                Name = "Root Defaults Author",
+                AudiobookRootFolderPath = audiobookRoot.Path,
+                EbookRootFolderPath = ebookRoot.Path,
+                AudiobookQualityProfileId = 11,
+                AudiobookMetadataProfileId = 21,
+                EbookQualityProfileId = 31,
+                EbookMetadataProfileId = 41,
+                AudiobookMonitored = true,
+                EbookMonitored = false,
+                SyncMonitoredAcrossFormats = false
+            };
+            var repository = new StubAuthorRepository(new Dictionary<int, Author> { { storedAuthor.Id, storedAuthor } });
+            var rootFolders = new StubRootFolderService(new[] { audiobookRoot, ebookRoot });
+            var service = BuildService(repository, rootFolders);
+            var update = new Author
+            {
+                Id = storedAuthor.Id,
+                Name = storedAuthor.Name,
+                AudiobookRootFolderPath = audiobookRoot.Path,
+                EbookRootFolderPath = ebookRoot.Path,
+                AudiobookQualityProfileId = null,
+                AudiobookMetadataProfileId = null,
+                EbookQualityProfileId = storedAuthor.EbookQualityProfileId,
+                EbookMetadataProfileId = storedAuthor.EbookMetadataProfileId,
+                AudiobookMonitored = storedAuthor.AudiobookMonitored,
+                EbookMonitored = storedAuthor.EbookMonitored,
+                SyncMonitoredAcrossFormats = false
+            };
+
+            var updated = service.UpdateAuthor(update);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(updated.AudiobookQualityProfileId, Is.EqualTo(10));
+                Assert.That(updated.AudiobookMetadataProfileId, Is.EqualTo(20));
+                Assert.That(updated.EbookQualityProfileId, Is.EqualTo(31));
+                Assert.That(updated.EbookMetadataProfileId, Is.EqualTo(41));
             });
         }
 
