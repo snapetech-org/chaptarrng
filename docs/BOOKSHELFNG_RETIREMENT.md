@@ -35,17 +35,20 @@ CLI checks are recorded below. An earlier application migration fix is commit
 Its exact-head Build
 [39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854)
 passed Linux, macOS, Windows, PostgreSQL migration, and runner-receipt checks.
-The latest matching-parity change is commit
-[`6f296ed2`](https://github.com/snapetech-org/chaptarrng/commit/6f296ed20792bdfce7192d12e730bc996818fa3).
-It restores BookshelfNG's fuzzy RSS-title fallback, keeps the configured
-`BookImportMinimumMatchPercent` active for that fallback, and preserves the
-matched author and edition title. Its focused regression set passed 126/126
-locally. Exact-head Build
-[39660910878](https://github.com/snapetech-org/chaptarrng/actions/runs/39660910878)
-and standalone-asset validation
-[39660911376](https://github.com/snapetech-org/chaptarrng/actions/runs/39660911376)
-are queued. The current source remains unpublished; `v0.9.977` predates these
-changes and the retirement release freeze remains active.
+The latest matching compatibility change is commit
+[`97c1284f`](https://github.com/snapetech-org/chaptarrng/commit/97c1284fb3c3ce8670546a1059dd8fa1aefeeb92).
+It keeps BookshelfNG's numeric `BookImportMinimumMatchPercent` active for the
+fuzzy RSS-title fallback and restores its weighted score gate for migrated
+installs, using BookshelfNG's 70% default when the setting was never saved.
+Fresh ChaptarrNG installs leave that compatibility gate disabled. The mapped
+`BookMatchingStrictness` remains an additional safety policy, and ChaptarrNG's
+newer identity and ambiguity checks mean the combined decision pipeline is not
+identical in every case. Focused matching, importer, and RSS regression tests
+passed 68/68 locally. The PostgreSQL fixture now asserts the compatibility
+marker and preserved source backup, but all eight database-backed cases skipped
+locally because `CHAPTARRNG_POSTGRES_TEST_CONNECTION` is unset. Hosted exact-head
+validation remains pending. The current source is unpublished; `v0.9.977`
+predates these changes and the retirement release freeze remains active.
 
 The canonical
 [audit report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md)
@@ -708,13 +711,16 @@ validate the Unraid template handoff; details are in the
 [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 
 BookshelfNG's `BookImportMinimumMatchPercent` setting (default 70, valid range
-50–99) now remains active for ChaptarrNG's fuzzy RSS-title fallback. When no
-explicit ChaptarrNG mode is present, the current source converter also maps the
-nearest policy band: 50–66 to Aggressive, 67–82 to Balanced, and 83–99 to
-Strict. The migration report names both behaviors, and invalid values stop
-conversion. The strictness mapping is still an approximation because the two
-applications use different release-title and import-scoring algorithms;
-validate it against converted data. This source change is not in public
+50–99) remains active for ChaptarrNG's fuzzy RSS-title fallback and now gates
+release/file candidate scores for migrated BookshelfNG installs. The importer
+enables `BookshelfMatchCompatibility` only for converted installs, including
+when the legacy 70% default had no saved row; fresh ChaptarrNG installs keep it
+disabled. When no explicit ChaptarrNG mode is present, the converter also maps
+the nearest policy band: 50–66 to Aggressive, 67–82 to Balanced, and 83–99 to
+Strict. The migration report names these behaviors, and invalid values stop
+conversion. ChaptarrNG retains additional identity-proof and ambiguity checks,
+so this is a closer compatibility path rather than an identical matching
+pipeline. Review it against converted data. The source change is not in public
 `.977`.
 
 For a source earlier than migration 14, first update BookshelfNG to its final
