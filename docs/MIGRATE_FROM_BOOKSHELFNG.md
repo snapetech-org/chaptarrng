@@ -17,7 +17,7 @@
 > exact migration-158 SQLite schema. Its pre-upgrade check rejects schemas
 > before migration 14; upgrade those installations to the final BookshelfNG
 > `0.4.21.71` release first. The current migration candidate code head is
-> `ce9b4bfe06abb271b37c0330c3ca26ec5e6d41e1`. It includes the migration and
+> `f30dcec8c882c0169a544eee337f1d628e76e5d4`. It includes the migration and
 > installer work, Books index Both filter, combined Bookshelf Formats view,
 > audiobook-scoped SeerrNG narrator operations, visible retry actions, and the
 > responsive ChaptarrNG UI. It also preserves manual edition choices on local
@@ -27,12 +27,14 @@
 > eligible existing-author format paths; confirmation rechecks settings and
 > queues refreshes without moving files. Profile reset is disabled when the
 > selected root has no configured default. Exact-head Build
-> [39519231702](https://github.com/snapetech-org/chaptarrng/actions/runs/39519231702)
-> is still in progress. Security Analysis, Semgrep CE, Trivy, and NuGet
-> submission have passed; CodeQL is in progress. Local frontend tests pass
-> 55/55, typecheck and translation-key checks pass, and changed CSS passes
-> Stylelint. The current code remains unpublished and is not approved for
-> operator cutover during the release freeze.
+> [39520269403](https://github.com/snapetech-org/chaptarrng/actions/runs/39520269403)
+> passed Linux, Windows, and macOS build/test jobs, PostgreSQL migration
+> smoke, and native-runner receipt reconciliation. Security Analysis,
+> Semgrep CE, Trivy, and NuGet submission passed. No CodeQL run is attached to
+> this source commit; the release-note contract was skipped on the main push.
+> Local frontend tests pass 57/57, typecheck and translation-key checks pass,
+> and changed CSS passes Stylelint. The current code remains unpublished and
+> is not approved for operator cutover during the release freeze.
 > **Provider identity warning:** `.977` maps bare numeric source IDs to
 > Goodreads regardless of `HARDCOVER`. A database from the native Hardcover
 > BookshelfNG mode can therefore pass integrity checks while acquiring the
