@@ -276,6 +276,7 @@ namespace Chaptarr.Http.Authentication
                     // Use a safe placeholder configuration when OIDC isn't configured. The scheme will
                     // not be challenged unless the user selects OIDC as the active auth method.
                     var oidcAuthority = configFileProvider.OidcAuthority;
+                    var isAppleIssuer = IsAppleIssuer(oidcAuthority);
                     var oidcClientId = configFileProvider.OidcClientId;
                     var oidcClientSecret = configFileProvider.OidcClientSecret;
 
@@ -303,13 +304,16 @@ namespace Chaptarr.Http.Authentication
                     options.ClientSecret = isConfigured ? oidcClientSecret : string.Empty;
 
                     options.ResponseType = OpenIdConnectResponseType.Code;
-                    options.UsePkce = true;
+                    options.UsePkce = !isAppleIssuer;
                     options.SaveTokens = false;
-                    options.GetClaimsFromUserInfoEndpoint = true;
+                    options.GetClaimsFromUserInfoEndpoint = !isAppleIssuer;
                     options.ClaimActions.MapUniqueJsonKey("email_verified", "email_verified");
 
                     options.Scope.Clear();
-                    foreach (var scope in ParseOidcScopes(configFileProvider.OidcScopes))
+                    var oidcScopes = isAppleIssuer
+                        ? new[] { "openid", "email" }
+                        : ParseOidcScopes(configFileProvider.OidcScopes);
+                    foreach (var scope in oidcScopes)
                     {
                         options.Scope.Add(scope);
                     }
@@ -319,8 +323,12 @@ namespace Chaptarr.Http.Authentication
                     options.TokenValidationParameters.RoleClaimType = "identifier";
 
                     // Support providers that use form_post response_mode (POST callback) by allowing correlation cookies cross-site.
-                    options.CorrelationCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
-                    options.NonceCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
+                    options.CorrelationCookie.SameSite = isAppleIssuer
+                        ? Microsoft.AspNetCore.Http.SameSiteMode.None
+                        : Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+                    options.NonceCookie.SameSite = isAppleIssuer
+                        ? Microsoft.AspNetCore.Http.SameSiteMode.None
+                        : Microsoft.AspNetCore.Http.SameSiteMode.Lax;
                     options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
                     options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
 
@@ -347,13 +355,14 @@ namespace Chaptarr.Http.Authentication
 
                     // Ensure OIDC backchannel traffic (discovery, token exchange, userinfo) uses the same
                     // proxy/certificate validation and IPv4/IPv6 fallback behavior as the rest of the app.
+                    options.BackchannelTimeout = TimeSpan.FromSeconds(15);
                     options.BackchannelHttpHandler = proxyConfigurationError == null
-                        ? socketsHttpHandlerFactory.CreateHandler(proxySettings,
-                            allowAutoRedirect: true,
+                        ? new OidcResponseLimitHandler(socketsHttpHandlerFactory.CreateHandler(proxySettings,
+                            allowAutoRedirect: false,
                             useCookies: false,
                             credentials: null,
                             preAuthenticate: false,
-                            maxConnectionsPerServer: 12)
+                            maxConnectionsPerServer: 12))
                         : new ConfigurationErrorHttpMessageHandler(proxyConfigurationError);
 
                     var legacyRedirectUri = BookshelfOidcEnvironmentSettings.GetRedirectUri();
@@ -364,6 +373,10 @@ namespace Chaptarr.Http.Authentication
                             if (!string.IsNullOrWhiteSpace(legacyRedirectUri))
                             {
                                 context.ProtocolMessage.RedirectUri = legacyRedirectUri;
+                            }
+                            if (isAppleIssuer)
+                            {
+                                context.ProtocolMessage.ResponseMode = OpenIdConnectResponseMode.FormPost;
                             }
 
                             return System.Threading.Tasks.Task.CompletedTask;
@@ -445,7 +458,7 @@ namespace Chaptarr.Http.Authentication
                         options.ResponseType = OpenIdConnectResponseType.Code;
                     }
 
-                    options.UsePkce = true;
+                    options.UsePkce = !IsAppleIssuer(options.Authority);
                 })
                 // Route UI auth dynamically based on the current config so switching auth methods does not require a restart.
                 .AddPolicyScheme(UiAuthScheme, UiAuthScheme, options =>
@@ -746,6 +759,11 @@ namespace Chaptarr.Http.Authentication
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Select(x => x.ToLowerInvariant())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAppleIssuer(string issuer)
+        {
+            return string.Equals(issuer?.Trim(), "https://appleid.apple.com", StringComparison.Ordinal);
         }
 
         private static IEnumerable<string> ParseOidcScopes(string raw)
