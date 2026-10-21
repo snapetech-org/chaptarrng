@@ -32,6 +32,7 @@ trap 'rm -rf -- "$tmp_dir"' EXIT
 aur=false
 copr=false
 bookshelfng_copr=false
+ppa=false
 chocolatey=false
 
 skip() {
@@ -63,6 +64,31 @@ else
   skip 'BookshelfNG COPR' 'BOOKSHELFNG_COPR_WEBHOOK_URL is not a package-scoped COPR custom webhook URL for bookshelfng; replace the Actions secret.'
 fi
 
+ppa_target="${LAUNCHPAD_PPA:-}"
+if [[ -z "${GPG_PRIVATE_KEY:-}" || -z "$ppa_target" ]]; then
+  skip PPA 'GPG_PRIVATE_KEY and LAUNCHPAD_PPA are both required; the PPA publisher will not run.'
+elif [[ ! "$ppa_target" =~ ^ppa:~?[A-Za-z0-9][A-Za-z0-9.+_-]*/[A-Za-z0-9][A-Za-z0-9.+_-]*$ ]]; then
+  skip PPA 'LAUNCHPAD_PPA must use the form ppa:<owner>/<archive>; update the Actions secret or variable.'
+else
+  gpg_home="$tmp_dir/gnupg"
+  mkdir -m 0700 "$gpg_home"
+  if ! printf '%s\n' "$GPG_PRIVATE_KEY" | GNUPGHOME="$gpg_home" gpg --batch --import >/dev/null 2>&1 || \
+    ! GNUPGHOME="$gpg_home" gpg --batch --with-colons --list-secret-keys 2>/dev/null | awk -F: '$1 == "sec" { found = 1 } END { exit !found }'; then
+    skip PPA 'GPG_PRIVATE_KEY is not an importable private signing key; update the Actions secret.'
+  else
+    shorthand="${ppa_target#ppa:}"
+    owner="${shorthand%%/*}"
+    archive="${shorthand#*/}"
+    owner="${owner#\~}"
+    archive_api="https://api.launchpad.net/1.0/~${owner}/%2Barchive/ubuntu/${archive}"
+    if curl --fail --silent --show-error --max-time 20 "$archive_api" >/dev/null 2>&1; then
+      ppa=true
+    else
+      skip PPA 'The configured Launchpad PPA could not be found through its public API; check its owner and archive name.'
+    fi
+  fi
+fi
+
 if [[ -z "${CHOCOLATEY_API_KEY:-}" ]]; then
   skip Chocolatey 'CHOCOLATEY_API_KEY is unset; the Chocolatey publisher will not run.'
 elif [[ "$CHOCOLATEY_API_KEY" =~ [[:space:]] ]]; then
@@ -75,5 +101,6 @@ fi
   printf 'aur=%s\n' "$aur"
   printf 'copr=%s\n' "$copr"
   printf 'bookshelfng_copr=%s\n' "$bookshelfng_copr"
+  printf 'ppa=%s\n' "$ppa"
   printf 'chocolatey=%s\n' "$chocolatey"
 } >> "$GITHUB_OUTPUT"

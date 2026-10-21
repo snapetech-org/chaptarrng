@@ -118,11 +118,12 @@ operator database. The candidate BookshelfNG package itself was not published.
 
 Before a release can publish, the workflow validates AUR private-key
 usability, package-scoped ChaptarrNG and BookshelfNG COPR webhook formats,
-and Chocolatey key shape. Invalid optional publisher settings skip that
-channel without writing credential values to the workflow summary. The main
-release preflight also validates the Discord webhook before artifact or image
-publishing. These checks validate configuration shape, not live publisher
-authorization or channel acceptance.
+Launchpad signing-key import, PPA name and public API lookup, and Chocolatey
+key shape. Invalid optional publisher settings skip that channel without
+writing credential values to the workflow summary. The main release preflight
+also validates the Discord webhook before artifact or image publishing. These
+checks do not establish publisher authorization or channel acceptance; no
+Launchpad PPA bridge is configured.
 
 The `v0.9.977` release and standard image were published successfully. The
 ChaptarrNG Chocolatey package built and passed its package-transition smoke,
