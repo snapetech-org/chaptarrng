@@ -14,7 +14,6 @@ namespace Chaptarr.Core.Test
         public string DefaultEbookRootFolderPath { get; set; } = string.Empty;
         public bool ImportExtraFiles { get; set; }
         public bool MoveExtraFilesOnRename { get; set; }
-        public bool MoveExtraFilesOnRename { get; set; }
         public bool KeepExistingLibraryFileOnImportConflict { get; set; }
         public ProperDownloadTypes DownloadPropersAndRepacks { get; set; } = ProperDownloadTypes.PreferAndUpgrade;
         public bool AudioProductionCustomFormatsSeeded { get; set; }
