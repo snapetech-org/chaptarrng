@@ -86,8 +86,9 @@ offer Retry in search-as-you-type mode; interactive release search does the
 same. Narrator discovery errors announce the failure and can be retried without
 stale errors during loading. Organize, retag, and convert preview failures show
 available error details and Retry. Manual Import hides stale rows and disables
-Import after a preview error; File Browser can retry the current directory.
-The frontend CJS regression suite passes 114/114 locally. These application
+Import after a preview error; File Browser can retry the current directory. Activity lists, author history,
+book-edit edition loading, Calendar, backup lists, and Wanted pages also retry
+after load errors. The frontend CJS regression suite passes 116/116 locally. These application
 changes are on [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Earlier matrix results predate the latest picker changes;
 follow the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml)
