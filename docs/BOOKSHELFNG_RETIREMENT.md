@@ -58,13 +58,15 @@ open.
 Standalone archive work covers all ten BookshelfNG runtime identifiers in the
 ChaptarrNG source release matrix. The exact-head no-publication run
 [39582093706](https://github.com/snapetech-org/chaptarrng/actions/runs/39582093706)
-passed eight archive targets; Linux x86 and FreeBSD failed while copying custom
-runtime packs over preexisting SDK files because `cp -a` tried to restore their
-ownership and timestamps. ChaptarrNG `main` now skips those attributes when
-merging the packs. The focused overlap regression passes locally, and the
-follow-up no-publication matrix
+passed eight archive targets; Linux x86 and FreeBSD initially failed while
+copying custom runtime packs over preexisting SDK files because `cp -a` tried to
+restore their ownership and timestamps. ChaptarrNG `main` skips those
+attributes. The follow-up no-publication matrix
 [39595241427](https://github.com/snapetech-org/chaptarrng/actions/runs/39595241427)
-is queued to validate the fix. The matrix creates only temporary CI artifacts; no
+then failed because the builder expected SDK 10.0.402 to include reference packs
+at 10.0.12. The current source change collects the installed SDK pack versions
+and pins custom-runtime publishing to 10.0.12; focused checks pass locally, and
+hosted validation is pending. The matrix creates only temporary CI artifacts; no
 release, package, image, or migration bridge is published. Keep BookshelfNG in
 service until the full migration and channel acceptance gates close.
 The current path ledger records the candidate Debian bridge at its exact pinned

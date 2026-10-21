@@ -88,7 +88,11 @@ for package_pattern in (
 
 tree.write(output_config, encoding="utf-8", xml_declaration=True)
 PY
-  restore_sources=("-p:RestoreConfigFile=$custom_nuget_config")
+  # The custom Linux x86 and FreeBSD runtime packs are pinned to 10.0.12.
+  restore_sources=(
+    "-p:RestoreConfigFile=$custom_nuget_config"
+    "-p:RuntimeFrameworkVersion=10.0.12"
+  )
 fi
 
 dotnet publish src/NzbDrone.Console/Chaptarr.Console.csproj \
