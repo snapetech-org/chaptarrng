@@ -2506,7 +2506,27 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
         public List<object> SearchForNewEntity(string title, string provider)
         {
+            return SearchForNewEntity(title, provider, null);
+        }
+
+        public List<object> SearchForNewEntity(string title, string provider, BookMediaType? mediaType)
+        {
             _logger.DebugSafe($"[BookInfoProxy] SearchForNewEntity called with title: '{title}', provider: '{provider ?? "null"}'");
+
+            if (string.IsNullOrWhiteSpace(provider) && _hardcoverMetadataProxy?.IsNativeEnabled != true)
+            {
+                return IsMetadataApiEnabled()
+                    ? BuildAdditionalSearchResults(SearchMetadataApiCatalog(title, getAllEditions: false, mediaType: null))
+                    : SearchForNewEntity(title, "goodreads");
+            }
+
+            if (provider?.Equals(AdditionalMetadataSources.MetadataApi, StringComparison.OrdinalIgnoreCase) == true ||
+                provider?.Equals("metadata", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return IsMetadataApiEnabled()
+                    ? SearchMetadataServerEntities(title, mediaType)
+                    : new List<object>();
+            }
 
             if (AdditionalMetadataSources.IsSupportedSource(provider))
             {
@@ -2574,8 +2594,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 }
             }
 
-            // Search providers should hit their own upstream APIs only.
-            // No fallback to the metadata server search endpoint (/api/v5/search).
+            // Existing provider routes stay isolated; a failed provider is never
+            // followed by a metadata-server search.
             if (string.IsNullOrWhiteSpace(provider) || string.Equals(provider, "hardcover", StringComparison.OrdinalIgnoreCase))
             {
                 if (_hardcoverMetadataProxy?.IsNativeEnabled == true)
@@ -2685,7 +2705,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
             // Default to Goodreads behavior
             _logger.DebugSafe($"[BookInfoProxy] Executing Goodreads search for: {title}");
-            var books = SearchForNewBook(title, null, false);
+            var books = SearchForNewBookCore(title, null, false, null, preferMetadataApi: false);
             _logger.Debug($"[BookInfoProxy] Goodreads search returned {books?.Count ?? 0} books");
 
             var result = new List<object>();
@@ -2709,6 +2729,102 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
             _logger.Debug($"[BookInfoProxy] Final result count: {result.Count} (unique authors + books)");
             return result;
+        }
+
+        private List<object> SearchMetadataServerEntities(string title, BookMediaType? mediaType)
+        {
+            var trimmedTitle = title?.Trim();
+            if (trimmedTitle.IsNullOrWhiteSpace())
+            {
+                return new List<object>();
+            }
+
+            try
+            {
+                var requestBuilder = _requestBuilder.GetRequestBuilder().Create()
+                    .SetSegment("route", "api/v5/search")
+                    .AddQueryParam("term", trimmedTitle);
+
+                if (mediaType.HasValue)
+                {
+                    requestBuilder.AddQueryParam("mediaType", mediaType.Value == BookMediaType.Ebook ? "ebook" : "audiobook");
+                }
+
+                var httpRequest = requestBuilder.Build();
+                httpRequest.SuppressHttpError = true;
+                httpRequest.RequestTimeout = TimeSpan.FromSeconds(15);
+
+                var httpResponse = ExecuteV5Request(httpRequest, _httpClient.Get, "free-text search");
+                if (httpResponse.HasHttpError)
+                {
+                    _logger.Warn("Metadata server free-text search failed with HTTP status {0}", httpResponse.StatusCode);
+                    throw new NzbDroneClientException(HttpStatusCode.ServiceUnavailable, "Metadata server search failed");
+                }
+
+                var searchResponse = Json.Deserialize<MetadataServerSearchResponse>(httpResponse.Content);
+                if (searchResponse?.Results == null)
+                {
+                    throw new NzbDroneClientException(HttpStatusCode.BadGateway, "Metadata server returned an invalid search response");
+                }
+
+                var authors = new Dictionary<string, ProviderSearchResult>(StringComparer.OrdinalIgnoreCase);
+                var books = new List<ProviderSearchResult>();
+
+                foreach (var candidate in searchResponse.Results.Take(50))
+                {
+                    if (candidate == null || !ProviderIdHelper.TryNormalize(candidate.Id, null, out var candidateId))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        if (string.Equals(candidate.Type, "author", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var author = GetAuthorInfo(candidateId, useCache: true);
+                            if (author != null)
+                            {
+                                authors.TryAdd(candidateId, new ProviderSearchResult(author, candidateId));
+                            }
+
+                            continue;
+                        }
+
+                        if (!string.Equals(candidate.Type, "book", StringComparison.OrdinalIgnoreCase) ||
+                            !ProviderIdHelper.TryNormalize(candidate.AuthorId, null, out var candidateAuthorId))
+                        {
+                            continue;
+                        }
+
+                        var bookInfo = GetBookInfo(candidateId, mediaType ?? BookMediaType.Audiobook, candidateAuthorId);
+                        var book = bookInfo?.Item2;
+                        if (book?.Author == null)
+                        {
+                            continue;
+                        }
+
+                        book.Author.RemoteProviderIds ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        book.Author.RemoteProviderIds.Add(candidateAuthorId);
+                        authors.TryAdd(candidateAuthorId, new ProviderSearchResult(book.Author, candidateAuthorId));
+                        books.Add(new ProviderSearchResult(book, candidateAuthorId));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.DebugSafe(ex, "Skipping metadata server search candidate {0}", candidate.Id);
+                    }
+                }
+
+                return authors.Values.Cast<object>().Concat(books).ToList();
+            }
+            catch (NzbDroneClientException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.WarnSafe(ex, "Metadata server free-text search failed");
+                throw new NzbDroneClientException(HttpStatusCode.ServiceUnavailable, "Metadata server search failed", ex);
+            }
         }
 
         private List<object> BuildAdditionalSearchResults(IEnumerable<Book> books)
@@ -3024,7 +3140,12 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 .ToList();
         }
 
-            public List<Book> SearchForNewBook(string title, string author, bool getAllEditions = true, BookMediaType? mediaType = null)
+        public List<Book> SearchForNewBook(string title, string author, bool getAllEditions = true, BookMediaType? mediaType = null)
+        {
+            return SearchForNewBookCore(title, author, getAllEditions, mediaType, preferMetadataApi: true);
+        }
+
+        private List<Book> SearchForNewBookCore(string title, string author, bool getAllEditions, BookMediaType? mediaType, bool preferMetadataApi)
             {
                 var q = title.ToLower().Trim();
                 if (author != null)
@@ -3190,7 +3311,9 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     return nativeBooks;
                 }
 
-                var primaryResults = Search(q, getAllEditions, mediaType);
+                var primaryResults = preferMetadataApi && IsMetadataApiEnabled()
+                    ? SearchMetadataApiCatalog(q, getAllEditions, mediaType)
+                    : Search(q, getAllEditions, mediaType);
                 ApplySearchMetadataPreferences(primaryResults);
                 var supplementalResults = _additionalBookMetadataProxy.Search(q);
                 ApplySearchMetadataPreferences(supplementalResults);
@@ -3214,6 +3337,82 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 _logger.Warn(ex, ex.Message);
                 throw new GoodreadsException("Search for '{0}' failed. Invalid response received from Goodreads.", ex, title);
             }
+        }
+
+        private bool IsMetadataApiEnabled()
+        {
+            var sources = AdditionalMetadataSources.GetConfiguredRuntimeSources(
+                AdditionalMetadataSources.GetEnvironmentSourceOverride(),
+                _configService.MetadataCatalogSources,
+                _configService.IsDefined("MetadataCatalogSources"),
+                _configService.AdditionalMetadataSources,
+                _configService.IsDefined("AdditionalMetadataSources"),
+                null,
+                null,
+                null,
+                null,
+                _hardcoverMetadataProxy?.IsNativeEnabled == true ? null : AdditionalMetadataSources.MetadataApi);
+
+            return sources.Contains(AdditionalMetadataSources.MetadataApi);
+        }
+
+        private List<Book> SearchMetadataApiCatalog(string query, bool getAllEditions, BookMediaType? mediaType)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return new List<Book>();
+            }
+
+            var searchResults = _goodreadsSearchProxy.SearchMetadataApi(query);
+            if (searchResults == null)
+            {
+                searchResults = _goodreadsSearchProxy.Search(query);
+            }
+
+            searchResults ??= new List<SearchJsonResource>();
+            var books = new List<Book>();
+
+            if (getAllEditions)
+            {
+                foreach (var workId in searchResults
+                    .Where(result => result?.WorkId > 0)
+                    .Select(result => result.WorkId)
+                    .Distinct())
+                {
+                    try
+                    {
+                        books.AddRange(SearchByV5WorkId(EnsureCanonicalProviderId(workId.ToString(), "gr")));
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.Warn(exception, "Readarr-compatible metadata catalog work {0} failed", workId);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var result in searchResults.Where(item => item?.BookId > 0).DistinctBy(item => item.BookId))
+                {
+                    try
+                    {
+                        books.Add(GetEditionInfo(result.BookId, getAllEditions: false));
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.Warn(exception, "Readarr-compatible metadata catalog edition {0} failed", result.BookId);
+                    }
+                }
+            }
+
+            if (mediaType.HasValue)
+            {
+                books.ForEach(book => book.MediaType = mediaType.Value);
+            }
+
+            return books
+                .Where(book => book != null && !string.IsNullOrWhiteSpace(GetBookKey(book)))
+                .DistinctBy(GetBookKey)
+                .ToList();
         }
 
         public List<Book> SearchByIsbn(string isbn)

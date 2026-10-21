@@ -36,6 +36,10 @@ class AuthorSearchInput extends Component {
 
   componentDidMount() {
     this.props.bindShortcut(shortcuts.AUTHOR_SEARCH_INPUT.key, this.focusInput);
+
+    if (!this.props.metadataProviderConfig?.isPopulated && !this.props.metadataProviderConfig?.isFetching) {
+      this.props.fetchMetadataProvider();
+    }
   }
 
   componentWillUnmount() {
@@ -160,13 +164,26 @@ class AuthorSearchInput extends Component {
     }
 
     const isHardcoverConfigured = this.props.isHardcoverConfigured !== false;
+    const metadataApiEnabled = !this.props.metadataProviderConfig?.isPopulated ||
+      (!this.props.metadataProviderConfig.error && this.props.metadataProviderConfig.item?.enableMetadataApi?.value);
 
-    return [
+    const suggestions = [
       { type: ADD_NEW_TYPE, title: trimmedQuery, provider: 'hardcover', providerLabel: 'Hardcover', isDisabled: !isHardcoverConfigured },
       { type: ADD_NEW_TYPE, title: trimmedQuery, provider: 'goodreads', providerLabel: 'Goodreads' },
       { type: ADD_NEW_TYPE, title: trimmedQuery, provider: 'audible', providerLabel: translate('Audiobooks') },
       { type: ADD_NEW_TYPE, title: trimmedQuery, provider: 'ranobedb', providerLabel: translate('RanobeDBLightNovels') }
     ];
+
+    if (metadataApiEnabled) {
+      suggestions.splice(1, 0, {
+        type: ADD_NEW_TYPE,
+        title: trimmedQuery,
+        provider: 'metadata-api',
+        providerLabel: translate('MetadataApiCatalog')
+      });
+    }
+
+    return suggestions;
   }
 
   reset() {
@@ -487,10 +504,12 @@ class AuthorSearchInput extends Component {
 
 AuthorSearchInput.propTypes = {
   isHardcoverConfigured: PropTypes.bool,
+  metadataProviderConfig: PropTypes.object,
   onGoToAuthor: PropTypes.func.isRequired,
   onGoToBook: PropTypes.func.isRequired,
   onGoToAddNewAuthor: PropTypes.func.isRequired,
   onHardcoverSetupRequired: PropTypes.func,
+  fetchMetadataProvider: PropTypes.func.isRequired,
   bindShortcut: PropTypes.func.isRequired
 };
 

@@ -53,7 +53,21 @@ const supplementalMetadataProviders = [
   { key: 'apify-goodreads', name: 'enableApifyGoodreads', label: 'ApifyGoodreadsActor', requiresApifyCredentials: true }
 ];
 
+function isMetadataApiEnabled(metadataProviderConfig) {
+  if (!metadataProviderConfig?.isPopulated || metadataProviderConfig.error) {
+    return true;
+  }
+
+  return metadataProviderConfig.item?.enableMetadataApi?.value === true;
+}
+
+function getNonHardcoverProvider(metadataProviderConfig) {
+  return isMetadataApiEnabled(metadataProviderConfig) ? 'metadata-api' : 'goodreads';
+}
+
 const supportsSeriesFilter = (provider) => provider !== 'goodreads' &&
+  provider !== 'metadata' &&
+  provider !== 'metadata-api' &&
   !supplementalMetadataProviders.some((source) => source.key === provider);
 
 class AddNewItem extends Component {
@@ -64,11 +78,9 @@ class AddNewItem extends Component {
   constructor(props, context) {
     super(props, context);
 
-    const defaultProvider = props.isHardcoverConfigured === false ? 'goodreads' : 'hardcover';
+    const defaultProvider = props.isHardcoverConfigured === false ? getNonHardcoverProvider(props.metadataProviderConfig) : 'hardcover';
     const providerFromProps = props.provider || defaultProvider;
-    const selectedProvider = props.isHardcoverConfigured === false && providerFromProps === 'hardcover' ?
-      defaultProvider :
-      providerFromProps;
+    const selectedProvider = props.isHardcoverConfigured === false && providerFromProps === 'hardcover' ? defaultProvider : providerFromProps;
 
     const term = props.term || '';
 
@@ -130,12 +142,28 @@ class AddNewItem extends Component {
     if (prevProps.isHardcoverConfigured !== isHardcoverConfigured &&
         isHardcoverConfigured === false &&
         this.state.selectedProvider === 'hardcover') {
-      this.setState({ selectedProvider: 'goodreads' }, () => {
+      const nextProvider = getNonHardcoverProvider(this.props.metadataProviderConfig);
+      this.setState({ selectedProvider: nextProvider }, () => {
         const nextTerm = this.state.term;
         if (nextTerm) {
           this.props.onSearchChange(nextTerm, this.state.selectedProvider);
         }
       });
+    }
+
+    if (prevProps.metadataProviderConfig !== this.props.metadataProviderConfig &&
+        this.props.metadataProviderConfig?.isPopulated &&
+        this.props.isHardcoverConfigured === false &&
+        !this.props.provider &&
+        (this.state.selectedProvider === 'metadata-api' || this.state.selectedProvider === 'goodreads')) {
+      const nextProvider = getNonHardcoverProvider(this.props.metadataProviderConfig);
+      if (nextProvider !== this.state.selectedProvider) {
+        this.setState({ selectedProvider: nextProvider }, () => {
+          if (this.state.term) {
+            this.props.onSearchChange(this.state.term, nextProvider);
+          }
+        });
+      }
     }
   }
 
@@ -303,6 +331,10 @@ class AddNewItem extends Component {
       { key: 'goodreads', value: 'Goodreads' },
       { key: 'audible', value: translate('Audiobooks') }
     ];
+
+    if (metadataProviderConfig.isPopulated && !metadataProviderConfig.error && metadataProviderSettings.enableMetadataApi?.value) {
+      metadataProviders.splice(1, 0, { key: 'metadata-api', value: translate('MetadataApiCatalog') });
+    }
 
     if (metadataProviderConfig.isPopulated && !metadataProviderConfig.error) {
       supplementalMetadataProviders.forEach((source) => {

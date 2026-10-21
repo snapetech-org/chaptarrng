@@ -2,13 +2,15 @@ import { push } from 'connected-react-router';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
 import { showMessage } from 'Store/Actions/appActions';
+import { fetchMetadataProvider } from 'Store/Actions/settingsActions';
 import translate from 'Utilities/String/translate';
 import AuthorSearchInput from './AuthorSearchInput';
 
 function createMapStateToProps() {
   return createSelector(
     (state) => state.settings.hardcoverConfig,
-    (hardcoverConfig) => {
+    (state) => state.settings.metadataProvider,
+    (hardcoverConfig, metadataProviderConfig) => {
       const { isPopulated, error, item } = hardcoverConfig;
       let isHardcoverConfigured = null;
 
@@ -17,7 +19,8 @@ function createMapStateToProps() {
       }
 
       return {
-        isHardcoverConfigured
+        isHardcoverConfigured,
+        metadataProviderConfig
       };
     }
   );
@@ -25,6 +28,10 @@ function createMapStateToProps() {
 
 function createMapDispatchToProps(dispatch, props) {
   return {
+    fetchMetadataProvider() {
+      dispatch(fetchMetadataProvider());
+    },
+
     onGoToAuthor(authorId) {
       dispatch(push(`${window.Chaptarr.urlBase}/author/${authorId}`));
     },
