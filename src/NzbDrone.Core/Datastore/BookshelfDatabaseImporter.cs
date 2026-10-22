@@ -638,7 +638,10 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Books", sourceCount, 0, sourceCount, 0, 0,
-                $"BookshelfNG books are split by the source editions' media types and linked to the preserved managed author ID; {mediaChoices.Count(x => x.Value == BookshelfMediaChoice.BothUnmonitored)} unresolved books are kept in both catalogs without monitoring until reviewed; {NumericProviderDisposition()}");
+                $"BookshelfNG books are split by the source editions' media types and linked to the preserved managed author ID; " +
+                $"{mediaChoices.Count(x => x.Value == BookshelfMediaChoice.Both)} ambiguous books are monitored in both catalogs and " +
+                $"{mediaChoices.Count(x => x.Value == BookshelfMediaChoice.BothUnmonitored)} are kept in both catalogs without monitoring per the fallback or explicit media map; " +
+                $"{NumericProviderDisposition()}");
             return result;
         }
 

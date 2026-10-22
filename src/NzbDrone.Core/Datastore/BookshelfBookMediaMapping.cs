@@ -18,7 +18,8 @@ namespace NzbDrone.Core.Datastore
 
     /// <summary>
     /// Resolves BookshelfNG works whose source rows do not identify a media type.
-    /// These choices cannot be inferred safely from a missing edition relationship.
+    /// The fallback preserves source monitoring in both catalogs; an operator map
+    /// can narrow the choice to one format when the source provides no evidence.
     /// </summary>
     public static class BookshelfBookMediaMapping
     {
@@ -39,9 +40,11 @@ namespace NzbDrone.Core.Datastore
                     return new Dictionary<int, BookshelfMediaChoice>();
                 }
 
-                // Keep unresolved source books available without starting format-specific
-                // searches until an operator confirms their intended media type.
-                var automaticChoices = required.ToDictionary(book => book.SourceBookId, _ => BookshelfMediaChoice.BothUnmonitored);
+                // Preserve the source book-level monitoring choice even when the
+                // source does not identify which format the operator intended.
+                var automaticChoices = required.ToDictionary(
+                    book => book.SourceBookId,
+                    book => book.Monitored ? BookshelfMediaChoice.Both : BookshelfMediaChoice.BothUnmonitored);
                 WriteReview(reviewPath, required, automaticChoices);
                 return automaticChoices;
             }
@@ -255,7 +258,7 @@ namespace NzbDrone.Core.Datastore
             var document = new ReviewDocument
             {
                 Version = SupportedMapVersion,
-                Instructions = "Provide a media map before conversion to choose formats. Without a map, unresolved entries are imported into both media catalogs and left unmonitored until reviewed. Set mediaType to audiobook or ebook for one format, both to monitor both formats, or both-unmonitored to preserve both without monitoring. Save the completed document as the matching .bookshelf-media-map.json file.",
+                Instructions = "Use a media map to choose formats when the source has no unambiguous edition selection. Without a map, source-monitored books are imported into both media catalogs with both formats monitored; source-unmonitored books stay unmonitored. Set mediaType to audiobook or ebook to choose one format, both to monitor both formats, or both-unmonitored to preserve both without monitoring. Save the completed document as the matching .bookshelf-media-map.json file.",
                 Books = books.Select(book => new ResolutionEntry
                 {
                     SourceBookId = book.SourceBookId,

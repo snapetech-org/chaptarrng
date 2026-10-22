@@ -501,12 +501,15 @@ does not include this mapping.
 The converter writes
 `readarr.db.bookshelf-media-review.json` beside the database and keeps it after
 automatic conversion. It lists the source book IDs, titles, authors, original
-monitoring state, reason, and the `both-unmonitored` fallback. On Unix it is
-created with owner-only permissions because it contains library metadata. Use
-the review file after startup to correct the media type and monitoring choice
-in ChaptarrNG. The normal startup log gives the review file path. Automatic
-preservation prevents a conversion stop; it does not infer the book's true
-format.
+monitoring state, reason, and the chosen fallback. On Unix it is created with
+owner-only permissions because it contains library metadata. When a source
+book is monitored but no edition identifies its format, the fallback creates
+both ChaptarrNG media records and preserves monitoring for both. An
+unmonitored source book remains unmonitored in both records. This keeps the
+source book-level monitoring choice active, but cannot identify which format
+the operator intended. Use the review file and optional media map to narrow an
+ambiguous book to one format. The normal startup log gives the review file
+path.
 
 When one audiobook edition and one ebook edition are selected for the same
 BookshelfNG work, conversion preserves each selection on its matching

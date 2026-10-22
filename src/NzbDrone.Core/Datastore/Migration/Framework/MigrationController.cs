@@ -68,7 +68,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 var mediaReviewPath = mediaMapBasePath + ".bookshelf-media-review.json";
                 if (File.Exists(mediaReviewPath))
                 {
-                    _logger.Warn("BookshelfNG books were kept in both catalogs without monitoring where their media type was unclear. Review the migration choices at {0}", mediaReviewPath);
+                    _logger.Warn("BookshelfNG books with unclear media types were preserved in both catalogs; source-monitored books remain monitored in both formats. Review or narrow the migration choices at {0}", mediaReviewPath);
                 }
 
                 return;
