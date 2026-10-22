@@ -33,5 +33,24 @@ namespace Chaptarr.Core.Test.MediaFiles
 
             Assert.That(tags["isbn"], Is.EqualTo(expected));
         }
+
+        [Test]
+        public void should_prefer_valid_978_then_979_identifiers_for_epub_metadata()
+        {
+            var preferred978 = EBookTagService.SelectPreferredIsbn(new[]
+            {
+                "9790000000001",
+                "0306406152",
+                "9780306406157"
+            });
+            var preferred979 = EBookTagService.SelectPreferredIsbn(new[]
+            {
+                "0306406152",
+                "9790000000001"
+            });
+
+            Assert.That(preferred978, Is.EqualTo("9780306406157"));
+            Assert.That(preferred979, Is.EqualTo("9790000000001"));
+        }
     }
 }

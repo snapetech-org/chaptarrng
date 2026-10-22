@@ -8,7 +8,9 @@ required for that sign-off. It does not replace technical evidence for feature
 parity, representative-data conversion and rollback, provider fulfillment, or
 installed update-channel handoff. Those readiness gates remain separate.
 
-**Reviewed:** 2026-10-21. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public app releases. ChaptarrNG [main](https://github.com/snapetech-org/chaptarrng/tree/main) contains a candidate-only Debian bridge builder. An isolated dpkg round-trip against the checksum-verified public BookshelfNG `.71` package preserved a modified config and data canary with dependency checks bypassed and systemd mocked. A separate Debian Trixie apt transaction used that actual package and the local `.977` candidate, resolved dependencies (including `libicu76` and `ca-certificates`), installed the CA bundle, upgraded and downgraded without a conffile prompt, and preserved the canaries. In a systemd-running Trixie container, the actual `.71` service upgraded to the local candidate, restarted, and passed `/ping`; after restoring the pre-upgrade database copy, downgrade to `.71` also restarted and passed `/ping`. This used a fresh empty `.71` database and synthetic canaries, not operator data. No compatibility package or migration bridge has been published. Release publication remains frozen and publisher readiness variables remain unset. This is the current handoff summary for moving BookshelfNG users to ChaptarrNG. The detailed feature inventory remains in the [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
+**Reviewed:** 2026-10-22. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public app releases. ChaptarrNG [main](https://github.com/snapetech-org/chaptarrng/tree/main) contains a candidate-only Debian bridge builder. An isolated dpkg round-trip against the checksum-verified public BookshelfNG `.71` package preserved a modified config and data canary with dependency checks bypassed and systemd mocked. A separate Debian Trixie apt transaction used that actual package and the local `.977` candidate, resolved dependencies (including `libicu76` and `ca-certificates`), installed the CA bundle, upgraded and downgraded without a conffile prompt, and preserved the canaries. In a systemd-running Trixie container, the actual `.71` service upgraded to the local candidate, restarted, and passed `/ping`; after restoring the pre-upgrade database copy, downgrade to `.71` also restarted and passed `/ping`. This used a fresh empty `.71` database and synthetic canaries, not operator data. No compatibility package or migration bridge has been published. Release publication remains frozen and publisher readiness variables remain unset. This is the current handoff summary for moving BookshelfNG users to ChaptarrNG. The detailed feature inventory remains in the [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
+
+**Matcher parity validation — 2026-10-22:** The converted-install scorer now follows BookshelfNG's per-format tag fields and legacy identifier, year, narrator, and format comparisons; EPUB identifier extraction uses the legacy ISBN priority. ChaptarrNG's stronger identity and ambiguity checks remain in the pipeline. The full Release Core test project passed 4,604 tests with 0 failures and 19 skips; a separate Chromium browser integration run passed 3/3. PostgreSQL/live-service checks and real M4B checks remain skipped without their configured connection or toolchain. These are code checks, not scoring acceptance against a representative converted library. The public `v0.9.977` release is unchanged.
 
 The exact revision-pinned path audit stays canonical in BookshelfNG's
 maintainer ledger: the
@@ -68,10 +70,10 @@ review. A private rehearsal on current ChaptarrNG `main` has now passed preview,
 migration, restore preview, and rollback for two populated migration-158 SQLite
 snapshots; see the [rehearsal record](MIGRATE_FROM_BOOKSHELFNG.md#populated-sqlite-migration-and-restore-rehearsal-2026-10-21).
 This closes conversion and database rollback evidence for those two data sets.
-No runtime retirement is approved. Broader normal-startup acceptance, feature
-parity, provider fulfillment, SeerrNG workflows, and installed update-channel
-handoff remain open. Maintainer/operator sign-off is recorded above; keep
-BookshelfNG in service until technical readiness gates close.
+Runtime retirement stays deferred while broader normal-startup acceptance,
+feature parity, provider fulfillment, SeerrNG workflows, and installed
+update-channel handoff remain open. Maintainer/operator sign-off is recorded
+above; keep BookshelfNG in service until the technical readiness gates close.
 
 The current source and target pins, disposition counts, and remaining path
 review live in the canonical BookshelfNG
@@ -297,7 +299,7 @@ dependency, release-note, Semgrep, and Trivy checks passed; publication jobs
 were skipped. Real Community Applications update/rollback and representative
 data migration/rollback remain unaccepted. Issue [#144](https://github.com/snapetech-org/bookshelfng/issues/144)
 remains open. Keep BookshelfNG running and do not apply migration or start
-ChaptarrNG against BookshelfNG appdata until acceptance is complete.
+ChaptarrNG against BookshelfNG appdata until technical readiness is complete.
 
 **Prior application-code validation (2026-10-19):** ChaptarrNG draft PR #131
 contains code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build
@@ -327,8 +329,8 @@ administrative and unrelated command routes; and the real `ReadarrAPI` created,
 polled, and cancelled a synthetic pending request. See the detailed evidence
 below. This does not close successful provider fulfillment, representative
 operator data, semantic parity, real media/M4B acceptance, installed rollback,
-installer/channel handoff, or operator sign-off. No release or bridge was
-published.
+or installer/channel handoff. Maintainer/operator sign-off is recorded above.
+No release or bridge was published.
 
 The Windows standalone handoff remains candidate-only. BookshelfNG's WPF
 installer still installs its own Readarr service. Merged PR #131 contains a

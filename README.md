@@ -179,8 +179,9 @@ migration/rollback remain open.
 The release freeze remains in force. BookshelfNG issue [#144](https://github.com/snapetech-org/bookshelfng/issues/144)
 remains open, and BookshelfNG must stay in service until representative data,
 rollback, feature parity, provider workflows, update-channel handoff, and
-operator acceptance are complete. No release or compatibility bridge was
-published.
+technical acceptance are complete. Project/provider maintainer and operator
+sign-off is recorded; it does not close those technical gates. No release or
+compatibility bridge was published.
 
 The BookshelfNG Windows WPF installer still installs BookshelfNG. ChaptarrNG
 `main` contains an unpublished transactional WPF handoff installer. It keeps

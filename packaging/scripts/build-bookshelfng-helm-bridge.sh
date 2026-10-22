@@ -62,7 +62,7 @@ identities while pinning the standard ChaptarrNG @VERSION@ image at
 service settings must be preserved.
 
 Before upgrading, stop BookshelfNG, take an independent backup or storage
-snapshot, and complete the approved migration and rollback rehearsal. Set
+snapshot, and complete the migration and rollback rehearsal. Set
 `BOOKSHELF_PROVIDER_MODE` to `hardcover` or `softcover` to match the existing
 BookshelfNG database. The converter reads and preserves the provider settings
 stored in that database.

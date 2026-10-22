@@ -3,26 +3,28 @@
 This chart keeps the existing BookshelfNG chart identity and Kubernetes
 resource names while replacing its container with ChaptarrNG. It is a
 **source-only retirement candidate**. There is no published ChaptarrNG Helm
-chart or approved production cutover yet. ChaptarrNG releases and compatibility
-bridges remain frozen until representative data, migration and rollback,
-feature parity, installed channel handoff, and operator acceptance are complete.
+chart, and a production cutover is not ready yet. ChaptarrNG releases and
+compatibility bridges remain frozen until representative data, migration and
+rollback, feature parity, and installed channel handoff pass technical checks.
+Maintainer/operator sign-off is recorded separately and does not close these
+readiness gates.
 
 The chart name stays `bookshelfng`. With the same Helm release name and
 namespace, it keeps the StatefulSet, Service, PVC, selector labels, service
 account behavior, `/config` mount, and port `8787`. The existing PVC remains
 named `<release>-config` under the default naming rules. Keep the existing
-release name, namespace, and values when a cutover is approved.
+release name, namespace, and values for an in-place cutover.
 
 ## Safety requirements
 
 Rendering fails closed unless all of these are supplied:
 
-- `bookshelfMigration.confirmed=true`, set only after the retirement gates are
-  approved;
+- `bookshelfMigration.confirmed=true`, set after migration and channel checks
+  pass for the target deployment;
 - `bookshelfMigration.providerMode=hardcover` or `softcover`, matching the
   source BookshelfNG provider mode; and
 - `image.digest=sha256:<64 lowercase hexadecimal characters>`, pointing to
-  the approved, provider-compatible ChaptarrNG image. A private image mirror
+  a validated, provider-compatible ChaptarrNG image. A private image mirror
   also needs the explicit `image.allowCustomRepository=true` setting.
 
 There is no mutable image tag default. The chart also rejects more than one
@@ -30,9 +32,9 @@ replica while the source SQLite database is migrated. Replica count zero is
 allowed for a deliberate service stop.
 
 Do not use this candidate against live BookshelfNG data. The published
-ChaptarrNG `v0.9.977` image has known migration limits and is not an approved
-cutover target. The chart does not make the migration or its rollback
-operationally accepted.
+ChaptarrNG `v0.9.977` image has known migration limits and is not ready for
+this cutover. The chart does not run migration or validate rollback against
+the target data; complete those checks separately.
 
 ## Future cutover shape
 
@@ -40,20 +42,20 @@ After the release and channel gates close, use the versioned chart published to
 the existing `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` identity. Keep
 the existing release name and namespace.
 First record the release and its values, stop BookshelfNG, take an independent
-backup or storage snapshot, and complete the approved migration preview and
+backup or storage snapshot, and complete the migration preview and
 rollback rehearsal on a copy. Confirm the source provider mode and obtain the
-matching immutable image digest from the approved release evidence.
+matching immutable image digest from release evidence.
 
 The in-place upgrade will have this form; replace the placeholders with the
-existing release details and the approved provider-specific digest:
+existing release details and the validated provider-specific digest:
 
 ```sh
 helm upgrade bookshelfng oci://ghcr.io/snapetech/bookshelfng/bookshelfng \
-  --version <approved-chaptarrng-version> \
+  --version <chaptarrng-version> \
   --namespace <existing-namespace> \
   --reuse-values \
   --set-string image.repository=ghcr.io/snapetech-org/chaptarrng \
-  --set-string image.digest=sha256:<approved-64-character-digest> \
+  --set-string image.digest=sha256:<validated-64-character-digest> \
   --set bookshelfMigration.confirmed=true \
   --set bookshelfMigration.providerMode=hardcover
 ```
@@ -93,4 +95,4 @@ with the same legacy release values, and compares every rendered resource
 after normalizing only the app image and chart-version labels. It covers the
 default release and retained ingress, service-account, persistence, resource,
 node-selection, pod-label, and secret-backed environment settings. It also
-checks that missing approval, provider mode, or a valid image digest fails.
+checks that missing operator confirmation, provider mode, or a valid image digest fails.

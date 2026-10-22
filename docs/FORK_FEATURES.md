@@ -51,10 +51,11 @@ conversion settings, and startup-error recovery pass in the 122/122 frontend CJS
 suite. Current application source is on
 [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Publication remains frozen; no release, package, image, installer,
-or migration bridge was published. Representative operator-data migration and
-rollback, provider and SeerrNG workflows, representative media and restart
-recovery, installed update-channel handoff, and operator acceptance remain open. Keep BookshelfNG in service and do not
-start ChaptarrNG against BookshelfNG appdata. See the
+or migration bridge was published. Maintainer/operator sign-off is recorded.
+Representative operator-data migration and rollback, provider and SeerrNG
+workflows, representative media and restart recovery, and installed
+update-channel handoff remain technical readiness gaps. Keep BookshelfNG in
+service and do not start ChaptarrNG against BookshelfNG appdata. See the
 [retirement status](BOOKSHELFNG_RETIREMENT.md) and
 [migration guide](MIGRATE_FROM_BOOKSHELFNG.md).
 

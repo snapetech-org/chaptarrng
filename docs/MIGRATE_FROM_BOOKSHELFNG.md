@@ -1,16 +1,16 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Release status (2026-10-21).** ChaptarrNG `v0.9.977` remains the latest
-> public release. Releases are frozen until the BookshelfNG retirement gates
-> close. Keep BookshelfNG in service; do not apply migration, install a bridge,
-> or start ChaptarrNG against BookshelfNG appdata.
+> **Release status (2026-10-22).** ChaptarrNG `v0.9.977` remains the latest
+> public release. Maintainer/operator sign-off is recorded, but technical
+> retirement gates remain open. Keep BookshelfNG in service; do not apply
+> migration, install a bridge, or start ChaptarrNG against BookshelfNG appdata.
 >
 > The published `.977` migration path supports BookshelfNG `0.4.21.71` with a
 > migration-158 SQLite database. It does not safely identify native Hardcover
 > provider IDs; do not apply `.977` to a database from native Hardcover mode.
 > Newer SQLite migration, provider compatibility, and installer work exists on
 > [ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main),
-> but remains unpublished and is not approved for cutover.
+> but remains unpublished and is not ready for cutover.
 >
 > Current `main` also upgrades supported older BookshelfNG PostgreSQL schemas
 > on a disposable schema snapshot and preserves the untouched source for
@@ -52,13 +52,14 @@
 > [BookshelfNG retirement issue](https://github.com/snapetech-org/bookshelfng/issues/144)
 > and [operator migration guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
 > for current gates. The validation notes below are dated evidence snapshots,
-> not authorization to cut over.
+> not proof that the technical cutover gates are closed.
 
-An approved future migration will use the standard ChaptarrNG application and
-container build. The `Chaptarr` executable provides explicit preview and apply
-commands, and normal startup also detects and converts a supported BookshelfNG
-database automatically. Do not run normal ChaptarrNG startup against
-BookshelfNG appdata while cutover remains unapproved.
+After technical readiness closes, run the migration with the standard
+ChaptarrNG application and container build. The `Chaptarr` executable provides
+explicit preview and apply commands, and normal startup also detects and
+converts a supported BookshelfNG database automatically. Do not run normal
+ChaptarrNG startup against BookshelfNG appdata while cutover readiness remains
+incomplete.
 
 The ChaptarrNG source also includes
 [`scripts/bookshelfng-to-chaptarrng.sh`](../scripts/bookshelfng-to-chaptarrng.sh),
@@ -203,7 +204,7 @@ raw upload extensions are not accepted by published `v0.9.977`.
 The published `.977` converter does not support PostgreSQL. Current `main`
 contains a separate PostgreSQL route that migrates recognized older source
 schemas on a disposable PostgreSQL snapshot, and preserves the original schema
-for rollback. This source candidate remains unpublished and unapproved for
+for rollback. This source candidate remains unpublished and is not ready for
 operator cutover; representative populated data, independent backup restore,
 installed rollback, and channel handoff are still required. See the
 [PostgreSQL candidate notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md). For SQLite,

@@ -7,8 +7,8 @@ image:
   digest: ""
   pullPolicy: IfNotPresent
 
-# The BookshelfNG-to-ChaptarrNG data migration is not approved for production
-# cutover yet. Rendering the chart requires an explicit future approval.
+# Production cutover is not ready until the migration and update-channel checks
+# pass. Rendering also requires explicit operator confirmation.
 bookshelfMigration:
   confirmed: false
   providerMode: ""

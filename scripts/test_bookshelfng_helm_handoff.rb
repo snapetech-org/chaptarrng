@@ -235,7 +235,7 @@ assert(docker_workflow.include?("inputs.legacy_bridge_enabled && vars.CHAPTARRNG
        "legacy Docker aliases are not gated by both retirement readiness variables")
 
 [
-  ["missing explicit approval", ["--set", "bookshelfMigration.providerMode=hardcover", "--set-string", "image.digest=#{DIGEST}"], /confirmed must be true/],
+  ["missing operator confirmation", ["--set", "bookshelfMigration.providerMode=hardcover", "--set-string", "image.digest=#{DIGEST}"], /confirmed must be true/],
   ["missing provider mode", ["--set", "bookshelfMigration.confirmed=true", "--set-string", "image.digest=#{DIGEST}"], /providerMode must explicitly match/],
   ["missing image digest", ["--set", "bookshelfMigration.confirmed=true", "--set", "bookshelfMigration.providerMode=hardcover"], /image.digest must be set/],
   ["legacy repository retained by --reuse-values", ["--set", "bookshelfMigration.confirmed=true", "--set", "bookshelfMigration.providerMode=hardcover", "--set", "image.repository=ghcr.io/snapetech/bookshelfng", "--set-string", "image.digest=#{DIGEST}"], /image.repository must be the ChaptarrNG image/],

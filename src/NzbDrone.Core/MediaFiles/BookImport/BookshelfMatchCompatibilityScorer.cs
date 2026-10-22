@@ -57,12 +57,12 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             trackTags ??= Array.Empty<Dictionary<string, List<string>>>();
             var distance = new WeightedDistance();
-            var fileAuthors = GetMostCommonList(trackTags, "artist", "albumartist", "album artist", "author", "composer", "writer");
+            var fileAuthors = GetMostCommonList(trackTags, mediaType);
             var authorVariants = GetAuthorVariants(fileAuthors);
             var authorName = book?.Author?.Name ?? candidate.AuthorName;
             distance.AddString("author", authorVariants, authorName);
 
-            var fileTitle = GetMostCommon(trackTags, "album", "booktitle", "book title", "title");
+            var fileTitle = GetMostCommonTitle(trackTags, mediaType);
             var fileTitles = new[] { fileTitle, CleanTitleCruft.Replace(fileTitle ?? string.Empty, string.Empty) }
                 .Where(value => value != null)
                 .Distinct(StringComparer.Ordinal)
@@ -105,28 +105,44 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             }
             distance.AddString("book", fileTitles, titleOptions);
 
-            AddIdentifierDistance(distance, "isbn", "isbn_missing", GetMostCommon(trackTags, "isbn", "isbn13", "isbn-13", "isbn10", "isbn-10"), edition?.Isbn13 ?? edition?.Isbn10, ValidIsbnRegex);
-            AddIdentifierDistance(distance, "asin", "asin_missing", GetMostCommon(trackTags, "asin", "audible_asin", "audible asin"), edition?.Asin ?? edition?.AudibleASIN, ValidAsinRegex);
+            AddIdentifierDistance(
+                distance,
+                "isbn",
+                "isbn_missing",
+                mediaType == BookMediaType.Ebook ? GetMostCommon(trackTags, "isbn") : null,
+                edition?.Isbn13,
+                ValidIsbnRegex);
+            AddIdentifierDistance(
+                distance,
+                "asin",
+                "asin_missing",
+                mediaType == BookMediaType.Ebook ? GetMostCommon(trackTags, "asin") : null,
+                edition?.Asin,
+                ValidAsinRegex);
 
-            var localYear = GetMostCommonYear(trackTags, "date", "year", "originaldate", "original date");
-            var releaseDate = edition?.ReleaseDate ?? candidate.ReleaseDate;
-            if (localYear.HasValue && releaseDate.HasValue)
+            var localYear = mediaType == BookMediaType.Audiobook
+                ? GetMostCommonYear(trackTags, "date", "year")
+                : 0;
+            var releaseDate = edition?.ReleaseDate;
+            if (localYear > 0 && releaseDate.HasValue)
             {
                 var remoteYear = releaseDate.Value.Year;
-                var difference = Math.Abs(localYear.Value - remoteYear);
+                var difference = Math.Abs(localYear - remoteYear);
                 var maximumDifference = Math.Abs(DateTime.Now.Year - remoteYear);
                 distance.AddRatio("year", difference, maximumDifference);
             }
 
-            var localLanguage = GetMostCommon(trackTags, "language", "lang")?.CanonicalizeLanguage();
-            var editionLanguage = (edition?.Language ?? candidate.Lang)?.CanonicalizeLanguage();
+            var localLanguage = mediaType == BookMediaType.Ebook
+                ? GetMostCommonSeparatedValue(trackTags, "language")?.CanonicalizeLanguage()
+                : null;
+            var editionLanguage = mediaType == BookMediaType.Ebook ? edition?.Language?.CanonicalizeLanguage() : null;
             if (!string.IsNullOrWhiteSpace(localLanguage) && !string.IsNullOrWhiteSpace(editionLanguage))
             {
                 distance.AddBool("language", localLanguage != editionLanguage);
             }
 
-            var localPublisher = GetMostCommon(trackTags, "publisher");
-            var editionPublisher = edition?.Publisher ?? candidate.Publisher;
+            var localPublisher = mediaType == BookMediaType.Ebook ? GetMostCommonSeparatedValue(trackTags, "publisher") : null;
+            var editionPublisher = edition?.Publisher;
             if (!string.IsNullOrWhiteSpace(localPublisher) && !string.IsNullOrWhiteSpace(editionPublisher))
             {
                 distance.AddString("publisher", localPublisher, editionPublisher);
@@ -134,27 +150,25 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             if (mediaType == BookMediaType.Audiobook)
             {
-                var fileNarrators = GetNarrators(GetValues(trackTags, "narrator", "narrators"));
-                var editionNarrators = GetNarrators(
-                    (edition?.NarratorNames ?? new List<string>())
-                    .Concat(new[] { edition?.Narrator ?? candidate.NarratorNames }));
+                var fileNarrators = GetNarrators(GetValues(trackTags, "narrator", "narrators", "performer"));
+                var editionNarrators = GetNarrators(new[] { edition?.Narrator });
                 if (fileNarrators.Count > 0 && editionNarrators.Count > 0)
                 {
                     distance.AddString("narrator", fileNarrators, editionNarrators);
                 }
             }
 
-            var format = edition?.Format ?? edition?.EditionFormat ?? candidate.EditionFormat;
+            var format = edition?.Format;
             if (!string.IsNullOrWhiteSpace(format))
             {
                 if (mediaType == BookMediaType.Ebook)
                 {
-                    distance.AddBool("ebook_format", !EbookFormats.Contains(format, StringComparer.OrdinalIgnoreCase));
-                    distance.AddBool("wrong_format", AudiobookFormats.Contains(format, StringComparer.OrdinalIgnoreCase));
+                    distance.AddBool("ebook_format", !EbookFormats.Contains(format));
+                    distance.AddBool("wrong_format", AudiobookFormats.Contains(format));
                 }
                 else
                 {
-                    distance.AddBool("audio_format", !AudiobookFormats.Contains(format, StringComparer.OrdinalIgnoreCase));
+                    distance.AddBool("audio_format", !AudiobookFormats.Contains(format));
                 }
             }
 
@@ -164,27 +178,26 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
         private static void AddIdentifierDistance(WeightedDistance distance, string key, string missingKey, string localValue, string editionValue, Regex valid)
         {
-            var local = NormalizeIdentifier(localValue, valid);
-            var remote = NormalizeIdentifier(editionValue, valid);
-            if (!string.IsNullOrWhiteSpace(local) && string.Equals(local, remote, StringComparison.Ordinal))
+            var local = ValidIdentifier(localValue, valid);
+            if (!string.IsNullOrWhiteSpace(local) && string.Equals(local, editionValue, StringComparison.Ordinal))
             {
                 distance.Add(key, 0);
             }
-            else if (!string.IsNullOrWhiteSpace(local) || !string.IsNullOrWhiteSpace(remote))
+            else if (!string.IsNullOrWhiteSpace(local) || !string.IsNullOrWhiteSpace(editionValue))
             {
                 distance.Add(missingKey, 1);
             }
         }
 
-        private static string NormalizeIdentifier(string value, Regex valid)
+        private static string ValidIdentifier(string value, Regex valid)
         {
             if (string.IsNullOrWhiteSpace(value))
             {
                 return null;
             }
 
-            var normalized = value.Trim().Replace("-", string.Empty).ToUpperInvariant();
-            return valid.IsMatch(normalized) ? normalized : null;
+            var normalizedForValidation = value.Trim().Replace("-", string.Empty).ToUpperInvariant();
+            return valid.IsMatch(normalizedForValidation) ? value : null;
         }
 
         private static int? ParseYear(string value)
@@ -200,68 +213,152 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
         private static string GetMostCommon(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
         {
-            var values = GetValues(trackTags, names);
-            return values.GroupBy(value => value, StringComparer.OrdinalIgnoreCase)
+            var values = GetTrackValues(trackTags, names);
+            return values.GroupBy(value => value)
                 .OrderByDescending(group => group.Count())
                 .Select(group => group.First())
                 .FirstOrDefault();
         }
 
-        private static List<string> GetMostCommonList(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
+        private static string GetMostCommonSeparatedValue(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
+        {
+            var values = GetTrackValues(trackTags, names)
+                .Select(value => value?.Split(';').FirstOrDefault())
+                .ToList();
+            return values.GroupBy(value => value)
+                .OrderByDescending(group => group.Count())
+                .Select(group => group.First())
+                .FirstOrDefault();
+        }
+
+        private static List<string> GetMostCommonList(IReadOnlyList<Dictionary<string, List<string>>> trackTags, BookMediaType mediaType)
         {
             if (trackTags == null || trackTags.Count == 0)
             {
                 return new List<string>();
             }
 
-            var nameSet = new HashSet<string>(names ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
             var perTrack = trackTags
                 .Where(tags => tags != null)
-                .Select(tags => tags
-                    .Where(pair => nameSet.Contains(pair.Key))
-                    .SelectMany(pair => pair.Value ?? new List<string>())
-                    .Where(value => !string.IsNullOrWhiteSpace(value))
-                    .Select(value => value.Trim())
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList())
+                .Select(tags => GetLegacyAuthors(tags, mediaType))
                 .ToList();
 
             return perTrack
-                .GroupBy(values => string.Join("\u001f", values), StringComparer.Ordinal)
+                .GroupBy(values => string.Join(", ", values))
                 .OrderByDescending(group => group.Count())
                 .Select(group => group.First())
                 .FirstOrDefault() ?? new List<string>();
         }
 
-        private static int? GetMostCommonYear(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
+        private static List<string> GetLegacyAuthors(Dictionary<string, List<string>> tags, BookMediaType mediaType)
         {
-            var years = GetValues(trackTags, names)
-                .Select(ParseYear)
-                .Where(year => year.HasValue)
-                .Select(year => year.Value)
-                .ToList();
+            if (mediaType == BookMediaType.Ebook)
+            {
+                return SplitList(GetFirstValue(tags, "author", "authors"));
+            }
+
+            var bookAuthors = GetValues(tags, "albumartist", "album artist", "albumartists");
+            if (bookAuthors.Count == 0)
+            {
+                bookAuthors = GetValues(tags, "albumartistsort", "albumartist_sort", "album artist sort");
+            }
+
+            var performers = GetValues(tags, "artist", "performers");
+            if (performers.Count == 0)
+            {
+                performers = GetValues(tags, "performersort", "artist_sort", "performers_sort");
+            }
+
+            return bookAuthors.Concat(performers).Distinct().ToList();
+        }
+
+        private static string GetMostCommonTitle(IReadOnlyList<Dictionary<string, List<string>>> trackTags, BookMediaType mediaType)
+        {
+            var titles = trackTags?.Where(tags => tags != null)
+                .Select(tags => mediaType == BookMediaType.Audiobook
+                    ? GetLegacyAudioTitle(tags)
+                    : GetFirstValue(tags, "title", "booktitle", "book title"))
+                .ToList() ?? new List<string>();
+
+            return titles.GroupBy(value => value)
+                .OrderByDescending(group => group.Count())
+                .Select(group => group.First())
+                .FirstOrDefault();
+        }
+
+        private static string GetLegacyAudioTitle(Dictionary<string, List<string>> tags)
+        {
+            var bookTitle = GetFirstValue(tags, "album")
+                ?? GetFirstValue(tags, "album_sort", "albumsort", "album sort");
+            if (!string.IsNullOrWhiteSpace(bookTitle))
+            {
+                return bookTitle;
+            }
+
+            return GetFirstValue(tags, "title", "title_sort", "titlesort", "title sort");
+        }
+
+        private static int GetMostCommonYear(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
+        {
+            var years = trackTags?.Where(tags => tags != null)
+                .Select(tags => ParseYear(GetFirstValue(tags, names)) ?? 0)
+                .ToList() ?? new List<int>();
 
             return years.GroupBy(year => year)
                 .OrderByDescending(group => group.Count())
-                .Select(group => (int?)group.Key)
+                .Select(group => group.Key)
                 .FirstOrDefault();
+        }
+
+        private static List<string> GetTrackValues(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
+        {
+            return trackTags?.Where(tags => tags != null)
+                .Select(tags => GetFirstValue(tags, names))
+                .ToList() ?? new List<string>();
+        }
+
+        private static string GetFirstValue(Dictionary<string, List<string>> tags, params string[] names)
+        {
+            if (tags == null || names == null)
+            {
+                return null;
+            }
+
+            foreach (var name in names)
+            {
+                var pair = tags.FirstOrDefault(value => string.Equals(value.Key, name, StringComparison.OrdinalIgnoreCase));
+                var value = pair.Value?.FirstOrDefault();
+                if (value != null)
+                {
+                    return value;
+                }
+            }
+
+            return null;
         }
 
         private static List<string> GetValues(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
         {
-            if (trackTags == null || trackTags.Count == 0)
-            {
-                return new List<string>();
-            }
+            return trackTags?.Where(tags => tags != null)
+                .SelectMany(tags => GetValues(tags, names))
+                .ToList() ?? new List<string>();
+        }
 
+        private static List<string> GetValues(Dictionary<string, List<string>> tags, params string[] names)
+        {
             var nameSet = new HashSet<string>(names ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
-            return trackTags
-                .Where(tags => tags != null)
-                .SelectMany(tags => tags
-                    .Where(pair => nameSet.Contains(pair.Key))
-                    .SelectMany(pair => pair.Value ?? new List<string>()))
+            return tags?.Where(pair => nameSet.Contains(pair.Key))
+                .SelectMany(pair => pair.Value ?? new List<string>())
                 .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Select(value => value.Trim())
+                .ToList() ?? new List<string>();
+        }
+
+        private static List<string> SplitList(string value)
+        {
+            return (value ?? string.Empty)
+                .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(item => item.Trim())
+                .Where(item => !string.IsNullOrWhiteSpace(item))
                 .ToList();
         }
 
@@ -300,11 +397,32 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             foreach (var separator in new[] { " and ", " & " })
             {
-                if (input.Contains(separator, StringComparison.OrdinalIgnoreCase))
+                if (input.Contains(separator))
                 {
-                    return input.Split(new[] { separator }, StringSplitOptions.None)
-                        .SelectMany(SplitAuthor)
-                        .ToList();
+                    var result = new List<string>();
+                    foreach (var value in input.Split(new[] { separator }, StringSplitOptions.None).Select(value => value.Trim()))
+                    {
+                        var split = SplitAuthor(value);
+                        if (split.Any())
+                        {
+                            result.AddRange(split);
+                        }
+                        else
+                        {
+                            result.Add(value);
+                        }
+                    }
+
+                    return result;
+                }
+            }
+
+            if (input.Contains(','))
+            {
+                var split = input.Split(',').Select(value => value.Trim()).ToList();
+                if (split[0].Contains(' '))
+                {
+                    return split;
                 }
             }
 
@@ -428,7 +546,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 return string.Empty;
             }
 
-            var characters = input.ToLowerInvariant().RemoveAccent().ToCharArray();
+            var characters = input.ToLower().RemoveAccent().ToCharArray();
             return new string(Array.FindAll(characters, char.IsLetterOrDigit));
         }
     }

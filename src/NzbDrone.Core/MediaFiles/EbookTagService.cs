@@ -397,12 +397,18 @@ namespace NzbDrone.Core.MediaFiles
 
         public string GetIsbn(IEnumerable<EpubMetadataIdentifier> ids)
         {
-            var candidates = ids.Select(x => StripIsbn(x?.Identifier))
+            return SelectPreferredIsbn(ids?.Select(x => x?.Identifier));
+        }
+
+        internal static string SelectPreferredIsbn(IEnumerable<string> identifiers)
+        {
+            var candidates = (identifiers ?? Enumerable.Empty<string>())
+                .Select(StripIsbn)
                 .Where(x => x != null)
                 .OrderByDescending(x => x.Length);
 
-            return candidates.FirstOrDefault(x => x.StartsWith("978"))
-                ?? candidates.FirstOrDefault(x => x.StartsWith("979"))
+            return candidates.FirstOrDefault(x => x.StartsWith("978", StringComparison.Ordinal))
+                ?? candidates.FirstOrDefault(x => x.StartsWith("979", StringComparison.Ordinal))
                 ?? candidates.FirstOrDefault();
         }
 
@@ -510,6 +516,9 @@ namespace NzbDrone.Core.MediaFiles
             {
                 using (var bookRef = EpubReader.OpenBook(file))
                 {
+                    var isbnCandidates = new List<string>();
+                    string asin = null;
+
                     // Basic fields
                     if (!string.IsNullOrWhiteSpace(bookRef.Title))
                     {
@@ -571,11 +580,15 @@ namespace NzbDrone.Core.MediaFiles
                                     // Also add standard fields
                                     if (scheme.Contains("isbn"))
                                     {
-                                        tags["isbn"] = id.Identifier;
+                                        var isbn = StripIsbn(id.Identifier);
+                                        if (isbn != null)
+                                        {
+                                            isbnCandidates.Add(isbn);
+                                        }
                                     }
                                     else if (scheme.Contains("asin"))
                                     {
-                                        tags["asin"] = id.Identifier;
+                                        asin ??= id.Identifier;
                                     }
                                 }
                             }
@@ -675,6 +688,17 @@ namespace NzbDrone.Core.MediaFiles
                                 }
                             }
                         }
+                    }
+
+                    var selectedIsbn = SelectPreferredIsbn(isbnCandidates);
+                    if (selectedIsbn != null)
+                    {
+                        tags["isbn"] = selectedIsbn;
+                    }
+
+                    if (asin != null)
+                    {
+                        tags["asin"] = asin;
                     }
 
                     // Log all extracted fields
