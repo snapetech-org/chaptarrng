@@ -12,9 +12,9 @@ installed update-channel handoff. Those readiness gates remain separate.
 
 **Matcher parity validation — 2026-10-22:** The converted-install scorer now follows BookshelfNG's per-format tag fields and legacy identifier, year, narrator, and format comparisons; EPUB identifier extraction uses the legacy ISBN priority. ChaptarrNG's stronger identity and ambiguity checks remain in the pipeline. The full Release Core test project passed 4,604 tests with 0 failures and 19 skips; a separate Chromium browser integration run passed 3/3. PostgreSQL/live-service checks and real M4B checks remain skipped without their configured connection or toolchain. These are code checks, not scoring acceptance against a representative converted library. The public `v0.9.977` release is unchanged.
 
-**Shared-root author-path regression fix — 2026-10-22:** Startup repair and author-path building now preserve separate audiobook and ebook directories when both use the same configured root and that root is also the author's current path. Focused regression tests cover both the builder and startup repair. The local test attempt could not reach test execution because this environment lacks the configured SixLabors license; exact-head hosted validation is pending. Representative operator data and provider acceptance remain open.
+**Shared-root author-path regression fix — 2026-10-22:** Startup repair and author-path building now preserve separate audiobook and ebook directories when both use the same configured root and that root is also the author's current path. Focused regression tests cover both the builder and startup repair. The full Core test project passed 4,607 tests with 0 failures and 19 skips. Rebuilt local AppImage and Flatpak candidates both preserve the paths during installed-channel startup. Exact-head hosted validation, representative operator data, and provider acceptance remain open.
 
-**Desktop installed-channel rehearsal — 2026-10-22:** Checksum-verified public BookshelfNG `0.4.21.71` AppImage and Flatpak packages were installed in task-scoped locations, then replaced with the local ChaptarrNG `.978` candidates under the same desktop identity and data path. Both previewed without changing the source DB, converted the synthetic schema-158 fixture to schema 121 (four authors, nine books; SQLite integrity `ok`, no foreign-key violations), retained a source backup, and restored the BookshelfNG database byte-for-byte after rollback preview. The public `.71` packages were restored and both started on schema 158 with `/ping` HTTP 200. The pre-fix local `.978` candidate had three authors whose configured root folders equaled their author paths; it repaired those author paths and rewrote their ebook paths. The current source now has a regression fix for this path shape, pending exact-head hosted validation. Representative-data review remains open. This local rehearsal proves the package identity and rollback flow against a synthetic fixture, not operator-data acceptance or a live published update channel. No candidate or bridge was published.
+**Desktop installed-channel rehearsal — 2026-10-22:** Checksum-verified public BookshelfNG `0.4.21.71` AppImage and Flatpak packages were installed in task-scoped locations, then replaced with rebuilt local ChaptarrNG `.978` candidates under the same desktop identity and data path. Both migration previews left the source DB unchanged; normal startup converted the synthetic schema-158 fixture to schema 121 (four authors, nine books; SQLite integrity `ok`, no foreign-key violations), retained a source backup, and preserved the three authors' distinct ebook and audiobook paths when their shared root equaled the author path. No startup path-repair entries appeared. Restore previews left both databases unchanged; explicit rollback recovered the BookshelfNG database byte-for-byte. The public `.71` packages were restored and each started against schema 158 with `/ping` HTTP 200. The first local candidate build exposed the path collapse; the rebuilt candidate includes the regression fix. This rehearsal proves package identity and rollback behavior against a synthetic fixture, not operator-data acceptance or a live published update channel. Exact-head hosted validation and representative-data review remain open. No candidate or bridge was published.
 
 The exact revision-pinned path audit stays canonical in BookshelfNG's
 maintainer ledger: the
@@ -782,23 +782,24 @@ and follow the
 | Unraid | The ChaptarrNG template is maintained separately. | The legacy-template handoff is in [BookshelfNG Unraid PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5); its XML and settings-preservation check passed, but the Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
 | StartOS | No ChaptarrNG update is published. | The parked `bookshelfng-startos` package still pins `docker.io/snapetech/bookshelfng:hardcover-v0.4.21.37`; it keeps package ID `bookshelfng`, backs up `main`, `books`, and `downloads`, mounts `/config`, `/books`, and `/downloads`, exposes `8787`, and starts `/init`. A local Linux/amd64 production-image candidate from commit `2d6124e2` was exercised through a wrapper that invoked `/init` with no arguments and no CMD. With network disabled and task-scoped copies of populated BookshelfNG databases, it converted schema 158 to 121, retained saved port `8787`, Forms authentication, and the API key, returned `/ping` HTTP 200, passed the image health check, and passed SQLite integrity and foreign-key checks. Docker image metadata exposes only `8787/tcp` for the Bookshelf target. This is image and copied-database evidence only: `/books` and `/downloads` were empty, and no StartOS package build, device install/update, backup, or rollback was tested. The local amd64 BuildKit syntax check for linux/arm64 passed, but a full aarch64 image build could not execute because this host has no arm64 emulator. The StartOS ARM64 image build remains open. The package remains on the BookshelfNG image, and no handoff has been published. |
 | Helm | A same-name compatibility chart is in ChaptarrNG `main`; its versioned publisher targets the existing BookshelfNG OCI chart identity and requires both release-readiness gates, the migration bridge gate, and an explicit bridge request. The publisher has not run during the freeze. | Local build and chart contract checks cover the preserved release, StatefulSet, Service, selectors, port, `/config` mount, PVC, both provider modes, and pinned image. No chart is published; installed PVC upgrade, GitOps sync, and rollback remain open. Existing installs can keep the same chart source after acceptance, while pinned/offline archives need a manual update. |
-| AppImage | ChaptarrNG Linux x64 standalone archives are available. | Source-only launcher candidate keeps desktop ID `com.snapetech.bookshelfng`, `$XDG_DATA_HOME/bookshelfng`, and launches `Chaptarr` with the legacy data path. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper; use `.978` or newer. The pre-fix local `.978` AppImage passed a same-path update and rollback rehearsal from the checksum-verified public `.71` package using a synthetic schema-158 fixture. Representative-data and custom-root path acceptance remain open. |
-| Flatpak | ChaptarrNG Linux x64 standalone archives are available. | Source-only manifest keeps app ID `com.snapetech.BookshelfNG`, desktop launcher, and sandbox config path `bookshelfng`; updates use Flatpak. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper; use `.978` or newer. The pre-fix local `.978` bundle passed an in-place app-ID update and rollback rehearsal from the checksum-verified public `.71` bundle using a synthetic schema-158 fixture. Representative-data and custom-root path acceptance remain open. |
+| AppImage | ChaptarrNG Linux x64 standalone archives are available. | Source-only launcher candidate keeps desktop ID `com.snapetech.bookshelfng`, `$XDG_DATA_HOME/bookshelfng`, and launches `Chaptarr` with the legacy data path. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper. The rebuilt local `.978` AppImage passed a same-path update, path-preservation, and rollback rehearsal from the checksum-verified public `.71` package using a synthetic schema-158 fixture. Representative-data and live-channel acceptance remain open. |
+| Flatpak | ChaptarrNG Linux x64 standalone archives are available. | Source-only manifest keeps app ID `com.snapetech.BookshelfNG`, desktop launcher, and sandbox config path `bookshelfng`; updates use Flatpak. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper. The rebuilt local `.978` bundle passed an in-place app-ID update, path-preservation, and rollback rehearsal from the checksum-verified public `.71` bundle using a synthetic schema-158 fixture. Representative-data and live-channel acceptance remain open. |
 | Cloudron | No ChaptarrNG package update is published. | Source-only manifest and Dockerfile preserve app ID `tech.snapetech.bookshelfng`, `/config`, `/books`, `/downloads`, port `8787`, and `/ping`; no accepted Cloudron build, version feed, install/update, or rollback exists. |
 | Co-op Cloud | No ChaptarrNG recipe is accepted upstream. | Source-only recipe candidate preserves the `bookshelfng` stack volumes, mount paths, Traefik port, and candidate image variable. Maintainer acceptance, real Swarm update, backup, and rollback are open. |
 | Self-hosting catalogs | ChaptarrNG has a manual Compose candidate. | The candidate preserves the `bookshelfng` container and volume identities. CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other catalog records live in external repositories and have not been updated or accepted. |
 | Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, BookshelfNG's in-app updater, pinned/offline installs, and manually managed services still need an approved update path or explicit retirement decision. |
 
-The local desktop-candidate build on 2026-10-22 used ChaptarrNG application
-commit `18af70a7f0d4b1e85fccd007b8a40a88ff13c78f` and its `.978` Linux x64
-standalone archive (`cd590945b9ba7442c0196e8e46b74c5151c955b4e51a4be29e649d6c1f784d44`).
-The BookshelfNG-identity AppImage SHA-256 is
-`b7567aa7a27de5a8ac7d87d4d915ee3606abb5622c7c251939d3410343935c89`; the
+The rebuilt desktop candidates on 2026-10-22 contain the shared-root path fix.
+Their `.978` Linux x64 standalone archive SHA-256 is
+`b564ebfc4ca1d17ed1edaf1a794ddb374d41d226a3925dc3a99fbb1d980102e9`. The
+BookshelfNG-identity AppImage SHA-256 is
+`1709cbdfb6b965e7858c8bb68c2a10397f310e2d91fa101bd74600225df3350b`; the
 Flatpak bundle SHA-256 is
-`e45641065cd931e4ea11510f2687b489cc60b83aa62db5293d80f18054cae64c` and its
+`25015108e0f7ce3d7305e98a4b93174a0a8969333db7bb5f4f3394c5abfbc6f9` and its
 local ref is `app/com.snapetech.BookshelfNG/x86_64/stable` at commit
-`f5d7abbf55dc17085029b9ea2c84ccd821fb878f62d41f2e3369ae6bd22ba231`.
-Both artifacts returned HTTP 200 from `/ping` in local startup smokes. The
+`2dae189b1af9a8339984659226ddea0a0e4c484d2a794982a201ec5897a62378`. The
+candidate payloads returned HTTP 200 from `/ping` during installed-channel
+rehearsals. The
 checksum-verified public `.71` sources used for the installed-channel rehearsal
 were AppImage SHA-256
 `c116df08ddd9609e19d9b7d83f9206bb5a2940b99ce7dd5259fda44c991b06db` and
@@ -810,18 +811,20 @@ ID. Both source databases were restored byte-for-byte from the retained
 BookshelfNG backup, then the public `.71` apps started and returned `/ping` 200.
 These artifacts remain unsigned and unpublished.
 
-On 2026-10-22, both pre-fix `.978` packaged executables passed an installed-channel migration
-and rollback rehearsal using the synthetic schema-158 fixture. Preview left
-the source unchanged; apply reached Chaptarr schema 121 with four authors and
-nine books, SQLite integrity `ok`, and no foreign-key violations. Restore
-preview and explicit rollback recovered the BookshelfNG database byte-for-byte
-from its retained source backup; the old `.71` package then started against
-schema 158 and returned `/ping` 200. The Flatpak executable ran inside its
-sandbox with a task-scoped data path. The pre-fix `.978` candidate exposed automatic repairs for three authors
-whose configured root folder equaled the author path, including rewriting each
-ebook path. The source now includes a regression fix for this shape, pending
-exact-head hosted validation. Representative-data review remains open. The rehearsal does not validate operator data, provider fulfillment,
-or a live published update channel.
+On 2026-10-22, both rebuilt `.978` packaged executables passed an
+installed-channel migration and rollback rehearsal using the synthetic
+schema-158 fixture. Preview left the source unchanged; apply reached Chaptarr
+schema 121 with four authors and nine books, SQLite integrity `ok`, and no
+foreign-key violations. The three authors whose shared root equaled their
+author path retained distinct ebook and audiobook directories; startup logged
+no path repairs. Restore preview left the databases unchanged, and explicit
+rollback recovered the BookshelfNG database byte-for-byte from its retained
+source backup. The old `.71` AppImage and Flatpak then each started against
+schema 158 and returned `/ping` HTTP 200. Flatpak ran inside its sandbox with a
+task-scoped data path. An earlier candidate build exposed the path collapse;
+the rebuilt payloads contain the regression fix. Exact-head hosted validation
+and representative-data review remain open. This rehearsal does not validate
+operator data, provider fulfillment, or a live published update channel.
 
 Release, image, and package publishing require both
 `CHAPTARRNG_RELEASE_READY` and `BOOKSHELFNG_RELEASE_READY`. The legacy package,
@@ -895,9 +898,10 @@ authorized while these gates remain open. The remaining work is:
    handoff was tested; verify each published package checksum or image digest
    against the tested artifact.
 4. Repeat AppImage and Flatpak migration and rollback checks with representative
-   operator data, including the custom-root path case identified in the local
-   rehearsal. The `.978` candidates now pass local same-identity update, backup,
-   and rollback checks with a synthetic schema-158 fixture. Update and validate
+   operator data, including the custom-root path case now covered by the local
+   regression tests and rebuilt `.978` candidates. The candidates pass local
+   same-identity update, backup, path-preservation, and rollback checks with a
+   synthetic schema-158 fixture. Update and validate
    the external StartOS package, Cloudron feed, Co-op Cloud recipe collection, and
    supported catalog entries after a digest is published. Preserve a tested
    manual migration path for pinned and offline installs.
@@ -907,6 +911,6 @@ authorized while these gates remain open. The remaining work is:
    SQLite snapshots is recorded in the [migration guide](MIGRATE_FROM_BOOKSHELFNG.md#populated-sqlite-migration-and-restore-rehearsal-2026-10-21);
    this does not validate each user-facing workflow or package channel.
 
-The conversion preview, source-side archive helper, synthetic conversion checks, and package templates are present. Source-only AppImage, Flatpak, Cloudron, Co-op Cloud, and catalog candidates now preserve their legacy identities and data paths. The pre-fix local `.978` AppImage and Flatpak payloads have passed same-identity installed-channel update and rollback rehearsals with public `.71` packages and synthetic schema-158 data. Source includes a regression fix for the custom-root path shape, pending hosted validation. Representative-data acceptance and provider fulfillment, external-channel acceptance, an in-place deployment cutover, full feature parity, all legacy package publications, and a universal automatic update path are not established. See the
+The conversion preview, source-side archive helper, synthetic conversion checks, and package templates are present. Source-only AppImage, Flatpak, Cloudron, Co-op Cloud, and catalog candidates preserve their legacy identities and data paths. The rebuilt local `.978` AppImage and Flatpak payloads have passed same-identity installed-channel update, custom-root path-preservation, and rollback rehearsals with public `.71` packages and synthetic schema-158 data. Representative-data acceptance and provider fulfillment, external-channel acceptance, an in-place deployment cutover, full feature parity, all legacy package publications, and a universal automatic update path are not established. See the
 [BookshelfNG operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)
 and the linked parity roadmap for the detailed evidence ledger.

@@ -301,18 +301,21 @@ container files default to the source-only compatibility image target; replace
 it with the exact published image digest before accepting an update. Third-party
 catalog listings remain owned by their maintainers and are unchanged.
 
-The pre-fix local `.978` AppImage and Flatpak candidates are built, unsigned, and
-unpublished. Both passed a local installed-channel update rehearsal from the
-checksum-verified public `.71` packages: the AppImage candidate replaced the old
-binary at the same path, and Flatpak updated the same app ID. On a task-scoped
-schema-158 fixture, preview left the source unchanged, startup converted to
-schema 121, and restore recovered the source database byte-for-byte. The old
-`.71` packages were restored and each returned `/ping` 200. This does not
-establish an update from a published ChaptarrNG candidate or acceptance with
-operator data. The pre-fix candidate fixture has three author paths equal to configured
-root folders; it automatically repaired those records at startup, including
-rewriting their ebook paths. Source now has a regression fix for that path
-shape, pending hosted validation. Representative-data acceptance remains open. Cloudron package generation,
+The rebuilt local `.978` AppImage and Flatpak candidates are unsigned and
+unpublished. Both passed an installed-channel update rehearsal from the
+checksum-verified public `.71` packages: the AppImage replaced the old binary
+at the same path, and Flatpak updated the same app ID. On a task-scoped
+schema-158 fixture, migration preview left the source unchanged, startup
+converted to schema 121, and restore recovered the source database
+byte-for-byte. Candidate startup preserved distinct ebook and audiobook paths
+for three authors whose shared root equaled the author path; no path repair ran.
+The old `.71` packages were reinstalled and each returned `/ping` HTTP 200
+against the restored schema-158 database. The first local `.978` candidate
+build exposed this path collapse; the rebuilt candidates include the regression
+fix, covered by builder and startup-repair tests. The full Core test project
+passed 4,607 tests with 0 failures and 19 skips. These checks do not establish
+an update from a published ChaptarrNG candidate or acceptance with operator
+data. Representative-data acceptance remains open. Cloudron package generation,
 the canonical Co-op Cloud recipe review, and catalog-specific update and
 rollback flows have not been accepted. Keep each old installation in service
 until that channel has passed its acceptance checks or has an explicit
