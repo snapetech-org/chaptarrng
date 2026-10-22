@@ -29,7 +29,7 @@ permissions:
 jobs:
   helm-handoff:
     name: Render and verify in-place resource identity
-    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON('{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main"]}') || 'ubuntu-latest' }}
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     env:
       BOOKSHELFNG_CHART_SOURCE_SHA: adea130aeea2b6ea29c28a6ea8bf4706169d15e4
     steps:
