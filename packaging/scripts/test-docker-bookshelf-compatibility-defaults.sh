@@ -50,6 +50,12 @@ run_case 'production image keeps the StartOS /init command' bash -c '
   grep -Fq "dotnet /app/Chaptarr.dll -nobrowser -data=/config" "$2"
 ' _ "$repo_root/Dockerfile.cross" "$repo_root/docker-startos-init.sh"
 
+run_case 'source-build image includes legacy compatibility defaults' bash -c '
+  set -euo pipefail
+  grep -Fxq "COPY docker-entrypoint.sh /entrypoint.sh" "$1"
+  grep -Fxq "COPY docker-bookshelf-compatibility-defaults.sh /docker-bookshelf-compatibility-defaults.sh" "$1"
+' _ "$repo_root/Dockerfile.build"
+
 run_case 'compatibility image targets advertise their legacy container port' bash -c '
   set -euo pipefail
   grep -A1 -Fx "FROM runtime AS bookshelf-softcover" "$1" | grep -Fxq "EXPOSE 8787"
