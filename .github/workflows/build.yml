@@ -29,7 +29,7 @@ jobs:
   release-notes:
     name: Release-note contract
     if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot' && (github.event.action != 'edited' || github.event.changes.body != null)
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON('{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main"]}') || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -71,8 +71,9 @@ jobs:
 
   build:
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
-    # Every platform matrix leg uses its corresponding GitHub-hosted runner.
-    runs-on: ${{ matrix.os }}
+    # Trusted main Linux validation uses the isolated shared pool; PRs and
+    # non-Linux matrix legs use GitHub-hosted runners.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON('{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main"]}') || matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -326,7 +327,7 @@ jobs:
         PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
       run: echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> "$GITHUB_ENV"
 
-    - name: Install Chromium and system dependencies on GitHub-hosted Linux
+    - name: Install Chromium and system dependencies on Linux
       if: runner.os == 'Linux'
       env:
         PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
@@ -457,7 +458,7 @@ jobs:
 
   postgres-migrations:
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON('{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main"]}') || 'ubuntu-latest' }}
     services:
       postgres:
         image: postgres:16
@@ -554,7 +555,7 @@ jobs:
 
   docker-compatibility-build:
     name: Docker (${{ matrix.target }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON('{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main"]}') || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -617,7 +618,7 @@ jobs:
   validation-reconcile:
     name: Reconcile native runner receipts
     needs: [build, postgres-migrations, docker-compatibility-build]
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON('{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main"]}') || 'ubuntu-latest' }}
     permissions:
       contents: read
       actions: read

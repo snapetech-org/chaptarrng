@@ -49,13 +49,18 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertRegex(push, r"(?m)^    branches:\s*\[\s*main\s*\]$")
         self.assertNotIn("**", push)
 
-    def test_build_matrix_uses_hosted_runners(self) -> None:
+    def test_build_matrix_uses_shared_pool_only_for_trusted_main_linux(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         build = job_block(source, "build")
         runner_match = re.search(r"(?m)^    runs-on: (?P<runner>[^\n]+)$", build)
         self.assertIsNotNone(runner_match)
-        self.assertEqual(runner_match.group("runner"), "${{ matrix.os }}")
-        self.assertNotIn("self-hosted", source)
+        runner = runner_match.group("runner")
+        self.assertIn("matrix.os == 'ubuntu-latest'", runner)
+        self.assertIn('"group":"ng-shared-main-jit"', runner)
+        self.assertIn("github.event_name == 'push'", runner)
+        self.assertIn("github.event_name == 'workflow_dispatch'", runner)
+        self.assertIn("github.ref == 'refs/heads/main'", runner)
+        self.assertIn("|| matrix.os", runner)
         self.assertNotIn("TRUSTED_MAIN_RUNNERS_ENABLED", source)
 
     def test_pr_body_edits_revalidate_notes_without_restarting_builds(self) -> None:
@@ -155,9 +160,30 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
                 capture_output=True,
             )
 
+    def test_security_scans_use_the_shared_pool_only_on_trusted_main_runs(self) -> None:
+        workflow_dir = WORKFLOW.parent
+        for workflow_name, job_name in (
+            ("codeql.yml", "analyze"),
+            ("semgrep-community.yml", "semgrep"),
+        ):
+            source = (workflow_dir / workflow_name).read_text(encoding="utf-8")
+            job = job_block(source, job_name)
+            runner_match = re.search(r"(?m)^    runs-on: (?P<runner>[^\n]+)$", job)
+            self.assertIsNotNone(runner_match, workflow_name)
+            runner = runner_match.group("runner")
+            self.assertIn('"group":"ng-shared-main-jit"', runner)
+            self.assertIn("github.event_name == 'push'", runner)
+            self.assertIn("github.event_name == 'workflow_dispatch'", runner)
+            self.assertIn("github.event_name == 'schedule'", runner)
+            self.assertIn("github.ref == 'refs/heads/main'", runner)
+            self.assertIn("|| 'ubuntu-latest'", runner)
+        semgrep = (workflow_dir / "semgrep-community.yml").read_text(encoding="utf-8")
+        self.assertIn("docker info", semgrep)
+        self.assertIn("docker run", semgrep)
+
     def test_playwright_install_uses_hosted_linux_dependencies(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("Install Chromium and system dependencies on GitHub-hosted Linux", source)
+        self.assertIn("Install Chromium and system dependencies on Linux", source)
         self.assertIn("install --with-deps chromium", source)
         self.assertNotIn("runner.environment", source)
 
