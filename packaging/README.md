@@ -301,11 +301,14 @@ container files default to the source-only compatibility image target; replace
 it with the exact published image digest before accepting an update. Third-party
 catalog listings remain owned by their maintainers and are unchanged.
 
-The local AppImage and Flatpak build helper is available, but actual package
-builds, Cloudron package generation, the canonical Co-op Cloud recipe review,
-and catalog-specific update and rollback flows have not been accepted. Keep the old installation in service until that channel has
-passed its acceptance checks or has an explicit retirement decision. The
-StartOS package candidate and external repository boundary are documented in
+The local `.978` AppImage and Flatpak candidates are built and pass startup and
+synthetic migration/restore smokes. They are unsigned and unpublished;
+existing-channel updates and representative-data acceptance remain open.
+Cloudron package generation, the canonical Co-op Cloud recipe review, and
+catalog-specific update and rollback flows have not been accepted. Keep the old
+installation in service until that channel has passed its acceptance checks or
+has an explicit retirement decision. The StartOS package candidate and external
+repository boundary are documented in
 [`legacy/startos/README.md`](legacy/startos/README.md).
 
 ## Work required before enabling the legacy bridge
@@ -326,8 +329,9 @@ StartOS package candidate and external repository boundary are documented in
   manifest digests before changing any mutable image aliases.
 - Complete the separate [BookshelfNG feature-parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md),
   or explicitly accept and document the behavior that will not move.
-- Build and accept the AppImage and Flatpak packages; generate the Cloudron
-  version metadata from its accepted build; update the external StartOS
+- Test updates, backup, and rollback from existing AppImage and Flatpak
+  installations; generate the Cloudron version metadata from its accepted
+  build; update the external StartOS
   package, canonical Co-op Cloud recipe, and supported catalog records to a
   verified immutable digest. Run each channel's installed update, backup, and
   rollback checks. Record explicit retirement decisions for unsupported
