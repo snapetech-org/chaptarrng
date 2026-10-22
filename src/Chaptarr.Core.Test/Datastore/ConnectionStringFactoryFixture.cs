@@ -1,4 +1,5 @@
 using System.IO;
+using System.Collections.Generic;
 using Npgsql;
 using NUnit.Framework;
 using NzbDrone.Common.EnvironmentInfo;
@@ -17,6 +18,7 @@ namespace Chaptarr.Core.Test.Datastore
         private InterfaceStub<IAppFolderInfo> _folders;
         private IConfigFileProvider _configInstance;
         private IAppFolderInfo _foldersInstance;
+        private StubPostgresDatabaseInspector _postgresInspector;
 
         [SetUp]
         public void Setup()
@@ -31,13 +33,15 @@ namespace Chaptarr.Core.Test.Datastore
             Set("PostgresCacheDb", "cache");
             Set("PostgresNoResetOnClose", true);
 
+            _postgresInspector = new StubPostgresDatabaseInspector();
+
             _folders = InterfaceStub<IAppFolderInfo>.Create(out _foldersInstance);
             _folders.Values["AppDataFolder"] = "/tmp/chaptarr-test";
         }
 
         private void Set(string name, object value) => _config.Values[name] = value;
 
-        private ConnectionStringFactory Build() => new ConnectionStringFactory(_foldersInstance, _configInstance);
+        private ConnectionStringFactory Build() => new ConnectionStringFactory(_foldersInstance, _configInstance, _postgresInspector);
 
         private static NpgsqlConnectionStringBuilder Parse(DatabaseConnectionInfo info) => new NpgsqlConnectionStringBuilder(info.ConnectionString);
 
@@ -136,6 +140,35 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.That(factory.MainDbConnection.DatabaseType, Is.EqualTo(DatabaseType.SQLite));
             Assert.That(factory.CacheDbConnection.DatabaseType, Is.EqualTo(DatabaseType.SQLite));
+        }
+
+        [Test]
+        public void should_select_bookshelf_postgres_defaults_for_an_implicit_bookshelf_main_database()
+        {
+            Set("PostgresMainDb", BookshelfPostgresDatabaseSelector.ChaptarrMainDb);
+            Set("PostgresLogDb", BookshelfPostgresDatabaseSelector.ChaptarrLogDb);
+            Set("PostgresCacheDb", BookshelfPostgresDatabaseSelector.ChaptarrCacheDb);
+            _postgresInspector.States[BookshelfPostgresDatabaseSelector.BookshelfMainDb] =
+                new PostgresDatabaseState(true, DatabaseLineage.BookshelfNG, false);
+
+            var factory = Build();
+
+            Assert.That(Parse(factory.MainDbConnection).Database, Is.EqualTo(BookshelfPostgresDatabaseSelector.BookshelfMainDb));
+            Assert.That(Parse(factory.LogDbConnection).Database, Is.EqualTo(BookshelfPostgresDatabaseSelector.BookshelfLogDb));
+            Assert.That(Parse(factory.CacheDbConnection).Database, Is.EqualTo(BookshelfPostgresDatabaseSelector.BookshelfCacheDb));
+        }
+
+        private sealed class StubPostgresDatabaseInspector : IPostgresDatabaseInspector
+        {
+            public Dictionary<string, PostgresDatabaseState> States { get; } = new Dictionary<string, PostgresDatabaseState>();
+
+            public PostgresDatabaseState Inspect(string connectionString)
+            {
+                var database = new NpgsqlConnectionStringBuilder(connectionString).Database;
+                return States.TryGetValue(database, out var state)
+                    ? state
+                    : new PostgresDatabaseState(false, DatabaseLineage.Empty, false);
+            }
         }
     }
 }

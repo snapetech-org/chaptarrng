@@ -27,6 +27,25 @@ moves the Chaptarr tables into the schema selected by the existing connection
 search path. Rollback moves the retained BookshelfNG tables back and preserves
 the displaced Chaptarr tables in a `chaptarrng_backup_*` schema.
 
+### Database-name compatibility
+
+BookshelfNG's implicit PostgreSQL database names are `readarr-main`,
+`readarr-log`, and `readarr-cache`; ChaptarrNG's fresh-install defaults are
+`chaptarr-main`, `chaptarr-log`, and `chaptarr-cache`. Current `main` checks
+the implicit `chaptarr-main` database and falls back to `readarr-main` only
+when the former is empty and the latter has a recognized BookshelfNG or
+ChaptarrNG schema. If the default database is unsupported while the legacy
+database contains application data, startup stops instead of choosing one.
+Explicitly configured database names are preserved.
+
+When the selected main database is BookshelfNG, or a converted ChaptarrNG
+database carrying the dedicated `BookshelfNGDatabaseMigrated` marker, implicit
+log and cache names resolve to `readarr-log` and `readarr-cache`. Explicit log
+and cache names remain in effect. This allows a restart after conversion to
+continue using the same PostgreSQL databases even though the defaults are not
+written to `config.xml`. This is source-candidate behavior; it does not change
+the published `.977` support statement above.
+
 The schema backups remain in the same PostgreSQL database. They are not a
 replacement for an independent database backup. The converter expects the
 BookshelfNG application to be stopped; its advisory lock coordinates ChaptarrNG
@@ -88,6 +107,12 @@ stored beside `readarr.db` in the ChaptarrNG app data directory.
   apply, restore preview, rollback, normal-startup conversion, and rejection of
   a future schema version and an unsupported view. This does not substitute for
   representative data.
+- 2026-10-22 default-name compatibility validation: the full Core suite with
+  PostgreSQL enabled passed 4,632 tests with 0 failures and 11 skips. The
+  focused PostgreSQL 17 selector, schema-inspector, and converter checks passed
+  22/22, including migration-marker inspection and real database-name
+  selection across a conversion restart. Representative operator PostgreSQL
+  handoff remains open.
 - Hosted synthetic PostgreSQL conversion and rollback fixture: passed 4/4 cases on exact-head run [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100), including normal-startup conversion and backup retention. This is one synthetic migration-158 schema. Representative operator data, independent backup/restore, and rollback acceptance on a supported deployment remain open.
 - Verify PostgreSQL BookshelfNG migrations and ChaptarrNG runtime startup in
   the supported deployment, including sequence allocation after import.

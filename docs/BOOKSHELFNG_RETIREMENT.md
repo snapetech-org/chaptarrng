@@ -16,6 +16,8 @@ installed update-channel handoff. Those readiness gates remain separate.
 
 **Desktop installed-channel rehearsal — 2026-10-22:** Checksum-verified public BookshelfNG `0.4.21.71` AppImage and Flatpak packages were installed in task-scoped locations, then replaced with rebuilt local ChaptarrNG `.978` candidates under the same desktop identity and data path. Both migration previews left the source DB unchanged; normal startup converted the synthetic schema-158 fixture to schema 121 (four authors, nine books; SQLite integrity `ok`, no foreign-key violations), retained a source backup, and preserved the three authors' distinct ebook and audiobook paths when their shared root equaled the author path. No startup path-repair entries appeared. Restore previews left both databases unchanged; explicit rollback recovered the BookshelfNG database byte-for-byte. The public `.71` packages were restored and each started against schema 158 with `/ping` HTTP 200. The first local candidate build exposed the path collapse; the rebuilt candidate includes the regression fix. This rehearsal proves package identity and rollback behavior against a synthetic fixture, not operator-data acceptance or a live published update channel. Exact-head hosted validation and representative-data review remain open. No candidate or bridge was published.
 
+**PostgreSQL default-name compatibility — 2026-10-22:** The source candidate now resolves implicit BookshelfNG `readarr-*` PostgreSQL database names, carries the main/log/cache selection across restart through a dedicated migration marker, preserves explicitly configured names, and stops on ambiguous populated schemas. The full Core suite with PostgreSQL enabled passed 4,632 tests with 0 failures and 11 skips; focused PostgreSQL 17 selector, inspector, and converter checks passed 22/22, including live database-name selection and restart behavior. Separate operator data and installed PostgreSQL handoff remain unverified. No release or bridge was published.
+
 The exact revision-pinned path audit stays canonical in BookshelfNG's
 maintainer ledger: the
 [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md),
@@ -700,6 +702,16 @@ the original tables in a backup schema. Local PostgreSQL 17 fixtures passed
 including rollback and normal-startup conversion with backup retention; this
 remains synthetic evidence. Operator-data acceptance remains open; see the
 [PostgreSQL migration notes](BOOKSHELFNG_POSTGRESQL_MIGRATION.md).
+
+The current PostgreSQL source candidate also handles BookshelfNG's implicit
+`readarr-main`, `readarr-log`, and `readarr-cache` defaults, which differ from
+ChaptarrNG's unsaved `chaptarr-*` defaults. It selects the recognized legacy
+main database when the implicit ChaptarrNG main database is empty, preserves
+the selected legacy log/cache databases across restart using the migration
+marker, honors explicit database names, and stops on conflicting or
+unsupported populated data. This closes a source-selection gap only; it does
+not establish PostgreSQL operator-data acceptance or published-release
+support.
 
 Some BookshelfNG books do not contain enough data to infer ebook versus
 audiobook. Preview writes a private review file. Operators can provide a

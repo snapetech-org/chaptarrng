@@ -173,6 +173,28 @@ namespace Chaptarr.Core.Test.Http.Authentication
             Assert.That(BookshelfOidcEnvironmentSettings.AllowPrivateIssuer, Is.False);
         }
 
+        [Test]
+        public void should_treat_unpersisted_postgres_database_defaults_as_implicit()
+        {
+            var config = CreateConfigFileProvider();
+
+            Assert.That(config.IsPostgresMainDbExplicitlyConfigured(), Is.False);
+            Assert.That(config.IsPostgresLogDbExplicitlyConfigured(), Is.False);
+            Assert.That(config.IsPostgresCacheDbExplicitlyConfigured(), Is.False);
+        }
+
+        [Test]
+        public void should_preserve_explicit_postgres_database_names_even_when_they_match_defaults()
+        {
+            var config = CreateConfigFileProvider(
+                ("PostgresMainDb", "chaptarr-main"),
+                ("PostgresLogDb", "operator-log"));
+
+            Assert.That(config.IsPostgresMainDbExplicitlyConfigured(), Is.True);
+            Assert.That(config.IsPostgresLogDbExplicitlyConfigured(), Is.True);
+            Assert.That(config.IsPostgresCacheDbExplicitlyConfigured(), Is.False);
+        }
+
         [TestCase("https://books.example.com/signin-oidc", "https://books.example.com/signin-oidc")]
         [TestCase("http://books.example.com/signin-oidc", "")]
         [TestCase("https://books.example.com/callback", "")]

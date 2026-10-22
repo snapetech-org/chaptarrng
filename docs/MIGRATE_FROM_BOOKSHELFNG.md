@@ -213,6 +213,14 @@ requires migration 158, and databases earlier than migration 14 require that
 unreleased source fix. Do not switch applications while the retirement freeze
 is active.
 
+The current PostgreSQL candidate also recognizes BookshelfNG's implicit
+`readarr-main`, `readarr-log`, and `readarr-cache` names when ChaptarrNG's
+database names were never explicitly configured. It resumes on those names
+after conversion using the migration marker in the main database. Explicit
+database-name settings take precedence, and ambiguous populated databases stop
+startup for review. See the candidate notes for the exact selection rules;
+this behavior is not included in published `v0.9.977`.
+
 Environment variables are outside the database conversion. If BookshelfNG
 used `BOOKSHELF_ALLOW_API_KEY_QUERY=false`, ChaptarrNG honors it while
 `CHAPTARR__AUTH__ALLOWAPIKEYQUERY` is unset. Prefer the ChaptarrNG setting for

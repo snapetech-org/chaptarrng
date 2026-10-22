@@ -27,6 +27,8 @@ namespace NzbDrone.Core.Datastore
     /// </summary>
     public static class BookshelfDatabaseImporter
     {
+        internal const string BookshelfNGMigrationMarkerKey = "BookshelfNGDatabaseMigrated";
+
         private const int SupportedSourceMigration = 158;
         private static readonly IReadOnlyDictionary<string, string> CompatibleIndexerContracts =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -1726,6 +1728,7 @@ namespace NzbDrone.Core.Datastore
             const string legacyMatchKey = "bookimportminimummatchpercent";
             const string chaptarrStrictnessKey = "bookmatchingstrictness";
             const string chaptarrMatchCompatibilityKey = "bookshelfmatchcompatibility";
+            const string bookshelfMigrationMarkerKey = "bookshelfngdatabasemigrated";
             const string legacyHardcoverTokenKey = "hardcoverauth";
             const string chaptarrHardcoverTokenKey = "hardcoverapitoken";
             const string chaptarrHardcoverEnabledKey = "hardcoverenabled";
@@ -1742,6 +1745,7 @@ namespace NzbDrone.Core.Datastore
             var legacyRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMatchKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var strictnessRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrStrictnessKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var matchCompatibilityRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrMatchCompatibilityKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfMigrationMarkerRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfMigrationMarkerKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var legacyHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverEnabledRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverEnabledKey, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -1754,6 +1758,11 @@ namespace NzbDrone.Core.Datastore
             if (legacyRows.Count > 1 || strictnessRows.Count > 1 || matchCompatibilityRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate match settings; conversion stopped before promotion.");
+            }
+
+            if (bookshelfMigrationMarkerRows.Count > 1)
+            {
+                throw new InvalidDataException("BookshelfNG config contains duplicate migration markers; conversion stopped before promotion.");
             }
 
             if (legacyHardcoverTokenRows.Count > 1 || chaptarrHardcoverTokenRows.Count > 1)
@@ -1849,6 +1858,25 @@ namespace NzbDrone.Core.Datastore
                      !bool.TryParse(GetString(matchCompatibilityRows[0], "Value"), out _))
             {
                 throw new InvalidDataException("BookshelfNG BookshelfMatchCompatibility must be true or false; conversion stopped before promotion.");
+            }
+
+            if (bookshelfMigrationMarkerRows.Count == 0)
+            {
+                var migrationMarker = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["Key"] = BookshelfNGMigrationMarkerKey,
+                    ["Value"] = "true"
+                };
+                if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+                {
+                    migrationMarker["Id"] = checked(++nextGeneratedConfigId);
+                }
+                configRows.Add(migrationMarker);
+            }
+            else
+            {
+                bookshelfMigrationMarkerRows[0]["Key"] = BookshelfNGMigrationMarkerKey;
+                bookshelfMigrationMarkerRows[0]["Value"] = "true";
             }
 
             var hardcoverTokenDisposition = "no saved Hardcover token was present";
@@ -1991,7 +2019,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Config", sourceCount, 0, sourceCount, 0, 0,
-                "saved configuration is copied with compatible fields; " + matchSettingDisposition + "; " + hardcoverTokenDisposition + "; " + hardcoverModeDisposition + "; " + metadataServerUrlDisposition + "; " + authorPathSettingDisposition);
+                "saved configuration is copied with compatible fields; a dedicated BookshelfNG migration marker is retained on the ChaptarrNG database; " + matchSettingDisposition + "; " + hardcoverTokenDisposition + "; " + hardcoverModeDisposition + "; " + metadataServerUrlDisposition + "; " + authorPathSettingDisposition);
         }
 
         private static void MapBookshelfNewAuthorRoot(

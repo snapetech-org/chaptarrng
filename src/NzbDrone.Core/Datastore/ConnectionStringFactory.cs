@@ -20,19 +20,37 @@ namespace NzbDrone.Core.Datastore
     public class ConnectionStringFactory : IConnectionStringFactory
     {
         private readonly IConfigFileProvider _configFileProvider;
+        private readonly IPostgresDatabaseInspector _postgresDatabaseInspector;
 
-        public ConnectionStringFactory(IAppFolderInfo appFolderInfo, IConfigFileProvider configFileProvider)
+        public ConnectionStringFactory(
+            IAppFolderInfo appFolderInfo,
+            IConfigFileProvider configFileProvider,
+            IPostgresDatabaseInspector postgresDatabaseInspector)
         {
             _configFileProvider = configFileProvider;
+            _postgresDatabaseInspector = postgresDatabaseInspector;
 
-            MainDbConnection = _configFileProvider.PostgresHost.IsNotNullOrWhiteSpace() ? GetPostgresConnectionString(_configFileProvider.PostgresMainDb) :
-                GetConnectionString(appFolderInfo.GetDatabase());
+            if (_configFileProvider.PostgresHost.IsNotNullOrWhiteSpace())
+            {
+                var selection = BookshelfPostgresDatabaseSelector.Resolve(
+                    _configFileProvider.PostgresMainDb,
+                    _configFileProvider.PostgresLogDb,
+                    _configFileProvider.PostgresCacheDb,
+                    _configFileProvider.IsPostgresMainDbExplicitlyConfigured(),
+                    _configFileProvider.IsPostgresLogDbExplicitlyConfigured(),
+                    _configFileProvider.IsPostgresCacheDbExplicitlyConfigured(),
+                    InspectPostgresDatabase);
 
-            LogDbConnection = _configFileProvider.PostgresHost.IsNotNullOrWhiteSpace() ? GetPostgresConnectionString(_configFileProvider.PostgresLogDb) :
-                GetConnectionString(appFolderInfo.GetLogDatabase());
-
-            CacheDbConnection = _configFileProvider.PostgresHost.IsNotNullOrWhiteSpace() ? GetPostgresConnectionString(_configFileProvider.PostgresCacheDb) :
-                GetConnectionString(appFolderInfo.GetCacheDatabase());
+                MainDbConnection = GetPostgresConnectionString(selection.MainDb);
+                LogDbConnection = GetPostgresConnectionString(selection.LogDb);
+                CacheDbConnection = GetPostgresConnectionString(selection.CacheDb);
+            }
+            else
+            {
+                MainDbConnection = GetConnectionString(appFolderInfo.GetDatabase());
+                LogDbConnection = GetConnectionString(appFolderInfo.GetLogDatabase());
+                CacheDbConnection = GetConnectionString(appFolderInfo.GetCacheDatabase());
+            }
         }
 
         public DatabaseConnectionInfo MainDbConnection { get; private set; }
@@ -81,6 +99,16 @@ namespace NzbDrone.Core.Datastore
             ApplyPostgresTls(connectionBuilder);
 
             return new DatabaseConnectionInfo(DatabaseType.PostgreSQL, connectionBuilder.ConnectionString);
+        }
+
+        private PostgresDatabaseState InspectPostgresDatabase(string dbName)
+        {
+            if (string.IsNullOrWhiteSpace(dbName))
+            {
+                return new PostgresDatabaseState(false, DatabaseLineage.Empty, false);
+            }
+
+            return _postgresDatabaseInspector.Inspect(GetPostgresConnectionString(dbName).ConnectionString);
         }
 
         private void ApplyPostgresTls(NpgsqlConnectionStringBuilder connectionBuilder)

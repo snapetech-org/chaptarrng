@@ -65,6 +65,9 @@ namespace NzbDrone.Core.Configuration
         string PostgresMainDb { get; }
         string PostgresLogDb { get; }
         string PostgresCacheDb { get; }
+        bool IsPostgresMainDbExplicitlyConfigured();
+        bool IsPostgresLogDbExplicitlyConfigured();
+        bool IsPostgresCacheDbExplicitlyConfigured();
         string PostgresSslMode { get; }
         string PostgresRootCert { get; }
         bool PostgresNoResetOnClose { get; }
@@ -308,6 +311,9 @@ namespace NzbDrone.Core.Configuration
         public string PostgresMainDb => _postgresOptions?.MainDb ?? GetValue("PostgresMainDb", "chaptarr-main", persist: false);
         public string PostgresLogDb => _postgresOptions?.LogDb ?? GetValue("PostgresLogDb", "chaptarr-log", persist: false);
         public string PostgresCacheDb => _postgresOptions?.CacheDb ?? GetValue("PostgresCacheDb", "chaptarr-cache", persist: false);
+        public bool IsPostgresMainDbExplicitlyConfigured() => IsPostgresDatabaseNameExplicitlyConfigured("PostgresMainDb", _postgresOptions?.MainDb);
+        public bool IsPostgresLogDbExplicitlyConfigured() => IsPostgresDatabaseNameExplicitlyConfigured("PostgresLogDb", _postgresOptions?.LogDb);
+        public bool IsPostgresCacheDbExplicitlyConfigured() => IsPostgresDatabaseNameExplicitlyConfigured("PostgresCacheDb", _postgresOptions?.CacheDb);
         public string PostgresSslMode => _postgresOptions?.SslMode ?? GetValue("PostgresSslMode", string.Empty, persist: false);
         public string PostgresRootCert => _postgresOptions?.RootCert ?? GetValue("PostgresRootCert", string.Empty, persist: false);
         public bool PostgresNoResetOnClose => _postgresOptions?.NoResetOnClose ?? GetValueBoolean("PostgresNoResetOnClose", true, persist: false);
@@ -409,6 +415,17 @@ namespace NzbDrone.Core.Configuration
                     //return the default value
                     return defaultValue.ToString();
                 });
+        }
+
+        private bool IsPostgresDatabaseNameExplicitlyConfigured(string key, string environmentValue)
+        {
+            if (environmentValue != null)
+            {
+                return true;
+            }
+
+            var config = LoadConfigFile().Descendants(CONFIG_ELEMENT_NAME).Single();
+            return config.Descendants(key).Any();
         }
 
         public void SetValue(string key, object value)
