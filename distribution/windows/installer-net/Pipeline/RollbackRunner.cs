@@ -16,7 +16,9 @@ public static class RollbackRunner
         IProgress<LogLine> log,
         CancellationToken ct = default,
         int? bookshelfServiceStartType = null,
-        bool? bookshelfServiceWasRunning = null)
+        bool? bookshelfServiceWasRunning = null,
+        string? chaptarrConsolePath = null,
+        bool restorePostgresDatabase = false)
     {
         var scriptPath = ExtractToTemp();
         try
@@ -36,6 +38,15 @@ public static class RollbackRunner
             {
                 arguments.Add("-BookshelfServiceWasRunning");
                 arguments.Add(bookshelfServiceWasRunning.Value ? "1" : "0");
+            }
+            if (!string.IsNullOrWhiteSpace(chaptarrConsolePath))
+            {
+                arguments.Add("-ChaptarrConsolePath");
+                arguments.Add(chaptarrConsolePath);
+            }
+            if (restorePostgresDatabase)
+            {
+                arguments.Add("-RestorePostgresDatabase");
             }
 
             var exit = await PowerShellRunner.RunScriptAsync(

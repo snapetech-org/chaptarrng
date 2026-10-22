@@ -5,6 +5,10 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $DataDirectory,
 
+    [string] $ChaptarrConsolePath,
+
+    [switch] $RestorePostgresDatabase,
+
     [int] $BookshelfServiceStartType = 0,
 
     [int] $BookshelfServiceWasRunning = -1
@@ -15,6 +19,7 @@ $BackupPath = [IO.Path]::GetFullPath($BackupPath)
 $DataDirectory = [IO.Path]::GetFullPath($DataDirectory)
 $backupBin = Join-Path $BackupPath 'bin'
 $backupReadarrConsole = Join-Path $backupBin 'Readarr.Console.exe'
+$postgresDump = Join-Path $BackupPath 'postgres-main.dump'
 $migrationRecordPath = 'HKLM:\SOFTWARE\ChaptarrNG\BookshelfMigration'
 $migrationRecord = Get-ItemProperty -LiteralPath $migrationRecordPath -ErrorAction SilentlyContinue
 $savedStartType = if ($BookshelfServiceStartType -in @(2, 3, 4)) {
@@ -40,8 +45,12 @@ $startTypeName = switch ($savedStartType) {
 
 if (-not (Test-Path -LiteralPath $backupBin -PathType Container) -or
     -not (Test-Path -LiteralPath $backupReadarrConsole -PathType Leaf) -or
-    -not (Test-Path -LiteralPath (Join-Path $BackupPath 'readarr.db') -PathType Leaf)) {
+    (-not (Test-Path -LiteralPath (Join-Path $BackupPath 'readarr.db') -PathType Leaf) -and
+     -not (Test-Path -LiteralPath $postgresDump -PathType Leaf))) {
     throw "The BookshelfNG rollback backup is incomplete: $BackupPath"
+}
+if ($RestorePostgresDatabase -and -not (Test-Path -LiteralPath $postgresDump -PathType Leaf)) {
+    throw "The independent PostgreSQL main-database backup is missing: $postgresDump"
 }
 
 function Stop-And-DeleteService([string] $Name) {
@@ -150,6 +159,21 @@ Assert-ServiceTargetsDataDirectory 'Readarr'
 Stop-And-DeleteService 'Chaptarr'
 Stop-ServiceOnly 'Readarr'
 
+if ($RestorePostgresDatabase) {
+    if ([string]::IsNullOrWhiteSpace($ChaptarrConsolePath)) {
+        $ChaptarrConsolePath = Join-Path $DataDirectory 'bin\Chaptarr.Console.exe'
+    }
+    if (-not (Test-Path -LiteralPath $ChaptarrConsolePath -PathType Leaf)) {
+        throw "The ChaptarrNG utility needed to restore the PostgreSQL backup was not found: $ChaptarrConsolePath"
+    }
+
+    Write-Host 'Restoring the independent PostgreSQL database backups before restoring BookshelfNG binaries...'
+    & $ChaptarrConsolePath '-restore-bookshelf-postgres' "-bookshelf-postgres-backup=$BackupPath" "-data=$BackupPath" '-confirm-bookshelf-service-stopped'
+    if ($LASTEXITCODE -ne 0) {
+        throw "ChaptarrNG PostgreSQL backup restore exited with code $LASTEXITCODE. The dump is preserved at $postgresDump."
+    }
+}
+
 $currentBin = Join-Path $DataDirectory 'bin'
 if (Test-Path -LiteralPath $currentBin) {
     Remove-Item -LiteralPath $currentBin -Recurse -Force
@@ -160,7 +184,13 @@ if (-not (Test-Path -LiteralPath $readarrConsole -PathType Leaf)) {
     throw "The restored BookshelfNG executable is missing from $currentBin."
 }
 
-foreach ($name in @('config.xml', 'readarr.db', 'readarr.db-journal', 'readarr.db-wal')) {
+$hasSqliteBackup = Test-Path -LiteralPath (Join-Path $BackupPath 'readarr.db') -PathType Leaf
+$restoreFileNames = if ($hasSqliteBackup) {
+    @('config.xml', 'readarr.db', 'readarr.db-journal', 'readarr.db-wal')
+} else {
+    @('config.xml')
+}
+foreach ($name in $restoreFileNames) {
     $current = Join-Path $DataDirectory $name
     $source = Join-Path $BackupPath $name
     if (Test-Path -LiteralPath $current) {

@@ -4,12 +4,18 @@
 > convert a PostgreSQL BookshelfNG database. Current `main` upgrades supported
 > older BookshelfNG schemas on a disposable PostgreSQL snapshot before staging
 > ChaptarrNG, and retains the untouched source schema for rollback. Local
-> PostgreSQL 17 coverage passes 8/8 cases, including source migrations 1, 13,
-> 22, and 33, the migration-158 schema, startup conversion, rejection of a
-> future schema version, and refusal of unsupported PostgreSQL objects. These
-> are synthetic fixtures; representative
-> operator-data conversion, independent backup/restore, installed rollback,
-> provider parity, and channel handoff remain open. See the
+> PostgreSQL 17 converter fixtures cover source migrations 1, 13, 22, 33, and
+> 158, startup conversion, rollback, and fail-closed unsupported schemas. The
+> full Core suite with PostgreSQL enabled passed 4,632 tests with 0 failures
+> and 11 skips; the focused selector, inspector, and converter checks passed
+> 22/22. The trusted local bulk suite passed on 2026-10-22 with 4,688 passed,
+> 0 failed, 22 skipped, and 2 inconclusive NUnit cases; its real-tool backup
+> fixture is reserved for the hosted disposable-PostgreSQL job. A candidate
+> Windows installer adds an independent `pg_dump` backup and `pg_restore`
+> rollback path. Native Windows service/rollback validation and exact-head
+> hosted PostgreSQL validation remain outstanding. Representative
+> operator-data conversion, installed restore/rollback, provider parity, and
+> channel handoff remain open. See the
 > [retirement status report](BOOKSHELFNG_RETIREMENT.md) for the full release
 > and acceptance state.
 
@@ -47,10 +53,18 @@ written to `config.xml`. This is source-candidate behavior; it does not change
 the published `.977` support statement above.
 
 The schema backups remain in the same PostgreSQL database. They are not a
-replacement for an independent database backup. The converter expects the
-BookshelfNG application to be stopped; its advisory lock coordinates ChaptarrNG
-conversions but does not stop BookshelfNG or other database clients from
-writing.
+replacement for an independent database backup. The candidate Windows
+installer requires `pg_dump` and `pg_restore` on `PATH`, an explicit
+`PostgresUser`, and no other client sessions on the selected main, log, and
+cache databases before backup. It stores a verified custom-format dump of each
+unique database's active application schema and restores those dumps before
+reinstalling BookshelfNG. Restore archives are validated before changes and
+each database restore is transactional. It does not capture PostgreSQL roles,
+cluster settings, or unrelated schemas, and it does not replace a full
+operator-managed cluster backup. Keep all database clients stopped through
+preview, review, and apply. The converter's advisory lock
+coordinates ChaptarrNG conversions but does not stop BookshelfNG or other
+database clients from writing.
 
 Current `main` requires a `VersionInfo` table whose maximum version is between
 1 and 158. BookshelfNG shares migration IDs with its upstream, so valid

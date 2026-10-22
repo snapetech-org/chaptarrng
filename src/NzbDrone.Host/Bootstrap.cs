@@ -252,9 +252,36 @@ namespace NzbDrone.Host
 
             var migrateBookshelf = startupContext.MigrateBookshelf || startupContext.PreviewBookshelfMigration;
             var restoreBookshelf = startupContext.RestoreBookshelf || startupContext.PreviewBookshelfRestore;
+            var postgresBackupMode = startupContext.CheckBookshelfPostgresBackup ||
+                startupContext.BackupBookshelfPostgres ||
+                startupContext.RestoreBookshelfPostgres;
+            var postgresUtilityCount =
+                (startupContext.CheckBookshelfPostgresBackup ? 1 : 0) +
+                (startupContext.BackupBookshelfPostgres ? 1 : 0) +
+                (startupContext.RestoreBookshelfPostgres ? 1 : 0);
+            if (postgresUtilityCount > 1 || (postgresBackupMode && (migrateBookshelf || restoreBookshelf)))
+            {
+                throw new InvalidOperationException("Choose one BookshelfNG migration or PostgreSQL backup utility command at a time.");
+            }
+
             if (migrateBookshelf && restoreBookshelf)
             {
                 throw new InvalidOperationException("Choose either BookshelfNG migration or BookshelfNG rollback, not both.");
+            }
+
+            if (startupContext.CheckBookshelfPostgresBackup)
+            {
+                return ApplicationModes.CheckBookshelfPostgresBackup;
+            }
+
+            if (startupContext.BackupBookshelfPostgres)
+            {
+                return ApplicationModes.BackupBookshelfPostgres;
+            }
+
+            if (startupContext.RestoreBookshelfPostgres)
+            {
+                return ApplicationModes.RestoreBookshelfPostgres;
             }
 
             if (restoreBookshelf)

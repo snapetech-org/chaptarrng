@@ -35,7 +35,10 @@ namespace NzbDrone.Common
             Console.WriteLine("                 /{0} Convert a BookshelfNG SQLite or PostgreSQL database and retain a source backup", StartupContext.MIGRATE_BOOKSHELF);
             Console.WriteLine("                 /{0} Preview restoration of a retained BookshelfNG backup", StartupContext.PREVIEW_BOOKSHELF_RESTORE);
             Console.WriteLine("                 /{0} Restore BookshelfNG from a retained backup; specify /bookshelf-backup=path-or-schema", StartupContext.RESTORE_BOOKSHELF);
-            Console.WriteLine("                 /{0} Confirm that all BookshelfNG or ChaptarrNG processes using this database are stopped", StartupContext.CONFIRM_BOOKSHELF_SERVICE_STOPPED);
+            Console.WriteLine("                 /{0} Check pg_dump and pg_restore before a Windows PostgreSQL handoff", StartupContext.CHECK_BOOKSHELF_POSTGRES_BACKUP);
+            Console.WriteLine("                 /{0} Create independent PostgreSQL database backups; specify /bookshelf-postgres-backup=directory", StartupContext.BACKUP_BOOKSHELF_POSTGRES);
+            Console.WriteLine("                 /{0} Restore independent PostgreSQL database backups; specify /bookshelf-postgres-backup=directory", StartupContext.RESTORE_BOOKSHELF_POSTGRES);
+            Console.WriteLine("                 /{0} Confirm that all BookshelfNG or ChaptarrNG processes using the selected databases are stopped", StartupContext.CONFIRM_BOOKSHELF_SERVICE_STOPPED);
             Console.WriteLine("                 <No Arguments>  Run application in console mode.");
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -62,6 +63,30 @@ public static class ServiceLifecycle
             $@"SYSTEM\CurrentControlSet\Services\{BookshelfServiceName}",
             writable: false);
         return key?.GetValue("ObjectName") as string ?? "LocalSystem";
+    }
+
+    public static IReadOnlyDictionary<string, string> GetBookshelfServiceEnvironment()
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(
+            $@"SYSTEM\CurrentControlSet\Services\{BookshelfServiceName}",
+            writable: false);
+        var values = key?.GetValue("Environment") as string[];
+        var environment = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (values is null)
+        {
+            return environment;
+        }
+
+        foreach (var value in values)
+        {
+            var separator = value.IndexOf('=');
+            if (separator > 0)
+            {
+                environment[value[..separator]] = value[(separator + 1)..];
+            }
+        }
+
+        return environment;
     }
 
     public static int GetBookshelfServiceStartType()

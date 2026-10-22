@@ -111,6 +111,11 @@ test('binds open sources only after masking their host directories', () => {
   assert.ok(operations.indexOf(descriptorBinds[0]) > finalHostMask);
   assert.equal(descriptorBinds[0].source, '/home/runner/work/project');
   assert.equal(descriptorBinds[0].target, '/mnt/workspace');
+  assert.deepEqual(
+    operations.filter((operation) => operation.target === '/etc/passwd' || operation.target === '/etc/group').map((operation) => operation.target),
+    ['/etc/passwd', '/etc/group']
+  );
+  assert.ok(operations.findIndex((operation) => operation.target === '/etc/passwd') > finalHostMask);
   assert.equal(descriptorBinds.at(-1).source, '/home/runner/work/_temp/validation-run/sandbox-marker');
 });
 

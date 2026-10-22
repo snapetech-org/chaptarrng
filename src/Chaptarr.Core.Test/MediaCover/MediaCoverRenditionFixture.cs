@@ -49,6 +49,25 @@ namespace Chaptarr.Core.Test.MediaCover
             }
         }
 
+        private class ConfigServiceProxy : DispatchProxy
+        {
+            public string MetadataServerUrl { get; set; }
+
+            protected override object Invoke(MethodInfo targetMethod, object[] args)
+            {
+                return targetMethod?.Name == "get_MetadataServerUrl"
+                    ? MetadataServerUrl
+                    : throw new NotImplementedException(targetMethod?.Name);
+            }
+        }
+
+        private static IConfigService CreateConfigServiceForImageHost(string host)
+        {
+            var configService = DispatchProxy.Create<IConfigService, ConfigServiceProxy>();
+            ((ConfigServiceProxy)(object)configService).MetadataServerUrl = $"https://{host}/";
+            return configService;
+        }
+
         private class ConfigFileProxy : DispatchProxy
         {
             protected override object Invoke(MethodInfo targetMethod, object[] args)
@@ -571,7 +590,7 @@ namespace Chaptarr.Core.Test.MediaCover
                 diskProvider: diskProvider,
                 appFolderInfo: appFolder,
                 coverExistsSpecification: null,
-                configService: null,
+                configService: CreateConfigServiceForImageHost("assets.hardcover.app"),
                 configFileProvider: null,
                 eventAggregator: null,
                 deferredCoverService: null,
@@ -623,7 +642,7 @@ namespace Chaptarr.Core.Test.MediaCover
                 diskProvider: diskProvider,
                 appFolderInfo: appFolder,
                 coverExistsSpecification: null,
-                configService: null,
+                configService: CreateConfigServiceForImageHost("assets.hardcover.app"),
                 configFileProvider: null,
                 eventAggregator: null,
                 deferredCoverService: null,
@@ -671,7 +690,7 @@ namespace Chaptarr.Core.Test.MediaCover
                 diskProvider: diskProvider,
                 appFolderInfo: appFolder,
                 coverExistsSpecification: null,
-                configService: null,
+                configService: CreateConfigServiceForImageHost("assets.hardcover.app"),
                 configFileProvider: null,
                 eventAggregator: null,
                 deferredCoverService: null,
@@ -730,7 +749,7 @@ namespace Chaptarr.Core.Test.MediaCover
                 diskProvider: diskProvider,
                 appFolderInfo: appFolder,
                 coverExistsSpecification: null,
-                configService: null,
+                configService: CreateConfigServiceForImageHost("assets.hardcover.app"),
                 configFileProvider: null,
                 eventAggregator: null,
                 deferredCoverService: null,

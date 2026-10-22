@@ -107,7 +107,8 @@ public static class ProcessStreamer
         string? workingDirectory,
         IProgress<LogLine> log,
         CancellationToken ct = default,
-        IReadOnlyDictionary<string, string?>? environment = null)
+        IReadOnlyDictionary<string, string?>? environment = null,
+        Action? onStarted = null)
     {
         var psi = new ProcessStartInfo
         {
@@ -159,6 +160,8 @@ public static class ProcessStreamer
         {
             throw new InvalidOperationException($"Failed to start process: {fileName}");
         }
+
+        onStarted?.Invoke();
 
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();

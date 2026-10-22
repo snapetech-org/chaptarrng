@@ -130,6 +130,31 @@ function createSyntheticGitRepository(workspace, runDirectory) {
   ]);
 }
 
+function createSandboxIdentityFiles(runDirectory) {
+  const uid = typeof process.getuid === 'function' ? process.getuid() : 65534;
+  const gid = typeof process.getgid === 'function' ? process.getgid() : 65534;
+  const users = new Map([
+    [0, 'root:x:0:0:root:/mnt/run-data/home:/usr/sbin/nologin'],
+    [65534, 'nobody:x:65534:65534:nobody:/mnt/run-data/home:/usr/sbin/nologin'],
+  ]);
+  if (!users.has(uid)) users.set(uid, `validation:x:${uid}:${gid}:Validation sandbox:/mnt/run-data/home:/usr/sbin/nologin`);
+
+  const groups = new Map([
+    [0, 'root:x:0:'],
+    [65534, 'nogroup:x:65534:'],
+  ]);
+  if (!groups.has(gid)) groups.set(gid, `validation:x:${gid}:`);
+
+  writeFileSync(path.join(runDirectory, 'sandbox-passwd'), `${[...users.values()].join('\n')}\n`, {
+    mode: 0o444,
+    flag: 'wx',
+  });
+  writeFileSync(path.join(runDirectory, 'sandbox-group'), `${[...groups.values()].join('\n')}\n`, {
+    mode: 0o444,
+    flag: 'wx',
+  });
+}
+
 function linkDependencies(sourceRoot, workspace) {
   const dependencies = [];
   const dependencyDirectories = [];
@@ -436,6 +461,7 @@ async function main() {
   const workspace = path.join(runDirectory, 'workspace');
   mkdirSync(workspace, { mode: 0o700 });
   try {
+    createSandboxIdentityFiles(runDirectory);
     const hostEnv = gitEnvironment(
       sourceRoot,
       path.join(runDirectory, 'empty')

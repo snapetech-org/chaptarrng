@@ -71,6 +71,8 @@ export function sandboxMountOperations({
     { type: 'dir', path: guestRun },
     { type: 'bind-fd', source: workspace, target: guestWorkspace },
     { type: 'bind-fd', source: runDirectory, target: guestRun },
+    { type: 'ro-bind-fd', source: path.join(runDirectory, 'sandbox-passwd'), target: '/etc/passwd' },
+    { type: 'ro-bind-fd', source: path.join(runDirectory, 'sandbox-group'), target: '/etc/group' },
   );
   for (const [source, target] of externalMounts)
     operations.push({ type: 'ro-bind-fd', source, target });

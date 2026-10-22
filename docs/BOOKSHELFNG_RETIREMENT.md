@@ -18,6 +18,8 @@ installed update-channel handoff. Those readiness gates remain separate.
 
 **PostgreSQL default-name compatibility — 2026-10-22:** The source candidate now resolves implicit BookshelfNG `readarr-*` PostgreSQL database names, carries the main/log/cache selection across restart through a dedicated migration marker, preserves explicitly configured names, and stops on ambiguous populated schemas. The full Core suite with PostgreSQL enabled passed 4,632 tests with 0 failures and 11 skips; focused PostgreSQL 17 selector, inspector, and converter checks passed 22/22, including live database-name selection and restart behavior. Separate operator data and installed PostgreSQL handoff remain unverified. No release or bridge was published.
 
+**Windows PostgreSQL installer path — 2026-10-22:** The candidate installer checks for `pg_dump`/`pg_restore`, requires an explicit `PostgresUser`, rejects other connected PostgreSQL clients after stopping BookshelfNG, stores verified custom-format dumps for each unique main/log/cache database, rechecks client sessions after preview review, and restores validated dumps transactionally before restoring BookshelfNG files and service. Automatic rollback skips PostgreSQL restore until the mutating converter has started, so preview cancellation cannot overwrite later database changes. The trusted local bulk suite passed 2/2 validation tasks with 4,688 passed, 0 failed, 22 skipped, and 2 inconclusive NUnit cases. Its real-tool PostgreSQL backup/restore fixture is assigned to the hosted disposable-PostgreSQL job; exact-head hosted validation and an end-to-end Windows PostgreSQL service rehearsal remain outstanding. The installer stays candidate-only and no release or bridge was published.
+
 The exact revision-pinned path audit stays canonical in BookshelfNG's
 maintainer ledger: the
 [consolidation report](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md),
@@ -339,17 +341,17 @@ or installer/channel handoff. Maintainer/operator sign-off is recorded above.
 No release or bridge was published.
 
 The Windows standalone handoff remains candidate-only. BookshelfNG's WPF
-installer still installs its own Readarr service. Merged PR #131 contains a
-ChaptarrNG migration installer for one SQLite database under the standard
-NT AUTHORITY\LocalService account. The exact-head Windows service round-trip
-on Build 39365402673 passed injected-health-failure rollback, retry, explicit
-restore, deferred service cleanup, and selected data-directory preservation.
-The installer takes a retained integrity-checked backup, previews before
-apply, and holds a read-only SQLite PRAGMA data_version guard through preview
-review. Raw database/WAL/journal fingerprints remain diagnostic. Custom
-service accounts, PostgreSQL, and multiple databases fail closed.
-Representative Windows data and real operator rollback remain unaccepted.
-Keep the release freeze in place.
+installer still installs its own Readarr service. The ChaptarrNG migration
+installer supports SQLite and now has a source path for PostgreSQL under the
+standard NT AUTHORITY\LocalService account. Exact-head Build 39365402673
+passed the SQLite service round-trip with injected-health-failure rollback,
+retry, explicit restore, deferred service cleanup, and selected data-directory
+preservation. SQLite uses a retained integrity-checked backup and holds a
+read-only PRAGMA data_version guard through preview review. PostgreSQL uses an
+independent schema dump and client-session preflight, but this new path has not
+yet been bulk-tested or rehearsed end to end on Windows. Custom service
+accounts, representative Windows data, and real operator rollback remain
+unaccepted. Keep the release freeze in place.
 
 **Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19):** The
 Linux app files from Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)

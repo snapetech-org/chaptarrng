@@ -14,6 +14,9 @@ namespace NzbDrone.Common.EnvironmentInfo
         bool PreviewBookshelfMigration { get; }
         bool RestoreBookshelf { get; }
         bool PreviewBookshelfRestore { get; }
+        bool CheckBookshelfPostgresBackup { get; }
+        bool BackupBookshelfPostgres { get; }
+        bool RestoreBookshelfPostgres { get; }
         bool ConfirmBookshelfServiceStopped { get; }
 
         string PreservedArguments { get; }
@@ -35,6 +38,9 @@ namespace NzbDrone.Common.EnvironmentInfo
         public const string PREVIEW_BOOKSHELF_MIGRATION = "preview-bookshelf-migration";
         public const string RESTORE_BOOKSHELF = "restore-bookshelf";
         public const string PREVIEW_BOOKSHELF_RESTORE = "preview-bookshelf-restore";
+        public const string CHECK_BOOKSHELF_POSTGRES_BACKUP = "check-bookshelf-postgres-backup";
+        public const string BACKUP_BOOKSHELF_POSTGRES = "backup-bookshelf-postgres";
+        public const string RESTORE_BOOKSHELF_POSTGRES = "restore-bookshelf-postgres";
         public const string CONFIRM_BOOKSHELF_SERVICE_STOPPED = "confirm-bookshelf-service-stopped";
 
         public StartupContext(params string[] args)
@@ -70,6 +76,9 @@ namespace NzbDrone.Common.EnvironmentInfo
         public bool PreviewBookshelfMigration => Flags.Contains(PREVIEW_BOOKSHELF_MIGRATION);
         public bool RestoreBookshelf => Flags.Contains(RESTORE_BOOKSHELF);
         public bool PreviewBookshelfRestore => Flags.Contains(PREVIEW_BOOKSHELF_RESTORE);
+        public bool CheckBookshelfPostgresBackup => Flags.Contains(CHECK_BOOKSHELF_POSTGRES_BACKUP);
+        public bool BackupBookshelfPostgres => Flags.Contains(BACKUP_BOOKSHELF_POSTGRES);
+        public bool RestoreBookshelfPostgres => Flags.Contains(RESTORE_BOOKSHELF_POSTGRES);
         public bool ConfirmBookshelfServiceStopped => Flags.Contains(CONFIRM_BOOKSHELF_SERVICE_STOPPED);
         public bool ExitImmediately => Flags.Contains(EXIT_IMMEDIATELY);
 

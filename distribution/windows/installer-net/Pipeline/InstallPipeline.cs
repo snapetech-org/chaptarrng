@@ -30,6 +30,7 @@ public static class InstallPipeline
         string? previousBinDirectory = null;
         var serviceStopped = false;
         var bookshelfWasRunning = false;
+        var postgresDatabaseMutationMayHaveStarted = false;
         int? bookshelfServiceStartType = null;
 
         try
@@ -58,6 +59,7 @@ public static class InstallPipeline
             {
                 return Failure(unsupportedSource, null);
             }
+            var postgresSource = BackupService.IsPostgresSource(dataDirectory);
 
             var providerMode = ui.ChooseProviderIdentityMode();
             if (!providerMode.HasValue)
@@ -67,6 +69,26 @@ public static class InstallPipeline
 
             ui.Log($"[pipeline] BookshelfNG service data directory: {dataDirectory}");
             ui.Log($"[pipeline] Provider identity mode selected: {providerMode.Value}");
+            if (postgresSource)
+            {
+                ui.SetStep("Checking PostgreSQL backup support...", "This handoff needs pg_dump, pg_restore, an explicit PostgresUser, and a reachable database for its independent rollback copy.");
+                stagingDirectory = await PayloadExtractor.ExtractToStagingDirectoryAsync(
+                    dataDirectory,
+                    log,
+                    extractProgress,
+                    ct).ConfigureAwait(false);
+                var checkExit = await ProcessStreamer.RunAsync(
+                    Path.Combine(stagingDirectory, "Chaptarr.Console.exe"),
+                    new[] { "-check-bookshelf-postgres-backup", $"-data={dataDirectory}" },
+                    stagingDirectory,
+                    log,
+                    ct).ConfigureAwait(false);
+                if (checkExit != 0)
+                {
+                    return Failure($"PostgreSQL backup preflight exited with code {checkExit}. Review the installer log, install pg_dump and pg_restore on PATH, and ensure PostgresUser is explicitly configured.", null);
+                }
+            }
+
             var initialServiceStatus = ServiceLifecycle.TryGetStatus(ServiceLifecycle.BookshelfServiceName);
             if (initialServiceStatus is not (ServiceControllerStatus.Running or ServiceControllerStatus.Stopped))
             {
@@ -86,9 +108,58 @@ public static class InstallPipeline
             }
 
             serviceStopped = true;
+            if (postgresSource)
+            {
+                ui.SetStep("Checking PostgreSQL connections...", "Stop every other application or client using the BookshelfNG database before the independent backup.");
+                var idleCheckExit = await ProcessStreamer.RunAsync(
+                    Path.Combine(stagingDirectory!, "Chaptarr.Console.exe"),
+                    new[]
+                    {
+                        "-check-bookshelf-postgres-backup",
+                        "-confirm-bookshelf-service-stopped",
+                        $"-data={dataDirectory}"
+                    },
+                    stagingDirectory,
+                    log,
+                    CancellationToken.None).ConfigureAwait(false);
+                if (idleCheckExit != 0)
+                {
+                    throw new InvalidOperationException($"PostgreSQL connection preflight exited with code {idleCheckExit}; the source database was not migrated.");
+                }
+            }
 
-            ui.SetStep("Backing up BookshelfNG...", "The original binaries, config, SQLite database, and existing backups are retained.");
-            var backup = await BackupService.BackupAsync(dataDirectory, log, ct).ConfigureAwait(false);
+            ui.SetStep("Backing up BookshelfNG...", postgresSource
+                ? "The original binaries, config, independent PostgreSQL dump, and existing backups are retained."
+                : "The original binaries, config, SQLite database, and existing backups are retained.");
+            var migrationConsole = stagingDirectory is null
+                ? null
+                : Path.Combine(stagingDirectory, "Chaptarr.Console.exe");
+            var backup = await BackupService.BackupAsync(
+                dataDirectory,
+                log,
+                postgresSource,
+                postgresSource
+                    ? async backupSetDirectory =>
+                    {
+                        var backupExit = await ProcessStreamer.RunAsync(
+                            migrationConsole!,
+                            new[]
+                            {
+                                "-backup-bookshelf-postgres",
+                                "-confirm-bookshelf-service-stopped",
+                                $"-bookshelf-postgres-backup={backupSetDirectory}",
+                                $"-data={dataDirectory}"
+                            },
+                            stagingDirectory,
+                            log,
+                            ct).ConfigureAwait(false);
+                        if (backupExit != 0)
+                        {
+                            throw new InvalidOperationException($"Independent PostgreSQL backup exited with code {backupExit}.");
+                        }
+                    }
+                    : null,
+                ct).ConfigureAwait(false);
             backupPath = backup.Path;
             RegistryService.WriteUpgradeStart(
                 backup.Path,
@@ -108,17 +179,57 @@ public static class InstallPipeline
                 throw new InvalidOperationException("The stopped BookshelfNG service could not be disabled during migration.");
             }
 
-            stagingDirectory = await PayloadExtractor.ExtractToStagingDirectoryAsync(
+            stagingDirectory ??= await PayloadExtractor.ExtractToStagingDirectoryAsync(
                 dataDirectory,
                 log,
                 extractProgress,
                 ct).ConfigureAwait(false);
             var chaptarrConsole = Path.Combine(stagingDirectory, "Chaptarr.Console.exe");
             var environment = GetProviderEnvironment(providerMode.Value);
-            ui.SetStep("Previewing the migration...", "The source database is checked for changes through operator confirmation.");
-            var sourceFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
-            using (var sourceVersionGuard = new SqliteDatabaseVersionGuard(dataDirectory))
+            ui.SetStep("Previewing the migration...", postgresSource
+                ? "Keep every other PostgreSQL client stopped through review and apply. The independent database dump is retained for rollback."
+                : "The SQLite source database is checked for committed changes through operator confirmation.");
+            SqliteDatabaseFingerprint.Snapshot? sourceFingerprint = null;
+            if (postgresSource)
             {
+                var previewExit = await ProcessStreamer.RunAsync(
+                    chaptarrConsole,
+                    new[] { "-preview-bookshelf-migration", $"-data={dataDirectory}" },
+                    stagingDirectory,
+                    log,
+                    ct,
+                    environment).ConfigureAwait(false);
+                if (previewExit != 0)
+                {
+                    throw new InvalidOperationException($"The read-only BookshelfNG migration preview exited with code {previewExit}.");
+                }
+
+                ui.SetStep("Review the migration preview...", "Read the row report and warnings in the log before continuing.");
+                if (!ui.ConfirmMigrationApply(providerMode.Value, backup.Path))
+                {
+                    throw new OperationCanceledException("Migration cancelled at the preview review step.", ct);
+                }
+
+                var idleCheckExit = await ProcessStreamer.RunAsync(
+                    chaptarrConsole,
+                    new[]
+                    {
+                        "-check-bookshelf-postgres-backup",
+                        "-confirm-bookshelf-service-stopped",
+                        $"-data={dataDirectory}"
+                    },
+                    stagingDirectory,
+                    log,
+                    CancellationToken.None).ConfigureAwait(false);
+                if (idleCheckExit != 0)
+                {
+                    throw new InvalidOperationException($"PostgreSQL connection preflight exited with code {idleCheckExit}; the source database was not migrated.");
+                }
+            }
+            else
+            {
+                sourceFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
+                using var sourceVersionGuard = new SqliteDatabaseVersionGuard(dataDirectory);
                 var previewExit = await ProcessStreamer.RunAsync(
                     chaptarrConsole,
                     new[] { "-preview-bookshelf-migration", $"-data={dataDirectory}" },
@@ -142,8 +253,11 @@ public static class InstallPipeline
                 EnsureSourceDatabaseUnchanged(sourceVersionGuard, "while the preview awaited confirmation");
             }
 
-            var afterReviewFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
-            LogSourceDatabaseRepresentationChange(sourceFingerprint, afterReviewFingerprint, "during preview and operator review", ui);
+            if (sourceFingerprint is not null)
+            {
+                var afterReviewFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
+                LogSourceDatabaseRepresentationChange(sourceFingerprint, afterReviewFingerprint, "during preview and operator review", ui);
+            }
 
             ui.SetStep("Applying BookshelfNG data migration...", "This modifies the database after the separate, verified backup.");
             var applyExit = await ProcessStreamer.RunAsync(
@@ -157,7 +271,8 @@ public static class InstallPipeline
                 stagingDirectory,
                 log,
                 ct,
-                environment).ConfigureAwait(false);
+                environment,
+                () => postgresDatabaseMutationMayHaveStarted = postgresSource).ConfigureAwait(false);
             if (applyExit != 0)
             {
                 throw new InvalidOperationException($"The BookshelfNG data migration exited with code {applyExit}.");
@@ -239,13 +354,13 @@ public static class InstallPipeline
         }
         catch (OperationCanceledException)
         {
-            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, "Migration cancelled.")
+            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, postgresDatabaseMutationMayHaveStarted, "Migration cancelled.")
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             ui.LogError($"[pipeline] {ex.GetType().Name}: {ex.Message}");
-            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, ex.Message)
+            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, postgresDatabaseMutationMayHaveStarted, ex.Message)
                 .ConfigureAwait(false);
         }
         finally
@@ -282,7 +397,9 @@ public static class InstallPipeline
                 log,
                 CancellationToken.None,
                 record.BookshelfServiceStartType,
-                record.BookshelfServiceWasRunning).ConfigureAwait(false);
+                record.BookshelfServiceWasRunning,
+                Path.Combine(record.DataDirectory, "bin", "Chaptarr.Console.exe"),
+                restorePostgresDatabase: File.Exists(Path.Combine(record.BackupPath, "postgres-main.dump"))).ConfigureAwait(false);
             if (exit != 0)
             {
                 return Failure($"Rollback failed with exit code {exit}. The backup is still available at {record.BackupPath}.", record.BackupPath);
@@ -306,9 +423,11 @@ public static class InstallPipeline
         string? dataDirectory,
         string? backupPath,
         string? previousBinDirectory,
+        string? stagingDirectory,
         bool serviceStopped,
         bool bookshelfWasRunning,
         int? bookshelfServiceStartType,
+        bool restorePostgresDatabase,
         string reason)
     {
         ui.LogError($"[pipeline] {reason}");
@@ -345,7 +464,9 @@ public static class InstallPipeline
                 log,
                 CancellationToken.None,
                 bookshelfServiceStartType,
-                bookshelfWasRunning).ConfigureAwait(false);
+                bookshelfWasRunning,
+                ResolveMigrationConsole(dataDirectory, stagingDirectory),
+                restorePostgresDatabase).ConfigureAwait(false);
             if (exit == 0)
             {
                 RecordRollbackTimestamp(ui);
@@ -512,5 +633,17 @@ public static class InstallPipeline
         {
             return null;
         }
+    }
+
+    private static string? ResolveMigrationConsole(string dataDirectory, string? stagingDirectory)
+    {
+        var installed = Path.Combine(dataDirectory, "bin", "Chaptarr.Console.exe");
+        if (File.Exists(installed))
+        {
+            return installed;
+        }
+
+        var staged = stagingDirectory is null ? null : Path.Combine(stagingDirectory, "Chaptarr.Console.exe");
+        return staged is not null && File.Exists(staged) ? staged : null;
     }
 }

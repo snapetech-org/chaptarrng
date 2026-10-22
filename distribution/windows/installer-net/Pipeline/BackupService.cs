@@ -49,47 +49,104 @@ public static class BackupService
             return $"The BookshelfNG config file was not found: {configPath}";
         }
 
-        if (!File.Exists(databasePath))
-        {
-            return "This installer currently supports BookshelfNG SQLite installations only. No readarr.db was found; PostgreSQL installations must use the documented manual migration path.";
-        }
-
+        string? postgresHost;
         try
         {
             var config = XDocument.Load(configPath);
-            var postgresHost = config
+            postgresHost = config
                 .Descendants()
                 .FirstOrDefault(e => string.Equals(e.Name.LocalName, "PostgresHost", StringComparison.OrdinalIgnoreCase))
                 ?.Value;
-            if (!string.IsNullOrWhiteSpace(postgresHost))
-            {
-                return "This installer currently supports BookshelfNG SQLite installations only. The config selects PostgreSQL; use the documented manual PostgreSQL migration path.";
-            }
         }
         catch (Exception ex)
         {
             return $"The BookshelfNG config could not be read safely: {ex.Message}";
         }
 
-        foreach (var name in new[]
+        var serviceEnvironmentConflict = GetServicePostgresEnvironmentConflict();
+        if (serviceEnvironmentConflict is not null)
+        {
+            return serviceEnvironmentConflict;
+        }
+
+        var environmentSelectsPostgres = new[]
         {
             "CHAPTARR__POSTGRES__HOST",
             "READARR__POSTGRES__HOST",
             "AUDIOARR__POSTGRES__HOST"
-        })
+        }.Any(name => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name)));
+
+        var postgresSource = !string.IsNullOrWhiteSpace(postgresHost) || environmentSelectsPostgres;
+        if (!postgresSource && !File.Exists(databasePath))
         {
-            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name)))
+            return "Neither a BookshelfNG SQLite database nor PostgreSQL configuration was found in this data directory.";
+        }
+
+        return null;
+    }
+
+    public static bool IsPostgresSource(string dataDirectory)
+    {
+        var configPath = Path.Combine(dataDirectory, "config.xml");
+        if (File.Exists(configPath))
+        {
+            try
             {
-                return $"The environment variable {name} selects PostgreSQL. Remove or review it before using the SQLite Windows migration installer.";
+                var config = XDocument.Load(configPath);
+                var host = config
+                    .Descendants()
+                    .FirstOrDefault(e => string.Equals(e.Name.LocalName, "PostgresHost", StringComparison.OrdinalIgnoreCase))
+                    ?.Value;
+                if (!string.IsNullOrWhiteSpace(host))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // The preflight reports malformed config before the installer proceeds.
+            }
+        }
+
+        return new[]
+        {
+            "CHAPTARR__POSTGRES__HOST",
+            "READARR__POSTGRES__HOST",
+            "AUDIOARR__POSTGRES__HOST"
+        }.Any(name => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name)));
+    }
+
+    private static string? GetServicePostgresEnvironmentConflict()
+    {
+        foreach (var item in ServiceLifecycle.GetBookshelfServiceEnvironment())
+        {
+            if (!IsPostgresEnvironmentVariable(item.Key))
+            {
+                continue;
+            }
+
+            var installerValue = Environment.GetEnvironmentVariable(item.Key);
+            if (!string.Equals(item.Value, installerValue, StringComparison.Ordinal))
+            {
+                return $"The Readarr service has a service-specific PostgreSQL environment setting ({item.Key}) that the installer process and Chaptarr service cannot safely inherit. Move PostgreSQL settings to config.xml or machine-level environment variables before retrying.";
             }
         }
 
         return null;
     }
 
+    private static bool IsPostgresEnvironmentVariable(string name)
+    {
+        return name.StartsWith("CHAPTARR__POSTGRES__", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("READARR__POSTGRES__", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("AUDIOARR__POSTGRES__", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static async Task<BackupResult> BackupAsync(
         string dataDirectory,
         IProgress<LogLine> log,
+        bool postgresSource,
+        Func<string, Task>? createPostgresDump,
         CancellationToken ct = default)
     {
         var backupRoot = GetBackupRoot(dataDirectory);
@@ -104,14 +161,43 @@ public static class BackupService
 
         try
         {
-            await CopyBinAsync(dataDirectory, target, log, ct).ConfigureAwait(false);
-            CopySqliteSet(dataDirectory, target, log);
+            if (postgresSource)
+            {
+                CopySqliteSetIfPresent(dataDirectory, target, log);
+                if (createPostgresDump is null)
+                {
+                    throw new InvalidOperationException("A PostgreSQL database backup callback was not provided.");
+                }
+
+                await createPostgresDump(target).ConfigureAwait(false);
+                var mainDumpPath = Path.Combine(target, "postgres-main.dump");
+                if (!File.Exists(mainDumpPath) || new FileInfo(mainDumpPath).Length == 0)
+                {
+                    throw new InvalidDataException("The independent PostgreSQL main-database backup was not created or was empty.");
+                }
+
+                log.Report(new LogLine(LogStream.Stdout, "[backup] Independent PostgreSQL database backup set created and verified."));
+            }
+            else
+            {
+                await CopyBinAsync(dataDirectory, target, log, ct).ConfigureAwait(false);
+                CopySqliteSet(dataDirectory, target, log);
+            }
+
+            if (postgresSource)
+            {
+                await CopyBinAsync(dataDirectory, target, log, ct).ConfigureAwait(false);
+            }
+
             CopySingleFile(Path.Combine(dataDirectory, "config.xml"), target, log);
             CopyBackupsFolder(dataDirectory, target, log);
-            RunIntegrityCheck(target, log);
+            if (!postgresSource)
+            {
+                RunIntegrityCheck(target, log);
+            }
 
             log.Report(new LogLine(LogStream.Stdout, $"[backup] Complete and retained: {target}"));
-            return new BackupResult("FileCopy", target);
+            return new BackupResult(postgresSource ? "PostgreSQLDump" : "FileCopy", target);
         }
         catch
         {
@@ -222,6 +308,20 @@ public static class BackupService
             if (File.Exists(source))
             {
                 File.Copy(source, Path.Combine(target, name), overwrite: false);
+            }
+        }
+    }
+
+    private static void CopySqliteSetIfPresent(string dataDirectory, string target, IProgress<LogLine> log)
+    {
+        var names = new[] { "readarr.db", "readarr.db-journal", "readarr.db-wal" };
+        foreach (var name in names)
+        {
+            var source = Path.Combine(dataDirectory, name);
+            if (File.Exists(source))
+            {
+                File.Copy(source, Path.Combine(target, name), overwrite: false);
+                log.Report(new LogLine(LogStream.Stdout, $"[backup] Preserved coexisting file {name}."));
             }
         }
     }

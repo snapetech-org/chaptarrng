@@ -106,7 +106,7 @@ mkdir -p "$test_results_directory"
 
 if ! dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj \
   --configuration Release --no-restore --no-build --verbosity normal \
-  --filter 'FullyQualifiedName~BookshelfPostgresDatabaseConverterFixture' \
+  --filter 'FullyQualifiedName~BookshelfPostgresDatabaseConverterFixture|FullyQualifiedName~BookshelfPostgresExternalBackupFixture' \
   -- \
   "NUnit.WorkDirectory=$data_dir" \
   "NUnit.TestOutputXml=nunit-results"; then

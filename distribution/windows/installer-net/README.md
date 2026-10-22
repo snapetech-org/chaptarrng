@@ -5,14 +5,16 @@ published or linked from a release channel while BookshelfNG retirement remains
 release-frozen. It does not install a fresh ChaptarrNG instance.
 
 The installer upgrades an existing BookshelfNG Windows service from `Readarr`
-to `Chaptarr`, keeping its selected data directory. The initial supported path
-is a single SQLite database in an existing BookshelfNG installation using its
-standard `NT AUTHORITY\LocalService` service account. Custom service accounts
-fail closed so the installer cannot silently change access to media folders or
-network shares. PostgreSQL,
-multiple appdata databases, unsupported schemas, and installations without the
-legacy Windows service fail closed and use the documented manual migration
-procedure instead.
+to `Chaptarr`, keeping its selected data directory. It supports SQLite and
+PostgreSQL sources in an existing BookshelfNG installation using its standard
+`NT AUTHORITY\LocalService` service account. Custom service accounts fail
+closed so the installer cannot silently change access to media folders or
+network shares. PostgreSQL handoff requires `pg_dump` and `pg_restore` on `PATH`
+and an explicitly configured `PostgresUser`. Service-only PostgreSQL
+environment overrides also fail closed because the new service cannot inherit
+them safely. Multiple appdata databases, unsupported schemas, and installations
+without the legacy Windows service fail closed and use the documented manual
+migration procedure instead.
 
 ## Migration sequence
 
@@ -20,10 +22,20 @@ The installer requires administrator privileges and performs this sequence:
 
 1. Detect the BookshelfNG `Readarr` service and its configured `-data` directory.
 2. Ask whether bare numeric provider IDs represent native Hardcover or Goodreads.
-3. Stop BookshelfNG and copy its `bin`, config, SQLite database, WAL and journal,
-   and existing user backups into a timestamped sibling backup directory.
-4. Run SQLite `PRAGMA integrity_check` against the copied database. The backup
-   is retained permanently; the installer does not rotate older backups.
+3. For PostgreSQL, check for the required client tools and an explicit database
+   user before stopping the service. Stop BookshelfNG, then require that no
+   other client sessions remain on the selected main, log, and cache databases.
+4. Copy the original `bin`, config, any coexisting SQLite files, and existing
+   user backups into a timestamped sibling backup directory. SQLite installs
+   copy the database, WAL, and journal and run `PRAGMA integrity_check` on the
+   copy. PostgreSQL installs use `pg_dump` to create and `pg_restore --list` to
+   verify custom-format dumps for each unique main, log, and cache database.
+   Each dump contains that database's active application schema. Rollback
+   prevalidates the complete dump set and restores every database atomically
+   per database.
+   The dump keeps credentials in a temporary protected `PGPASSFILE`, excludes
+   PostgreSQL owners and grants, and leaves unrelated database schemas alone.
+   Backups are retained permanently; the installer does not rotate older ones.
 5. Stage the ChaptarrNG payload outside `bin` and run the non-mutating migration
    preview with the chosen provider mode. A read-only SQLite connection holds
    `PRAGMA data_version` across preview and operator confirmation, then checks
@@ -32,7 +44,9 @@ The installer requires administrator privileges and performs this sequence:
    differences are diagnostic when `data_version` is unchanged. Windows may
    deny direct access to WAL bytes while SQLite holds the connection open.
    SQLite rebuilds its transient `-shm` index when the database is reopened, so
-   it is not backed up.
+   it is not backed up. For PostgreSQL, keep all clients stopped through review
+   and apply; the installer checks for other sessions before backup and again
+   after preview review.
 6. Show the preview output in the installer log and require a separate apply
    confirmation.
 7. Apply the migration, replace `bin`, remove the `Readarr` service, and register
@@ -41,9 +55,11 @@ The installer requires administrator privileges and performs this sequence:
    contains the data directory, and check the configured local `/ping` endpoint.
 
 Any failure after a complete backup invokes the embedded rollback helper. It
-stops and removes either service registration, restores the saved BookshelfNG
-binaries, config, database, and user backups, then reinstalls and starts
-`Readarr`. The backup is preserved after both success and failure. The UI also
+stops and removes either service registration, restores the PostgreSQL dumps
+when the mutating converter has started, restores the saved BookshelfNG
+binaries, config, SQLite files, and user backups, then reinstalls and starts
+`Readarr`. A cancellation during preview leaves the untouched PostgreSQL data
+in place. The backup is preserved after both success and failure. The UI also
 offers **Restore BookshelfNG** after a successful migration. Manual restore
 returns to the backup point, so Chaptarr changes made after migration are not
 kept.
@@ -118,8 +134,10 @@ The code and hosted build do not replace migration rehearsal on representative
 Windows BookshelfNG data. Before enabling a release or update-channel handoff,
 validate:
 
-- A populated Windows SQLite install with provider IDs and paths representative
+- A populated Windows SQLite or PostgreSQL install with provider IDs and paths representative
   of real deployments.
+- An installed PostgreSQL handoff using the operator's `pg_dump`/`pg_restore`
+  versions, database permissions, TLS settings, and an independent restore.
 - Acceptance against representative operator data. The hosted round-trip uses
   a synthetic fixture and does not establish real-install parity.
 - Failure injection beyond the local `/ping` port conflict, and additional

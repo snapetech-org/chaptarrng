@@ -182,12 +182,135 @@ namespace NzbDrone.Host
                         break;
                     }
 
+                case ApplicationModes.CheckBookshelfPostgresBackup:
+                    {
+                        GetPostgresBookshelfDatabase(DatabaseLineage.BookshelfNG);
+                        var databases = GetPostgresBackupDatabases();
+                        var backup = new BookshelfPostgresExternalBackup(new ExternalToolRunner());
+                        backup.VerifyTools();
+                        foreach (var (_, database) in databases)
+                        {
+                            backup.ValidateDatabaseConnection(database.ConnectionString);
+                        }
+
+                        if (_startupContext.ConfirmBookshelfServiceStopped)
+                        {
+                            foreach (var (_, database) in databases)
+                            {
+                                backup.EnsureSourceDatabaseIsIdle(database.ConnectionString);
+                            }
+                        }
+
+                        Console.WriteLine("PostgreSQL external backup tools are available for the BookshelfNG main, log, and cache databases.");
+                        break;
+                    }
+
+                case ApplicationModes.BackupBookshelfPostgres:
+                    {
+                        if (!_startupContext.ConfirmBookshelfServiceStopped)
+                        {
+                            throw new InvalidOperationException("Creating an independent PostgreSQL backup requires -confirm-bookshelf-service-stopped. Stop every process using these databases first.");
+                        }
+
+                        GetPostgresBookshelfDatabase(DatabaseLineage.BookshelfNG);
+                        var databases = GetPostgresBackupDatabases();
+                        if (!_startupContext.Args.TryGetValue("bookshelf-postgres-backup", out var backupPath) ||
+                            string.IsNullOrWhiteSpace(backupPath))
+                        {
+                            throw new InvalidOperationException("PostgreSQL backup requires -bookshelf-postgres-backup=/path/to/backup-directory.");
+                        }
+
+                        var backup = new BookshelfPostgresExternalBackup(new ExternalToolRunner());
+                        backup.VerifyTools();
+                        backupPath = Path.GetFullPath(backupPath);
+                        foreach (var (name, database) in databases)
+                        {
+                            backup.CreateDump(database.ConnectionString, Path.Combine(backupPath, $"postgres-{name}.dump"));
+                            Console.WriteLine($"Independent PostgreSQL {name} database backup created and verified.");
+                        }
+
+                        break;
+                    }
+
+                case ApplicationModes.RestoreBookshelfPostgres:
+                    {
+                        if (!_startupContext.ConfirmBookshelfServiceStopped)
+                        {
+                            throw new InvalidOperationException("Restoring an independent PostgreSQL backup requires -confirm-bookshelf-service-stopped. Stop every process using this database first.");
+                        }
+
+                        GetPostgresBookshelfDatabase(DatabaseLineage.BookshelfNG, DatabaseLineage.Chaptarr);
+                        var databases = GetPostgresBackupDatabases();
+                        if (!_startupContext.Args.TryGetValue("bookshelf-postgres-backup", out var backupPath) ||
+                            string.IsNullOrWhiteSpace(backupPath))
+                        {
+                            throw new InvalidOperationException("PostgreSQL restore requires -bookshelf-postgres-backup=/path/to/backup-directory.");
+                        }
+
+                        var backup = new BookshelfPostgresExternalBackup(new ExternalToolRunner());
+                        backup.VerifyTools();
+                        backupPath = Path.GetFullPath(backupPath);
+                        var restoreItems = new System.Collections.Generic.List<(string Name, DatabaseConnectionInfo Database, string Path)>();
+                        foreach (var (name, database) in databases)
+                        {
+                            backup.EnsureSourceDatabaseIsIdle(database.ConnectionString);
+                            var dumpPath = Path.Combine(backupPath, $"postgres-{name}.dump");
+                            backup.ValidateDump(dumpPath);
+                            restoreItems.Add((name, database, dumpPath));
+                        }
+
+                        foreach (var (name, database, dumpPath) in restoreItems)
+                        {
+                            backup.RestoreDump(database.ConnectionString, dumpPath);
+                            Console.WriteLine($"Independent PostgreSQL {name} database backup restored.");
+                        }
+
+                        break;
+                    }
+
                 default:
                     {
                         _consoleService.PrintHelp();
                         break;
                     }
             }
+        }
+
+        private DatabaseConnectionInfo GetPostgresBookshelfDatabase(params DatabaseLineage[] allowedLineages)
+        {
+            var database = _connectionStringFactory.MainDbConnection;
+            if (database.DatabaseType != DatabaseType.PostgreSQL)
+            {
+                throw new InvalidDataException("The configured main database is not PostgreSQL.");
+            }
+
+            var lineage = DatabaseLineageGuard.Detect(database.ConnectionString, DatabaseType.PostgreSQL);
+            if (!allowedLineages.Contains(lineage))
+            {
+                throw new InvalidDataException($"The configured PostgreSQL main database has unsupported lineage '{lineage}'.");
+            }
+
+            return database;
+        }
+
+        private (string Name, DatabaseConnectionInfo Database)[] GetPostgresBackupDatabases()
+        {
+            var databases = new[]
+            {
+                ("main", _connectionStringFactory.MainDbConnection),
+                ("log", _connectionStringFactory.LogDbConnection),
+                ("cache", _connectionStringFactory.CacheDbConnection)
+            };
+
+            if (databases.Any(database => database.Item2.DatabaseType != DatabaseType.PostgreSQL))
+            {
+                throw new InvalidDataException("BookshelfNG PostgreSQL backup requires PostgreSQL for its main, log, and cache databases.");
+            }
+
+            return databases
+                .GroupBy(database => database.Item2.ConnectionString, StringComparer.Ordinal)
+                .Select(group => group.First())
+                .ToArray();
         }
     }
 }

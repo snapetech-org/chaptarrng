@@ -1001,8 +1001,11 @@ older-schema, PostgreSQL, Windows-native, package-channel, external-client, or
 full feature-parity acceptance. No user data or database files were committed.
 
 An earlier hosted Windows run of the migration candidate failed four
-promotion/rollback cases. The Linux image checks below do not establish a
-passing native Windows migration run.
+promotion/rollback cases. A later native Windows service round-trip on Build
+39365402673 passed injected-health-failure rollback, retry, explicit restore,
+deferred service cleanup, and selected data-directory preservation for the
+SQLite installer route. The new Windows PostgreSQL backup/restore extension
+has not yet had an end-to-end Windows service rehearsal.
 
 ## Published image smoke test (2026-10-15)
 
