@@ -40,7 +40,9 @@ disabled-by-default switch for this behavior; it also preserves the saved
 setting and BookshelfNG ebook/audiobook root defaults during migration. The
 new switch is source-only and is not in `.977`. The next version bump is not a release: publication is frozen
 until the BookshelfNG migration, rollback, feature-parity, and install-channel
-acceptance gates are closed. The merged release and distribution workflows
+acceptance gates are closed. Project/provider maintainer and operator acceptance
+was recorded on 2026-10-21; this closes the human sign-off gate, not technical
+migration, parity, or install-channel readiness. The merged release and distribution workflows
 fail closed unless both `CHAPTARRNG_RELEASE_READY=true` and
 `BOOKSHELFNG_RELEASE_READY=true`. They must remain false until every retirement
 gate closes. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)

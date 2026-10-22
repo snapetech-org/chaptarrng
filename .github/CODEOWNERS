@@ -1,4 +1,4 @@
 # Code owners for ChaptarrNG.
-# Every change requires review/approval from an owner listed below.
-# Keep this list to trusted maintainers only.
+# This file identifies trusted owners for review requests on pull requests.
+# GitHub enforces an approval requirement only when branch or ruleset settings require it.
 * @snapetech

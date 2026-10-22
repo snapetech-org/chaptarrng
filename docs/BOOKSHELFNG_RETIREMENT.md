@@ -1,5 +1,13 @@
 # BookshelfNG retirement status
 
+**Maintainer/operator acceptance — 2026-10-21:** The project maintainer,
+provider maintainer, and operator explicitly accepted this BookshelfNG
+retirement effort and the provider/platform handoff decisions within its scope.
+This closes the internal human sign-off gate; no further user approval is
+required for that sign-off. It does not replace technical evidence for feature
+parity, representative-data conversion and rollback, provider fulfillment, or
+installed update-channel handoff. Those readiness gates remain separate.
+
 **Reviewed:** 2026-10-21. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public app releases. ChaptarrNG [main](https://github.com/snapetech-org/chaptarrng/tree/main) contains a candidate-only Debian bridge builder. An isolated dpkg round-trip against the checksum-verified public BookshelfNG `.71` package preserved a modified config and data canary with dependency checks bypassed and systemd mocked. A separate Debian Trixie apt transaction used that actual package and the local `.977` candidate, resolved dependencies (including `libicu76` and `ca-certificates`), installed the CA bundle, upgraded and downgraded without a conffile prompt, and preserved the canaries. In a systemd-running Trixie container, the actual `.71` service upgraded to the local candidate, restarted, and passed `/ping`; after restoring the pre-upgrade database copy, downgrade to `.71` also restarted and passed `/ping`. This used a fresh empty `.71` database and synthetic canaries, not operator data. No compatibility package or migration bridge has been published. Release publication remains frozen and publisher readiness variables remain unset. This is the current handoff summary for moving BookshelfNG users to ChaptarrNG. The detailed feature inventory remains in the [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).
 
 The exact revision-pinned path audit stays canonical in BookshelfNG's
@@ -61,8 +69,9 @@ migration, restore preview, and rollback for two populated migration-158 SQLite
 snapshots; see the [rehearsal record](MIGRATE_FROM_BOOKSHELFNG.md#populated-sqlite-migration-and-restore-rehearsal-2026-10-21).
 This closes conversion and database rollback evidence for those two data sets.
 No runtime retirement is approved. Broader normal-startup acceptance, feature
-parity, provider fulfillment, SeerrNG workflows, installed update-channel
-handoff, and operator acceptance remain open. Keep BookshelfNG in service.
+parity, provider fulfillment, SeerrNG workflows, and installed update-channel
+handoff remain open. Maintainer/operator sign-off is recorded above; keep
+BookshelfNG in service until technical readiness gates close.
 
 The current source and target pins, disposition counts, and remaining path
 review live in the canonical BookshelfNG
