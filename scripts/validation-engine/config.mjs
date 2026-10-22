@@ -39,7 +39,7 @@ export const validation = {
   ],
   maxConcurrentTasks: 2,
   runtimes: [
-    { command: process.execPath, args: ['--version'], versionPattern: '^v26\\.10\\.0$' },
+    { command: process.execPath, args: ['--version'], versionPattern: '^v26\\.12\\.1$' },
   ],
   inventory: [
     {

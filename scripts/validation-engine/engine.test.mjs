@@ -39,6 +39,19 @@ function assertChromiumCacheWorkflowContract(source) {
   assert.match(workflow, /PLAYWRIGHT_BROWSERS_PATH=\$PLAYWRIGHT_BROWSERS_PATH.*\$GITHUB_ENV/);
 }
 
+test('workflow and validation engine pin the same Node.js version', () => {
+  const workflow = readFileSync(new URL('../../.github/workflows/build.yml', import.meta.url), 'utf8');
+  const workflowVersions = [...workflow.matchAll(/node-version:\s*["']?([0-9]+\.[0-9]+\.[0-9]+)/g)]
+    .map((match) => match[1]);
+  const runtime = validation.runtimes.find(({ command, args }) =>
+    command === process.execPath && args?.[0] === '--version');
+
+  assert.ok(workflowVersions.length > 0, 'build workflow must pin Node.js');
+  assert.equal(new Set(workflowVersions).size, 1, 'all build jobs must use the same Node.js version');
+  assert.ok(runtime, 'validation engine must check its Node.js runtime');
+  assert.equal(runtime.versionPattern, `^v${workflowVersions[0].replaceAll('.', '\\.')}$`, 'validation engine must require the version installed by CI');
+});
+
 test('book-file count and matching-log toast fallbacks stay localized', () => {
   const header = readFileSync(new URL('../../frontend/src/Author/Details/AuthorDetailsHeader.js', import.meta.url), 'utf8');
   assert.match(header, /translate\('BookFilesCountSingularMessage'\)/);
