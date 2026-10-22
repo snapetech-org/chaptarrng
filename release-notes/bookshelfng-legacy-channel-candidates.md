@@ -1,5 +1,5 @@
-ChaptarrNG now contains source-only AppImage, Flatpak, Cloudron, Co-op Cloud,
-and self-hosting catalog candidates that preserve BookshelfNG package IDs,
-data paths, ports, container names, or volume identities. Their builds and
-installed update and rollback flows still require platform acceptance. No
-package, catalog listing, image alias, or release was published by this change.
+Built and smoke-started `.978` BookshelfNG identity AppImage and Flatpak
+candidates; the Flatpak installed in a user scope. Existing-channel update,
+migration, backup/restore, and rollback remain open for platform acceptance.
+Both artifacts are unsigned and unpublished; no package, catalog listing,
+image alias, or release was published.

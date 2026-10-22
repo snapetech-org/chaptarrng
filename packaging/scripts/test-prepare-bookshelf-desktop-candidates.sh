@@ -40,6 +40,7 @@ test -s "$flatpak/src/com.snapetech.BookshelfNG.metainfo.xml"
 test -s "$flatpak/src/com.snapetech.BookshelfNG.png"
 test -s "$flatpak/com.snapetech.BookshelfNG.yml"
 grep -Fq 'app-id: com.snapetech.BookshelfNG' "$flatpak/com.snapetech.BookshelfNG.yml"
+grep -Fq 'branch: stable' "$flatpak/com.snapetech.BookshelfNG.yml"
 
 if bash "$repo_root/packaging/scripts/prepare-bookshelf-desktop-candidates.sh" "$archive" "$output" >/dev/null 2>&1; then
   echo 'Candidate preparation unexpectedly overwrote an existing output directory.' >&2

@@ -32,6 +32,7 @@ tar -czf "$archive" -C "$work/archive" ChaptarrNG
 cat > "$work/stubs/appimagetool" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
+test "${ARCH:-}" = x86_64
 test -x "$1/AppRun"
 printf 'synthetic AppImage payload\n' > "$2"
 SH
@@ -39,15 +40,19 @@ cat > "$work/stubs/flatpak-builder" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 repo=''
+state_dir=''
 positional=()
 for arg in "$@"; do
   case "$arg" in
     --repo=*) repo=${arg#--repo=} ;;
+    --state-dir=*) state_dir=${arg#--state-dir=} ;;
     --force-clean|--disable-download) ;;
     *) positional+=("$arg") ;;
   esac
 done
 test -n "$repo"
+test -n "$state_dir"
+test "$(basename "$state_dir")" = flatpak-builder-state
 test "${#positional[@]}" -eq 2
 test -s "${positional[1]}"
 mkdir -p "$repo"

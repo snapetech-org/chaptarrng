@@ -30,6 +30,8 @@ jobs:
   helm-handoff:
     name: Render and verify in-place resource identity
     runs-on: ubuntu-latest
+    env:
+      BOOKSHELFNG_CHART_SOURCE_SHA: adea130aeea2b6ea29c28a6ea8bf4706169d15e4
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
@@ -43,10 +45,13 @@ jobs:
           persist-credentials: false
 
       - name: Position the BookshelfNG checkout at the pinned chart revision
-        run: git -C bookshelfng-reference checkout --detach adea130aeea2b6ea29c28a6ea8bf4706169d15e
+        run: git -C bookshelfng-reference checkout --detach "$BOOKSHELFNG_CHART_SOURCE_SHA"
 
       - name: Verify BookshelfNG reference pin
-        run: test "$(git -C bookshelfng-reference rev-parse HEAD)" = "adea130aeea2b6ea29c28a6ea8bf4706169d15e"
+        run: |
+          actual="$(git -C bookshelfng-reference rev-parse --verify 'HEAD^{commit}' | tr -d '\r\n')"
+          printf 'BookshelfNG chart source: expected=%s actual=%s\n' "$BOOKSHELFNG_CHART_SOURCE_SHA" "$actual"
+          test "$actual" = "$BOOKSHELFNG_CHART_SOURCE_SHA"
 
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
         with:

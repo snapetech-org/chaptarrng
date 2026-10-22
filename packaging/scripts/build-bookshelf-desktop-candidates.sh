@@ -68,13 +68,13 @@ bash "$repo_root/packaging/scripts/prepare-bookshelf-desktop-candidates.sh" "$ar
 mkdir -p -- "$output"
 
 appimage="$output/ChaptarrNG-${version}-bookshelfng-x86_64.AppImage"
-appimagetool "$staged/appimage/ChaptarrNG.AppDir" "$appimage"
+ARCH=x86_64 appimagetool "$staged/appimage/ChaptarrNG.AppDir" "$appimage"
 chmod 0755 "$appimage"
 sha256sum "$appimage" > "$appimage.sha256"
 
 flatpak_repo="$output/flatpak-repo"
 flatpak_build="$work/flatpak-build"
-flatpak-builder --force-clean --disable-download --repo="$flatpak_repo" \
+flatpak-builder --force-clean --disable-download --state-dir="$work/flatpak-builder-state" --repo="$flatpak_repo" \
   "$flatpak_build" "$staged/flatpak/com.snapetech.BookshelfNG.yml"
 flatpak_bundle="$output/ChaptarrNG-${version}-bookshelfng.flatpak"
 flatpak build-bundle "$flatpak_repo" "$flatpak_bundle" com.snapetech.BookshelfNG stable

@@ -80,7 +80,7 @@ With Helm 3.20.0 and Ruby available, run:
 
 ```sh
 mkdir -p /tmp/bookshelfng-reference
-git -C /path/to/bookshelfng archive adea130aeea2b6ea29c28a6ea8bf4706169d15e charts/bookshelfng \
+git -C /path/to/bookshelfng archive adea130aeea2b6ea29c28a6ea8bf4706169d15e4 charts/bookshelfng \
   | tar -x -C /tmp/bookshelfng-reference
 BOOKSHELFNG_REFERENCE_CHART=/tmp/bookshelfng-reference/charts/bookshelfng \
   ruby scripts/test_bookshelfng_helm_handoff.rb
