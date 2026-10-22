@@ -56,6 +56,7 @@ namespace Chaptarr.Api.V1.Author
         }
 
         [HttpPut] // nosemgrep: csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery -- API fallback auth accepts API keys or bearer tokens, never browser cookies.
+        [Consumes("application/json")]
         public IActionResult SaveAll([FromBody] AuthorEditorResource resource)
         {
             var authorsToUpdate = _authorService.GetAuthors(resource.AuthorIds);
@@ -359,6 +360,7 @@ namespace Chaptarr.Api.V1.Author
         }
 
         [HttpDelete] // nosemgrep: csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery -- API fallback auth accepts API keys or bearer tokens, never browser cookies.
+        [Consumes("application/json")]
         public IActionResult DeleteAuthor([FromBody] AuthorEditorResource resource)
         {
             // See AuthorController.DeleteAuthor - a bulk selection can add up to just as many books

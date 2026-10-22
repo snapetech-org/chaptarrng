@@ -49,6 +49,7 @@ namespace Chaptarr.Api.V1.ManualImport
         }
 
         [HttpPost] // nosemgrep: csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery -- API fallback auth accepts API keys or bearer tokens, never browser cookies.
+        [Consumes("application/json")]
         public IActionResult UpdateItems([FromBody] List<ManualImportUpdateResource> resource)
         {
             if (resource == null || resource.Count == 0)

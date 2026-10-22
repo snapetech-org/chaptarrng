@@ -71,6 +71,13 @@ defaults to 16 MiB and is clamped to 1–128 MiB. The backup upload endpoint has
 its own explicit 1 GiB request and multipart limits, so large ChaptarrNG and
 BookshelfNG backup restores remain supported.
 
+## JSON-only mutation endpoints
+
+The BookshelfNG-compatible Author Editor, Bookshelf, Book Editor, and Manual
+Import update actions accept JSON request bodies only. Clients calling those
+actions must send `Content-Type: application/json`; other request media types
+are rejected.
+
 These controls are included in the current ChaptarrNG source. They are not in
 the published `v0.9.977` release and do not by themselves close the BookshelfNG
 migration, release, or cutover gates.
