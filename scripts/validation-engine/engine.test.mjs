@@ -25,7 +25,7 @@ function assertChromiumCacheWorkflowContract(source) {
   assert.doesNotMatch(workflow, /^(<<<<<<<|=======|>>>>>>>).*$/m);
   const cacheSteps = [
     'Configure Chromium cache for direct-download browser tests',
-    'Install Chromium and system dependencies on GitHub-hosted Linux',
+    'Install Chromium and system dependencies on Linux',
     'Test',
   ];
   for (const name of cacheSteps) {
