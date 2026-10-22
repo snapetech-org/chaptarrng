@@ -4192,6 +4192,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     var authorFolder = !string.IsNullOrWhiteSpace(authorFolderPath)
                         ? Path.GetFileName(authorFolderPath)
                         : Directory.GetParent(dir)?.Name ?? string.Empty;
+                    authorFolder = CanonicalMatchInputBuilder.CleanDownloadFolderName(authorFolder);
                     if (!string.IsNullOrWhiteSpace(bookFolder))
                     {
                         tags["ALBUM"] = new List<string> { NormalizeForPathTokens(bookFolder) };

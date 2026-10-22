@@ -13,7 +13,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
     public class DiscographySpecificationFixture
     {
         [Test]
-        public void should_hard_reject_discography_even_when_all_books_are_released()
+        public void should_accept_discography_when_all_books_are_released()
         {
             var spec = new DiscographySpecification(LogManager.GetCurrentClassLogger());
             var remoteBook = new RemoteBook
@@ -29,10 +29,29 @@ namespace Chaptarr.Core.Test.DecisionEngine
 
             var decision = spec.IsSatisfiedBy(remoteBook, new BookSearchCriteria());
 
+            Assert.That(decision.Accepted, Is.True);
+        }
+
+        [Test]
+        public void should_reject_discography_when_a_book_is_unreleased_or_has_no_release_date()
+        {
+            var spec = new DiscographySpecification(LogManager.GetCurrentClassLogger());
+            var remoteBook = new RemoteBook
+            {
+                Release = new ReleaseInfo { Title = "Pierce Brown Discography 2020-2030" },
+                ParsedBookInfo = new ParsedBookInfo { Discography = true },
+                Books = new List<Book>
+                {
+                    new Book { ReleaseDate = DateTime.UtcNow.AddYears(-1) },
+                    new Book { ReleaseDate = DateTime.UtcNow.AddYears(1) },
+                    new Book { ReleaseDate = null }
+                }
+            };
+
+            var decision = spec.IsSatisfiedBy(remoteBook, new BookSearchCriteria());
+
             Assert.That(decision.Accepted, Is.False);
-            Assert.That(decision.CanBypass, Is.False);
-            Assert.That(decision.Category, Is.EqualTo("Pack"));
-            Assert.That(decision.Reason, Is.EqualTo("Release appears to contain multiple books (discography)"));
+            Assert.That(decision.Reason, Is.EqualTo("Discography release rejected. All books haven't released yet."));
         }
 
         [Test]

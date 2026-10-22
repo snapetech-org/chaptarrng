@@ -404,6 +404,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             return new DiskScanService(
                 configService: null,
                 diskProvider: diskProvider,
+                mediaFileAttributeService: null,
                 calibre: null,
                 mediaFileService: mediaFileService ?? new StubMediaFileService(),
                 metadataTagService: metadataTagService,
@@ -427,6 +428,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             var sut = new DiskScanService(
                 configService: null,
                 diskProvider: null,
+                mediaFileAttributeService: null,
                 calibre: null,
                 mediaFileService: mediaFileService,
                 metadataTagService: null,
@@ -473,6 +475,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             var sut = new DiskScanService(
                 configService: null,
                 diskProvider: diskProvider,
+                mediaFileAttributeService: null,
                 calibre: null,
                 mediaFileService: mediaFileService,
                 metadataTagService: metadataTagService,
@@ -528,6 +531,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             var sut = new DiskScanService(
                 configService: null,
                 diskProvider: diskProvider,
+                mediaFileAttributeService: null,
                 calibre: null,
                 mediaFileService: mediaFileService,
                 metadataTagService: metadataTagService,
@@ -561,6 +565,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             var sut = new DiskScanService(
                 configService: null,
                 diskProvider: null,
+                mediaFileAttributeService: null,
                 calibre: null,
                 mediaFileService: null,
                 metadataTagService: null,

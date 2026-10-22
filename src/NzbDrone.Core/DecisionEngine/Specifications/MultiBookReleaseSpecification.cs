@@ -29,6 +29,12 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             switch (detection.Verdict)
             {
                 case ReleasePackDetectionVerdict.MultipleBooks:
+                    if (DiscographySpecification.AllBooksReleased(subject))
+                    {
+                        _logger.TraceSafe("Allowing published discography release {0}.", subject.Release?.Title);
+                        return Decision.Accept();
+                    }
+
                     _logger.TraceSafe("Release {0} rejected as multi-book pack. Type={1}, Match={2}",
                         subject.Release?.Title,
                         detection.PackType,

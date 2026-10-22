@@ -119,6 +119,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             return new DiskScanService(
                 configService: null,
                 diskProvider: diskProvider,
+                mediaFileAttributeService: null,
                 calibre: null,
                 mediaFileService: null,
                 metadataTagService: null,

@@ -53,6 +53,7 @@ namespace NzbDrone.Core.MediaFiles
 
         private readonly IConfigService _configService;
         private readonly IDiskProvider _diskProvider;
+        private readonly IMediaFileAttributeService _mediaFileAttributeService;
         private readonly ICalibreProxy _calibre;
         private readonly IMediaFileService _mediaFileService;
         private readonly IMetadataTagService _metadataTagService;
@@ -68,6 +69,7 @@ namespace NzbDrone.Core.MediaFiles
         public DiskScanService(
             IConfigService configService,
             IDiskProvider diskProvider,
+            IMediaFileAttributeService mediaFileAttributeService,
             ICalibreProxy calibre,
             IMediaFileService mediaFileService,
             IMetadataTagService metadataTagService,
@@ -82,6 +84,7 @@ namespace NzbDrone.Core.MediaFiles
         {
             _configService = configService;
             _diskProvider = diskProvider;
+            _mediaFileAttributeService = mediaFileAttributeService;
             _calibre = calibre;
             _mediaFileService = mediaFileService;
             _metadataTagService = metadataTagService;
@@ -120,6 +123,14 @@ namespace NzbDrone.Core.MediaFiles
                 folders = _rootFolderService.All().Select(x => x.Path).ToList();
             }
 
+            var createEmptyAuthorFolders = _configService?.CreateEmptyAuthorFolders == true;
+            var createEmptyEbookAuthorFolders = _configService?.CreateEmptyEbookAuthorFolders == true;
+            var authorsToCreateFoldersFor = createEmptyAuthorFolders || createEmptyEbookAuthorFolders
+                ? authorIds != null && authorIds.Any()
+                    ? _authorService.GetAuthors(authorIds)
+                    : _authorService.GetAllAuthors()
+                : new List<Author>();
+
             LogMemorySnapshot("Disk scan start ({0} folders)", folders.Count);
 
             var scanStopwatch = Stopwatch.StartNew();
@@ -148,6 +159,12 @@ namespace NzbDrone.Core.MediaFiles
                 {
                     _logger.Error("Not scanning {0}, it's not a subdirectory of a defined root folder", folder);
                     continue;
+                }
+
+                if (authorsToCreateFoldersFor.Count > 0 && _diskProvider.FolderExists(rootFolder.Path))
+                {
+                    CreateEmptyAuthorFolders(folder, rootFolder, authorsToCreateFoldersFor,
+                        createEmptyAuthorFolders, createEmptyEbookAuthorFolders);
                 }
 
                 if (!_diskProvider.FolderExists(folder))
@@ -269,6 +286,50 @@ namespace NzbDrone.Core.MediaFiles
             _eventAggregator.PublishEvent(doneEvt);
 
             CompactAfterLargeScanIfNeeded(totalScannedFiles, scanStopwatch.Elapsed);
+        }
+
+        private void CreateEmptyAuthorFolders(
+            string folder,
+            RootFolder rootFolder,
+            IEnumerable<Author> authors,
+            bool createLegacyAuthorFolders,
+            bool createEbookAuthorFolders)
+        {
+            foreach (var author in authors)
+            {
+                if (author == null)
+                {
+                    continue;
+                }
+
+                var authorPaths = new List<string>();
+                if (createLegacyAuthorFolders && author.Path.IsNotNullOrWhiteSpace())
+                {
+                    authorPaths.Add(author.Path);
+                }
+
+                if (createEbookAuthorFolders && author.EbookPath.IsNotNullOrWhiteSpace())
+                {
+                    authorPaths.Add(author.EbookPath);
+                }
+
+                foreach (var authorPath in authorPaths.Distinct(PathEqualityComparer.Instance))
+                {
+                    var authorIsInRoot = PathEqualityComparer.Instance.Equals(authorPath, rootFolder.Path) ||
+                        rootFolder.Path.IsParentPath(authorPath);
+                    var authorIsInScannedFolder = PathEqualityComparer.Instance.Equals(authorPath, folder) ||
+                        folder.IsParentPath(authorPath);
+
+                    if (!authorIsInRoot || !authorIsInScannedFolder || _diskProvider.FolderExists(authorPath))
+                    {
+                        continue;
+                    }
+
+                    _logger.Debug("Creating missing author folder {0}", authorPath);
+                    _diskProvider.EnsureFolder(authorPath);
+                    _mediaFileAttributeService.SetFolderPermissions(authorPath);
+                }
+            }
         }
 
         private void LogMemorySnapshot(string message, params object[] args)
