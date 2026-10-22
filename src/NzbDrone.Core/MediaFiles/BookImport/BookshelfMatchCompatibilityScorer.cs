@@ -150,7 +150,10 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             if (mediaType == BookMediaType.Audiobook)
             {
-                var fileNarrators = GetNarrators(GetValues(trackTags, "narrator", "narrators", "performer"));
+                // BookshelfNG's AudioTag maps its explicit NARRATOR credit to FileTrackInfo.Narrator.
+                // Performers are also included in the author list, so treating them as narrator
+                // evidence would add a score penalty that the legacy matcher never applied.
+                var fileNarrators = GetNarrators(GetValues(trackTags, "narrator", "narrators"));
                 var editionNarrators = GetNarrators(new[] { edition?.Narrator });
                 if (fileNarrators.Count > 0 && editionNarrators.Count > 0)
                 {

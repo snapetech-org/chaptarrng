@@ -143,6 +143,35 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
         }
 
         [Test]
+        public void should_not_treat_audiobook_performers_as_narrator_credits()
+        {
+            var tags = new Dictionary<string, List<string>>
+            {
+                ["albumartist"] = new List<string> { "Ursula Le Guin" },
+                ["performer"] = new List<string> { "Ursula Le Guin" },
+                ["album"] = new List<string> { "A Wizard of Earthsea" }
+            };
+            var candidate = new EditionFtsMatch
+            {
+                AuthorName = "Ursula Le Guin",
+                BookTitle = "A Wizard of Earthsea",
+                EditionTitle = "A Wizard of Earthsea",
+                EditionFormat = "Audiobook"
+            };
+            var edition = new Edition
+            {
+                Title = "A Wizard of Earthsea",
+                Format = "Audiobook",
+                Narrator = "A Different Narrator"
+            };
+            var book = new Book { Title = "A Wizard of Earthsea", Author = new Author { Name = "Ursula Le Guin" } };
+
+            var percent = BookshelfMatchCompatibilityScorer.GetMatchPercent(new[] { tags }, candidate, edition, book, BookMediaType.Audiobook);
+
+            Assert.That(percent, Is.EqualTo(100));
+        }
+
+        [Test]
         public void should_use_bookshelf_audio_title_and_sort_fallbacks()
         {
             var tags = new Dictionary<string, List<string>>
