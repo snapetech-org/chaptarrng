@@ -743,16 +743,18 @@ support.
 
 Some BookshelfNG books do not contain enough data to infer ebook versus
 audiobook. Preview writes a private review file. Operators can provide a
-complete, source-matched media map before conversion; with no map, conversion
-keeps each unresolved work in both ChaptarrNG catalogs, unmonitored, and
-leaves a private review file for classification after startup. This avoids
-speculative searches and keeps conversion moving, but does not infer a work's
-true format. A single monitored
-edition of each format is preserved on its corresponding ChaptarrNG record;
-multiple monitored editions of the same format still fail closed. The
-populated-library rehearsal accounted for every source row; some book
-classifications still required human review, and test choices were not
-reviewed as correct library decisions. A separate 2026-10-18
+complete, source-matched media map before conversion. Current ChaptarrNG source
+keeps each unresolved work in both catalogs and maps its source book-level
+monitoring choice to both: monitored source books remain monitored in both
+formats, while unmonitored source books remain unmonitored. The published
+`.977` release predates this fallback change and leaves ambiguous works
+unmonitored in both formats. This avoids guessing a media type but does not
+infer a work's true format. A single monitored edition of each format is
+preserved on its corresponding ChaptarrNG record; multiple monitored editions
+of the same format still fail closed. The populated-library rehearsal
+accounted for every source row; some book classifications still required
+human review, and test choices were not reviewed as correct library decisions.
+A separate 2026-10-18
 Docker image-switch smoke used an empty database created by BookshelfNG `.71`:
 ChaptarrNG `.977` converted it on normal startup, retained the original database,
 and restored it through rollback; the BookshelfNG image started again on port

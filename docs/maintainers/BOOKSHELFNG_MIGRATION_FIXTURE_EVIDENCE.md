@@ -12,6 +12,15 @@ release artifact. The worktree also carried local uncommitted source edits, so
 this is local behavioral evidence rather than exact-head hosted CI evidence.
 The expanded fixture helper is now committed in `380454f5`.
 
+**Historical fallback note:** This 2026-10-21 run records the behavior of that
+candidate: its two unresolved works were unmonitored in both catalogs. The
+automatic fallback changed in ChaptarrNG commit
+`5b9801484bb200c2ff1436a9ffccb296e93f243c` on 2026-10-22 to preserve source
+book-level monitoring (monitored sources map to both monitored formats;
+unmonitored sources remain unmonitored). This fixture report does not test
+that later behavior; current evidence is in the
+[retirement status](../BOOKSHELFNG_RETIREMENT.md).
+
 The source had 39 tables and passed SQLite integrity and foreign-key checks.
 It contained four authors, six works, nine editions, four placeholder files,
 two sidecars, four history rows, three download-history rows, two series, three

@@ -483,14 +483,16 @@ the same provider-mode values.
 
 Some source records have no edition rows, so their media type cannot be
 determined from the database. A monitored mixed-format book can also have no
-selected edition. With no media map, preview and startup now preserve each
-unresolved book in both ChaptarrNG catalogs and leave both records unmonitored.
-This keeps the migration moving without starting speculative searches in the
-wrong format. It can create a temporary duplicate title across the ebook and
-audiobook catalogs; no files are assigned or moved for that book. The fallback
-also applies to a monitored mixed-format book with no selected edition: its
-existing editions and files remain, but neither format is monitored until the
-operator reviews it.
+selected edition. With no media map, preview and startup preserve each
+unresolved book in both ChaptarrNG catalogs. A source-monitored book remains
+monitored in both target formats; a source-unmonitored book remains
+unmonitored in both. This preserves the legacy book-level monitoring choice
+without guessing the intended format. The private review file records the
+ambiguity, and a media map can narrow the book to one format. A temporary
+duplicate title can appear across the ebook and audiobook catalogs; the
+fallback does not infer a format for an editionless work or move its media
+files. For a mixed-format book with no selected edition, its existing editions
+and file rows remain.
 
 The current ChaptarrNG migration candidate maps legacy
 `MetadataFiles.Consumer=Readarr` rows to `LegacyAudiobookshelfMetadata`. This
