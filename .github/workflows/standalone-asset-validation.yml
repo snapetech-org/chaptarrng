@@ -137,6 +137,14 @@ jobs:
         name: chaptarrng-platform-runtime-packs
         path: ${{ runner.temp }}/platform-runtime-packs
 
+    - name: Configure user-writable .NET install directory
+      shell: bash
+      run: |
+        set -euo pipefail
+        dotnet_dir="$RUNNER_TEMP/dotnet"
+        mkdir -p -- "$dotnet_dir"
+        printf 'DOTNET_INSTALL_DIR=%s\n' "$dotnet_dir" >> "$GITHUB_ENV"
+
     - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
         dotnet-version: 10.0.402
@@ -144,9 +152,12 @@ jobs:
     # Extra runtime packs must go into an owned copy of the runner-managed SDK.
     - name: Prepare writable .NET SDK root for extra platform packs
       env:
-        SOURCE_DOTNET_ROOT: /usr/share/dotnet
         DOTNET_ROOT: ${{ runner.temp }}/chaptarrng-dotnet
-      run: bash packaging/scripts/prepare-writable-dotnet-root.sh "$SOURCE_DOTNET_ROOT" "$DOTNET_ROOT"
+      shell: bash
+      run: |
+        set -euo pipefail
+        source_dotnet_root="$(dirname -- "$(readlink -f -- "$(command -v dotnet)")")"
+        bash packaging/scripts/prepare-writable-dotnet-root.sh "$source_dotnet_root" "$DOTNET_ROOT"
 
     - name: Require ImageSharp build license
       env:
@@ -188,6 +199,14 @@ jobs:
       with:
         name: standalone-validation-ui
         path: _output/UI
+
+    - name: Configure user-writable .NET install directory
+      shell: bash
+      run: |
+        set -euo pipefail
+        dotnet_dir="$RUNNER_TEMP/dotnet"
+        mkdir -p -- "$dotnet_dir"
+        printf 'DOTNET_INSTALL_DIR=%s\n' "$dotnet_dir" >> "$GITHUB_ENV"
 
     - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:

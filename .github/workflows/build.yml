@@ -492,6 +492,14 @@ jobs:
         node-version: 26.12.1
         package-manager-cache: false
 
+    - name: Configure user-writable .NET install directory
+      shell: bash
+      run: |
+        set -euo pipefail
+        dotnet_dir="$RUNNER_TEMP/dotnet"
+        mkdir -p -- "$dotnet_dir"
+        printf 'DOTNET_INSTALL_DIR=%s\n' "$dotnet_dir" >> "$GITHUB_ENV"
+
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
@@ -501,8 +509,15 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client
+        if ! command -v psql >/dev/null 2>&1; then
+          proxy="${https_proxy:-${HTTPS_PROXY:-${http_proxy:-${HTTP_PROXY:-}}}}"
+          apt_options=()
+          if [[ -n "$proxy" ]]; then
+            apt_options+=(-o "Acquire::http::Proxy=$proxy" -o "Acquire::https::Proxy=$proxy")
+          fi
+          sudo apt-get "${apt_options[@]}" update
+          sudo apt-get "${apt_options[@]}" install -y postgresql-client
+        fi
 
     - name: Create databases
       shell: bash
@@ -600,6 +615,8 @@ jobs:
     - name: Set up Docker Buildx
       if: steps.license.outputs.configured == 'true'
       uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      with:
+        driver-opts: env.HTTP_PROXY=http://10.0.2.100:3128,env.HTTPS_PROXY=http://10.0.2.100:3128,env.http_proxy=http://10.0.2.100:3128,env.https_proxy=http://10.0.2.100:3128
 
     - name: Build image for all published architectures without pushing
       if: steps.license.outputs.configured == 'true'

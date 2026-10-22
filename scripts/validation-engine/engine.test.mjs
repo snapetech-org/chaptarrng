@@ -35,6 +35,9 @@ function assertChromiumCacheWorkflowContract(source) {
     const next = workflow.indexOf('\n    - name:', start + marker.length);
     const step = workflow.slice(start, next === -1 ? workflow.length : next);
     assert.ok(step.split('\n').some((line) => line.trim() === cacheSetting), `${name} must use the per-job runner cache path`);
+    if (name !== 'Test') {
+      assert.ok(step.split('\n').some((line) => line.trim() === "if: runner.os == 'Linux'"), `${name} must only run on Linux`);
+    }
   }
   assert.match(workflow, /PLAYWRIGHT_BROWSERS_PATH=\$PLAYWRIGHT_BROWSERS_PATH.*\$GITHUB_ENV/);
 }
@@ -50,6 +53,23 @@ test('workflow and validation engine pin the same Node.js version', () => {
   assert.equal(new Set(workflowVersions).size, 1, 'all build jobs must use the same Node.js version');
   assert.ok(runtime, 'validation engine must check its Node.js runtime');
   assert.equal(runtime.versionPattern, `^v${workflowVersions[0].replaceAll('.', '\\.')}$`, 'validation engine must require the version installed by CI');
+});
+
+test('self-hosted migration checks keep SDK, package, and scanner setup writable and reachable', () => {
+  const buildWorkflow = readFileSync(new URL('../../.github/workflows/build.yml', import.meta.url), 'utf8');
+  const codeqlWorkflow = readFileSync(new URL('../../.github/workflows/codeql.yml', import.meta.url), 'utf8');
+  const securityWorkflow = readFileSync(new URL('../../.github/workflows/security.yml', import.meta.url), 'utf8');
+  const standaloneWorkflow = readFileSync(new URL('../../.github/workflows/standalone-asset-validation.yml', import.meta.url), 'utf8');
+  const debBridgeTest = readFileSync(new URL('../../packaging/scripts/test-build-bookshelfng-deb-bridge.sh', import.meta.url), 'utf8');
+
+  assert.match(buildWorkflow, /DOTNET_INSTALL_DIR=%s.*\$GITHUB_ENV/);
+  assert.match(buildWorkflow, /Acquire::http::Proxy=\$proxy/);
+  assert.match(buildWorkflow, /driver-opts: env\.HTTP_PROXY=http:\/\/10\.0\.2\.100:3128/);
+  assert.match(codeqlWorkflow, /github\/codeql-action\/init@[^\s]+ # v4\.39\.1/);
+  assert.match(securityWorkflow, /TRIVY_DB_REPOSITORY: ghcr\.io\/aquasecurity\/trivy-db:2/);
+  assert.match(standaloneWorkflow, /DOTNET_INSTALL_DIR=%s.*\$GITHUB_ENV/);
+  assert.match(standaloneWorkflow, /source_dotnet_root=.*readlink -f/);
+  assert.match(debBridgeTest, /Acquire::https::Proxy=\$apt_proxy/);
 });
 
 test('book-file count and matching-log toast fallbacks stay localized', () => {

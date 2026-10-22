@@ -90,25 +90,41 @@ TASK_SCRATCH_DIR="$task_root/dpkg-roundtrip" \
   bash "$repo_root/packaging/scripts/test-bookshelfng-deb-roundtrip.sh"
 
 command -v docker >/dev/null
-docker run --rm -i --mount "type=bind,src=$task_root,dst=/packages,readonly" \
+docker_proxy_args=()
+for proxy_name in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do
+  if [[ -n "${!proxy_name:-}" ]]; then
+    docker_proxy_args+=(--env "$proxy_name=${!proxy_name}")
+  fi
+done
+
+docker run --rm -i --user 0:0 "${docker_proxy_args[@]}" \
+  --mount "type=bind,src=$task_root,dst=/packages,readonly" \
   debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad \
   sh -s <<'APTTEST'
 set -eu
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -qq -y --no-install-recommends /packages/bookshelfng_0.4.21.71-1_amd64.deb
+apt_proxy="${https_proxy:-${HTTPS_PROXY:-${http_proxy:-${HTTP_PROXY:-}}}}"
+apt_get() {
+  if [ -n "$apt_proxy" ]; then
+    command apt-get -o "Acquire::http::Proxy=$apt_proxy" -o "Acquire::https::Proxy=$apt_proxy" "$@"
+  else
+    command apt-get "$@"
+  fi
+}
+apt_get update -qq
+apt_get install -qq -y --no-install-recommends /packages/bookshelfng_0.4.21.71-1_amd64.deb
 test "$(dpkg-query -W -f='${Version}' bookshelfng)" = 0.4.21.71-1
 printf '# config-canary\n' >> /etc/bookshelfng/bookshelfng.env
 mkdir -p /var/lib/bookshelfng
 printf 'migration-data-canary\n' > /var/lib/bookshelfng/data-canary
-apt-get install -qq -y --no-install-recommends /packages/out/bookshelfng_0.9.977-1_amd64.deb
+apt_get install -qq -y --no-install-recommends /packages/out/bookshelfng_0.9.977-1_amd64.deb
 test "$(dpkg-query -W -f='${Version}' bookshelfng)" = 0.9.977-1
 test -s /etc/ssl/certs/ca-certificates.crt
 test -x /usr/lib/chaptarrng/bin/Chaptarr
 test "$(readlink /usr/bin/bookshelfng)" = ../lib/chaptarrng/bin/Chaptarr
 grep -Fq '# config-canary' /etc/bookshelfng/bookshelfng.env
 grep -Fq 'migration-data-canary' /var/lib/bookshelfng/data-canary
-apt-get install -qq -y --allow-downgrades --no-install-recommends /packages/bookshelfng_0.4.21.71-1_amd64.deb
+apt_get install -qq -y --allow-downgrades --no-install-recommends /packages/bookshelfng_0.4.21.71-1_amd64.deb
 test "$(dpkg-query -W -f='${Version}' bookshelfng)" = 0.4.21.71-1
 test -x /usr/lib/bookshelfng/Readarr
 test "$(readlink /usr/bin/bookshelfng)" = ../lib/bookshelfng/Readarr
