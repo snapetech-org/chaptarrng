@@ -301,14 +301,22 @@ container files default to the source-only compatibility image target; replace
 it with the exact published image digest before accepting an update. Third-party
 catalog listings remain owned by their maintainers and are unchanged.
 
-The local `.978` AppImage and Flatpak candidates are built and pass startup and
-synthetic migration/restore smokes. They are unsigned and unpublished;
-existing-channel updates and representative-data acceptance remain open.
-Cloudron package generation, the canonical Co-op Cloud recipe review, and
-catalog-specific update and rollback flows have not been accepted. Keep the old
-installation in service until that channel has passed its acceptance checks or
-has an explicit retirement decision. The StartOS package candidate and external
-repository boundary are documented in
+The pre-fix local `.978` AppImage and Flatpak candidates are built, unsigned, and
+unpublished. Both passed a local installed-channel update rehearsal from the
+checksum-verified public `.71` packages: the AppImage candidate replaced the old
+binary at the same path, and Flatpak updated the same app ID. On a task-scoped
+schema-158 fixture, preview left the source unchanged, startup converted to
+schema 121, and restore recovered the source database byte-for-byte. The old
+`.71` packages were restored and each returned `/ping` 200. This does not
+establish an update from a published ChaptarrNG candidate or acceptance with
+operator data. The pre-fix candidate fixture has three author paths equal to configured
+root folders; it automatically repaired those records at startup, including
+rewriting their ebook paths. Source now has a regression fix for that path
+shape, pending hosted validation. Representative-data acceptance remains open. Cloudron package generation,
+the canonical Co-op Cloud recipe review, and catalog-specific update and
+rollback flows have not been accepted. Keep each old installation in service
+until that channel has passed its acceptance checks or has an explicit
+retirement decision. The StartOS package candidate and external repository boundary are documented in
 [`legacy/startos/README.md`](legacy/startos/README.md).
 
 ## Work required before enabling the legacy bridge
@@ -329,9 +337,9 @@ repository boundary are documented in
   manifest digests before changing any mutable image aliases.
 - Complete the separate [BookshelfNG feature-parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md),
   or explicitly accept and document the behavior that will not move.
-- Test updates, backup, and rollback from existing AppImage and Flatpak
-  installations; generate the Cloudron version metadata from its accepted
-  build; update the external StartOS
+- Validate AppImage and Flatpak migration against representative operator data,
+  including the shared-root path fix now in source. Generate
+  the Cloudron version metadata from its accepted build; update the external StartOS
   package, canonical Co-op Cloud recipe, and supported catalog records to a
   verified immutable digest. Run each channel's installed update, backup, and
   rollback checks. Record explicit retirement decisions for unsupported
