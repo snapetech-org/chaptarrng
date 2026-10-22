@@ -90,11 +90,11 @@ for workflow in "$release_workflow" "$docker_workflow" "$package_workflow"; do
     exit 1
   }
 done
-if CHAPTARRNG_RELEASE_READY=false BOOKSHELFNG_RELEASE_READY=true bash "$readiness_gate"; then
+if CHAPTARRNG_RELEASE_READY=false BOOKSHELFNG_RELEASE_READY=true bash "$readiness_gate" >/dev/null 2>&1; then
   echo "The retirement release-readiness gate accepted a disabled value." >&2
   exit 1
 fi
-if CHAPTARRNG_RELEASE_READY=true BOOKSHELFNG_RELEASE_READY=false bash "$readiness_gate"; then
+if CHAPTARRNG_RELEASE_READY=true BOOKSHELFNG_RELEASE_READY=false bash "$readiness_gate" >/dev/null 2>&1; then
   echo "The retirement release-readiness gate accepted incomplete BookshelfNG readiness." >&2
   exit 1
 fi
