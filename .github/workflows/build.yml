@@ -352,36 +352,13 @@ jobs:
         bash packaging/scripts/test-build-bookshelf-desktop-candidates.sh
 
     - name: Test
-      id: validation
       env:
         DIRECT_DOWNLOAD_REQUIRE_PLAYWRIGHT: ${{ runner.os == 'Linux' && 'true' || 'false' }}
         PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
-        VALIDATION_NODE_ID: chaptarr-${{ matrix.platform }}-${{ runner.arch }}
-        VALIDATION_TEMP_ROOT: ${{ runner.temp }}
-        VALIDATION_RECEIPT_EXPORT: ${{ runner.temp }}/chaptarr-validation/receipt.json
-      shell: bash
-      run: |
-        set -euo pipefail
-        mkdir -p "$VALIDATION_TEMP_ROOT/chaptarr-validation"
-        echo "started=true" >> "$GITHUB_OUTPUT"
-        set +e
-        node scripts/validation-engine/engine.mjs --tests-only
-        status=$?
-        set -e
-        exit "$status"
+      run: dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore --no-build --verbosity normal
 
-    - name: Upload validation receipt
-      if: always() && steps.validation.outputs.started == 'true'
-      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-      with:
-        name: chaptarr-validation-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.platform }}-${{ runner.arch }}
-        path: ${{ runner.temp }}/chaptarr-validation/receipt.json
-        retention-days: 7
-        if-no-files-found: error
-
-    # CSS Modules generation rewrites tracked declaration files. Build the UI
-    # after exporting the receipt so every validation node fingerprints the
-    # same committed checkout as the PostgreSQL migration node.
+    # CSS Modules generation rewrites tracked declaration files, so build the UI
+    # after the tests have finished.
     - name: Build frontend
       run: yarn build
     
@@ -486,12 +463,6 @@ jobs:
           exit 1
         fi
 
-    - name: Setup Node.js
-      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-      with:
-        node-version: 26.12.1
-        package-manager-cache: false
-
     - name: Configure user-writable .NET install directory
       shell: bash
       run: |
@@ -544,29 +515,34 @@ jobs:
         dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore -p:UseSharedCompilation=false
 
     - name: Smoke - migrate up on fresh PostgreSQL
-      id: validation
       env:
-        VALIDATION_NODE_ID: chaptarr-postgres-linux-${{ runner.arch }}
-        VALIDATION_RECEIPT_EXPORT: ${{ runner.temp }}/chaptarr-validation/receipt.json
-      shell: bash
-      run: |
-        set -euo pipefail
-        mkdir -p "$RUNNER_TEMP/chaptarr-validation"
-        echo "started=true" >> "$GITHUB_OUTPUT"
-        set +e
-        node scripts/validation-engine/engine.mjs --task postgres-migrations-smoke
-        status=$?
-        set -e
-        exit "$status"
+        CHAPTARRNG_POSTGRES_SMOKE_DIR: ${{ runner.temp }}/chaptarr-postgres-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+        Chaptarr__Postgres__Host: localhost
+        Chaptarr__Postgres__Port: "5432"
+        Chaptarr__Postgres__User: chaptarr
+        Chaptarr__Postgres__Password: chaptarr
+        Chaptarr__Postgres__MainDb: chaptarr-main
+        Chaptarr__Postgres__LogDb: chaptarr-log
+        Chaptarr__Postgres__CacheDb: chaptarr-cache
+        CHAPTARRNG_POSTGRES_TEST_CONNECTION: Host=localhost;Port=5432;Database=chaptarr-main;Username=chaptarr;Password=chaptarr;Pooling=false;Timeout=5;Command Timeout=300
+        Chaptarr__Server__BindAddress: 127.0.0.1
+        Chaptarr__Server__Port: "8789"
+      run: bash scripts/test-postgres-migrations-smoke.sh
 
-    - name: Upload validation receipt
-      if: always() && steps.validation.outputs.started == 'true'
+    - name: Upload PostgreSQL smoke logs
+      id: postgres-smoke-logs
+      if: failure()
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: chaptarr-validation-${{ github.run_id }}-${{ github.run_attempt }}-postgres-${{ runner.arch }}
-        path: ${{ runner.temp }}/chaptarr-validation/receipt.json
-        retention-days: 7
-        if-no-files-found: error
+        name: chaptarr-postgres-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/chaptarr-postgres-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+        retention-days: 3
+        if-no-files-found: ignore
+
+    - name: Remove local PostgreSQL smoke logs
+      if: always() && steps.postgres-smoke-logs.outcome != 'failure'
+      shell: bash
+      run: rm -rf -- "${{ runner.temp }}/chaptarr-postgres-smoke-${{ github.run_id }}-${{ github.run_attempt }}"
 
   docker-compatibility-build:
     name: Docker (${{ matrix.target }})
@@ -631,32 +607,3 @@ jobs:
         cache-to: type=gha,scope=bookshelfng-${{ matrix.cache-scope }},mode=max
         secrets: |
           SIXLABORS_LICENSE_KEY=${{ secrets.SIXLABORS_LICENSE_KEY }}
-
-  validation-reconcile:
-    name: Reconcile native runner receipts
-    needs: [build, postgres-migrations, docker-compatibility-build]
-    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
-    permissions:
-      contents: read
-      actions: read
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-
-    - name: Setup Node.js
-      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-      with:
-        node-version: 26.12.1
-        package-manager-cache: false
-
-    - name: Download receipts from this workflow attempt
-      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-      with:
-        pattern: chaptarr-validation-${{ github.run_id }}-${{ github.run_attempt }}-*
-        path: validation-receipts
-
-    - name: Reconcile platform and migration receipts
-      env:
-        GITHUB_RUN_ID: ${{ github.run_id }}
-        GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
-        GITHUB_SHA: ${{ github.sha }}
-      run: node scripts/validation-engine/reconcile.mjs validation-receipts

@@ -60,8 +60,7 @@ unset SIXLABORS_LICENSE_KEY
 ```
 
 `src/Directory.Build.props` passes `SIXLABORS_LICENSE_KEY` to the ImageSharp
-build target. If you are running the validation engine, follow its instructions
-to build with the license and clear the variable before starting the engine.
+build target. The license variable is only needed for the build commands above.
 
 ## GitHub Actions builds
 
@@ -92,4 +91,3 @@ metadata. Do not add the key to a Docker `ARG`, `ENV`, or runtime configuration.
 
 - [Six Labors ImageSharp license and build setup](https://docs.sixlabors.com/articles/imagesharp/index.html#license)
 - [Six Labors licensing portal](https://licensing.sixlabors.com/)
-- [ChaptarrNG validation-engine build instructions](validation-engine.md#local-use)

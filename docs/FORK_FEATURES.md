@@ -419,11 +419,6 @@ root certificate. The connection pool no longer resets the session after each
 query. UI routes load their code on demand, while React Query manages server
 state; both changes reduce startup work for large installations.
 
-The [validation engine guide](./development/validation-engine.md) documents
-source-bound local and CI test runs, platform receipts, and live task progress.
-It complements the normal release changelog and does not imply that every
-backlog report has passed final validation.
-
 ## Backups and service security
 
 Quickstart Settings Backups support optional passphrase encryption. Full
