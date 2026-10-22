@@ -154,6 +154,24 @@ named test volumes; do not point this harness at operator appdata.
 
 ## Recorded smoke evidence
 
+**Current source-built populated migration and lifecycle smoke (2026-10-22):**
+ChaptarrNG commit `7db557ba` built through the checked-in
+`Dockerfile.build` and passed both Compose smoke scripts against SeerrNG
+source commit `35d83b8be0243c6c7831e4833644ffd4cfe52c33`. Normal startup
+converted the disposable populated BookshelfNG migration-158 fixture.
+SeerrNG's compiled `ReadarrAPI` read one migrated audiobook and one ebook
+with their expected Hardcover identities. Capability discovery and restricted
+service-key access passed; `/config/host` and unrelated `/command` access were
+denied to that key, while the global key remained authorized. The adapter
+created a synthetic pending author import, polled it, cancelled it, and read
+the terminal cancellation state. The first source-image attempt exposed that
+`Dockerfile.build` omitted the compatibility-defaults script sourced by the
+entrypoint; commit `7db557ba` adds the missing copy and a regression check, and
+the rebuilt image passed. Records, keys, and media placeholders were
+synthetic. This does not establish live provider fulfillment, retries,
+availability or history parity, production settings, real operator records,
+or full SeerrNG operator acceptance.
+
 **Exact-head artifact-based populated migration and lifecycle smoke
 (2026-10-19):** The Linux application artifact from ChaptarrNG PR #131 code
 head `969fb20bdc21b876d71d844f40606b27e20dc8ec`, Build
