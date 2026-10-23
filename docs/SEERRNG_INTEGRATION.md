@@ -60,6 +60,25 @@ submission also passed. The UI is source-only in public `v0.9.977`. PR #131 is
 merged, but operator-data, full SeerrNG workflow, rollback, and channel
 acceptance remain open, so release publication stays frozen.
 
+**Source-built compatibility recheck (2026-10-23):** ChaptarrNG checkout
+`00db3253348fbfc9bd49453b923789c25b4a4763` (application-code snapshot
+`a2d0af9fc31a94369bf091189b10b63f8ab1dc7e`, built version `0.9.978.0`) was
+built through the checked-in `Dockerfile.build` and exercised with SeerrNG
+checkout `bc580332ab49a7efa87e3d78b680a2a0cf1abbd0`. The Compose smoke converted
+the populated synthetic BookshelfNG schema-158 fixture during normal startup.
+SeerrNG's `ReadarrAPI` read the migrated audiobook and ebook, each format
+reported its one migrated book file, and migrated history row 93 remained on
+the ebook and absent from audiobook history. The restricted key was denied
+administrative and unrelated commands. SeerrNG then created, polled, and
+cancelled a synthetic pending import and observed its terminal state. The
+unique Compose containers, network, and volumes were removed; the local build
+image cache was retained.
+
+This verifies those paths for the synthetic fixture only. It does not prove
+full availability or history parity, live provider fulfillment, retry
+behavior, real operator data, installed-channel acceptance, or complete SeerrNG
+workflow parity.
+
 **Prior PR #131 application-code validation (2026-10-19):** snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed [Build 39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract. [CodeQL 39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), [security 39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), [NuGet 39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and [dependency review 39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. The SeerrNG adapter and request-route unit suite at source commit `b810153c` passed 4 files / 283 tests. The built Linux artifact also passed the earlier empty-library API and service-key smoke. The populated source-build check for later code is recorded below.
 
 **SeerrNG pending-request lifecycle probe (2026-10-19):** On the isolated Linux candidate from Build run [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373), SeerrNG's real `ReadarrAPI` (`b810153c`) submitted an ebook request for a synthetic work whose author was unavailable. `addBook` received a pending ID, `getPendingAuthorImport` read it, `cancelPendingAuthorImport` cancelled it, and a second poll observed the expected terminal cancellation state: `OverallStatus=Failed` with `LastError=Cancelled by user`. The cancelled record remains queryable rather than being removed. This proves request creation, polling, and cancellation across the adapter/API boundary. It used a disposable database and synthetic IDs; provider-success behavior, retries, availability, history, migrated records, production settings, full SeerrNG operator workflow, and operator acceptance remain open. The tested app artifact is code snapshot `0612cb4c`; PR commit `d9713604` added the repeatable helper and docs, and the intervening app change is Calibre selector tie-breaking rather than a SeerrNG API change. The probe is now repeatable through `integration/seerrng-request-lifecycle.mjs` and is wired after the authorization smoke in `integration/seerrng-smoke.compose.yml`. On 2026-10-19, both scripts passed against the isolated artifact from Build 39239940373 and SeerrNG source `b810153c`; `node --check`, Prettier, and Compose configuration validation also passed. The earlier Compose invocation used a temporary runtime image with `--no-build`. A follow-up source-build run on 2026-10-19 built the candidate through the checked-in `Dockerfile.build` from PR head `7cfb5d87` and passed both scripts after the harness prepared its disposable `/books` volume as UID/GID `99:100`. Successful fulfillment, retries, availability/history, converted records, saved operator settings, and acceptance remain open.

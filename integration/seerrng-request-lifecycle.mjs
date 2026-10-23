@@ -94,6 +94,36 @@ assert.deepEqual(
   [{ id: 51, bookId: 31 }]
 );
 
+const [
+  legacyAudiobookDetails,
+  legacyEbookDetails,
+  audiobookHistory,
+  ebookHistory,
+] = await Promise.all([
+  audiobookApi.getBook(legacyAudiobook.id),
+  api.getBook(legacyEbook.id),
+  audiobookApi.getBookHistory(legacyAudiobook.id),
+  api.getBookHistory(legacyEbook.id),
+]);
+assert.equal(
+  legacyAudiobookDetails.statistics?.bookFileCount,
+  1,
+  "SeerrNG should see the audiobook's file in its format-specific availability"
+);
+assert.equal(
+  legacyEbookDetails.statistics?.bookFileCount,
+  1,
+  "SeerrNG should see the ebook's file in its format-specific availability"
+);
+assert.ok(
+  ebookHistory.some(({ id, bookId }) => id === 93 && bookId === legacyEbook.id),
+  "The migrated ebook import history should remain attached to the ebook"
+);
+assert.ok(
+  !audiobookHistory.some(({ id }) => id === 93),
+  "The ebook import history should not leak into the audiobook history"
+);
+
 const [qualityProfiles, metadataProfiles] = await Promise.all([
   api.getProfiles({ forceRefresh: true }),
   api.getMetadataProfiles(),
@@ -195,7 +225,7 @@ try {
   assert.equal(cancelled.lastError, "Cancelled by user");
 
   console.log(
-    `SeerrNG ReadarrAPI created, polled, and cancelled synthetic pending import ${pendingId}; ChaptarrNG returned its terminal cancellation state.`
+    `SeerrNG ReadarrAPI read format-specific file counts and history, then created, polled, and cancelled synthetic pending import ${pendingId}; ChaptarrNG returned its terminal cancellation state.`
   );
 } finally {
   if (pendingId !== undefined) {

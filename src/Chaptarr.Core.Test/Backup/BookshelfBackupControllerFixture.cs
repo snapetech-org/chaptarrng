@@ -124,14 +124,14 @@ namespace Chaptarr.Core.Test.Backup
             invalidController.HttpContext.Request.Headers[BookshelfEncryptedBackupService.PassphraseHeader] = "incorrect-backup-passphrase";
             SetUpload(invalidController, encryptedPath, "bookshelfng_backup.enc");
 
-            Assert.Throws<BadRequestException>(() => invalidController.UploadAndRestore("incorrect-backup-passphrase"));
+            Assert.Throws<BadRequestException>(() => invalidController.UploadAndRestore("incorrect-backup-passphrase", null));
             _backupService.Verify(service => service.Restore(It.IsAny<string>()), Times.Never);
 
             var controller = CreateController();
             controller.HttpContext.Request.Headers[BookshelfEncryptedBackupService.PassphraseHeader] = Passphrase;
             SetUpload(controller, encryptedPath, "bookshelfng_backup.enc");
 
-            controller.UploadAndRestore(Passphrase);
+            controller.UploadAndRestore(Passphrase, controller.Request.Form.Files[0]);
 
             Assert.That(restoredPath, Does.EndWith(".zip"));
             Assert.That(restoredBytes, Is.EqualTo(original));
@@ -148,7 +148,7 @@ namespace Chaptarr.Core.Test.Backup
             var controller = CreateController();
             SetUpload(controller, encryptedPath, "chaptarr_backup.zip.enc");
 
-            controller.UploadAndRestore(null);
+            controller.UploadAndRestore(null, null);
 
             _backupService.Verify(service => service.Restore(It.Is<string>(path => path.EndsWith(".zip.enc", StringComparison.OrdinalIgnoreCase))), Times.Once);
         }
@@ -172,7 +172,7 @@ namespace Chaptarr.Core.Test.Backup
             var controller = CreateController();
             SetUpload(controller, uploadPath, Path.GetFileName(uploadPath));
 
-            controller.UploadAndRestore(null);
+            controller.UploadAndRestore(null, null);
 
             Assert.Multiple(() =>
             {
@@ -191,7 +191,7 @@ namespace Chaptarr.Core.Test.Backup
             var controller = CreateController();
             SetUpload(controller, uploadPath, Path.GetFileName(uploadPath));
 
-            Assert.Throws<UnsupportedMediaTypeException>(() => controller.UploadAndRestore(null));
+            Assert.Throws<UnsupportedMediaTypeException>(() => controller.UploadAndRestore(null, null));
             _backupService.Verify(service => service.Restore(It.IsAny<string>()), Times.Never);
         }
 

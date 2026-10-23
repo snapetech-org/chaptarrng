@@ -13,6 +13,7 @@ using Chaptarr.Http.Middleware;
 using Chaptarr.Http.REST;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using NzbDrone.Common.Disk;
@@ -408,6 +409,9 @@ namespace Chaptarr.Api.V1.Author
 
         [RestPostById]
         [ProducesResponseType(typeof(ProviderAmbiguityResource), ProviderAmbiguityHelper.StatusCode)]
+        [ProducesResponseType(typeof(AuthorResource), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(PendingAuthorImportAcceptedResource), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(typeof(ApiErrorResource), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<AuthorResource>> AddAuthor([FromBody] AuthorResource authorResource, [FromQuery] bool queueIfUnavailable = true)
         {
             var facadeContext = HttpContext.GetReadarrFacadeContext();
@@ -529,10 +533,10 @@ namespace Chaptarr.Api.V1.Author
             {
                 var pendingId = -author.Id;
 
-                return Accepted(new
+                return Accepted(new PendingAuthorImportAcceptedResource
                 {
-                    pendingId,
-                    message = "The author isn't available yet on the metadata server. Chaptarr has queued the import and will automatically add them when they become available (you can visit the chaptarrbot channel in our discord to ask for updates)."
+                    PendingId = pendingId,
+                    Message = "The author isn't available yet on the metadata server. Chaptarr has queued the import and will automatically add them when they become available (you can visit the chaptarrbot channel in our discord to ask for updates)."
                 });
             }
 

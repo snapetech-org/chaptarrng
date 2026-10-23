@@ -16,6 +16,7 @@ using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
 using NzbDrone.Core.Download.Clients.QBittorrent;
+using NzbDrone.Core.ImportLists.Chaptarr;
 using NzbDrone.Core.Indexers.DirectDownload;
 using NzbDrone.Core.Indexers.MyAnonaMouse;
 using NzbDrone.Core.MetadataSource.BookInfo;
@@ -344,6 +345,116 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM ImportLists WHERE Id = 111;"), Is.EqualTo("HardcoverImportSettings"));
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 111;"), Does.Contain("fixture-token"));
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 111;"), Does.Contain("fixture-list"));
+            });
+        }
+
+        [Test]
+        public void should_map_bookshelf_readarr_import_list_to_chaptarr_with_its_saved_settings()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = """
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (137, 'Legacy Readarr library', 'ReadarrImport', '{"baseUrl":"https://bookshelf.example","apiKey":"fixture-readarr-api-key","profileIds":[1],"tagIds":[3],"rootFolderPaths":["/legacy-library"]}', 'ReadarrSettings', 1, '/legacy-library', 1, 1, 1, '[3]');
+                    """;
+                command.ExecuteNonQuery();
+            }
+
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.That(preview.ImportReport.BlockingIssues, Is.Empty,
+                "the legacy provider name and settings contract have equivalent Chaptarr implementations");
+
+            migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Implementation FROM ImportLists WHERE Id = 137;"), Is.EqualTo("ChaptarrImport"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM ImportLists WHERE Id = 137;"), Is.EqualTo("ChaptarrSettings"));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT EnableAutomaticAdd FROM ImportLists WHERE Id = 137;"), Is.EqualTo(1));
+                var settings = QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 137;");
+                var migratedSettings = NzbDrone.Common.Serializer.STJson.Deserialize<ChaptarrSettings>(settings);
+                Assert.That(migratedSettings.BaseUrl, Is.EqualTo("https://bookshelf.example"));
+                Assert.That(migratedSettings.ApiKey, Is.EqualTo("fixture-readarr-api-key"));
+                Assert.That(migratedSettings.ProfileIds, Is.EqualTo(new[] { 1 }));
+                Assert.That(migratedSettings.TagIds, Is.EqualTo(new[] { 3 }));
+                Assert.That(migratedSettings.RootFolderPaths, Is.EqualTo(new[] { "/legacy-library" }));
+            });
+        }
+
+        [Test]
+        public void should_preserve_every_builtin_bookshelf_indexer_with_its_matching_contract()
+        {
+            var providers = new[]
+            {
+                ("DirectDownloadIndexer", "DirectDownloadSettings"),
+                ("FileList", "FileListSettings"),
+                ("Gazelle", "GazelleSettings"),
+                ("IPTorrents", "IPTorrentsSettings"),
+                ("MyAnonaMouse", "MyAnonaMouseSettings"),
+                ("Newznab", "NewznabSettings"),
+                ("Nyaa", "NyaaSettings"),
+                ("TorrentRssIndexer", "TorrentRssIndexerSettings"),
+                ("Torrentleech", "TorrentleechSettings"),
+                ("Torznab", "TorznabSettings")
+            };
+
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+
+                for (var index = 0; index < providers.Length; index++)
+                {
+                    using var command = source.CreateCommand();
+                    command.CommandText = @"
+                        INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
+                        VALUES ($id, $name, $implementation, '{}', $contract, 1, 1, 1, 25, '[]', 0);";
+                    command.Parameters.AddWithValue("$id", 900 + index);
+                    command.Parameters.AddWithValue("$name", $"Built-in provider {providers[index].Item1}");
+                    command.Parameters.AddWithValue("$implementation", providers[index].Item1);
+                    command.Parameters.AddWithValue("$contract", providers[index].Item2);
+                    command.ExecuteNonQuery();
+                }
+            }
+
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.That(preview.ImportReport.BlockingIssues, Is.Empty,
+                "all built-in BookshelfNG indexer names and contracts have an equivalent Chaptarr provider");
+
+            migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                for (var index = 0; index < providers.Length; index++)
+                {
+                    var (implementation, contract) = providers[index];
+                    Assert.That(QueryScalar<int>(
+                        _sourcePath,
+                        $"SELECT COUNT(*) FROM Indexers WHERE Id = {900 + index} AND Implementation = '{implementation}' AND ConfigContract = '{contract}' AND Settings = '{{}}';"),
+                        Is.EqualTo(1),
+                        $"{implementation} settings and contract should survive migration");
+                }
             });
         }
 
