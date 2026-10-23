@@ -89,6 +89,18 @@ through the adapter. A separate HTTP regression probe for the bare numeric
 Hardcover ID fix resolved `2459845` through both audiobook and ebook facades and
 returned the canonical `hc:2459845` identity.
 
+A later source-built Compose run on 2026-10-23 used ChaptarrNG checkout
+`00db3253348fbfc9bd49453b923789c25b4a4763` (application-code snapshot
+`a2d0af9fc31a94369bf091189b10b63f8ab1dc7e`) and SeerrNG
+`bc580332ab49a7efa87e3d78b680a2a0cf1abbd0`. After normal startup converted a
+populated synthetic schema-158 database, SeerrNG's `ReadarrAPI` read both
+formats, observed one book file per format, and read an ebook history row that
+remained absent from audiobook history. The restricted-key boundary and
+pending-import create, poll, and cancel lifecycle also passed. This is scoped
+synthetic evidence; full history and availability parity, live provider
+fulfillment, and real-data acceptance remain open. See
+[the SeerrNG integration record](SEERRNG_INTEGRATION.md).
+
 Historical local validation on 2026-10-20 used a preview based on `ac85470a`.
 The Core suite passed 4,515 tests with 15 skipped. The frontend CJS suite passed
 86/86, typecheck and translation checks passed, focused ESLint passed, and the
@@ -186,7 +198,10 @@ The resulting sign-in and migrated-database behavior still need acceptance.
 Current ChaptarrNG source is on [main](https://github.com/snapetech-org/chaptarrng/tree/main). Manual Import's author, book, edition,
 and quality selectors now explain empty results, retry failures, hide stale
 choices, and disable submission when no quality is available. The full
-frontend CJS regression suite passes 122/122 locally; startup errors identify failed data sources and retry setup requests, while browser storage failures explain the issue without a misleading retry. Add New and interactive release searches expose retryable provider errors, narrator-discovery failures announce and retry, and organize, retag, and convert previews offer retry on failure. Manual Import, File Browser, book-file details and quality loading, and conversion settings also recover from failed loads. Activity lists, author history, Edit Book edition lookup, Calendar, backup lists, and Wanted pages retry load failures. Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). These checks do not close installed-build or operator-data
+all 36 frontend CJS regression files passed on 2026-10-23: 126 passed,
+zero skipped, and zero failed. Startup errors identify failed data sources and
+retry setup requests, while browser storage failures explain the issue without
+a misleading retry. Add New and interactive release searches expose retryable provider errors, narrator-discovery failures announce and retry, and organize, retag, and convert previews offer retry on failure. Manual Import, File Browser, book-file details and quality loading, and conversion settings also recover from failed loads. Activity lists, author history, Edit Book edition lookup, Calendar, backup lists, and Wanted pages retry load failures. Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). These checks do not close installed-build or operator-data
 acceptance.
 
 The combined shelf is a presentation over ChaptarrNG's separate audiobook and

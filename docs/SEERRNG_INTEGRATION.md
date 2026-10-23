@@ -60,18 +60,24 @@ submission also passed. The UI is source-only in public `v0.9.977`. PR #131 is
 merged, but operator-data, full SeerrNG workflow, rollback, and channel
 acceptance remain open, so release publication stays frozen.
 
-**Source-built compatibility recheck (2026-10-23):** ChaptarrNG `main` at
-`a2d0af9fc31a94369bf091189b10b63f8ab1dc7e` was built through the checked-in
-`Dockerfile.build` and exercised with the current SeerrNG checkout at
-`bc580332ab49a7efa87e3d78b680a2a0cf1abbd0`. The Compose smoke converted the
-populated synthetic BookshelfNG schema-158 fixture during normal startup;
-SeerrNG's `ReadarrAPI` read the migrated audiobook and ebook, the restricted
-key was denied administrative and unrelated commands, and a synthetic pending
-import was created, polled, and cancelled to its terminal state. The disposable
-Compose containers, network, and volumes were removed. This confirms the
-covered source-build integration on the current ChaptarrNG head; live provider
-fulfillment, retries, availability/history parity, real operator data, and
-installed-channel acceptance remain open.
+**Source-built compatibility recheck (2026-10-23):** ChaptarrNG checkout
+`00db3253348fbfc9bd49453b923789c25b4a4763` (application-code snapshot
+`a2d0af9fc31a94369bf091189b10b63f8ab1dc7e`, built version `0.9.978.0`) was
+built through the checked-in `Dockerfile.build` and exercised with SeerrNG
+checkout `bc580332ab49a7efa87e3d78b680a2a0cf1abbd0`. The Compose smoke converted
+the populated synthetic BookshelfNG schema-158 fixture during normal startup.
+SeerrNG's `ReadarrAPI` read the migrated audiobook and ebook, each format
+reported its one migrated book file, and migrated history row 93 remained on
+the ebook and absent from audiobook history. The restricted key was denied
+administrative and unrelated commands. SeerrNG then created, polled, and
+cancelled a synthetic pending import and observed its terminal state. The
+unique Compose containers, network, and volumes were removed; the local build
+image cache was retained.
+
+This verifies those paths for the synthetic fixture only. It does not prove
+full availability or history parity, live provider fulfillment, retry
+behavior, real operator data, installed-channel acceptance, or complete SeerrNG
+workflow parity.
 
 **Prior PR #131 application-code validation (2026-10-19):** snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed [Build 39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract. [CodeQL 39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), [security 39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), [NuGet 39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and [dependency review 39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. The SeerrNG adapter and request-route unit suite at source commit `b810153c` passed 4 files / 283 tests. The built Linux artifact also passed the earlier empty-library API and service-key smoke. The populated source-build check for later code is recorded below.
 

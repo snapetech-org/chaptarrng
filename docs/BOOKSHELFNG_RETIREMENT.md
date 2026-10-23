@@ -153,9 +153,9 @@ Browser can retry the current directory. Activity lists, author history,
 book-edit edition and book-file detail/quality loading, Calendar, backup lists,
 Wanted pages, and conversion settings also retry after load errors. Startup
 errors identify the failed data source and retry failed setup requests when
-browser storage works. The frontend
-CJS suite passes 122/122 locally, and focused migration, metadata, move, and
-CLI checks are recorded below. An earlier application migration fix is commit
+browser storage works. All 36 frontend CJS test files passed on 2026-10-23: 126 passed, zero
+skipped, and zero failed. Focused migration, metadata, move, and CLI checks are
+recorded below. An earlier application migration fix is commit
 [`c2535e71`](https://github.com/snapetech-org/chaptarrng/commit/c2535e712aa7c1ecbf29347a7e1e9d477bb870e3).
 Its exact-head Build
 [39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854)
@@ -740,10 +740,15 @@ acceptance remain open.
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
   An earlier source candidate also passed the isolated SeerrNG Compose smoke
   against PR #131 head `ddec3e81` and SeerrNG `10f06eab9`: capability discovery,
-  empty paged-library access, and restricted-key denials passed. This does not
-  establish populated-data acceptance or end-to-end SeerrNG workflows.
-  Unchanged SeerrNG edition-card, request, polling, availability, pending-work,
-  and authorization acceptance remains open.
+  empty paged-library access, and restricted-key denials passed. A later
+  source-built run on 2026-10-23 converted the populated synthetic schema-158
+  fixture and used SeerrNG's `ReadarrAPI` to read both formats, verify one
+  migrated file per format, and confirm an ebook history row stayed out of
+  audiobook history. The restricted-key boundary and pending-import lifecycle
+  also passed. This narrows the local evidence gap but does not establish full
+  SeerrNG availability/history parity, live provider fulfillment, retries,
+  operator-data acceptance, or complete request workflow acceptance; see
+  [the integration evidence](SEERRNG_INTEGRATION.md).
 - The merged source also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs now require an explicit mode: `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) selects Hardcover, and `HARDCOVER=false` selects Goodreads. An unset or invalid mode fails closed. The Docker candidate builds separate softcover and Hardcover compatibility targets so legacy aliases can retain that mode; `latest`, `main`, and `hardcover` must use the Hardcover target, while `softcover` must use the Goodreads target. These source changes are not in `.977`; PR #131 merged on 2026-10-20, and converted-data acceptance remains open.
 - BookshelfNG's BookLore notification settings and `OnReleaseImport` trigger are copied unchanged into ChaptarrNG, and remain in the retained source backup. A separate BookOrbit Book Dock destination is candidate work in this branch; it does not rewrite BookLore URLs or credentials. Mock tests cover login, Book Dock permission, streamed uploads, redirects, rejected credentials/files, and partial-batch failure. An isolated BookOrbit v3.2.0 live API check passed setup, login, permission check, EPUB upload/listing, and unsupported-file rejection. That does not verify downstream processing of a production book or a real-user handoff. The integration is not in `.977`, and the broader retirement gate remains open.
 - Merged PR #131 adds ChaptarrNG's format-aware author-media move workflow:
