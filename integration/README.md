@@ -96,6 +96,13 @@ in the [retirement status](../docs/BOOKSHELFNG_RETIREMENT.md). Representative
 audiobooks and restart/resume remain open, and release publication stays
 frozen.
 
+On 2026-10-23, the pinned-tool run passed all eight cases against the current
+application source on `main` (`6c3477f7`; the .NET application and test source
+is unchanged from `9d2948bc`). Six cases covered Move/Copy import, merge,
+unprobeable-part fallback, and simulated tool failure; two covered embedded
+chapter preservation in Move and Copy modes. The test generated synthetic
+audio. Representative audiobooks and interrupted restart/resume remain open.
+
 After building the test assembly as in `.github/workflows/build.yml`, run it
 locally with:
 
