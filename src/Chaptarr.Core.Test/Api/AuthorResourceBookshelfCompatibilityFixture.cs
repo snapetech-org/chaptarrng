@@ -32,7 +32,16 @@ namespace Chaptarr.Core.Test.Api
             Assert.That(resource.QualityProfileId, Is.EqualTo(19));
             Assert.That(resource.MetadataProfileId, Is.EqualTo(29));
             Assert.That(resource.RootFolderPath, Is.EqualTo("/ebooks"));
-            Assert.That(resource.MonitorNewItems, Is.EqualTo("new"));
+            Assert.That(resource.MonitorNewItems, Is.EqualTo(NewItemMonitorTypes.New));
+        }
+
+        [Test]
+        public void native_resource_should_return_non_null_legacy_profile_ids_when_no_format_profile_is_configured()
+        {
+            var resource = AuthorResourceMapper.ToResource(new Author { Id = 8, Name = "Unconfigured" });
+
+            Assert.That(resource.QualityProfileId, Is.Zero);
+            Assert.That(resource.MetadataProfileId, Is.Zero);
         }
 
         [Test]
@@ -41,7 +50,7 @@ namespace Chaptarr.Core.Test.Api
             var resource = new AuthorResource
             {
                 Monitored = false,
-                MonitorNewItems = "new",
+                MonitorNewItems = NewItemMonitorTypes.New,
                 Tags = new HashSet<int> { 3, 5 }
             };
 

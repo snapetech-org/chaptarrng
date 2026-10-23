@@ -40,7 +40,7 @@ namespace Chaptarr.Core.Test.Api
                 QualityProfileId = 1,
                 MetadataProfileId = 2,
                 Monitored = true,
-                MonitorNewItems = "all",
+                MonitorNewItems = NewItemMonitorTypes.All,
                 LastSelectedMediaType = "ebook"
             };
 
@@ -87,7 +87,7 @@ namespace Chaptarr.Core.Test.Api
                 QualityProfileId = 1,
                 MetadataProfileId = 2,
                 Monitored = true,
-                MonitorNewItems = "all"
+                MonitorNewItems = NewItemMonitorTypes.All
             };
 
             var exception = Assert.Throws<ValidationException>(() =>

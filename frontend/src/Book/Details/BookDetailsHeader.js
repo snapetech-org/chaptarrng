@@ -114,7 +114,7 @@ function getDownloadStatusLabel(queueItem, grabbed) {
     return { kind: kinds.PURPLE, icon: icons.DOWNLOADED, title: translate('WaitingToImport') };
   }
 
-  if (trackedDownloadState === 'importBlocked') {
+  if (trackedDownloadState === 'importBlocked' || trackedDownloadState === 'importFailed') {
     return { kind: kinds.WARNING, icon: icons.DOWNLOADED, title: `${translate('ManualImport')} ${translate('Required')}` };
   }
 

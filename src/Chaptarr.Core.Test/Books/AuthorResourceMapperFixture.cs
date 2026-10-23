@@ -27,7 +27,7 @@ namespace Chaptarr.Core.Test.Books
                 MetadataProfileId = 2,
                 RootFolderPath = "/ebooks",
                 Monitored = true,
-                MonitorNewItems = "all",
+                MonitorNewItems = NewItemMonitorTypes.All,
                 Tags = new HashSet<int> { 4 }
             };
             var ebookRoot = new RootFolder
@@ -370,7 +370,7 @@ namespace Chaptarr.Core.Test.Books
                 MetadataProfileId = 8,
                 RootFolderPath = "/books",
                 Monitored = true,
-                MonitorNewItems = "none",
+                MonitorNewItems = NewItemMonitorTypes.None,
                 Tags = new HashSet<int> { 4 },
                 AddOptions = new AddAuthorOptions
                 {
@@ -451,7 +451,7 @@ namespace Chaptarr.Core.Test.Books
         {
             var hcResource = new AuthorResource
             {
-                MonitorNewItems = "none",
+                MonitorNewItems = NewItemMonitorTypes.None,
                 AddOptions = new AddAuthorOptions
                 {
                     BooksToMonitor = new List<string> { "12345", "gr:999", "not-a-provider-id" }
@@ -460,7 +460,7 @@ namespace Chaptarr.Core.Test.Books
 
             var grResource = new AuthorResource
             {
-                MonitorNewItems = "none",
+                MonitorNewItems = NewItemMonitorTypes.None,
                 AddOptions = new AddAuthorOptions
                 {
                     BooksToMonitor = new List<string> { "94932951", "hc:2514970", "not-a-provider-id" }
@@ -486,7 +486,7 @@ namespace Chaptarr.Core.Test.Books
                 MetadataProfileId = 8,
                 RootFolderPath = "/ebooks",
                 Monitored = true,
-                MonitorNewItems = "all",
+                MonitorNewItems = NewItemMonitorTypes.All,
                 Tags = new HashSet<int> { 4, 5 }
             };
 
@@ -622,7 +622,7 @@ namespace Chaptarr.Core.Test.Books
                 AuthorName = "E. Lockhart",
                 QualityProfileId = 7,
                 Monitored = false,
-                MonitorNewItems = "none",
+                MonitorNewItems = NewItemMonitorTypes.None,
                 AudiobookMonitored = true,
                 AudiobookMonitorNewItems = NewItemMonitorTypes.All
             };
