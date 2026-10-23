@@ -334,9 +334,13 @@ Unraid transition PR [#5](https://github.com/snapetech-org/bookshelfng-unraid/pu
 remains draft at `1261a9f8`. Its exact-head build, template, package-sync,
 dependency, release-note, Semgrep, and Trivy checks passed; publication jobs
 were skipped. Real Community Applications update/rollback and representative
-data migration/rollback remain unaccepted. Issue [#144](https://github.com/snapetech-org/bookshelfng/issues/144)
-remains open. Keep BookshelfNG running and do not apply migration or start
-ChaptarrNG against BookshelfNG appdata until technical readiness is complete.
+data migration/rollback remain unaccepted. BookshelfNG issue
+[#144](https://github.com/snapetech-org/bookshelfng/issues/144) was closed by
+the maintainer on 2026-10-22. Its final body still says to keep BookshelfNG in
+service and withholds release and channel authorization until the listed gates
+close; closing the issue did not close those gates. Keep BookshelfNG running
+and do not apply migration or start ChaptarrNG against BookshelfNG appdata
+until technical readiness is complete.
 
 **Prior application-code validation (2026-10-19):** ChaptarrNG draft PR #131
 contains code commit `0e881d921dd55aa89e12747557ccaadbb2352a21`. Exact-head Build
