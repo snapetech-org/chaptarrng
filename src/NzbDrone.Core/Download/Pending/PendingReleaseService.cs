@@ -245,6 +245,18 @@ namespace NzbDrone.Core.Download.Pending
                 var firstQuality = g.First().Quality.Quality;
                 var qualityProfile = author?.GetQualityProfileForQuality(firstQuality);
 
+                if (_configService?.BookshelfMatchCompatibility == true &&
+                    g.First().Book.MediaType == BookMediaType.Audiobook &&
+                    qualityProfile?.Items?.Any() == true)
+                {
+                    // BookshelfNG selected pending audiobook candidates by its quality and
+                    // revision order, then the legacy author-tag protocol preference. The
+                    // migration marker keeps that visible queue choice for converted installs.
+                    return g.OrderByDescending(e => e.Quality, new QualityModelComparer(qualityProfile))
+                        .ThenBy(q => PrioritizeBookshelfDownloadProtocol(q.Author, q.Protocol))
+                        .First();
+                }
+
                 var ordered = qualityProfile?.Items != null && qualityProfile.Items.Any()
                     ? g.OrderByDescending(
                         e => e,
@@ -506,6 +518,13 @@ namespace NzbDrone.Core.Download.Pending
             }
 
             return 1;
+        }
+
+        private int PrioritizeBookshelfDownloadProtocol(Author author, DownloadProtocol downloadProtocol)
+        {
+            var delayProfile = _delayProfileService.BestForTags(author?.Tags ?? new HashSet<int>());
+
+            return downloadProtocol == delayProfile?.PreferredProtocol ? 0 : 1;
         }
 
         public void Handle(AuthorDeletedEvent message)

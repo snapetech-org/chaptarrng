@@ -10,6 +10,8 @@ namespace Chaptarr.Core.Test
         public BookMatchingStrictness BookMatchingStrictness { get; set; } = BookMatchingStrictness.Balanced;
         public int BookImportMinimumMatchPercent { get; set; } = 70;
         public bool BookshelfMatchCompatibility { get; set; }
+        public int MinimumAge { get; set; }
+        public int RssSyncInterval { get; set; }
         public bool UsePathAsTagsFallback { get; set; } = true;
         public bool AutoAddMissingAuthorsFromCompletedDownloads { get; set; }
         public bool AutoInitializeFormatSpecificAuthorPaths { get; set; }
@@ -56,6 +58,16 @@ namespace Chaptarr.Core.Test
             {
                 BookshelfMatchCompatibility = (bool)args[0];
                 return null;
+            }
+
+            if (targetMethod?.Name == "get_MinimumAge")
+            {
+                return MinimumAge;
+            }
+
+            if (targetMethod?.Name == "get_RssSyncInterval")
+            {
+                return RssSyncInterval;
             }
 
             if (targetMethod?.Name == "get_DownloadPropersAndRepacks")
