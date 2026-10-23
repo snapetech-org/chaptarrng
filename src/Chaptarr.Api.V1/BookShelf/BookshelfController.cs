@@ -27,10 +27,10 @@ namespace Chaptarr.Api.V1.Bookshelf
         [HttpGet("legacy-identities")]
         public IActionResult GetLegacyIdentities([FromQuery] string entityType, [FromQuery] List<int> sourceIds)
         {
-            var allowedEntityTypes = new HashSet<string>(new[] { "Author", "Book", "Edition", "BookFile" }, StringComparer.OrdinalIgnoreCase);
+            var allowedEntityTypes = new HashSet<string>(new[] { "Author", "AuthorMetadata", "Book", "Edition", "BookFile" }, StringComparer.OrdinalIgnoreCase);
             if (!allowedEntityTypes.Contains(entityType ?? string.Empty))
             {
-                return BadRequest("entityType must be Author, Book, Edition, or BookFile.");
+                return BadRequest("entityType must be Author, AuthorMetadata, Book, Edition, or BookFile.");
             }
 
             sourceIds = sourceIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>();

@@ -457,6 +457,7 @@ namespace NzbDrone.Core.Datastore
 
                 InsertRow(target, transaction, "Authors", targetColumns, values);
                 RecordBookshelfLegacyIdentity(target, transaction, "Author", sourceId, sourceId, null);
+                RecordBookshelfLegacyIdentity(target, transaction, "AuthorMetadata", metadataId, sourceId, null);
                 var providerIds = canonicalId == null ? new List<string>() : new List<string> { canonicalId };
                 authors[sourceId] = new AuthorMap(sourceId, metadataId, providerIds);
             }

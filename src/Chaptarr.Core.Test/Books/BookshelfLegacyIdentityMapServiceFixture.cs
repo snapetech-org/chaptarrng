@@ -33,6 +33,7 @@ CREATE TABLE BookshelfLegacyIdentityMap (
 INSERT INTO BookshelfLegacyIdentityMap VALUES ('BookshelfNG', 'Book', 30, 30, 0);
 INSERT INTO BookshelfLegacyIdentityMap VALUES ('BookshelfNG', 'Book', 30, 31, 1);
 INSERT INTO BookshelfLegacyIdentityMap VALUES ('BookshelfNG', 'Book', 32, 32, 1);
+INSERT INTO BookshelfLegacyIdentityMap VALUES ('BookshelfNG', 'AuthorMetadata', 10, 20, NULL);
 INSERT INTO BookshelfLegacyIdentityMap VALUES ('OtherSource', 'Book', 30, 900, 0);";
             command.ExecuteNonQuery();
         }
@@ -85,6 +86,21 @@ INSERT INTO BookshelfLegacyIdentityMap VALUES ('OtherSource', 'Book', 30, 900, 0
             {
                 ("BookshelfNG", 30, 30, (int?)0),
                 ("BookshelfNG", 30, 31, (int?)1)
+            }));
+        }
+
+        [Test]
+        public void should_resolve_legacy_author_metadata_id_from_target_author_id()
+        {
+            var database = DispatchProxy.Create<IMainDatabase, MainDatabaseProxy>();
+            ((MainDatabaseProxy)(object)database).ConnectionString = ConnectionString;
+            var subject = new BookshelfLegacyIdentityMapService(database);
+
+            var mappings = subject.GetMappingsByTargetIds("AuthorMetadata", new[] { 20 });
+
+            Assert.That(mappings.Select(mapping => (mapping.Source, mapping.SourceId, mapping.TargetId, mapping.MediaType)), Is.EqualTo(new[]
+            {
+                ("BookshelfNG", 10, 20, (int?)null)
             }));
         }
 

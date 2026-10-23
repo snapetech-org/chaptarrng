@@ -197,6 +197,7 @@ namespace Chaptarr.Api.V1.Config
         [RestPutById]
         public async Task<ActionResult<HostConfigResource>> SaveHostConfig([FromBody] HostConfigResource resource)
         {
+            resource.ApplyBookshelfCompatibilityAliases();
             EnsureValidProxyEnums(resource.ProxyMode, resource.ProxyType);
 
             var current = HostConfigResourceMapper.ToResource(_configFileProvider, _configService);
@@ -254,6 +255,7 @@ namespace Chaptarr.Api.V1.Config
 
             var dictionary = resource.GetType()
                                      .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                                     .Where(prop => prop.Name != nameof(HostConfigResource.ProxyEnabled))
                                      .ToDictionary(prop => prop.Name, prop => prop.GetValue(resource, null));
 
             _configFileProvider.SaveConfigDictionary(dictionary);

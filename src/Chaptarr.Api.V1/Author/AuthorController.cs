@@ -109,6 +109,7 @@ namespace Chaptarr.Api.V1.Author
         private readonly IProviderAliasService _providerAliasService;
         private readonly IEditionService _editionService;
         private readonly IMediaFileService _mediaFileService;
+        private readonly IBookshelfLegacyIdentityMapService _bookshelfLegacyIdentityMapService;
         private readonly IEventAggregator _eventAggregator;
 	        private readonly IAppFolderInfo _appFolderInfo;
 	        private readonly IBuildFileNames _fileNameBuilder;
@@ -144,7 +145,8 @@ namespace Chaptarr.Api.V1.Author
                             AuthorFolderAsRootFolderValidator authorFolderAsRootFolderValidator,
                             IProviderAliasService providerAliasService = null,
                             IEditionService editionService = null,
-                            IMediaFileService mediaFileService = null)
+                            IMediaFileService mediaFileService = null,
+                            IBookshelfLegacyIdentityMapService bookshelfLegacyIdentityMapService = null)
             : base(signalRBroadcaster)
         {
             _authorService = authorService;
@@ -161,6 +163,7 @@ namespace Chaptarr.Api.V1.Author
             _providerAliasService = providerAliasService;
             _editionService = editionService;
             _mediaFileService = mediaFileService;
+            _bookshelfLegacyIdentityMapService = bookshelfLegacyIdentityMapService;
             _eventAggregator = eventAggregator;
             _appFolderInfo = appFolderInfo;
             _fileNameBuilder = fileNameBuilder;
@@ -348,9 +351,10 @@ namespace Chaptarr.Api.V1.Author
             }
 
             var resource = author.ToResource(HttpContext.GetReadarrFacadeContext());
+            ApplyBookshelfAuthorMetadataIds(new[] { resource });
             MapCoversToLocal(resource);
             FetchAndLinkAuthorStatistics(resource, HttpContext.GetReadarrFacadeContext()?.MediaType);
-            LinkNextPreviousBooks(new[] { author }, resource);
+            LinkNextPreviousBooks(resource);
 
             LinkRootFolderPath(new[] { author }, resource);
 
@@ -375,8 +379,9 @@ namespace Chaptarr.Api.V1.Author
             var authorResources = authors.ToResource(HttpContext.GetReadarrFacadeContext());
             var authorResourceArray = authorResources.ToArray();
 
+            ApplyBookshelfAuthorMetadataIds(authorResourceArray);
             MapCoversToLocal(authorResourceArray);
-            LinkNextPreviousBooks(authors, authorResourceArray);
+            LinkNextPreviousBooks(authorResourceArray);
 
             if (normalizedMediaType == null)
             {
@@ -825,6 +830,7 @@ namespace Chaptarr.Api.V1.Author
                     }
 
                     var authorResource = existingAuthor.ToResource(HttpContext.GetReadarrFacadeContext());
+                    ApplyBookshelfAuthorMetadataIds(new[] { authorResource });
                     if (!string.IsNullOrWhiteSpace(hydrationWarning))
                     {
                         authorResource.HydrationWarning = hydrationWarning;
@@ -1378,19 +1384,16 @@ namespace Chaptarr.Api.V1.Author
             }
         }
 
-        private void LinkNextPreviousBooks(IEnumerable<NzbDrone.Core.Books.Author> authorModels, params AuthorResource[] authors)
+        private void LinkNextPreviousBooks(params AuthorResource[] authors)
         {
             var authorIds = authors.Where(x => x != null).Select(x => x.Id).ToList();
             var nextBooks = _bookService.GetNextBooksByAuthorId(authorIds);
             var lastBooks = _bookService.GetLastBooksByAuthorId(authorIds);
 
-            PreloadAuthorIndexBooks(authorModels,
-                                    (nextBooks ?? new List<Book>()).Concat(lastBooks ?? new List<Book>()),
-                                    _editionService == null ? null : ids => _editionService.GetEditionsByBook(ids),
-                                    _mediaFileService == null ? null : ids => _mediaFileService.GetFilesByBooks(ids));
-
             var nextByAuthor = FirstBookPerAuthor(nextBooks);
             var lastByAuthor = FirstBookPerAuthor(lastBooks);
+            var legacyMetadataIds = GetBookshelfAuthorMetadataIds(
+                nextByAuthor.Values.Concat(lastByAuthor.Values).Select(book => book.AuthorId));
 
             foreach (var authorResource in authors)
             {
@@ -1399,9 +1402,53 @@ namespace Chaptarr.Api.V1.Author
                     continue;
                 }
 
-                authorResource.NextBook = ToAuthorIndexBookResource(nextByAuthor.GetValueOrDefault(authorResource.Id));
-                authorResource.LastBook = ToAuthorIndexBookResource(lastByAuthor.GetValueOrDefault(authorResource.Id));
+                authorResource.NextBook = ToAuthorIndexBookResource(nextByAuthor.GetValueOrDefault(authorResource.Id), legacyMetadataIds);
+                authorResource.LastBook = ToAuthorIndexBookResource(lastByAuthor.GetValueOrDefault(authorResource.Id), legacyMetadataIds);
             }
+        }
+
+        private AuthorIndexBookResource ToAuthorIndexBookResource(
+            NzbDrone.Core.Books.Book book,
+            IReadOnlyDictionary<int, int> legacyMetadataIds)
+        {
+            if (book == null)
+            {
+                return null;
+            }
+
+            var legacyMetadataId = legacyMetadataIds.TryGetValue(book.AuthorId, out var metadataId)
+                ? metadataId
+                : book.AuthorId;
+            return book.ToAuthorIndexResource(legacyMetadataId, HttpContext?.GetReadarrFacadeContext());
+        }
+
+        private void ApplyBookshelfAuthorMetadataIds(IEnumerable<AuthorResource> resources)
+        {
+            var authorResources = resources?.Where(resource => resource != null).ToList();
+            if (authorResources == null || authorResources.Count == 0)
+            {
+                return;
+            }
+
+            var metadataIdByAuthorId = GetBookshelfAuthorMetadataIds(authorResources.Select(resource => resource.Id));
+
+            foreach (var resource in authorResources)
+            {
+                resource.AuthorMetadataId = metadataIdByAuthorId.TryGetValue(resource.Id, out var metadataId)
+                    ? metadataId
+                    : resource.Id;
+            }
+        }
+
+        private Dictionary<int, int> GetBookshelfAuthorMetadataIds(IEnumerable<int> authorIds)
+        {
+            var mappings = _bookshelfLegacyIdentityMapService?.GetMappingsByTargetIds(
+                    "AuthorMetadata",
+                    authorIds) ?? new List<BookshelfLegacyIdentityMapEntry>();
+            return mappings
+                .GroupBy(mapping => mapping.TargetId)
+                .Where(group => group.Select(mapping => mapping.SourceId).Distinct().Count() == 1)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
         }
 
         private static Dictionary<int, Book> FirstBookPerAuthor(List<Book> books)
@@ -1422,160 +1469,6 @@ namespace Chaptarr.Api.V1.Author
             }
 
             return result;
-        }
-
-        internal static void PreloadAuthorIndexBooks(IEnumerable<NzbDrone.Core.Books.Author> authorModels,
-                                                     IEnumerable<Book> books,
-                                                     Func<List<int>, List<Edition>> editionLoader,
-                                                     Func<List<int>, List<BookFile>> bookFileLoader)
-        {
-            var bookList = new List<Book>();
-            var seenBookIds = new HashSet<int>();
-
-            foreach (var book in books ?? Enumerable.Empty<Book>())
-            {
-                if (book != null && book.Id > 0 && seenBookIds.Add(book.Id))
-                {
-                    bookList.Add(book);
-                }
-            }
-
-            if (bookList.Count == 0)
-            {
-                return;
-            }
-
-            var authorsById = new Dictionary<int, NzbDrone.Core.Books.Author>();
-
-            foreach (var author in authorModels ?? Enumerable.Empty<NzbDrone.Core.Books.Author>())
-            {
-                if (author != null)
-                {
-                    authorsById[author.Id] = author;
-                }
-            }
-
-            foreach (var book in bookList)
-            {
-                if (book.LazyAuthor?.IsLoaded == true)
-                {
-                    continue;
-                }
-
-                if (authorsById.TryGetValue(book.AuthorId, out var author))
-                {
-                    book.Author = author;
-                }
-            }
-
-            if (editionLoader != null)
-            {
-                var pendingEditionBooks = bookList.Where(x => x.LazyEditions?.IsLoaded != true).ToList();
-
-                if (pendingEditionBooks.Count > 0)
-                {
-                    var editionsByBook = GroupBy(editionLoader(pendingEditionBooks.Select(x => x.Id).ToList()), edition => edition.BookId);
-
-                    foreach (var book in pendingEditionBooks)
-                    {
-                        book.Editions = editionsByBook.GetValueOrDefault(book.Id) ?? new List<Edition>();
-                    }
-                }
-            }
-
-            if (bookFileLoader != null)
-            {
-                var pendingFileBooks = bookList.Where(x => x.LazyBookFiles?.IsLoaded != true && x.Editions != null).ToList();
-
-                if (pendingFileBooks.Count > 0)
-                {
-                    var bookIdByEditionId = new Dictionary<int, int>();
-
-                    foreach (var book in bookList)
-                    {
-                        foreach (var edition in book.Editions ?? new List<Edition>())
-                        {
-                            if (edition != null)
-                            {
-                                bookIdByEditionId[edition.Id] = book.Id;
-                            }
-                        }
-                    }
-
-                    var filesByBook = new Dictionary<int, List<BookFile>>();
-
-                    foreach (var file in bookFileLoader(pendingFileBooks.Select(x => x.Id).ToList()) ?? new List<BookFile>())
-                    {
-                        if (file == null)
-                        {
-                            continue;
-                        }
-
-                        int? bookId = file.LazyEdition?.IsLoaded == true ? file.LazyEdition.Value?.BookId : null;
-
-                        if (bookId == null && bookIdByEditionId.TryGetValue(file.EditionId, out var mappedBookId))
-                        {
-                            bookId = mappedBookId;
-                        }
-
-                        if (bookId == null)
-                        {
-                            continue;
-                        }
-
-                        if (!filesByBook.TryGetValue(bookId.Value, out var list))
-                        {
-                            list = new List<BookFile>();
-                            filesByBook[bookId.Value] = list;
-                        }
-
-                        list.Add(file);
-                    }
-
-                    foreach (var book in pendingFileBooks)
-                    {
-                        book.BookFiles = filesByBook.GetValueOrDefault(book.Id) ?? new List<BookFile>();
-                    }
-                }
-            }
-        }
-
-        private static Dictionary<int, List<T>> GroupBy<T>(List<T> items, Func<T, int> keySelector)
-            where T : class
-        {
-            var result = new Dictionary<int, List<T>>();
-
-            foreach (var item in items ?? new List<T>())
-            {
-                if (item == null)
-                {
-                    continue;
-                }
-
-                var key = keySelector(item);
-
-                if (!result.TryGetValue(key, out var list))
-                {
-                    list = new List<T>();
-                    result[key] = list;
-                }
-
-                list.Add(item);
-            }
-
-            return result;
-        }
-
-        private static BookResource ToAuthorIndexBookResource(Book book)
-        {
-            if (book == null)
-            {
-                return null;
-            }
-
-            var resource = book.ToResource(BookResourceMappingOptions.Lean());
-            resource.Author = null;
-            return resource;
         }
 
         private void FetchAndLinkAuthorStatistics(AuthorResource resource, string mediaType = null)
@@ -2054,7 +1947,9 @@ namespace Chaptarr.Api.V1.Author
         [NonAction]
         public void Handle(AuthorDeletedEvent message)
         {
-            BroadcastResourceChange(ModelAction.Deleted, message.Author.ToResource());
+            var resource = message.Author.ToResource();
+            ApplyBookshelfAuthorMetadataIds(new[] { resource });
+            BroadcastResourceChange(ModelAction.Deleted, resource);
         }
 
         [NonAction]

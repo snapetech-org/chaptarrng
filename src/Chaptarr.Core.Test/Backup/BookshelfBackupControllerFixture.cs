@@ -78,7 +78,7 @@ namespace Chaptarr.Core.Test.Backup
             var controller = CreateController(responseCompletedCallbacks);
             controller.HttpContext.Request.Headers[BookshelfEncryptedBackupService.PassphraseHeader] = Passphrase;
 
-            var result = (FileStreamResult)controller.CreateEncryptedBackup();
+            var result = (FileStreamResult)controller.CreateEncryptedBackup(Passphrase);
             var encryptedPath = Path.Combine(_tempFolder, "export.enc");
             using (var output = File.Create(encryptedPath))
             {
@@ -124,14 +124,14 @@ namespace Chaptarr.Core.Test.Backup
             invalidController.HttpContext.Request.Headers[BookshelfEncryptedBackupService.PassphraseHeader] = "incorrect-backup-passphrase";
             SetUpload(invalidController, encryptedPath, "bookshelfng_backup.enc");
 
-            Assert.Throws<BadRequestException>(() => invalidController.UploadAndRestore());
+            Assert.Throws<BadRequestException>(() => invalidController.UploadAndRestore("incorrect-backup-passphrase"));
             _backupService.Verify(service => service.Restore(It.IsAny<string>()), Times.Never);
 
             var controller = CreateController();
             controller.HttpContext.Request.Headers[BookshelfEncryptedBackupService.PassphraseHeader] = Passphrase;
             SetUpload(controller, encryptedPath, "bookshelfng_backup.enc");
 
-            controller.UploadAndRestore();
+            controller.UploadAndRestore(Passphrase);
 
             Assert.That(restoredPath, Does.EndWith(".zip"));
             Assert.That(restoredBytes, Is.EqualTo(original));
@@ -148,7 +148,7 @@ namespace Chaptarr.Core.Test.Backup
             var controller = CreateController();
             SetUpload(controller, encryptedPath, "chaptarr_backup.zip.enc");
 
-            controller.UploadAndRestore();
+            controller.UploadAndRestore(null);
 
             _backupService.Verify(service => service.Restore(It.Is<string>(path => path.EndsWith(".zip.enc", StringComparison.OrdinalIgnoreCase))), Times.Once);
         }
@@ -172,7 +172,7 @@ namespace Chaptarr.Core.Test.Backup
             var controller = CreateController();
             SetUpload(controller, uploadPath, Path.GetFileName(uploadPath));
 
-            controller.UploadAndRestore();
+            controller.UploadAndRestore(null);
 
             Assert.Multiple(() =>
             {
@@ -191,7 +191,7 @@ namespace Chaptarr.Core.Test.Backup
             var controller = CreateController();
             SetUpload(controller, uploadPath, Path.GetFileName(uploadPath));
 
-            Assert.Throws<UnsupportedMediaTypeException>(() => controller.UploadAndRestore());
+            Assert.Throws<UnsupportedMediaTypeException>(() => controller.UploadAndRestore(null));
             _backupService.Verify(service => service.Restore(It.IsAny<string>()), Times.Never);
         }
 

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Chaptarr.Http;
 using FluentValidation;
 using NzbDrone.Common.EnvironmentInfo;
@@ -38,6 +39,18 @@ namespace Chaptarr.Api.V1.Config
         protected override MediaManagementConfigResource ToResource(IConfigService model)
         {
             return MediaManagementConfigResourceMapper.ToResource(model);
+        }
+
+        protected override void NormalizeForSave(MediaManagementConfigResource resource)
+        {
+            resource.ApplyBookshelfCompatibilityAliases();
+        }
+
+        protected override bool ShouldSaveProperty(PropertyInfo property)
+        {
+            return property.Name != nameof(MediaManagementConfigResource.NewAuthorEbookRootFolderPath) &&
+                   property.Name != nameof(MediaManagementConfigResource.NewAuthorAudiobookRootFolderPath) &&
+                   base.ShouldSaveProperty(property);
         }
     }
 }

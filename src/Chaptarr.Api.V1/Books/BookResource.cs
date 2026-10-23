@@ -28,6 +28,9 @@ namespace Chaptarr.Api.V1.Books
         public string Disambiguation { get; set; }
         public string Overview { get; set; }
         public int AuthorId { get; set; }
+        // BookshelfNG exposed a separate author metadata row ID in its embedded Book model.
+        // ChaptarrNG uses one author identity; migrated responses can project the original ID.
+        public int AuthorMetadataId { get; set; }
         public string ForeignBookId { get; set; }  // Chaptarr-native IDs are prefixed; Readarr facades emit bare IDs in the requested dialect.
         public string LocalBookId { get; set; }
         public string ForeignEditionId { get; set; }
@@ -52,6 +55,7 @@ namespace Chaptarr.Api.V1.Books
         public Ratings Ratings { get; set; }
         public DateTime? ReleaseDate { get; set; }
         public DateTime Added { get; set; }
+        public DateTime? LastSearchTime { get; set; }
         public int PageCount { get; set; }
         public List<string> Genres { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -192,6 +196,7 @@ namespace Chaptarr.Api.V1.Books
             {
                 Id = model.Id,
                 AuthorId = model.AuthorId,
+                AuthorMetadataId = model.AuthorId,
                 Author = options.IncludeAuthor ? model.Author?.ToResource(options.FacadeContext) : null,
                 ForeignBookId = foreignBookId,
                 LocalBookId = model.Id.ToString(),
@@ -220,6 +225,7 @@ namespace Chaptarr.Api.V1.Books
                     : (model.Ratings ?? new Ratings()),
                 ReleaseDate = selectedEdition?.ReleaseDate ?? model.ReleaseDate,
                 Added = model.Added,
+                LastSearchTime = model.LastSearchTime,
                 // Don't show page count for audiobooks
                 PageCount = model.MediaType == BookMediaType.Audiobook
                     ? 0
@@ -837,7 +843,7 @@ namespace Chaptarr.Api.V1.Books
             return idx > 0 ? value.Substring(idx + 1) : value;
         }
 
-        private static string BuildForeignBookId(Book model, ReadarrFacadeContext facadeContext)
+        internal static string BuildForeignBookId(Book model, ReadarrFacadeContext facadeContext)
         {
             if (facadeContext?.IsHardcover == true)
             {

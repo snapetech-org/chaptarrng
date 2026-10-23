@@ -100,9 +100,9 @@ namespace Chaptarr.Api.V1.System.Backup
         }
 
         [HttpPost("encrypted")]
-        public IActionResult CreateEncryptedBackup()
+        public IActionResult CreateEncryptedBackup([FromHeader(Name = BookshelfEncryptedBackupService.PassphraseHeader)] string passphrase)
         {
-            var passphrase = GetPassphrase();
+            passphrase = GetPassphrase(passphrase);
             var encryptedPath = Path.Combine(GetPrivateTempFolder(), $"chaptarr_backup_{Guid.NewGuid():N}.enc");
             string backupPath = null;
 
@@ -134,7 +134,7 @@ namespace Chaptarr.Api.V1.System.Backup
         [HttpPost("restore/upload")]
         [RequestSizeLimit(RestoreUploadLimitBytes)]
         [RequestFormLimits(MultipartBodyLengthLimit = RestoreUploadLimitBytes)]
-        public object UploadAndRestore()
+        public object UploadAndRestore([FromHeader(Name = BookshelfEncryptedBackupService.PassphraseHeader)] string passphrase)
         {
             var files = Request.Form.Files;
 
@@ -158,7 +158,7 @@ namespace Chaptarr.Api.V1.System.Backup
             var restoreFolder = GetPrivateTempFolder();
             var path = Path.Combine(restoreFolder, $"restore_upload_{Guid.NewGuid():N}{restoreExtension}");
             var decryptedPath = Path.Combine(restoreFolder, $"restore_decrypted_{Guid.NewGuid():N}.zip");
-            var passphrase = isBookshelfEncryptedBackup ? GetPassphrase() : null;
+            passphrase = isBookshelfEncryptedBackup ? GetPassphrase(passphrase) : null;
 
             try
             {
@@ -195,10 +195,8 @@ namespace Chaptarr.Api.V1.System.Backup
             };
         }
 
-        private string GetPassphrase()
+        private static string GetPassphrase(string passphrase)
         {
-            var passphrase = Request.Headers[BookshelfEncryptedBackupService.PassphraseHeader].ToString();
-
             if (!BookshelfEncryptedBackupService.IsValidPassphrase(passphrase))
             {
                 throw new BadRequestException($"A passphrase with at least {BookshelfEncryptedBackupService.MinimumPassphraseLength} characters and no more than {BookshelfEncryptedBackupService.MaximumPassphraseBytes} UTF-8 bytes is required.");

@@ -65,9 +65,15 @@ commands, ordinary startup conversion, and an unmonitored dual-catalog
 fallback for records whose format cannot be inferred. PR #126 merged the
 version-aware migration-1-to-13 table guard into `main`; hosted Linux, macOS,
 Windows, and PostgreSQL migration checks passed. The fix is not in public
-`.977`; a versioned release is produced by the manual Release workflow after
-its CI validation passes. Retirement acceptance remains separate from standard
-ChaptarrNG release publication.
+`.977`; a versioned release is produced after its CI validation passes.
+Retirement acceptance remains separate from standard ChaptarrNG release
+publication.
+
+**Release automation (2026-10-23).** Merging a newer stable version to `main`
+now starts the Release workflow automatically. CI and the retirement readiness
+gates still control publication; a main update without a newer version does
+not cut a release.
+
 BookshelfNG `0.4.21.71` is published as the final source release; its issue
 #114 request is closed, and it includes the source-side appdata archive helper.
 ChaptarrNG adds opt-in initialization of missing format-specific paths for new

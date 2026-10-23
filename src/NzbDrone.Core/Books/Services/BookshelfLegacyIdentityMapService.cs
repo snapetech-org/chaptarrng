@@ -18,6 +18,7 @@ namespace NzbDrone.Core.Books
     public interface IBookshelfLegacyIdentityMapService
     {
         List<BookshelfLegacyIdentityMapEntry> GetMappings(string entityType, IEnumerable<int> sourceIds);
+        List<BookshelfLegacyIdentityMapEntry> GetMappingsByTargetIds(string entityType, IEnumerable<int> targetIds);
         List<int> ResolveBookIds(IEnumerable<int> sourceIds, BookMediaType? mediaType = null);
     }
 
@@ -33,22 +34,32 @@ namespace NzbDrone.Core.Books
 
         public List<BookshelfLegacyIdentityMapEntry> GetMappings(string entityType, IEnumerable<int> sourceIds)
         {
-            if (string.IsNullOrWhiteSpace(entityType))
+            return GetMappingsByIds(entityType, sourceIds, "SourceId");
+        }
+
+        public List<BookshelfLegacyIdentityMapEntry> GetMappingsByTargetIds(string entityType, IEnumerable<int> targetIds)
+        {
+            return GetMappingsByIds(entityType, targetIds, "TargetId");
+        }
+
+        private List<BookshelfLegacyIdentityMapEntry> GetMappingsByIds(string entityType, IEnumerable<int> ids, string idColumn)
+        {
+            if (string.IsNullOrWhiteSpace(entityType) || (idColumn != "SourceId" && idColumn != "TargetId"))
             {
                 return new List<BookshelfLegacyIdentityMapEntry>();
             }
 
-            var ids = sourceIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>();
-            if (ids.Count == 0)
+            var distinctIds = ids?.Where(id => id > 0).Distinct().ToList() ?? new List<int>();
+            if (distinctIds.Count == 0)
             {
                 return new List<BookshelfLegacyIdentityMapEntry>();
             }
 
             var mappings = new List<BookshelfLegacyIdentityMapEntry>();
             using var connection = _database.OpenConnection();
-            for (var offset = 0; offset < ids.Count; offset += 500)
+            for (var offset = 0; offset < distinctIds.Count; offset += 500)
             {
-                var batch = ids.Skip(offset).Take(500).ToList();
+                var batch = distinctIds.Skip(offset).Take(500).ToList();
                 var parameters = new DynamicParameters();
                 parameters.Add("Source", SourceSystem);
                 parameters.Add("EntityType", entityType.Trim());
@@ -65,8 +76,8 @@ SELECT ""Source"", ""EntityType"", ""SourceId"", ""TargetId"", ""MediaType""
 FROM ""BookshelfLegacyIdentityMap""
 WHERE ""Source"" = @Source
   AND LOWER(""EntityType"") = LOWER(@EntityType)
-  AND ""SourceId"" IN ({string.Join(", ", parameterNames)})
-ORDER BY ""SourceId"", ""MediaType"", ""TargetId"";";
+  AND ""{idColumn}"" IN ({string.Join(", ", parameterNames)})
+ORDER BY ""SourceId"", ""MediaType"", ""TargetId"";"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- idColumn is allow-listed to fixed column names above.
                 mappings.AddRange(connection.Query<BookshelfLegacyIdentityMapEntry>(sql, parameters));
             }
 

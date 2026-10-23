@@ -73,6 +73,7 @@ namespace Chaptarr.Core.Test.Api
                 {
                     nameof(IBookshelfLegacyIdentityMapService.ResolveBookIds) => new List<int> { 10, 11 },
                     nameof(IBookshelfLegacyIdentityMapService.GetMappings) => new List<BookshelfLegacyIdentityMapEntry>(),
+                    nameof(IBookshelfLegacyIdentityMapService.GetMappingsByTargetIds) => new List<BookshelfLegacyIdentityMapEntry>(),
                     _ => throw new NotImplementedException(targetMethod?.Name)
                 };
             }

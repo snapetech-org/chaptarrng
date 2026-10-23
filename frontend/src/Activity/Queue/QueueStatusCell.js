@@ -139,7 +139,7 @@ function QueueStatusCell(props) {
       iconKind = kinds.PRIMARY;
     }
 
-    if (trackedDownloadState === 'importBlocked') {
+    if (trackedDownloadState === 'importBlocked' || trackedDownloadState === 'importFailed') {
       title = `${translate('Downloaded')} - ${translate('ManualImport')} ${translate('Required')}`;
       iconKind = kinds.WARNING;
     }

@@ -183,7 +183,9 @@ namespace Chaptarr.Api.V1.ManualImport
                     ? _legacyIdentityMapService?.ResolveBookIds(new[] { resource.BookId.Value }, mediaType) ?? new List<int> { resource.BookId.Value }
                     : new List<int>();
                 var book = resolvedBookIds.Count > 0 ? _bookService.GetBook(resolvedBookIds[0]) : null;
-                var edition = ResolveLocalEdition(resource.EditionId, book);
+                var edition = resource.EditionId.HasValue
+                    ? ResolveLocalEdition(resource.EditionId, book)
+                    : ResolveForeignEdition(resource.ForeignEditionId, book);
 
                 items.Add(new ManualImportItem
                 {
@@ -239,6 +241,31 @@ namespace Chaptarr.Api.V1.ManualImport
             if (edition.BookId != book.Id)
             {
                 throw new BadRequestException($"Selected edition {editionId.Value} does not belong to selected book {book.Id}.");
+            }
+
+            return edition;
+        }
+
+        private Edition ResolveForeignEdition(string foreignEditionId, Book book)
+        {
+            if (string.IsNullOrWhiteSpace(foreignEditionId) ||
+                string.Equals(foreignEditionId.Trim(), "0", global::System.StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            var facadeContext = HttpContext?.GetReadarrFacadeContext();
+            var normalizedForeignEditionId = ReadarrFacadeProviderIdTranslator.NormalizeBareProviderId(foreignEditionId, facadeContext);
+            var edition = _editionService.GetEditionByForeignEditionId(normalizedForeignEditionId);
+
+            if (edition == null)
+            {
+                throw new BadRequestException($"Selected foreign edition '{foreignEditionId}' could not be found.");
+            }
+
+            if (book != null && edition.BookId != book.Id)
+            {
+                throw new BadRequestException($"Selected foreign edition '{foreignEditionId}' does not belong to selected book {book.Id}.");
             }
 
             return edition;
