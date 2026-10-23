@@ -59,6 +59,8 @@ namespace NzbDrone.Core.Datastore
             {
                 ["ReadarrSettings"] = "ChaptarrSettings"
             };
+        private static readonly ISet<string> ImportListMappedSourceColumns =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ProfileId" };
         private static readonly IReadOnlyDictionary<string, string> MetadataContracts =
             BuildProviderContractMap(typeof(IMetadata), typeof(MetadataBase<>));
         private static readonly IReadOnlyDictionary<string, string> MetadataImplementationAliases =
@@ -75,6 +77,8 @@ namespace NzbDrone.Core.Datastore
             };
         private static readonly IReadOnlyDictionary<string, string> NotificationContracts =
             BuildProviderContractMap(typeof(INotification), typeof(NotificationBase<>));
+        private static readonly ISet<string> NotificationMappedSourceColumns =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "OnTrackRetag" };
 
         private static readonly HashSet<string> SupportedSourceTables = new(StringComparer.Ordinal)
         {
@@ -1294,6 +1298,11 @@ namespace NzbDrone.Core.Datastore
             var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in ReadRows(source, "ImportLists"))
             {
+                EnsureAllSourceValuesMapped(
+                    row,
+                    targetColumns,
+                    "ImportLists",
+                    ImportListMappedSourceColumns);
                 var values = Intersect(row, targetColumns);
                 var sourceProfileId = GetNullableInt(row, "ProfileId");
                 var sourceMetadataProfileId = GetNullableInt(row, "MetadataProfileId");
@@ -1337,6 +1346,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in rows)
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "Indexers");
                 var values = Intersect(row, targetColumns);
                 CheckProviderSettingsCompatibility(row, values, CompatibleIndexerContracts, unsupported);
 
@@ -1376,16 +1386,7 @@ namespace NzbDrone.Core.Datastore
             var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in rows)
             {
-                var unmapped = row.Where(x => x.Value != null && !targetColumns.ContainsKey(x.Key))
-                    .Select(x => x.Key)
-                    .OrderBy(x => x, StringComparer.Ordinal)
-                    .ToArray();
-                if (unmapped.Length > 0)
-                {
-                    throw new InvalidDataException(
-                        $"BookshelfNG {table} row {GetInt(row, "Id")} has non-empty fields with no Chaptarr mapping: " +
-                        string.Join(", ", unmapped.Select(x => table + "." + x)) + ". Conversion stopped before promotion.");
-                }
+                EnsureAllSourceValuesMapped(row, targetColumns, table);
 
                 var values = Intersect(row, targetColumns);
                 CheckProviderSettingsCompatibility(row, values, compatibleContracts, unsupported, implementationAliases);
@@ -1451,6 +1452,26 @@ namespace NzbDrone.Core.Datastore
             }
 
             unsupported.Add($"row {GetInt(sourceRow, "Id")}: {sourceImplementation}/{(sourceConfigContract.Length == 0 ? "(missing contract)" : sourceConfigContract)}{settingsDisposition}");
+        }
+
+        private static void EnsureAllSourceValuesMapped(
+            IReadOnlyDictionary<string, object> sourceRow,
+            IReadOnlyDictionary<string, ColumnInfo> targetColumns,
+            string table,
+            ISet<string> explicitlyMappedSourceColumns = null)
+        {
+            var unmapped = sourceRow.Where(x => x.Value != null &&
+                    !targetColumns.ContainsKey(x.Key) &&
+                    explicitlyMappedSourceColumns?.Contains(x.Key) != true)
+                .Select(x => x.Key)
+                .OrderBy(x => x, StringComparer.Ordinal)
+                .ToArray();
+            if (unmapped.Length > 0)
+            {
+                throw new InvalidDataException(
+                    $"BookshelfNG {table} row {GetInt(sourceRow, "Id")} has non-empty fields with no Chaptarr mapping: " +
+                    string.Join(", ", unmapped.Select(x => table + "." + x)) + ". Conversion stopped before promotion.");
+            }
         }
 
         private static string[] FindMissingGoodreadsOAuthSettings(string settingsJson, string implementation, string configContract)
@@ -2131,6 +2152,11 @@ namespace NzbDrone.Core.Datastore
             var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in ReadRows(source, "Notifications"))
             {
+                EnsureAllSourceValuesMapped(
+                    row,
+                    targetColumns,
+                    "Notifications",
+                    NotificationMappedSourceColumns);
                 var values = Intersect(row, targetColumns);
                 CheckProviderSettingsCompatibility(row, values, NotificationContracts, unsupported);
                 if (!row.ContainsKey("OnBookRetag"))
@@ -2162,16 +2188,7 @@ namespace NzbDrone.Core.Datastore
             var targetColumns = GetColumns(target, table);
             foreach (var row in ReadRows(source, table))
             {
-                var unmapped = row.Where(x => x.Value != null && !targetColumns.ContainsKey(x.Key))
-                    .Select(x => x.Key)
-                    .OrderBy(x => x, StringComparer.Ordinal)
-                    .ToArray();
-                if (unmapped.Length > 0)
-                {
-                    throw new InvalidDataException(
-                        $"BookshelfNG {table} row {GetInt(row, "Id")} has non-empty fields with no Chaptarr mapping: " +
-                        string.Join(", ", unmapped.Select(x => table + "." + x)) + ". Conversion stopped before promotion.");
-                }
+                EnsureAllSourceValuesMapped(row, targetColumns, table);
 
                 var values = Intersect(row, targetColumns);
                 transform?.Invoke(values);

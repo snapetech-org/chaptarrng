@@ -396,18 +396,18 @@ namespace Chaptarr.Core.Test.Datastore
         [Test]
         public void should_preserve_every_builtin_bookshelf_indexer_with_its_matching_contract()
         {
-            var providers = new[]
+            (string Implementation, string Contract, string Settings)[] providers =
             {
-                ("DirectDownloadIndexer", "DirectDownloadSettings"),
-                ("FileList", "FileListSettings"),
-                ("Gazelle", "GazelleSettings"),
-                ("IPTorrents", "IPTorrentsSettings"),
-                ("MyAnonaMouse", "MyAnonaMouseSettings"),
-                ("Newznab", "NewznabSettings"),
-                ("Nyaa", "NyaaSettings"),
-                ("TorrentRssIndexer", "TorrentRssIndexerSettings"),
-                ("Torrentleech", "TorrentleechSettings"),
-                ("Torznab", "TorznabSettings")
+                ("DirectDownloadIndexer", "DirectDownloadSettings", "{\"urls\":\"https://direct.example\",\"apiKey\":\"fixture-direct-key\",\"enableSlowFallback\":true}"),
+                ("FileList", "FileListSettings", "{\"username\":\"fixture-filelist-user\",\"passkey\":\"fixture-filelist-key\",\"categories\":[7,12]}"),
+                ("Gazelle", "GazelleSettings", "{\"baseUrl\":\"https://gazelle.example\",\"username\":\"fixture-gazelle-user\",\"password\":\"fixture-gazelle-password\",\"useFreeleechToken\":true}"),
+                ("IPTorrents", "IPTorrentsSettings", "{\"baseUrl\":\"https://iptorrents.example\",\"minimumSeeders\":3}"),
+                ("MyAnonaMouse", "MyAnonaMouseSettings", "{\"baseUrl\":\"https://www.myanonamouse.net\",\"mamId\":\"fixture-mam-token\",\"searchType\":2,\"searchInDescription\":true}"),
+                ("Newznab", "NewznabSettings", "{\"baseUrl\":\"https://newznab.example\",\"apiPath\":\"/api\",\"apiKey\":\"fixture-newznab-key\",\"categories\":[7020,8000]}"),
+                ("Nyaa", "NyaaSettings", "{\"baseUrl\":\"https://nyaa.example\",\"additionalParameters\":\"trusted=1\"}"),
+                ("TorrentRssIndexer", "TorrentRssIndexerSettings", "{\"baseUrl\":\"https://rss.example/feed\",\"cookie\":\"fixture-rss-cookie\",\"allowZeroSize\":true}"),
+                ("Torrentleech", "TorrentleechSettings", "{\"baseUrl\":\"https://torrentleech.example\",\"apiKey\":\"fixture-torrentleech-key\"}"),
+                ("Torznab", "TorznabSettings", "{\"baseUrl\":\"https://torznab.example\",\"apiPath\":\"/api\",\"apiKey\":\"fixture-torznab-key\",\"minimumSeeders\":2}")
             };
 
             using (var source = new SqliteConnection(_sourceConnectionString))
@@ -419,11 +419,12 @@ namespace Chaptarr.Core.Test.Datastore
                     using var command = source.CreateCommand();
                     command.CommandText = @"
                         INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
-                        VALUES ($id, $name, $implementation, '{}', $contract, 1, 1, 1, 25, '[]', 0);";
+                        VALUES ($id, $name, $implementation, $settings, $contract, 1, 1, 1, 25, '[]', 0);";
                     command.Parameters.AddWithValue("$id", 900 + index);
-                    command.Parameters.AddWithValue("$name", $"Built-in provider {providers[index].Item1}");
-                    command.Parameters.AddWithValue("$implementation", providers[index].Item1);
-                    command.Parameters.AddWithValue("$contract", providers[index].Item2);
+                    command.Parameters.AddWithValue("$name", $"Built-in provider {providers[index].Implementation}");
+                    command.Parameters.AddWithValue("$implementation", providers[index].Implementation);
+                    command.Parameters.AddWithValue("$settings", providers[index].Settings);
+                    command.Parameters.AddWithValue("$contract", providers[index].Contract);
                     command.ExecuteNonQuery();
                 }
             }
@@ -448,12 +449,15 @@ namespace Chaptarr.Core.Test.Datastore
             {
                 for (var index = 0; index < providers.Length; index++)
                 {
-                    var (implementation, contract) = providers[index];
+                    var (implementation, contract, settings) = providers[index];
                     Assert.That(QueryScalar<int>(
                         _sourcePath,
-                        $"SELECT COUNT(*) FROM Indexers WHERE Id = {900 + index} AND Implementation = '{implementation}' AND ConfigContract = '{contract}' AND Settings = '{{}}';"),
+                        $"SELECT COUNT(*) FROM Indexers WHERE Id = {900 + index} AND Implementation = '{implementation}' AND ConfigContract = '{contract}';"),
                         Is.EqualTo(1),
-                        $"{implementation} settings and contract should survive migration");
+                        $"{implementation} implementation and contract should survive migration");
+                    Assert.That(QueryScalar<string>(_sourcePath, $"SELECT Settings FROM Indexers WHERE Id = {900 + index};"),
+                        Is.EqualTo(settings),
+                        $"{implementation} settings fields should survive migration");
                 }
             });
         }
@@ -1805,6 +1809,36 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(exception.Message, Does.Contain("Config.UnmappedValue"));
             Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
             Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+        }
+
+        [TestCase("Indexers", 120)]
+        [TestCase("ImportLists", 110)]
+        [TestCase("Notifications", 111)]
+        public void should_refuse_nonempty_unmapped_provider_columns_without_changing_the_source(string table, int rowId)
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = $@"
+                    ALTER TABLE ""{table}"" ADD COLUMN UnmappedProviderValue TEXT;
+                    UPDATE ""{table}"" SET UnmappedProviderValue = 'keep-me' WHERE Id = {rowId};";
+                command.ExecuteNonQuery();
+            }
+
+            var before = File.ReadAllBytes(_sourcePath);
+            var exception = Assert.Throws<InvalidDataException>(() => new MigrationController(
+                LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                    _sourceConnectionString,
+                    new MigrationContext(MigrationType.Main),
+                    DatabaseType.SQLite));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain($"{table}.UnmappedProviderValue"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+            });
         }
 
         private void CreateSourceDatabase()
