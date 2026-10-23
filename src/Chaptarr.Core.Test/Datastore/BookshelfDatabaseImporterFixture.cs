@@ -394,6 +394,71 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_preserve_every_builtin_bookshelf_indexer_with_its_matching_contract()
+        {
+            var providers = new[]
+            {
+                ("DirectDownloadIndexer", "DirectDownloadSettings"),
+                ("FileList", "FileListSettings"),
+                ("Gazelle", "GazelleSettings"),
+                ("IPTorrents", "IPTorrentsSettings"),
+                ("MyAnonaMouse", "MyAnonaMouseSettings"),
+                ("Newznab", "NewznabSettings"),
+                ("Nyaa", "NyaaSettings"),
+                ("TorrentRssIndexer", "TorrentRssIndexerSettings"),
+                ("Torrentleech", "TorrentleechSettings"),
+                ("Torznab", "TorznabSettings")
+            };
+
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+
+                for (var index = 0; index < providers.Length; index++)
+                {
+                    using var command = source.CreateCommand();
+                    command.CommandText = @"
+                        INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
+                        VALUES ($id, $name, $implementation, '{}', $contract, 1, 1, 1, 25, '[]', 0);";
+                    command.Parameters.AddWithValue("$id", 900 + index);
+                    command.Parameters.AddWithValue("$name", $"Built-in provider {providers[index].Item1}");
+                    command.Parameters.AddWithValue("$implementation", providers[index].Item1);
+                    command.Parameters.AddWithValue("$contract", providers[index].Item2);
+                    command.ExecuteNonQuery();
+                }
+            }
+
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.That(preview.ImportReport.BlockingIssues, Is.Empty,
+                "all built-in BookshelfNG indexer names and contracts have an equivalent Chaptarr provider");
+
+            migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                for (var index = 0; index < providers.Length; index++)
+                {
+                    var (implementation, contract) = providers[index];
+                    Assert.That(QueryScalar<int>(
+                        _sourcePath,
+                        $"SELECT COUNT(*) FROM Indexers WHERE Id = {900 + index} AND Implementation = '{implementation}' AND ConfigContract = '{contract}' AND Settings = '{{}}';"),
+                        Is.EqualTo(1),
+                        $"{implementation} settings and contract should survive migration");
+                }
+            });
+        }
+
+        [Test]
         public void should_fail_closed_when_bare_numeric_provider_ids_have_no_explicit_source_mode()
         {
             SetBareNumericProviderIds();
