@@ -66,6 +66,30 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("|| matrix.os", runner)
         self.assertNotIn("TRUSTED_MAIN_RUNNERS_ENABLED", source)
 
+    def test_buildkit_proxy_is_limited_to_trusted_main_and_reaches_build_steps(self) -> None:
+        source = WORKFLOW.read_text(encoding="utf-8")
+        docker_job = job_block(source, "docker-compatibility-build")
+        expected_proxy_gate = (
+            "BUILDKIT_EGRESS_PROXY: ${{ (github.event_name == 'push' || "
+            "github.event_name == 'workflow_dispatch') && github.ref == "
+            "'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}"
+        )
+        self.assertIn(expected_proxy_gate, docker_job)
+
+        buildx = step_block(source, "Set up Docker Buildx")
+        build = step_block(
+            source, "Build image for all published architectures without pushing"
+        )
+        for proxy_name in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+            self.assertIn(
+                f"env.{proxy_name}=${{{{ env.BUILDKIT_EGRESS_PROXY }}}}", buildx
+            )
+            self.assertIn(
+                f"{proxy_name}=${{{{ env.BUILDKIT_EGRESS_PROXY }}}}", build
+            )
+        self.assertIn("env.NO_PROXY=localhost,127.0.0.1", buildx)
+        self.assertIn("NO_PROXY=localhost,127.0.0.1", build)
+
     def test_pr_body_edits_revalidate_notes_without_restarting_builds(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         pull_request = event_block(source, "pull_request")
