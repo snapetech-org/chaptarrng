@@ -74,6 +74,30 @@ assert.deepEqual(
   ]
 );
 
+const legacyBookSearchResponse = await requestWithKey("/command", globalKey, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ name: "BookSearch", bookIds: [30] }),
+});
+assert.equal(legacyBookSearchResponse.status, 201);
+const legacyBookSearchLocation = legacyBookSearchResponse.headers.get("Location");
+assert.ok(legacyBookSearchLocation, "BookSearch should return its command URL");
+const legacyBookSearchId = Number(
+  new URL(legacyBookSearchLocation, apiUrl).pathname.split("/").at(-1)
+);
+assert.ok(Number.isSafeInteger(legacyBookSearchId) && legacyBookSearchId > 0);
+const legacyBookSearchCommandResponse = await requestWithKey(
+  `/command/${legacyBookSearchId}`,
+  globalKey
+);
+assert.equal(legacyBookSearchCommandResponse.status, 200);
+const legacyBookSearchCommand = await legacyBookSearchCommandResponse.json();
+assert.deepEqual(
+  legacyBookSearchCommand.body.bookIds,
+  [30, 31],
+  "A legacy BookSearch command should include both migrated format records"
+);
+
 const [legacyAudiobook, legacyEbook] = await Promise.all([
   audiobookApi.getBook(30),
   api.getBook(30),
