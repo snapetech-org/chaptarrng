@@ -41,6 +41,19 @@ does not establish complete feature parity, representative-data acceptance,
 hosted exact-head validation, provider fulfillment, or installed-channel
 handoff. No release or cutover was published.
 
+**BookshelfNG import-list provider migration — 2026-10-23:** A read-only
+provider-source comparison found that BookshelfNG's built-in `ReadarrImport`
+was the only import-list implementation without a target-name match. ChaptarrNG
+now maps it to `ChaptarrImport` and translates the identical
+`ReadarrSettings`/`ChaptarrSettings` contract names while preserving the saved
+URL, API key, profile IDs, tag IDs, and root-folder paths. The migration fixture
+previews and applies that mapping, then deserializes the result as the target
+settings type. The full Release Core suite passed 4,735 tests with 25 skips and
+no failures. This closes the identified source-level provider mapping gap; it
+does not establish live remote-instance behavior, representative operator-data
+acceptance, hosted exact-head validation, or installed-channel handoff. No
+release or cutover was published.
+
 **Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
 ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through
 `Dockerfile.build` and passed both checked-in smoke scripts against SeerrNG

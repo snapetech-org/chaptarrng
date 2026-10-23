@@ -354,6 +354,13 @@ backup preserves the original configuration, but it does not make an
 unsupported provider active in ChaptarrNG. These candidate changes are not in
 published `v0.9.977` while the release freeze remains active.
 
+The built-in BookshelfNG `ReadarrImport` list is mapped to ChaptarrNG's
+`ChaptarrImport` implementation. Its saved `ReadarrSettings` fields
+(`BaseUrl`, `ApiKey`, `ProfileIds`, `TagIds`, and `RootFolderPaths`) match the
+target settings contract; conversion updates the provider and contract names
+while retaining those values. This compatibility is source-only and is not in
+published `v0.9.977`.
+
 Preserve `HARDCOVER=true`, `HARDCOVER_AUTH`, `HARDCOVER_API_KEY`, and any
 custom `HARDCOVER_API_URL` environment value used by the BookshelfNG install.
 Run preview and migration with the same `HARDCOVER` and `HARDCOVER_NATIVE`

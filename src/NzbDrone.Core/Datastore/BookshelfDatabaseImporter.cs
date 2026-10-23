@@ -49,6 +49,16 @@ namespace NzbDrone.Core.Datastore
             BuildProviderContractMap(typeof(IDownloadClient), typeof(DownloadClientBase<>));
         private static readonly IReadOnlyDictionary<string, string> ImportListContracts =
             BuildProviderContractMap(typeof(IImportList), typeof(ImportListBase<>));
+        private static readonly IReadOnlyDictionary<string, string> ImportListImplementationAliases =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ReadarrImport"] = "ChaptarrImport"
+            };
+        private static readonly IReadOnlyDictionary<string, string> ImportListContractAliases =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ReadarrSettings"] = "ChaptarrSettings"
+            };
         private static readonly IReadOnlyDictionary<string, string> MetadataContracts =
             BuildProviderContractMap(typeof(IMetadata), typeof(MetadataBase<>));
         private static readonly IReadOnlyDictionary<string, string> MetadataImplementationAliases =
@@ -1296,7 +1306,13 @@ namespace NzbDrone.Core.Datastore
                 values["ShouldMonitor"] = RemapMonitorType(GetInt(row, "ShouldMonitor"));
                 SetIfPresent(values, "EnableAutomaticAdd", GetBoolean(row, "EnableAutomaticAdd"));
                 SetIfPresent(values, "ConfigContract", GetString(row, "ConfigContract") ?? "");
-                CheckProviderSettingsCompatibility(row, values, ImportListContracts, unsupported);
+                CheckProviderSettingsCompatibility(
+                    row,
+                    values,
+                    ImportListContracts,
+                    unsupported,
+                    ImportListImplementationAliases,
+                    ImportListContractAliases);
                 SetIfPresent(values, "MonitorNewItems", GetValue(row, "MonitorNewItems") ?? 0);
                 InsertRow(target, transaction, "ImportLists", targetColumns, values);
             }
@@ -1389,7 +1405,8 @@ namespace NzbDrone.Core.Datastore
             IDictionary<string, object> targetRow,
             IReadOnlyDictionary<string, string> compatibleContracts,
             ISet<string> unsupported,
-            IReadOnlyDictionary<string, string> implementationAliases = null)
+            IReadOnlyDictionary<string, string> implementationAliases = null,
+            IReadOnlyDictionary<string, string> contractAliases = null)
         {
             var sourceImplementation = GetString(sourceRow, "Implementation") ?? "(missing implementation)";
             var implementation = implementationAliases != null && implementationAliases.TryGetValue(sourceImplementation, out var alias)
@@ -1400,7 +1417,15 @@ namespace NzbDrone.Core.Datastore
                 SetIfPresent(targetRow, "Implementation", implementation);
             }
 
-            var configContract = GetString(sourceRow, "ConfigContract") ?? "";
+            var sourceConfigContract = GetString(sourceRow, "ConfigContract") ?? "";
+            var configContract = contractAliases != null && contractAliases.TryGetValue(sourceConfigContract, out var contractAlias)
+                ? contractAlias
+                : sourceConfigContract;
+            if (!configContract.Equals(sourceConfigContract, StringComparison.OrdinalIgnoreCase))
+            {
+                SetIfPresent(targetRow, "ConfigContract", configContract);
+            }
+
             var hasCompatibleImplementation = compatibleContracts.TryGetValue(implementation, out var expectedContract) &&
                 string.Equals(configContract, expectedContract, StringComparison.OrdinalIgnoreCase);
             var settingsIssues = hasCompatibleImplementation
@@ -1425,7 +1450,7 @@ namespace NzbDrone.Core.Datastore
                 settingsDisposition += " (missing Goodreads OAuth settings: " + string.Join(", ", missingOAuthSettings) + ")";
             }
 
-            unsupported.Add($"row {GetInt(sourceRow, "Id")}: {sourceImplementation}/{(configContract.Length == 0 ? "(missing contract)" : configContract)}{settingsDisposition}");
+            unsupported.Add($"row {GetInt(sourceRow, "Id")}: {sourceImplementation}/{(sourceConfigContract.Length == 0 ? "(missing contract)" : sourceConfigContract)}{settingsDisposition}");
         }
 
         private static string[] FindMissingGoodreadsOAuthSettings(string settingsJson, string implementation, string configContract)
