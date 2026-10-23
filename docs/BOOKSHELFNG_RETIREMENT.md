@@ -9,22 +9,24 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
-**Latest ChaptarrNG parity and CI — 2026-10-23:** ChaptarrNG application-code commit
-`3fe0a8f1d25c843dfcfc1ca7d7ac20be3e5a6406` restores BookshelfNG audiobook
-release ordering for migrated installs and includes the earlier paged-library
-and OIDC parity fixes. The Release Core suite passed 4,699 tests with 25 skips
-and no failures. The commit hook's Semgrep scan found zero findings, and the
-release-note preview passed. Exact-head Build
-[39900179145](https://github.com/snapetech-org/chaptarrng/actions/runs/39900179145)
-has not completed: Windows and macOS builds are in progress while Linux,
-PostgreSQL migration, and Docker jobs remain queued. Security Analysis is
-running; CodeQL, Semgrep, Trivy, standalone-asset validation, and dependency
-submission remain queued. The prior Build
-[39897196030](https://github.com/snapetech-org/chaptarrng/actions/runs/39897196030)
-was cancelled after the newer commit; its PostgreSQL job failed during NuGet
-dependency restore, before PostgreSQL build or smoke. The public `v0.9.977`
-release is unchanged. No release or cutover was published or authorized by
-this source commit.
+**Latest ChaptarrNG parity and CI — 2026-10-23:** Application-code commit
+`cd1b3fe927df86e61ee566e03cffe1641dde9cd9` is on `main`; it includes the earlier
+migrated-audiobook release and pending-queue ranking fixes and orders inferred
+audiobook parts by complete embedded disc/track tags across import, existing-
+file repair, and in-place download assignment. Incomplete or ambiguous tags
+retain natural-path ordering. The Release Core suite passed 4,707 tests with
+25 skips and no failures. The commit hook's Semgrep scan found zero findings,
+and the push readiness checks passed. Exact-head automatic dependency
+submission [39969823947](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823947)
+passed; Build [39969823480](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823480),
+Security Analysis [39969823597](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823597),
+CodeQL [39969823529](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823529),
+Semgrep [39969823578](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823578),
+Trivy [39969823726](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823726),
+and standalone-asset validation
+[39969823444](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823444)
+remain queued. The public `v0.9.977` release is unchanged. No release or
+cutover was published or authorized by this source commit.
 
 **Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
 ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through
