@@ -1,7 +1,7 @@
 # ng-runner-policy: hosted-first-v1
 name: Docker Build and Publish
 
-# Never fires on its own. release.yml calls it after a version bump and CI pass.
+# Never fires on its own. release.yml calls it after a v<semver> tag passes CI.
 on:
   workflow_call:
     inputs:
@@ -47,7 +47,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ inputs.sha }}
         persist-credentials: false
 
     - name: Require retirement release readiness

@@ -13,9 +13,9 @@ on:
         required: true
   workflow_dispatch:
 
-# Tests only, never publishes. PRs and merges are both validated automatically, but
-# nothing reaches users until release.yml is run by hand; docker-publish.yml is
-# workflow_call-only, so no run started here can push an image.
+# Tests only, never publishes. PRs and main commits are validated separately, while
+# release.yml starts publication from a matching v<semver> tag. docker-publish.yml
+# is workflow_call-only, so no CI run started here can push an image.
 
 # Superseded PR code checks cancel; body-only edits have a separate group.
 # Main builds and release callers keep their own run and are never superseded.
