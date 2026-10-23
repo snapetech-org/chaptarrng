@@ -241,6 +241,9 @@ jobs:
     - name: Install frontend dependencies
       run: yarn install --frozen-lockfile
 
+    - name: Verify bundled asset URLs remain same-origin
+      run: node --test frontend/src/indexTemplateAssetUrls.test.cjs
+
     - name: Test Books list both-format filtering
       run: >-
         node --test
