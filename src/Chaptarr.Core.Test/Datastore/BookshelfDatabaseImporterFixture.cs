@@ -1820,9 +1820,23 @@ namespace Chaptarr.Core.Test.Datastore
             {
                 source.Open();
                 using var command = source.CreateCommand();
-                command.CommandText = $@"
-                    ALTER TABLE ""{table}"" ADD COLUMN UnmappedProviderValue TEXT;
-                    UPDATE ""{table}"" SET UnmappedProviderValue = 'keep-me' WHERE Id = {rowId};";
+                command.CommandText = table switch
+                {
+                    "Indexers" => """
+                        ALTER TABLE "Indexers" ADD COLUMN UnmappedProviderValue TEXT;
+                        UPDATE "Indexers" SET UnmappedProviderValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "ImportLists" => """
+                        ALTER TABLE "ImportLists" ADD COLUMN UnmappedProviderValue TEXT;
+                        UPDATE "ImportLists" SET UnmappedProviderValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Notifications" => """
+                        ALTER TABLE "Notifications" ADD COLUMN UnmappedProviderValue TEXT;
+                        UPDATE "Notifications" SET UnmappedProviderValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    _ => throw new ArgumentOutOfRangeException(nameof(table), table, "Unexpected provider table fixture")
+                };
+                command.Parameters.AddWithValue("$rowId", rowId);
                 command.ExecuteNonQuery();
             }
 
