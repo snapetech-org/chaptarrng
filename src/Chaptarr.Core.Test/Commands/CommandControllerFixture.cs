@@ -1,16 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Chaptarr.Api.V1.Commands;
+using Chaptarr.Http.Middleware;
 using Chaptarr.Http.REST;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NLog;
 using NUnit.Framework;
 using NzbDrone.Common.Composition;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Commands;
 using NzbDrone.Core.IndexerSearch;
 using NzbDrone.Core.MediaFiles.Commands;
@@ -76,6 +79,36 @@ namespace Chaptarr.Core.Test.Commands
             public Task BroadcastMessage(SignalRMessage message) => Task.CompletedTask;
         }
 
+        private sealed class StubLegacyIdentityMapService : IBookshelfLegacyIdentityMapService
+        {
+            public List<int> LastSourceIds { get; private set; } = new List<int>();
+            public BookMediaType? LastMediaType { get; private set; }
+
+            public List<BookshelfLegacyIdentityMapEntry> GetMappings(string entityType, IEnumerable<int> sourceIds) =>
+                new List<BookshelfLegacyIdentityMapEntry>();
+
+            public List<BookshelfLegacyIdentityMapEntry> GetMappingsByTargetIds(string entityType, IEnumerable<int> targetIds) =>
+                new List<BookshelfLegacyIdentityMapEntry>();
+
+            public List<int> ResolveBookIds(IEnumerable<int> sourceIds, BookMediaType? mediaType = null)
+            {
+                LastSourceIds = sourceIds?.ToList() ?? new List<int>();
+                LastMediaType = mediaType;
+
+                if (!LastSourceIds.Contains(30))
+                {
+                    return LastSourceIds;
+                }
+
+                return mediaType switch
+                {
+                    BookMediaType.Ebook => new List<int> { 61 },
+                    BookMediaType.Audiobook => new List<int> { 30 },
+                    _ => new List<int> { 30, 61 }
+                };
+            }
+        }
+
         [Test]
         public void rename_author_should_reject_unknown_media_type_before_queueing()
         {
@@ -125,6 +158,38 @@ namespace Chaptarr.Core.Test.Commands
             Assert.That(((MissingBookSearchCommand)queue.PushedCommand).MediaType, Is.Null);
         }
 
+        [Test]
+        public void book_search_command_should_resolve_legacy_id_to_both_split_format_rows()
+        {
+            var queue = new StubCommandQueue();
+            var identityMap = new StubLegacyIdentityMapService();
+            var controller = CreateController(queue, """{"name":"BookSearch","bookIds":[30]}""", identityMap);
+
+            controller.StartCommand(new CommandResource { Name = "BookSearch" });
+
+            Assert.That(((BookSearchCommand)queue.PushedCommand).BookIds, Is.EqualTo(new[] { 30, 61 }));
+            Assert.That(identityMap.LastSourceIds, Is.EqualTo(new[] { 30 }));
+            Assert.That(identityMap.LastMediaType, Is.Null);
+        }
+
+        [Test]
+        public void book_search_command_should_resolve_legacy_id_within_facade_media_type()
+        {
+            var queue = new StubCommandQueue();
+            var identityMap = new StubLegacyIdentityMapService();
+            var facadeContext = new ReadarrFacadeContext("hc", "ebook", "/readarr/hc/ebook");
+            var controller = CreateController(
+                queue,
+                """{"name":"BookSearch","bookIds":[30]}""",
+                identityMap,
+                facadeContext);
+
+            controller.StartCommand(new CommandResource { Name = "BookSearch" });
+
+            Assert.That(((BookSearchCommand)queue.PushedCommand).BookIds, Is.EqualTo(new[] { 61 }));
+            Assert.That(identityMap.LastMediaType, Is.EqualTo(BookMediaType.Ebook));
+        }
+
         [TestCase("MoveAuthorMedia")]
         [TestCase("MoveAuthorMediaBatch")]
         public void author_media_move_commands_should_require_the_preview_validated_endpoint(string commandName)
@@ -139,7 +204,11 @@ namespace Chaptarr.Core.Test.Commands
             Assert.That(queue.WasPushed, Is.False);
         }
 
-        private static CommandController CreateController(StubCommandQueue queue, string body)
+        private static CommandController CreateController(
+            StubCommandQueue queue,
+            string body,
+            IBookshelfLegacyIdentityMapService legacyIdentityMapService = null,
+            ReadarrFacadeContext facadeContext = null)
         {
             var controller = new CommandController(
                 queue,
@@ -147,16 +216,22 @@ namespace Chaptarr.Core.Test.Commands
                 new KnownTypes(new List<Type>
                 {
                     typeof(RenameAuthorCommand),
+                    typeof(BookSearchCommand),
                     typeof(MissingBookSearchCommand),
                     typeof(CutoffUnmetBookSearchCommand),
                     typeof(MoveAuthorMediaCommand),
                     typeof(MoveAuthorMediaBatchCommand)
                 }),
-                LogManager.GetCurrentClassLogger());
+                LogManager.GetCurrentClassLogger(),
+                legacyIdentityMapService);
 
             var context = new DefaultHttpContext();
             context.Request.Method = "POST";
             context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+            if (facadeContext != null)
+            {
+                context.Items[ReadarrFacadeContext.ItemKey] = facadeContext;
+            }
 
             controller.ControllerContext = new ControllerContext
             {

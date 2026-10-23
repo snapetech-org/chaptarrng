@@ -12,10 +12,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Data.Sqlite;
 using NLog;
 using NLog.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
 using NzbDrone.Core.Download.Clients.QBittorrent;
+using NzbDrone.Core.ImportLists.Chaptarr;
 using NzbDrone.Core.Indexers.DirectDownload;
 using NzbDrone.Core.Indexers.MyAnonaMouse;
 using NzbDrone.Core.MetadataSource.BookInfo;
@@ -345,6 +348,342 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 111;"), Does.Contain("fixture-token"));
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 111;"), Does.Contain("fixture-list"));
             });
+        }
+
+        [Test]
+        public void should_map_bookshelf_readarr_import_list_to_chaptarr_with_its_saved_settings()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = """
+                    INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags)
+                    VALUES (137, 'Legacy Readarr library', 'ReadarrImport', '{"baseUrl":"https://bookshelf.example","apiKey":"fixture-readarr-api-key","profileIds":[1],"tagIds":[3],"rootFolderPaths":["/legacy-library"]}', 'ReadarrSettings', 1, '/legacy-library', 1, 1, 1, '[3]');
+                    """;
+                command.ExecuteNonQuery();
+            }
+
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.That(preview.ImportReport.BlockingIssues, Is.Empty,
+                "the legacy provider name and settings contract have equivalent Chaptarr implementations");
+
+            migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Implementation FROM ImportLists WHERE Id = 137;"), Is.EqualTo("ChaptarrImport"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT ConfigContract FROM ImportLists WHERE Id = 137;"), Is.EqualTo("ChaptarrSettings"));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT EnableAutomaticAdd FROM ImportLists WHERE Id = 137;"), Is.EqualTo(1));
+                var settings = QueryScalar<string>(_sourcePath, "SELECT Settings FROM ImportLists WHERE Id = 137;");
+                var migratedSettings = NzbDrone.Common.Serializer.STJson.Deserialize<ChaptarrSettings>(settings);
+                Assert.That(migratedSettings.BaseUrl, Is.EqualTo("https://bookshelf.example"));
+                Assert.That(migratedSettings.ApiKey, Is.EqualTo("fixture-readarr-api-key"));
+                Assert.That(migratedSettings.ProfileIds, Is.EqualTo(new[] { 1 }));
+                Assert.That(migratedSettings.TagIds, Is.EqualTo(new[] { 3 }));
+                Assert.That(migratedSettings.RootFolderPaths, Is.EqualTo(new[] { "/legacy-library" }));
+            });
+        }
+
+        [Test]
+        public void should_preserve_every_builtin_bookshelf_indexer_with_its_matching_contract()
+        {
+            (string Implementation, string Contract, string Settings)[] providers =
+            {
+                ("DirectDownloadIndexer", "DirectDownloadSettings", "{\"urls\":\"https://direct.example\",\"apiKey\":\"fixture-direct-key\",\"enableSlowFallback\":true}"),
+                ("FileList", "FileListSettings", "{\"username\":\"fixture-filelist-user\",\"passkey\":\"fixture-filelist-key\",\"categories\":[7,12]}"),
+                ("Gazelle", "GazelleSettings", "{\"baseUrl\":\"https://gazelle.example\",\"username\":\"fixture-gazelle-user\",\"password\":\"fixture-gazelle-password\",\"useFreeleechToken\":true}"),
+                ("IPTorrents", "IPTorrentsSettings", "{\"baseUrl\":\"https://iptorrents.example\",\"minimumSeeders\":3}"),
+                ("MyAnonaMouse", "MyAnonaMouseSettings", "{\"baseUrl\":\"https://www.myanonamouse.net\",\"mamId\":\"fixture-mam-token\",\"searchType\":2,\"searchInDescription\":true}"),
+                ("Newznab", "NewznabSettings", "{\"baseUrl\":\"https://newznab.example\",\"apiPath\":\"/api\",\"apiKey\":\"fixture-newznab-key\",\"categories\":[7020,8000]}"),
+                ("Nyaa", "NyaaSettings", "{\"baseUrl\":\"https://nyaa.example\",\"additionalParameters\":\"trusted=1\"}"),
+                ("TorrentRssIndexer", "TorrentRssIndexerSettings", "{\"baseUrl\":\"https://rss.example/feed\",\"cookie\":\"fixture-rss-cookie\",\"allowZeroSize\":true}"),
+                ("Torrentleech", "TorrentleechSettings", "{\"baseUrl\":\"https://torrentleech.example\",\"apiKey\":\"fixture-torrentleech-key\"}"),
+                ("Torznab", "TorznabSettings", "{\"baseUrl\":\"https://torznab.example\",\"apiPath\":\"/api\",\"apiKey\":\"fixture-torznab-key\",\"minimumSeeders\":2}")
+            };
+
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+
+                for (var index = 0; index < providers.Length; index++)
+                {
+                    using var command = source.CreateCommand();
+                    command.CommandText = @"
+                        INSERT INTO Indexers (Id, Name, Implementation, Settings, ConfigContract, EnableRss, EnableAutomaticSearch, EnableInteractiveSearch, Priority, Tags, DownloadClientId)
+                        VALUES ($id, $name, $implementation, $settings, $contract, 1, 1, 1, 25, '[]', 0);";
+                    command.Parameters.AddWithValue("$id", 900 + index);
+                    command.Parameters.AddWithValue("$name", $"Built-in provider {providers[index].Implementation}");
+                    command.Parameters.AddWithValue("$implementation", providers[index].Implementation);
+                    command.Parameters.AddWithValue("$settings", providers[index].Settings);
+                    command.Parameters.AddWithValue("$contract", providers[index].Contract);
+                    command.ExecuteNonQuery();
+                }
+            }
+
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.That(preview.ImportReport.BlockingIssues, Is.Empty,
+                "all built-in BookshelfNG indexer names and contracts have an equivalent Chaptarr provider");
+
+            migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                for (var index = 0; index < providers.Length; index++)
+                {
+                    var (implementation, contract, settings) = providers[index];
+                    Assert.That(QueryScalar<int>(
+                        _sourcePath,
+                        $"SELECT COUNT(*) FROM Indexers WHERE Id = {900 + index} AND Implementation = '{implementation}' AND ConfigContract = '{contract}';"),
+                        Is.EqualTo(1),
+                        $"{implementation} implementation and contract should survive migration");
+                    Assert.That(QueryScalar<string>(_sourcePath, $"SELECT Settings FROM Indexers WHERE Id = {900 + index};"),
+                        Is.EqualTo(settings),
+                        $"{implementation} settings fields should survive migration");
+                }
+            });
+        }
+
+        [Test]
+        public void should_preserve_every_builtin_bookshelf_download_client_import_list_and_notification()
+        {
+            (string Implementation, string Contract)[] downloadClientTypes =
+            {
+                ("Aria2", "Aria2Settings"),
+                ("TorrentBlackhole", "TorrentBlackholeSettings"),
+                ("UsenetBlackhole", "UsenetBlackholeSettings"),
+                ("Deluge", "DelugeSettings"),
+                ("TorrentDownloadStation", "DownloadStationSettings"),
+                ("UsenetDownloadStation", "DownloadStationSettings"),
+                ("Flood", "FloodSettings"),
+                ("Hadouken", "HadoukenSettings"),
+                ("NzbVortex", "NzbVortexSettings"),
+                ("Nzbget", "NzbgetSettings"),
+                ("Pneumatic", "PneumaticSettings"),
+                ("QBittorrent", "QBittorrentSettings"),
+                ("Sabnzbd", "SabnzbdSettings"),
+                ("RTorrent", "RTorrentSettings"),
+                ("UTorrent", "UTorrentSettings")
+            };
+            (string Implementation, string Contract)[] importListTypes =
+            {
+                ("GoodreadsBookshelf", "GoodreadsBookshelfImportListSettings"),
+                ("GoodreadsListImportList", "GoodreadsListImportListSettings"),
+                ("GoodreadsOwnedBooks", "GoodreadsOwnedBooksImportListSettings"),
+                ("GoodreadsSeriesImportList", "GoodreadsSeriesImportListSettings"),
+                ("HardcoverImport", "HardcoverImportSettings"),
+                ("LazyLibrarianImport", "LazyLibrarianImportSettings")
+            };
+            (string Implementation, string Contract)[] notificationTypes =
+            {
+                ("Apprise", "AppriseSettings"),
+                ("BookLore", "BookLoreSettings"),
+                ("CustomScript", "CustomScriptSettings"),
+                ("Discord", "DiscordSettings"),
+                ("Email", "EmailSettings"),
+                ("GoodreadsBookshelf", "GoodreadsBookshelfNotificationSettings"),
+                ("GoodreadsOwnedBooks", "GoodreadsOwnedBooksNotificationSettings"),
+                ("Gotify", "GotifySettings"),
+                ("Join", "JoinSettings"),
+                ("Kavita", "KavitaSettings"),
+                ("MailGun", "MailgunSettings"),
+                ("Ntfy", "NtfySettings"),
+                ("PlexServer", "PlexServerSettings"),
+                ("Prowl", "ProwlSettings"),
+                ("PushBullet", "PushBulletSettings"),
+                ("Pushover", "PushoverSettings"),
+                ("SendGrid", "SendGridSettings"),
+                ("Signal", "SignalSettings"),
+                ("Simplepush", "SimplepushSettings"),
+                ("Slack", "SlackSettings"),
+                ("Subsonic", "SubsonicSettings"),
+                ("SynologyIndexer", "SynologyIndexerSettings"),
+                ("Telegram", "TelegramSettings"),
+                ("Twitter", "TwitterSettings")
+            };
+
+            var downloadClients = downloadClientTypes
+                .Select((provider, index) => (Id: 900 + index, provider.Implementation, provider.Contract,
+                    Settings: CreateBuiltInProviderSettings(provider.Implementation, provider.Contract)))
+                .ToArray();
+            var importLists = importListTypes
+                .Select((provider, index) => (Id: 1000 + index, provider.Implementation, provider.Contract,
+                    Settings: CreateBuiltInProviderSettings(provider.Implementation, provider.Contract)))
+                .ToArray();
+            var notifications = notificationTypes
+                .Select((provider, index) => (Id: 1100 + index, provider.Implementation, provider.Contract,
+                    Settings: CreateBuiltInProviderSettings(provider.Implementation, provider.Contract)))
+                .ToArray();
+
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+
+                foreach (var provider in downloadClients)
+                {
+                    using var command = source.CreateCommand();
+                    command.CommandText = "INSERT INTO DownloadClients (Id, Enable, Name, Implementation, Settings, ConfigContract) VALUES ($id, 1, $name, $implementation, $settings, $contract);";
+                    command.Parameters.AddWithValue("$id", provider.Id);
+                    command.Parameters.AddWithValue("$name", $"Built-in download client {provider.Implementation}");
+                    command.Parameters.AddWithValue("$implementation", provider.Implementation);
+                    command.Parameters.AddWithValue("$settings", provider.Settings);
+                    command.Parameters.AddWithValue("$contract", provider.Contract);
+                    command.ExecuteNonQuery();
+                }
+
+                foreach (var provider in importLists)
+                {
+                    using var command = source.CreateCommand();
+                    command.CommandText = "INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags) VALUES ($id, $name, $implementation, $settings, $contract, 1, '/library', 1, 1, 1, '[]');";
+                    command.Parameters.AddWithValue("$id", provider.Id);
+                    command.Parameters.AddWithValue("$name", $"Built-in import list {provider.Implementation}");
+                    command.Parameters.AddWithValue("$implementation", provider.Implementation);
+                    command.Parameters.AddWithValue("$settings", provider.Settings);
+                    command.Parameters.AddWithValue("$contract", provider.Contract);
+                    command.ExecuteNonQuery();
+                }
+
+                foreach (var provider in notifications)
+                {
+                    using var command = source.CreateCommand();
+                    command.CommandText = """
+                        INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                        VALUES ($id, $name, 1, $settings, $implementation, $contract, 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);
+                        """;
+                    command.Parameters.AddWithValue("$id", provider.Id);
+                    command.Parameters.AddWithValue("$name", $"Built-in notification {provider.Implementation}");
+                    command.Parameters.AddWithValue("$implementation", provider.Implementation);
+                    command.Parameters.AddWithValue("$settings", provider.Settings);
+                    command.Parameters.AddWithValue("$contract", provider.Contract);
+                    command.ExecuteNonQuery();
+                }
+            }
+
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.That(preview.ImportReport.BlockingIssues, Is.Empty,
+                "all built-in BookshelfNG provider implementation and settings contracts have an equivalent Chaptarr provider");
+
+            migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                foreach (var provider in downloadClients)
+                {
+                    Assert.That(ReadMigratedProvider(_sourcePath, "DownloadClients", provider.Id),
+                        Is.EqualTo((provider.Implementation, provider.Contract, provider.Settings)),
+                        $"{provider.Implementation} download-client settings should survive migration");
+                }
+
+                foreach (var provider in importLists)
+                {
+                    Assert.That(ReadMigratedProvider(_sourcePath, "ImportLists", provider.Id),
+                        Is.EqualTo((provider.Implementation, provider.Contract, provider.Settings)),
+                        $"{provider.Implementation} import-list settings should survive migration");
+                }
+
+                foreach (var provider in notifications)
+                {
+                    Assert.That(ReadMigratedProvider(_sourcePath, "Notifications", provider.Id),
+                        Is.EqualTo((provider.Implementation, provider.Contract, provider.Settings)),
+                        $"{provider.Implementation} notification settings should survive migration");
+                }
+            });
+        }
+
+        private static string CreateBuiltInProviderSettings(string implementation, string contract)
+        {
+            if (implementation == "GoodreadsBookshelf" && contract == "GoodreadsBookshelfImportListSettings")
+            {
+                return "{\"userId\":\"12345678\",\"bookshelfIds\":[\"to-read\"],\"accessToken\":\"fixture-access-token\",\"accessTokenSecret\":\"fixture-access-secret\",\"requestTokenSecret\":\"fixture-request-secret\",\"userName\":\"fixture-user\",\"signIn\":\"startOAuth\",\"signingUrl\":\"https://auth.servarr.com/v1/goodreads/sign\",\"oauthUrl\":\"https://www.goodreads.com/oauth/authorize\",\"oauthRequestTokenUrl\":\"https://www.goodreads.com/oauth/request_token\",\"oauthAccessTokenUrl\":\"https://www.goodreads.com/oauth/access_token\"}";
+            }
+
+            if (implementation == "GoodreadsOwnedBooks" && contract == "GoodreadsOwnedBooksImportListSettings")
+            {
+                return "{\"userId\":\"12345678\",\"accessToken\":\"fixture-owned-access-token\",\"accessTokenSecret\":\"fixture-owned-access-secret\",\"requestTokenSecret\":\"fixture-owned-request-secret\",\"userName\":\"fixture-owned-user\",\"signIn\":\"startOAuth\"}";
+            }
+
+            if (implementation == "GoodreadsBookshelf" && contract == "GoodreadsBookshelfNotificationSettings")
+            {
+                return "{\"accessToken\":\"fixture-notify-access-token\",\"accessTokenSecret\":\"fixture-notify-access-secret\",\"requestTokenSecret\":\"fixture-notify-request\",\"userId\":\"12345678\",\"userName\":\"fixture-notify-user\",\"addIds\":[\"read\"],\"removeIds\":[\"to-read\"],\"signIn\":\"startOAuth\"}";
+            }
+
+            if (implementation == "GoodreadsOwnedBooks" && contract == "GoodreadsOwnedBooksNotificationSettings")
+            {
+                return "{\"accessToken\":\"fixture-owned-notify-token\",\"accessTokenSecret\":\"fixture-owned-notify-secret\",\"requestTokenSecret\":\"fixture-owned-notify-request\",\"userId\":\"12345678\",\"userName\":\"fixture-owned-notify-user\",\"condition\":10,\"description\":\"\",\"location\":\"\",\"signIn\":\"startOAuth\"}";
+            }
+
+            var settingsType = typeof(BookshelfDatabaseImporter).Assembly.GetTypes()
+                .Single(type => type.Name.Equals(contract, StringComparison.OrdinalIgnoreCase));
+            var setting = settingsType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .FirstOrDefault(property =>
+                    property.PropertyType == typeof(string) &&
+                    property.CanWrite &&
+                    property.GetCustomAttribute<JsonIgnoreAttribute>() == null &&
+                    property.GetCustomAttribute<System.Text.Json.Serialization.JsonIgnoreAttribute>() == null);
+            if (setting == null)
+            {
+                return "{}";
+            }
+
+            var jsonName = setting.GetCustomAttribute<JsonPropertyAttribute>()?.PropertyName ??
+                setting.GetCustomAttribute<System.Text.Json.Serialization.JsonPropertyNameAttribute>()?.Name ??
+                setting.Name;
+            return new JObject { [jsonName] = "fixture-provider-value" }.ToString(Formatting.None);
+        }
+
+        private static (string Implementation, string Contract, string Settings) ReadMigratedProvider(
+            string sourcePath,
+            string table,
+            int id)
+        {
+            using var source = new SqliteConnection($"Data Source={sourcePath}");
+            source.Open();
+            using var command = source.CreateCommand();
+            command.CommandText = table switch
+            {
+                "DownloadClients" => "SELECT Implementation, ConfigContract, Settings FROM DownloadClients WHERE Id = $id;",
+                "ImportLists" => "SELECT Implementation, ConfigContract, Settings FROM ImportLists WHERE Id = $id;",
+                "Notifications" => "SELECT Implementation, ConfigContract, Settings FROM Notifications WHERE Id = $id;",
+                _ => throw new ArgumentOutOfRangeException(nameof(table), table, "Unexpected built-in provider table fixture")
+            };
+            command.Parameters.AddWithValue("$id", id);
+            using var reader = command.ExecuteReader();
+            if (!reader.Read())
+            {
+                throw new InvalidDataException($"Migrated provider row {table}/{id} is missing.");
+            }
+
+            return (reader.GetString(0), reader.GetString(1), reader.GetString(2));
         }
 
         [Test]
@@ -1694,6 +2033,142 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(exception.Message, Does.Contain("Config.UnmappedValue"));
             Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
             Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+        }
+
+        [TestCase("QualityProfiles", 1)]
+        [TestCase("MetadataProfiles", 1)]
+        [TestCase("RootFolders", 1)]
+        [TestCase("AuthorMetadata", 10)]
+        [TestCase("Authors", 20)]
+        [TestCase("Books", 30)]
+        [TestCase("Editions", 40)]
+        [TestCase("BookFiles", 50)]
+        [TestCase("ExtraFiles", 60)]
+        [TestCase("MetadataFiles", 61)]
+        [TestCase("Series", 70)]
+        [TestCase("SeriesBookLink", 80)]
+        [TestCase("Blocklist", 92)]
+        [TestCase("DownloadHistory", 91)]
+        [TestCase("History", 93)]
+        [TestCase("DownloadClients", 109)]
+        [TestCase("ImportLists", 110)]
+        [TestCase("Indexers", 120)]
+        [TestCase("Metadata", 135)]
+        [TestCase("Notifications", 111)]
+        [TestCase("NamingConfig", 5)]
+        public void should_refuse_nonempty_unmapped_migration_columns_without_changing_the_source(string table, int rowId)
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = table switch
+                {
+                    "QualityProfiles" => """
+                        ALTER TABLE "QualityProfiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "QualityProfiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "MetadataProfiles" => """
+                        ALTER TABLE "MetadataProfiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "MetadataProfiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "RootFolders" => """
+                        ALTER TABLE "RootFolders" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "RootFolders" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "AuthorMetadata" => """
+                        ALTER TABLE "AuthorMetadata" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "AuthorMetadata" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Authors" => """
+                        ALTER TABLE "Authors" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Authors" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Books" => """
+                        ALTER TABLE "Books" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Books" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Editions" => """
+                        ALTER TABLE "Editions" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Editions" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "BookFiles" => """
+                        ALTER TABLE "BookFiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "BookFiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "ExtraFiles" => """
+                        ALTER TABLE "ExtraFiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "ExtraFiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "MetadataFiles" => """
+                        ALTER TABLE "MetadataFiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "MetadataFiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Series" => """
+                        ALTER TABLE "Series" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Series" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "SeriesBookLink" => """
+                        ALTER TABLE "SeriesBookLink" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "SeriesBookLink" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Blocklist" => """
+                        ALTER TABLE "Blocklist" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Blocklist" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "DownloadHistory" => """
+                        ALTER TABLE "DownloadHistory" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "DownloadHistory" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "History" => """
+                        ALTER TABLE "History" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "History" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "DownloadClients" => """
+                        ALTER TABLE "DownloadClients" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "DownloadClients" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "ImportLists" => """
+                        ALTER TABLE "ImportLists" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "ImportLists" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Indexers" => """
+                        ALTER TABLE "Indexers" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Indexers" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Metadata" => """
+                        ALTER TABLE "Metadata" ADD COLUMN UnmappedMigrationValue TEXT;
+                        INSERT INTO "Metadata" (Id, Enable, Name, Implementation, Settings, ConfigContract, UnmappedMigrationValue)
+                        VALUES ($rowId, 1, 'Legacy OPF sidecar', 'AudiobookshelfMetadata', '{}', 'NullConfig', 'keep-me');
+                        """,
+                    "Notifications" => """
+                        ALTER TABLE "Notifications" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Notifications" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "NamingConfig" => """
+                        ALTER TABLE "NamingConfig" ADD COLUMN UnmappedMigrationValue TEXT;
+                        INSERT INTO "NamingConfig" (Id, ReplaceIllegalCharacters, AuthorFolderFormat, RenameBooks, StandardBookFormat, ColonReplacementFormat, UnmappedMigrationValue)
+                        VALUES ($rowId, 0, '{Author Name}', 1, '{Book Title}', 4, 'keep-me');
+                        """,
+                    _ => throw new ArgumentOutOfRangeException(nameof(table), table, "Unexpected migration table fixture")
+                };
+                command.Parameters.AddWithValue("$rowId", rowId);
+                command.ExecuteNonQuery();
+            }
+
+            var before = File.ReadAllBytes(_sourcePath);
+            var exception = Assert.Throws<InvalidDataException>(() => new MigrationController(
+                LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                    _sourceConnectionString,
+                    new MigrationContext(MigrationType.Main),
+                    DatabaseType.SQLite));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain($"{table}.UnmappedMigrationValue"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
+                Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+            });
         }
 
         private void CreateSourceDatabase()

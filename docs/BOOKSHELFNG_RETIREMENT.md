@@ -9,7 +9,92 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
-**Latest ChaptarrNG parity and validation — 2026-10-23:** Application-code
+**Legacy-ID book-search command compatibility — 2026-10-23:** The API command
+endpoint now resolves `BookSearchCommand` IDs through the migrated
+`BookshelfLegacyIdentityMap`. An unscoped request searches every target row
+created when a legacy book splits by format; an ebook or audiobook Readarr
+facade searches only its matching row. Regression cases cover both paths. The
+Release Core suite passed 4,762 tests, skipped 25, and failed 0; the full
+Release application solution built with 0 warnings and 0 errors. This closes
+the server-side legacy-ID command path; converted-data acceptance and live
+SeerrNG fulfillment remain open.
+
+**Structured migration field-loss protection — 2026-10-23:** ChaptarrNG commit
+`5dad84d17c2ed6818d25eeab249e52783927f2a9` extends the importer's fail-closed
+column mapping checks to all copied or transformed structured tables, including
+profiles, roots, authors and metadata, books and editions, media files, series,
+blocklists, history, and provider configuration. Source-only values are allowed
+only where the importer explicitly translates them, including per-format book
+monitoring. Parameterized regression cases inject a non-empty unknown field
+into 21 tables and verify conversion stops before promotion while leaving the
+source database byte-identical and creating no backup. The Release Core suite
+passed 4,758 tests, skipped 25, and failed 0; the commit-hook Semgrep scan found
+0 findings. This closes another silent data-loss path; it does not establish
+complete migration fidelity, live provider behavior, feature parity,
+representative-data acceptance, or release/channel readiness.
+
+**Converted matching threshold application — 2026-10-23:** ChaptarrNG commit
+`f783e27c` adds an integration case through the real `FileMatchingService` for
+the converted-install compatibility marker. It confirms the saved BookshelfNG
+threshold changes whether a candidate is accepted (51% accepts; 70% rejects),
+while a fresh-install matcher ignores that legacy threshold even when set to
+99%. The Release Core suite passed 4,760 tests, skipped 25, and failed 0;
+commit-hook Semgrep found 0 findings. This validates the migrated setting's
+runtime wiring with synthetic match data. Representative converted-library
+acceptance and full feature parity remain open.
+
+**Built-in provider settings preservation matrix — 2026-10-23:** ChaptarrNG
+commit `37703f82204fd993f49ea37ed11020c6a5435af5` adds a migration fixture for
+all 15 built-in BookshelfNG download clients, six import-list providers (with
+the `ReadarrImport` to `ChaptarrImport` alias covered separately), and 24
+notifications. Each row carries representative populated settings; preview
+must report no blocking issues, and apply must preserve its implementation,
+settings contract, and serialized settings exactly. Existing fixtures cover
+all ten indexers and the metadata settings adapter. The full Release Core suite
+passed 4,759 tests, skipped 25, and failed 0. This broadens source-level
+provider migration coverage; live fulfillment, real credentials and operator
+data, complete semantic parity, and installed-channel acceptance remain open.
+
+**Provider migration fail-closed coverage — 2026-10-23:** ChaptarrNG commit
+`2ae3d0959bf8da7e6e1999bf69cc5d2f5b611f8d` rejects non-empty source columns
+without a target mapping in `Indexers`, `ImportLists`, and `Notifications`,
+while preserving the explicit `ProfileId` and `OnTrackRetag` conversions. The
+indexer migration fixture now covers all ten built-in BookshelfNG indexer
+contracts with representative saved settings and verifies exact settings
+preservation. The Release Core suite passed 4,740 tests, skipped 25, and failed
+0; commit-hook Semgrep found zero findings. Exact-head hosted Build
+[`40010572006`](https://github.com/snapetech-org/chaptarrng/actions/runs/40010572006),
+Security Analysis
+[`40010572313`](https://github.com/snapetech-org/chaptarrng/actions/runs/40010572313),
+and standalone-asset validation
+[`40010572013`](https://github.com/snapetech-org/chaptarrng/actions/runs/40010572013)
+were queued or pending. This closes a source-level silent-column-drop path;
+full provider mapping, live fulfillment, representative operator data, and
+release/channel acceptance remain open.
+
+**Latest ChaptarrNG validation — 2026-10-23:** Application-code snapshot
+`a2d0af9fc31a94369bf091189b10b63f8ab1dc7e` (before documentation-only
+`ec83157eee0c3d14b223565418dee7d913376cdd` and
+`65867fa78ea95fa39887e94f4483fe77ffa70f6e`) passes the Release Core suite
+(4,736 passed, 25 skipped, 0 failed). The pinned-tool M4B integration passed
+8/8 with no skips, covering merge/chapter handling, Move/Copy behavior, and
+failure fallback. The Core suite also covers simulated restart recovery from a
+persisted conversion job with its output and manifest, then queues the import
+sweep; actual interrupted-media recovery remains open. A source-built Compose
+smoke against SeerrNG
+`bc580332ab49a7efa87e3d78b680a2a0cf1abbd0` converted the populated synthetic
+BookshelfNG schema-158 fixture during startup; SeerrNG read both format
+libraries through the restricted key, administrative and unrelated access
+were denied, and a pending request completed create/poll/cancel. Hosted exact-
+head build and security workflows for `65867fa78ea95fa39887e94f4483fe77ffa70f6e`
+are still queued. Release run
+[`40003167055`](https://github.com/snapetech-org/chaptarrng/actions/runs/40003167055)
+was cancelled before publication; public `v0.9.977` remains latest. These
+synthetic checks do not establish live-provider fulfillment, representative
+operator-data acceptance, installed rollback, or update-channel handoff. No
+release or cutover was published.
+
+**Prior parity checkpoint — 2026-10-23:** Application-code
 commit `4b57b479d73c844db19278233e25efe94509e99b` is on `main`; it includes
 migrated-audiobook release and pending-queue ranking compatibility, orders
 inferred audiobook parts by complete embedded disc/track tags, and preserves
@@ -25,6 +110,45 @@ are `action_required` with no jobs started. GitHub rejected this agent's
 workflow-approval request because repository-admin rights are required, so
 hosted validation remains open. The public `v0.9.977` release is unchanged;
 no release or cutover was published.
+
+**BookshelfNG API contract and release-search compatibility — 2026-10-23:**
+ChaptarrNG restores the legacy `/api/v1/release` array response and moves the
+interactive search wrapper to `/api/v1/release/search`; the frontend now calls
+the wrapper route. Legacy book IDs mapped to both ebook and audiobook rows are
+searched across both rows unless the request has a format-scoped facade
+context. Generated OpenAPI now documents encrypted backup passphrase and
+multipart restore requirements, encrypted download responses, and author/book
+creation response contracts. The Core suite passed 4,734 tests with 25 skips;
+the six backup-controller fixtures, including a bound multipart file, passed.
+The frontend suite passed 126 tests, typecheck passed, and the changed frontend
+files passed ESLint. This closes these identified source/API-contract gaps; it
+does not establish complete feature parity, representative-data acceptance,
+hosted exact-head validation, provider fulfillment, or installed-channel
+handoff. No release or cutover was published.
+
+**BookshelfNG import-list provider migration — 2026-10-23:** A read-only
+provider-source comparison found that BookshelfNG's built-in `ReadarrImport`
+was the only import-list implementation without a target-name match. ChaptarrNG
+now maps it to `ChaptarrImport` and translates the identical
+`ReadarrSettings`/`ChaptarrSettings` contract names while preserving the saved
+URL, API key, profile IDs, tag IDs, and root-folder paths. The migration fixture
+previews and applies that mapping, then deserializes the result as the target
+settings type. The full Release Core suite passed 4,735 tests with 25 skips and
+no failures. This closes the identified source-level provider mapping gap; it
+does not establish live remote-instance behavior, representative operator-data
+acceptance, hosted exact-head validation, or installed-channel handoff. No
+release or cutover was published.
+
+**BookshelfNG startup diagnostics — 2026-10-23:** ChaptarrNG restores the
+startup diagnostics for build/runtime metadata, HTTP binding, and packaged UI
+entry-point presence. Existing `BOOKSHELF_IMAGE_*` and `BOOKSHELF_CONTAINER`
+values remain readable, with CR/LF sanitized before logging. A host-lifecycle
+fixture verifies legacy image metadata, sanitized output, HTTP settings, and
+the missing-UI report. The full Release Core suite passed 4,736 tests with 25
+skips and no failures. This restores the identified operational diagnostics
+path; exact-head hosted validation, representative operator-data acceptance,
+and installed-channel handoff remain open. No release or cutover was
+published.
 
 **Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
 ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through
@@ -92,9 +216,9 @@ Browser can retry the current directory. Activity lists, author history,
 book-edit edition and book-file detail/quality loading, Calendar, backup lists,
 Wanted pages, and conversion settings also retry after load errors. Startup
 errors identify the failed data source and retry failed setup requests when
-browser storage works. The frontend
-CJS suite passes 122/122 locally, and focused migration, metadata, move, and
-CLI checks are recorded below. An earlier application migration fix is commit
+browser storage works. All 36 frontend CJS test files passed on 2026-10-23: 126 passed, zero
+skipped, and zero failed. Focused migration, metadata, move, and CLI checks are
+recorded below. An earlier application migration fix is commit
 [`c2535e71`](https://github.com/snapetech-org/chaptarrng/commit/c2535e712aa7c1ecbf29347a7e1e9d477bb870e3).
 Its exact-head Build
 [39561683854](https://github.com/snapetech-org/chaptarrng/actions/runs/39561683854)
@@ -679,10 +803,15 @@ acceptance remain open.
   [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646).
   An earlier source candidate also passed the isolated SeerrNG Compose smoke
   against PR #131 head `ddec3e81` and SeerrNG `10f06eab9`: capability discovery,
-  empty paged-library access, and restricted-key denials passed. This does not
-  establish populated-data acceptance or end-to-end SeerrNG workflows.
-  Unchanged SeerrNG edition-card, request, polling, availability, pending-work,
-  and authorization acceptance remains open.
+  empty paged-library access, and restricted-key denials passed. A later
+  source-built run on 2026-10-23 converted the populated synthetic schema-158
+  fixture and used SeerrNG's `ReadarrAPI` to read both formats, verify one
+  migrated file per format, and confirm an ebook history row stayed out of
+  audiobook history. The restricted-key boundary and pending-import lifecycle
+  also passed. This narrows the local evidence gap but does not establish full
+  SeerrNG availability/history parity, live provider fulfillment, retries,
+  operator-data acceptance, or complete request workflow acceptance; see
+  [the integration evidence](SEERRNG_INTEGRATION.md).
 - The merged source also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs now require an explicit mode: `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) selects Hardcover, and `HARDCOVER=false` selects Goodreads. An unset or invalid mode fails closed. The Docker candidate builds separate softcover and Hardcover compatibility targets so legacy aliases can retain that mode; `latest`, `main`, and `hardcover` must use the Hardcover target, while `softcover` must use the Goodreads target. These source changes are not in `.977`; PR #131 merged on 2026-10-20, and converted-data acceptance remains open.
 - BookshelfNG's BookLore notification settings and `OnReleaseImport` trigger are copied unchanged into ChaptarrNG, and remain in the retained source backup. A separate BookOrbit Book Dock destination is candidate work in this branch; it does not rewrite BookLore URLs or credentials. Mock tests cover login, Book Dock permission, streamed uploads, redirects, rejected credentials/files, and partial-batch failure. An isolated BookOrbit v3.2.0 live API check passed setup, login, permission check, EPUB upload/listing, and unsupported-file rejection. That does not verify downstream processing of a production book or a real-user handoff. The integration is not in `.977`, and the broader retirement gate remains open.
 - Merged PR #131 adds ChaptarrNG's format-aware author-media move workflow:
@@ -966,9 +1095,10 @@ authorized while these gates remain open. The remaining work is:
 
 1. Close each BookshelfNG feature row with behavioral and converted-data
    evidence, or record an explicit maintainer decision to retire that behavior.
-   This includes validating the lossy numeric matching-policy translation
-   against converted data. The cross-catalog fallback is merged source work,
-   not in `.977`; it needs identifier, exact-name, ambiguity, and pending-import
+   The saved numeric matching threshold is now exercised through the current
+   matcher with synthetic data; representative converted-library acceptance
+   remains open. The cross-catalog fallback is merged source work, not in
+   `.977`; it needs identifier, exact-name, ambiguity, and pending-import
    acceptance evidence.
 2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
    passes; validate older-schema support on representative operator data,

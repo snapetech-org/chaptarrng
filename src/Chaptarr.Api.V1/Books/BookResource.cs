@@ -843,7 +843,7 @@ namespace Chaptarr.Api.V1.Books
             return idx > 0 ? value.Substring(idx + 1) : value;
         }
 
-        private static string BuildForeignBookId(Book model, ReadarrFacadeContext facadeContext)
+        internal static string BuildForeignBookId(Book model, ReadarrFacadeContext facadeContext)
         {
             if (facadeContext?.IsHardcover == true)
             {

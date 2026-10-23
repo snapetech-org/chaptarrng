@@ -307,6 +307,66 @@
                 }
               }
             }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorResource"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingAuthorImportAcceptedResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingAuthorImportAcceptedResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingAuthorImportAcceptedResource"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResource"
+                }
+              }
+            }
           }
         }
       }
@@ -1234,16 +1294,32 @@
         ],
         "parameters": [
           {
-            "name": "x-Bookshelf-Backup-Passphrase",
+            "name": "X-Bookshelf-Backup-Passphrase",
             "in": "header",
+            "description": "Passphrase used to encrypt the portable backup. It must contain at least 16 characters.",
+            "required": true,
             "schema": {
-              "type": "string"
+              "maxLength": 4096,
+              "minLength": 16,
+              "type": "string",
+              "format": "password"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Encrypted backup archive",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid passphrase"
           }
         }
       }
@@ -1255,13 +1331,41 @@
         ],
         "parameters": [
           {
-            "name": "x-Bookshelf-Backup-Passphrase",
+            "name": "X-Bookshelf-Backup-Passphrase",
             "in": "header",
+            "description": "Required when the uploaded restore file has the .enc extension.",
             "schema": {
-              "type": "string"
+              "maxLength": 4096,
+              "minLength": 16,
+              "type": "string",
+              "format": "password"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "restore"
+                ],
+                "type": "object",
+                "properties": {
+                  "restore": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "restore": {
+                  "style": "form"
+                }
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -1610,6 +1714,26 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PendingBookRequestResource"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResource"
                 }
               }
             }
@@ -10508,6 +10632,70 @@
             }
           },
           {
+            "name": "seriesId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseResource"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseResource"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseResource"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/release/search": {
+      "get": {
+        "tags": [
+          "Release"
+        ],
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "authorId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
             "name": "bypassFilters",
             "in": "query",
             "schema": {
@@ -10526,7 +10714,24 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseSearchResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseSearchResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseSearchResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -13128,6 +13333,31 @@
         },
         "additionalProperties": false
       },
+      "AddNarratorOptions": {
+        "type": "object",
+        "properties": {
+          "monitor": {
+            "$ref": "#/components/schemas/MonitorTypes"
+          },
+          "mediaType": {
+            "$ref": "#/components/schemas/BookMediaType"
+          },
+          "booksToMonitor": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "monitored": {
+            "type": "boolean"
+          },
+          "searchForMissingBooks": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "AddSeriesRequest": {
         "type": "object",
         "properties": {
@@ -13354,6 +13584,303 @@
         ],
         "type": "string"
       },
+      "Author": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "cleanName": {
+            "type": "string",
+            "nullable": true
+          },
+          "monitored": {
+            "type": "boolean"
+          },
+          "audiobookMonitored": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "ebookMonitored": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "audiobookMonitorNewItems": {
+            "$ref": "#/components/schemas/NewItemMonitorTypes"
+          },
+          "ebookMonitorNewItems": {
+            "$ref": "#/components/schemas/NewItemMonitorTypes"
+          },
+          "syncMonitoredAcrossFormats": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "audiobookSettingsManuallyOverridden": {
+            "type": "boolean"
+          },
+          "ebookSettingsManuallyOverridden": {
+            "type": "boolean"
+          },
+          "lastInfoSync": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "path": {
+            "type": "string",
+            "nullable": true
+          },
+          "audiobookRootFolderPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "ebookRootFolderPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "audiobookPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "ebookPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "added": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "audiobookQualityProfileId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "ebookQualityProfileId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "metadataProfileId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "audiobookMetadataProfileId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "ebookMetadataProfileId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "tags": {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "audiobookTags": {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "ebookTags": {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "addOptions": {
+            "$ref": "#/components/schemas/AddAuthorOptions"
+          },
+          "lastSelectedMediaType": {
+            "type": "string",
+            "nullable": true
+          },
+          "titleSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortName": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameLastFirst": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortNameLastFirst": {
+            "type": "string",
+            "nullable": true
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "overview": {
+            "type": "string",
+            "nullable": true
+          },
+          "disambiguation": {
+            "type": "string",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "nullable": true
+          },
+          "hometown": {
+            "type": "string",
+            "nullable": true
+          },
+          "born": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "died": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/AuthorStatusType"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaCover"
+            },
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Links"
+            },
+            "nullable": true
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "ratings": {
+            "$ref": "#/components/schemas/Ratings"
+          },
+          "goodreadsAuthorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "hardcoverAuthorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "audnexusAuthorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "openLibraryAuthorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "googleBooksAuthorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "ranobeDbAuthorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "additionalMetadataProviderId": {
+            "type": "string",
+            "nullable": true
+          },
+          "isni": {
+            "type": "string",
+            "nullable": true
+          },
+          "viaf": {
+            "type": "string",
+            "nullable": true
+          },
+          "pseudonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "providerUrls": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "selectedPosterHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "audiobookQualityProfile": {
+            "$ref": "#/components/schemas/QualityProfileLazyLoaded"
+          },
+          "ebookQualityProfile": {
+            "$ref": "#/components/schemas/QualityProfileLazyLoaded"
+          },
+          "metadataProfile": {
+            "$ref": "#/components/schemas/MetadataProfileLazyLoaded"
+          },
+          "audiobookMetadataProfile": {
+            "$ref": "#/components/schemas/MetadataProfileLazyLoaded"
+          },
+          "ebookMetadataProfile": {
+            "$ref": "#/components/schemas/MetadataProfileLazyLoaded"
+          },
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Book"
+            },
+            "nullable": true
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Series"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AuthorEditorResource": {
         "type": "object",
         "properties": {
@@ -13526,6 +14053,121 @@
           "searchForMissingBooks": {
             "type": "boolean",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AuthorIndexBookResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "authorMetadataId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "foreignBookId": {
+            "type": "string",
+            "nullable": true
+          },
+          "foreignEditionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "titleSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "releaseDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Links"
+            },
+            "nullable": true
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "relatedBooks": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "ratings": {
+            "$ref": "#/components/schemas/Ratings"
+          },
+          "lastSearchTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cleanTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "monitored": {
+            "type": "boolean"
+          },
+          "anyEditionOk": {
+            "type": "boolean"
+          },
+          "lastInfoSync": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "added": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "addOptions": {
+            "$ref": "#/components/schemas/AddBookOptions"
+          },
+          "authorMetadata": {
+            "$ref": "#/components/schemas/AuthorMetadataLazyLoaded"
+          },
+          "author": {
+            "$ref": "#/components/schemas/AuthorLazyLoaded"
+          },
+          "editions": {
+            "$ref": "#/components/schemas/EditionListLazyLoaded"
+          },
+          "bookFiles": {
+            "$ref": "#/components/schemas/BookFileListLazyLoaded"
+          },
+          "seriesLinks": {
+            "$ref": "#/components/schemas/SeriesBookLinkListLazyLoaded"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AuthorLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
           }
         },
         "additionalProperties": false
@@ -13783,6 +14425,113 @@
         },
         "additionalProperties": false
       },
+      "AuthorMetadata": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "foreignAuthorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "titleSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortName": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameLastFirst": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortNameLastFirst": {
+            "type": "string",
+            "nullable": true
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "overview": {
+            "type": "string",
+            "nullable": true
+          },
+          "disambiguation": {
+            "type": "string",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "nullable": true
+          },
+          "hometown": {
+            "type": "string",
+            "nullable": true
+          },
+          "born": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "died": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/AuthorStatusType"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaCover"
+            },
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Links"
+            },
+            "nullable": true
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "ratings": {
+            "$ref": "#/components/schemas/Ratings"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AuthorMetadataLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/AuthorMetadata"
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AuthorPathUpdateResource": {
         "type": "object",
         "properties": {
@@ -13872,10 +14621,10 @@
             "nullable": true
           },
           "nextBook": {
-            "$ref": "#/components/schemas/BookResource"
+            "$ref": "#/components/schemas/AuthorIndexBookResource"
           },
           "lastBook": {
-            "$ref": "#/components/schemas/BookResource"
+            "$ref": "#/components/schemas/AuthorIndexBookResource"
           },
           "images": {
             "type": "array",
@@ -13981,8 +14730,7 @@
             "nullable": true
           },
           "monitorNewItems": {
-            "type": "string",
-            "nullable": true
+            "$ref": "#/components/schemas/NewItemMonitorTypes"
           },
           "folder": {
             "type": "string",
@@ -14292,6 +15040,275 @@
         },
         "additionalProperties": false
       },
+      "Book": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "foreignEditionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "titleSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "overview": {
+            "type": "string",
+            "nullable": true
+          },
+          "releaseDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Links"
+            },
+            "nullable": true
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "relatedBooks": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "ratings": {
+            "$ref": "#/components/schemas/Ratings"
+          },
+          "lastSearchTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaCover"
+            },
+            "nullable": true
+          },
+          "goodreadsBookId": {
+            "type": "string",
+            "nullable": true
+          },
+          "goodreadsWorkId": {
+            "type": "string",
+            "nullable": true
+          },
+          "hardcoverBookId": {
+            "type": "string",
+            "nullable": true
+          },
+          "isbN10": {
+            "type": "string",
+            "nullable": true
+          },
+          "isbN13": {
+            "type": "string",
+            "nullable": true
+          },
+          "openLibraryEditionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "openLibraryWorkId": {
+            "type": "string",
+            "nullable": true
+          },
+          "googleBooksId": {
+            "type": "string",
+            "nullable": true
+          },
+          "asin": {
+            "type": "string",
+            "nullable": true
+          },
+          "audibleASIN": {
+            "type": "string",
+            "nullable": true
+          },
+          "ranobeDbBookId": {
+            "type": "string",
+            "nullable": true
+          },
+          "additionalMetadataProviderId": {
+            "type": "string",
+            "nullable": true
+          },
+          "baseBookId": {
+            "type": "string",
+            "nullable": true
+          },
+          "unitKeyHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "languageCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "languageName": {
+            "type": "string",
+            "nullable": true
+          },
+          "publicationYear": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "publisher": {
+            "type": "string",
+            "nullable": true
+          },
+          "pageCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "seriesId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "seriesName": {
+            "type": "string",
+            "nullable": true
+          },
+          "seriesPosition": {
+            "type": "string",
+            "nullable": true
+          },
+          "isGraphicAudio": {
+            "type": "boolean"
+          },
+          "audioProductionType": {
+            "type": "string",
+            "nullable": true
+          },
+          "isOmnibus": {
+            "type": "boolean"
+          },
+          "narratorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "narrator": {
+            "type": "string",
+            "nullable": true
+          },
+          "wantedNarratorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "mediaType": {
+            "$ref": "#/components/schemas/BookMediaType"
+          },
+          "cleanTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "monitored": {
+            "type": "boolean"
+          },
+          "audiobookMonitored": {
+            "type": "boolean"
+          },
+          "ebookMonitored": {
+            "type": "boolean"
+          },
+          "anyEditionOk": {
+            "type": "boolean"
+          },
+          "lastInfoSync": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "added": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "addOptions": {
+            "$ref": "#/components/schemas/AddBookOptions"
+          },
+          "providerUrls": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "author": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "editions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Edition"
+            },
+            "nullable": true
+          },
+          "bookFiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookFile"
+            },
+            "nullable": true
+          },
+          "seriesLinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesBookLink"
+            },
+            "nullable": true
+          },
+          "narratorEntity": {
+            "$ref": "#/components/schemas/Narrator"
+          },
+          "wantedNarrator": {
+            "$ref": "#/components/schemas/Narrator"
+          }
+        },
+        "additionalProperties": false
+      },
       "BookAddType": {
         "enum": [
           "automatic",
@@ -14354,6 +15371,151 @@
           "mediaType": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BookFile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "path": {
+            "type": "string",
+            "nullable": true
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateAdded": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "originalFilePath": {
+            "type": "string",
+            "nullable": true
+          },
+          "sceneName": {
+            "type": "string",
+            "nullable": true
+          },
+          "releaseGroup": {
+            "type": "string",
+            "nullable": true
+          },
+          "quality": {
+            "$ref": "#/components/schemas/QualityModel"
+          },
+          "indexerFlags": {
+            "$ref": "#/components/schemas/IndexerFlags"
+          },
+          "mediaInfo": {
+            "$ref": "#/components/schemas/MediaInfoModel"
+          },
+          "editionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "calibreId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "part": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "releasePart": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "releasePartCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isGraphicAudio": {
+            "type": "boolean"
+          },
+          "audioProductionType": {
+            "type": "string",
+            "nullable": true
+          },
+          "narrator": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastMatchAttempt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "matchDetails": {
+            "type": "string",
+            "nullable": true
+          },
+          "matchProvenance": {
+            "$ref": "#/components/schemas/MatchProvenance"
+          },
+          "mediaType": {
+            "type": "string",
+            "nullable": true
+          },
+          "replicaPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "allTags": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "nullable": true
+            },
+            "nullable": true
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "author": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "edition": {
+            "$ref": "#/components/schemas/Edition"
+          },
+          "partCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BookFileListLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookFile"
+            },
+            "nullable": true,
+            "readOnly": true
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
           }
         },
         "additionalProperties": false
@@ -14567,6 +15729,37 @@
           },
           "authorMonitoring": {
             "$ref": "#/components/schemas/BookImportAuthorMonitoring"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BookLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/Book"
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BookListLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Book"
+            },
+            "nullable": true,
+            "readOnly": true
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
           }
         },
         "additionalProperties": false
@@ -15509,6 +16702,37 @@
         },
         "additionalProperties": false
       },
+      "CustomFormat": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "includeCustomFormatWhenRenaming": {
+            "type": "boolean"
+          },
+          "builtInKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "appliesTo": {
+            "$ref": "#/components/schemas/CustomFormatMediaType"
+          },
+          "specifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ICustomFormatSpecification"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CustomFormatMediaType": {
         "enum": [
           "both",
@@ -15892,6 +17116,216 @@
         ],
         "type": "string"
       },
+      "Edition": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bookId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "foreignEditionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "titleSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "isbn13": {
+            "type": "string",
+            "nullable": true
+          },
+          "isbn10": {
+            "type": "string",
+            "nullable": true
+          },
+          "asin": {
+            "type": "string",
+            "nullable": true
+          },
+          "asins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "subtitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "matchingTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "overview": {
+            "type": "string",
+            "nullable": true
+          },
+          "format": {
+            "type": "string",
+            "nullable": true
+          },
+          "isEbook": {
+            "type": "boolean"
+          },
+          "disambiguation": {
+            "type": "string",
+            "nullable": true
+          },
+          "publisher": {
+            "type": "string",
+            "nullable": true
+          },
+          "pageCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "releaseDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaCover"
+            },
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Links"
+            },
+            "nullable": true
+          },
+          "ratings": {
+            "$ref": "#/components/schemas/Ratings"
+          },
+          "reviewCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "goodreadsEditionId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "hardcoverEditionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "openLibraryEditionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "readingFormatId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "editionFormat": {
+            "type": "string",
+            "nullable": true
+          },
+          "editionInfo": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "chapterCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "hasChapters": {
+            "type": "boolean"
+          },
+          "chapters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EditionChapter"
+            },
+            "nullable": true
+          },
+          "isGraphicAudio": {
+            "type": "boolean"
+          },
+          "audioProductionType": {
+            "type": "string",
+            "nullable": true
+          },
+          "narrator": {
+            "type": "string",
+            "nullable": true
+          },
+          "audibleASIN": {
+            "type": "string",
+            "nullable": true
+          },
+          "googleBooksEditionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "narratorNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "providerUrls": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "monitored": {
+            "type": "boolean"
+          },
+          "manualAdd": {
+            "type": "boolean"
+          },
+          "isFallbackEdition": {
+            "type": "boolean"
+          },
+          "book": {
+            "$ref": "#/components/schemas/Book"
+          },
+          "bookFiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookFile"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "EditionCatalogResource": {
         "type": "object",
         "properties": {
@@ -15960,6 +17394,28 @@
         },
         "additionalProperties": false
       },
+      "EditionChapter": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "startOffsetMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startOffsetSec": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lengthMs": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "EditionChapterResource": {
         "type": "object",
         "properties": {
@@ -15978,6 +17434,24 @@
           "lengthMs": {
             "type": "integer",
             "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "EditionListLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Edition"
+            },
+            "nullable": true,
+            "readOnly": true
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
           }
         },
         "additionalProperties": false
@@ -16262,6 +17736,67 @@
           "bookReleaseDate"
         ],
         "type": "string"
+      },
+      "FilterSummary": {
+        "type": "object",
+        "properties": {
+          "totalResults": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "filteredCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "displayedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hardFilteredCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "softFilteredCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasSoftFilters": {
+            "type": "boolean"
+          },
+          "hasHardFilters": {
+            "type": "boolean"
+          },
+          "bypassMode": {
+            "type": "boolean"
+          },
+          "filteredCategories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "filterBreakdown": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "summaryText": {
+            "type": "string",
+            "nullable": true
+          },
+          "filterWarnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       },
       "HardcoverConfigResource": {
         "type": "object",
@@ -16600,6 +18135,37 @@
             "type": "boolean"
           },
           "oidcAllowAnyVerifiedUser": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ICustomFormatSpecification": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "infoLink": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "implementationName": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "negate": {
+            "type": "boolean"
+          },
+          "required": {
             "type": "boolean"
           }
         },
@@ -17067,6 +18633,20 @@
           }
         },
         "additionalProperties": false
+      },
+      "IndexerFlags": {
+        "enum": [
+          "freeleech",
+          "halfleech",
+          "doubleUpload",
+          "internal",
+          "scene",
+          "freeleech75",
+          "freeleech25",
+          "vipExclusive",
+          "vipFreeleech"
+        ],
+        "type": "string"
       },
       "IndexerResource": {
         "type": "object",
@@ -18451,6 +20031,91 @@
         },
         "additionalProperties": false
       },
+      "MetadataProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "profileType": {
+            "$ref": "#/components/schemas/MetadataProfileType"
+          },
+          "minPopularity": {
+            "type": "number",
+            "format": "double"
+          },
+          "skipMissingDate": {
+            "type": "boolean"
+          },
+          "skipMissingIsbn": {
+            "type": "boolean"
+          },
+          "skipPartsAndSets": {
+            "type": "boolean"
+          },
+          "skipSeriesSecondary": {
+            "type": "boolean"
+          },
+          "skipMissingIdentifierOmnibus": {
+            "type": "boolean"
+          },
+          "skipOmnibus": {
+            "type": "boolean"
+          },
+          "skipMissingAsin": {
+            "type": "boolean"
+          },
+          "allowedLanguages": {
+            "type": "string",
+            "nullable": true
+          },
+          "preferredEditionTerms": {
+            "type": "string",
+            "nullable": true
+          },
+          "preferredSeries": {
+            "type": "string",
+            "nullable": true
+          },
+          "minPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ignored": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "ignoredGenres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MetadataProfileLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/MetadataProfile"
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
       "MetadataProfileResource": {
         "type": "object",
         "properties": {
@@ -18523,6 +20188,14 @@
           }
         },
         "additionalProperties": false
+      },
+      "MetadataProfileType": {
+        "enum": [
+          "general",
+          "audiobook",
+          "ebook"
+        ],
+        "type": "string"
       },
       "MetadataProviderConfigResource": {
         "type": "object",
@@ -18864,6 +20537,72 @@
         },
         "additionalProperties": false
       },
+      "Narrator": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "narratorMetadataId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "cleanName": {
+            "type": "string",
+            "nullable": true
+          },
+          "monitored": {
+            "type": "boolean"
+          },
+          "monitorNewItems": {
+            "$ref": "#/components/schemas/NewItemMonitorTypes"
+          },
+          "lastInfoSync": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "path": {
+            "type": "string",
+            "nullable": true
+          },
+          "rootFolderPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "added": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tags": {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "addOptions": {
+            "$ref": "#/components/schemas/AddNarratorOptions"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/NarratorMetadataLazyLoaded"
+          },
+          "books": {
+            "$ref": "#/components/schemas/BookListLazyLoaded"
+          },
+          "series": {
+            "$ref": "#/components/schemas/SeriesListLazyLoaded"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "NarratorAnalysisResource": {
         "type": "object",
         "properties": {
@@ -18963,6 +20702,134 @@
           }
         },
         "additionalProperties": false
+      },
+      "NarratorMetadata": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "localNarratorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "titleSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortName": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameLastFirst": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortNameLastFirst": {
+            "type": "string",
+            "nullable": true
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "overview": {
+            "type": "string",
+            "nullable": true
+          },
+          "disambiguation": {
+            "type": "string",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "nullable": true
+          },
+          "hometown": {
+            "type": "string",
+            "nullable": true
+          },
+          "born": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "died": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/NarratorStatusType"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaCover"
+            },
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Links"
+            },
+            "nullable": true
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "ratings": {
+            "$ref": "#/components/schemas/Ratings"
+          },
+          "hardcoverNarratorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "goodreadsNarratorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastInfoSync": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "NarratorMetadataLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/NarratorMetadata"
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "NarratorStatusType": {
+        "enum": [
+          "active",
+          "retired",
+          "unknown"
+        ],
+        "type": "string"
       },
       "NewItemMonitorTypes": {
         "enum": [
@@ -19508,6 +21375,20 @@
         },
         "additionalProperties": false
       },
+      "PendingAuthorImportAcceptedResource": {
+        "type": "object",
+        "properties": {
+          "pendingId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "PendingAuthorImportResource": {
         "type": "object",
         "properties": {
@@ -19802,6 +21683,19 @@
           },
           "sample": {
             "$ref": "#/components/schemas/SampleContext"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProfileFormatItem": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/CustomFormat"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false
@@ -20111,6 +22005,106 @@
           },
           "revision": {
             "$ref": "#/components/schemas/Revision"
+          }
+        },
+        "additionalProperties": false
+      },
+      "QualityProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "profileType": {
+            "$ref": "#/components/schemas/ProfileType"
+          },
+          "upgradeAllowed": {
+            "type": "boolean"
+          },
+          "preferCustomFormatsOverQuality": {
+            "type": "boolean"
+          },
+          "convertMp3ToM4b": {
+            "type": "boolean"
+          },
+          "convertToQualityId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "mergeMultiPartFiles": {
+            "type": "boolean"
+          },
+          "cutoff": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minFormatScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "cutoffFormatScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "formatItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileFormatItem"
+            },
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityProfileQualityItem"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QualityProfileLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/QualityProfile"
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QualityProfileQualityItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "quality": {
+            "$ref": "#/components/schemas/Quality"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityProfileQualityItem"
+            },
+            "nullable": true
+          },
+          "allowed": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -20863,6 +22857,45 @@
         },
         "additionalProperties": false
       },
+      "ReleaseSearchResponse": {
+        "type": "object",
+        "properties": {
+          "releases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseResource"
+            },
+            "nullable": true
+          },
+          "hiddenReleases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseResource"
+            },
+            "nullable": true
+          },
+          "filterSummary": {
+            "$ref": "#/components/schemas/FilterSummary"
+          },
+          "siblingBookId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "siblingMediaType": {
+            "type": "string",
+            "nullable": true
+          },
+          "siblingToggleEnabled": {
+            "type": "boolean"
+          },
+          "siblingToggleDisabledReason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "RemotePathMappingResource": {
         "type": "object",
         "properties": {
@@ -21534,6 +23567,232 @@
         },
         "additionalProperties": false
       },
+      "Series": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "titleSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "numbered": {
+            "type": "boolean"
+          },
+          "workCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "primaryWorkCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "goodreadsSeriesId": {
+            "type": "string",
+            "nullable": true
+          },
+          "hardcoverSeriesId": {
+            "type": "string",
+            "nullable": true
+          },
+          "openLibrarySeriesId": {
+            "type": "string",
+            "nullable": true
+          },
+          "amazonSeriesAsin": {
+            "type": "string",
+            "nullable": true
+          },
+          "seriesType": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentSeriesId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "totalBooks": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "primaryBooks": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "narrator": {
+            "type": "string",
+            "nullable": true
+          },
+          "mediaType": {
+            "$ref": "#/components/schemas/BookMediaType"
+          },
+          "baseSeriesId": {
+            "type": "string",
+            "nullable": true
+          },
+          "instanceNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "preferredNarratorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "providerUrls": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            },
+            "nullable": true
+          },
+          "seriesBooks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesBook"
+            },
+            "nullable": true
+          },
+          "isNarratorVariant": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "isOriginal": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "displayTitle": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "linkItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesBookLink"
+            },
+            "nullable": true
+          },
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Book"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeriesBook": {
+        "type": "object",
+        "properties": {
+          "bookId": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "string",
+            "nullable": true
+          },
+          "coverUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeriesBookLink": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "position": {
+            "type": "string",
+            "nullable": true
+          },
+          "seriesPosition": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "seriesId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bookId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "seriesInstanceType": {
+            "type": "string",
+            "nullable": true
+          },
+          "isInheritedLink": {
+            "type": "boolean"
+          },
+          "series": {
+            "$ref": "#/components/schemas/SeriesLazyLoaded"
+          },
+          "book": {
+            "$ref": "#/components/schemas/BookLazyLoaded"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeriesBookLinkListLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesBookLink"
+            },
+            "nullable": true,
+            "readOnly": true
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
       "SeriesBookLinkResource": {
         "type": "object",
         "properties": {
@@ -21604,6 +23863,37 @@
           },
           "ratings": {
             "$ref": "#/components/schemas/Ratings"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeriesLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/Series"
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeriesListLazyLoaded": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Series"
+            },
+            "nullable": true,
+            "readOnly": true
+          },
+          "isLoaded": {
+            "type": "boolean",
+            "readOnly": true
           }
         },
         "additionalProperties": false
@@ -22530,9 +24820,9 @@
           "downloadFailedPending",
           "importPending",
           "importing",
+          "importFailed",
           "imported",
-          "ignored",
-          "importBlocked"
+          "ignored"
         ],
         "type": "string"
       },

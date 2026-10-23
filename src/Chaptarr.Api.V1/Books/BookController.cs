@@ -1449,6 +1449,7 @@ namespace Chaptarr.Api.V1.Books
 				        [RestPostById]
 				        [ProducesResponseType(typeof(ProviderAmbiguityResource), ProviderAmbiguityHelper.StatusCode)]
 				        [ProducesResponseType(typeof(PendingBookRequestResource), StatusCodes.Status202Accepted)]
+				        [ProducesResponseType(typeof(BookResource), StatusCodes.Status201Created)]
 			        public async Task<ActionResult<BookResource>> AddBook([FromQuery] string mediaType, [FromBody] BookResource bookResource)
 			        {
 			            try

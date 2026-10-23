@@ -223,7 +223,8 @@ namespace Chaptarr.Core.Test
                                             string defaultAudiobookRootFolderPath = "",
                                             string defaultEbookRootFolderPath = "",
                                             bool autoInitializeFormatSpecificAuthorPaths = false,
-                                            bool bookshelfMatchCompatibility = false)
+                                            bool bookshelfMatchCompatibility = false,
+                                            int bookImportMinimumMatchPercent = 70)
         {
             var service = DispatchProxy.Create<IConfigService, ConfigServiceTestProxy>();
             ((ConfigServiceTestProxy)service).BookMatchingStrictness = strictness;
@@ -234,6 +235,7 @@ namespace Chaptarr.Core.Test
             ((ConfigServiceTestProxy)service).DefaultEbookRootFolderPath = defaultEbookRootFolderPath;
             ((ConfigServiceTestProxy)service).AutoInitializeFormatSpecificAuthorPaths = autoInitializeFormatSpecificAuthorPaths;
             ((ConfigServiceTestProxy)service).BookshelfMatchCompatibility = bookshelfMatchCompatibility;
+            ((ConfigServiceTestProxy)service).BookImportMinimumMatchPercent = bookImportMinimumMatchPercent;
             return service;
         }
     }

@@ -65,7 +65,8 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
             IEnumerable<EditionFtsMatch> candidates,
             IEnumerable<Book> books,
             bool bookshelfMatchCompatibility = false,
-            IEditionService editionService = null)
+            IEditionService editionService = null,
+            int bookImportMinimumMatchPercent = 70)
         {
             var logger = LogManager.GetCurrentClassLogger();
             var authorService = DispatchProxy.Create<IAuthorService, AuthorServiceProxy>();
@@ -82,7 +83,9 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                 commandQueue: null,
                 authorFolderMatchingService: null,
                 rootFolderService: null,
-                configService: ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: bookshelfMatchCompatibility),
+                configService: ConfigServiceTestProxy.Create(
+                    bookshelfMatchCompatibility: bookshelfMatchCompatibility,
+                    bookImportMinimumMatchPercent: bookImportMinimumMatchPercent),
                 authorService: authorService,
                 eventAggregator: null,
                 authorLibraryService: null,
@@ -287,8 +290,11 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
             Assert.That(match, Is.Null);
         }
 
-        [Test]
-        public void should_apply_the_saved_bookshelf_minimum_only_to_converted_installations()
+        [TestCase(51, true)]
+        [TestCase(70, false)]
+        public void should_apply_the_saved_bookshelf_minimum_only_to_converted_installations(
+            int minimumMatchPercent,
+            bool expectedConvertedMatch)
         {
             var candidate = Candidate(1, 1, "The Hobbit", durationSeconds: 3600);
             var book = new Book
@@ -310,11 +316,18 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                 new[] { candidate },
                 new[] { book },
                 bookshelfMatchCompatibility: true,
-                editionService: editionService.Object);
-            var normalService = CreateService(new[] { candidate }, new[] { book });
+                editionService: editionService.Object,
+                bookImportMinimumMatchPercent: minimumMatchPercent);
+            var normalService = CreateService(
+                new[] { candidate },
+                new[] { book },
+                bookImportMinimumMatchPercent: 99);
 
             Assert.That(normalService.HolyGrailMatchFile(file, BookMediaType.Audiobook, restrictToAuthorId: 41), Is.Not.Null);
-            Assert.That(compatibleService.HolyGrailMatchFile(file, BookMediaType.Audiobook, restrictToAuthorId: 41), Is.Null);
+            Assert.That(
+                compatibleService.HolyGrailMatchFile(file, BookMediaType.Audiobook, restrictToAuthorId: 41) != null,
+                Is.EqualTo(expectedConvertedMatch),
+                $"converted matching should apply the saved {minimumMatchPercent}% BookshelfNG threshold");
         }
     }
 }

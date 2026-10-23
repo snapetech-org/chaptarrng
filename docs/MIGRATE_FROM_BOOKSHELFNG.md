@@ -48,8 +48,9 @@
 > and conversion settings also retry failed loads. Startup errors identify the
 > failed data source and retry failed setup requests when browser storage works.
 > The frontend CJS suite passes
-> 122/122 locally. Focused migration, metadata,
-> move, and CLI checks are listed in the retirement status. Current application
+> 126/126 locally on 2026-10-23 across all 36 test files, with no skips or
+> failures. Focused migration, metadata, move, and CLI checks are listed in the
+> retirement status. Current application
 > source is on [ChaptarrNG main](https://github.com/snapetech-org/chaptarrng/tree/main).
 > Exact-head CI status for current `main` is tracked by the [Build ChaptarrNG workflow](https://github.com/snapetech-org/chaptarrng/actions/workflows/build.yml). Current source remains unpublished. The source also
 > preserves BookshelfNG's optional
@@ -137,6 +138,9 @@ source author, book, edition, and book-file IDs. A book split by media type has
 one row for each resulting Chaptarr book. Format-scoped `GET /api/v1/book`
 lookups and book-scoped API operations resolve these mappings, while the legacy
 Bookshelf monitoring endpoint expands selected source IDs to their target rows.
+The generic `BookSearch` command also resolves a submitted legacy book ID: an
+unscoped request searches every migrated format row, and a format-scoped
+Readarr facade searches only its ebook or audiobook row.
 Other clients can query the map with
 `GET /api/v1/bookshelf/legacy-identities?entityType=Book&sourceIds=30` (up to
 500 IDs per request). The map remains in the Chaptarr database and its normal
@@ -354,6 +358,13 @@ backup preserves the original configuration, but it does not make an
 unsupported provider active in ChaptarrNG. These candidate changes are not in
 published `v0.9.977` while the release freeze remains active.
 
+The built-in BookshelfNG `ReadarrImport` list is mapped to ChaptarrNG's
+`ChaptarrImport` implementation. Its saved `ReadarrSettings` fields
+(`BaseUrl`, `ApiKey`, `ProfileIds`, `TagIds`, and `RootFolderPaths`) match the
+target settings contract; conversion updates the provider and contract names
+while retaining those values. This compatibility is source-only and is not in
+published `v0.9.977`.
+
 Preserve `HARDCOVER=true`, `HARDCOVER_AUTH`, `HARDCOVER_API_KEY`, and any
 custom `HARDCOVER_API_URL` environment value used by the BookshelfNG install.
 Run preview and migration with the same `HARDCOVER` and `HARDCOVER_NATIVE`
@@ -403,7 +414,14 @@ Move-mode source cleanup, and Copy-mode source retention. Failure cases verify
 fallback to separate original-track imports in both modes when FFprobe cannot
 read a source and when a controlled FFmpeg error makes the real `m4b-tool`
 process fail. The Linux build workflow runs these six cases in the checked-in
-`integration/Dockerfile.m4b-test` image. Synthetic embedded-chapter Move/Copy and TagLib-write cases pass on c4fa; representative M4B files and restart/resume remain open.
+`integration/Dockerfile.m4b-test` image. The current application snapshot also
+passed eight pinned-tool cases covering embedded-chapter Move/Copy and
+TagLib-write/reprobe. `ConversionJobServiceFixture` simulates startup after an
+interrupted conversion: it restores a persisted converting job with its
+synthetic output and manifest, marks the artifact ready to import, and queues
+the import sweep. That fixture passes in the full Core suite. Representative
+M4B files and recovery of a real in-progress conversion after an installed
+service restart remain unverified.
 The implementation requires the FFmpeg executable to be named `ffmpeg`
 (`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.
 
