@@ -9,22 +9,22 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
-**Latest ChaptarrNG parity and CI — 2026-10-23:** ChaptarrNG application-code commit
-`3fe0a8f1d25c843dfcfc1ca7d7ac20be3e5a6406` restores BookshelfNG audiobook
-release ordering for migrated installs and includes the earlier paged-library
-and OIDC parity fixes. The Release Core suite passed 4,699 tests with 25 skips
-and no failures. The commit hook's Semgrep scan found zero findings, and the
-release-note preview passed. Exact-head Build
-[39900179145](https://github.com/snapetech-org/chaptarrng/actions/runs/39900179145)
-has not completed: Windows and macOS builds are in progress while Linux,
-PostgreSQL migration, and Docker jobs remain queued. Security Analysis is
-running; CodeQL, Semgrep, Trivy, standalone-asset validation, and dependency
-submission remain queued. The prior Build
-[39897196030](https://github.com/snapetech-org/chaptarrng/actions/runs/39897196030)
-was cancelled after the newer commit; its PostgreSQL job failed during NuGet
-dependency restore, before PostgreSQL build or smoke. The public `v0.9.977`
-release is unchanged. No release or cutover was published or authorized by
-this source commit.
+**Latest ChaptarrNG parity and validation — 2026-10-23:** Application-code
+commit `4b57b479d73c844db19278233e25efe94509e99b` is on `main`; it includes
+migrated-audiobook release and pending-queue ranking compatibility, orders
+inferred audiobook parts by complete embedded disc/track tags, and preserves
+release-push provenance through decision evaluation. It also handles pushed
+releases whose indexer name is absent. The Release Core suite passed 4,709
+tests with 25 skips and no failures. Commit-hook Semgrep found zero findings,
+and push readiness checks passed. On upstream PR
+[#114](https://github.com/Chaptarr/chaptarr/pull/114), exact-head Semgrep
+([39972277607](https://github.com/Chaptarr/chaptarr/actions/runs/39972277607))
+and Trivy
+([39972277647](https://github.com/Chaptarr/chaptarr/actions/runs/39972277647))
+are `action_required` with no jobs started. GitHub rejected this agent's
+workflow-approval request because repository-admin rights are required, so
+hosted validation remains open. The public `v0.9.977` release is unchanged;
+no release or cutover was published.
 
 **Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
 ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through

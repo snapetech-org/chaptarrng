@@ -1,20 +1,21 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
 > **Release status (2026-10-23).** ChaptarrNG `v0.9.977` remains the latest
-> public release. ChaptarrNG application-code commit `3fe0a8f1` restores BookshelfNG's
-> audiobook release order for migrated installs and includes the earlier
-> paged-library and OIDC protections. Its Release Core suite passed 4,699
-> tests with 25 skips and no failures. Exact-head Build
-> [39900179145](https://github.com/snapetech-org/chaptarrng/actions/runs/39900179145)
-> is still active: Windows and macOS builds are in progress while Linux,
-> PostgreSQL, and Docker jobs remain queued. Security Analysis is running;
-> CodeQL, Semgrep, Trivy, standalone-asset validation, and dependency submission
-> remain queued. The earlier run for `785707bb`
-> was cancelled after the new commit; its PostgreSQL job failed during NuGet
-> restore before building or running smoke. Maintainer/operator sign-off is
-> recorded, but technical
-> retirement gates remain open. Keep BookshelfNG in service; do not apply
-> migration, install a bridge, or start ChaptarrNG against BookshelfNG appdata.
+> public release. Application-code commit
+> `4b57b479d73c844db19278233e25efe94509e99b` is on `main`; it includes
+> migrated-audiobook release and pending-queue ranking compatibility, tagged
+> audiobook-part ordering, and release-push provenance handling. The Release
+> Core suite passed 4,709 tests with 25 skips and no failures. Commit-hook
+> Semgrep found zero findings and push readiness checks passed. On upstream
+> PR [#114](https://github.com/Chaptarr/chaptarr/pull/114), exact-head Semgrep
+> ([39972277607](https://github.com/Chaptarr/chaptarr/actions/runs/39972277607))
+> and Trivy
+> ([39972277647](https://github.com/Chaptarr/chaptarr/actions/runs/39972277647))
+> are `action_required` with no jobs started; approving them requires repository
+> admin rights, which this agent account lacks. Hosted validation remains open.
+> Maintainer/operator sign-off is recorded, but technical retirement gates
+> remain open. Keep BookshelfNG in service; do not apply migration, install a
+> bridge, or start ChaptarrNG against BookshelfNG appdata.
 >
 > The published `.977` migration path supports BookshelfNG `0.4.21.71` with a
 > migration-158 SQLite database. It does not safely identify native Hardcover

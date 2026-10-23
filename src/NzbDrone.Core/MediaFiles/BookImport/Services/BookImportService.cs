@@ -638,7 +638,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Services
             }
 
             var partAssignments = PartAssignmentHelper.BuildPathAssignmentsByEdition(
-                resolvedFiles.Select(item => (item.Request.File.Path, (int?)item.Edition.Id)),
+                resolvedFiles.Select(item => (item.Request.File.Path, (int?)item.Edition.Id, item.Request.File.AllTags)),
                 defaultEdition?.Id ?? 0);
 
             // Resolve existing DB rows per path (list size is per-book and should be small).
