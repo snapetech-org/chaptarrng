@@ -9,19 +9,22 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
-**Latest ChaptarrNG parity and CI — 2026-10-23:** ChaptarrNG `main` commit
-`785707bb3b1a37fd31e88f5421e9b566ea1f1517` restores BookshelfNG's default
-paged-library size, stored-title ordering, author and link includes, and adds
-OIDC private/reserved-address protections. The Release Core suite passed 4,692
-tests with 25 skips and no failures; local Semgrep reported zero findings, and
-the release-note preview passed. Exact-head Build
+**Latest ChaptarrNG parity and CI — 2026-10-23:** ChaptarrNG application-code commit
+`3fe0a8f1d25c843dfcfc1ca7d7ac20be3e5a6406` restores BookshelfNG audiobook
+release ordering for migrated installs and includes the earlier paged-library
+and OIDC parity fixes. The Release Core suite passed 4,699 tests with 25 skips
+and no failures. The commit hook's Semgrep scan found zero findings, and the
+release-note preview passed. Exact-head Build
+[39900179145](https://github.com/snapetech-org/chaptarrng/actions/runs/39900179145)
+has not completed: Windows and macOS builds are in progress while Linux,
+PostgreSQL migration, and Docker jobs remain queued. Security Analysis is
+running; CodeQL, Semgrep, Trivy, standalone-asset validation, and dependency
+submission remain queued. The prior Build
 [39897196030](https://github.com/snapetech-org/chaptarrng/actions/runs/39897196030)
-has no final conclusion yet. Its PostgreSQL migration job failed at dependency
-restore: the log shows NuGet package downloads returning prematurely and the
-vulnerability-data service index failing to load, so PostgreSQL build and
-smoke steps did not start. Other platform jobs were queued or in progress. The
-public `v0.9.977` release is unchanged. No release or cutover was published or authorized by this source
-commit.
+was cancelled after the newer commit; its PostgreSQL job failed during NuGet
+dependency restore, before PostgreSQL build or smoke. The public `v0.9.977`
+release is unchanged. No release or cutover was published or authorized by
+this source commit.
 
 **Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
 ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through
@@ -270,9 +273,11 @@ unless `BOOKSHELF_OIDC_ALLOW_PRIVATE_ISSUER=true`. The configured proxy and
 certificate path is retained, redirects remain disabled, and response bodies
 are capped at 1 MiB. Its paged books route now defaults to 50 records, sorts
 by stored title, and includes each author and book links when callers omit
-`include`. These candidate changes are not present in public `.977`. The
-Release Core suite passed 4,692 tests with 25 skips and no failures against
-this code candidate; exact-head hosted CI and installed-channel acceptance
+`include`. For migrated installations, two audiobook release candidates also
+use BookshelfNG's quality/revision, custom-format, protocol, indexer, peer,
+book-count, age, and rounded-size order. Fresh installs and mixed-format
+comparisons retain ChaptarrNG's priority. These candidate changes are not
+present in public `.977`; exact-head hosted CI and installed-channel acceptance
 remain separate gates.
 
 Current ChaptarrNG `main` also accepts raw `.db` and `.xml` BookshelfNG backup
