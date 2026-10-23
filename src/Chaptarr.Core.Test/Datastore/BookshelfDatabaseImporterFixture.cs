@@ -12,6 +12,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Data.Sqlite;
 using NLog;
 using NLog.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
@@ -460,6 +462,228 @@ namespace Chaptarr.Core.Test.Datastore
                         $"{implementation} settings fields should survive migration");
                 }
             });
+        }
+
+        [Test]
+        public void should_preserve_every_builtin_bookshelf_download_client_import_list_and_notification()
+        {
+            (string Implementation, string Contract)[] downloadClientTypes =
+            {
+                ("Aria2", "Aria2Settings"),
+                ("TorrentBlackhole", "TorrentBlackholeSettings"),
+                ("UsenetBlackhole", "UsenetBlackholeSettings"),
+                ("Deluge", "DelugeSettings"),
+                ("TorrentDownloadStation", "DownloadStationSettings"),
+                ("UsenetDownloadStation", "DownloadStationSettings"),
+                ("Flood", "FloodSettings"),
+                ("Hadouken", "HadoukenSettings"),
+                ("NzbVortex", "NzbVortexSettings"),
+                ("Nzbget", "NzbgetSettings"),
+                ("Pneumatic", "PneumaticSettings"),
+                ("QBittorrent", "QBittorrentSettings"),
+                ("Sabnzbd", "SabnzbdSettings"),
+                ("RTorrent", "RTorrentSettings"),
+                ("UTorrent", "UTorrentSettings")
+            };
+            (string Implementation, string Contract)[] importListTypes =
+            {
+                ("GoodreadsBookshelf", "GoodreadsBookshelfImportListSettings"),
+                ("GoodreadsListImportList", "GoodreadsListImportListSettings"),
+                ("GoodreadsOwnedBooks", "GoodreadsOwnedBooksImportListSettings"),
+                ("GoodreadsSeriesImportList", "GoodreadsSeriesImportListSettings"),
+                ("HardcoverImport", "HardcoverImportSettings"),
+                ("LazyLibrarianImport", "LazyLibrarianImportSettings")
+            };
+            (string Implementation, string Contract)[] notificationTypes =
+            {
+                ("Apprise", "AppriseSettings"),
+                ("BookLore", "BookLoreSettings"),
+                ("CustomScript", "CustomScriptSettings"),
+                ("Discord", "DiscordSettings"),
+                ("Email", "EmailSettings"),
+                ("GoodreadsBookshelf", "GoodreadsBookshelfNotificationSettings"),
+                ("GoodreadsOwnedBooks", "GoodreadsOwnedBooksNotificationSettings"),
+                ("Gotify", "GotifySettings"),
+                ("Join", "JoinSettings"),
+                ("Kavita", "KavitaSettings"),
+                ("MailGun", "MailgunSettings"),
+                ("Ntfy", "NtfySettings"),
+                ("PlexServer", "PlexServerSettings"),
+                ("Prowl", "ProwlSettings"),
+                ("PushBullet", "PushBulletSettings"),
+                ("Pushover", "PushoverSettings"),
+                ("SendGrid", "SendGridSettings"),
+                ("Signal", "SignalSettings"),
+                ("Simplepush", "SimplepushSettings"),
+                ("Slack", "SlackSettings"),
+                ("Subsonic", "SubsonicSettings"),
+                ("SynologyIndexer", "SynologyIndexerSettings"),
+                ("Telegram", "TelegramSettings"),
+                ("Twitter", "TwitterSettings")
+            };
+
+            var downloadClients = downloadClientTypes
+                .Select((provider, index) => (Id: 900 + index, provider.Implementation, provider.Contract,
+                    Settings: CreateBuiltInProviderSettings(provider.Implementation, provider.Contract)))
+                .ToArray();
+            var importLists = importListTypes
+                .Select((provider, index) => (Id: 1000 + index, provider.Implementation, provider.Contract,
+                    Settings: CreateBuiltInProviderSettings(provider.Implementation, provider.Contract)))
+                .ToArray();
+            var notifications = notificationTypes
+                .Select((provider, index) => (Id: 1100 + index, provider.Implementation, provider.Contract,
+                    Settings: CreateBuiltInProviderSettings(provider.Implementation, provider.Contract)))
+                .ToArray();
+
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+
+                foreach (var provider in downloadClients)
+                {
+                    using var command = source.CreateCommand();
+                    command.CommandText = "INSERT INTO DownloadClients (Id, Enable, Name, Implementation, Settings, ConfigContract) VALUES ($id, 1, $name, $implementation, $settings, $contract);";
+                    command.Parameters.AddWithValue("$id", provider.Id);
+                    command.Parameters.AddWithValue("$name", $"Built-in download client {provider.Implementation}");
+                    command.Parameters.AddWithValue("$implementation", provider.Implementation);
+                    command.Parameters.AddWithValue("$settings", provider.Settings);
+                    command.Parameters.AddWithValue("$contract", provider.Contract);
+                    command.ExecuteNonQuery();
+                }
+
+                foreach (var provider in importLists)
+                {
+                    using var command = source.CreateCommand();
+                    command.CommandText = "INSERT INTO ImportLists (Id, Name, Implementation, Settings, ConfigContract, EnableAutomaticAdd, RootFolderPath, ShouldMonitor, ProfileId, MetadataProfileId, Tags) VALUES ($id, $name, $implementation, $settings, $contract, 1, '/library', 1, 1, 1, '[]');";
+                    command.Parameters.AddWithValue("$id", provider.Id);
+                    command.Parameters.AddWithValue("$name", $"Built-in import list {provider.Implementation}");
+                    command.Parameters.AddWithValue("$implementation", provider.Implementation);
+                    command.Parameters.AddWithValue("$settings", provider.Settings);
+                    command.Parameters.AddWithValue("$contract", provider.Contract);
+                    command.ExecuteNonQuery();
+                }
+
+                foreach (var provider in notifications)
+                {
+                    using var command = source.CreateCommand();
+                    command.CommandText = """
+                        INSERT INTO Notifications (Id, Name, OnGrab, Settings, Implementation, ConfigContract, OnUpgrade, Tags, OnRename, OnReleaseImport, OnHealthIssue, IncludeHealthWarnings, OnDownloadFailure, OnImportFailure, OnBookRetag, OnAuthorDelete, OnBookDelete, OnBookFileDelete, OnBookFileDeleteForUpgrade, OnApplicationUpdate, OnAuthorAdded)
+                        VALUES ($id, $name, 1, $settings, $implementation, $contract, 1, '[]', 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0);
+                        """;
+                    command.Parameters.AddWithValue("$id", provider.Id);
+                    command.Parameters.AddWithValue("$name", $"Built-in notification {provider.Implementation}");
+                    command.Parameters.AddWithValue("$implementation", provider.Implementation);
+                    command.Parameters.AddWithValue("$settings", provider.Settings);
+                    command.Parameters.AddWithValue("$contract", provider.Contract);
+                    command.ExecuteNonQuery();
+                }
+            }
+
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+
+            Assert.That(preview.ImportReport.BlockingIssues, Is.Empty,
+                "all built-in BookshelfNG provider implementation and settings contracts have an equivalent Chaptarr provider");
+
+            migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+
+            Assert.Multiple(() =>
+            {
+                foreach (var provider in downloadClients)
+                {
+                    Assert.That(ReadMigratedProvider(_sourcePath, "DownloadClients", provider.Id),
+                        Is.EqualTo((provider.Implementation, provider.Contract, provider.Settings)),
+                        $"{provider.Implementation} download-client settings should survive migration");
+                }
+
+                foreach (var provider in importLists)
+                {
+                    Assert.That(ReadMigratedProvider(_sourcePath, "ImportLists", provider.Id),
+                        Is.EqualTo((provider.Implementation, provider.Contract, provider.Settings)),
+                        $"{provider.Implementation} import-list settings should survive migration");
+                }
+
+                foreach (var provider in notifications)
+                {
+                    Assert.That(ReadMigratedProvider(_sourcePath, "Notifications", provider.Id),
+                        Is.EqualTo((provider.Implementation, provider.Contract, provider.Settings)),
+                        $"{provider.Implementation} notification settings should survive migration");
+                }
+            });
+        }
+
+        private static string CreateBuiltInProviderSettings(string implementation, string contract)
+        {
+            if (implementation == "GoodreadsBookshelf" && contract == "GoodreadsBookshelfImportListSettings")
+            {
+                return "{\"userId\":\"12345678\",\"bookshelfIds\":[\"to-read\"],\"accessToken\":\"fixture-access-token\",\"accessTokenSecret\":\"fixture-access-secret\",\"requestTokenSecret\":\"fixture-request-secret\",\"userName\":\"fixture-user\",\"signIn\":\"startOAuth\",\"signingUrl\":\"https://auth.servarr.com/v1/goodreads/sign\",\"oauthUrl\":\"https://www.goodreads.com/oauth/authorize\",\"oauthRequestTokenUrl\":\"https://www.goodreads.com/oauth/request_token\",\"oauthAccessTokenUrl\":\"https://www.goodreads.com/oauth/access_token\"}";
+            }
+
+            if (implementation == "GoodreadsOwnedBooks" && contract == "GoodreadsOwnedBooksImportListSettings")
+            {
+                return "{\"userId\":\"12345678\",\"accessToken\":\"fixture-owned-access-token\",\"accessTokenSecret\":\"fixture-owned-access-secret\",\"requestTokenSecret\":\"fixture-owned-request-secret\",\"userName\":\"fixture-owned-user\",\"signIn\":\"startOAuth\"}";
+            }
+
+            if (implementation == "GoodreadsBookshelf" && contract == "GoodreadsBookshelfNotificationSettings")
+            {
+                return "{\"accessToken\":\"fixture-notify-access-token\",\"accessTokenSecret\":\"fixture-notify-access-secret\",\"requestTokenSecret\":\"fixture-notify-request\",\"userId\":\"12345678\",\"userName\":\"fixture-notify-user\",\"addIds\":[\"read\"],\"removeIds\":[\"to-read\"],\"signIn\":\"startOAuth\"}";
+            }
+
+            if (implementation == "GoodreadsOwnedBooks" && contract == "GoodreadsOwnedBooksNotificationSettings")
+            {
+                return "{\"accessToken\":\"fixture-owned-notify-token\",\"accessTokenSecret\":\"fixture-owned-notify-secret\",\"requestTokenSecret\":\"fixture-owned-notify-request\",\"userId\":\"12345678\",\"userName\":\"fixture-owned-notify-user\",\"condition\":10,\"description\":\"\",\"location\":\"\",\"signIn\":\"startOAuth\"}";
+            }
+
+            var settingsType = typeof(BookshelfDatabaseImporter).Assembly.GetTypes()
+                .Single(type => type.Name.Equals(contract, StringComparison.OrdinalIgnoreCase));
+            var setting = settingsType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                .FirstOrDefault(property =>
+                    property.PropertyType == typeof(string) &&
+                    property.CanWrite &&
+                    property.GetCustomAttribute<JsonIgnoreAttribute>() == null &&
+                    property.GetCustomAttribute<System.Text.Json.Serialization.JsonIgnoreAttribute>() == null);
+            if (setting == null)
+            {
+                return "{}";
+            }
+
+            var jsonName = setting.GetCustomAttribute<JsonPropertyAttribute>()?.PropertyName ??
+                setting.GetCustomAttribute<System.Text.Json.Serialization.JsonPropertyNameAttribute>()?.Name ??
+                setting.Name;
+            return new JObject { [jsonName] = "fixture-provider-value" }.ToString(Formatting.None);
+        }
+
+        private static (string Implementation, string Contract, string Settings) ReadMigratedProvider(
+            string sourcePath,
+            string table,
+            int id)
+        {
+            using var source = new SqliteConnection($"Data Source={sourcePath}");
+            source.Open();
+            using var command = source.CreateCommand();
+            command.CommandText = table switch
+            {
+                "DownloadClients" => "SELECT Implementation, ConfigContract, Settings FROM DownloadClients WHERE Id = $id;",
+                "ImportLists" => "SELECT Implementation, ConfigContract, Settings FROM ImportLists WHERE Id = $id;",
+                "Notifications" => "SELECT Implementation, ConfigContract, Settings FROM Notifications WHERE Id = $id;",
+                _ => throw new ArgumentOutOfRangeException(nameof(table), table, "Unexpected built-in provider table fixture")
+            };
+            command.Parameters.AddWithValue("$id", id);
+            using var reader = command.ExecuteReader();
+            if (!reader.Read())
+            {
+                throw new InvalidDataException($"Migrated provider row {table}/{id} is missing.");
+            }
+
+            return (reader.GetString(0), reader.GetString(1), reader.GetString(2));
         }
 
         [Test]
