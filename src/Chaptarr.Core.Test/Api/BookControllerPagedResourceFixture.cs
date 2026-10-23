@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Chaptarr.Api.V1.Books;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -70,7 +71,39 @@ namespace Chaptarr.Core.Test.Api
             bookService.Verify(service => service.GetBooksPaged(0, 1000, "cleanTitle", "ASC", false, null, null, null, null, null), Times.Once);
         }
 
-        private static BookController CreateController(IBookService bookService)
+        [Test]
+        public void should_resolve_a_migrated_bookshelf_id_to_the_requested_media_type()
+        {
+            var legacyIdentityMap = new Mock<IBookshelfLegacyIdentityMapService>();
+            legacyIdentityMap
+                .Setup(service => service.ResolveBookIds(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 30 })), BookMediaType.Ebook))
+                .Returns(new List<int> { 31 });
+
+            var bookService = new Mock<IBookService>();
+            bookService
+                .Setup(service => service.GetBooks(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 31 }))))
+                .Returns(new List<Book>
+                {
+                    new Book
+                    {
+                        Id = 31,
+                        AuthorId = 20,
+                        MediaType = BookMediaType.Ebook,
+                        Title = "Fixture ebook",
+                        CleanTitle = "fixture ebook",
+                        TitleSlug = "fixture-ebook"
+                    }
+                });
+
+            var controller = CreateController(bookService.Object, legacyIdentityMap.Object);
+            var books = controller.GetBooks(authorId: null, bookIds: new List<int> { 30 }, bookId: null, mediaType: "ebook");
+
+            Assert.That(books.Select(book => book.Id), Is.EqualTo(new[] { 31 }));
+            legacyIdentityMap.Verify(service => service.ResolveBookIds(It.IsAny<IEnumerable<int>>(), BookMediaType.Ebook), Times.Once);
+            bookService.Verify(service => service.GetBooks(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 31 }))), Times.Once);
+        }
+
+        private static BookController CreateController(IBookService bookService, IBookshelfLegacyIdentityMapService legacyIdentityMap = null)
         {
             var seriesLinks = new Mock<ISeriesBookLinkService>();
             seriesLinks.Setup(service => service.GetLinksByBook(It.IsAny<List<int>>()))
@@ -89,7 +122,7 @@ namespace Chaptarr.Core.Test.Api
                 seriesBookLinkService: seriesLinks.Object,
                 authorStatisticsService: authorStatistics.Object,
                 mediaFileService: null,
-                coverMapper: null,
+                coverMapper: new Mock<NzbDrone.Core.MediaCover.IMapCoversToLocal>().Object,
                 mediaCoverProxy: null,
                 upgradableSpecification: null,
                 signalRBroadcaster: null,
@@ -100,7 +133,8 @@ namespace Chaptarr.Core.Test.Api
                 rootFolderService: null,
                 qualityProfileExistsValidator: new QualityProfileExistsValidator(null),
                 metadataProfileExistsValidator: new MetadataProfileExistsValidator(null),
-                logger: LogManager.GetCurrentClassLogger())
+                logger: LogManager.GetCurrentClassLogger(),
+                bookshelfLegacyIdentityMapService: legacyIdentityMap)
             {
                 ControllerContext = new ControllerContext
                 {

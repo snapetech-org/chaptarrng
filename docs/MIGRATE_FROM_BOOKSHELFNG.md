@@ -120,6 +120,17 @@ conversion and rollback, but it is not a real-data rehearsal or proof for every
 historical BookshelfNG release. Unknown or newer schemas fail closed without
 changing the source.
 
+The converted Chaptarr database retains a `BookshelfLegacyIdentityMap` for
+source author, book, edition, and book-file IDs. A book split by media type has
+one row for each resulting Chaptarr book. Format-scoped `GET /api/v1/book`
+lookups and book-scoped API operations resolve these mappings, while the legacy
+Bookshelf monitoring endpoint expands selected source IDs to their target rows.
+Other clients can query the map with
+`GET /api/v1/bookshelf/legacy-identities?entityType=Book&sourceIds=30` (up to
+500 IDs per request). The map remains in the Chaptarr database and its normal
+database backups. It helps migrate local references, while provider IDs remain
+the durable identity for newly built integrations.
+
 **Prior PR #131 application-code validation (2026-10-19):** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. The Linux artifact also passed the earlier empty-library API and authorization smoke. The populated source-build check on later code is recorded below.
 
 

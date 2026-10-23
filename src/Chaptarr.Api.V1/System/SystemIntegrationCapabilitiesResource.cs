@@ -42,5 +42,8 @@ namespace Chaptarr.Api.V1.System
 
         /// <summary>GET /book/{id}/editions/catalog lists every known edition with narration details.</summary>
         public bool EditionCatalog { get; set; } = true;
+
+        /// <summary>GET /bookshelf/legacy-identities returns durable source IDs from BookshelfNG conversions.</summary>
+        public bool BookshelfLegacyIdentityMap { get; set; } = true;
     }
 }

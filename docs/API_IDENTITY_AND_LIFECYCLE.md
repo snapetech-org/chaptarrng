@@ -29,7 +29,8 @@ feature list. The current contract is:
     "pagedLibrary": true,
     "providerScopedEditionIdentity": true,
     "pendingAuthorImports": true,
-    "pendingImportCancellation": true
+    "pendingImportCancellation": true,
+    "bookshelfLegacyIdentityMap": true
   }
 }
 ```
@@ -43,6 +44,31 @@ Hardcover-setting fallback for those builds.
 Provider IDs are durable identity. Local database row IDs are not.
 
 Use provider IDs such as `hc:149559`, `gr:173491`, `az:B001IOF7SC`, `ol:OL...`, and `gb:...` for matching, crosswalks, caches, sync state, and external integrations. Chaptarr local row IDs are only handles inside one user's database. A local ID can change if metadata is repaired, merged, split, or reimported.
+
+For a BookshelfNG conversion, Chaptarr stores a durable old-to-new map for
+authors, books, editions, and book files. A source book that becomes both media
+types has one mapping row per target book. Existing format-aware API reads use
+that map: `GET /api/v1/book?bookIds=30&mediaType=ebook` resolves the ebook row,
+while a request without `mediaType` returns each mapped format row. The legacy
+Bookshelf monitoring endpoint also expands selected source book IDs to their
+target rows. The map is also used by book-scoped edition and file reads,
+history, queue and release requests, format actions, manual import, and
+book mutations. When an operation is format-scoped, its `mediaType` selects the
+matching target row; Chaptarr's own selection actions send that scope so a
+single-format change does not affect the sibling format.
+
+Clients that keep BookshelfNG numeric IDs can retrieve mappings in batches of
+up to 500 with:
+
+```text
+GET /api/v1/bookshelf/legacy-identities?entityType=Book&sourceIds=30
+```
+
+Supported `entityType` values are `Author`, `Book`, `Edition`, and `BookFile`.
+Each result includes `source`, `entityType`, `sourceId`, `targetId`, and an
+optional `mediaType` (`audiobook` or `ebook`). The map is migration provenance
+for existing installations; new integrations should continue to persist
+provider IDs rather than local row IDs.
 
 ### Books Are Provider Pockets
 

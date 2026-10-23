@@ -1,6 +1,9 @@
 using System.Collections.Generic;
+using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
+using Chaptarr.Http.Middleware;
 using Microsoft.AspNetCore.Mvc;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.MediaFiles;
 
 namespace Chaptarr.Api.V1.Books
@@ -9,16 +12,20 @@ namespace Chaptarr.Api.V1.Books
     public class ConvertBookController : Controller
     {
         private readonly IBookFileConversionService _bookFileConversionService;
+        private readonly IBookshelfLegacyIdentityMapService _legacyIdentityMapService;
 
-        public ConvertBookController(IBookFileConversionService bookFileConversionService)
+        public ConvertBookController(
+            IBookFileConversionService bookFileConversionService,
+            IBookshelfLegacyIdentityMapService legacyIdentityMapService = null)
         {
             _bookFileConversionService = bookFileConversionService;
+            _legacyIdentityMapService = legacyIdentityMapService;
         }
 
         [HttpGet]
         [ProducesResponseType(typeof(List<ConvertBookResource>), 200)]
         [ProducesResponseType(typeof(ApiErrorResource), 400)]
-        public ActionResult<List<ConvertBookResource>> GetConvertibleBookFiles(int authorId, int? bookId)
+        public ActionResult<List<ConvertBookResource>> GetConvertibleBookFiles(int authorId, int? bookId, string mediaType = null)
         {
             if (authorId <= 0)
             {
@@ -26,6 +33,23 @@ namespace Chaptarr.Api.V1.Books
                 {
                     Message = "authorId is required."
                 });
+            }
+
+            mediaType ??= HttpContext?.GetReadarrFacadeContext()?.MediaType;
+            if (bookId.HasValue)
+            {
+                var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(
+                    new[] { bookId.Value },
+                    MediaTypeParameterParser.ParseOptional(mediaType));
+                if (resolvedBookIds != null)
+                {
+                    if (resolvedBookIds.Count == 0)
+                    {
+                        return NotFound();
+                    }
+
+                    bookId = resolvedBookIds[0];
+                }
             }
 
             return _bookFileConversionService.GetConversionPreviews(authorId, bookId).ToResource();

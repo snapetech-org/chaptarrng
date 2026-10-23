@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Chaptarr.Api.V1.Books;
+using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
 using Chaptarr.Http.Middleware;
 using Microsoft.AspNetCore.Mvc;
@@ -16,23 +17,29 @@ namespace NzbDrone.Api.V1.Editions
         private readonly IEditionService _editionService;
         private readonly IBookService _bookService;
         private readonly IMediaCoverProxy _mediaCoverProxy;
+        private readonly IBookshelfLegacyIdentityMapService _legacyIdentityMapService;
 
         public EditionController(IEditionService editionService,
                                  IBookService bookService,
-                                 IMediaCoverProxy mediaCoverProxy)
+                                 IMediaCoverProxy mediaCoverProxy,
+                                 IBookshelfLegacyIdentityMapService legacyIdentityMapService = null)
         {
             _editionService = editionService;
             _bookService = bookService;
             _mediaCoverProxy = mediaCoverProxy;
+            _legacyIdentityMapService = legacyIdentityMapService;
         }
 
         [HttpGet]
-        public List<EditionResource> GetEditions([FromQuery] List<int> bookId)
+        public List<EditionResource> GetEditions([FromQuery] List<int> bookId, [FromQuery] string mediaType = null)
         {
-            var requestedBookIds = bookId?
+            var sourceBookIds = bookId?
                 .Where(id => id > 0)
                 .Distinct()
                 .ToList() ?? new List<int>();
+            var effectiveMediaType = mediaType ?? HttpContext?.GetReadarrFacadeContext()?.MediaType;
+            var parsedMediaType = MediaTypeParameterParser.ParseOptional(effectiveMediaType);
+            var requestedBookIds = _legacyIdentityMapService?.ResolveBookIds(sourceBookIds, parsedMediaType) ?? sourceBookIds;
 
             var editions = _editionService.GetEditionsByBook(requestedBookIds);
             var resources = editions.ToResource(HttpContext.GetReadarrFacadeContext());

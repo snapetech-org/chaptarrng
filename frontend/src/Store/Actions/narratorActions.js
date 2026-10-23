@@ -86,6 +86,7 @@ export const actionHandlers = handleThunks({
 
   [FETCH_NARRATOR_DISCOVERY]: function(getState, payload, dispatch) {
     const { bookId } = payload;
+    const selectedBook = getState().books.items.find((item) => item.id === bookId);
 
     dispatch(set({
       section,
@@ -94,7 +95,8 @@ export const actionHandlers = handleThunks({
     }));
 
     // Use editions endpoint to get narrator variants
-    const endpoint = `/edition?bookId=${bookId}`;
+    const mediaTypeQuery = selectedBook?.mediaType ? `&mediaType=${encodeURIComponent(selectedBook.mediaType)}` : '';
+    const endpoint = `/edition?bookId=${bookId}${mediaTypeQuery}`;
 
     const promise = createAjaxRequest({
       url: endpoint,
@@ -254,7 +256,7 @@ export const actionHandlers = handleThunks({
       // replacing it. The server decides whether a separate row is needed and returns
       // the existing one when this narrator is already tracked.
       const promise = createAjaxRequest({
-        url: `/book/${bookId}/editions/wanted`,
+        url: `/book/${bookId}/editions/wanted${currentBook.mediaType ? `?mediaType=${encodeURIComponent(currentBook.mediaType)}` : ''}`,
         method: 'POST',
         data: JSON.stringify({
           editionId: selectedEditionId,

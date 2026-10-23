@@ -90,7 +90,7 @@ namespace NzbDrone.Core.Datastore
 
         private static readonly string[] TargetTablesToClear =
         {
-            "ProviderAliasIndex", "AuthorSeries", "SeriesBookLink", "EditionNarratorLink", "BookNarratorLink",
+            "BookshelfLegacyIdentityMap", "ProviderAliasIndex", "AuthorSeries", "SeriesBookLink", "EditionNarratorLink", "BookNarratorLink",
             "ExtraFiles", "OtherFiles", "MetadataFiles", "BookFiles", "Editions", "Books", "Authors", "Series",
             "Narrators", "NarratorMetadata", "ImportListExclusions", "ImportListStatus", "ImportLists", "Indexers",
             "IndexerStatus", "Notifications", "NotificationStatus", "DownloadClients", "DownloadClientStatus", "Metadata",
@@ -456,6 +456,7 @@ namespace NzbDrone.Core.Datastore
                 SetIfPresent(values, "ProviderUrls", "{}");
 
                 InsertRow(target, transaction, "Authors", targetColumns, values);
+                RecordBookshelfLegacyIdentity(target, transaction, "Author", sourceId, sourceId, null);
                 var providerIds = canonicalId == null ? new List<string>() : new List<string> { canonicalId };
                 authors[sourceId] = new AuthorMap(sourceId, metadataId, providerIds);
             }
@@ -632,6 +633,7 @@ namespace NzbDrone.Core.Datastore
                     SetIfPresent(values, "Images", "[]");
                     SetIfPresent(values, "ProviderUrls", "{}");
                     InsertRow(target, transaction, "Books", targetColumns, values);
+                    RecordBookshelfLegacyIdentity(target, transaction, "Book", sourceId, targetId, mediaType);
                 }
 
                 result[sourceId] = new BookMap(sourceId, mapping, canonicalBookId, author.Id);
@@ -672,7 +674,9 @@ namespace NzbDrone.Core.Datastore
                 }
 
                 var foreignEditionId = NormalizeSourceId(GetString(row, "ForeignEditionId"), "edition");
+                var sourceEditionId = GetInt(row, "Id");
                 var values = Intersect(row, targetColumns);
+                values["Id"] = sourceEditionId;
                 values["BookId"] = targetBookId;
                 values["IsEbook"] = ebook;
                 values["MediaType"] = mediaType;
@@ -685,7 +689,8 @@ namespace NzbDrone.Core.Datastore
                     string.IsNullOrWhiteSpace(narrator) ? Array.Empty<string>() : new[] { narrator }));
                 SetIfPresent(values, "ProviderUrls", "{}");
                 InsertRow(target, transaction, "Editions", targetColumns, values);
-                result[GetInt(row, "Id")] = new EditionMap(GetInt(row, "Id"), sourceBookId, mediaType, targetBookId, foreignEditionId);
+                RecordBookshelfLegacyIdentity(target, transaction, "Edition", sourceEditionId, sourceEditionId, mediaType);
+                result[sourceEditionId] = new EditionMap(sourceEditionId, sourceBookId, mediaType, targetBookId, foreignEditionId);
             }
 
             report.RecordTable("Editions", sourceCount, 0, sourceCount, 0, 0,
@@ -708,6 +713,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "BookFiles"))
             {
+                var sourceFileId = GetInt(row, "Id");
                 var sourceEditionId = GetInt(row, "EditionId");
                 if (sourceEditionId == 0 || !editions.TryGetValue(sourceEditionId, out var edition))
                 {
@@ -722,6 +728,7 @@ namespace NzbDrone.Core.Datastore
 
                     var orphanModified = GetValue(row, "Modified") ?? GetValue(row, "DateAdded") ?? DateTime.UnixEpoch;
                     var orphanValues = Intersect(row, targetColumns);
+                    orphanValues["Id"] = sourceFileId;
                     orphanValues["EditionId"] = 0;
                     orphanValues["Modified"] = orphanModified;
                     orphanValues["DateAdded"] = GetValue(row, "DateAdded") ?? orphanModified;
@@ -733,8 +740,9 @@ namespace NzbDrone.Core.Datastore
                     SetIfPresent(orphanValues, "Part", GetValue(row, "Part") ?? 0);
                     SetIfPresent(orphanValues, "IndexerFlags", GetValue(row, "IndexerFlags") ?? 0);
                     InsertRow(target, transaction, "BookFiles", targetColumns, orphanValues);
-                    result[GetInt(row, "Id")] = new BookFileMap(
-                        GetInt(row, "Id"),
+                    RecordBookshelfLegacyIdentity(target, transaction, "BookFile", sourceFileId, sourceFileId, null);
+                    result[sourceFileId] = new BookFileMap(
+                        sourceFileId,
                         0,
                         -1,
                         0,
@@ -746,6 +754,7 @@ namespace NzbDrone.Core.Datastore
                 var modified = GetValue(row, "Modified") ?? GetValue(row, "DateAdded") ?? DateTime.UnixEpoch;
                 var dateAdded = GetValue(row, "DateAdded") ?? modified;
                 var values = Intersect(row, targetColumns);
+                values["Id"] = sourceFileId;
                 values["EditionId"] = sourceEditionId;
                 values["Modified"] = modified;
                 values["DateAdded"] = dateAdded;
@@ -754,8 +763,9 @@ namespace NzbDrone.Core.Datastore
                 SetIfPresent(values, "Part", GetValue(row, "Part") ?? 0);
                 SetIfPresent(values, "IndexerFlags", GetValue(row, "IndexerFlags") ?? 0);
                 InsertRow(target, transaction, "BookFiles", targetColumns, values);
-                result[GetInt(row, "Id")] = new BookFileMap(
-                    GetInt(row, "Id"),
+                RecordBookshelfLegacyIdentity(target, transaction, "BookFile", sourceFileId, sourceFileId, edition.MediaType);
+                result[sourceFileId] = new BookFileMap(
+                    sourceFileId,
                     edition.SourceBookId,
                     edition.MediaType,
                     edition.TargetBookId,
@@ -2629,6 +2639,27 @@ namespace NzbDrone.Core.Datastore
 
             parameter.Value = value ?? DBNull.Value;
             command.Parameters.Add(parameter);
+        }
+
+        private static void RecordBookshelfLegacyIdentity(
+            DbConnection target,
+            DbTransaction transaction,
+            string entityType,
+            int sourceId,
+            int targetId,
+            int? mediaType)
+        {
+            using var command = target.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = $@"INSERT INTO {Quote("BookshelfLegacyIdentityMap")}
+                ({Quote("Source")}, {Quote("EntityType")}, {Quote("SourceId")}, {Quote("TargetId")}, {Quote("MediaType")})
+                VALUES (@source, @entityType, @sourceId, @targetId, @mediaType);"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- fixed table and column identifiers are escaped; all row values are parameters.
+            AddParameter(command, "@source", "BookshelfNG");
+            AddParameter(command, "@entityType", entityType);
+            AddParameter(command, "@sourceId", sourceId);
+            AddParameter(command, "@targetId", targetId);
+            AddParameter(command, "@mediaType", mediaType);
+            command.ExecuteNonQuery();
         }
 
         private static object NormalizeTargetValue(DbConnection target, ColumnInfo targetColumn, object value)

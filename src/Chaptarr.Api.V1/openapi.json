@@ -842,6 +842,28 @@
         }
       }
     },
+    "/api/v1/author/editor/backfill-roots": {
+      "post": {
+        "tags": [
+          "AuthorEditor"
+        ],
+        "parameters": [
+          {
+            "name": "dryRun",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/author/editor": {
       "put": {
         "tags": [
@@ -850,16 +872,6 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthorEditorResource"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthorEditorResource"
-              }
-            },
-            "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/AuthorEditorResource"
               }
@@ -879,16 +891,6 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthorEditorResource"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AuthorEditorResource"
-              }
-            },
-            "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/AuthorEditorResource"
               }
@@ -949,6 +951,198 @@
         }
       }
     },
+    "/api/v1/author/media-move/preview": {
+      "post": {
+        "tags": [
+          "AuthorMediaMove"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveRequestResource"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveRequestResource"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveRequestResource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorMediaMovePreview"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorMediaMovePreview"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorMediaMovePreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/author/media-move/start": {
+      "post": {
+        "tags": [
+          "AuthorMediaMove"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveRequestResource"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveRequestResource"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveRequestResource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/author/media-move/bulk/preview": {
+      "post": {
+        "tags": [
+          "AuthorMediaMove"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveBatchRequestResource"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveBatchRequestResource"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveBatchRequestResource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorMediaMoveBatchPreview"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorMediaMoveBatchPreview"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorMediaMoveBatchPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/author/media-move/bulk/start": {
+      "post": {
+        "tags": [
+          "AuthorMediaMove"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveBatchRequestResource"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveBatchRequestResource"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorMediaMoveBatchRequestResource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system/backup": {
       "get": {
         "tags": [
@@ -983,43 +1177,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v1/system/backup/encrypted": {
-      "post": {
-        "tags": [
-          "Backup"
-        ],
-        "parameters": [
-          {
-            "name": "X-Bookshelf-Backup-Passphrase",
-            "in": "header",
-            "required": true,
-            "description": "Passphrase used to encrypt the portable backup. It must contain at least 16 characters and no more than 4096 UTF-8 bytes.",
-            "schema": {
-              "type": "string",
-              "minLength": 16,
-              "maxLength": 4096,
-              "format": "password"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "BookshelfNG-compatible encrypted backup archive",
-            "content": {
-              "application/octet-stream": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid passphrase"
           }
         }
       }
@@ -1070,44 +1227,23 @@
         }
       }
     },
+    "/api/v1/system/backup/encrypted": {
+      "post": {
+        "tags": [
+          "Backup"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/system/backup/restore/upload": {
       "post": {
         "tags": [
           "Backup"
         ],
-        "parameters": [
-          {
-            "name": "X-Bookshelf-Backup-Passphrase",
-            "in": "header",
-            "required": false,
-            "description": "Required when restoring a BookshelfNG-compatible .enc backup.",
-            "schema": {
-              "type": "string",
-              "minLength": 16,
-              "maxLength": 4096,
-              "format": "password"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "restore"
-                ],
-                "properties": {
-                  "restore": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "OK"
@@ -1336,6 +1472,22 @@
             "in": "query",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
             }
           }
         ],
@@ -1606,6 +1758,62 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/book/{id}/editions/catalog": {
+      "get": {
+        "tags": [
+          "Book"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "mediaType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EditionCatalogResource"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EditionCatalogResource"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EditionCatalogResource"
+                  }
                 }
               }
             }
@@ -1913,14 +2121,8 @@
           {
             "name": "mediaType",
             "in": "query",
-            "required": true,
             "schema": {
-              "type": "string",
-              "enum": [
-                "audiobook",
-                "ebook",
-                "both"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -1928,7 +2130,23 @@
           "200": {
             "description": "OK",
             "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookshelfAuthorCountResource"
+                  }
+                }
+              },
               "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookshelfAuthorCountResource"
+                  }
+                }
+              },
+              "text/json": {
                 "schema": {
                   "type": "array",
                   "items": {
@@ -1950,7 +2168,6 @@
           {
             "name": "authorIds",
             "in": "query",
-            "required": true,
             "schema": {
               "type": "array",
               "items": {
@@ -1962,14 +2179,8 @@
           {
             "name": "mediaType",
             "in": "query",
-            "required": true,
             "schema": {
-              "type": "string",
-              "enum": [
-                "audiobook",
-                "ebook",
-                "both"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -1977,7 +2188,23 @@
           "200": {
             "description": "OK",
             "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookResource"
+                  }
+                }
+              },
               "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookResource"
+                  }
+                }
+              },
+              "text/json": {
                 "schema": {
                   "type": "array",
                   "items": {
@@ -2107,6 +2334,13 @@
               "type": "boolean",
               "default": false
             }
+          },
+          {
+            "name": "mediaType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2166,6 +2400,13 @@
               "type": "boolean",
               "default": false
             }
+          },
+          {
+            "name": "mediaType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2179,6 +2420,15 @@
       "put": {
         "tags": [
           "Book"
+        ],
+        "parameters": [
+          {
+            "name": "mediaType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "content": {
@@ -2219,6 +2469,13 @@
             "schema": {
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "name": "mediaType",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -2276,16 +2533,6 @@
               "schema": {
                 "$ref": "#/components/schemas/BookEditorResource"
               }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BookEditorResource"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/BookEditorResource"
-              }
             }
           }
         },
@@ -2305,19 +2552,32 @@
               "schema": {
                 "$ref": "#/components/schemas/BookEditorResource"
               }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BookEditorResource"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/BookEditorResource"
-              }
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bookfile/{id}/download": {
+      "get": {
+        "tags": [
+          "BookFile"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -2652,6 +2912,38 @@
         }
       }
     },
+    "/api/v1/bookshelf/legacy-identities": {
+      "get": {
+        "tags": [
+          "Bookshelf"
+        ],
+        "parameters": [
+          {
+            "name": "entityType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceIds",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/bookshelf": {
       "post": {
         "tags": [
@@ -2660,16 +2952,6 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BookshelfResource"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BookshelfResource"
-              }
-            },
-            "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/BookshelfResource"
               }
@@ -3282,6 +3564,89 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ConversionConfigResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/convert": {
+      "get": {
+        "tags": [
+          "ConvertBook"
+        ],
+        "parameters": [
+          {
+            "name": "authorId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "bookId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "mediaType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConvertBookResource"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConvertBookResource"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConvertBookResource"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResource"
                 }
               }
             }
@@ -4585,6 +4950,13 @@
                 "type": "integer",
                 "format": "int32"
               }
+            }
+          },
+          {
+            "name": "mediaType",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -5975,6 +6347,95 @@
         }
       }
     },
+    "/api/v1/importlist/{id}/preview": {
+      "post": {
+        "tags": [
+          "ImportListSync"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportListSyncHistoryResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportListSyncHistoryResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportListSyncHistoryResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/importlist/{id}/history": {
+      "get": {
+        "tags": [
+          "ImportListSync"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ImportListSyncHistoryResource"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ImportListSyncHistoryResource"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ImportListSyncHistoryResource"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/indexer": {
       "get": {
         "tags": [
@@ -6697,22 +7158,6 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ManualImportUpdateResource"
-                }
-              }
-            },
-            "text/json": {
-              "schema": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ManualImportUpdateResource"
-                }
-              }
-            },
-            "application/*+json": {
               "schema": {
                 "type": "array",
                 "items": {
@@ -7559,6 +8004,44 @@
         }
       }
     },
+    "/api/v1/metadataprofile/genres": {
+      "get": {
+        "tags": [
+          "MetadataProfile"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/metadataprofile/languages": {
       "get": {
         "tags": [
@@ -7593,35 +8076,6 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MetadataProfileResource"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/config/metadataprovider": {
-      "get": {
-        "tags": [
-          "MetadataProviderConfig"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/MetadataProviderConfigResource"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MetadataProviderConfigResource"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MetadataProviderConfigResource"
                 }
               }
             }
@@ -7706,6 +8160,35 @@
             "description": "OK",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataProviderConfigResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config/metadataprovider": {
+      "get": {
+        "tags": [
+          "MetadataProviderConfig"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataProviderConfigResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataProviderConfigResource"
+                }
+              },
+              "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MetadataProviderConfigResource"
                 }
@@ -10961,6 +11444,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "mediaType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -11044,6 +11534,52 @@
                   "items": {
                     "$ref": "#/components/schemas/SeriesResource"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/series/narrators/matrix": {
+      "get": {
+        "tags": [
+          "Series"
+        ],
+        "parameters": [
+          {
+            "name": "title",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesNarratorMatrixResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesNarratorMatrixResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesNarratorMatrixResource"
                 }
               }
             }
@@ -12567,102 +13103,6 @@
           }
         }
       }
-    },
-    "/api/v1/book/{id}/editions/catalog": {
-      "get": {
-        "tags": [
-          "Book"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/EditionCatalogResource"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/EditionCatalogResource"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/EditionCatalogResource"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/series/narrators/matrix": {
-      "get": {
-        "tags": [
-          "Series"
-        ],
-        "parameters": [
-          {
-            "name": "title",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "authorId",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/SeriesNarratorMatrixResource"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SeriesNarratorMatrixResource"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SeriesNarratorMatrixResource"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -12731,16 +13171,16 @@
           "monitorAllBooksByAllAuthors": {
             "type": "boolean"
           },
-          "monitor": {
-            "type": "string",
-            "nullable": true
-          },
           "monitorExisting": {
             "type": "string",
             "nullable": true
           },
           "monitorFuture": {
             "type": "boolean",
+            "nullable": true
+          },
+          "monitor": {
+            "type": "string",
             "nullable": true
           },
           "audiobookMonitorExistingMode": {
@@ -12814,6 +13254,9 @@
             "format": "int32"
           },
           "searchForNewBook": {
+            "type": "boolean"
+          },
+          "asNewVariant": {
             "type": "boolean"
           }
         },
@@ -13093,6 +13536,259 @@
         },
         "additionalProperties": false
       },
+      "AuthorMediaMoveBatchPreview": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "nullable": true
+          },
+          "destinationRootPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "previewToken": {
+            "type": "string",
+            "nullable": true
+          },
+          "authorCount": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "mediaFileCount": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "sidecarFileCount": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "missingFileCount": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "totalSize": {
+            "type": "integer",
+            "format": "int64",
+            "readOnly": true
+          },
+          "requiredCopyBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "availableSpace": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "canMove": {
+            "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "authors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuthorMediaMovePreview"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AuthorMediaMoveBatchRequestResource": {
+        "type": "object",
+        "properties": {
+          "authorIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "format": {
+            "type": "string",
+            "nullable": true
+          },
+          "destinationRootPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "previewToken": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AuthorMediaMoveFile": {
+        "type": "object",
+        "properties": {
+          "fileType": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookFileId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "extraFileId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sourcePath": {
+            "type": "string",
+            "nullable": true
+          },
+          "destinationPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceExists": {
+            "type": "boolean"
+          },
+          "destinationExists": {
+            "type": "boolean"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AuthorMediaMovePreview": {
+        "type": "object",
+        "properties": {
+          "authorId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "authorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "format": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourcePath": {
+            "type": "string",
+            "nullable": true
+          },
+          "destinationPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "previewToken": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "requiredCopyBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "availableSpace": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "mediaFileCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sidecarFileCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "missingFileCount": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "alreadyAtDestinationCount": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "canMove": {
+            "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuthorMediaMoveFile"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AuthorMediaMoveRequestResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "format": {
+            "type": "string",
+            "nullable": true
+          },
+          "destinationPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "previewToken": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AuthorPathUpdateResource": {
         "type": "object",
         "properties": {
@@ -13291,6 +13987,14 @@
             "nullable": true
           },
           "folder": {
+            "type": "string",
+            "nullable": true
+          },
+          "audiobookPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "ebookPath": {
             "type": "string",
             "nullable": true
           },
@@ -13723,6 +14427,13 @@
             "type": "string",
             "nullable": true
           },
+          "isGraphicAudio": {
+            "type": "boolean"
+          },
+          "audioProductionType": {
+            "type": "string",
+            "nullable": true
+          },
           "tags": {
             "type": "object",
             "additionalProperties": {
@@ -13931,6 +14642,45 @@
         },
         "additionalProperties": false
       },
+      "BookRelatedFormatResource": {
+        "type": "object",
+        "properties": {
+          "bookId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mediaType": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "narrator": {
+            "type": "string",
+            "nullable": true
+          },
+          "disambiguation": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BookRelatedFormatsResource": {
+        "type": "object",
+        "properties": {
+          "formats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookRelatedFormatResource"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "BookResource": {
         "type": "object",
         "properties": {
@@ -14005,11 +14755,11 @@
             "type": "string",
             "nullable": true
           },
-          "additionalMetadataProviderId": {
+          "googleBooksId": {
             "type": "string",
             "nullable": true
           },
-          "googleBooksId": {
+          "additionalMetadataProviderId": {
             "type": "string",
             "nullable": true
           },
@@ -14176,45 +14926,6 @@
         },
         "additionalProperties": false
       },
-      "BookRelatedFormatResource": {
-        "type": "object",
-        "properties": {
-          "bookId": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "mediaType": {
-            "type": "string",
-            "nullable": true
-          },
-          "title": {
-            "type": "string",
-            "nullable": true
-          },
-          "narrator": {
-            "type": "string",
-            "nullable": true
-          },
-          "disambiguation": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "BookRelatedFormatsResource": {
-        "type": "object",
-        "properties": {
-          "formats": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BookRelatedFormatResource"
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
       "BookResourcePagingResource": {
         "type": "object",
         "properties": {
@@ -14347,6 +15058,10 @@
             "format": "int32"
           },
           "bookCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "availableBookCount": {
             "type": "integer",
             "format": "int32"
           },
@@ -14488,6 +15203,10 @@
             "nullable": true,
             "readOnly": true
           },
+          "requiresLibraryState": {
+            "type": "boolean",
+            "readOnly": true
+          },
           "isExclusive": {
             "type": "boolean",
             "readOnly": true
@@ -14497,6 +15216,10 @@
             "readOnly": true
           },
           "isLongRunning": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "leavesThreadForOtherCommands": {
             "type": "boolean",
             "readOnly": true
           },
@@ -14694,6 +15417,59 @@
         },
         "additionalProperties": false
       },
+      "ConvertBookResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "authorId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bookId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "editionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bookFileId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bookTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "path": {
+            "type": "string",
+            "nullable": true
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sourceQuality": {
+            "type": "string",
+            "nullable": true
+          },
+          "targetQuality": {
+            "type": "string",
+            "nullable": true
+          },
+          "canConvert": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CustomFilterResource": {
         "type": "object",
         "properties": {
@@ -14713,7 +15489,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "additionalProperties": {}
+              "additionalProperties": { }
             },
             "nullable": true
           }
@@ -15099,6 +15875,74 @@
         ],
         "type": "string"
       },
+      "EditionCatalogResource": {
+        "type": "object",
+        "properties": {
+          "editionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "foreignEditionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "format": {
+            "type": "string",
+            "nullable": true
+          },
+          "isEbook": {
+            "type": "boolean"
+          },
+          "narrators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "production": {
+            "type": "string",
+            "nullable": true
+          },
+          "abridged": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "publisher": {
+            "type": "string",
+            "nullable": true
+          },
+          "releaseDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "monitored": {
+            "type": "boolean"
+          },
+          "owned": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "EditionChapterResource": {
         "type": "object",
         "properties": {
@@ -15358,9 +16202,7 @@
             "type": "string",
             "nullable": true
           },
-          "value": {
-            "nullable": true
-          },
+          "value": { },
           "type": {
             "type": "string",
             "nullable": true
@@ -16027,11 +16869,85 @@
         },
         "additionalProperties": false
       },
+      "ImportListSyncHistoryResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "importListId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "importListName": {
+            "type": "string",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "durationMilliseconds": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "result": {
+            "type": "string",
+            "nullable": true
+          },
+          "failureStage": {
+            "type": "string",
+            "nullable": true
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "processedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "existingCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "changedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "excludedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unresolvedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "searchEligibleCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "providerStateCommitted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "ImportListType": {
         "enum": [
           "program",
           "goodreads",
-          "other"
+          "other",
+          "hardcover"
         ],
         "type": "string"
       },
@@ -16097,6 +17013,10 @@
             "format": "int32"
           },
           "rssSyncInterval": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "missingBookSearchInterval": {
             "type": "integer",
             "format": "int32"
           }
@@ -16688,6 +17608,9 @@
             },
             "nullable": true
           },
+          "matchProvenance": {
+            "$ref": "#/components/schemas/MatchProvenance"
+          },
           "tags": {
             "type": "object",
             "additionalProperties": {
@@ -17120,6 +18043,49 @@
         },
         "additionalProperties": false
       },
+      "MatrixBookResource": {
+        "type": "object",
+        "properties": {
+          "bookId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "narrators": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatrixNarratorResource"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MatrixNarratorResource": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "editionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "owned": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "MediaCover": {
         "type": "object",
         "properties": {
@@ -17480,6 +18446,10 @@
             "type": "integer",
             "format": "int32"
           },
+          "audibleMarketplace": {
+            "type": "string",
+            "nullable": true
+          },
           "writeAudioTags": {
             "$ref": "#/components/schemas/WriteAudioTagsType"
           },
@@ -17495,8 +18465,25 @@
           "embedMetadata": {
             "type": "boolean"
           },
-          "audibleMarketplace": {
+          "hardcoverAuth": {
             "type": "string",
+            "nullable": true
+          },
+          "hasHardcoverAuth": {
+            "type": "boolean"
+          },
+          "hardcoverAuthFromEnvironment": {
+            "type": "boolean"
+          },
+          "clearHardcoverAuth": {
+            "type": "boolean"
+          },
+          "enableHardcover": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "enableMetadataApi": {
+            "type": "boolean",
             "nullable": true
           },
           "enableGoogleBooks": {
@@ -17815,6 +18802,44 @@
           },
           "isSporadicNarrator": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NarratorCoverageResource": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "production": {
+            "type": "string",
+            "nullable": true
+          },
+          "coveredBookIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "missingBookIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "ownedBookIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -18395,6 +19420,10 @@
           },
           "searchForMissingBooks": {
             "type": "boolean"
+          },
+          "lastSelectedMediaType": {
+            "type": "string",
+            "nullable": true
           },
           "createdAt": {
             "type": "string",
@@ -19868,6 +20897,12 @@
           "isCalibreLibrary": {
             "type": "boolean"
           },
+          "reapCalibreDuplicates": {
+            "type": "boolean"
+          },
+          "autoPushCalibreMetadata": {
+            "type": "boolean"
+          },
           "host": {
             "type": "string",
             "nullable": true
@@ -20036,6 +21071,9 @@
             "type": "integer",
             "format": "int64",
             "nullable": true
+          },
+          "hasAssignedAuthors": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -20172,7 +21210,15 @@
             "nullable": true,
             "readOnly": true
           },
+          "requiresLibraryState": {
+            "type": "boolean",
+            "readOnly": true
+          },
           "isLongRunning": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "leavesThreadForOtherCommands": {
             "type": "boolean",
             "readOnly": true
           },
@@ -20276,6 +21322,9 @@
           "bookId": {
             "type": "integer",
             "format": "int32"
+          },
+          "isPrimary": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -20464,6 +21513,38 @@
         },
         "additionalProperties": false
       },
+      "SeriesNarratorMatrixResource": {
+        "type": "object",
+        "properties": {
+          "seriesId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "seriesTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalBooks": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "narrators": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NarratorCoverageResource"
+            },
+            "nullable": true
+          },
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatrixBookResource"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "SeriesNarratorPreferenceRequest": {
         "type": "object",
         "properties": {
@@ -20563,6 +21644,15 @@
           "primaryWorkCount": {
             "type": "integer",
             "format": "int32"
+          },
+          "seriesType": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentSeriesId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           },
           "mediaType": {
             "type": "string",
@@ -20855,6 +21945,9 @@
             "type": "boolean"
           },
           "editionCatalog": {
+            "type": "boolean"
+          },
+          "bookshelfLegacyIdentityMap": {
             "type": "boolean"
           }
         },
@@ -21418,187 +22511,6 @@
           "sync"
         ],
         "type": "string"
-      },
-      "EditionCatalogResource": {
-        "type": "object",
-        "properties": {
-          "editionId": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "foreignEditionId": {
-            "type": "string",
-            "nullable": true
-          },
-          "title": {
-            "type": "string",
-            "nullable": true
-          },
-          "language": {
-            "type": "string",
-            "nullable": true
-          },
-          "format": {
-            "type": "string",
-            "nullable": true
-          },
-          "isEbook": {
-            "type": "boolean"
-          },
-          "narrators": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "nullable": true
-          },
-          "production": {
-            "type": "string",
-            "nullable": true
-          },
-          "abridged": {
-            "type": "string",
-            "nullable": true
-          },
-          "durationSeconds": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "publisher": {
-            "type": "string",
-            "nullable": true
-          },
-          "releaseDate": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "imageUrl": {
-            "type": "string",
-            "nullable": true
-          },
-          "monitored": {
-            "type": "boolean"
-          },
-          "owned": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
-      },
-      "NarratorCoverageResource": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "production": {
-            "type": "string",
-            "nullable": true
-          },
-          "coveredBookIds": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "int32"
-            },
-            "nullable": true
-          },
-          "missingBookIds": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "int32"
-            },
-            "nullable": true
-          },
-          "ownedBookIds": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "int32"
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "MatrixNarratorResource": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "editionId": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "owned": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
-      },
-      "MatrixBookResource": {
-        "type": "object",
-        "properties": {
-          "bookId": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "title": {
-            "type": "string",
-            "nullable": true
-          },
-          "position": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "narrators": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MatrixNarratorResource"
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "SeriesNarratorMatrixResource": {
-        "type": "object",
-        "properties": {
-          "seriesId": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "seriesTitle": {
-            "type": "string",
-            "nullable": true
-          },
-          "totalBooks": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "narrators": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NarratorCoverageResource"
-            },
-            "nullable": true
-          },
-          "books": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MatrixBookResource"
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
       }
     },
     "securitySchemes": {
@@ -21618,10 +22530,10 @@
   },
   "security": [
     {
-      "X-Api-Key": []
+      "X-Api-Key": [ ]
     },
     {
-      "apikey": []
+      "apikey": [ ]
     }
   ],
   "tags": [
@@ -21645,6 +22557,9 @@
     },
     {
       "name": "AuthorLookup"
+    },
+    {
+      "name": "AuthorMediaMove"
     },
     {
       "name": "Backup"
@@ -21678,6 +22593,9 @@
     },
     {
       "name": "ConversionConfig"
+    },
+    {
+      "name": "ConvertBook"
     },
     {
       "name": "CustomFilter"
@@ -21729,6 +22647,9 @@
     },
     {
       "name": "ImportListExclusion"
+    },
+    {
+      "name": "ImportListSync"
     },
     {
       "name": "Indexer"

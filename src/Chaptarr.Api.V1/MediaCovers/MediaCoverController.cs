@@ -1,11 +1,15 @@
 using System.IO;
+using System.Linq;
+using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
+using Chaptarr.Http.Middleware;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.MediaCover;
 
 namespace Chaptarr.Api.V1.MediaCovers
@@ -16,11 +20,16 @@ namespace Chaptarr.Api.V1.MediaCovers
         private readonly IAppFolderInfo _appFolderInfo;
         private readonly IDiskProvider _diskProvider;
         private readonly IContentTypeProvider _mimeTypeProvider;
+        private readonly IBookshelfLegacyIdentityMapService _legacyIdentityMapService;
 
-        public MediaCoverController(IAppFolderInfo appFolderInfo, IDiskProvider diskProvider)
+        public MediaCoverController(
+            IAppFolderInfo appFolderInfo,
+            IDiskProvider diskProvider,
+            IBookshelfLegacyIdentityMapService legacyIdentityMapService = null)
         {
             _appFolderInfo = appFolderInfo;
             _diskProvider = diskProvider;
+            _legacyIdentityMapService = legacyIdentityMapService;
             _mimeTypeProvider = new FileExtensionContentTypeProvider();
         }
 
@@ -58,6 +67,18 @@ namespace Chaptarr.Api.V1.MediaCovers
             if (!MediaCoverRendition.IsSupportedImagePath(filename))
             {
                 return NotFound();
+            }
+
+            var mediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
+            var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(new[] { bookId }, mediaType);
+            if (resolvedBookIds != null)
+            {
+                if (!resolvedBookIds.Any())
+                {
+                    return NotFound();
+                }
+
+                bookId = resolvedBookIds[0];
             }
 
             var baseDir = Path.Combine(_appFolderInfo.GetAppDataPath(), "MediaCover", "Books", bookId.ToString());

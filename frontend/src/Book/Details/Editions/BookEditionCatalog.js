@@ -62,43 +62,43 @@ function abridgementLabel(abridged) {
   return abridged === 'unabridged' ? translate('EditionUnabridged') : null;
 }
 
-function BookEditionCatalog({ bookId }) {
-  const [state, setState] = useState({ bookId, isFetching: true, error: false, items: [] });
+function BookEditionCatalog({ bookId, mediaType }) {
+  const [state, setState] = useState({ bookId, mediaType, isFetching: true, error: false, items: [] });
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let isCurrent = true;
 
     const { request, abortRequest } = createAjaxRequest({
-      url: `/book/${bookId}/editions/catalog`,
+      url: `/book/${bookId}/editions/catalog${mediaType ? `?mediaType=${encodeURIComponent(mediaType)}` : ''}`,
       dataType: 'json'
     });
 
-    setState({ bookId, isFetching: true, error: false, items: [] });
+    setState({ bookId, mediaType, isFetching: true, error: false, items: [] });
     request.done((items) => {
       if (!isCurrent) {
         return;
       }
 
-      setState({ bookId, isFetching: false, error: false, items: items || [] });
+      setState({ bookId, mediaType, isFetching: false, error: false, items: items || [] });
     });
     request.fail((xhr) => {
       if (!isCurrent || xhr.aborted) {
         return;
       }
 
-      setState({ bookId, isFetching: false, error: true, items: [] });
+      setState({ bookId, mediaType, isFetching: false, error: true, items: [] });
     });
 
     return () => {
       isCurrent = false;
       abortRequest();
     };
-  }, [bookId, retryCount]);
+  }, [bookId, mediaType, retryCount]);
 
   const { isFetching, error, items } = state;
 
-  if (state.bookId !== bookId || isFetching) {
+  if (state.bookId !== bookId || state.mediaType !== mediaType || isFetching) {
     return <LoadingIndicator />;
   }
 
@@ -166,7 +166,8 @@ function BookEditionCatalog({ bookId }) {
 }
 
 BookEditionCatalog.propTypes = {
-  bookId: PropTypes.number.isRequired
+  bookId: PropTypes.number.isRequired,
+  mediaType: PropTypes.oneOf(['audiobook', 'ebook'])
 };
 
 export default BookEditionCatalog;

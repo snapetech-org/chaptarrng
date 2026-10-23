@@ -342,10 +342,11 @@ class BookDetailsConnector extends Component {
 
   populate = () => {
     const bookId = this.props.id;
+    const mediaType = this.props.mediaType;
 
-    this.props.fetchBookFiles({ bookId });
-    this.props.fetchEditions({ bookId });
-    this.props.fetchQueueDetails({ bookIds: [bookId] });
+    this.props.fetchBookFiles({ bookId, mediaType });
+    this.props.fetchEditions({ bookId, mediaType });
+    this.props.fetchQueueDetails({ bookIds: [bookId], mediaType });
     this.props.fetchNotifications();
     this.props.fetchRootFolders();
   };
@@ -364,6 +365,7 @@ class BookDetailsConnector extends Component {
   onMonitorTogglePress = (monitored) => {
     this.props.toggleBooksMonitored({
       bookIds: [this.props.id],
+      mediaType: this.props.mediaType,
       monitored
     });
   };
@@ -425,6 +427,7 @@ class BookDetailsConnector extends Component {
 
 BookDetailsConnector.propTypes = {
   id: PropTypes.number,
+  mediaType: PropTypes.oneOf(['audiobook', 'ebook']),
   bookRecord: PropTypes.object,
   fetchRootFolders: PropTypes.func.isRequired,
   anyReleaseOk: PropTypes.bool,

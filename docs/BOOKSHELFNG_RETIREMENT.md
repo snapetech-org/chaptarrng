@@ -953,7 +953,13 @@ authorized while these gates remain open. The remaining work is:
    verify normal startup and external clients against the converted library
    before enabling automatic aliases. Preview/apply/restore on two populated
    SQLite snapshots is recorded in the [migration guide](MIGRATE_FROM_BOOKSHELFNG.md#populated-sqlite-migration-and-restore-rehearsal-2026-10-21);
-   this does not validate each user-facing workflow or package channel.
+   this does not validate each user-facing workflow or package channel. Current
+   `main` now persists `BookshelfLegacyIdentityMap` rows for source author,
+   book, edition, and file IDs, including both targets of a media split, and
+   resolves old book IDs across format-scoped reads, book-scoped workflows, and
+   the legacy Bookshelf monitoring action.
+   Synthetic fixtures cover those mappings; representative converted-data and
+   external-client acceptance remain open.
 
 The conversion preview, source-side archive helper, synthetic conversion checks, and package templates are present. Source-only AppImage, Flatpak, Cloudron, Co-op Cloud, and catalog candidates preserve their legacy identities and data paths. The rebuilt local `.978` AppImage and Flatpak payloads have passed same-identity installed-channel update, custom-root path-preservation, and rollback rehearsals with public `.71` packages and synthetic schema-158 data. Representative-data acceptance and provider fulfillment, external-channel acceptance, an in-place deployment cutover, full feature parity, all legacy package publications, and a universal automatic update path are not established. See the
 [BookshelfNG operator guide](https://github.com/snapetech-org/bookshelfng/blob/main/docs/migrate-from-bookshelfng-to-chaptarrng.md)

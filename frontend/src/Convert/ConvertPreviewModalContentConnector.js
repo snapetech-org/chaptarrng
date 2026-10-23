@@ -29,12 +29,14 @@ class ConvertPreviewModalContentConnector extends Component {
   componentDidMount() {
     const {
       authorId,
-      bookId
+      bookId,
+      mediaType
     } = this.props;
 
     this.props.fetchConvertPreview({
       authorId,
-      bookId
+      bookId,
+      mediaType
     });
   }
 
@@ -44,10 +46,11 @@ class ConvertPreviewModalContentConnector extends Component {
   onRetryPress = () => {
     const {
       authorId,
-      bookId
+      bookId,
+      mediaType
     } = this.props;
 
-    this.props.fetchConvertPreview({ authorId, bookId });
+    this.props.fetchConvertPreview({ authorId, bookId, mediaType });
   };
 
   onConvertPress = (files) => {
@@ -78,6 +81,7 @@ class ConvertPreviewModalContentConnector extends Component {
 ConvertPreviewModalContentConnector.propTypes = {
   authorId: PropTypes.number.isRequired,
   bookId: PropTypes.number,
+  mediaType: PropTypes.oneOf(['audiobook', 'ebook']),
   fetchConvertPreview: PropTypes.func.isRequired,
   executeCommand: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired

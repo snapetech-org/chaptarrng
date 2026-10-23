@@ -625,6 +625,7 @@ class AuthorDetails extends Component {
                   <TabPanel>
                     <AuthorHistoryTable
                       authorId={id}
+                      mediaType={selectedMediaType}
                     />
                   </TabPanel>
 

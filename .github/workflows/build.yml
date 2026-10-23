@@ -242,7 +242,10 @@ jobs:
       run: yarn install --frozen-lockfile
 
     - name: Test Books list both-format filtering
-      run: node --test frontend/src/Book/Index/getBookIndexQuery.test.cjs
+      run: >-
+        node --test
+        frontend/src/Book/Index/getBookIndexQuery.test.cjs
+        frontend/src/Book/Index/BookIndex.test.cjs
 
     - name: Test book infinite-scroll id deduplication
       run: node --test frontend/src/Store/Reducers/bookInfiniteScrollReducer.test.cjs

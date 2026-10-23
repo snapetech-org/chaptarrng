@@ -435,6 +435,7 @@ class BookDetails extends Component {
                 <AuthorHistoryTable
                   authorId={author.id}
                   bookId={id}
+                  mediaType={mediaType}
                 />
               </TabPanel>
 
@@ -454,11 +455,12 @@ class BookDetails extends Component {
                 <BookFileEditorTable
                   authorId={author.id}
                   bookId={id}
+                  selectedMediaType={mediaType}
                 />
               </TabPanel>
 
               <TabPanel>
-                <BookEditionCatalog bookId={id} />
+                <BookEditionCatalog bookId={id} mediaType={mediaType} />
               </TabPanel>
 
               {
@@ -483,6 +485,7 @@ class BookDetails extends Component {
             isOpen={isRetagModalOpen}
             authorId={author.id}
             bookId={id}
+            mediaType={mediaType}
             onModalClose={this.onRetagModalClose}
           />
 
@@ -490,6 +493,7 @@ class BookDetails extends Component {
             isOpen={isConvertModalOpen}
             authorId={author.id}
             bookId={id}
+            mediaType={mediaType}
             onModalClose={this.onConvertModalClose}
           />
 

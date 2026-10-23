@@ -5,6 +5,7 @@ using System.IO.Abstractions;
 using System.Linq;
 using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
+using Chaptarr.Http.Middleware;
 using Chaptarr.Http.REST;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -42,6 +43,7 @@ namespace Chaptarr.Api.V1.BookFiles
         private readonly IMetadataTagService _metadataTagService;
         private readonly IAuthorService _authorService;
         private readonly IBookService _bookService;
+        private readonly IBookshelfLegacyIdentityMapService _bookshelfLegacyIdentityMapService;
 	        private readonly IUpgradableSpecification _upgradableSpecification;
 	        private readonly IRootFolderService _rootFolderService;
 	        private readonly Logger _logger;
@@ -58,7 +60,8 @@ namespace Chaptarr.Api.V1.BookFiles
                                IBookService bookService,
                                IUpgradableSpecification upgradableSpecification,
                                IRootFolderService rootFolderService,
-                               Logger logger)
+                               Logger logger,
+                               IBookshelfLegacyIdentityMapService bookshelfLegacyIdentityMapService = null)
             : base(signalRBroadcaster)
         {
             _mediaFileService = mediaFileService;
@@ -69,6 +72,7 @@ namespace Chaptarr.Api.V1.BookFiles
             _upgradableSpecification = upgradableSpecification;
             _rootFolderService = rootFolderService;
             _logger = logger;
+            _bookshelfLegacyIdentityMapService = bookshelfLegacyIdentityMapService;
         }
 
         private BookFileResource MapToResource(BookFile bookFile)
@@ -309,8 +313,12 @@ namespace Chaptarr.Api.V1.BookFiles
         [HttpGet]
         public List<BookFileResource> GetBookFiles(int? authorId, [FromQuery] List<int> bookFileIds, [FromQuery(Name = "bookId")] List<int> bookIds, bool? unmapped, string mediaType = null)
         {
+            mediaType ??= HttpContext?.GetReadarrFacadeContext()?.MediaType;
+            bookFileIds ??= new List<int>();
+            bookIds ??= new List<int>();
             _logger.DebugSafe($"[BOOKFILE-API] GetBookFiles called - authorId: {authorId}, bookIds: [{string.Join(",", bookIds)}], bookFileIds: [{string.Join(",", bookFileIds)}], unmapped: {unmapped}, mediaType: {mediaType}");
-            var normalizedMediaType = MediaTypeParameterParser.NormalizeOptional(mediaType);
+            var parsedMediaType = MediaTypeParameterParser.ParseOptional(mediaType);
+            var normalizedMediaType = parsedMediaType.HasValue ? MediaTypeParameterParser.ToApiValue(parsedMediaType.Value) : null;
             
             if (!authorId.HasValue && !bookFileIds.Any() && !bookIds.Any() && !unmapped.HasValue)
             {
@@ -341,9 +349,15 @@ namespace Chaptarr.Api.V1.BookFiles
             if (bookIds.Any())
             {
                 var result = new List<BookFileResource>();
-                foreach (var bookId in bookIds)
+                var resolvedBookIds = _bookshelfLegacyIdentityMapService?.ResolveBookIds(bookIds, parsedMediaType) ?? bookIds;
+                foreach (var bookId in resolvedBookIds)
                 {
                     var book = _bookService.GetBook(bookId);
+                    if (book == null || (parsedMediaType.HasValue && book.MediaType != parsedMediaType.Value))
+                    {
+                        continue;
+                    }
+
                     var bookAuthor = _authorService.GetAuthor(book.AuthorId);
                     var bookFiles = _mediaFileService.GetFilesByBook(book.Id);
                     _logger.Debug($"[BOOKFILE-API] Found {bookFiles.Count} files for bookId: {bookId} (Book: {book.Title} by {bookAuthor?.Name})");

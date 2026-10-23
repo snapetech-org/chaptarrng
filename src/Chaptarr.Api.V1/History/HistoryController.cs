@@ -26,18 +26,21 @@ namespace Chaptarr.Api.V1.History
         private readonly IUpgradableSpecification _upgradableSpecification;
         private readonly IFailedDownloadService _failedDownloadService;
         private readonly IAuthorService _authorService;
+        private readonly IBookshelfLegacyIdentityMapService _legacyIdentityMapService;
 
         public HistoryController(IHistoryService historyService,
                              ICustomFormatCalculationService formatCalculator,
                              IUpgradableSpecification upgradableSpecification,
                              IFailedDownloadService failedDownloadService,
-                             IAuthorService authorService)
+                             IAuthorService authorService,
+                             IBookshelfLegacyIdentityMapService legacyIdentityMapService = null)
         {
             _historyService = historyService;
             _formatCalculator = formatCalculator;
             _upgradableSpecification = upgradableSpecification;
             _failedDownloadService = failedDownloadService;
             _authorService = authorService;
+            _legacyIdentityMapService = legacyIdentityMapService;
         }
 
         protected HistoryResource MapToResource(EntityHistory model, bool includeAuthor, bool includeBook)
@@ -67,6 +70,8 @@ namespace Chaptarr.Api.V1.History
         [Produces("application/json")]
         public PagingResource<HistoryResource> GetHistory([FromQuery] PagingRequestResource paging, bool includeAuthor, bool includeBook, [FromQuery(Name = "eventType")] int[] eventTypes, int? bookId, string downloadId, [FromQuery] string mediaType = null)
         {
+            mediaType ??= HttpContext?.GetReadarrFacadeContext()?.MediaType;
+            var parsedMediaType = MediaTypeParameterParser.ParseOptional(mediaType);
             var pagingResource = new PagingResource<HistoryResource>(paging);
             var pagingSpec = pagingResource.MapToPagingSpec<HistoryResource, EntityHistory>("date", SortDirection.Descending);
 
@@ -77,7 +82,10 @@ namespace Chaptarr.Api.V1.History
 
             if (bookId.HasValue)
             {
-                pagingSpec.FilterExpressions.Add(h => h.BookId == bookId);
+                var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(new[] { bookId.Value }, parsedMediaType)
+                    ?? new List<int> { bookId.Value };
+                var bookIds = resolvedBookIds.ToArray();
+                pagingSpec.FilterExpressions.Add(h => bookIds.Contains(h.BookId));
             }
 
             if (downloadId.IsNotNullOrWhiteSpace())
@@ -85,7 +93,6 @@ namespace Chaptarr.Api.V1.History
                 pagingSpec.FilterExpressions.Add(h => h.DownloadId == downloadId);
             }
 
-            var parsedMediaType = MediaTypeParameterParser.ParseOptional(mediaType);
             return pagingSpec.ApplyToPage(spec => _historyService.Paged(spec, parsedMediaType), h => MapToResource(h, includeAuthor, includeBook));
         }
 
@@ -98,11 +105,19 @@ namespace Chaptarr.Api.V1.History
         [HttpGet("author")]
         public List<HistoryResource> GetAuthorHistory(int authorId, int? bookId = null, EntityHistoryEventType? eventType = null, bool includeAuthor = false, bool includeBook = false, [FromQuery] string mediaType = null)
         {
+            mediaType ??= HttpContext?.GetReadarrFacadeContext()?.MediaType;
             var author = _authorService.GetAuthor(authorId);
 
             if (bookId.HasValue)
             {
-                return FilterByMediaType(_historyService.GetByBook(bookId.Value, eventType), mediaType).Select(h =>
+                var parsedMediaType = MediaTypeParameterParser.ParseOptional(mediaType);
+                var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(new[] { bookId.Value }, parsedMediaType)
+                    ?? new List<int> { bookId.Value };
+                var history = resolvedBookIds
+                    .SelectMany(resolvedBookId => _historyService.GetByBook(resolvedBookId, eventType) ?? new List<EntityHistory>())
+                    .GroupBy(entry => entry.Id)
+                    .Select(group => group.First());
+                return FilterByMediaType(history, mediaType).Select(h =>
                 {
                     h.Author = author;
 

@@ -194,12 +194,12 @@ test('edition catalog ignores late results and clears the prior book while switc
     createHooks(harness)
   );
 
-  harness.render(BookEditionCatalog, { bookId: 101 });
-  assert.equal(requests[0].url, '/book/101/editions/catalog');
+  harness.render(BookEditionCatalog, { bookId: 101, mediaType: 'ebook' });
+  assert.equal(requests[0].url, '/book/101/editions/catalog?mediaType=ebook');
 
-  const nextBookView = harness.render(BookEditionCatalog, { bookId: 202 });
+  const nextBookView = harness.render(BookEditionCatalog, { bookId: 202, mediaType: 'audiobook' });
   assert.equal(nextBookView.type, 'LoadingIndicator');
-  assert.equal(requests[1].url, '/book/202/editions/catalog');
+  assert.equal(requests[1].url, '/book/202/editions/catalog?mediaType=audiobook');
 
   requests[0].resolve([{ editionId: 101, title: 'Old edition' }]);
   assert.equal(harness.states[0].items.length, 0);

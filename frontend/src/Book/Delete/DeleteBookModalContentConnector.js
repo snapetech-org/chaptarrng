@@ -126,6 +126,7 @@ class DeleteBookModalContentConnector extends Component {
   onDeletePress = (deleteFiles, addImportListExclusion, applyToBothFormats) => {
     this.props.deleteBook({
       id: this.props.bookId,
+      mediaType: this.props.mediaType,
       deleteFiles,
       addImportListExclusion,
       applyToBothFormats
@@ -155,6 +156,7 @@ class DeleteBookModalContentConnector extends Component {
 
 DeleteBookModalContentConnector.propTypes = {
   bookId: PropTypes.number.isRequired,
+  mediaType: PropTypes.oneOf(['audiobook', 'ebook']),
   authorId: PropTypes.number.isRequired,
   push: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired,

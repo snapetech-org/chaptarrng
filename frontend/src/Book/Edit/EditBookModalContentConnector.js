@@ -41,6 +41,7 @@ function createMapStateToProps() {
         title: book.title,
         authorName: author.authorName,
         bookType: book.bookType,
+        mediaType: book.mediaType,
         statistics: book.statistics,
         isFetching,
         isPopulated,
@@ -89,7 +90,7 @@ class EditBookModalContentConnector extends Component {
   };
 
   onRetryPress = () => {
-    this.props.dispatchFetchEditions({ bookId: this.props.bookId });
+    this.props.dispatchFetchEditions({ bookId: this.props.bookId, mediaType: this.props.mediaType });
   };
 
   //
@@ -109,6 +110,7 @@ class EditBookModalContentConnector extends Component {
 
 EditBookModalContentConnector.propTypes = {
   bookId: PropTypes.number,
+  mediaType: PropTypes.oneOf(['audiobook', 'ebook']),
   isSaving: PropTypes.bool.isRequired,
   saveError: PropTypes.object,
   dispatchSetBookValue: PropTypes.func.isRequired,

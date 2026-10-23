@@ -209,6 +209,27 @@ test('paged mass search keeps confirmation open until the full ID list is ready'
   assert.deepEqual(searchedIds, [[10, 11, 12]]);
 });
 
+test('bulk book edits keep a single selected format scoped when the library view shows both formats', () => {
+  const savedPayloads = [];
+  const bookIndex = makeBookIndex({
+    items: [
+      { id: 30, mediaType: 'audiobook' },
+      { id: 31, mediaType: 'ebook' }
+    ],
+    selectedMediaType: 'both',
+    onSaveSelected: (payload) => savedPayloads.push(payload)
+  });
+  bookIndex.state.selectedState = { 30: true };
+
+  bookIndex.onSaveSelected({ monitored: true });
+
+  assert.equal(savedPayloads.length, 1);
+  assert.equal(savedPayloads[0].bookIds.length, 1);
+  assert.equal(savedPayloads[0].bookIds[0], 30);
+  assert.equal(savedPayloads[0].monitored, true);
+  assert.equal(savedPayloads[0].mediaType, 'audiobook');
+});
+
 test('paged mass search failure displays provider error and retries before starting search', async() => {
   let fetchCount = 0;
   const searchedIds = [];

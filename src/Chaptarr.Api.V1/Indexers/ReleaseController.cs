@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
+using Chaptarr.Http.Middleware;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using NLog;
@@ -35,6 +37,7 @@ namespace Chaptarr.Api.V1.Indexers
         private readonly IBookService _bookService;
         private readonly IParsingService _parsingService;
         private readonly IIndexerFactory _indexerFactory;
+        private readonly IBookshelfLegacyIdentityMapService _bookshelfLegacyIdentityMapService;
         private readonly Logger _logger;
 
         private readonly ICached<DownloadDecision> _downloadDecisionCache;
@@ -49,7 +52,8 @@ namespace Chaptarr.Api.V1.Indexers
                              IParsingService parsingService,
                              IIndexerFactory indexerFactory,
                              ICacheManager cacheManager,
-                             Logger logger)
+                             Logger logger,
+                             IBookshelfLegacyIdentityMapService bookshelfLegacyIdentityMapService = null)
         {
             _rssFetcherAndParser = rssFetcherAndParser;
             _releaseSearchService = releaseSearchService;
@@ -60,6 +64,7 @@ namespace Chaptarr.Api.V1.Indexers
             _bookService = bookService;
             _parsingService = parsingService;
             _indexerFactory = indexerFactory;
+            _bookshelfLegacyIdentityMapService = bookshelfLegacyIdentityMapService;
             _logger = logger;
 
             PostValidator.RuleFor(s => s.IndexerId).ValidId();
@@ -90,7 +95,11 @@ namespace Chaptarr.Api.V1.Indexers
                 {
                     if (release.BookId.HasValue)
                     {
-                        var book = _bookService.GetBook(release.BookId.Value);
+                        var book = GetBookByCompatibleId(release.BookId.Value);
+                        if (book == null)
+                        {
+                            throw new NzbDroneClientException(HttpStatusCode.NotFound, "Unable to find the requested book");
+                        }
 
                         remoteBook.Author = _authorService.GetAuthor(book.AuthorId);
                         remoteBook.Books = new List<Book> { book };
@@ -119,7 +128,11 @@ namespace Chaptarr.Api.V1.Indexers
 
                     if (books.Empty() && release.BookId.HasValue)
                     {
-                        var book = _bookService.GetBook(release.BookId.Value);
+                        var book = GetBookByCompatibleId(release.BookId.Value);
+                        if (book == null)
+                        {
+                            throw new NzbDroneClientException(HttpStatusCode.NotFound, "Unable to find the requested book");
+                        }
 
                         books = new List<Book> { book };
                     }
@@ -227,11 +240,15 @@ namespace Chaptarr.Api.V1.Indexers
         {
             try
             {
-                var book = _bookService.GetBook(bookId);
+                var book = GetBookByCompatibleId(bookId);
+                if (book == null)
+                {
+                    throw new NzbDroneClientException(HttpStatusCode.NotFound, "Unable to find the requested book");
+                }
                 var author = _authorService.GetAuthor(book.AuthorId);
 
                 // Start indexer search
-                var indexerSearchTask = _releaseSearchService.BookSearch(bookId, true, true, true);
+                var indexerSearchTask = _releaseSearchService.BookSearch(book.Id, true, true, true);
 
                 // Wait for indexer search to complete
                 var decisions = await indexerSearchTask;
@@ -641,6 +658,20 @@ namespace Chaptarr.Api.V1.Indexers
         private string GetCacheKey(ReleaseResource resource)
         {
             return string.Concat(resource.IndexerId, "_", resource.Guid);
+        }
+
+        private Book GetBookByCompatibleId(int bookId)
+        {
+            var facadeMediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
+            var resolvedBookIds = _bookshelfLegacyIdentityMapService?.ResolveBookIds(new[] { bookId }, facadeMediaType)
+                ?? new List<int> { bookId };
+            if (resolvedBookIds.Count == 0)
+            {
+                return null;
+            }
+
+            var resolvedBookId = resolvedBookIds[0];
+            return _bookService.GetBook(resolvedBookId);
         }
 
         private SiblingToggleInfo BuildSiblingToggleInfo(Book book, NzbDrone.Core.Books.Author author)

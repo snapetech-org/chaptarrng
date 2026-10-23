@@ -1224,6 +1224,10 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 31 AND MediaType = 1 AND AudiobookMonitored = 0 AND EbookMonitored = 1 AND ForeignEditionId = 'ol:OL123M';"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND Monitored = 1;"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 41 AND BookId = 31 AND Monitored = 1;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookshelfLegacyIdentityMap WHERE Source = 'BookshelfNG' AND EntityType = 'Author' AND SourceId = 20 AND TargetId = 20;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookshelfLegacyIdentityMap WHERE Source = 'BookshelfNG' AND EntityType = 'Book' AND SourceId = 30 AND ((TargetId = 30 AND MediaType = 0) OR (TargetId = 31 AND MediaType = 1));"), Is.EqualTo(2));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookshelfLegacyIdentityMap WHERE Source = 'BookshelfNG' AND EntityType = 'Edition' AND ((SourceId = 40 AND TargetId = 40 AND MediaType = 0) OR (SourceId = 41 AND TargetId = 41 AND MediaType = 1));"), Is.EqualTo(2));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookshelfLegacyIdentityMap WHERE Source = 'BookshelfNG' AND EntityType = 'BookFile' AND ((SourceId = 50 AND TargetId = 50 AND MediaType = 0) OR (SourceId = 51 AND TargetId = 51 AND MediaType = 1));"), Is.EqualTo(2));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
             });

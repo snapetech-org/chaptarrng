@@ -50,6 +50,14 @@ if [[ "$ready" != "yes" ]]; then
   exit 1
 fi
 
+# The PostgreSQL fixtures create and restore disposable schemas in the configured
+# database and verify that their source database is idle before taking a dump.
+# Stop the startup-smoke process before those checks so its connection pool does
+# not look like an external client holding the source database open.
+kill "$app_pid" >/dev/null 2>&1 || true
+wait "$app_pid" >/dev/null 2>&1 || true
+app_pid=""
+
 mkdir -p "$test_results_directory"
 dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj \
   --configuration Release --no-restore --no-build --verbosity normal \

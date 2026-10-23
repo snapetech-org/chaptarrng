@@ -461,13 +461,22 @@ class BookIndex extends Component {
   };
 
   onSaveSelected = (changes) => {
+    const selectedIds = new Set(this.getSelectedIds());
+    const selectedMediaTypes = new Set(
+      (this.props.items || [])
+        .filter((book) => selectedIds.has(book.id))
+        .map((book) => book.mediaType)
+        .filter((value) => value === 'audiobook' || value === 'ebook')
+    );
     const payload = {
-      bookIds: this.getSelectedIds(),
+      bookIds: Array.from(selectedIds),
       ...changes
     };
 
     if (this.props.selectedMediaType !== 'both') {
       payload.mediaType = this.props.selectedMediaType;
+    } else if (selectedMediaTypes.size === 1) {
+      payload.mediaType = Array.from(selectedMediaTypes)[0];
     }
 
     this.props.onSaveSelected(payload);

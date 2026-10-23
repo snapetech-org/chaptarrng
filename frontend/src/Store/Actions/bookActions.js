@@ -11,6 +11,7 @@ import createAjaxRequest from 'Utilities/createAjaxRequest';
 import dateFilterPredicate from 'Utilities/Date/dateFilterPredicate';
 import dayjs from 'Utilities/Date/dayjsSetup';
 import coerceMonitoredBoolean from 'Utilities/Monitoring/coerceMonitoredBoolean';
+import getSectionState from 'Utilities/State/getSectionState';
 import translate from 'Utilities/String/translate';
 import { removeItem, set, update, updateItem } from './baseActions';
 import createBookMonitoringFailureAction from './createBookMonitoringFailureAction';
@@ -693,13 +694,17 @@ export const actionHandlers = handleThunks({
     const {
       bookId,
       bookEntity = bookEntities.BOOKS,
-      monitored
+      monitored,
+      mediaType
     } = payload;
 
     // Defensive: API expects a boolean, but UI can sometimes pass 0/1/2
     const monitoredBool = coerceMonitoredBoolean(monitored);
 
     const bookSection = last(bookEntity.split('.'));
+    const bookState = getSectionState(getState(), bookEntity, true);
+    const selectedBook = bookState?.items?.find((book) => book.id === bookId);
+    const effectiveMediaType = mediaType || selectedBook?.mediaType;
 
     dispatch(updateItem({
       id: bookId,
@@ -708,7 +713,7 @@ export const actionHandlers = handleThunks({
     }));
 
     const promise = createAjaxRequest({
-      url: '/book/monitor',
+      url: effectiveMediaType ? `/book/monitor?mediaType=${encodeURIComponent(effectiveMediaType)}` : '/book/monitor',
       method: 'PUT',
       data: JSON.stringify({ bookIds: [bookId], monitored: monitoredBool }),
       dataType: 'json'
@@ -768,6 +773,15 @@ export const actionHandlers = handleThunks({
 
     // Defensive: API expects a boolean, but UI can sometimes pass 0/1/2
     const monitoredBool = coerceMonitoredBoolean(monitored);
+    const bookState = getSectionState(getState(), bookEntity, true);
+    const selectedIds = new Set(bookIds);
+    const selectedMediaTypes = new Set(
+      (bookState?.items || [])
+        .filter((book) => selectedIds.has(book.id))
+        .map((book) => book.mediaType)
+        .filter((value) => value === 'audiobook' || value === 'ebook')
+    );
+    const effectiveMediaType = mediaType || (selectedMediaTypes.size === 1 ? Array.from(selectedMediaTypes)[0] : null);
 
     dispatch(batchActions(
       bookIds.map((bookId) => {
@@ -780,7 +794,7 @@ export const actionHandlers = handleThunks({
     ));
 
     const promise = createAjaxRequest({
-      url: '/book/monitor',
+      url: effectiveMediaType ? `/book/monitor?mediaType=${encodeURIComponent(effectiveMediaType)}` : '/book/monitor',
       method: 'PUT',
       data: JSON.stringify({ bookIds, monitored: monitoredBool }),
       dataType: 'json'

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
+using Chaptarr.Http.Middleware;
 using Chaptarr.Http.REST;
 using Microsoft.AspNetCore.Mvc;
 using NLog;
@@ -29,6 +30,7 @@ namespace Chaptarr.Api.V1.ManualImport
         private readonly IManualImportService _manualImportService;
         private readonly IMediaFileService _mediaFileService;
         private readonly IRootFolderService _rootFolderService;
+        private readonly IBookshelfLegacyIdentityMapService _legacyIdentityMapService;
         private readonly Logger _logger;
 
         public ManualImportController(IManualImportService manualImportService,
@@ -37,7 +39,8 @@ namespace Chaptarr.Api.V1.ManualImport
                                   IBookService bookService,
                                   IMediaFileService mediaFileService,
                                   IRootFolderService rootFolderService,
-                                  Logger logger)
+                                  Logger logger,
+                                  IBookshelfLegacyIdentityMapService legacyIdentityMapService = null)
         {
             _authorService = authorService;
             _bookService = bookService;
@@ -45,6 +48,7 @@ namespace Chaptarr.Api.V1.ManualImport
             _manualImportService = manualImportService;
             _mediaFileService = mediaFileService;
             _rootFolderService = rootFolderService;
+            _legacyIdentityMapService = legacyIdentityMapService;
             _logger = logger;
         }
 
@@ -171,10 +175,14 @@ namespace Chaptarr.Api.V1.ManualImport
         private List<ManualImportResource> UpdateImportItems(List<ManualImportUpdateResource> resources)
         {
             var items = new List<ManualImportItem>();
+            var mediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
             foreach (var resource in resources)
             {
                 var author = resource.AuthorId.HasValue ? _authorService.GetAuthor(resource.AuthorId.Value) : null;
-                var book = resource.BookId.HasValue ? _bookService.GetBook(resource.BookId.Value) : null;
+                var resolvedBookIds = resource.BookId.HasValue
+                    ? _legacyIdentityMapService?.ResolveBookIds(new[] { resource.BookId.Value }, mediaType) ?? new List<int> { resource.BookId.Value }
+                    : new List<int>();
+                var book = resolvedBookIds.Count > 0 ? _bookService.GetBook(resolvedBookIds[0]) : null;
                 var edition = ResolveLocalEdition(resource.EditionId, book);
 
                 items.Add(new ManualImportItem

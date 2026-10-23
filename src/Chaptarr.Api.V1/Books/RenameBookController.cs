@@ -1,7 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
 using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
+using Chaptarr.Http.Middleware;
 using Microsoft.AspNetCore.Mvc;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.MediaFiles;
 
 namespace Chaptarr.Api.V1.Books
@@ -10,10 +13,14 @@ namespace Chaptarr.Api.V1.Books
     public class RenameBookController : Controller
     {
         private readonly IRenameBookFileService _renameBookFileService;
+        private readonly IBookshelfLegacyIdentityMapService _legacyIdentityMapService;
 
-        public RenameBookController(IRenameBookFileService renameBookFileService)
+        public RenameBookController(
+            IRenameBookFileService renameBookFileService,
+            IBookshelfLegacyIdentityMapService legacyIdentityMapService = null)
         {
             _renameBookFileService = renameBookFileService;
+            _legacyIdentityMapService = legacyIdentityMapService;
         }
 
         [HttpGet]
@@ -21,6 +28,7 @@ namespace Chaptarr.Api.V1.Books
         [ProducesResponseType(typeof(ApiErrorResource), 400)]
         public ActionResult<List<RenameBookResource>> GetBookFiles(int authorId, int? bookId, string mediaType = null, bool moveToCanonicalAuthorFolder = false)
         {
+            mediaType ??= HttpContext?.GetReadarrFacadeContext()?.MediaType;
             if (bookId.HasValue)
             {
                 if (moveToCanonicalAuthorFolder)
@@ -29,6 +37,19 @@ namespace Chaptarr.Api.V1.Books
                     {
                         Message = "moveToCanonicalAuthorFolder is only supported for author-level previews; omit bookId."
                     });
+                }
+
+                var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(
+                    new[] { bookId.Value },
+                    MediaTypeParameterParser.ParseOptional(mediaType));
+                if (resolvedBookIds != null)
+                {
+                    if (!resolvedBookIds.Any())
+                    {
+                        return NotFound();
+                    }
+
+                    bookId = resolvedBookIds[0];
                 }
 
                 return _renameBookFileService.GetRenamePreviews(authorId, bookId.Value).ToResource();

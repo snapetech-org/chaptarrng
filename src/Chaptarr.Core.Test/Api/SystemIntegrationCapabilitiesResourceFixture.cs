@@ -27,6 +27,7 @@ namespace Chaptarr.Core.Test.Api
             Assert.That(resource.Features.WantedEditionVariants, Is.True);
             Assert.That(resource.Features.SeriesNarratorMatrix, Is.True);
             Assert.That(resource.Features.EditionCatalog, Is.True);
+            Assert.That(resource.Features.BookshelfLegacyIdentityMap, Is.True);
         }
     }
 }
