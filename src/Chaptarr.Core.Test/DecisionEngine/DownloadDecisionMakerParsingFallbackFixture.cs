@@ -255,6 +255,58 @@ namespace Chaptarr.Core.Test.DecisionEngine
             Assert.That(specification.SeenSource, Is.EqualTo(ReleaseSourceType.InteractiveSearch));
         }
 
+        [TestCase(false, ReleaseSourceType.Rss)]
+        [TestCase(true, ReleaseSourceType.ReleasePush)]
+        public void should_preserve_rss_and_release_push_source_before_decision_specifications_run(
+            bool pushedRelease,
+            ReleaseSourceType expectedSource)
+        {
+            var author = new Author { Id = 7, Name = "Example Author" };
+            var book = new Book
+            {
+                Id = 11,
+                Author = author,
+                AuthorId = author.Id,
+                Title = "Example Book",
+                MediaType = BookMediaType.Audiobook
+            };
+            var parsingService = new TestParsingService
+            {
+                MappedBooks = new List<Book> { book }
+            };
+            var ftsRepository = new TestEditionFtsRepository();
+            ftsRepository.Recalls.Add(new BookFtsMatch
+            {
+                BookId = book.Id,
+                AuthorId = author.Id,
+                AuthorName = author.Name,
+                BookTitle = book.Title
+            });
+            var specification = new RecordingReleaseSourceSpecification();
+            var decisionMaker = new DownloadDecisionMaker(new List<IDecisionEngineSpecification> { specification },
+                                                          parsingService,
+                                                          ftsRepository,
+                                                          new NoOpCustomFormatCalculationService(),
+                                                          new NoOpRemoteBookAggregationService(),
+                                                          new NoOpReleaseNarratorMetadataEnricher(),
+                                                          (IConfigService)null,
+                                                          LogManager.GetCurrentClassLogger());
+
+            decisionMaker.GetRssDecision(new List<ReleaseInfo>
+            {
+                new ReleaseInfo
+                {
+                    Title = "Example Author - Example Book",
+                    Author = author.Name,
+                    Indexer = pushedRelease ? null : "Test Indexer",
+                    Categories = new List<int>(),
+                    PublishDate = DateTime.UtcNow
+                }
+            }, pushedRelease);
+
+            Assert.That(specification.SeenSource, Is.EqualTo(expectedSource));
+        }
+
         [Test]
         public void should_fallback_to_search_criteria_when_title_parse_yields_no_author()
         {

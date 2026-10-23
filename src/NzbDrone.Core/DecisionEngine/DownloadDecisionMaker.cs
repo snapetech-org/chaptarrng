@@ -58,7 +58,7 @@ namespace NzbDrone.Core.DecisionEngine
 
         public List<DownloadDecision> GetRssDecision(List<ReleaseInfo> reports, bool pushedRelease = false)
         {
-            var decisions = GetBookDecisions(reports).ToList();
+            var decisions = GetBookDecisions(reports, pushedRelease).ToList();
 
             if (_logger.IsDebugEnabled)
             {
@@ -830,8 +830,8 @@ namespace NzbDrone.Core.DecisionEngine
 
         private static bool IsMAMIndexer(string indexerName)
         {
-            return indexerName.Contains("MyAnonamouse", StringComparison.OrdinalIgnoreCase) ||
-                   indexerName.Contains("MAM", StringComparison.OrdinalIgnoreCase);
+            return indexerName?.Contains("MyAnonamouse", StringComparison.OrdinalIgnoreCase) == true ||
+                   indexerName?.Contains("MAM", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private void EnrichReleaseNarratorMetadata(List<ReleaseInfo> reports, SearchCriteriaBase searchCriteria)
