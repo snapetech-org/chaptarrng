@@ -190,14 +190,17 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("install --with-deps chromium", source)
         self.assertNotIn("runner.environment", source)
 
-    def test_frontend_build_runs_after_validation_receipts_are_exported(self) -> None:
+    def test_frontend_build_runs_after_tests_and_before_publish(self) -> None:
         build = job_block(WORKFLOW.read_text(encoding="utf-8"), "build")
 
-        receipt_upload = build.index("- name: Upload validation receipt")
+        tests = build.index("- name: Test\n")
         frontend_build = build.index("- name: Build frontend")
         publish = build.index("- name: Publish")
 
-        self.assertLess(receipt_upload, frontend_build)
+        self.assertIn(
+            "dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj",
+            build[tests:frontend_build],
+        )
         self.assertLess(frontend_build, publish)
 
 
