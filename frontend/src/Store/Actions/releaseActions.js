@@ -346,7 +346,7 @@ export const actionHandlers = handleThunks({
     }));
 
     const { request, abortRequest } = createAjaxRequest({
-      url: payload.id == null ? '/release' : `/release/${payload.id}`,
+      url: payload.id == null ? '/release/search' : `/release/${payload.id}`,
       data: enhancedPayload,
       traditional: true
     });

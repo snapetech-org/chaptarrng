@@ -7,6 +7,7 @@ using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
 using Chaptarr.Http.Middleware;
 using FluentValidation;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NLog;
 using NzbDrone.Common.Cache;
@@ -211,11 +212,12 @@ namespace Chaptarr.Api.V1.Indexers
         }
 
         [HttpGet]
-        public async Task<object> GetReleases(int? bookId, int? authorId, bool bypassFilters = false, int? seriesId = null)
+        [ProducesResponseType(typeof(List<ReleaseResource>), StatusCodes.Status200OK)]
+        public async Task<List<ReleaseResource>> GetReleases(int? bookId, int? authorId, int? seriesId)
         {
             if (bookId.HasValue)
             {
-                return await GetBookReleases(int.Parse(Request.Query["bookId"]), bypassFilters);
+                return await GetLegacyBookReleases(bookId.Value);
             }
 
             if (seriesId.HasValue)
@@ -225,18 +227,107 @@ namespace Chaptarr.Api.V1.Indexers
                     throw new NzbDroneClientException(HttpStatusCode.BadRequest, "An authorId is required when searching for a series pack");
                 }
 
-                return await GetSeriesReleases(seriesId.Value, authorId.Value, bypassFilters);
+                return await GetLegacySeriesReleases(seriesId.Value, authorId.Value);
             }
 
             if (authorId.HasValue)
             {
-                return await GetAuthorReleases(int.Parse(Request.Query["authorId"]), bypassFilters);
+                return await GetLegacyAuthorReleases(authorId.Value);
             }
 
             return await GetRss();
         }
 
-        private async Task<object> GetBookReleases(int bookId, bool bypassFilters = false)
+        [HttpGet("search")]
+        [ProducesResponseType(typeof(ReleaseSearchResponse), StatusCodes.Status200OK)]
+        public async Task<ActionResult<ReleaseSearchResponse>> GetInteractiveReleases(
+            int? bookId,
+            int? authorId,
+            bool bypassFilters = false,
+            int? seriesId = null)
+        {
+            if (bookId.HasValue)
+            {
+                return Ok(await GetBookReleases(bookId.Value, bypassFilters));
+            }
+
+            if (seriesId.HasValue)
+            {
+                if (!authorId.HasValue)
+                {
+                    throw new NzbDroneClientException(HttpStatusCode.BadRequest, "An authorId is required when searching for a series pack");
+                }
+
+                return Ok(await GetSeriesReleases(seriesId.Value, authorId.Value, bypassFilters));
+            }
+
+            if (authorId.HasValue)
+            {
+                return Ok(await GetAuthorReleases(authorId.Value, bypassFilters));
+            }
+
+            throw new NzbDroneClientException(HttpStatusCode.BadRequest, "A bookId, authorId, or seriesId is required for interactive search");
+        }
+
+        private async Task<List<ReleaseResource>> GetLegacyBookReleases(int bookId)
+        {
+            var facadeMediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
+            var targetBookIds = _bookshelfLegacyIdentityMapService?.ResolveBookIds(new[] { bookId }, facadeMediaType)
+                ?? new List<int> { bookId };
+            var books = targetBookIds.Select(targetBookId => _bookService.GetBook(targetBookId)).ToList();
+            if (books.Count == 0 || books.Any(book => book == null))
+            {
+                throw new NzbDroneClientException(HttpStatusCode.NotFound, "Unable to find the requested book");
+            }
+
+            try
+            {
+                var decisions = new List<DownloadDecision>();
+                foreach (var book in books)
+                {
+                    decisions.AddRange(await _releaseSearchService.BookSearch(book.Id, true, true, true));
+                }
+
+                return MapDecisions(_prioritizeDownloadDecision.PrioritizeDecisions(decisions));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Book search failed");
+                throw new NzbDroneClientException(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
+        private async Task<List<ReleaseResource>> GetLegacyAuthorReleases(int authorId)
+        {
+            try
+            {
+                var mapping = _bookshelfLegacyIdentityMapService?.GetMappings("Author", new[] { authorId }).FirstOrDefault();
+                var targetAuthorId = mapping?.TargetId ?? authorId;
+                var decisions = await _releaseSearchService.AuthorSearch(targetAuthorId, false, true, true);
+                return MapDecisions(_prioritizeDownloadDecision.PrioritizeDecisions(decisions));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Author search failed");
+                throw new NzbDroneClientException(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
+        private async Task<List<ReleaseResource>> GetLegacySeriesReleases(int seriesId, int authorId)
+        {
+            try
+            {
+                var decisions = await _releaseSearchService.SeriesSearch(seriesId, authorId, true, true);
+                return MapDecisions(_prioritizeDownloadDecision.PrioritizeDecisions(decisions));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Series pack search failed");
+                throw new NzbDroneClientException(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
+        private async Task<ReleaseSearchResponse> GetBookReleases(int bookId, bool bypassFilters = false)
         {
             try
             {
@@ -289,7 +380,7 @@ namespace Chaptarr.Api.V1.Indexers
             }
         }
 
-        private async Task<object> GetAuthorReleases(int authorId, bool bypassFilters = false)
+        private async Task<ReleaseSearchResponse> GetAuthorReleases(int authorId, bool bypassFilters = false)
         {
             try
             {
@@ -323,7 +414,7 @@ namespace Chaptarr.Api.V1.Indexers
             }
         }
 
-        private async Task<object> GetSeriesReleases(int seriesId, int authorId, bool bypassFilters = false)
+        private async Task<ReleaseSearchResponse> GetSeriesReleases(int seriesId, int authorId, bool bypassFilters = false)
         {
             try
             {

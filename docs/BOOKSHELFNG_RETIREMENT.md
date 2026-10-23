@@ -26,6 +26,21 @@ workflow-approval request because repository-admin rights are required, so
 hosted validation remains open. The public `v0.9.977` release is unchanged;
 no release or cutover was published.
 
+**BookshelfNG API contract and release-search compatibility — 2026-10-23:**
+ChaptarrNG restores the legacy `/api/v1/release` array response and moves the
+interactive search wrapper to `/api/v1/release/search`; the frontend now calls
+the wrapper route. Legacy book IDs mapped to both ebook and audiobook rows are
+searched across both rows unless the request has a format-scoped facade
+context. Generated OpenAPI now documents encrypted backup passphrase and
+multipart restore requirements, encrypted download responses, and author/book
+creation response contracts. The Core suite passed 4,734 tests with 25 skips;
+the six backup-controller fixtures, including a bound multipart file, passed.
+The frontend suite passed 126 tests, typecheck passed, and the changed frontend
+files passed ESLint. This closes these identified source/API-contract gaps; it
+does not establish complete feature parity, representative-data acceptance,
+hosted exact-head validation, provider fulfillment, or installed-channel
+handoff. No release or cutover was published.
+
 **Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
 ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through
 `Dockerfile.build` and passed both checked-in smoke scripts against SeerrNG

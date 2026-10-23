@@ -164,6 +164,7 @@ namespace NzbDrone.Host
                     }
                 });
                 c.EnableAnnotations();
+                c.OperationFilter<BookshelfBackupOpenApiOperationFilter>();
 
                 var apiKeyHeader = new OpenApiSecurityScheme
                 {

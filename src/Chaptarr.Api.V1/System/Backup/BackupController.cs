@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using Chaptarr.Http;
 using Chaptarr.Http.REST;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Common.Crypto;
 using NzbDrone.Common.Disk;
@@ -12,6 +13,7 @@ using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Backup;
 using NzbDrone.Http.REST.Attributes;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Chaptarr.Api.V1.System.Backup
 {
@@ -100,7 +102,13 @@ namespace Chaptarr.Api.V1.System.Backup
         }
 
         [HttpPost("encrypted")]
-        public IActionResult CreateEncryptedBackup([FromHeader(Name = BookshelfEncryptedBackupService.PassphraseHeader)] string passphrase)
+        [Produces("application/octet-stream")]
+        [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
+        [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid passphrase")]
+        public IActionResult CreateEncryptedBackup(
+            [FromHeader(Name = BookshelfEncryptedBackupService.PassphraseHeader)]
+            [SwaggerParameter("Passphrase used to encrypt the portable backup. It must contain at least 16 characters.")]
+            string passphrase)
         {
             passphrase = GetPassphrase(passphrase);
             var encryptedPath = Path.Combine(GetPrivateTempFolder(), $"chaptarr_backup_{Guid.NewGuid():N}.enc");
@@ -132,18 +140,23 @@ namespace Chaptarr.Api.V1.System.Backup
         }
 
         [HttpPost("restore/upload")]
+        [Consumes("multipart/form-data")]
         [RequestSizeLimit(RestoreUploadLimitBytes)]
         [RequestFormLimits(MultipartBodyLengthLimit = RestoreUploadLimitBytes)]
-        public object UploadAndRestore([FromHeader(Name = BookshelfEncryptedBackupService.PassphraseHeader)] string passphrase)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public object UploadAndRestore(
+            [FromHeader(Name = BookshelfEncryptedBackupService.PassphraseHeader)]
+            [SwaggerParameter("Required when the uploaded restore file has the .enc extension.")]
+            string passphrase,
+            IFormFile restore)
         {
-            var files = Request.Form.Files;
+            var file = restore ?? Request.Form.Files.FirstOrDefault();
 
-            if (files.Empty())
+            if (file == null)
             {
                 throw new BadRequestException("file must be provided");
             }
 
-            var file = files.First();
             var filename = file.FileName ?? string.Empty;
             var extension = Path.GetExtension(filename);
             var isEncryptedFullBackup = filename.EndsWith(".zip.enc", StringComparison.OrdinalIgnoreCase);

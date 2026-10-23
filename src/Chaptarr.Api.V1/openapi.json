@@ -307,6 +307,66 @@
                 }
               }
             }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorResource"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingAuthorImportAcceptedResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingAuthorImportAcceptedResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingAuthorImportAcceptedResource"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResource"
+                }
+              }
+            }
           }
         }
       }
@@ -1234,16 +1294,32 @@
         ],
         "parameters": [
           {
-            "name": "x-Bookshelf-Backup-Passphrase",
+            "name": "X-Bookshelf-Backup-Passphrase",
             "in": "header",
+            "description": "Passphrase used to encrypt the portable backup. It must contain at least 16 characters.",
+            "required": true,
             "schema": {
-              "type": "string"
+              "maxLength": 4096,
+              "minLength": 16,
+              "type": "string",
+              "format": "password"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Encrypted backup archive",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid passphrase"
           }
         }
       }
@@ -1255,13 +1331,41 @@
         ],
         "parameters": [
           {
-            "name": "x-Bookshelf-Backup-Passphrase",
+            "name": "X-Bookshelf-Backup-Passphrase",
             "in": "header",
+            "description": "Required when the uploaded restore file has the .enc extension.",
             "schema": {
-              "type": "string"
+              "maxLength": 4096,
+              "minLength": 16,
+              "type": "string",
+              "format": "password"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "restore"
+                ],
+                "type": "object",
+                "properties": {
+                  "restore": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "restore": {
+                  "style": "form"
+                }
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -1610,6 +1714,26 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PendingBookRequestResource"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResource"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResource"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookResource"
                 }
               }
             }
@@ -10508,6 +10632,70 @@
             }
           },
           {
+            "name": "seriesId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseResource"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseResource"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseResource"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/release/search": {
+      "get": {
+        "tags": [
+          "Release"
+        ],
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "authorId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
             "name": "bypassFilters",
             "in": "query",
             "schema": {
@@ -10526,7 +10714,24 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseSearchResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseSearchResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseSearchResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -17532,6 +17737,67 @@
         ],
         "type": "string"
       },
+      "FilterSummary": {
+        "type": "object",
+        "properties": {
+          "totalResults": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "filteredCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "displayedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hardFilteredCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "softFilteredCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasSoftFilters": {
+            "type": "boolean"
+          },
+          "hasHardFilters": {
+            "type": "boolean"
+          },
+          "bypassMode": {
+            "type": "boolean"
+          },
+          "filteredCategories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "filterBreakdown": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "summaryText": {
+            "type": "string",
+            "nullable": true
+          },
+          "filterWarnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "HardcoverConfigResource": {
         "type": "object",
         "properties": {
@@ -21109,6 +21375,20 @@
         },
         "additionalProperties": false
       },
+      "PendingAuthorImportAcceptedResource": {
+        "type": "object",
+        "properties": {
+          "pendingId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "PendingAuthorImportResource": {
         "type": "object",
         "properties": {
@@ -22571,6 +22851,45 @@
             "nullable": true
           },
           "formatType": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReleaseSearchResponse": {
+        "type": "object",
+        "properties": {
+          "releases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseResource"
+            },
+            "nullable": true
+          },
+          "hiddenReleases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseResource"
+            },
+            "nullable": true
+          },
+          "filterSummary": {
+            "$ref": "#/components/schemas/FilterSummary"
+          },
+          "siblingBookId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "siblingMediaType": {
+            "type": "string",
+            "nullable": true
+          },
+          "siblingToggleEnabled": {
+            "type": "boolean"
+          },
+          "siblingToggleDisabledReason": {
             "type": "string",
             "nullable": true
           }
