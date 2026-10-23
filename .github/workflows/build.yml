@@ -543,6 +543,7 @@ jobs:
 
     - name: Smoke - migrate up on fresh PostgreSQL
       env:
+        TMPDIR: ${{ runner.temp }}
         CHAPTARRNG_POSTGRES_SMOKE_DIR: ${{ runner.temp }}/chaptarr-postgres-smoke-${{ github.run_id }}-${{ github.run_attempt }}
         Chaptarr__Postgres__Host: localhost
         Chaptarr__Postgres__Port: "5432"
