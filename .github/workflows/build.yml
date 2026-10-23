@@ -496,6 +496,27 @@ jobs:
           sudo apt-get "${apt_options[@]}" install -y postgresql-client
         fi
 
+    - name: Pin dump tools to the PostgreSQL service version
+      shell: bash
+      run: |
+        set -euo pipefail
+        client_dir="$RUNNER_TEMP/postgres16-client-bin"
+        mkdir -p -- "$client_dir"
+        cat > "$client_dir/postgres16-tool" <<'WRAPPER'
+        #!/usr/bin/env bash
+        set -euo pipefail
+        tool="${0##*/}"
+        docker_args=(run --rm --network host --user "$(id -u):$(id -g)" --volume "${RUNNER_TEMP}:${RUNNER_TEMP}")
+        while IFS= read -r name; do
+          docker_args+=(--env "$name")
+        done < <(compgen -e | grep '^PG' || true)
+        docker "${docker_args[@]}" postgres:16 "$tool" "$@"
+        WRAPPER
+        chmod 0755 "$client_dir/postgres16-tool"
+        ln -s postgres16-tool "$client_dir/pg_dump"
+        ln -s postgres16-tool "$client_dir/pg_restore"
+        echo "$client_dir" >> "$GITHUB_PATH"
+
     - name: Create databases
       shell: bash
       env:
