@@ -599,8 +599,6 @@ jobs:
           env.HTTPS_PROXY=${{ env.BUILDKIT_EGRESS_PROXY }}
           env.http_proxy=${{ env.BUILDKIT_EGRESS_PROXY }}
           env.https_proxy=${{ env.BUILDKIT_EGRESS_PROXY }}
-          env.NO_PROXY=localhost,127.0.0.1
-          env.no_proxy=localhost,127.0.0.1
 
     - name: Build image for all published architectures without pushing
       if: steps.license.outputs.configured == 'true'

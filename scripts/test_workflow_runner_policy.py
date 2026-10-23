@@ -87,7 +87,13 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             self.assertIn(
                 f"{proxy_name}=${{{{ env.BUILDKIT_EGRESS_PROXY }}}}", build
             )
-        self.assertIn("env.NO_PROXY=localhost,127.0.0.1", buildx)
+        buildx_driver_options = [
+            line.strip()
+            for line in buildx.splitlines()
+            if line.strip().startswith("env.")
+        ]
+        self.assertTrue(buildx_driver_options)
+        self.assertTrue(all("," not in option for option in buildx_driver_options))
         self.assertIn("NO_PROXY=localhost,127.0.0.1", build)
 
     def test_pr_body_edits_revalidate_notes_without_restarting_builds(self) -> None:
