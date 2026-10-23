@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
+using Chaptarr.Http.Middleware;
 using Chaptarr.Http.REST;
 using Chaptarr.Http.Validation;
 using Microsoft.AspNetCore.Mvc;
@@ -12,8 +13,9 @@ using NLog;
 using NzbDrone.Common.Composition;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Common.TPL;
-using NzbDrone.Core.Datastore.Events;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Commands;
+using NzbDrone.Core.Datastore.Events;
 using NzbDrone.Core.MediaFiles.BookImport.Manual;
 using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.Messaging.Commands;
@@ -32,18 +34,21 @@ namespace Chaptarr.Api.V1.Commands
         private readonly Logger _logger;
         private readonly Debouncer _debouncer;
         private readonly Dictionary<int, CommandResource> _pendingUpdates;
+        private readonly IBookshelfLegacyIdentityMapService _bookshelfLegacyIdentityMapService;
 
         private readonly CommandPriorityComparer _commandPriorityComparer = new CommandPriorityComparer();
 
         public CommandController(IManageCommandQueue commandQueueManager,
                              IBroadcastSignalRMessage signalRBroadcaster,
                              KnownTypes knownTypes,
-                             Logger logger)
+                             Logger logger,
+                             IBookshelfLegacyIdentityMapService bookshelfLegacyIdentityMapService = null)
             : base(signalRBroadcaster)
         {
             _commandQueueManager = commandQueueManager;
             _knownTypes = knownTypes;
             _logger = logger;
+            _bookshelfLegacyIdentityMapService = bookshelfLegacyIdentityMapService;
 
             _debouncer = new Debouncer(SendUpdates, TimeSpan.FromSeconds(0.1));
             _pendingUpdates = new Dictionary<int, CommandResource>();
@@ -77,6 +82,16 @@ namespace Chaptarr.Api.V1.Commands
                 : CommandPriority.Normal;
 
             dynamic command = STJson.Deserialize(body, commandType);
+
+            if (command is BookSearchCommand bookSearchCommand &&
+                bookSearchCommand.BookIds?.Count > 0 &&
+                _bookshelfLegacyIdentityMapService != null)
+            {
+                var facadeMediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
+                bookSearchCommand.BookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(
+                    bookSearchCommand.BookIds,
+                    facadeMediaType);
+            }
 
             if (command is RescanFoldersCommand rescanFoldersCommand)
             {

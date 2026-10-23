@@ -9,6 +9,16 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
+**Legacy-ID book-search command compatibility — 2026-10-23:** The API command
+endpoint now resolves `BookSearchCommand` IDs through the migrated
+`BookshelfLegacyIdentityMap`. An unscoped request searches every target row
+created when a legacy book splits by format; an ebook or audiobook Readarr
+facade searches only its matching row. Regression cases cover both paths. The
+Release Core suite passed 4,762 tests, skipped 25, and failed 0; the full
+Release application solution built with 0 warnings and 0 errors. This closes
+the server-side legacy-ID command path; converted-data acceptance and live
+SeerrNG fulfillment remain open.
+
 **Structured migration field-loss protection — 2026-10-23:** ChaptarrNG commit
 `5dad84d17c2ed6818d25eeab249e52783927f2a9` extends the importer's fail-closed
 column mapping checks to all copied or transformed structured tables, including

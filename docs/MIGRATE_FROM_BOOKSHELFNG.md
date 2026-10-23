@@ -138,6 +138,9 @@ source author, book, edition, and book-file IDs. A book split by media type has
 one row for each resulting Chaptarr book. Format-scoped `GET /api/v1/book`
 lookups and book-scoped API operations resolve these mappings, while the legacy
 Bookshelf monitoring endpoint expands selected source IDs to their target rows.
+The generic `BookSearch` command also resolves a submitted legacy book ID: an
+unscoped request searches every migrated format row, and a format-scoped
+Readarr facade searches only its ebook or audiobook row.
 Other clients can query the map with
 `GET /api/v1/bookshelf/legacy-identities?entityType=Book&sourceIds=30` (up to
 500 IDs per request). The map remains in the Chaptarr database and its normal
