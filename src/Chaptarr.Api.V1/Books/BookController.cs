@@ -18,6 +18,7 @@ using NzbDrone.Core.AuthorStats;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Commands;
 using NzbDrone.Core.Books.Events;
+using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Events;
 using NzbDrone.Core.DecisionEngine.Specifications;
 using NzbDrone.Core.Download;
@@ -1195,15 +1196,25 @@ namespace Chaptarr.Api.V1.Books
             return mediaType == BookMediaType.Ebook ? BookMediaType.Audiobook : BookMediaType.Ebook;
         }
 
-        [HttpGet("{bookId:int}")]
-        public ActionResult<BookResource> GetBookById(int bookId)
+        [RestGetById]
+        [Produces("application/json")]
+        public override ActionResult<BookResource> GetResourceByIdWithErrorHandler(int id)
         {
-            var book = ResolveBookRouteToken(bookId.ToString(global::System.Globalization.CultureInfo.InvariantCulture), HttpContext?.GetReadarrFacadeContext()?.MediaType);
-            if (book == null)
+            try
+            {
+                var mediaType = Request.Query["mediaType"].FirstOrDefault() ?? HttpContext?.GetReadarrFacadeContext()?.MediaType;
+                var book = ResolveBookRouteToken(id.ToString(global::System.Globalization.CultureInfo.InvariantCulture), mediaType);
+                if (book == null)
+                {
+                    return NotFound();
+                }
+
+                return MapToResource(book, true);
+            }
+            catch (ModelNotFoundException)
             {
                 return NotFound();
             }
-            return MapToResource(book, true);
         }
 
         /// <summary>

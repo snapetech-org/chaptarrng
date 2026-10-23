@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Chaptarr.Api.V1.Books;
+using Chaptarr.Http.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -101,6 +102,39 @@ namespace Chaptarr.Core.Test.Api
             Assert.That(books.Select(book => book.Id), Is.EqualTo(new[] { 31 }));
             legacyIdentityMap.Verify(service => service.ResolveBookIds(It.IsAny<IEnumerable<int>>(), BookMediaType.Ebook), Times.Once);
             bookService.Verify(service => service.GetBooks(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 31 }))), Times.Once);
+        }
+
+        [Test]
+        public void should_resolve_a_migrated_bookshelf_id_when_getting_one_book_by_id()
+        {
+            var legacyIdentityMap = new Mock<IBookshelfLegacyIdentityMapService>();
+            legacyIdentityMap
+                .Setup(service => service.ResolveBookIds(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 30 })), BookMediaType.Ebook))
+                .Returns(new List<int> { 31 });
+
+            var bookService = new Mock<IBookService>();
+            bookService
+                .Setup(service => service.GetBooks(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 31 }))))
+                .Returns(new List<Book>
+                {
+                    new Book
+                    {
+                        Id = 31,
+                        AuthorId = 20,
+                        MediaType = BookMediaType.Ebook,
+                        Title = "Fixture ebook",
+                        CleanTitle = "fixture ebook",
+                        TitleSlug = "fixture-ebook"
+                    }
+                });
+
+            var controller = CreateController(bookService.Object, legacyIdentityMap.Object);
+            controller.ControllerContext.HttpContext.Request.QueryString = new QueryString("?mediaType=ebook");
+
+            var result = controller.GetResourceByIdWithErrorHandler(30);
+
+            Assert.That(result.Value?.Id, Is.EqualTo(31));
+            legacyIdentityMap.Verify(service => service.ResolveBookIds(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 30 })), BookMediaType.Ebook), Times.Once);
         }
 
         private static BookController CreateController(IBookService bookService, IBookshelfLegacyIdentityMapService legacyIdentityMap = null)

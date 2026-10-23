@@ -7,7 +7,8 @@ INSERT INTO VersionInfo (Version, AppliedOn, Description)
                 SELECT version, CURRENT_TIMESTAMP, 'BookshelfNG schema fixture' FROM migrations;
 
                 INSERT INTO QualityProfiles (Id, Name, Cutoff, Items, UpgradeAllowed)
-                VALUES (1, 'Audio default', 1, '[]', 1), (2, 'Ebook override', 2, '[]', 0);
+                VALUES (1, 'Audio default', 1, '[{"quality":1,"allowed":true}]', 1),
+                       (2, 'Ebook override', 2, '[{"quality":2,"allowed":true}]', 0);
                 INSERT INTO MetadataProfiles (Id, Name, MinPopularity, SkipMissingDate, SkipMissingIsbn, SkipPartsAndSets, SkipSeriesSecondary, AllowedLanguages, PreferredEditionTerms, PreferredSeries)
                 VALUES
                     (1, 'Audio metadata', 0, 0, 0, 0, 0, '[]', '3|audible', 'The Fixture Series'),

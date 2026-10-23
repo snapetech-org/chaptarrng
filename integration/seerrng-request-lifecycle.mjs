@@ -36,6 +36,11 @@ const api = new ReadarrAPI({
   apiKey: serviceKey,
   mediaType: "ebook",
 });
+const audiobookApi = new ReadarrAPI({
+  url: apiUrl,
+  apiKey: serviceKey,
+  mediaType: "audiobook",
+});
 
 const systemStatus = await api.getSystemStatus();
 assert.equal(systemStatus.appName, "Chaptarr");
@@ -67,6 +72,26 @@ assert.deepEqual(
     { sourceId: 30, targetId: 30, mediaType: "audiobook" },
     { sourceId: 30, targetId: 31, mediaType: "ebook" },
   ]
+);
+
+const [legacyAudiobook, legacyEbook] = await Promise.all([
+  audiobookApi.getBook(30),
+  api.getBook(30),
+]);
+assert.equal(legacyAudiobook.id, 30);
+assert.equal(legacyEbook.id, 31);
+
+const [legacyAudiobookFiles, legacyEbookFiles] = await Promise.all([
+  audiobookApi.getBookFiles(30),
+  api.getBookFiles(30),
+]);
+assert.deepEqual(
+  legacyAudiobookFiles.map(({ id, bookId }) => ({ id, bookId })),
+  [{ id: 50, bookId: 30 }]
+);
+assert.deepEqual(
+  legacyEbookFiles.map(({ id, bookId }) => ({ id, bookId })),
+  [{ id: 51, bookId: 31 }]
 );
 
 const [qualityProfiles, metadataProfiles] = await Promise.all([
