@@ -19,6 +19,18 @@ Release application solution built with 0 warnings and 0 errors. This closes
 the server-side legacy-ID command path; converted-data acceptance and live
 SeerrNG fulfillment remain open.
 
+**Legacy-ID book command compatibility — 2026-10-23:** Generic API commands
+for book search, refresh, cover downloads, and supported metadata pushes now
+resolve migrated BookshelfNG IDs to every target format row when unscoped, and
+respect the ebook or audiobook Readarr facade when scoped. A single-book
+`RefreshBook` request that splits by format is queued as `BulkRefreshBook`;
+cover downloads process all resolved rows. The direct book cover-download
+endpoint follows the same expansion. Regression coverage includes command
+mapping and cover processing. The Release Core suite passed 4,771 tests,
+skipped 25, and failed 0; the full Release application solution built with 0
+warnings and 0 errors. Other client routes, converted-data acceptance, and live
+SeerrNG fulfillment remain open.
+
 **Structured migration field-loss protection — 2026-10-23:** ChaptarrNG commit
 `5dad84d17c2ed6818d25eeab249e52783927f2a9` extends the importer's fail-closed
 column mapping checks to all copied or transformed structured tables, including
