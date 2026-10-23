@@ -1,27 +1,21 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
 > **Release status (2026-10-23).** ChaptarrNG `v0.9.977` remains the latest
-> public release. Application-code commit `cd1b3fe927df86e61ee566e03cffe1641dde9cd9`
-> is on `main`; it includes migrated-audiobook release and pending-queue
-> ranking compatibility and orders inferred audiobook parts by complete
-> embedded disc/track tags across import, existing-file repair, and in-place
-> download assignment. Incomplete or ambiguous tags keep natural-path order.
-> The Release Core suite passed 4,707 tests with 25 skips and no failures.
-> The commit hook's Semgrep scan found zero findings and the push readiness
-> checks passed. Exact-head dependency submission
-> [39969823947](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823947)
-> passed; Build
-> [39969823480](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823480),
-> Security Analysis
-> [39969823597](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823597),
-> CodeQL [39969823529](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823529),
-> Semgrep [39969823578](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823578),
-> Trivy [39969823726](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823726),
-> and standalone-asset validation
-> [39969823444](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823444)
-> remain queued. Maintainer/operator sign-off is recorded, but technical
-> retirement gates remain open. Keep BookshelfNG in service; do not apply
-> migration, install a bridge, or start ChaptarrNG against BookshelfNG appdata.
+> public release. Application-code commit
+> `4b57b479d73c844db19278233e25efe94509e99b` is on `main`; it includes
+> migrated-audiobook release and pending-queue ranking compatibility, tagged
+> audiobook-part ordering, and release-push provenance handling. The Release
+> Core suite passed 4,709 tests with 25 skips and no failures. Commit-hook
+> Semgrep found zero findings and push readiness checks passed. On upstream
+> PR [#114](https://github.com/Chaptarr/chaptarr/pull/114), exact-head Semgrep
+> ([39972277607](https://github.com/Chaptarr/chaptarr/actions/runs/39972277607))
+> and Trivy
+> ([39972277647](https://github.com/Chaptarr/chaptarr/actions/runs/39972277647))
+> are `action_required` with no jobs started; approving them requires repository
+> admin rights, which this agent account lacks. Hosted validation remains open.
+> Maintainer/operator sign-off is recorded, but technical retirement gates
+> remain open. Keep BookshelfNG in service; do not apply migration, install a
+> bridge, or start ChaptarrNG against BookshelfNG appdata.
 >
 > The published `.977` migration path supports BookshelfNG `0.4.21.71` with a
 > migration-158 SQLite database. It does not safely identify native Hardcover

@@ -9,24 +9,22 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
-**Latest ChaptarrNG parity and CI — 2026-10-23:** Application-code commit
-`cd1b3fe927df86e61ee566e03cffe1641dde9cd9` is on `main`; it includes the earlier
-migrated-audiobook release and pending-queue ranking fixes and orders inferred
-audiobook parts by complete embedded disc/track tags across import, existing-
-file repair, and in-place download assignment. Incomplete or ambiguous tags
-retain natural-path ordering. The Release Core suite passed 4,707 tests with
-25 skips and no failures. The commit hook's Semgrep scan found zero findings,
-and the push readiness checks passed. Exact-head automatic dependency
-submission [39969823947](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823947)
-passed; Build [39969823480](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823480),
-Security Analysis [39969823597](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823597),
-CodeQL [39969823529](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823529),
-Semgrep [39969823578](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823578),
-Trivy [39969823726](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823726),
-and standalone-asset validation
-[39969823444](https://github.com/snapetech-org/chaptarrng/actions/runs/39969823444)
-remain queued. The public `v0.9.977` release is unchanged. No release or
-cutover was published or authorized by this source commit.
+**Latest ChaptarrNG parity and validation — 2026-10-23:** Application-code
+commit `4b57b479d73c844db19278233e25efe94509e99b` is on `main`; it includes
+migrated-audiobook release and pending-queue ranking compatibility, orders
+inferred audiobook parts by complete embedded disc/track tags, and preserves
+release-push provenance through decision evaluation. It also handles pushed
+releases whose indexer name is absent. The Release Core suite passed 4,709
+tests with 25 skips and no failures. Commit-hook Semgrep found zero findings,
+and push readiness checks passed. On upstream PR
+[#114](https://github.com/Chaptarr/chaptarr/pull/114), exact-head Semgrep
+([39972277607](https://github.com/Chaptarr/chaptarr/actions/runs/39972277607))
+and Trivy
+([39972277647](https://github.com/Chaptarr/chaptarr/actions/runs/39972277647))
+are `action_required` with no jobs started. GitHub rejected this agent's
+workflow-approval request because repository-admin rights are required, so
+hosted validation remains open. The public `v0.9.977` release is unchanged;
+no release or cutover was published.
 
 **Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
 ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through
