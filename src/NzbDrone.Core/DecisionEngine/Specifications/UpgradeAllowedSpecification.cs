@@ -1,5 +1,6 @@
 using System.Linq;
 using NLog;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.IndexerSearch.Definitions;
 using NzbDrone.Core.Parser.Model;
@@ -12,14 +13,17 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         private readonly UpgradableSpecification _upgradableSpecification;
         private readonly ICustomFormatCalculationService _formatService;
         private readonly Logger _logger;
+        private readonly IConfigService _configService;
 
         public UpgradeAllowedSpecification(UpgradableSpecification upgradableSpecification,
                                            Logger logger,
-                                           ICustomFormatCalculationService formatService)
+                                           ICustomFormatCalculationService formatService,
+                                           IConfigService configService)
         {
             _upgradableSpecification = upgradableSpecification;
             _formatService = formatService;
             _logger = logger;
+            _configService = configService;
         }
 
         public SpecificationPriority Priority => SpecificationPriority.Default;
@@ -27,7 +31,8 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
 
         public virtual Decision IsSatisfiedBy(RemoteBook subject, SearchCriteriaBase searchCriteria)
         {
-            if (InteractiveBookSearchSpecificationHelper.IsResolvedInteractiveBookSearch(subject, searchCriteria))
+            if (_configService?.BookshelfMatchCompatibility != true &&
+                InteractiveBookSearchSpecificationHelper.IsResolvedInteractiveBookSearch(subject, searchCriteria))
             {
                 _logger.Trace("Skipping upgrade-allowed rejection for resolved interactive book search");
                 return Decision.Accept();

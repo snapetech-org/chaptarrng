@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using NLog;
 using NzbDrone.Common.Extensions;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.IndexerSearch.Definitions;
 using NzbDrone.Core.Parser.Model;
@@ -16,15 +17,21 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         private readonly Logger _logger;
         private readonly IReleaseProfileService _releaseProfileService;
         private readonly ITermMatcherService _termMatcherService;
+        private readonly IConfigService _configService;
 
         // Enhanced title cleaning regex for consistent term matching
         private static readonly Regex CleanTitleCruft = new Regex(@"\((?:unabridged|abridged|audiobook|audio\s*book)\)|\[(?:MP3|M4B|AAC|FLAC|OGG)\]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        public ReleaseRestrictionsSpecification(ITermMatcherService termMatcherService, IReleaseProfileService releaseProfileService, Logger logger)
+        public ReleaseRestrictionsSpecification(
+            ITermMatcherService termMatcherService,
+            IReleaseProfileService releaseProfileService,
+            IConfigService configService,
+            Logger logger)
         {
             _logger = logger;
             _releaseProfileService = releaseProfileService;
             _termMatcherService = termMatcherService;
+            _configService = configService;
         }
 
         public SpecificationPriority Priority => SpecificationPriority.Default;
@@ -66,7 +73,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 {
                     var terms = string.Join(", ", requiredTerms);
                     _logger.TraceSafe("[{0}] does not contain one of the required terms: {1}", title, terms);
-                    return Decision.RejectSoftFilter("Does not contain one of the required terms: {0}", "Release Profile", terms);
+                    return RejectProfileRestriction("Does not contain one of the required terms: {0}", terms);
                 }
                 else
                 {
@@ -86,7 +93,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 {
                     var terms = string.Join(", ", foundTerms);
                     _logger.TraceSafe("[{0}] contains these ignored terms: {1}", title, terms);
-                    return Decision.RejectSoftFilter("Contains these ignored terms: {0}", "Release Profile", terms);
+                    return RejectProfileRestriction("Contains these ignored terms: {0}", terms);
                 }
             }
 
@@ -119,6 +126,16 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             }
 
             return foundTerms;
+        }
+
+        private Decision RejectProfileRestriction(string reason, params object[] args)
+        {
+            if (_configService?.BookshelfMatchCompatibility == true)
+            {
+                return Decision.Reject(reason, args);
+            }
+
+            return Decision.RejectSoftFilter(reason, "Release Profile", args);
         }
 
         /// <summary>
