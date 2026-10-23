@@ -23,6 +23,18 @@ passed 4,758 tests, skipped 25, and failed 0; the commit-hook Semgrep scan found
 complete migration fidelity, live provider behavior, feature parity,
 representative-data acceptance, or release/channel readiness.
 
+**Built-in provider settings preservation matrix — 2026-10-23:** ChaptarrNG
+commit `37703f82204fd993f49ea37ed11020c6a5435af5` adds a migration fixture for
+all 15 built-in BookshelfNG download clients, six import-list providers (with
+the `ReadarrImport` to `ChaptarrImport` alias covered separately), and 24
+notifications. Each row carries representative populated settings; preview
+must report no blocking issues, and apply must preserve its implementation,
+settings contract, and serialized settings exactly. Existing fixtures cover
+all ten indexers and the metadata settings adapter. The full Release Core suite
+passed 4,759 tests, skipped 25, and failed 0. This broadens source-level
+provider migration coverage; live fulfillment, real credentials and operator
+data, complete semantic parity, and installed-channel acceptance remain open.
+
 **Provider migration fail-closed coverage — 2026-10-23:** ChaptarrNG commit
 `2ae3d0959bf8da7e6e1999bf69cc5d2f5b611f8d` rejects non-empty source columns
 without a target mapping in `Indexers`, `ImportLists`, and `Notifications`,
