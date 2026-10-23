@@ -1811,10 +1811,28 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
         }
 
-        [TestCase("Indexers", 120)]
+        [TestCase("QualityProfiles", 1)]
+        [TestCase("MetadataProfiles", 1)]
+        [TestCase("RootFolders", 1)]
+        [TestCase("AuthorMetadata", 10)]
+        [TestCase("Authors", 20)]
+        [TestCase("Books", 30)]
+        [TestCase("Editions", 40)]
+        [TestCase("BookFiles", 50)]
+        [TestCase("ExtraFiles", 60)]
+        [TestCase("MetadataFiles", 61)]
+        [TestCase("Series", 70)]
+        [TestCase("SeriesBookLink", 80)]
+        [TestCase("Blocklist", 92)]
+        [TestCase("DownloadHistory", 91)]
+        [TestCase("History", 93)]
+        [TestCase("DownloadClients", 109)]
         [TestCase("ImportLists", 110)]
+        [TestCase("Indexers", 120)]
+        [TestCase("Metadata", 135)]
         [TestCase("Notifications", 111)]
-        public void should_refuse_nonempty_unmapped_provider_columns_without_changing_the_source(string table, int rowId)
+        [TestCase("NamingConfig", 5)]
+        public void should_refuse_nonempty_unmapped_migration_columns_without_changing_the_source(string table, int rowId)
         {
             using (var source = new SqliteConnection(_sourceConnectionString))
             {
@@ -1822,19 +1840,93 @@ namespace Chaptarr.Core.Test.Datastore
                 using var command = source.CreateCommand();
                 command.CommandText = table switch
                 {
-                    "Indexers" => """
-                        ALTER TABLE "Indexers" ADD COLUMN UnmappedProviderValue TEXT;
-                        UPDATE "Indexers" SET UnmappedProviderValue = 'keep-me' WHERE Id = $rowId;
+                    "QualityProfiles" => """
+                        ALTER TABLE "QualityProfiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "QualityProfiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "MetadataProfiles" => """
+                        ALTER TABLE "MetadataProfiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "MetadataProfiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "RootFolders" => """
+                        ALTER TABLE "RootFolders" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "RootFolders" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "AuthorMetadata" => """
+                        ALTER TABLE "AuthorMetadata" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "AuthorMetadata" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Authors" => """
+                        ALTER TABLE "Authors" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Authors" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Books" => """
+                        ALTER TABLE "Books" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Books" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Editions" => """
+                        ALTER TABLE "Editions" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Editions" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "BookFiles" => """
+                        ALTER TABLE "BookFiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "BookFiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "ExtraFiles" => """
+                        ALTER TABLE "ExtraFiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "ExtraFiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "MetadataFiles" => """
+                        ALTER TABLE "MetadataFiles" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "MetadataFiles" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Series" => """
+                        ALTER TABLE "Series" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Series" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "SeriesBookLink" => """
+                        ALTER TABLE "SeriesBookLink" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "SeriesBookLink" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Blocklist" => """
+                        ALTER TABLE "Blocklist" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Blocklist" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "DownloadHistory" => """
+                        ALTER TABLE "DownloadHistory" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "DownloadHistory" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "History" => """
+                        ALTER TABLE "History" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "History" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "DownloadClients" => """
+                        ALTER TABLE "DownloadClients" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "DownloadClients" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
                         """,
                     "ImportLists" => """
-                        ALTER TABLE "ImportLists" ADD COLUMN UnmappedProviderValue TEXT;
-                        UPDATE "ImportLists" SET UnmappedProviderValue = 'keep-me' WHERE Id = $rowId;
+                        ALTER TABLE "ImportLists" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "ImportLists" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Indexers" => """
+                        ALTER TABLE "Indexers" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Indexers" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
+                        """,
+                    "Metadata" => """
+                        ALTER TABLE "Metadata" ADD COLUMN UnmappedMigrationValue TEXT;
+                        INSERT INTO "Metadata" (Id, Enable, Name, Implementation, Settings, ConfigContract, UnmappedMigrationValue)
+                        VALUES ($rowId, 1, 'Legacy OPF sidecar', 'AudiobookshelfMetadata', '{}', 'NullConfig', 'keep-me');
                         """,
                     "Notifications" => """
-                        ALTER TABLE "Notifications" ADD COLUMN UnmappedProviderValue TEXT;
-                        UPDATE "Notifications" SET UnmappedProviderValue = 'keep-me' WHERE Id = $rowId;
+                        ALTER TABLE "Notifications" ADD COLUMN UnmappedMigrationValue TEXT;
+                        UPDATE "Notifications" SET UnmappedMigrationValue = 'keep-me' WHERE Id = $rowId;
                         """,
-                    _ => throw new ArgumentOutOfRangeException(nameof(table), table, "Unexpected provider table fixture")
+                    "NamingConfig" => """
+                        ALTER TABLE "NamingConfig" ADD COLUMN UnmappedMigrationValue TEXT;
+                        INSERT INTO "NamingConfig" (Id, ReplaceIllegalCharacters, AuthorFolderFormat, RenameBooks, StandardBookFormat, ColonReplacementFormat, UnmappedMigrationValue)
+                        VALUES ($rowId, 0, '{Author Name}', 1, '{Book Title}', 4, 'keep-me');
+                        """,
+                    _ => throw new ArgumentOutOfRangeException(nameof(table), table, "Unexpected migration table fixture")
                 };
                 command.Parameters.AddWithValue("$rowId", rowId);
                 command.ExecuteNonQuery();
@@ -1849,7 +1941,7 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(exception.Message, Does.Contain($"{table}.UnmappedProviderValue"));
+                Assert.That(exception.Message, Does.Contain($"{table}.UnmappedMigrationValue"));
                 Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
             });
