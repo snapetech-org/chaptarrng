@@ -333,9 +333,8 @@ namespace Chaptarr.Http.Authentication
                     options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
 
                     var discoveryUrl = options.MetadataAddress ?? options.Authority;
-                    options.RequireHttpsMetadata = isConfigured &&
-                                                  !IsLoopbackHttpUrl(discoveryUrl) &&
-                                                  !BookshelfOidcEnvironmentSettings.AllowPrivateIssuer;
+                    var allowPrivateIssuer = BookshelfOidcEnvironmentSettings.AllowPrivateIssuer;
+                    options.RequireHttpsMetadata = !allowPrivateIssuer;
 
                     HttpProxySettings proxySettings = null;
                     Exception proxyConfigurationError = null;
@@ -357,12 +356,14 @@ namespace Chaptarr.Http.Authentication
                     // proxy/certificate validation and IPv4/IPv6 fallback behavior as the rest of the app.
                     options.BackchannelTimeout = TimeSpan.FromSeconds(15);
                     options.BackchannelHttpHandler = proxyConfigurationError == null
-                        ? new OidcResponseLimitHandler(socketsHttpHandlerFactory.CreateHandler(proxySettings,
-                            allowAutoRedirect: false,
-                            useCookies: false,
-                            credentials: null,
-                            preAuthenticate: false,
-                            maxConnectionsPerServer: 12))
+                        ? new OidcBackchannelTargetPolicyHandler(allowPrivateIssuer,
+                            new OidcResponseLimitHandler(socketsHttpHandlerFactory.CreateHandler(proxySettings,
+                                allowAutoRedirect: false,
+                                useCookies: false,
+                                credentials: null,
+                                preAuthenticate: false,
+                                maxConnectionsPerServer: 12,
+                                allowPrivateNetworkTargets: allowPrivateIssuer || proxySettings?.IsDirectConnection == false)))
                         : new ConfigurationErrorHttpMessageHandler(proxyConfigurationError);
 
                     var legacyRedirectUri = BookshelfOidcEnvironmentSettings.GetRedirectUri();
@@ -688,13 +689,6 @@ namespace Chaptarr.Http.Authentication
 
             return !string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) &&
                    !string.Equals(value, "1", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsLoopbackHttpUrl(string value)
-        {
-            return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
-                   uri.Scheme == Uri.UriSchemeHttp &&
-                   uri.IsLoopback;
         }
 
         private static bool IsXhr(HttpRequest request)

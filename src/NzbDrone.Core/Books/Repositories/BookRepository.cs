@@ -1337,7 +1337,11 @@ namespace NzbDrone.Core.Books
             offset = Math.Max(0, offset);
             pageSize = Math.Clamp(pageSize, 1, 500);
 
-            var allowedSortKeys = new HashSet<string> { "cleantitle", "title", "authortitle", "authorname", "narrator", "duration", "releasedate", "qualityprofileid", "added", "id", "bookfilecount", "path", "sizeondisk" };
+            var allowedSortKeys = new HashSet<string>
+            {
+                "bookshelftitle", "cleantitle", "title", "authortitle", "authorname", "narrator", "duration",
+                "releasedate", "qualityprofileid", "added", "id", "bookfilecount", "path", "sizeondisk"
+            };
             if (string.IsNullOrWhiteSpace(sortKey) || !allowedSortKeys.Contains(sortKey.ToLowerInvariant()))
             {
                 sortKey = "title";
@@ -1352,6 +1356,8 @@ namespace NzbDrone.Core.Books
             var titleSortExpression = GetBookListTitleSortExpression(bookReference, trueIndicator);
             var columnMap = new Dictionary<string, string>
             {
+                // The legacy BookshelfNG paged endpoint sorts by Book.Title, not the newer display-title sort.
+                ["bookshelftitle"] = $"\"{tableName}\".\"Title\"",
                 ["cleantitle"] = cleanTitleSortExpression,
                 ["title"] = titleSortExpression,
                 ["authortitle"] = "LOWER(\"Authors\".\"Name\")",

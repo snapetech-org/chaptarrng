@@ -271,16 +271,24 @@ in the converted database and the source backup. This setting does not change
 the primary metadata provider or make native Hardcover fall back automatically
 when a request fails.
 
-The source candidate also reads BookshelfNG's `BOOKSHELF_OIDC_*` environment
-variables when the corresponding ChaptarrNG OIDC setting is empty. This keeps
+The current ChaptarrNG main candidate also reads BookshelfNG's
+`BOOKSHELF_OIDC_*` environment variables when the corresponding ChaptarrNG OIDC
+setting is empty. This keeps
 the issuer, client ID and secret, scopes, email allow-lists, allow-any-verified
 choice, and private-issuer behavior when the deployment carries its existing
 environment forward. A saved non-empty ChaptarrNG value takes precedence. The
 legacy callback override is accepted only as an HTTPS URL ending in
 `/signin-oidc`; otherwise ChaptarrNG uses its normal callback URL. Keep these
 variables in the deployment definition because the appdata archive does not
-include them. This source-only compatibility change is not in public `.977`,
-and OIDC denies sign-in unless an allow-list or the explicit
+include them. OIDC backchannel requests reject issuer hosts that resolve to
+private or reserved addresses by default. Set
+`BOOKSHELF_OIDC_ALLOW_PRIVATE_ISSUER=true` for an internal issuer; ChaptarrNG
+keeps configured proxy and certificate handling, disables redirects, and caps
+backchannel response bodies at 1 MiB. The paged library API defaults to 50
+records, sorts by the stored book title, and includes each book's author and
+links when `include` is omitted, matching BookshelfNG's default contract. These
+current-main changes are not in public `.977`, and OIDC denies sign-in unless
+an allow-list or the explicit
 allow-any-verified setting is configured.
 
 ### Provider configuration blockers

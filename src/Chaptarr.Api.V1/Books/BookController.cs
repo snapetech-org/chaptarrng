@@ -1287,8 +1287,8 @@ namespace Chaptarr.Api.V1.Books
         [HttpGet("paged")]
         public ActionResult<PagedBookApiResource> GetBooksPaged(
             [FromQuery] int offset = 0,
-            [FromQuery] int pageSize = 200,
-            [FromQuery] string sortKey = "cleanTitle",
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string sortKey = "bookshelfTitle",
             [FromQuery] string sortDirection = "ASC",
             [FromQuery] bool includeUnmonitored = false,
             [FromQuery] string mediaType = null,
@@ -1320,10 +1320,10 @@ namespace Chaptarr.Api.V1.Books
             var pagedResource = new PagedBookApiResource
             {
                 Records = MapToResource(pagedBooks.Records,
-                    IncludeRequested(include, "author"),
+                    string.IsNullOrWhiteSpace(include) || IncludeRequested(include, "author"),
                     statsByBookId,
                     includeOverview: IncludeRequested(include, "overview"),
-                    includeLinks: IncludeRequested(include, "links")),
+                    includeLinks: string.IsNullOrWhiteSpace(include) || IncludeRequested(include, "links")),
                 TotalCount = pagedBooks.TotalCount,
                 Offset = pagedBooks.Offset,
                 PageSize = pagedBooks.PageSize

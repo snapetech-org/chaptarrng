@@ -175,7 +175,14 @@ namespace Chaptarr.Core.Test.Http
 
         private sealed class NoopSocketsHttpHandlerFactory : ICreateManagedSocketsHttpHandler
         {
-            public SocketsHttpHandler CreateHandler(HttpProxySettings proxySettings, bool allowAutoRedirect, bool useCookies, ICredentials credentials, bool preAuthenticate, int maxConnectionsPerServer)
+            public SocketsHttpHandler CreateHandler(
+                HttpProxySettings proxySettings,
+                bool allowAutoRedirect,
+                bool useCookies,
+                ICredentials credentials,
+                bool preAuthenticate,
+                int maxConnectionsPerServer,
+                bool allowPrivateNetworkTargets = true)
             {
                 return new SocketsHttpHandler();
             }

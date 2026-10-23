@@ -21,7 +21,7 @@ namespace Chaptarr.Core.Test.Api
         {
             var bookService = new Mock<IBookService>();
             bookService
-                .Setup(service => service.GetBooksPaged(150, 100, "cleanTitle", "ASC", false, null, null, null, null, null))
+                .Setup(service => service.GetBooksPaged(150, 100, "bookshelfTitle", "ASC", false, null, null, null, null, null))
                 .Returns(new PagedBookResource
                 {
                     Records = new List<Book>(),
@@ -45,7 +45,47 @@ namespace Chaptarr.Core.Test.Api
                 Assert.That(page.Records, Is.Empty);
             });
 
-            bookService.Verify(service => service.GetBooksPaged(150, 100, "cleanTitle", "ASC", false, null, null, null, null, null), Times.Once);
+            bookService.Verify(service => service.GetBooksPaged(150, 100, "bookshelfTitle", "ASC", false, null, null, null, null, null), Times.Once);
+        }
+
+        [Test]
+        public void should_preserve_bookshelf_default_page_resource_contract()
+        {
+            var bookService = new Mock<IBookService>();
+            bookService
+                .Setup(service => service.GetBooksPaged(0, 50, "bookshelfTitle", "ASC", false, null, null, null, null, null))
+                .Returns(new PagedBookResource
+                {
+                    Records = new List<Book>
+                    {
+                        new Book
+                        {
+                            Id = 10,
+                            AuthorId = 20,
+                            Title = "Fixture book",
+                            Links = new List<Links> { new Links { Name = "Source", Url = "https://example.org/book" } },
+                            Author = new Author { Id = 20, Name = "Fixture author" }
+                        }
+                    },
+                    TotalCount = 1,
+                    Offset = 0,
+                    PageSize = 50
+                });
+
+            var controller = CreateController(bookService.Object);
+            var result = controller.GetBooksPaged().Result as OkObjectResult;
+            Assert.That(result, Is.Not.Null);
+
+            var page = (PagedBookApiResource)result!.Value!;
+            Assert.Multiple(() =>
+            {
+                Assert.That(page.PageSize, Is.EqualTo(50));
+                Assert.That(page.Records, Has.Count.EqualTo(1));
+                Assert.That(page.Records.Single().Author?.Id, Is.EqualTo(20));
+                Assert.That(page.Records.Single().Links?.Any(link => link.Name == "Source"), Is.True);
+            });
+
+            bookService.Verify(service => service.GetBooksPaged(0, 50, "bookshelfTitle", "ASC", false, null, null, null, null, null), Times.Once);
         }
 
         [Test]
@@ -53,7 +93,7 @@ namespace Chaptarr.Core.Test.Api
         {
             var bookService = new Mock<IBookService>();
             bookService
-                .Setup(service => service.GetBooksPaged(0, 1000, "cleanTitle", "ASC", false, null, null, null, null, null))
+                .Setup(service => service.GetBooksPaged(0, 1000, "bookshelfTitle", "ASC", false, null, null, null, null, null))
                 .Returns(new PagedBookResource
                 {
                     Records = new List<Book>(),
@@ -69,7 +109,7 @@ namespace Chaptarr.Core.Test.Api
 
             var rejected = controller.GetBooksPaged(offset: 0, pageSize: 1001).Result as BadRequestObjectResult;
             Assert.That(rejected, Is.Not.Null);
-            bookService.Verify(service => service.GetBooksPaged(0, 1000, "cleanTitle", "ASC", false, null, null, null, null, null), Times.Once);
+            bookService.Verify(service => service.GetBooksPaged(0, 1000, "bookshelfTitle", "ASC", false, null, null, null, null, null), Times.Once);
         }
 
         [Test]

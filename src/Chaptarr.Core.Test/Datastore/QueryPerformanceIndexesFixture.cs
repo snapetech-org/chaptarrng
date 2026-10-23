@@ -165,6 +165,18 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_sort_the_bookshelf_compatible_page_by_stored_title()
+        {
+            var captured = new CapturedStatements();
+            var repository = new BookRepository(new MainDatabase(CreateDatabase(captured)), new StubEventAggregator());
+
+            repository.GetBooksPaged(0, 50, "bookshelfTitle", "ASC", true, "audiobook", null, null);
+            var sql = captured.Sql.Last(statement => statement.Contains("LIMIT 50"));
+
+            Assert.That(sql, Does.Contain("ORDER BY \"Books\".\"Title\" ASC, \"Books\".\"Id\" ASC"));
+        }
+
+        [Test]
         public void should_count_the_clean_title_jump_bar_from_the_index_alone()
         {
             var captured = new CapturedStatements();

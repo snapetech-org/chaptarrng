@@ -78,6 +78,16 @@ defaults to 16 MiB and is clamped to 1–128 MiB. The backup upload endpoint has
 its own explicit 1 GiB request and multipart limits, so large ChaptarrNG and
 BookshelfNG backup restores remain supported.
 
+## OIDC backchannel destinations
+
+OIDC discovery, user-info, and token requests reject hosts that resolve to
+private or reserved addresses. Set
+`BOOKSHELF_OIDC_ALLOW_PRIVATE_ISSUER=true` when an internal identity provider
+needs those addresses. This opt-in also permits HTTP metadata, matching the
+BookshelfNG setting. ChaptarrNG continues to use the configured proxy and
+certificate validation, does not follow redirects, and limits each response
+body to 1 MiB.
+
 ## JSON-only mutation endpoints
 
 The BookshelfNG-compatible Author Editor, Bookshelf, Book Editor, and Manual

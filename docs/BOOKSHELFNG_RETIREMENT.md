@@ -250,6 +250,17 @@ staged Semgrep found no issues. This source-only compatibility change is not in
 `.977`; preserve the variables through any deployment migration and keep the
 release freeze in place.
 
+Current ChaptarrNG `main` also matches BookshelfNG's OIDC backchannel target
+policy: issuer hosts resolving to private or reserved addresses are rejected
+unless `BOOKSHELF_OIDC_ALLOW_PRIVATE_ISSUER=true`. The configured proxy and
+certificate path is retained, redirects remain disabled, and response bodies
+are capped at 1 MiB. Its paged books route now defaults to 50 records, sorts
+by stored title, and includes each author and book links when callers omit
+`include`. These candidate changes are not present in public `.977`. The
+Release Core suite passed 4,692 tests with 25 skips and no failures against
+this code candidate; exact-head hosted CI and installed-channel acceptance
+remain separate gates.
+
 Current ChaptarrNG `main` also accepts raw `.db` and `.xml` BookshelfNG backup
 uploads. The `.xml` suffix is a legacy filename; the contents must still be a
 SQLite database. Before staging, ChaptarrNG checks SQLite integrity and
