@@ -164,17 +164,11 @@ jobs:
         source_dotnet_root="$(dirname -- "$(readlink -f -- "$(command -v dotnet)")")"
         bash packaging/scripts/prepare-writable-dotnet-root.sh "$source_dotnet_root" "$DOTNET_ROOT"
 
-    - name: Require ImageSharp build license
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-      run: test -n "$SIXLABORS_LICENSE_KEY"
-
     - name: Build standalone application archive
       env:
         CUSTOM_RUNTIME_PACKS_DIR: ${{ runner.temp }}/platform-runtime-packs/packages
         DOTNET_ROOT: ${{ runner.temp }}/chaptarrng-dotnet
         DOTNETVERSION: 10.0.402
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: bash packaging/scripts/build-standalone.sh 0.0.0 "${{ matrix.rid }}" "$RUNNER_TEMP/release-assets"
 
     - name: Verify archive and checksum sidecar
@@ -217,14 +211,7 @@ jobs:
       with:
         dotnet-version: 10.0.402
 
-    - name: Require ImageSharp build license
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-      run: test -n "$SIXLABORS_LICENSE_KEY"
-
     - name: Build standalone application archive
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: bash packaging/scripts/build-standalone.sh 0.0.0 "${{ matrix.rid }}" "$RUNNER_TEMP/release-assets"
 
     - name: Verify archive and checksum sidecar

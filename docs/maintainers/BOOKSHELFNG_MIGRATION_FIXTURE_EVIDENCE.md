@@ -309,9 +309,9 @@ untouched and the BookshelfNG source database is retained by the converter for
 rollback. The previous ChaptarrNG database in `.pre-restore` is removed after
 successful migration and restored if conversion fails. A regression fixture
 covers restore staging and automatic conversion from an authentic schema-158
-fixture. The local test run is blocked before compilation by the machine's
-missing ImageSharp license; hosted exact-head validation passed on code head
-`6f57d355` in
+fixture. The local test run at this historical checkpoint was blocked before
+compilation by ImageSharp's build-license requirement; hosted exact-head
+validation passed on code head `6f57d355` in
 [run 39211491613](https://github.com/snapetech-org/chaptarrng/actions/runs/39211491613).
 Linux reported 4,363 passed, macOS 4,360 passed, and Windows 4,326 passed, with
 zero failures on all three platforms. PostgreSQL migration checks passed 4/4.

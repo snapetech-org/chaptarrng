@@ -32,7 +32,6 @@ TOOL_DIR="$(mktemp -d)"
 GENERATED_OUTPUT="$TOOL_DIR/openapi.json"
 SWAGGER_CLI=""
 SWAGGER_PID=""
-SIXLABORS_LICENSE_FILE="${SIXLABORS_LICENSE_FILE:-$(pwd)/sixlabors.lic}"
 
 cleanup() {
   if [[ -n "$SWAGGER_PID" ]] && kill -0 "$SWAGGER_PID" 2>/dev/null; then
@@ -53,11 +52,7 @@ run_msbuild() {
     "$@"
 }
 
-if [[ -f "$SIXLABORS_LICENSE_FILE" ]]; then
-  run_msbuild "-p:SixLaborsLicenseFile=$SIXLABORS_LICENSE_FILE"
-else
-  run_msbuild
-fi
+run_msbuild
 
 dotnet tool install --tool-path "$TOOL_DIR" --version 10.2.3 Swashbuckle.AspNetCore.Cli
 

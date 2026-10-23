@@ -72,7 +72,7 @@ namespace NzbDrone.Core.MediaCover
         private static readonly TimeSpan BlockedImageUrlBackoff = TimeSpan.FromHours(6);
         private readonly BoundedCache<DateTime> _blockedImageUrlsUntilUtc = new(4096, StringComparer.Ordinal);
 
-        // ImageSharp is slow on ARM (no hardware acceleration on mono yet)
+        // Cover decoding and resizing is CPU-intensive; keep this work bounded.
         // So limit the number of concurrent resizing tasks
         private static SemaphoreSlim _semaphore = new SemaphoreSlim((int)Math.Ceiling(Environment.ProcessorCount / 2.0));
         private readonly ConcurrentDictionary<string, Task<EnsureImageResult>> _inFlightDownloads = new();

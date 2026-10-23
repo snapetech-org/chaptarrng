@@ -50,7 +50,7 @@ overlapping pack file so the copy path is checked against a preexisting SDK.
 ## Build a standalone archive
 
 Build the frontend first so `_output/UI/index.html` exists. The archive builder
-requires .NET SDK `10.0.402`, `SIXLABORS_LICENSE_KEY`, and an output directory.
+requires .NET SDK `10.0.402` and an output directory.
 For Linux x86 and FreeBSD, download or build the custom runtime-pack artifact,
 then set `CUSTOM_RUNTIME_PACKS_DIR` to its `packages` directory:
 

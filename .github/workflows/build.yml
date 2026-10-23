@@ -7,10 +7,7 @@ on:
   pull_request:
     branches: [ main ]
     types: [ opened, edited, reopened, synchronize ]
-  workflow_call:
-    secrets:
-      SIXLABORS_LICENSE_KEY:
-        required: true
+  workflow_call: {}
   workflow_dispatch:
 
 # Tests only, never publishes. PRs and merges are both validated automatically, but
@@ -147,16 +144,6 @@ jobs:
         mkdir -p -- "$RUNNER_TEMP/dotnet"
         printf 'DOTNET_INSTALL_DIR=%s/dotnet\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
 
-
-    - name: Require ImageSharp build license
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-      shell: bash
-      run: |
-        if [[ -z "${SIXLABORS_LICENSE_KEY:-}" ]]; then
-          echo "::error::Configure the SIXLABORS_LICENSE_KEY Actions secret to build this repository's direct ImageSharp dependency."
-          exit 1
-        fi
 
     - name: Guard (repo) - no merge-conflict markers
       shell: bash
@@ -297,20 +284,14 @@ jobs:
     # native packaging owns bundled-tool acquisition and validation.
 
     - name: Restore dependencies
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: |
         dotnet restore src/Chaptarr.NoTests.sln
         dotnet restore src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj
     
     - name: Build
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: dotnet build src/Chaptarr.NoTests.sln --configuration Release --no-restore
 
     - name: Build test assembly
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore -p:UseSharedCompilation=false
 
     - name: Build tool-enabled M4B test image
@@ -376,8 +357,6 @@ jobs:
       run: yarn build
     
     - name: Publish
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: |
         dotnet publish src/NzbDrone.Console/Chaptarr.Console.csproj -c Release -f net10.0 -o ./publish/Chaptarr
         dotnet publish src/NzbDrone.Update/Chaptarr.Update.csproj -c Release -f net10.0 -o ./publish/Chaptarr/Chaptarr.Update
@@ -466,16 +445,6 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-    - name: Require ImageSharp build license
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-      shell: bash
-      run: |
-        if [[ -z "${SIXLABORS_LICENSE_KEY:-}" ]]; then
-          echo "::error::Configure the SIXLABORS_LICENSE_KEY Actions secret to build this repository's direct ImageSharp dependency."
-          exit 1
-        fi
-
     - name: Configure user-writable .NET install directory
       shell: bash
       run: |
@@ -519,15 +488,11 @@ jobs:
         psql -h localhost -U chaptarr -d postgres -c 'CREATE DATABASE "chaptarr-cache";'
 
     - name: Restore dependencies
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: |
         dotnet restore src/Chaptarr.NoTests.sln
         dotnet restore src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj
 
     - name: Build (migrations smoke)
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       run: |
         dotnet build src/Chaptarr.NoTests.sln --configuration Release --no-restore
         dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore -p:UseSharedCompilation=false
@@ -583,33 +548,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-    - name: Check whether the Six Labors build secret is available
-      id: license
-      env:
-        LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-        EVENT_NAME: ${{ github.event_name }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        if [[ -n "$LICENSE_KEY" ]]; then
-          echo 'configured=true' >> "$GITHUB_OUTPUT"
-        elif [[ "$EVENT_NAME" == 'pull_request' ]]; then
-          echo 'configured=false' >> "$GITHUB_OUTPUT"
-          echo 'Docker image builds are skipped for pull requests without the private image-build license.' >> "$GITHUB_STEP_SUMMARY"
-        else
-          echo '::error::SIXLABORS_LICENSE_KEY is required for Docker image validation outside pull requests.'
-          exit 1
-        fi
-
     - name: Set up QEMU for target-platform runtime steps
-      if: steps.license.outputs.configured == 'true'
       uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       with:
         image: tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
         platforms: arm,arm64
 
     - name: Set up Docker Buildx
-      if: steps.license.outputs.configured == 'true'
       uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       with:
         # The isolated BuildKit daemon needs the runner's trust roots too.
@@ -624,7 +569,6 @@ jobs:
           env.SSL_CERT_FILE=/etc/buildkit/certs/docker.io/ca-certificates.crt
 
     - name: Build image for all published architectures without pushing
-      if: steps.license.outputs.configured == 'true'
       uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
       with:
         context: .
@@ -641,6 +585,4 @@ jobs:
           no_proxy=localhost,127.0.0.1
         cache-from: type=gha,scope=bookshelfng-${{ matrix.cache-scope }}
         cache-to: type=gha,scope=bookshelfng-${{ matrix.cache-scope }},mode=max
-        secrets: |
-          SIXLABORS_LICENSE_KEY=${{ secrets.SIXLABORS_LICENSE_KEY }}
 
