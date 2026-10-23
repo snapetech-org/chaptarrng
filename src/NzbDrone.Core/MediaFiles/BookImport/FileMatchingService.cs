@@ -40,6 +40,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
     {
         private readonly IMatchingUploadLogger _matchingLogger;
         private readonly IV5MatchingService _v5MatchingService;
+        private readonly ISearchForNewBook _catalogSearch;
         private readonly IContainmentValidator _containmentValidator;
         private readonly Logger _logger;
         private readonly IPendingAuthorImportService _pendingAuthorImportService;
@@ -693,10 +694,12 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             IEditionService editionService,
             IEditionRepository editionRepository,
             IMediaInfoExtractor mediaInfoExtractor,
-            Logger logger)
+            Logger logger,
+            ISearchForNewBook catalogSearch = null)
         {
             _matchingLogger = matchingLogger;
             _v5MatchingService = v5MatchingService;
+            _catalogSearch = catalogSearch;
             _containmentValidator = containmentValidator;
             _pendingAuthorImportService = pendingAuthorImportService;
             _commandQueue = commandQueue;
@@ -795,9 +798,58 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             return MatchFilesToLibraryAsync(filesWithMetadata, restrictToAuthorId, ctx);
         }
 
-        public Task<FileMatchResult> MatchFilesToLibraryAsync(DiscoveredFileWithMetadata[] filesWithMetadata, int? restrictToAuthorId, MatchingContext context)
+        public async Task<FileMatchResult> MatchFilesToLibraryAsync(DiscoveredFileWithMetadata[] filesWithMetadata, int? restrictToAuthorId, MatchingContext context)
         {
-            return WithPerFileFtsMemo(context?.PerFileMatching == true, () => MatchFilesToLibraryCoreAsync(filesWithMetadata, restrictToAuthorId, context));
+            context ??= new MatchingContext();
+            var result = await WithPerFileFtsMemo(
+                context.PerFileMatching,
+                () => MatchFilesToLibraryCoreAsync(filesWithMetadata, restrictToAuthorId, context));
+
+            var catalogSearchIsBookScoped = context.TargetBookIds?.Any(id => id > 0) == true ||
+                context.HardAllowedBookIds?.Any(id => id > 0) == true;
+            Author allowedCatalogAuthor = null;
+            if (context.AllowCatalogSearch && !catalogSearchIsBookScoped && restrictToAuthorId is > 0)
+            {
+                try
+                {
+                    allowedCatalogAuthor = _authorService?.GetAuthor(restrictToAuthorId.Value);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException &&
+                    ex is not OperationCanceledException &&
+                    (ex is not AggregateException aggregate || !aggregate.Flatten().InnerExceptions.Any(inner =>
+                        inner is OutOfMemoryException or OperationCanceledException)))
+                {
+                    _logger.Debug(ex, "[CATALOG-MATCH] Could not load the scoped author; skipping catalog suggestions");
+                }
+            }
+
+            if (context.AllowCatalogSearch &&
+                !catalogSearchIsBookScoped &&
+                (!restrictToAuthorId.HasValue || allowedCatalogAuthor != null) &&
+                result.UnmatchedFiles?.Length > 0 &&
+                _catalogSearch != null)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    UnmappedCatalogSuggestionHelper.AddSuggestions(
+                        _catalogSearch,
+                        _logger,
+                        result.UnmatchedFiles,
+                        allowedCatalogAuthor,
+                        context.CancellationToken,
+                        stopAfterFirstCandidate: true);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException &&
+                    ex is not OutOfMemoryException &&
+                    (ex is not AggregateException aggregate || !aggregate.Flatten().InnerExceptions.Any(inner =>
+                        inner is OutOfMemoryException or OperationCanceledException)))
+                {
+                    _logger.Debug(ex, "[CATALOG-MATCH] Catalog suggestions failed; keeping the local/V5 match result");
+                }
+            }
+
+            return result;
         }
 
         private Task<FileMatchResult> MatchFilesToLibraryCoreAsync(DiscoveredFileWithMetadata[] filesWithMetadata, int? restrictToAuthorId, MatchingContext context)

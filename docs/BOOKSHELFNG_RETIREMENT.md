@@ -12,6 +12,21 @@ failures; the full Release solution built with 0 warnings and errors. This is
 source-level regression evidence; provider, representative-data, and installed
 handoff acceptance remain open.
 
+**Routine catalog identification fallback — 2026-10-23:** When local and V5
+matching leave files unmatched, ChaptarrNG now searches the configured catalog
+using ISBN, ASIN, Goodreads/provider IDs, author/title, title, a single-file
+filename, then author. Routine search stops broadening when a tier returns
+candidates; a review suggestion still requires the exact media type and one
+stable author/work identity. Author-scoped searches stay within that provider
+identity, and book-scoped searches do not widen. Manual Import preview and
+eligible completed-download imports use the same path. The explicit Unmapped
+Files retry retains its established query behavior, including rejecting
+conflicting identifier and text-tier identities. Release Core passed 4,800
+tests with 25 skipped and no failures; the full Release solution built with 0
+warnings and errors. This closes a routine source-level catalog-search gap;
+live-provider fulfillment, representative-data acceptance, and installed
+handoff remain open.
+
 **Maintainer/operator acceptance — 2026-10-22:** The project maintainer,
 provider maintainer, and operator explicitly accepted the BookshelfNG
 retirement effort and its migration and provider/platform handoff decisions,

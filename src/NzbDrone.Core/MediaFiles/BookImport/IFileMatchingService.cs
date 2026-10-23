@@ -19,6 +19,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         public bool AllowV5Identification { get; set; }
 
         /// <summary>
+        /// When true, search configured metadata catalogs for exact provider/identifier matches
+        /// and unambiguous title/author suggestions after local and V5 matching fail.
+        /// Suggestions remain reviewable and do not modify the library.
+        /// </summary>
+        public bool AllowCatalogSearch { get; set; }
+
+        /// <summary>
         /// When true, the matcher may import authors into the local library as part of author gating.
         /// Prefer keeping this false outside of root-scan style workflows.
         /// </summary>
