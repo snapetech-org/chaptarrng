@@ -1,6 +1,7 @@
 using System.Linq;
 using NLog;
 using NzbDrone.Common.Cache;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.IndexerSearch.Definitions;
 using NzbDrone.Core.Parser.Model;
@@ -13,15 +14,18 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         private readonly UpgradableSpecification _upgradableSpecification;
         private readonly ICustomFormatCalculationService _formatService;
         private readonly Logger _logger;
+        private readonly IConfigService _configService;
 
         public UpgradeDiskSpecification(UpgradableSpecification qualityUpgradableSpecification,
                                         ICacheManager cacheManager,
                                         ICustomFormatCalculationService formatService,
+                                        IConfigService configService,
                                         Logger logger)
         {
             _upgradableSpecification = qualityUpgradableSpecification;
             _formatService = formatService;
             _logger = logger;
+            _configService = configService;
         }
 
         public SpecificationPriority Priority => SpecificationPriority.Default;
@@ -29,7 +33,8 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
 
         public virtual Decision IsSatisfiedBy(RemoteBook subject, SearchCriteriaBase searchCriteria)
         {
-            if (InteractiveBookSearchSpecificationHelper.IsResolvedInteractiveBookSearch(subject, searchCriteria))
+            if (_configService?.BookshelfMatchCompatibility != true &&
+                InteractiveBookSearchSpecificationHelper.IsResolvedInteractiveBookSearch(subject, searchCriteria))
             {
                 _logger.Trace("Skipping on-disk upgrade rejection for resolved interactive book search");
                 return Decision.Accept();

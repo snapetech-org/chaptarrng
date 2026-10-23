@@ -1,5 +1,17 @@
 # BookshelfNG retirement status
 
+**Migrated release-decision parity — 2026-10-23:** ChaptarrNG now keeps
+BookshelfNG's non-bypassable required/ignored release-term and quality-profile
+rejections for converted installs, and does not skip cutoff or upgrade checks
+during resolved interactive searches. It also preserves BookshelfNG's empty
+discography acceptance edge. Fresh installs retain ChaptarrNG's current
+bypassable filters and stricter empty-discography handling. Split-book IDs are
+allocated above the complete source ID range to avoid colliding with adjacent
+legacy records. The Release Core suite passed 4,783 tests with 25 skips and no
+failures; the full Release solution built with 0 warnings and errors. This is
+source-level regression evidence; provider, representative-data, and installed
+handoff acceptance remain open.
+
 **Maintainer/operator acceptance — 2026-10-22:** The project maintainer,
 provider maintainer, and operator explicitly accepted the BookshelfNG
 retirement effort and its migration and provider/platform handoff decisions,
