@@ -9,6 +9,8 @@ using NLog;
 using NUnit.Framework;
 using NzbDrone.Core.AuthorStats;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.MediaCover.Commands;
+using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Validation;
 
 namespace Chaptarr.Core.Test.Api
@@ -177,7 +179,32 @@ namespace Chaptarr.Core.Test.Api
             legacyIdentityMap.Verify(service => service.ResolveBookIds(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 30 })), BookMediaType.Ebook), Times.Once);
         }
 
-        private static BookController CreateController(IBookService bookService, IBookshelfLegacyIdentityMapService legacyIdentityMap = null)
+        [Test]
+        public void should_download_media_for_every_format_of_an_unscoped_migrated_book_id()
+        {
+            var legacyIdentityMap = new Mock<IBookshelfLegacyIdentityMapService>();
+            legacyIdentityMap
+                .Setup(service => service.ResolveBookIds(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 30 })), null))
+                .Returns(new List<int> { 30, 31 });
+            var commandQueue = new Mock<IManageCommandQueue>();
+            var controller = CreateController(
+                new Mock<IBookService>().Object,
+                legacyIdentityMap.Object,
+                commandQueue.Object);
+
+            var result = controller.DownloadBookMedia(30);
+
+            Assert.That(result, Is.TypeOf<AcceptedResult>());
+            commandQueue.Verify(queue => queue.Push(
+                It.Is<DownloadBookMediaCommand>(command => command.BookIds.SequenceEqual(new[] { 30, 31 })),
+                CommandPriority.Normal,
+                CommandTrigger.Unspecified), Times.Once);
+        }
+
+        private static BookController CreateController(
+            IBookService bookService,
+            IBookshelfLegacyIdentityMapService legacyIdentityMap = null,
+            IManageCommandQueue commandQueue = null)
         {
             var seriesLinks = new Mock<ISeriesBookLinkService>();
             seriesLinks.Setup(service => service.GetLinksByBook(It.IsAny<List<int>>()))
@@ -200,7 +227,7 @@ namespace Chaptarr.Core.Test.Api
                 mediaCoverProxy: null,
                 upgradableSpecification: null,
                 signalRBroadcaster: null,
-                commandQueueManager: null,
+                commandQueueManager: commandQueue,
                 eventAggregator: null,
                 metadataProfileService: null,
                 qualityProfileService: null,

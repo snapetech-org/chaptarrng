@@ -9,6 +9,81 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
+**Legacy-ID book-search command compatibility — 2026-10-23:** The API command
+endpoint now resolves `BookSearchCommand` IDs through the migrated
+`BookshelfLegacyIdentityMap`. An unscoped request searches every target row
+created when a legacy book splits by format; an ebook or audiobook Readarr
+facade searches only its matching row. Regression cases cover both paths. The
+Release Core suite passed 4,762 tests, skipped 25, and failed 0; the full
+Release application solution built with 0 warnings and 0 errors. This closes
+the server-side legacy-ID command path; converted-data acceptance and live
+SeerrNG fulfillment remain open.
+
+**Legacy-ID book command compatibility — 2026-10-23:** Generic API commands
+for book search, refresh, cover downloads, and supported metadata pushes now
+resolve migrated BookshelfNG IDs to every target format row when unscoped, and
+respect the ebook or audiobook Readarr facade when scoped. A single-book
+`RefreshBook` request that splits by format is queued as `BulkRefreshBook`;
+cover downloads process all resolved rows. The direct book cover-download
+endpoint follows the same expansion. Regression coverage includes command
+mapping and cover processing. The Release Core suite passed 4,771 tests,
+skipped 25, and failed 0; the full Release application solution built with 0
+warnings and 0 errors. Other client routes, converted-data acceptance, and live
+SeerrNG fulfillment remain open.
+
+**Structured migration field-loss protection — 2026-10-23:** ChaptarrNG commit
+`5dad84d17c2ed6818d25eeab249e52783927f2a9` extends the importer's fail-closed
+column mapping checks to all copied or transformed structured tables, including
+profiles, roots, authors and metadata, books and editions, media files, series,
+blocklists, history, and provider configuration. Source-only values are allowed
+only where the importer explicitly translates them, including per-format book
+monitoring. Parameterized regression cases inject a non-empty unknown field
+into 21 tables and verify conversion stops before promotion while leaving the
+source database byte-identical and creating no backup. The Release Core suite
+passed 4,758 tests, skipped 25, and failed 0; the commit-hook Semgrep scan found
+0 findings. This closes another silent data-loss path; it does not establish
+complete migration fidelity, live provider behavior, feature parity,
+representative-data acceptance, or release/channel readiness.
+
+**Converted matching threshold application — 2026-10-23:** ChaptarrNG commit
+`f783e27c` adds an integration case through the real `FileMatchingService` for
+the converted-install compatibility marker. It confirms the saved BookshelfNG
+threshold changes whether a candidate is accepted (51% accepts; 70% rejects),
+while a fresh-install matcher ignores that legacy threshold even when set to
+99%. The Release Core suite passed 4,760 tests, skipped 25, and failed 0;
+commit-hook Semgrep found 0 findings. This validates the migrated setting's
+runtime wiring with synthetic match data. Representative converted-library
+acceptance and full feature parity remain open.
+
+**Built-in provider settings preservation matrix — 2026-10-23:** ChaptarrNG
+commit `37703f82204fd993f49ea37ed11020c6a5435af5` adds a migration fixture for
+all 15 built-in BookshelfNG download clients, six import-list providers (with
+the `ReadarrImport` to `ChaptarrImport` alias covered separately), and 24
+notifications. Each row carries representative populated settings; preview
+must report no blocking issues, and apply must preserve its implementation,
+settings contract, and serialized settings exactly. Existing fixtures cover
+all ten indexers and the metadata settings adapter. The full Release Core suite
+passed 4,759 tests, skipped 25, and failed 0. This broadens source-level
+provider migration coverage; live fulfillment, real credentials and operator
+data, complete semantic parity, and installed-channel acceptance remain open.
+
+**Provider migration fail-closed coverage — 2026-10-23:** ChaptarrNG commit
+`2ae3d0959bf8da7e6e1999bf69cc5d2f5b611f8d` rejects non-empty source columns
+without a target mapping in `Indexers`, `ImportLists`, and `Notifications`,
+while preserving the explicit `ProfileId` and `OnTrackRetag` conversions. The
+indexer migration fixture now covers all ten built-in BookshelfNG indexer
+contracts with representative saved settings and verifies exact settings
+preservation. The Release Core suite passed 4,740 tests, skipped 25, and failed
+0; commit-hook Semgrep found zero findings. Exact-head hosted Build
+[`40010572006`](https://github.com/snapetech-org/chaptarrng/actions/runs/40010572006),
+Security Analysis
+[`40010572313`](https://github.com/snapetech-org/chaptarrng/actions/runs/40010572313),
+and standalone-asset validation
+[`40010572013`](https://github.com/snapetech-org/chaptarrng/actions/runs/40010572013)
+were queued or pending. This closes a source-level silent-column-drop path;
+full provider mapping, live fulfillment, representative operator data, and
+release/channel acceptance remain open.
+
 **Latest ChaptarrNG validation — 2026-10-23:** Application-code snapshot
 `a2d0af9fc31a94369bf091189b10b63f8ab1dc7e` (before documentation-only
 `ec83157eee0c3d14b223565418dee7d913376cdd` and
@@ -1032,9 +1107,10 @@ authorized while these gates remain open. The remaining work is:
 
 1. Close each BookshelfNG feature row with behavioral and converted-data
    evidence, or record an explicit maintainer decision to retire that behavior.
-   This includes validating the lossy numeric matching-policy translation
-   against converted data. The cross-catalog fallback is merged source work,
-   not in `.977`; it needs identifier, exact-name, ambiguity, and pending-import
+   The saved numeric matching threshold is now exercised through the current
+   matcher with synthetic data; representative converted-library acceptance
+   remains open. The cross-catalog fallback is merged source work, not in
+   `.977`; it needs identifier, exact-name, ambiguity, and pending-import
    acceptance evidence.
 2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
    passes; validate older-schema support on representative operator data,

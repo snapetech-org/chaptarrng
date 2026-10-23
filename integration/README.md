@@ -96,6 +96,13 @@ in the [retirement status](../docs/BOOKSHELFNG_RETIREMENT.md). Representative
 audiobooks and restart/resume remain open, and release publication stays
 frozen.
 
+On 2026-10-23, the pinned-tool run passed all eight cases against the current
+application source on `main` (`6c3477f7`; the .NET application and test source
+is unchanged from `9d2948bc`). Six cases covered Move/Copy import, merge,
+unprobeable-part fallback, and simulated tool failure; two covered embedded
+chapter preservation in Move and Copy modes. The test generated synthetic
+audio. Representative audiobooks and interrupted restart/resume remain open.
+
 After building the test assembly as in `.github/workflows/build.yml`, run it
 locally with:
 
@@ -181,6 +188,29 @@ create/poll/cancel lifecycle. This does not test real media, successful
 provider fulfillment, operator records, PostgreSQL operator data, or installed
 rollback. The `.m4b` and `.epub` fixture files are placeholders. No release or
 bridge was published.
+
+## Exact-head source-build migration and SeerrNG smoke (2026-10-23)
+
+The checked-in Compose smoke built ChaptarrNG directly from commit
+`70167aec1578cf7e5c9871f2b34e78317bb6af63` and ran against SeerrNG
+`bc580332ab49a7efa87e3d78b680a2a0cf1abbd0`. The schema-158 BookshelfNG
+fixture converted during normal startup. SeerrNG's `ReadarrAPI` verified the
+legacy book identity mapping and format-scoped reads. A legacy `BookSearch`
+command using source book ID `30` returned both migrated IDs (`30` and `31`);
+the adapter then read the audiobook and ebook through their format-specific
+facades, observed each migrated file, and confirmed the ebook history row did
+not leak into audiobook history. The restricted service-key boundary passed,
+and SeerrNG created, polled, and cancelled a synthetic pending import through
+the adapter. ChaptarrNG reported `0.9.978.0`.
+
+The Docker build and both smoke scripts completed successfully; the frontend
+build reported the existing 22 CSS-order warnings, and container publishing
+reported missing Git metadata for SourceLink. The test used synthetic records
+and placeholder media, not operator data or live providers. It does not cover
+successful acquisition, playable M4B behavior, representative PostgreSQL
+data, installed rollback, or package-channel acceptance. The uniquely named
+Compose volumes, image, and override were removed after the run. No release,
+bridge, or cutover was performed.
 
 ## Earlier source-build request-lifecycle run (2026-10-19)
 

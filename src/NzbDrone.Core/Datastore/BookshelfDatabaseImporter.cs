@@ -59,6 +59,36 @@ namespace NzbDrone.Core.Datastore
             {
                 ["ReadarrSettings"] = "ChaptarrSettings"
             };
+        private static readonly ISet<string> ImportListMappedSourceColumns =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ProfileId" };
+        private static readonly ISet<string> RootFolderMappedSourceColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "DefaultQualityProfileId", "DefaultMetadataProfileId", "DefaultMonitorOption", "DefaultNewItemMonitorOption", "DefaultTags"
+        };
+        private static readonly ISet<string> AuthorMappedSourceColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "AuthorMetadataId", "LastInfoSync"
+        };
+        private static readonly ISet<string> AuthorMetadataMappedSourceColumns =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ForeignAuthorId" };
+        private static readonly ISet<string> BookMappedSourceColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "AuthorMetadataId", "ForeignBookId", "Monitored"
+        };
+        private static readonly ISet<string> EditionMappedSourceColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "IsEbook", "Narrator"
+        };
+        private static readonly ISet<string> SeriesMappedSourceColumns =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ForeignSeriesId" };
+        private static readonly ISet<string> SeriesBookLinkMappedSourceColumns =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Position" };
+        private static readonly ISet<string> BlocklistMappedSourceColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "AuthorId", "BookIds"
+        };
+        private static readonly ISet<string> NamingConfigMappedSourceColumns =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "MultiEpisodeStyle" };
         private static readonly IReadOnlyDictionary<string, string> MetadataContracts =
             BuildProviderContractMap(typeof(IMetadata), typeof(MetadataBase<>));
         private static readonly IReadOnlyDictionary<string, string> MetadataImplementationAliases =
@@ -75,6 +105,8 @@ namespace NzbDrone.Core.Datastore
             };
         private static readonly IReadOnlyDictionary<string, string> NotificationContracts =
             BuildProviderContractMap(typeof(INotification), typeof(NotificationBase<>));
+        private static readonly ISet<string> NotificationMappedSourceColumns =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "OnTrackRetag" };
 
         private static readonly HashSet<string> SupportedSourceTables = new(StringComparer.Ordinal)
         {
@@ -271,6 +303,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "QualityProfiles"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "QualityProfiles");
                 var sourceId = GetInt(row, "Id");
                 var audiobookId = sourceId;
                 var ebookId = nextId++;
@@ -304,6 +337,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "MetadataProfiles"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "MetadataProfiles");
                 var values = Intersect(row, targetColumns);
                 values["ProfileType"] = 0;
                 SetIfPresent(values, "Ignored", "[]");
@@ -331,6 +365,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "RootFolders"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "RootFolders", RootFolderMappedSourceColumns);
                 var values = Intersect(row, targetColumns);
                 var qualityId = GetNullableInt(row, "DefaultQualityProfileId");
                 var metadataId = GetNullableInt(row, "DefaultMetadataProfileId");
@@ -410,6 +445,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "Authors"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "Authors", AuthorMappedSourceColumns);
                 var metadataId = GetInt(row, "AuthorMetadataId");
                 if (!metadataRows.TryGetValue(metadataId, out var metadata))
                 {
@@ -422,6 +458,7 @@ namespace NzbDrone.Core.Datastore
                 }
 
                 referencedMetadataIds.Add(metadataId);
+                EnsureAllSourceValuesMapped(metadata, targetColumns, "AuthorMetadata", AuthorMetadataMappedSourceColumns);
                 var sourceId = GetInt(row, "Id");
                 var canonicalId = NormalizeSourceId(GetString(metadata, "ForeignAuthorId"), "author");
                 var values = Intersect(row, targetColumns);
@@ -544,6 +581,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "Books"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "Books", BookMappedSourceColumns);
                 var sourceId = GetInt(row, "Id");
                 var metadataId = GetInt(row, "AuthorMetadataId");
                 var author = authors.Values.SingleOrDefault(x => x.MetadataId == metadataId);
@@ -671,6 +709,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "Editions"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "Editions", EditionMappedSourceColumns);
                 var sourceBookId = GetInt(row, "BookId");
                 if (!books.TryGetValue(sourceBookId, out var book))
                 {
@@ -724,6 +763,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "BookFiles"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "BookFiles");
                 var sourceFileId = GetInt(row, "Id");
                 var sourceEditionId = GetInt(row, "EditionId");
                 if (sourceEditionId == 0 || !editions.TryGetValue(sourceEditionId, out var edition))
@@ -801,6 +841,7 @@ namespace NzbDrone.Core.Datastore
             var targetColumns = GetColumns(target, "ExtraFiles");
             foreach (var row in ReadRows(source, "ExtraFiles"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "ExtraFiles");
                 var sourceBookId = GetInt(row, "BookId");
                 var sourceFileId = GetInt(row, "BookFileId");
                 if (!books.TryGetValue(sourceBookId, out var book))
@@ -846,6 +887,7 @@ namespace NzbDrone.Core.Datastore
             var unsupportedConsumers = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in ReadRows(source, "MetadataFiles"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "MetadataFiles");
                 var values = Intersect(row, targetColumns);
                 var sourceConsumer = GetString(row, "Consumer") ?? "(missing consumer)";
                 var mappedConsumer = MetadataFileConsumerAliases.TryGetValue(sourceConsumer, out var alias)
@@ -1030,6 +1072,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "Series"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "Series", SeriesMappedSourceColumns);
                 var canonicalId = NormalizeSourceId(GetString(row, "ForeignSeriesId"), "series");
                 var values = Intersect(row, targetColumns);
                 values["Title"] = GetString(row, "Title") ?? "Unknown series";
@@ -1060,6 +1103,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in ReadRows(source, "SeriesBookLink"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "SeriesBookLink", SeriesBookLinkMappedSourceColumns);
                 var sourceBookId = GetInt(row, "BookId");
                 var sourceSeriesId = GetInt(row, "SeriesId");
                 if (!books.TryGetValue(sourceBookId, out var book) || !series.ContainsKey(sourceSeriesId))
@@ -1112,6 +1156,7 @@ namespace NzbDrone.Core.Datastore
             var targetColumns = GetColumns(target, "Blocklist");
             foreach (var row in ReadRows(source, "Blocklist"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "Blocklist", BlocklistMappedSourceColumns);
                 var sourceAuthorId = GetInt(row, "AuthorId");
                 if (!authors.TryGetValue(sourceAuthorId, out var author))
                 {
@@ -1157,6 +1202,7 @@ namespace NzbDrone.Core.Datastore
             var targetColumns = GetColumns(target, "DownloadHistory");
             foreach (var row in ReadRows(source, "DownloadHistory"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "DownloadHistory");
                 var values = Intersect(row, targetColumns);
                 values["BookId"] = 0; // BookshelfNG does not store a book ID on these events.
                 SetIfPresent(values, "Data", GetValue(row, "Data"));
@@ -1182,6 +1228,7 @@ namespace NzbDrone.Core.Datastore
             var ambiguousFileReferences = 0;
             foreach (var row in ReadRows(source, "History"))
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "History");
                 var sourceAuthorId = GetNullableInt(row, "AuthorId");
                 if (sourceAuthorId.HasValue && !authors.ContainsKey(sourceAuthorId.Value))
                 {
@@ -1294,6 +1341,11 @@ namespace NzbDrone.Core.Datastore
             var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in ReadRows(source, "ImportLists"))
             {
+                EnsureAllSourceValuesMapped(
+                    row,
+                    targetColumns,
+                    "ImportLists",
+                    ImportListMappedSourceColumns);
                 var values = Intersect(row, targetColumns);
                 var sourceProfileId = GetNullableInt(row, "ProfileId");
                 var sourceMetadataProfileId = GetNullableInt(row, "MetadataProfileId");
@@ -1337,6 +1389,7 @@ namespace NzbDrone.Core.Datastore
 
             foreach (var row in rows)
             {
+                EnsureAllSourceValuesMapped(row, targetColumns, "Indexers");
                 var values = Intersect(row, targetColumns);
                 CheckProviderSettingsCompatibility(row, values, CompatibleIndexerContracts, unsupported);
 
@@ -1376,16 +1429,7 @@ namespace NzbDrone.Core.Datastore
             var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in rows)
             {
-                var unmapped = row.Where(x => x.Value != null && !targetColumns.ContainsKey(x.Key))
-                    .Select(x => x.Key)
-                    .OrderBy(x => x, StringComparer.Ordinal)
-                    .ToArray();
-                if (unmapped.Length > 0)
-                {
-                    throw new InvalidDataException(
-                        $"BookshelfNG {table} row {GetInt(row, "Id")} has non-empty fields with no Chaptarr mapping: " +
-                        string.Join(", ", unmapped.Select(x => table + "." + x)) + ". Conversion stopped before promotion.");
-                }
+                EnsureAllSourceValuesMapped(row, targetColumns, table);
 
                 var values = Intersect(row, targetColumns);
                 CheckProviderSettingsCompatibility(row, values, compatibleContracts, unsupported, implementationAliases);
@@ -1451,6 +1495,26 @@ namespace NzbDrone.Core.Datastore
             }
 
             unsupported.Add($"row {GetInt(sourceRow, "Id")}: {sourceImplementation}/{(sourceConfigContract.Length == 0 ? "(missing contract)" : sourceConfigContract)}{settingsDisposition}");
+        }
+
+        private static void EnsureAllSourceValuesMapped(
+            IReadOnlyDictionary<string, object> sourceRow,
+            IReadOnlyDictionary<string, ColumnInfo> targetColumns,
+            string table,
+            ISet<string> explicitlyMappedSourceColumns = null)
+        {
+            var unmapped = sourceRow.Where(x => x.Value != null &&
+                    !targetColumns.ContainsKey(x.Key) &&
+                    explicitlyMappedSourceColumns?.Contains(x.Key) != true)
+                .Select(x => x.Key)
+                .OrderBy(x => x, StringComparer.Ordinal)
+                .ToArray();
+            if (unmapped.Length > 0)
+            {
+                throw new InvalidDataException(
+                    $"BookshelfNG {table} row {GetInt(sourceRow, "Id")} has non-empty fields with no Chaptarr mapping: " +
+                    string.Join(", ", unmapped.Select(x => table + "." + x)) + ". Conversion stopped before promotion.");
+            }
         }
 
         private static string[] FindMissingGoodreadsOAuthSettings(string settingsJson, string implementation, string configContract)
@@ -1746,6 +1810,7 @@ namespace NzbDrone.Core.Datastore
 
                 foreach (var row in sourceRows)
                 {
+                    EnsureAllSourceValuesMapped(row, targetColumns, "NamingConfig", NamingConfigMappedSourceColumns);
                     var values = Intersect(row, targetColumns);
                     SetIfPresent(values, "MultiEpisodeStyle", 0);
                     SetIfPresent(values, "AuthorFolderFormat", GetString(row, "AuthorFolderFormat") ?? "{Author Name}");
@@ -2131,6 +2196,11 @@ namespace NzbDrone.Core.Datastore
             var unsupported = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in ReadRows(source, "Notifications"))
             {
+                EnsureAllSourceValuesMapped(
+                    row,
+                    targetColumns,
+                    "Notifications",
+                    NotificationMappedSourceColumns);
                 var values = Intersect(row, targetColumns);
                 CheckProviderSettingsCompatibility(row, values, NotificationContracts, unsupported);
                 if (!row.ContainsKey("OnBookRetag"))
@@ -2162,16 +2232,7 @@ namespace NzbDrone.Core.Datastore
             var targetColumns = GetColumns(target, table);
             foreach (var row in ReadRows(source, table))
             {
-                var unmapped = row.Where(x => x.Value != null && !targetColumns.ContainsKey(x.Key))
-                    .Select(x => x.Key)
-                    .OrderBy(x => x, StringComparer.Ordinal)
-                    .ToArray();
-                if (unmapped.Length > 0)
-                {
-                    throw new InvalidDataException(
-                        $"BookshelfNG {table} row {GetInt(row, "Id")} has non-empty fields with no Chaptarr mapping: " +
-                        string.Join(", ", unmapped.Select(x => table + "." + x)) + ". Conversion stopped before promotion.");
-                }
+                EnsureAllSourceValuesMapped(row, targetColumns, table);
 
                 var values = Intersect(row, targetColumns);
                 transform?.Invoke(values);

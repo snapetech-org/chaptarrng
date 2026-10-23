@@ -4,16 +4,22 @@ using System.IO;
 using System.Linq;
 using Chaptarr.Api.V1.MediaTypes;
 using Chaptarr.Http;
+using Chaptarr.Http.Middleware;
 using Chaptarr.Http.REST;
 using Chaptarr.Http.Validation;
 using Microsoft.AspNetCore.Mvc;
+using NzbDrone.Core.Books.Calibre;
+using NzbDrone.Core.MediaCover.Commands;
+using NzbDrone.Core.Notifications.CalibreContentServer;
+using NzbDrone.Core.Notifications.Grimmory;
 using NzbDrone.Core.IndexerSearch;
 using NLog;
 using NzbDrone.Common.Composition;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Common.TPL;
-using NzbDrone.Core.Datastore.Events;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Commands;
+using NzbDrone.Core.Datastore.Events;
 using NzbDrone.Core.MediaFiles.BookImport.Manual;
 using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.Messaging.Commands;
@@ -32,18 +38,21 @@ namespace Chaptarr.Api.V1.Commands
         private readonly Logger _logger;
         private readonly Debouncer _debouncer;
         private readonly Dictionary<int, CommandResource> _pendingUpdates;
+        private readonly IBookshelfLegacyIdentityMapService _bookshelfLegacyIdentityMapService;
 
         private readonly CommandPriorityComparer _commandPriorityComparer = new CommandPriorityComparer();
 
         public CommandController(IManageCommandQueue commandQueueManager,
                              IBroadcastSignalRMessage signalRBroadcaster,
                              KnownTypes knownTypes,
-                             Logger logger)
+                             Logger logger,
+                             IBookshelfLegacyIdentityMapService bookshelfLegacyIdentityMapService = null)
             : base(signalRBroadcaster)
         {
             _commandQueueManager = commandQueueManager;
             _knownTypes = knownTypes;
             _logger = logger;
+            _bookshelfLegacyIdentityMapService = bookshelfLegacyIdentityMapService;
 
             _debouncer = new Debouncer(SendUpdates, TimeSpan.FromSeconds(0.1));
             _pendingUpdates = new Dictionary<int, CommandResource>();
@@ -77,6 +86,12 @@ namespace Chaptarr.Api.V1.Commands
                 : CommandPriority.Normal;
 
             dynamic command = STJson.Deserialize(body, commandType);
+
+            if (_bookshelfLegacyIdentityMapService != null)
+            {
+                var facadeMediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
+                command = ResolveLegacyBookCommandIds((Command)command, facadeMediaType);
+            }
 
             if (command is RescanFoldersCommand rescanFoldersCommand)
             {
@@ -125,6 +140,82 @@ namespace Chaptarr.Api.V1.Commands
             var trackedCommand = _commandQueueManager.Push(command, priority, CommandTrigger.Manual);
 
             return Created(trackedCommand.Id);
+        }
+
+        private Command ResolveLegacyBookCommandIds(Command command, BookMediaType? mediaType)
+        {
+            switch (command)
+            {
+                case BookSearchCommand bookSearchCommand when bookSearchCommand.BookIds?.Count > 0:
+                    bookSearchCommand.BookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(bookSearchCommand.BookIds, mediaType);
+                    break;
+
+                case BulkRefreshBookCommand bulkRefreshBookCommand when bulkRefreshBookCommand.BookIds?.Count > 0:
+                    bulkRefreshBookCommand.BookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(bulkRefreshBookCommand.BookIds, mediaType);
+                    break;
+
+                case PushCalibreMetadataCommand pushCalibreMetadataCommand when pushCalibreMetadataCommand.BookIds?.Count > 0:
+                    pushCalibreMetadataCommand.BookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(pushCalibreMetadataCommand.BookIds, mediaType);
+                    break;
+
+                case PushGrimmoryMetadataCommand pushGrimmoryMetadataCommand when pushGrimmoryMetadataCommand.BookIds?.Count > 0:
+                    pushGrimmoryMetadataCommand.BookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(pushGrimmoryMetadataCommand.BookIds, mediaType);
+                    break;
+
+                case RePushBookCommand rePushBookCommand when rePushBookCommand.BookIds?.Count > 0:
+                    rePushBookCommand.BookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(rePushBookCommand.BookIds, mediaType);
+                    if (rePushBookCommand.BookIds.Count == 0)
+                    {
+                        rePushBookCommand.BookId = 0;
+                    }
+                    break;
+
+                case RePushBookCommand rePushBookCommand when rePushBookCommand.BookId > 0:
+                    var rePushBookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(new[] { rePushBookCommand.BookId }, mediaType);
+                    if (rePushBookIds.Count > 1)
+                    {
+                        rePushBookCommand.BookIds = rePushBookIds;
+                    }
+                    else if (rePushBookIds.Count == 1)
+                    {
+                        rePushBookCommand.BookId = rePushBookIds[0];
+                    }
+                    else
+                    {
+                        rePushBookCommand.BookId = 0;
+                    }
+                    break;
+
+                case RefreshBookCommand refreshBookCommand when refreshBookCommand.BookId > 0:
+                    var refreshedBookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(new[] { refreshBookCommand.BookId.Value }, mediaType);
+                    if (refreshedBookIds.Count > 1)
+                    {
+                        return new BulkRefreshBookCommand(refreshedBookIds);
+                    }
+
+                    if (refreshedBookIds.Count == 1)
+                    {
+                        refreshBookCommand.BookId = refreshedBookIds[0];
+                    }
+                    else
+                    {
+                        throw new BadRequestException("Book ID does not match a book in the requested media type.");
+                    }
+                    break;
+
+                case DownloadBookMediaCommand downloadBookMediaCommand when downloadBookMediaCommand.BookId > 0:
+                    var downloadedBookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(new[] { downloadBookMediaCommand.BookId }, mediaType);
+                    if (downloadedBookIds.Count == 0)
+                    {
+                        throw new BadRequestException("Book ID does not match a book in the requested media type.");
+                    }
+
+                    downloadBookMediaCommand.BookId = downloadedBookIds[0];
+                    downloadBookMediaCommand.BookIds = downloadedBookIds;
+                    break;
+            }
+
+            return command;
         }
 
         private static void ValidateUnmappedFilesSelection(string mediaType, UnmappedFilesSelection selection)
