@@ -9,7 +9,23 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
-**Latest ChaptarrNG parity and validation — 2026-10-23:** Application-code
+**Latest ChaptarrNG validation — 2026-10-23:** ChaptarrNG `main` at
+`a2d0af9fc31a94369bf091189b10b63f8ab1dc7e` passes the Release Core suite
+(4,736 passed, 25 skipped, 0 failed). The pinned-tool M4B integration passed
+8/8 with no skips, covering merge/chapter handling, Move/Copy behavior, and
+failure fallback. A source-built Compose smoke against SeerrNG
+`bc580332ab49a7efa87e3d78b680a2a0cf1abbd0` converted the populated synthetic
+BookshelfNG schema-158 fixture during startup; SeerrNG read both format
+libraries through the restricted key, administrative and unrelated access
+were denied, and a pending request completed create/poll/cancel. Hosted exact-
+head build, standalone, and security workflows are still queued. Release run
+[`40001390170`](https://github.com/snapetech-org/chaptarrng/actions/runs/40001390170)
+was cancelled before publication; public `v0.9.977` remains latest. These
+synthetic checks do not establish live-provider fulfillment, representative
+operator-data acceptance, installed rollback, or update-channel handoff. No
+release or cutover was published.
+
+**Prior parity checkpoint — 2026-10-23:** Application-code
 commit `4b57b479d73c844db19278233e25efe94509e99b` is on `main`; it includes
 migrated-audiobook release and pending-queue ranking compatibility, orders
 inferred audiobook parts by complete embedded disc/track tags, and preserves
