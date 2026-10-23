@@ -31,7 +31,7 @@ installation choices.
 ## Operations and development
 
 - [Reporting issues](REPORTING_ISSUES.md): useful logs and environment details, with privacy guidance.
-- [HTTP security](HTTP_SECURITY.md): API keys, proxy trust, CORS, and request limits.
+- [HTTP security](HTTP_SECURITY.md): API keys, proxy trust, CORS, bundled UI asset URLs, and request limits.
 - [ImageSharp build license](development/imagesharp-license.md): source-build license requirements.
 - [Standalone archive builds](development/standalone-archives.md): supported runtime IDs, custom runtime packs, and no-publication validation.
 - [Setup experience contract](development/setup-experience-contract.md): Quickstart flow and completion rules.

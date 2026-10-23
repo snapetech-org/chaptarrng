@@ -60,6 +60,13 @@ The API policy allows its existing methods and headers, while the static policy
 allows only GET and OPTIONS. The API policy exposes the legacy
 `X-Bookshelf-Request-Id` response header for request correlation.
 
+## Bundled UI assets
+
+The generated UI accepts webpack JavaScript and stylesheet URLs only when they
+resolve to the same origin. The template emits only the URL path, query, and
+fragment, rejects invalid or external URLs, and limits each asset URL to 2,048
+characters.
+
 ## Request limits
 
 `REQUESTSPERMINUTE` sets a global fixed-window limit per client IP. It defaults
