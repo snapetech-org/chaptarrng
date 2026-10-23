@@ -597,11 +597,16 @@ jobs:
       if: steps.license.outputs.configured == 'true'
       uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       with:
+        # The isolated BuildKit daemon needs the runner's trust roots too.
+        buildkitd-config-inline: |
+          [registry."docker.io"]
+            ca = ["/etc/ssl/certs/ca-certificates.crt"]
         driver-opts: |
           env.HTTP_PROXY=${{ env.BUILDKIT_EGRESS_PROXY }}
           env.HTTPS_PROXY=${{ env.BUILDKIT_EGRESS_PROXY }}
           env.http_proxy=${{ env.BUILDKIT_EGRESS_PROXY }}
           env.https_proxy=${{ env.BUILDKIT_EGRESS_PROXY }}
+          env.SSL_CERT_FILE=/etc/buildkit/certs/docker.io/ca-certificates.crt
 
     - name: Build image for all published architectures without pushing
       if: steps.license.outputs.configured == 'true'
