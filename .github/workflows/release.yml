@@ -5,10 +5,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - package.json
-      - src/Directory.Build.props
-      - .github/workflows/release.yml
 
 permissions:
   contents: read
