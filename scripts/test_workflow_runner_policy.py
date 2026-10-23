@@ -70,7 +70,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         source = WORKFLOW.read_text(encoding="utf-8")
         docker_job = job_block(source, "docker-compatibility-build")
         expected_proxy_gate = (
-            "BUILDKIT_EGRESS_PROXY: ${{ (github.event_name == 'push' || "
+            "BUILDKIT_EGRESS_PROXY: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || "
             "github.event_name == 'workflow_dispatch') && github.ref == "
             "'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}"
         )
@@ -107,8 +107,8 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("github.event.changes.body != null", release_notes)
         self.assertIn("github.event.action != 'edited'", build)
         self.assertIn("github.event.action != 'edited'", migrations)
-        self.assertIn("group: build-${{ github.run_id }}-${{ github.run_attempt }}", source)
-        self.assertIn("cancel-in-progress: false", source)
+        self.assertIn("group: build-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}", source)
+        self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", source)
 
     def test_release_note_check_fetches_the_pr_head_after_merge(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
@@ -219,6 +219,18 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("Install Chromium and system dependencies on Linux", source)
         self.assertIn("install --with-deps chromium", source)
         self.assertNotIn("runner.environment", source)
+        linux_install = step_block(source, "Install Chromium and system dependencies on Linux")
+        self.assertNotIn("pwsh", linux_install)
+        self.assertIn('"$driver/node/linux-x64/node"', linux_install)
+        self.assertIn('"$driver/package/cli.js"', linux_install)
+
+    def test_postgres_restore_uses_client_matching_server_major(self) -> None:
+        source = WORKFLOW.read_text(encoding="utf-8")
+        migrations = job_block(source, "postgres-migrations")
+        self.assertIn("image: postgres:16", migrations)
+        self.assertIn("postgresql-client-16", migrations)
+        self.assertIn("/usr/lib/postgresql/16/bin", migrations)
+        self.assertIn("GITHUB_PATH", migrations)
 
     def test_frontend_build_runs_after_tests_and_before_publish(self) -> None:
         build = job_block(WORKFLOW.read_text(encoding="utf-8"), "build")
@@ -236,3 +248,4 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

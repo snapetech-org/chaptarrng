@@ -1,3 +1,4 @@
+# ng-runner-policy: hosted-first-v1
 name: Validate standalone release assets
 
 on:
@@ -34,10 +35,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ng-standalone-asset-validation-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
+
 jobs:
   verify-runtime-pack-install:
     name: Preserve existing .NET directory permissions
-    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -54,7 +59,7 @@ jobs:
   frontend:
     if: github.event_name != 'pull_request'
     name: Build frontend once
-    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -117,7 +122,7 @@ jobs:
     if: github.event_name != 'pull_request'
     name: Build and verify ${{ matrix.rid }} archive
     needs: [frontend, extra-platform-runtimes]
-    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -185,7 +190,7 @@ jobs:
     if: github.event_name != 'pull_request'
     name: Build and verify ${{ matrix.rid }} archive
     needs: frontend
-    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -239,3 +244,4 @@ jobs:
           fi
         fi
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")
+

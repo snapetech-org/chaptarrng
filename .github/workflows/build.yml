@@ -1,3 +1,4 @@
+# ng-runner-policy: hosted-first-v1
 name: Build ChaptarrNG
 
 on:
@@ -16,11 +17,11 @@ on:
 # nothing reaches users until release.yml is run by hand; docker-publish.yml is
 # workflow_call-only, so no run started here can push an image.
 
-# Keep every validation run attached to its own commit. A newer push must not
-# cancel a build that is already checking an earlier candidate.
+# Superseded PR code checks cancel; body-only edits have a separate group.
+# Main builds and release callers keep their own run and are never superseded.
 concurrency:
-  group: build-${{ github.run_id }}-${{ github.run_attempt }}
-  cancel-in-progress: false
+  group: build-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -29,7 +30,7 @@ jobs:
   release-notes:
     name: Release-note contract
     if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot' && (github.event.action != 'edited' || github.event.changes.body != null)
-    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -73,7 +74,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
     # Trusted main Linux validation uses the isolated shared pool; PRs and
     # non-Linux matrix legs use GitHub-hosted runners.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || matrix.os }}
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && matrix.os == 'ubuntu-latest' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -337,7 +338,13 @@ jobs:
       if: runner.os == 'Linux'
       env:
         PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
-      run: pwsh ./_tests/net10.0/playwright.ps1 install --with-deps chromium
+      shell: bash
+      run: |
+        set -euo pipefail
+        driver=./_tests/net10.0/.playwright
+        test -x "$driver/node/linux-x64/node"
+        test -f "$driver/package/cli.js"
+        PW_LANG_NAME=csharp "$driver/node/linux-x64/node" "$driver/package/cli.js" install --with-deps chromium
 
     - name: Verify Unraid package sync stays off feature branches
       shell: bash
@@ -441,7 +448,7 @@ jobs:
 
   postgres-migrations:
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
-    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-24.04' }}
     services:
       postgres:
         image: postgres:16
@@ -486,15 +493,20 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        if ! command -v psql >/dev/null 2>&1; then
+        if [[ ! -x /usr/lib/postgresql/16/bin/pg_dump || ! -x /usr/lib/postgresql/16/bin/pg_restore ]]; then
           proxy="${https_proxy:-${HTTPS_PROXY:-${http_proxy:-${HTTP_PROXY:-}}}}"
           apt_options=()
           if [[ -n "$proxy" ]]; then
             apt_options+=(-o "Acquire::http::Proxy=$proxy" -o "Acquire::https::Proxy=$proxy")
           fi
           sudo apt-get "${apt_options[@]}" update
-          sudo apt-get "${apt_options[@]}" install -y postgresql-client
+          sudo apt-get "${apt_options[@]}" install -y postgresql-client-16
         fi
+        # Match the service's major version. A newer pg_dump emits settings
+        # (such as transaction_timeout) that PostgreSQL 16 cannot restore.
+        /usr/lib/postgresql/16/bin/pg_dump --version
+        /usr/lib/postgresql/16/bin/pg_restore --version
+        echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
 
     - name: Create databases
       shell: bash
@@ -552,9 +564,9 @@ jobs:
 
   docker-compatibility-build:
     name: Docker (${{ matrix.target }})
-    runs-on: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     env:
-      BUILDKIT_EGRESS_PROXY: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
+      BUILDKIT_EGRESS_PROXY: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -631,3 +643,4 @@ jobs:
         cache-to: type=gha,scope=bookshelfng-${{ matrix.cache-scope }},mode=max
         secrets: |
           SIXLABORS_LICENSE_KEY=${{ secrets.SIXLABORS_LICENSE_KEY }}
+
