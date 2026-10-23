@@ -9,6 +9,23 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
+**Provider migration fail-closed coverage — 2026-10-23:** ChaptarrNG commit
+`2ae3d0959bf8da7e6e1999bf69cc5d2f5b611f8d` rejects non-empty source columns
+without a target mapping in `Indexers`, `ImportLists`, and `Notifications`,
+while preserving the explicit `ProfileId` and `OnTrackRetag` conversions. The
+indexer migration fixture now covers all ten built-in BookshelfNG indexer
+contracts with representative saved settings and verifies exact settings
+preservation. The Release Core suite passed 4,740 tests, skipped 25, and failed
+0; commit-hook Semgrep found zero findings. Exact-head hosted Build
+[`40010572006`](https://github.com/snapetech-org/chaptarrng/actions/runs/40010572006),
+Security Analysis
+[`40010572313`](https://github.com/snapetech-org/chaptarrng/actions/runs/40010572313),
+and standalone-asset validation
+[`40010572013`](https://github.com/snapetech-org/chaptarrng/actions/runs/40010572013)
+were queued or pending. This closes a source-level silent-column-drop path;
+full provider mapping, live fulfillment, representative operator data, and
+release/channel acceptance remain open.
+
 **Latest ChaptarrNG validation — 2026-10-23:** Application-code snapshot
 `a2d0af9fc31a94369bf091189b10b63f8ab1dc7e` (before documentation-only
 `ec83157eee0c3d14b223565418dee7d913376cdd` and
