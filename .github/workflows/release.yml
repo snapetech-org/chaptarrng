@@ -1,14 +1,14 @@
 name: Release
 
-# Manual only. Releases are cut from the maintained stable main branch.
+# A version bump merged to the maintained stable main branch starts a release.
 on:
-  workflow_dispatch:
-    inputs:
-      publish_legacy_bridge:
-        description: Publish BookshelfNG Debian, package, image, and Helm identities after all migration acceptance gates pass.
-        required: false
-        type: boolean
-        default: false
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+      - src/Directory.Build.props
+      - .github/workflows/release.yml
 
 permissions:
   contents: read
@@ -20,11 +20,47 @@ concurrency:
 jobs:
   preflight:
     runs-on: ubuntu-latest
+    outputs:
+      release_requested: ${{ steps.release-request.outputs.release_requested }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         ref: main
         persist-credentials: false
+
+    - name: Detect a new stable version
+      id: release-request
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -euo pipefail
+        version="$(python3 -c "import json; print(json.load(open('package.json', encoding='utf-8'))['version'])")"
+        if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+          echo "Expected a stable SemVer version in package.json, found $version." >&2
+          exit 1
+        fi
+
+        releases_json="$RUNNER_TEMP/published-releases.json"
+        gh release list --limit 100 --json tagName,isDraft,isPrerelease,publishedAt > "$releases_json"
+        latest_tag="$(jq -r '
+          [.[] | select(.isDraft == false and .isPrerelease == false and
+            (.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))]
+          | sort_by(.publishedAt)
+          | last
+          | .tagName // empty
+        ' "$releases_json")"
+        latest_version="${latest_tag#v}"
+        is_newer="$(python3 -c 'import sys; current=tuple(map(int, sys.argv[1].split("."))); latest=tuple(map(int, sys.argv[2].split("."))) if sys.argv[2] else (); print(str(current > latest).lower())' "$version" "$latest_version")"
+
+        if [[ "$is_newer" != true ]]; then
+          echo "Version $version is not newer than the latest published stable release ${latest_tag:-<none>}; skipping release publication."
+          echo 'release_requested=false' >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "Version $version is newer than ${latest_tag:-<none>}; starting the stable release pipeline."
+        echo 'release_requested=true' >> "$GITHUB_OUTPUT"
 
     - name: Require a releasable branch
       shell: bash
@@ -36,17 +72,20 @@ jobs:
         fi
 
     - name: Require retirement release readiness
+      if: steps.release-request.outputs.release_requested == 'true'
       env:
         CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
         BOOKSHELFNG_RELEASE_READY: ${{ vars.BOOKSHELFNG_RELEASE_READY }}
       run: ./packaging/scripts/require-release-readiness.sh
 
     - name: Validate Discord release destination before publishing
+      if: steps.release-request.outputs.release_requested == 'true'
       env:
         DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
       run: bash packaging/scripts/validate-release-publisher-config.sh discord
 
   validate:
+    if: needs.preflight.outputs.release_requested == 'true'
     needs: preflight
     uses: ./.github/workflows/build.yml
     secrets:
@@ -276,12 +315,12 @@ jobs:
     with:
       sha: ${{ needs.release.outputs.sha }}
       branch: ${{ github.ref_name }}
-      legacy_bridge_enabled: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
+      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
 
   dispatch-legacy-ghcr:
     name: Dispatch personal-account BookshelfNG GHCR bridge
     needs: [release, docker, publish-release]
-    if: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
+    if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -506,7 +545,7 @@ jobs:
         path: ${{ runner.temp }}/release-assets
 
     - name: Build the gated BookshelfNG Debian package asset
-      if: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
+      if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
       env:
         VERSION: ${{ needs.release.outputs.version }}
         ARCHIVE_PATH: ${{ runner.temp }}/release-assets/ChaptarrNG-${{ needs.release.outputs.version }}-linux-x64.tar.gz
@@ -524,7 +563,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: ${{ needs.release.outputs.tag }}
         VERSION: ${{ needs.release.outputs.version }}
-        LEGACY_BRIDGE_ENABLED: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
+        LEGACY_BRIDGE_ENABLED: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
       run: |
         set -euo pipefail
         release_state="$(gh release view "$TAG" --json isDraft --jq '.isDraft')"
@@ -585,7 +624,7 @@ jobs:
     with:
       tag: ${{ needs.release.outputs.tag }}
       version: ${{ needs.release.outputs.version }}
-      legacy_bridge_enabled: ${{ inputs.publish_legacy_bridge && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
+      legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
     secrets:
       AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
       COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}

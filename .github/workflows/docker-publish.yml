@@ -1,6 +1,6 @@
 name: Docker Build and Publish
 
-# Never fires on its own. Only release.yml can call it after manual CI succeeds.
+# Never fires on its own. release.yml calls it after a version bump and CI pass.
 on:
   workflow_call:
     inputs:
