@@ -54,6 +54,17 @@ does not establish live remote-instance behavior, representative operator-data
 acceptance, hosted exact-head validation, or installed-channel handoff. No
 release or cutover was published.
 
+**BookshelfNG startup diagnostics — 2026-10-23:** ChaptarrNG restores the
+startup diagnostics for build/runtime metadata, HTTP binding, and packaged UI
+entry-point presence. Existing `BOOKSHELF_IMAGE_*` and `BOOKSHELF_CONTAINER`
+values remain readable, with CR/LF sanitized before logging. A host-lifecycle
+fixture verifies legacy image metadata, sanitized output, HTTP settings, and
+the missing-UI report. The full Release Core suite passed 4,736 tests with 25
+skips and no failures. This restores the identified operational diagnostics
+path; exact-head hosted validation, representative operator-data acceptance,
+and installed-channel handoff remain open. No release or cutover was
+published.
+
 **Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
 ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through
 `Dockerfile.build` and passed both checked-in smoke scripts against SeerrNG
