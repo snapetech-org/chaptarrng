@@ -826,6 +826,13 @@ so this is a closer compatibility path rather than an identical matching
 pipeline. Review it against converted data. The source change is not in public
 `.977`.
 
+The same migration-only compatibility marker restores BookshelfNG's audiobook
+release ranking when both candidates are audiobooks: quality and revision,
+custom-format score, preferred protocol, indexer priority, torrent peers, book
+count, Usenet age, then size rounded to 200 MB. Fresh installs and mixed
+ebook/audiobook comparisons keep ChaptarrNG's current ranking. This source
+change is also not included in public `.977`.
+
 For a source earlier than migration 14, first update BookshelfNG to its final
 `0.4.21.71` release so it can bring the database to migration 158. The `.977`
 converter does not include the later `main` fix, and no follow-up release is

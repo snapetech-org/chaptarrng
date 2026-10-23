@@ -453,6 +453,13 @@ converted data before cutover. The migration report states both dispositions;
 values outside 50–99 stop conversion before promotion. This source change is
 not in `.977` while the release freeze remains active.
 
+For migrated installs, the same compatibility marker restores BookshelfNG's
+audiobook release order when comparing two audiobook candidates: quality and
+revision, custom-format score, preferred protocol, indexer priority, torrent
+peers, book count, Usenet age, and size rounded to 200 MB. Fresh installs and
+mixed ebook/audiobook comparisons keep ChaptarrNG's current ranking. This
+change is also absent from the published `.977` release.
+
 ## New author format paths
 
 The current migration candidate preserves BookshelfNG's
