@@ -410,7 +410,14 @@ Move-mode source cleanup, and Copy-mode source retention. Failure cases verify
 fallback to separate original-track imports in both modes when FFprobe cannot
 read a source and when a controlled FFmpeg error makes the real `m4b-tool`
 process fail. The Linux build workflow runs these six cases in the checked-in
-`integration/Dockerfile.m4b-test` image. Synthetic embedded-chapter Move/Copy and TagLib-write cases pass on c4fa; representative M4B files and restart/resume remain open.
+`integration/Dockerfile.m4b-test` image. The current application snapshot also
+passed eight pinned-tool cases covering embedded-chapter Move/Copy and
+TagLib-write/reprobe. `ConversionJobServiceFixture` simulates startup after an
+interrupted conversion: it restores a persisted converting job with its
+synthetic output and manifest, marks the artifact ready to import, and queues
+the import sweep. That fixture passes in the full Core suite. Representative
+M4B files and recovery of a real in-progress conversion after an installed
+service restart remain unverified.
 The implementation requires the FFmpeg executable to be named `ffmpeg`
 (`ffmpeg.exe` on Windows) for `m4b-tool` to find it through `PATH`.
 

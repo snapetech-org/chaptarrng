@@ -11,17 +11,21 @@ update-channel handoff.
 
 **Latest ChaptarrNG validation — 2026-10-23:** Application-code snapshot
 `a2d0af9fc31a94369bf091189b10b63f8ab1dc7e` (before documentation-only
-`ec83157eee0c3d14b223565418dee7d913376cdd`) passes the Release Core suite
+`ec83157eee0c3d14b223565418dee7d913376cdd` and
+`65867fa78ea95fa39887e94f4483fe77ffa70f6e`) passes the Release Core suite
 (4,736 passed, 25 skipped, 0 failed). The pinned-tool M4B integration passed
 8/8 with no skips, covering merge/chapter handling, Move/Copy behavior, and
-failure fallback. A source-built Compose smoke against SeerrNG
+failure fallback. The Core suite also covers simulated restart recovery from a
+persisted conversion job with its output and manifest, then queues the import
+sweep; actual interrupted-media recovery remains open. A source-built Compose
+smoke against SeerrNG
 `bc580332ab49a7efa87e3d78b680a2a0cf1abbd0` converted the populated synthetic
 BookshelfNG schema-158 fixture during startup; SeerrNG read both format
 libraries through the restricted key, administrative and unrelated access
 were denied, and a pending request completed create/poll/cancel. Hosted exact-
-head build and security workflows for `ec83157eee0c3d14b223565418dee7d913376cdd`
+head build and security workflows for `65867fa78ea95fa39887e94f4483fe77ffa70f6e`
 are still queued. Release run
-[`40003032844`](https://github.com/snapetech-org/chaptarrng/actions/runs/40003032844)
+[`40003167055`](https://github.com/snapetech-org/chaptarrng/actions/runs/40003167055)
 was cancelled before publication; public `v0.9.977` remains latest. These
 synthetic checks do not establish live-provider fulfillment, representative
 operator-data acceptance, installed rollback, or update-channel handoff. No
