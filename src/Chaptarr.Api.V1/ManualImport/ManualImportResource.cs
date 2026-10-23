@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Chaptarr.Api.V1.Author;
+using Chaptarr.Api.V1.BookFiles;
 using Chaptarr.Api.V1.Books;
 using Chaptarr.Api.V1.CustomFormats;
 using Chaptarr.Http.REST;
@@ -39,6 +40,7 @@ namespace Chaptarr.Api.V1.ManualImport
         public List<string> Warnings { get; set; }
         public MatchProvenance MatchProvenance { get; set; }
         public Dictionary<string, List<string>> Tags { get; set; }
+        public ParsedTrackInfo AudioTags { get; set; }
         public bool AdditionalFile { get; set; }
         public bool ReplaceExistingFiles { get; set; }
         public bool DisableReleaseSwitching { get; set; }
@@ -88,6 +90,7 @@ namespace Chaptarr.Api.V1.ManualImport
                 Warnings = model.Warnings ?? new List<string>(),
                 MatchProvenance = model.MatchProvenance?.Clone(),
                 Tags = model.Tags ?? new Dictionary<string, List<string>>(),
+                AudioTags = BookshelfAudioTagsCompatibilityMapper.ToParsedTrackInfo(model.Tags, model.Quality, null, model.DurationSeconds),
 
                 AdditionalFile = model.AdditionalFile,
                 ReplaceExistingFiles = model.ReplaceExistingFiles,

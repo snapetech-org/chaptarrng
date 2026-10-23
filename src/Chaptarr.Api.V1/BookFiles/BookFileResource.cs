@@ -29,9 +29,9 @@ namespace Chaptarr.Api.V1.BookFiles
         public MatchProvenance MatchProvenance { get; set; }
         public string ImportUnitKey { get; set; }
         public string ImportUnitRoot { get; set; }
+        public ParsedTrackInfo AudioTags { get; set; }
 
         public bool QualityCutoffNotMet { get; set; }
-        // Removed: ParsedTrackInfo AudioTags (field-agnostic import no longer exposes tags here)
     }
 
     public static class BookFileResourceMapper

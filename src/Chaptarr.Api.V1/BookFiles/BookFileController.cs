@@ -216,6 +216,10 @@ namespace Chaptarr.Api.V1.BookFiles
                 }
             }
 
+            // Keep the BookshelfNG v1 response field for existing clients while the richer
+            // field-agnostic tag map remains available through Tags.
+            resource.AudioTags = BookshelfAudioTagsCompatibilityMapper.ToParsedTrackInfo(bookFile, resource.Tags);
+
             return resource;
         }
 

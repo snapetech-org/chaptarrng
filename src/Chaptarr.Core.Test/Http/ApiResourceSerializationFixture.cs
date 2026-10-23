@@ -52,7 +52,7 @@ namespace Chaptarr.Core.Test.Http
 
             book.Editions = new System.Collections.Generic.List<Edition> { edition };
 
-            var nextBook = book.ToResource();
+            var nextBook = book.ToResource(BookResourceMappingOptions.Lean());
             nextBook.Author = null;
 
             var resource = new AuthorResource

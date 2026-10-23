@@ -15,7 +15,7 @@ namespace Chaptarr.Core.Test.Api
     public class BookshelfControllerFixture
     {
         [Test]
-        public void should_treat_an_empty_monitoring_object_as_no_command()
+        public void should_keep_bookshelf_default_all_monitoring_for_an_empty_options_object()
         {
             var request = STJson.Deserialize<BookshelfResource>(
                 "{\"authors\":[{\"id\":42}],\"monitoringOptions\":{}}");
@@ -24,10 +24,12 @@ namespace Chaptarr.Core.Test.Api
             var controller = new BookshelfController(authorService, monitoredService);
 
             var result = controller.UpdateAll(request);
+            var calls = GetMonitoredServiceProxy(monitoredService).Calls;
 
             Assert.That(result, Is.TypeOf<AcceptedResult>());
-            Assert.That(GetMonitoredServiceProxy(monitoredService).Calls, Is.Empty);
-            Assert.That(GetAuthorServiceProxy(authorService).GetAuthorsCallCount, Is.Zero);
+            Assert.That(calls, Has.Count.EqualTo(1));
+            Assert.That(calls[0].Options.Monitor, Is.EqualTo(MonitorTypes.All));
+            Assert.That(GetAuthorServiceProxy(authorService).GetAuthorsCallCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -118,6 +120,34 @@ namespace Chaptarr.Core.Test.Api
             {
                 (30, 30, "audiobook"),
                 (30, 31, "ebook")
+            }));
+        }
+
+        [Test]
+        public void should_return_author_metadata_identity_mappings_for_compatibility()
+        {
+            var identityMap = CreateLegacyIdentityMapService();
+            GetLegacyIdentityMapProxy(identityMap).Mappings = new List<BookshelfLegacyIdentityMapEntry>
+            {
+                new BookshelfLegacyIdentityMapEntry
+                {
+                    Source = "BookshelfNG",
+                    EntityType = "AuthorMetadata",
+                    SourceId = 10,
+                    TargetId = 20
+                }
+            };
+            var controller = new BookshelfController(
+                CreateAuthorService(new Author { Id = 42, Name = "Martha Wells" }),
+                CreateRecordingMonitoredService(),
+                identityMap);
+
+            var result = controller.GetLegacyIdentities("AuthorMetadata", new List<int> { 10 });
+            var mappings = ((OkObjectResult)result).Value as List<BookshelfLegacyIdentityResource>;
+
+            Assert.That(mappings.Select(mapping => (mapping.EntityType, mapping.SourceId, mapping.TargetId)), Is.EqualTo(new[]
+            {
+                ("AuthorMetadata", 10, 20)
             }));
         }
 
@@ -391,6 +421,7 @@ namespace Chaptarr.Core.Test.Api
                 {
                     nameof(IBookshelfLegacyIdentityMapService.ResolveBookIds) => ResolvedBookIds,
                     nameof(IBookshelfLegacyIdentityMapService.GetMappings) => Mappings,
+                    nameof(IBookshelfLegacyIdentityMapService.GetMappingsByTargetIds) => Mappings,
                     _ => throw new NotImplementedException($"Test proxy does not implement {targetMethod?.Name}")
                 };
             }

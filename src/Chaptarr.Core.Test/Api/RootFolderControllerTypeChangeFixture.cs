@@ -178,11 +178,13 @@ namespace Chaptarr.Core.Test.Api
         }
 
         [Test]
-        public void post_should_require_an_explicit_folder_type_in_json()
+        public void post_should_default_an_omitted_legacy_folder_type_to_mixed()
         {
-            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<RootFolderResource>(
+            var resource = JsonSerializer.Deserialize<RootFolderResource>(
                 "{\"name\":\"Books\",\"path\":\"/books\"}",
-                STJson.GetSerializerSettings()));
+                STJson.GetSerializerSettings());
+
+            Assert.That(resource.FolderType, Is.Zero);
         }
 
         [Test]

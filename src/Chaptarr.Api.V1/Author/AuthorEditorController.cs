@@ -59,6 +59,7 @@ namespace Chaptarr.Api.V1.Author
         [Consumes("application/json")]
         public IActionResult SaveAll([FromBody] AuthorEditorResource resource)
         {
+            resource.ApplyBookshelfCompatibilityAliases();
             var authorsToUpdate = _authorService.GetAuthors(resource.AuthorIds);
             var previousSyncByAuthorId = authorsToUpdate.ToDictionary(author => author.Id, author => author.SyncMonitoredAcrossFormats == true);
             var previousRootFoldersByAuthorId = authorsToUpdate.ToDictionary(author => author.Id, author => (author.AudiobookRootFolderPath, author.EbookRootFolderPath));

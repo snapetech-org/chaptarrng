@@ -570,6 +570,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Manual
             }
 
             item.Quality = decision.Item.Quality;
+            item.DurationSeconds = decision.Item.DurationSeconds;
             item.IndexerFlags = (int)decision.Item.IndexerFlags;
             item.Size = fileInfo.Exists ? fileInfo.Length : 0;
 

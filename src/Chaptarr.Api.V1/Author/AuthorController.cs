@@ -109,6 +109,7 @@ namespace Chaptarr.Api.V1.Author
         private readonly IProviderAliasService _providerAliasService;
         private readonly IEditionService _editionService;
         private readonly IMediaFileService _mediaFileService;
+        private readonly IBookshelfLegacyIdentityMapService _bookshelfLegacyIdentityMapService;
         private readonly IEventAggregator _eventAggregator;
 	        private readonly IAppFolderInfo _appFolderInfo;
 	        private readonly IBuildFileNames _fileNameBuilder;
@@ -144,7 +145,8 @@ namespace Chaptarr.Api.V1.Author
                             AuthorFolderAsRootFolderValidator authorFolderAsRootFolderValidator,
                             IProviderAliasService providerAliasService = null,
                             IEditionService editionService = null,
-                            IMediaFileService mediaFileService = null)
+                            IMediaFileService mediaFileService = null,
+                            IBookshelfLegacyIdentityMapService bookshelfLegacyIdentityMapService = null)
             : base(signalRBroadcaster)
         {
             _authorService = authorService;
@@ -161,6 +163,7 @@ namespace Chaptarr.Api.V1.Author
             _providerAliasService = providerAliasService;
             _editionService = editionService;
             _mediaFileService = mediaFileService;
+            _bookshelfLegacyIdentityMapService = bookshelfLegacyIdentityMapService;
             _eventAggregator = eventAggregator;
             _appFolderInfo = appFolderInfo;
             _fileNameBuilder = fileNameBuilder;
@@ -348,6 +351,7 @@ namespace Chaptarr.Api.V1.Author
             }
 
             var resource = author.ToResource(HttpContext.GetReadarrFacadeContext());
+            ApplyBookshelfAuthorMetadataIds(new[] { resource });
             MapCoversToLocal(resource);
             FetchAndLinkAuthorStatistics(resource, HttpContext.GetReadarrFacadeContext()?.MediaType);
             LinkNextPreviousBooks(new[] { author }, resource);
@@ -375,6 +379,7 @@ namespace Chaptarr.Api.V1.Author
             var authorResources = authors.ToResource(HttpContext.GetReadarrFacadeContext());
             var authorResourceArray = authorResources.ToArray();
 
+            ApplyBookshelfAuthorMetadataIds(authorResourceArray);
             MapCoversToLocal(authorResourceArray);
             LinkNextPreviousBooks(authors, authorResourceArray);
 
@@ -825,6 +830,7 @@ namespace Chaptarr.Api.V1.Author
                     }
 
                     var authorResource = existingAuthor.ToResource(HttpContext.GetReadarrFacadeContext());
+                    ApplyBookshelfAuthorMetadataIds(new[] { authorResource });
                     if (!string.IsNullOrWhiteSpace(hydrationWarning))
                     {
                         authorResource.HydrationWarning = hydrationWarning;
@@ -1391,6 +1397,8 @@ namespace Chaptarr.Api.V1.Author
 
             var nextByAuthor = FirstBookPerAuthor(nextBooks);
             var lastByAuthor = FirstBookPerAuthor(lastBooks);
+            var legacyMetadataIds = GetBookshelfAuthorMetadataIds(
+                nextByAuthor.Values.Concat(lastByAuthor.Values).Select(book => book.AuthorId));
 
             foreach (var authorResource in authors)
             {
@@ -1399,9 +1407,55 @@ namespace Chaptarr.Api.V1.Author
                     continue;
                 }
 
-                authorResource.NextBook = ToAuthorIndexBookResource(nextByAuthor.GetValueOrDefault(authorResource.Id));
-                authorResource.LastBook = ToAuthorIndexBookResource(lastByAuthor.GetValueOrDefault(authorResource.Id));
+                authorResource.NextBook = ToAuthorIndexBookResource(nextByAuthor.GetValueOrDefault(authorResource.Id), legacyMetadataIds);
+                authorResource.LastBook = ToAuthorIndexBookResource(lastByAuthor.GetValueOrDefault(authorResource.Id), legacyMetadataIds);
             }
+        }
+
+        private static BookResource ToAuthorIndexBookResource(
+            NzbDrone.Core.Books.Book book,
+            IReadOnlyDictionary<int, int> legacyMetadataIds)
+        {
+            if (book == null)
+            {
+                return null;
+            }
+
+            var resource = book.ToResource(BookResourceMappingOptions.Lean());
+            resource.Author = null;
+            resource.AuthorMetadataId = legacyMetadataIds.TryGetValue(book.AuthorId, out var metadataId)
+                ? metadataId
+                : book.AuthorId;
+            return resource;
+        }
+
+        private void ApplyBookshelfAuthorMetadataIds(IEnumerable<AuthorResource> resources)
+        {
+            var authorResources = resources?.Where(resource => resource != null).ToList();
+            if (authorResources == null || authorResources.Count == 0)
+            {
+                return;
+            }
+
+            var metadataIdByAuthorId = GetBookshelfAuthorMetadataIds(authorResources.Select(resource => resource.Id));
+
+            foreach (var resource in authorResources)
+            {
+                resource.AuthorMetadataId = metadataIdByAuthorId.TryGetValue(resource.Id, out var metadataId)
+                    ? metadataId
+                    : resource.Id;
+            }
+        }
+
+        private Dictionary<int, int> GetBookshelfAuthorMetadataIds(IEnumerable<int> authorIds)
+        {
+            var mappings = _bookshelfLegacyIdentityMapService?.GetMappingsByTargetIds(
+                    "AuthorMetadata",
+                    authorIds) ?? new List<BookshelfLegacyIdentityMapEntry>();
+            return mappings
+                .GroupBy(mapping => mapping.TargetId)
+                .Where(group => group.Select(mapping => mapping.SourceId).Distinct().Count() == 1)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
         }
 
         private static Dictionary<int, Book> FirstBookPerAuthor(List<Book> books)
@@ -1564,18 +1618,6 @@ namespace Chaptarr.Api.V1.Author
             }
 
             return result;
-        }
-
-        private static BookResource ToAuthorIndexBookResource(Book book)
-        {
-            if (book == null)
-            {
-                return null;
-            }
-
-            var resource = book.ToResource(BookResourceMappingOptions.Lean());
-            resource.Author = null;
-            return resource;
         }
 
         private void FetchAndLinkAuthorStatistics(AuthorResource resource, string mediaType = null)
@@ -2054,7 +2096,9 @@ namespace Chaptarr.Api.V1.Author
         [NonAction]
         public void Handle(AuthorDeletedEvent message)
         {
-            BroadcastResourceChange(ModelAction.Deleted, message.Author.ToResource());
+            var resource = message.Author.ToResource();
+            ApplyBookshelfAuthorMetadataIds(new[] { resource });
+            BroadcastResourceChange(ModelAction.Deleted, resource);
         }
 
         [NonAction]

@@ -16,6 +16,8 @@ namespace Chaptarr.Api.V1.ImportLists
         public int QualityProfileId { get; set; }
         public int MetadataProfileId { get; set; }
         public ImportListType ListType { get; set; }
+        // BookshelfNG exposed this same discriminator as an integer for v1 clients.
+        public int ListOrder => (int)ListType;
         public TimeSpan MinRefreshInterval { get; set; }
 
         public string HardcoverUsername { get; set; }
