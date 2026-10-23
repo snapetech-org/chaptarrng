@@ -182,6 +182,29 @@ provider fulfillment, operator records, PostgreSQL operator data, or installed
 rollback. The `.m4b` and `.epub` fixture files are placeholders. No release or
 bridge was published.
 
+## Exact-head source-build migration and SeerrNG smoke (2026-10-23)
+
+The checked-in Compose smoke built ChaptarrNG directly from commit
+`70167aec1578cf7e5c9871f2b34e78317bb6af63` and ran against SeerrNG
+`bc580332ab49a7efa87e3d78b680a2a0cf1abbd0`. The schema-158 BookshelfNG
+fixture converted during normal startup. SeerrNG's `ReadarrAPI` verified the
+legacy book identity mapping and format-scoped reads. A legacy `BookSearch`
+command using source book ID `30` returned both migrated IDs (`30` and `31`);
+the adapter then read the audiobook and ebook through their format-specific
+facades, observed each migrated file, and confirmed the ebook history row did
+not leak into audiobook history. The restricted service-key boundary passed,
+and SeerrNG created, polled, and cancelled a synthetic pending import through
+the adapter. ChaptarrNG reported `0.9.978.0`.
+
+The Docker build and both smoke scripts completed successfully; the frontend
+build reported the existing 22 CSS-order warnings, and container publishing
+reported missing Git metadata for SourceLink. The test used synthetic records
+and placeholder media, not operator data or live providers. It does not cover
+successful acquisition, playable M4B behavior, representative PostgreSQL
+data, installed rollback, or package-channel acceptance. The uniquely named
+Compose volumes, image, and override were removed after the run. No release,
+bridge, or cutover was performed.
+
 ## Earlier source-build request-lifecycle run (2026-10-19)
 
 The prior checked-in Compose run built ChaptarrNG PR #131 head
