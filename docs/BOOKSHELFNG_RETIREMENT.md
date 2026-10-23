@@ -9,21 +9,22 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
-**Current source-built SeerrNG migration smoke — 2026-10-22:** ChaptarrNG
-commit `7db557ba` built through `Dockerfile.build` and passed both checked-in
-smoke scripts against SeerrNG source `35d83b8be0243c6c7831e4833644ffd4cfe52c33`.
-Normal startup converted the populated synthetic migration-158 fixture;
-SeerrNG's compiled `ReadarrAPI` read one audiobook and one ebook with their
-Hardcover identities. Restricted-key capability and library access passed,
-administrative and unrelated command access was denied, and the global key
-retained administrative access. The pending-import add, poll, cancellation,
-and terminal-state read also passed. The first source-image attempt found that
-`Dockerfile.build` omitted the compatibility-defaults script required by its
-entrypoint; the fix and regression assertion are included in `7db557ba`, and
-the rebuilt source image passed. This closes current-source local harness
-validation only: live successful provider fulfillment, availability and
-history parity, production settings, real operator records, and full
-SeerrNG workflow acceptance remain open. See the
+**Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
+ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through
+`Dockerfile.build` and passed both checked-in smoke scripts against SeerrNG
+source commit `d0072cee5176554601108209296038f855ac740c`. Normal startup
+converted the populated synthetic migration-158 fixture. SeerrNG's compiled
+`ReadarrAPI` resolved legacy BookshelfNG book ID 30 to audiobook ID 30 and
+ebook ID 31, and returned their corresponding file IDs 50 and 51. Restricted-
+key capability and library reads passed; administrative and unrelated
+command access was denied, while the global key retained administrative
+access. The pending-import add, poll, cancellation, and terminal-state read
+also passed. The Release Core suite passed 4,663 tests with 25 skips and no
+failures. Records, keys, profiles, and media placeholders were synthetic.
+This closes local source-build and migrated-ID smoke coverage; live successful
+provider fulfillment, availability and history parity, production settings,
+real operator records, full SeerrNG workflow acceptance, and installed-channel
+handoff remain open. No release or bridge was published. See the
 [SeerrNG integration evidence](SEERRNG_INTEGRATION.md).
 
 **Reviewed:** 2026-10-22. BookshelfNG `0.4.21.71` and ChaptarrNG `v0.9.977` remain the latest public app releases. ChaptarrNG [main](https://github.com/snapetech-org/chaptarrng/tree/main) contains a candidate-only Debian bridge builder. An isolated dpkg round-trip against the checksum-verified public BookshelfNG `.71` package preserved a modified config and data canary with dependency checks bypassed and systemd mocked. A separate Debian Trixie apt transaction used that actual package and the local `.977` candidate, resolved dependencies (including `libicu76` and `ca-certificates`), installed the CA bundle, upgraded and downgraded without a conffile prompt, and preserved the canaries. In a systemd-running Trixie container, the actual `.71` service upgraded to the local candidate, restarted, and passed `/ping`; after restoring the pre-upgrade database copy, downgrade to `.71` also restarted and passed `/ping`. This used a fresh empty `.71` database and synthetic canaries, not operator data. No compatibility package or migration bridge has been published. Release publication remains frozen and publisher readiness variables remain unset. This is the current handoff summary for moving BookshelfNG users to ChaptarrNG. The detailed feature inventory remains in the [BookshelfNG parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md).

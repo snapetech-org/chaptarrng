@@ -149,32 +149,32 @@ M4B decoding or merge behavior. A separate real-tool importer check passed six
 synthetic multipart M4B cases; representative M4B media and restart/resume remain unverified; synthetic embedded-chapter preservation is covered on c4fa. The smoke checks that SeerrNG reads both
 converted formats and their Hardcover identities, confirms status and
 capability discovery, reads the split audiobook/ebook legacy-ID mappings with
-the restricted service key, rejects that key for administrative and unrelated
-command routes, and runs the compiled SeerrNG adapter through an ebook add,
-pending-import poll, and cancellation. `SEERRNG_NODE_MODULES` must
+the restricted service key, resolves legacy BookshelfNG IDs for individual
+format-scoped book and book-file lookups, rejects that key for administrative
+and unrelated command routes, and runs the compiled SeerrNG adapter through
+an ebook add, pending-import poll, and cancellation. `SEERRNG_NODE_MODULES` must
 point to the installed dependency directory so the separate smoke container
 can resolve SeerrNG's runtime packages. Use `down -v` afterward to delete the
 named test volumes; do not point this harness at operator appdata.
 
 ## Recorded smoke evidence
 
-**Current source-built populated migration and lifecycle smoke (2026-10-22):**
-ChaptarrNG commit `7db557ba` built through the checked-in
+**Current source-built populated migration, legacy-ID, and lifecycle smoke
+(2026-10-22):** ChaptarrNG commit
+`e5788975b0071aae0d1990460461b4321dde0e5a` built through the checked-in
 `Dockerfile.build` and passed both Compose smoke scripts against SeerrNG
-source commit `35d83b8be0243c6c7831e4833644ffd4cfe52c33`. Normal startup
+source commit `d0072cee5176554601108209296038f855ac740c`. Normal startup
 converted the disposable populated BookshelfNG migration-158 fixture.
-SeerrNG's compiled `ReadarrAPI` read one migrated audiobook and one ebook
-with their expected Hardcover identities. Capability discovery and restricted
-service-key access passed; `/config/host` and unrelated `/command` access were
-denied to that key, while the global key remained authorized. The adapter
-created a synthetic pending author import, polled it, cancelled it, and read
-the terminal cancellation state. The first source-image attempt exposed that
-`Dockerfile.build` omitted the compatibility-defaults script sourced by the
-entrypoint; commit `7db557ba` adds the missing copy and a regression check, and
-the rebuilt image passed. Records, keys, and media placeholders were
-synthetic. This does not establish live provider fulfillment, retries,
-availability or history parity, production settings, real operator records,
-or full SeerrNG operator acceptance.
+SeerrNG's compiled `ReadarrAPI` resolved legacy book ID 30 to audiobook ID 30
+and ebook ID 31, then read their corresponding file IDs 50 and 51. Capability
+discovery and restricted service-key access passed; `/config/host` and
+unrelated `/command` access were denied to that key, while the global key
+remained authorized. The adapter created a synthetic pending author import,
+polled it, cancelled it, and read the terminal cancellation state. The Release
+Core suite passed 4,663 tests with 25 skips and no failures. Records, keys,
+profiles, and media placeholders were synthetic. This does not establish live
+provider fulfillment, retries, availability or history parity, production
+settings, real operator records, or full SeerrNG operator acceptance.
 
 **Exact-head artifact-based populated migration and lifecycle smoke
 (2026-10-19):** The Linux application artifact from ChaptarrNG PR #131 code
