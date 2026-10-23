@@ -43,6 +43,9 @@ namespace NzbDrone.Core.MediaFiles
 
         // Match confidence tracking
         public DateTime? LastMatchAttempt { get; set; }
+        // The last successful remote catalog search for an otherwise-unmapped file.
+        // Persisting this lets unchanged scans avoid repeating a completed search.
+        public DateTime? LastRemoteSearchTime { get; set; }
         public string MatchDetails { get; set; }
 
         // Structured explanation for the successful automatic/manual match that linked this file.

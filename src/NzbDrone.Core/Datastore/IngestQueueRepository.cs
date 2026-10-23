@@ -63,7 +63,7 @@ namespace NzbDrone.Core.Datastore
         
         // Result tracking methods
         void RecordImportResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null);
-        void CompleteItemWithResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null, string statusError = null);
+        void CompleteItemWithResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null, string statusError = null, DateTime? lastRemoteSearchTime = null);
         List<ImportResult> GetImportResults(int? commandId = null);
     }
 
@@ -1042,19 +1042,19 @@ namespace NzbDrone.Core.Datastore
         {
             using (var conn = _dbContext.OpenConnection())
             {
-                InsertImportResult(conn, null, queueItemId, path, outcome, bookId, authorId, quality, errorMessage);
+                InsertImportResult(conn, null, queueItemId, path, outcome, bookId, authorId, quality, errorMessage, null);
                 _logger.Debug("Recorded {0} result for {1}", outcome, path);
             }
         }
 
-        public void CompleteItemWithResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null, string statusError = null)
+        public void CompleteItemWithResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null, string statusError = null, DateTime? lastRemoteSearchTime = null)
         {
             using (var conn = _dbContext.OpenConnection())
             using (var transaction = conn.BeginTransaction())
             {
                 try
                 {
-                    InsertImportResult(conn, transaction, queueItemId, path, outcome, bookId, authorId, quality, errorMessage);
+                    InsertImportResult(conn, transaction, queueItemId, path, outcome, bookId, authorId, quality, errorMessage, lastRemoteSearchTime);
 
                     var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                     conn.Execute(@"
@@ -1093,11 +1093,11 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
-        private static void InsertImportResult(IDbConnection conn, IDbTransaction transaction, int queueItemId, string path, ImportOutcome outcome, int? bookId, int? authorId, string quality, string errorMessage)
+        private static void InsertImportResult(IDbConnection conn, IDbTransaction transaction, int queueItemId, string path, ImportOutcome outcome, int? bookId, int? authorId, string quality, string errorMessage, DateTime? lastRemoteSearchTime)
         {
             var sql = @"
-                INSERT INTO import_results (queue_item_id, path, outcome, book_id, author_id, quality, error_message, created_at)
-                VALUES (@queueItemId, @path, @outcome, @bookId, @authorId, @quality, @errorMessage, @createdAt);
+                INSERT INTO import_results (queue_item_id, path, outcome, book_id, author_id, quality, error_message, last_remote_search_time_ticks, created_at)
+                VALUES (@queueItemId, @path, @outcome, @bookId, @authorId, @quality, @errorMessage, @lastRemoteSearchTimeTicks, @createdAt);
             ";
 
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -1110,8 +1110,29 @@ namespace NzbDrone.Core.Datastore
                 authorId,
                 quality,
                 errorMessage,
+                lastRemoteSearchTimeTicks = ToUtcTicks(lastRemoteSearchTime),
                 createdAt = now
             }, transaction);
+        }
+
+        private static long? ToUtcTicks(DateTime? value)
+        {
+            if (!value.HasValue)
+            {
+                return null;
+            }
+
+            var dateTime = value.Value;
+            if (dateTime.Kind == DateTimeKind.Local)
+            {
+                dateTime = dateTime.ToUniversalTime();
+            }
+            else if (dateTime.Kind == DateTimeKind.Unspecified)
+            {
+                dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            }
+
+            return dateTime.Ticks;
         }
         
             public List<ImportResult> GetImportResults(int? commandId = null)
@@ -1148,10 +1169,12 @@ namespace NzbDrone.Core.Datastore
                     var sql = @"
                         SELECT id, queue_item_id as QueueItemId, path, 
                                outcome, book_id as BookId, author_id as AuthorId, 
-                               quality, error_message as ErrorMessage, created_at as CreatedAt
+                               quality, error_message as ErrorMessage,
+                               last_remote_search_time_ticks as LastRemoteSearchTimeTicks,
+                               created_at as CreatedAt
                         FROM import_results
                         /**where**/
-                        ORDER BY created_at DESC
+                        ORDER BY created_at DESC, id DESC
                         LIMIT 1000;
                     ";
 
@@ -1184,6 +1207,7 @@ namespace NzbDrone.Core.Datastore
                     AuthorId = r.AuthorId,
                     Quality = r.Quality,
                     ErrorMessage = r.ErrorMessage,
+                    LastRemoteSearchTimeTicks = r.LastRemoteSearchTimeTicks,
                     CreatedAt = r.CreatedAt
                 }).ToList();
             }
@@ -1199,6 +1223,7 @@ namespace NzbDrone.Core.Datastore
             public int? AuthorId { get; set; }
             public string Quality { get; set; }
             public string ErrorMessage { get; set; }
+            public long? LastRemoteSearchTimeTicks { get; set; }
             public long CreatedAt { get; set; }
         }
     }
@@ -1244,6 +1269,7 @@ namespace NzbDrone.Core.Datastore
         public int? AuthorId { get; set; }
         public string Quality { get; set; }
         public string ErrorMessage { get; set; }
+        public long? LastRemoteSearchTimeTicks { get; set; }
         public long CreatedAt { get; set; }
     }
 }

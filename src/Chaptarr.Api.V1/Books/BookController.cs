@@ -2291,14 +2291,17 @@ namespace Chaptarr.Api.V1.Books
         [HttpPost("{id}/downloadmedia")]
         public IActionResult DownloadBookMedia(int id, bool forceDownload = false, string mediaType = null)
         {
-            var book = ResolveBookForApi(id, mediaType);
+            var bookIds = ResolveBookIdsForApi(new[] { id }, mediaType);
 
-            if (book == null)
+            if (bookIds.Count == 0)
             {
                 return NotFound();
             }
 
-            _commandQueueManager.Push(new DownloadBookMediaCommand(book.Id, forceDownload));
+            _commandQueueManager.Push(new DownloadBookMediaCommand(bookIds[0], forceDownload)
+            {
+                BookIds = bookIds
+            });
 
             return Accepted();
         }

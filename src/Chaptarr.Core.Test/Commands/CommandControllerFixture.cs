@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,10 +15,14 @@ using NLog;
 using NUnit.Framework;
 using NzbDrone.Common.Composition;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.Books.Calibre;
 using NzbDrone.Core.Books.Commands;
+using NzbDrone.Core.MediaCover.Commands;
 using NzbDrone.Core.IndexerSearch;
 using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.Messaging.Commands;
+using NzbDrone.Core.Notifications.CalibreContentServer;
+using NzbDrone.Core.Notifications.Grimmory;
 using NzbDrone.SignalR;
 
 namespace Chaptarr.Core.Test.Commands
@@ -190,6 +195,72 @@ namespace Chaptarr.Core.Test.Commands
             Assert.That(identityMap.LastMediaType, Is.EqualTo(BookMediaType.Ebook));
         }
 
+        [Test]
+        public void refresh_book_command_should_expand_a_split_legacy_id_to_bulk_refresh()
+        {
+            var queue = new StubCommandQueue();
+            var identityMap = new StubLegacyIdentityMapService();
+            var controller = CreateController(queue, """{"name":"RefreshBook","bookId":30}""", identityMap);
+
+            controller.StartCommand(new CommandResource { Name = "RefreshBook" });
+
+            Assert.That(queue.PushedCommand, Is.TypeOf<BulkRefreshBookCommand>());
+            Assert.That(((BulkRefreshBookCommand)queue.PushedCommand).BookIds, Is.EqualTo(new[] { 30, 61 }));
+        }
+
+        [Test]
+        public void refresh_book_command_should_use_the_facade_format_for_legacy_ids()
+        {
+            var queue = new StubCommandQueue();
+            var identityMap = new StubLegacyIdentityMapService();
+            var facadeContext = new ReadarrFacadeContext("hc", "ebook", "/readarr/hc/ebook");
+            var controller = CreateController(
+                queue,
+                """{"name":"RefreshBook","bookId":30}""",
+                identityMap,
+                facadeContext);
+
+            controller.StartCommand(new CommandResource { Name = "RefreshBook" });
+
+            Assert.That(((RefreshBookCommand)queue.PushedCommand).BookId, Is.EqualTo(61));
+        }
+
+        [TestCase("BulkRefreshBook", typeof(BulkRefreshBookCommand))]
+        [TestCase("PushCalibreMetadata", typeof(PushCalibreMetadataCommand))]
+        [TestCase("PushGrimmoryMetadata", typeof(PushGrimmoryMetadataCommand))]
+        [TestCase("RePushBook", typeof(RePushBookCommand))]
+        public void book_id_collection_commands_should_resolve_legacy_ids(string commandName, Type commandType)
+        {
+            var queue = new StubCommandQueue();
+            var identityMap = new StubLegacyIdentityMapService();
+            var controller = CreateController(
+                queue,
+                $"{{\"name\":\"{commandName}\",\"bookIds\":[30]}}",
+                identityMap);
+
+            controller.StartCommand(new CommandResource { Name = commandName });
+
+            var bookIds = (IEnumerable<int>)commandType.GetProperty("BookIds", BindingFlags.Instance | BindingFlags.Public).GetValue(queue.PushedCommand);
+            Assert.That(bookIds, Is.EqualTo(new[] { 30, 61 }));
+        }
+
+        [Test]
+        public void download_book_media_command_should_include_both_split_legacy_ids()
+        {
+            var queue = new StubCommandQueue();
+            var identityMap = new StubLegacyIdentityMapService();
+            var controller = CreateController(
+                queue,
+                """{"name":"DownloadBookMedia","bookId":30}""",
+                identityMap);
+
+            controller.StartCommand(new CommandResource { Name = "DownloadBookMedia" });
+
+            var command = (DownloadBookMediaCommand)queue.PushedCommand;
+            Assert.That(command.BookId, Is.EqualTo(30));
+            Assert.That(command.BookIds, Is.EqualTo(new[] { 30, 61 }));
+        }
+
         [TestCase("MoveAuthorMedia")]
         [TestCase("MoveAuthorMediaBatch")]
         public void author_media_move_commands_should_require_the_preview_validated_endpoint(string commandName)
@@ -217,6 +288,12 @@ namespace Chaptarr.Core.Test.Commands
                 {
                     typeof(RenameAuthorCommand),
                     typeof(BookSearchCommand),
+                    typeof(RefreshBookCommand),
+                    typeof(BulkRefreshBookCommand),
+                    typeof(DownloadBookMediaCommand),
+                    typeof(PushCalibreMetadataCommand),
+                    typeof(PushGrimmoryMetadataCommand),
+                    typeof(RePushBookCommand),
                     typeof(MissingBookSearchCommand),
                     typeof(CutoffUnmetBookSearchCommand),
                     typeof(MoveAuthorMediaCommand),

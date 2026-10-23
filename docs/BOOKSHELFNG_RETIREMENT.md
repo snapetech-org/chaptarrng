@@ -1,5 +1,32 @@
 # BookshelfNG retirement status
 
+**Migrated release-decision parity — 2026-10-23:** ChaptarrNG now keeps
+BookshelfNG's non-bypassable required/ignored release-term and quality-profile
+rejections for converted installs, and does not skip cutoff or upgrade checks
+during resolved interactive searches. It also preserves BookshelfNG's empty
+discography acceptance edge. Fresh installs retain ChaptarrNG's current
+bypassable filters and stricter empty-discography handling. Split-book IDs are
+allocated above the complete source ID range to avoid colliding with adjacent
+legacy records. The Release Core suite passed 4,783 tests with 25 skips and no
+failures; the full Release solution built with 0 warnings and errors. This is
+source-level regression evidence; provider, representative-data, and installed
+handoff acceptance remain open.
+
+**Routine catalog identification fallback — 2026-10-23:** When local and V5
+matching leave files unmatched, ChaptarrNG now searches the configured catalog
+using ISBN, ASIN, Goodreads/provider IDs, author/title, title, a single-file
+filename, then author. Routine search stops broadening when a tier returns
+candidates; a review suggestion still requires the exact media type and one
+stable author/work identity. Author-scoped searches stay within that provider
+identity, and book-scoped searches do not widen. Manual Import preview and
+eligible completed-download imports use the same path. The explicit Unmapped
+Files retry retains its established query behavior, including rejecting
+conflicting identifier and text-tier identities. Release Core passed 4,800
+tests with 25 skipped and no failures; the full Release solution built with 0
+warnings and errors. This closes a routine source-level catalog-search gap;
+live-provider fulfillment, representative-data acceptance, and installed
+handoff remain open.
+
 **Maintainer/operator acceptance — 2026-10-22:** The project maintainer,
 provider maintainer, and operator explicitly accepted the BookshelfNG
 retirement effort and its migration and provider/platform handoff decisions,
@@ -17,6 +44,18 @@ facade searches only its matching row. Regression cases cover both paths. The
 Release Core suite passed 4,762 tests, skipped 25, and failed 0; the full
 Release application solution built with 0 warnings and 0 errors. This closes
 the server-side legacy-ID command path; converted-data acceptance and live
+SeerrNG fulfillment remain open.
+
+**Legacy-ID book command compatibility — 2026-10-23:** Generic API commands
+for book search, refresh, cover downloads, and supported metadata pushes now
+resolve migrated BookshelfNG IDs to every target format row when unscoped, and
+respect the ebook or audiobook Readarr facade when scoped. A single-book
+`RefreshBook` request that splits by format is queued as `BulkRefreshBook`;
+cover downloads process all resolved rows. The direct book cover-download
+endpoint follows the same expansion. Regression coverage includes command
+mapping and cover processing. The Release Core suite passed 4,771 tests,
+skipped 25, and failed 0; the full Release application solution built with 0
+warnings and 0 errors. Other client routes, converted-data acceptance, and live
 SeerrNG fulfillment remain open.
 
 **Structured migration field-loss protection — 2026-10-23:** ChaptarrNG commit
@@ -1097,9 +1136,20 @@ authorized while these gates remain open. The remaining work is:
    evidence, or record an explicit maintainer decision to retire that behavior.
    The saved numeric matching threshold is now exercised through the current
    matcher with synthetic data; representative converted-library acceptance
-   remains open. The cross-catalog fallback is merged source work, not in
-   `.977`; it needs identifier, exact-name, ambiguity, and pending-import
-   acceptance evidence.
+   remains open. Routine configured-catalog fallback is now in ChaptarrNG
+   `main` at `30dcab13`; the Release Core suite covers identifier and search
+   tiers, exact media/work identity, ambiguity and scope guards, filename
+   fallback, and cancellation. Published `.977` does not contain this code.
+   Current source also carries BookshelfNG's `BookFiles.LastRemoteSearchTime`
+   through database conversion, routine scan filtering, unmapped retries,
+   staged imports, and successful relinking. An unchanged file with a completed
+   catalog search no longer repeats that search on every scan; changed files
+   and failed provider searches remain eligible, and a successful link clears
+   the marker. Release Core passed 4,806 tests (25 skipped, 0 failed), and the
+   Release solution build passed with 0 warnings and errors. Published `.977`
+   does not contain this source change. Live-provider behavior,
+   representative-file review through Manual Import, and end-to-end
+   pending-author fulfillment remain open.
 2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
    passes; validate older-schema support on representative operator data,
    then validate

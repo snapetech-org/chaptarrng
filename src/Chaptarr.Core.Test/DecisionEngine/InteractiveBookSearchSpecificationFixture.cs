@@ -269,6 +269,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var result = new CutoffSpecification(
                     new UpgradableSpecification(ConfigServiceTestProxy.Create(), LogManager.GetCurrentClassLogger()),
                     new NoOpCustomFormatCalculationService(),
+                    ConfigServiceTestProxy.Create(),
                     LogManager.GetCurrentClassLogger())
                 .IsSatisfiedBy(subject, criteria);
 
@@ -286,7 +287,8 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var result = new UpgradeAllowedSpecification(
                     new UpgradableSpecification(ConfigServiceTestProxy.Create(), LogManager.GetCurrentClassLogger()),
                     LogManager.GetCurrentClassLogger(),
-                    new NoOpCustomFormatCalculationService())
+                    new NoOpCustomFormatCalculationService(),
+                    ConfigServiceTestProxy.Create())
                 .IsSatisfiedBy(subject, criteria);
 
             Assert.That(result.Accepted, Is.True);
@@ -304,6 +306,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
                     new UpgradableSpecification(ConfigServiceTestProxy.Create(), LogManager.GetCurrentClassLogger()),
                     null,
                     new NoOpCustomFormatCalculationService(),
+                    ConfigServiceTestProxy.Create(),
                     LogManager.GetCurrentClassLogger())
                 .IsSatisfiedBy(subject, criteria);
 
@@ -321,6 +324,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
                     new UpgradableSpecification(ConfigServiceTestProxy.Create(), LogManager.GetCurrentClassLogger()),
                     null,
                     new NoOpCustomFormatCalculationService(),
+                    ConfigServiceTestProxy.Create(),
                     LogManager.GetCurrentClassLogger())
                 .IsSatisfiedBy(subject, null);
 
@@ -337,8 +341,64 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var result = new UpgradeAllowedSpecification(
                     new UpgradableSpecification(ConfigServiceTestProxy.Create(), LogManager.GetCurrentClassLogger()),
                     LogManager.GetCurrentClassLogger(),
-                    new NoOpCustomFormatCalculationService())
+                    new NoOpCustomFormatCalculationService(),
+                    ConfigServiceTestProxy.Create())
                 .IsSatisfiedBy(subject, null);
+
+            Assert.That(result.Accepted, Is.False);
+        }
+
+        [Test]
+        public void cutoff_should_not_skip_for_migrated_bookshelf_interactive_search()
+        {
+            var author = BuildAuthor(monitored: true, upgradeAllowed: true, cutoffQuality: Quality.M4B);
+            var book = BuildBook(author);
+            var subject = BuildRemoteBook(author, book, Quality.MP3, Quality.M4B);
+            var criteria = BuildBookSearchCriteria(author, book, interactiveSearch: true);
+
+            var result = new CutoffSpecification(
+                    new UpgradableSpecification(ConfigServiceTestProxy.Create(), LogManager.GetCurrentClassLogger()),
+                    new NoOpCustomFormatCalculationService(),
+                    ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: true),
+                    LogManager.GetCurrentClassLogger())
+                .IsSatisfiedBy(subject, criteria);
+
+            Assert.That(result.Accepted, Is.False);
+        }
+
+        [Test]
+        public void upgrade_allowed_should_not_skip_for_migrated_bookshelf_interactive_search()
+        {
+            var author = BuildAuthor(monitored: true, upgradeAllowed: false, cutoffQuality: Quality.M4B);
+            var book = BuildBook(author);
+            var subject = BuildRemoteBook(author, book, Quality.M4B, Quality.MP3);
+            var criteria = BuildBookSearchCriteria(author, book, interactiveSearch: true);
+
+            var result = new UpgradeAllowedSpecification(
+                    new UpgradableSpecification(ConfigServiceTestProxy.Create(), LogManager.GetCurrentClassLogger()),
+                    LogManager.GetCurrentClassLogger(),
+                    new NoOpCustomFormatCalculationService(),
+                    ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: true))
+                .IsSatisfiedBy(subject, criteria);
+
+            Assert.That(result.Accepted, Is.False);
+        }
+
+        [Test]
+        public void upgrade_disk_should_not_skip_for_migrated_bookshelf_interactive_search()
+        {
+            var author = BuildAuthor(monitored: true, upgradeAllowed: true, cutoffQuality: Quality.M4B);
+            var book = BuildBook(author);
+            var subject = BuildRemoteBook(author, book, Quality.MP3, Quality.M4B);
+            var criteria = BuildBookSearchCriteria(author, book, interactiveSearch: true);
+
+            var result = new UpgradeDiskSpecification(
+                    new UpgradableSpecification(ConfigServiceTestProxy.Create(), LogManager.GetCurrentClassLogger()),
+                    null,
+                    new NoOpCustomFormatCalculationService(),
+                    ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: true),
+                    LogManager.GetCurrentClassLogger())
+                .IsSatisfiedBy(subject, criteria);
 
             Assert.That(result.Accepted, Is.False);
         }

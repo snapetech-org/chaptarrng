@@ -1378,7 +1378,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var decisionMaker = new DownloadDecisionMaker(new List<IDecisionEngineSpecification>
                                                           {
                                                               new EbookFormatSpecification(logger),
-                                                              new QualityAllowedByProfileSpecification(logger),
+                                                              new QualityAllowedByProfileSpecification((IConfigService)null, logger),
                                                               new ReleaseTitleMatchSpecification(logger)
                                                           },
                                                           new TestParsingService(),
@@ -1487,7 +1487,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var decisionMaker = new DownloadDecisionMaker(new List<IDecisionEngineSpecification>
                                                           {
                                                               new EbookFormatSpecification(logger),
-                                                              new QualityAllowedByProfileSpecification(logger),
+                                                              new QualityAllowedByProfileSpecification((IConfigService)null, logger),
                                                               new ReleaseTitleMatchSpecification(logger)
                                                           },
                                                           new TestParsingService(),
@@ -1546,7 +1546,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var decisionMaker = new DownloadDecisionMaker(new List<IDecisionEngineSpecification>
                                                           {
                                                               new EbookFormatSpecification(logger),
-                                                              new QualityAllowedByProfileSpecification(logger),
+                                                              new QualityAllowedByProfileSpecification((IConfigService)null, logger),
                                                               new ReleaseTitleMatchSpecification(logger)
                                                           },
                                                           new TestParsingService(),
@@ -1625,7 +1625,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var decisionMaker = new DownloadDecisionMaker(new List<IDecisionEngineSpecification>
                                                           {
                                                               new EbookFormatSpecification(logger),
-                                                              new QualityAllowedByProfileSpecification(logger)
+                                                              new QualityAllowedByProfileSpecification((IConfigService)null, logger)
                                                           },
                                                           parsingService,
                                                           ftsRepository,

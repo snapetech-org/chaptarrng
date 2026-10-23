@@ -1999,6 +1999,22 @@ namespace Chaptarr.Core.Test.MediaFiles
         }
 
         [Test]
+        public void successful_import_of_an_unmapped_file_clears_its_remote_search_marker()
+        {
+            var outcome = RunDuplicateImportScenario(
+                Quality.EPUB,
+                Quality.EPUB,
+                existingUnmappedAtSource: true,
+                existingLastRemoteSearchTime: DateTime.UtcNow.AddDays(-1));
+
+            Assert.That(outcome.Results.Single().Result, Is.EqualTo(ImportResultType.Imported));
+            var relinkedFile = outcome.MediaFileService.FilesByBook
+                .Single(file => string.Equals(Path.GetFileName(file.Path), "part-1.epub", StringComparison.OrdinalIgnoreCase));
+            Assert.That(relinkedFile.EditionId, Is.GreaterThan(0));
+            Assert.That(relinkedFile.LastRemoteSearchTime, Is.Null);
+        }
+
+        [Test]
         public void genuine_upgrade_onto_an_occupied_tracked_destination_should_still_replace()
         {
             var outcome = RunDuplicateImportScenario(Quality.M4B, Quality.M4B, incomingRevision: new Revision(2), existingAtDestination: true);
@@ -2090,7 +2106,9 @@ namespace Chaptarr.Core.Test.MediaFiles
             ICustomFormatCalculationService customFormats = null,
             int? existingFileCount = null,
             bool existingAtDestination = false,
+            bool existingUnmappedAtSource = false,
             int? existingEditionIdOverride = null,
+            DateTime? existingLastRemoteSearchTime = null,
             bool existingUntracked = false,
             bool destinationFolderMissing = false,
             bool replaceExisting = true,
@@ -2194,7 +2212,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                     }
                     : null;
 
-                var mediaFileService = new StubMediaFileService { AllowUpdates = existingAtDestination };
+                var mediaFileService = new StubMediaFileService { AllowUpdates = existingAtDestination || existingUnmappedAtSource };
                 var existingPaths = new List<string>();
                 for (var i = 0; i < (existingFileCount ?? fileCount); i++)
                 {
@@ -2217,6 +2235,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                         Edition = otherEdition ?? edition,
                         Part = i + 1,
                         PartCount = fileCount,
+                        LastRemoteSearchTime = existingLastRemoteSearchTime,
                         Quality = new QualityModel { Quality = existingQuality, Revision = new Revision() }
                     };
 
@@ -2231,6 +2250,21 @@ namespace Chaptarr.Core.Test.MediaFiles
                     var sourcePath = Path.Combine(incomingDir, $"part-{i + 1}{ExtensionForQuality(incomingQuality)}");
                     File.WriteAllText(sourcePath, incomingContent);
                     sourcePaths.Add(sourcePath);
+                    if (existingUnmappedAtSource && i == 0)
+                    {
+                        mediaFileService.Add(new BookFile
+                        {
+                            Path = sourcePath,
+                            EditionId = 0,
+                            Part = 1,
+                            PartCount = fileCount,
+                            Size = new FileInfo(sourcePath).Length,
+                            Modified = File.GetLastWriteTimeUtc(sourcePath),
+                            LastRemoteSearchTime = existingLastRemoteSearchTime,
+                            Quality = new QualityModel { Quality = incomingQuality, Revision = new Revision() }
+                        });
+                    }
+
                     decisions.Add(new ImportDecision<LocalBook>(new LocalBook
                     {
                         Path = sourcePath,
@@ -2241,6 +2275,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                         PartCount = fileCount,
                         Quality = new QualityModel { Quality = incomingQuality, Revision = incomingRevision ?? new Revision() },
                         IsManualImport = isManualImport,
+                        ExistingFile = existingUnmappedAtSource,
                         IsGeneratedConversion = isGeneratedConversion,
                         Size = new FileInfo(sourcePath).Length,
                         Modified = File.GetLastWriteTimeUtc(sourcePath)

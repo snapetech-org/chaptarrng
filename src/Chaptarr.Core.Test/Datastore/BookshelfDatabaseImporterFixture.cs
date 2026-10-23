@@ -822,6 +822,14 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 41 AND BookId = 31 AND OpenLibraryEditionId = 'ol:OL123M';"), Is.EqualTo(1));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Links FROM Editions WHERE Id = 41;"), Is.EqualTo("[]"));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT MediaType FROM BookFiles WHERE Id = 51;"), Is.EqualTo("ebook"));
+            var remoteSearchTime = DateTime.Parse(
+                QueryScalar<string>(_sourcePath, "SELECT LastRemoteSearchTime FROM BookFiles WHERE Id = 50;"),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind);
+            Assert.That(remoteSearchTime,
+                Is.EqualTo(new DateTime(2026, 1, 4, 5, 6, 7, DateTimeKind.Utc)),
+                "successful catalog-search timestamps must survive BookshelfNG conversion");
+            Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 51 AND LastRemoteSearchTime IS NULL;"), Is.EqualTo(1));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT BookFileId FROM ExtraFiles WHERE Id = 60;"), Is.EqualTo(999));
             Assert.That(QueryScalar<long>(_sourcePath, "SELECT seq FROM sqlite_sequence WHERE name = 'BookFiles';"), Is.GreaterThanOrEqualTo(999));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT BookId FROM MetadataFiles WHERE Id = 61;"), Is.EqualTo(31));
@@ -1539,6 +1547,39 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(exception.Message, Does.Contain("no recognized provider prefix"));
             Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
             Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
+        }
+
+        [Test]
+        public void should_allocate_split_book_ids_above_all_source_book_ids()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO Books (Id, AuthorMetadataId, ForeignBookId, TitleSlug, Title, Links, Genres, Ratings, CleanTitle, Monitored, AnyEditionOk, Added, RelatedBooks, LastSearchTime)
+                    VALUES (31, 10, 'hardcover:book-31', 'hardcover:book-31', 'Adjacent Source Book', '[]', '[]', '{}', 'adjacent source book', 0, 0, '2026-01-05', '[]', NULL);
+                    INSERT INTO Editions (Id, BookId, ForeignEditionId, Isbn13, Asin, Title, TitleSlug, Images, Links, IsEbook, Monitored, ManualAdd, Narrator)
+                    VALUES (42, 31, 'hardcover-edition:audio-42', NULL, NULL, 'Adjacent Source Audiobook', 'audio-42', '[]', NULL, 0, 0, 0, NULL);";
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 31 AND MediaType = 0;"), Is.EqualTo(1),
+                    "the adjacent source audiobook must keep its original ID");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 32 AND MediaType = 1;"), Is.EqualTo(1),
+                    "the split ebook must use an ID above every source Books.Id");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookshelfLegacyIdentityMap WHERE Source = 'BookshelfNG' AND EntityType = 'Book' AND SourceId = 30 AND TargetId = 32 AND MediaType = 1;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookshelfLegacyIdentityMap WHERE Source = 'BookshelfNG' AND EntityType = 'Book' AND SourceId = 31 AND TargetId = 31 AND MediaType = 0;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
         }
 
         [Test]
