@@ -83,6 +83,40 @@ namespace Chaptarr.Core.Test.Http
             Assert.That(allowed, Is.EqualTo(expected));
         }
 
+        [TestCase("/api/v1/bookshelf/legacy-identities", "?entityType=Book&sourceIds=30", true)]
+        [TestCase("/readarr/hc/ebook/api/v1/bookshelf/legacy-identities", "?entityType=Book&sourceIds=30", true)]
+        [TestCase("/api/v1/bookshelf/legacy-identities", "?entityType=Series&sourceIds=30", false)]
+        [TestCase("/api/v1/bookshelf/legacy-identities", "?entityType=Book&sourceIds=0", false)]
+        [TestCase("/api/v1/bookshelf/legacy-identities", "?entityType=Book&sourceIds=30&unexpected=1", false)]
+        public async Task should_allow_only_valid_legacy_identity_lookups_for_the_service_key(
+            string route,
+            string queryString,
+            bool expected)
+        {
+            var context = new DefaultHttpContext();
+            context.Request.Method = "GET";
+            context.Request.Path = route;
+            context.Request.QueryString = new QueryString(queryString);
+
+            var allowed = await SeerrApiKeyAccessPolicy.IsAllowedAsync(context.Request);
+
+            Assert.That(allowed, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public async Task should_reject_legacy_identity_lookups_over_500_source_ids()
+        {
+            var context = new DefaultHttpContext();
+            context.Request.Method = "GET";
+            context.Request.Path = "/api/v1/bookshelf/legacy-identities";
+            context.Request.QueryString = new QueryString(
+                "?entityType=Book&sourceIds=" + string.Join("&sourceIds=", System.Linq.Enumerable.Range(1, 501)));
+
+            var allowed = await SeerrApiKeyAccessPolicy.IsAllowedAsync(context.Request);
+
+            Assert.That(allowed, Is.False);
+        }
+
         [Test]
         public async Task should_allow_a_narrator_matrix_query_with_plus_encoded_spaces()
         {

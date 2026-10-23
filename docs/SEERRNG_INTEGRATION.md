@@ -5,9 +5,10 @@ API shape. The integration capability contract is available at
 `GET /api/v1/system/capabilities`; SeerrNG uses it to select the provider-ID
 dialect, format-scoped routes, paged library endpoint, edition identity rules,
 pending author-import support, restricted-key support, and format-specific
-availability statistics. It also advertises `editionCatalog` for clients that
-show a person the known editions and audiobook performances available for a
-book.
+availability statistics. It also advertises `bookshelfLegacyIdentityMap` so a
+client can resolve BookshelfNG IDs retained by an older integration, and
+`editionCatalog` for clients that show a person the known editions and
+audiobook performances available for a book.
 
 One ChaptarrNG instance can serve both ebook and audiobook entries. Configure
 the SeerrNG services to use the same ChaptarrNG URL and dedicated service key,
@@ -78,9 +79,11 @@ to revoke that fallback; set the new value explicitly to rotate the key.
 
 The SeerrNG credential can inspect book libraries, profiles, queue and history,
 root folders, book files, edition catalogs, audiobook narrator comparisons,
-and command status; look up books and authors; add books; update an individual
-book; run a single book search; set a series narrator without overriding
-existing book values; and read or cancel pending author imports.
+the bounded BookshelfNG legacy identity map, and command status; look up books
+and authors; add books; update an individual book; run a single book search;
+set a series narrator without overriding existing book values; and read or
+cancel pending author imports. Legacy identity queries are limited to the four
+supported entity types and 500 positive source IDs per request.
 It can access the native `/api/v1` routes and the advertised
 `/readarr/{dialect}/{mediaType}/api/v1` compatibility routes. Media covers are
 available so the SeerrNG UI can display book artwork.
@@ -145,9 +148,10 @@ author, one mixed-format book, audiobook and ebook editions, and tiny synthetic
 M4B decoding or merge behavior. A separate real-tool importer check passed six
 synthetic multipart M4B cases; representative M4B media and restart/resume remain unverified; synthetic embedded-chapter preservation is covered on c4fa. The smoke checks that SeerrNG reads both
 converted formats and their Hardcover identities, confirms status and
-capability discovery, rejects the service key for administrative and
-unrelated command routes, and runs the compiled SeerrNG adapter through an
-ebook add, pending-import poll, and cancellation. `SEERRNG_NODE_MODULES` must
+capability discovery, reads the split audiobook/ebook legacy-ID mappings with
+the restricted service key, rejects that key for administrative and unrelated
+command routes, and runs the compiled SeerrNG adapter through an ebook add,
+pending-import poll, and cancellation. `SEERRNG_NODE_MODULES` must
 point to the installed dependency directory so the separate smoke container
 can resolve SeerrNG's runtime packages. Use `down -v` afterward to delete the
 named test volumes; do not point this harness at operator appdata.

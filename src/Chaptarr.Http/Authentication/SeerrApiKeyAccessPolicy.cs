@@ -95,6 +95,11 @@ namespace Chaptarr.Http.Authentication
                 return HasSinglePositiveIdQuery(request, "bookId");
             }
 
+            if (IsExactPath(path, "/bookshelf/legacy-identities"))
+            {
+                return IsLegacyIdentityMapQueryAllowed(request);
+            }
+
             switch (path.ToLowerInvariant())
             {
                 case "/system/status":
@@ -123,6 +128,37 @@ namespace Chaptarr.Http.Authentication
                    IsNumericItemPath(path, "/pendingauthorimport") ||
                    IsNumericItemPath(path, "/command") ||
                    IsMediaCoverPath(path);
+        }
+
+        private static bool IsLegacyIdentityMapQueryAllowed(HttpRequest request)
+        {
+            if (request.Query.Keys.Any(key =>
+                    !string.Equals(key, "entityType", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(key, "sourceIds", StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+
+            var entityTypes = request.Query["entityType"];
+            var entityType = entityTypes.Count == 1 ? entityTypes[0] : null;
+            if (entityType == null ||
+                !(string.Equals(entityType, "Author", StringComparison.OrdinalIgnoreCase) ||
+                  string.Equals(entityType, "Book", StringComparison.OrdinalIgnoreCase) ||
+                  string.Equals(entityType, "Edition", StringComparison.OrdinalIgnoreCase) ||
+                  string.Equals(entityType, "BookFile", StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+
+            var sourceIds = request.Query["sourceIds"];
+            if (sourceIds.Count is < 1 or > 500)
+            {
+                return false;
+            }
+
+            return sourceIds.All(sourceId =>
+                int.TryParse(sourceId, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedId) &&
+                parsedId > 0);
         }
 
         private static bool IsBookEditionCatalogPath(string path)
