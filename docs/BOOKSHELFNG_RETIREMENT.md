@@ -9,6 +9,20 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
+**Structured migration field-loss protection — 2026-10-23:** ChaptarrNG commit
+`5dad84d17c2ed6818d25eeab249e52783927f2a9` extends the importer's fail-closed
+column mapping checks to all copied or transformed structured tables, including
+profiles, roots, authors and metadata, books and editions, media files, series,
+blocklists, history, and provider configuration. Source-only values are allowed
+only where the importer explicitly translates them, including per-format book
+monitoring. Parameterized regression cases inject a non-empty unknown field
+into 21 tables and verify conversion stops before promotion while leaving the
+source database byte-identical and creating no backup. The Release Core suite
+passed 4,758 tests, skipped 25, and failed 0; the commit-hook Semgrep scan found
+0 findings. This closes another silent data-loss path; it does not establish
+complete migration fidelity, live provider behavior, feature parity,
+representative-data acceptance, or release/channel readiness.
+
 **Provider migration fail-closed coverage — 2026-10-23:** ChaptarrNG commit
 `2ae3d0959bf8da7e6e1999bf69cc5d2f5b611f8d` rejects non-empty source columns
 without a target mapping in `Indexers`, `ImportLists`, and `Notifications`,
