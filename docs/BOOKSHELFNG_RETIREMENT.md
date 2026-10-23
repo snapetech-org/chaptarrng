@@ -23,6 +23,16 @@ passed 4,758 tests, skipped 25, and failed 0; the commit-hook Semgrep scan found
 complete migration fidelity, live provider behavior, feature parity,
 representative-data acceptance, or release/channel readiness.
 
+**Converted matching threshold application — 2026-10-23:** ChaptarrNG commit
+`f783e27c` adds an integration case through the real `FileMatchingService` for
+the converted-install compatibility marker. It confirms the saved BookshelfNG
+threshold changes whether a candidate is accepted (51% accepts; 70% rejects),
+while a fresh-install matcher ignores that legacy threshold even when set to
+99%. The Release Core suite passed 4,760 tests, skipped 25, and failed 0;
+commit-hook Semgrep found 0 findings. This validates the migrated setting's
+runtime wiring with synthetic match data. Representative converted-library
+acceptance and full feature parity remain open.
+
 **Built-in provider settings preservation matrix — 2026-10-23:** ChaptarrNG
 commit `37703f82204fd993f49ea37ed11020c6a5435af5` adds a migration fixture for
 all 15 built-in BookshelfNG download clients, six import-list providers (with
@@ -1075,9 +1085,10 @@ authorized while these gates remain open. The remaining work is:
 
 1. Close each BookshelfNG feature row with behavioral and converted-data
    evidence, or record an explicit maintainer decision to retire that behavior.
-   This includes validating the lossy numeric matching-policy translation
-   against converted data. The cross-catalog fallback is merged source work,
-   not in `.977`; it needs identifier, exact-name, ambiguity, and pending-import
+   The saved numeric matching threshold is now exercised through the current
+   matcher with synthetic data; representative converted-library acceptance
+   remains open. The cross-catalog fallback is merged source work, not in
+   `.977`; it needs identifier, exact-name, ambiguity, and pending-import
    acceptance evidence.
 2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
    passes; validate older-schema support on representative operator data,
