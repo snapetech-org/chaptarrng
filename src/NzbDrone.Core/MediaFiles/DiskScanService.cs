@@ -800,6 +800,11 @@ namespace NzbDrone.Core.MediaFiles
                     group => group.Select(file => file.Reason).LastOrDefault(reason => !string.IsNullOrWhiteSpace(reason)),
                     PathEqualityComparer.Instance);
 
+            var remoteSearchTimeByPath = unmappedFiles
+                .Where(file => !string.IsNullOrWhiteSpace(file?.FilePath))
+                .GroupBy(file => file.FilePath, PathEqualityComparer.Instance)
+                .ToDictionary(group => group.Key, group => group.First().LastRemoteSearchTime, PathEqualityComparer.Instance);
+
             var filePaths = unmappedFiles
                 .Select(f => f?.FilePath)
                 .Where(path => !string.IsNullOrWhiteSpace(path))
@@ -887,6 +892,14 @@ namespace NzbDrone.Core.MediaFiles
                                 changed = true;
                             }
 
+                            if (remoteSearchTimeByPath.TryGetValue(filePath, out var existingRemoteSearchTime) &&
+                                existingRemoteSearchTime.HasValue &&
+                                existingFile.LastRemoteSearchTime != existingRemoteSearchTime)
+                            {
+                                existingFile.LastRemoteSearchTime = existingRemoteSearchTime;
+                                changed = true;
+                            }
+
                             if (changed)
                             {
                                 updatedUnmappedFiles.Add(existingFile);
@@ -919,7 +932,10 @@ namespace NzbDrone.Core.MediaFiles
                         Quality = qualityModel,
                         MediaInfo = new MediaInfoModel(), // Initialize MediaInfo to prevent null constraint errors
                         MediaType = BookFile.DetermineMediaType(qualityModel), // Set correct MediaType based on file extension/quality
-                        MatchDetails = newReason
+                        MatchDetails = newReason,
+                        LastRemoteSearchTime = remoteSearchTimeByPath.TryGetValue(filePath, out var newRemoteSearchTime)
+                            ? newRemoteSearchTime
+                            : null
                     };
 
                     TryHydrateUnmappedMetadata(bookFile, fileInfo);

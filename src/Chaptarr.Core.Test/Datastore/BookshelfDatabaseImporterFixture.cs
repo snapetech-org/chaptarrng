@@ -822,6 +822,14 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 41 AND BookId = 31 AND OpenLibraryEditionId = 'ol:OL123M';"), Is.EqualTo(1));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT Links FROM Editions WHERE Id = 41;"), Is.EqualTo("[]"));
             Assert.That(QueryScalar<string>(_sourcePath, "SELECT MediaType FROM BookFiles WHERE Id = 51;"), Is.EqualTo("ebook"));
+            var remoteSearchTime = DateTime.Parse(
+                QueryScalar<string>(_sourcePath, "SELECT LastRemoteSearchTime FROM BookFiles WHERE Id = 50;"),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind);
+            Assert.That(remoteSearchTime,
+                Is.EqualTo(new DateTime(2026, 1, 4, 5, 6, 7, DateTimeKind.Utc)),
+                "successful catalog-search timestamps must survive BookshelfNG conversion");
+            Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 51 AND LastRemoteSearchTime IS NULL;"), Is.EqualTo(1));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT BookFileId FROM ExtraFiles WHERE Id = 60;"), Is.EqualTo(999));
             Assert.That(QueryScalar<long>(_sourcePath, "SELECT seq FROM sqlite_sequence WHERE name = 'BookFiles';"), Is.GreaterThanOrEqualTo(999));
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT BookId FROM MetadataFiles WHERE Id = 61;"), Is.EqualTo(31));

@@ -78,18 +78,61 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 }, queryGroup =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    foreach (var item in queryGroup)
+                    {
+                        // A fresh attempt supersedes an older marker. If all provider calls fail,
+                        // leave this null so a later scan can retry the failed search.
+                        if (item?.Unmatched?.File != null)
+                        {
+                            item.Unmatched.File.LastRemoteSearchTime = null;
+                        }
+                    }
+
                     var query = queryGroup.First().Query;
                     var identifierResults = new List<Book>();
+                    var catalogSearchSucceeded = false;
+
+                    void RecordSearch(CatalogSearchOutcome outcome, ICollection<Book> destination)
+                    {
+                        if (outcome == null)
+                        {
+                            return;
+                        }
+
+                        catalogSearchSucceeded |= outcome.Succeeded;
+                        foreach (var result in outcome.Results)
+                        {
+                            destination.Add(result);
+                        }
+                    }
+
+                    void StampSuccessfulSearch()
+                    {
+                        if (!catalogSearchSucceeded)
+                        {
+                            return;
+                        }
+
+                        var searchedAt = DateTime.UtcNow;
+                        foreach (var item in queryGroup)
+                        {
+                            if (item?.Unmatched?.File != null)
+                            {
+                                item.Unmatched.File.LastRemoteSearchTime = searchedAt;
+                            }
+                        }
+                    }
+
                     if (!string.IsNullOrWhiteSpace(query.Isbn))
                     {
-                        identifierResults.AddRange(SearchCatalog(logger, "ISBN", query.Title,
-                            () => catalogSearch.SearchByIsbn(query.Isbn), query.MediaType, cancellationToken));
+                        RecordSearch(SearchCatalog(logger, "ISBN", query.Title,
+                            () => catalogSearch.SearchByIsbn(query.Isbn), query.MediaType, cancellationToken), identifierResults);
                     }
 
                     if (!string.IsNullOrWhiteSpace(query.Asin))
                     {
-                        identifierResults.AddRange(SearchCatalog(logger, "ASIN", query.Title,
-                            () => catalogSearch.SearchByAsin(query.Asin), query.MediaType, cancellationToken));
+                        RecordSearch(SearchCatalog(logger, "ASIN", query.Title,
+                            () => catalogSearch.SearchByAsin(query.Asin), query.MediaType, cancellationToken), identifierResults);
                     }
 
                     if (!string.IsNullOrWhiteSpace(query.ProviderId))
@@ -98,13 +141,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         if (query.GoodreadsEditionLookup &&
                             int.TryParse(query.ProviderId.Substring("gr:".Length), NumberStyles.None, CultureInfo.InvariantCulture, out goodreadsId))
                         {
-                            identifierResults.AddRange(SearchCatalog(logger, "Goodreads ID", query.Title,
-                                () => catalogSearch.SearchByGoodreadsBookId(goodreadsId, getAllEditions: true), query.MediaType, cancellationToken));
+                            RecordSearch(SearchCatalog(logger, "Goodreads ID", query.Title,
+                                () => catalogSearch.SearchByGoodreadsBookId(goodreadsId, getAllEditions: true), query.MediaType, cancellationToken), identifierResults);
                         }
                         else
                         {
-                            identifierResults.AddRange(SearchCatalog(logger, "provider ID " + query.ProviderId, query.Title,
-                                () => catalogSearch.SearchForNewBook(query.ProviderId, null, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken));
+                            RecordSearch(SearchCatalog(logger, "provider ID " + query.ProviderId, query.Title,
+                                () => catalogSearch.SearchForNewBook(query.ProviderId, null, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken), identifierResults);
                         }
                     }
 
@@ -112,6 +155,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     if (identifierResults.Count > 0 && stopAfterFirstCandidate)
                     {
                         Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                        StampSuccessfulSearch();
                         return;
                     }
 
@@ -124,35 +168,40 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     {
                         if (!string.IsNullOrWhiteSpace(query.Title) && !string.IsNullOrWhiteSpace(query.Author))
                         {
-                            results.AddRange(SearchCatalog(logger, "author/title", query.Title,
-                                () => catalogSearch.SearchForNewBook(query.Title, query.Author, getAllEditions: false, mediaType: query.MediaType), query.MediaType, cancellationToken));
+                            RecordSearch(SearchCatalog(logger, "author/title", query.Title,
+                                () => catalogSearch.SearchForNewBook(query.Title, query.Author, getAllEditions: false, mediaType: query.MediaType), query.MediaType, cancellationToken), results);
                         }
 
                         suggestion = BuildExactCatalogSuggestion(results, query, allowedAuthor);
                         Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                        StampSuccessfulSearch();
                         return;
                     }
 
                     if (!string.IsNullOrWhiteSpace(query.Title) && !string.IsNullOrWhiteSpace(query.Author))
                     {
-                        var authorTitleResults = SearchCatalog(logger, "author/title", query.Title,
+                        var authorTitleSearch = SearchCatalog(logger, "author/title", query.Title,
                             () => catalogSearch.SearchForNewBook(query.Title, query.Author, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
-                        suggestion = BuildExactCatalogSuggestion(authorTitleResults, query, allowedAuthor);
-                        if (authorTitleResults.Count > 0)
+                        catalogSearchSucceeded |= authorTitleSearch.Succeeded;
+                        suggestion = BuildExactCatalogSuggestion(authorTitleSearch.Results, query, allowedAuthor);
+                        if (authorTitleSearch.Results.Count > 0)
                         {
                             Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                            StampSuccessfulSearch();
                             return;
                         }
                     }
 
                     if (!string.IsNullOrWhiteSpace(query.Title))
                     {
-                        var titleResults = SearchCatalog(logger, "title", query.Title,
+                        var titleSearch = SearchCatalog(logger, "title", query.Title,
                             () => catalogSearch.SearchForNewBook(query.Title, null, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
-                        suggestion = BuildExactCatalogSuggestion(titleResults, query, allowedAuthor);
-                        if (titleResults.Count > 0)
+                        catalogSearchSucceeded |= titleSearch.Succeeded;
+                        suggestion = BuildExactCatalogSuggestion(titleSearch.Results, query, allowedAuthor);
+                        if (titleSearch.Results.Count > 0)
                         {
                             Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                            StampSuccessfulSearch();
                             return;
                         }
                     }
@@ -160,23 +209,28 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     if (!string.IsNullOrWhiteSpace(query.FileNameTitle))
                     {
                         var filenameQuery = CopyWithTitle(query, query.FileNameTitle);
-                        var filenameResults = SearchCatalog(logger, "filename title", query.FileNameTitle,
+                        var filenameSearch = SearchCatalog(logger, "filename title", query.FileNameTitle,
                             () => catalogSearch.SearchForNewBook(query.FileNameTitle, null, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
-                        suggestion = BuildExactCatalogSuggestion(filenameResults, filenameQuery, allowedAuthor);
-                        if (filenameResults.Count > 0)
+                        catalogSearchSucceeded |= filenameSearch.Succeeded;
+                        suggestion = BuildExactCatalogSuggestion(filenameSearch.Results, filenameQuery, allowedAuthor);
+                        if (filenameSearch.Results.Count > 0)
                         {
                             Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                            StampSuccessfulSearch();
                             return;
                         }
                     }
 
                     if (!string.IsNullOrWhiteSpace(query.Author))
                     {
-                        var authorResults = SearchCatalog(logger, "author", query.Author,
+                        var authorSearch = SearchCatalog(logger, "author", query.Author,
                             () => catalogSearch.SearchForNewBook(query.Author, null, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
-                        suggestion = BuildExactCatalogSuggestion(authorResults, query, allowedAuthor);
+                        catalogSearchSucceeded |= authorSearch.Succeeded;
+                        suggestion = BuildExactCatalogSuggestion(authorSearch.Results, query, allowedAuthor);
                         Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
                     }
+
+                    StampSuccessfulSearch();
                 });
             }
             catch (AggregateException ex)
@@ -203,7 +257,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             return suggestionsAdded;
         }
 
-        private static List<Book> SearchCatalog(
+        private static CatalogSearchOutcome SearchCatalog(
             Logger logger,
             string searchType,
             string searchText,
@@ -216,7 +270,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             {
                 var results = WithRequestedMediaType(search() ?? new List<Book>(), mediaType).ToList();
                 cancellationToken.ThrowIfCancellationRequested();
-                return results;
+                return new CatalogSearchOutcome(results, succeeded: true);
             }
             catch (Exception ex) when (ex is not OperationCanceledException &&
                 ex is not OutOfMemoryException &&
@@ -224,8 +278,20 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     inner is OutOfMemoryException or OperationCanceledException)))
             {
                 logger?.Debug(ex, "[CATALOG-MATCH] Catalog {0} search failed for '{1}'", searchType, searchText);
-                return new List<Book>();
+                return new CatalogSearchOutcome(new List<Book>(), succeeded: false);
             }
+        }
+
+        private sealed class CatalogSearchOutcome
+        {
+            public CatalogSearchOutcome(List<Book> results, bool succeeded)
+            {
+                Results = results ?? new List<Book>();
+                Succeeded = succeeded;
+            }
+
+            public List<Book> Results { get; }
+            public bool Succeeded { get; }
         }
 
         private static int AddSuggestion(IEnumerable<CatalogSearchQueryItem> queryGroup, AuthorSuggestion suggestion)

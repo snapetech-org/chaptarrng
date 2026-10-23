@@ -412,25 +412,25 @@ namespace NzbDrone.Core.MediaFiles
 	                        (""Path"", ""Size"", ""Modified"", ""DateAdded"", ""OriginalFilePath"", ""SceneName"",
 	                         ""ReleaseGroup"", ""Quality"", ""IndexerFlags"", ""MediaInfo"", ""EditionId"",
 	                         ""CalibreId"", ""Part"", ""IsGraphicAudio"", ""AudioProductionType"", ""Narrator"",
-	                         ""LastMatchAttempt"", ""MatchDetails"", ""MatchProvenance"", ""MediaType"", ""ReplicaPaths"",
+	                         ""LastMatchAttempt"", ""LastRemoteSearchTime"", ""MatchDetails"", ""MatchProvenance"", ""MediaType"", ""ReplicaPaths"",
 	                         ""AllTags"", ""DurationSeconds"")
 	                    VALUES
 	                        (@Path, @Size, @Modified, @DateAdded, @OriginalFilePath, @SceneName,
 	                         @ReleaseGroup, @Quality, @IndexerFlags, @MediaInfo, @EditionId,
 	                         @CalibreId, @Part, @IsGraphicAudio, @AudioProductionType, @Narrator,
-	                         @LastMatchAttempt, @MatchDetails, @MatchProvenance, @MediaType, @ReplicaPaths,
+	                         @LastMatchAttempt, @LastRemoteSearchTime, @MatchDetails, @MatchProvenance, @MediaType, @ReplicaPaths,
 	                         @AllTags, @DurationSeconds);"
 	                : @"INSERT INTO ""BookFiles""
 	                        (""Path"", ""Size"", ""Modified"", ""DateAdded"", ""OriginalFilePath"", ""SceneName"",
 	                         ""ReleaseGroup"", ""Quality"", ""IndexerFlags"", ""MediaInfo"", ""EditionId"",
 	                         ""CalibreId"", ""Part"", ""IsGraphicAudio"", ""AudioProductionType"", ""Narrator"",
-	                         ""LastMatchAttempt"", ""MatchDetails"", ""MatchProvenance"", ""MediaType"", ""ReplicaPaths"",
+	                         ""LastMatchAttempt"", ""LastRemoteSearchTime"", ""MatchDetails"", ""MatchProvenance"", ""MediaType"", ""ReplicaPaths"",
 	                         ""AllTags"", ""DurationSeconds"")
 	                    VALUES
 	                        (@Path, @Size, @Modified, @DateAdded, @OriginalFilePath, @SceneName,
 	                         @ReleaseGroup, @Quality, @IndexerFlags, @MediaInfo, @EditionId,
 	                         @CalibreId, @Part, @IsGraphicAudio, @AudioProductionType, @Narrator,
-	                         @LastMatchAttempt, @MatchDetails, @MatchProvenance, @MediaType, @ReplicaPaths,
+	                         @LastMatchAttempt, @LastRemoteSearchTime, @MatchDetails, @MatchProvenance, @MediaType, @ReplicaPaths,
 	                         @AllTags, @DurationSeconds)
 	                    ON CONFLICT(""Path"") DO NOTHING;";
 

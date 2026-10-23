@@ -180,6 +180,8 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30 AND \"MediaType\" = 0 AND \"AudiobookMonitored\" = TRUE;"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Editions\" WHERE \"Id\" = 40 AND \"BookId\" = 30 AND \"Monitored\" = TRUE;"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"BookFiles\" WHERE \"Id\" = 50 AND \"EditionId\" = 40 AND \"Path\" = '/library/Fixture Author/book.m4b';"), Is.EqualTo(1));
+            Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"BookFiles\" WHERE \"Id\" = 50 AND \"LastRemoteSearchTime\"::timestamp without time zone = TIMESTAMP '2026-01-04 05:06:07';"), Is.EqualTo(1),
+                "successful catalog-search timestamps must survive PostgreSQL source conversion");
             Assert.That(ReadScalarLong(sourceConnectionString, "SELECT nextval(pg_get_serial_sequence('\"BookFiles\"', 'Id'));"), Is.GreaterThan(50));
 
             var bookshelfBackupConnectionString = BuildConnectionString(_baseConnectionString, bookshelfBackupSchema);
@@ -509,8 +511,8 @@ namespace Chaptarr.Core.Test.Datastore
                 VALUES (40, 30, '40', NULL, NULL, 'Fixture Audiobook', 'audio-40', '[]', '[]', FALSE, TRUE, FALSE, 'A Narrator');
                 INSERT INTO ""Series"" (""Id"", ""ForeignSeriesId"", ""Title"", ""Numbered"", ""WorkCount"", ""PrimaryWorkCount"") OVERRIDING SYSTEM VALUE
                 VALUES (70, '70', 'Fixture Series', TRUE, 1, 1);
-                INSERT INTO ""BookFiles"" (""Id"", ""EditionId"", ""CalibreId"", ""Quality"", ""Size"", ""DateAdded"", ""MediaInfo"", ""Modified"", ""Path"", ""Part"") OVERRIDING SYSTEM VALUE
-                VALUES (50, 40, 0, '{}', 100, '2026-01-02 00:00:00+00', '{}', '2026-01-02 00:00:00+00', '/library/Fixture Author/book.m4b', 0);";
+                INSERT INTO ""BookFiles"" (""Id"", ""EditionId"", ""CalibreId"", ""Quality"", ""Size"", ""DateAdded"", ""MediaInfo"", ""Modified"", ""Path"", ""Part"", ""LastRemoteSearchTime"") OVERRIDING SYSTEM VALUE
+                VALUES (50, 40, 0, '{}', 100, '2026-01-02 00:00:00+00', '{}', '2026-01-02 00:00:00+00', '/library/Fixture Author/book.m4b', 0, '2026-01-04 05:06:07+00');";
             command.ExecuteNonQuery();
         }
 

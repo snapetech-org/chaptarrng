@@ -1136,9 +1136,20 @@ authorized while these gates remain open. The remaining work is:
    evidence, or record an explicit maintainer decision to retire that behavior.
    The saved numeric matching threshold is now exercised through the current
    matcher with synthetic data; representative converted-library acceptance
-   remains open. The cross-catalog fallback is merged source work, not in
-   `.977`; it needs identifier, exact-name, ambiguity, and pending-import
-   acceptance evidence.
+   remains open. Routine configured-catalog fallback is now in ChaptarrNG
+   `main` at `30dcab13`; the Release Core suite covers identifier and search
+   tiers, exact media/work identity, ambiguity and scope guards, filename
+   fallback, and cancellation. Published `.977` does not contain this code.
+   Current source also carries BookshelfNG's `BookFiles.LastRemoteSearchTime`
+   through database conversion, routine scan filtering, unmapped retries,
+   staged imports, and successful relinking. An unchanged file with a completed
+   catalog search no longer repeats that search on every scan; changed files
+   and failed provider searches remain eligible, and a successful link clears
+   the marker. Release Core passed 4,806 tests (25 skipped, 0 failed), and the
+   Release solution build passed with 0 warnings and errors. Published `.977`
+   does not contain this source change. Live-provider behavior,
+   representative-file review through Manual Import, and end-to-end
+   pending-author fulfillment remain open.
 2. Keep the migration-1-to-13 fix on `main` unreleased until the full gate
    passes; validate older-schema support on representative operator data,
    then validate

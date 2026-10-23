@@ -363,13 +363,13 @@ namespace NzbDrone.Core.MediaFiles
             else if (filter == FilterFilesType.Matched)
             {
                 unwanted = combined
-                    // "Matched" means the file is already mapped in the DB (EditionId > 0).
-                    // This filter is used for "Unmapped Files Only" views where we want to hide mapped files
-                    // regardless of timestamp drift (e.g. file date settings, retagging, network mounts).
-                    .Where(x => x.DbFile.EditionId > 0)
+                    // Hide unchanged files that already have a match or a completed remote
+                    // search. Changed files and unsought unmapped files remain eligible.
+                    .Where(x => MediaFileFreshness.IsUnchanged(x.DbFile, x.DiskFile) &&
+                        (x.DbFile.EditionId > 0 || x.DbFile.LastRemoteSearchTime.HasValue))
                     .Select(x => x.DiskFile)
                     .ToList();
-                _logger.Trace("{0} matched files", unwanted.Count);
+                _logger.Trace("{0} unchanged matched or remote-searched files", unwanted.Count);
             }
             else
             {

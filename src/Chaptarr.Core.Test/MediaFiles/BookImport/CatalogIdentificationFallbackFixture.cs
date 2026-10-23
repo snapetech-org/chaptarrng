@@ -66,7 +66,47 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                 Assert.That(unmatched.PotentialAuthors.Single().ProviderId, Is.EqualTo("hc:42"));
                 Assert.That(unmatched.PotentialAuthors.Single().BookProviderId, Is.EqualTo("hc:9001"));
                 Assert.That(unmatched.PotentialAuthors.Single().BookTitle, Is.EqualTo("Dune"));
+                Assert.That(unmatched.File.LastRemoteSearchTime, Is.Not.Null);
             });
+        }
+
+        [Test]
+        public void successful_empty_catalog_search_should_stamp_remote_search_time()
+        {
+            var catalog = new RecordingCatalogSearch();
+            var unmatched = Unmatched("/incoming/dune.epub", Tags(("TITLE", "Dune")));
+
+            var added = UnmappedCatalogSuggestionHelper.AddSuggestions(
+                catalog,
+                LogManager.GetCurrentClassLogger(),
+                new[] { unmatched },
+                stopAfterFirstCandidate: true);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(added, Is.Zero);
+                Assert.That(unmatched.File.LastRemoteSearchTime, Is.Not.Null);
+                Assert.That(unmatched.File.LastRemoteSearchTime.Value.Kind, Is.EqualTo(DateTimeKind.Utc));
+            });
+        }
+
+        [Test]
+        public void failed_catalog_search_should_clear_an_old_remote_search_marker()
+        {
+            var catalog = new RecordingCatalogSearch
+            {
+                OnTextSearch = (_, _) => throw new InvalidOperationException("provider unavailable")
+            };
+            var unmatched = Unmatched("/incoming/dune.epub", Tags(("TITLE", "Dune")));
+            unmatched.File.LastRemoteSearchTime = DateTime.UtcNow.AddDays(-1);
+
+            UnmappedCatalogSuggestionHelper.AddSuggestions(
+                catalog,
+                LogManager.GetCurrentClassLogger(),
+                new[] { unmatched },
+                stopAfterFirstCandidate: true);
+
+            Assert.That(unmatched.File.LastRemoteSearchTime, Is.Null);
         }
 
         [Test]

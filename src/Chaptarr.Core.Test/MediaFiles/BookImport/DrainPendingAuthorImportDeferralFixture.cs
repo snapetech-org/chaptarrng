@@ -228,7 +228,7 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                 ImportResults.Add((queueItemId, outcome, errorMessage));
             }
 
-            public void CompleteItemWithResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null, string statusError = null)
+            public void CompleteItemWithResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null, string statusError = null, DateTime? lastRemoteSearchTime = null)
             {
                 RecordImportResult(queueItemId, path, outcome, bookId, authorId, quality, errorMessage);
                 UpdateStatus(queueItemId, "done", statusError);
@@ -409,6 +409,13 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                     args[0] is string)
                 {
                     return null;
+                }
+
+                if (targetMethod?.Name == nameof(IMediaFileRepository.GetFileWithPath) &&
+                    args?.Length == 1 &&
+                    args[0] is List<string>)
+                {
+                    return new List<BookFile>();
                 }
 
                 throw new NotImplementedException($"Test proxy does not implement {typeof(IMediaFileRepository).Name}.{targetMethod?.Name}");

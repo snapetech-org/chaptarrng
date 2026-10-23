@@ -999,6 +999,12 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Services
                 shouldUpdate = true;
             }
 
+            if (persisted.LastRemoteSearchTime.HasValue)
+            {
+                persisted.LastRemoteSearchTime = null;
+                shouldUpdate = true;
+            }
+
             return shouldUpdate;
         }
 

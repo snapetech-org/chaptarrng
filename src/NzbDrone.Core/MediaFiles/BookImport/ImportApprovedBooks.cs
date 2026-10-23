@@ -1450,6 +1450,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     // A successful link supersedes the why-unmapped/apply-failure scratchpad.
                     bookFile.LastMatchAttempt = null;
                     bookFile.MatchDetails = null;
+                    bookFile.LastRemoteSearchTime = null;
 
                 // Respect legacy Readarr behavior: if this is an existing file discovered during a library scan,
                 // do not move/copy it. Only update DB state and tags.

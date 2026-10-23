@@ -227,7 +227,8 @@ namespace NzbDrone.Core.MediaFiles.Commands
                 Modified = MediaFileFreshness.GetLastWriteUtc(fileInfo),
                 AllTags = evidence.Tags,
                 DurationSeconds = evidence.DurationSeconds,
-                Quality = UnmappedFileStoredEvidence.ResolveQuality(file, file.Path)
+                Quality = UnmappedFileStoredEvidence.ResolveQuality(file, file.Path),
+                LastRemoteSearchTime = file.LastRemoteSearchTime
             };
         }
 
@@ -702,6 +703,7 @@ namespace NzbDrone.Core.MediaFiles.Commands
                 }
 
                 bookFile.LastMatchAttempt = now;
+                bookFile.LastRemoteSearchTime = unmatched.File.LastRemoteSearchTime;
                 bookFile.MatchDetails = unmatched.Reason ?? "NO_MATCH";
                 updated.Add(bookFile);
             }

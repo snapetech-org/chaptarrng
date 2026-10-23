@@ -26,6 +26,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         public IReadOnlyList<Dictionary<string, List<string>>> GroupMemberTags { get; set; }
         public QualityModel Quality { get; set; }
         public int? DurationSeconds { get; set; }
+        public DateTime? LastRemoteSearchTime { get; set; }
         
         // Multi-author support for FTS matching
         public List<Author> ExtractedAuthors { get; set; }

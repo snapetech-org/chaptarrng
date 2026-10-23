@@ -825,7 +825,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("BookFiles", sourceCount, 0, sourceCount, 0, 0,
-                $"book-file IDs and paths are preserved; linked files retain their edition-derived media type; unmapped file counts by cause: EditionId=0 {filesWithoutEditionId}, missing edition {filesWithMissingEdition}");
+                $"book-file IDs and paths plus LastRemoteSearchTime are preserved when present; linked files retain their edition-derived media type; unmapped file counts by cause: EditionId=0 {filesWithoutEditionId}, missing edition {filesWithMissingEdition}");
             return result;
         }
 

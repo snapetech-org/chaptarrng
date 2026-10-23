@@ -62,6 +62,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 return item == null ? default : MediaFileFreshness.FromUnixNanoseconds(item.MtimeNs);
             }
 
+            private static DateTime? FromUtcTicks(long? ticks)
+            {
+                return ticks.HasValue && ticks.Value >= DateTime.MinValue.Ticks && ticks.Value <= DateTime.MaxValue.Ticks
+                    ? new DateTime(ticks.Value, DateTimeKind.Utc)
+                    : null;
+            }
+
             private sealed class StageFilesResult
             {
                 public int StagedCount { get; set; }
@@ -243,7 +250,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                             result.UnmappedFiles.Add(new UnmappedFile
                             {
                                 FilePath = importResult.Path,
-                                Reason = importResult.ErrorMessage ?? "No matching book found"
+                                Reason = importResult.ErrorMessage ?? "No matching book found",
+                                LastRemoteSearchTime = FromUtcTicks(importResult.LastRemoteSearchTimeTicks)
                             });
                             break;
                             
@@ -351,6 +359,57 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     {
                         _logger.Warn(ex, "[DRAIN] Failed to create unmapped BookFile rows for {0} attempted files", pendingUnmappedBookFiles.Count);
                     }
+
+                    try
+                    {
+                        var pendingByPath = pendingUnmappedBookFiles
+                            .Where(file => !string.IsNullOrWhiteSpace(file?.Path))
+                            .GroupBy(file => file.Path, PathEqualityComparer.Instance)
+                            .ToDictionary(group => group.Key, group => group.First(), PathEqualityComparer.Instance);
+                        var persisted = _mediaFileRepository.GetFileWithPath(pendingByPath.Keys.ToList()) ?? new List<BookFile>();
+                        var updated = new List<BookFile>();
+                        foreach (var file in persisted)
+                        {
+                            if (file == null || file.EditionId != 0 ||
+                                !pendingByPath.TryGetValue(file.Path ?? string.Empty, out var pending))
+                            {
+                                continue;
+                            }
+
+                            var changed = false;
+                            if (file.Size != pending.Size)
+                            {
+                                file.Size = pending.Size;
+                                changed = true;
+                            }
+
+                            if (MediaFileFreshness.HasChanged(file, pending.Size, pending.Modified))
+                            {
+                                file.Modified = pending.Modified;
+                                changed = true;
+                            }
+
+                            if (file.LastRemoteSearchTime != pending.LastRemoteSearchTime)
+                            {
+                                file.LastRemoteSearchTime = pending.LastRemoteSearchTime;
+                                changed = true;
+                            }
+
+                            if (changed)
+                            {
+                                updated.Add(file);
+                            }
+                        }
+
+                        if (updated.Count > 0)
+                        {
+                            _mediaFileRepository.UpdateMany(updated);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warn(ex, "[DRAIN] Failed to update existing unmapped BookFile rows for {0} attempted files", pendingUnmappedBookFiles.Count);
+                    }
                     finally
                     {
                         pendingUnmappedBookFiles.Clear();
@@ -431,6 +490,15 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
                 try
                 {
+                var knownBookFilesByPath = (_mediaFileRepository.GetFileWithPath(claimed
+                        .Where(item => !string.IsNullOrWhiteSpace(item?.Path))
+                        .Select(item => item.Path)
+                        .Distinct(PathEqualityComparer.Instance)
+                        .ToList()) ?? new List<BookFile>())
+                    .Where(file => !string.IsNullOrWhiteSpace(file?.Path))
+                    .GroupBy(file => file.Path, PathEqualityComparer.Instance)
+                    .ToDictionary(group => group.Key, group => group.First(), PathEqualityComparer.Instance);
+
                 string GetUnitKey(string filePath)
                 {
                     try
@@ -634,13 +702,18 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         {
                             durationSeconds = MediaDuration.FromTimeSpan(_mediaInfoExtractor.GetDuration(item.Path));
                         }
+                        knownBookFilesByPath.TryGetValue(item.Path, out var knownBookFile);
+                        var modified = GetQueuedFileModifiedUtc(item);
                         var discovered = new DiscoveredFileWithMetadata
                         {
                             Path = item.Path,
                             Size = item.SizeBytes,
-                            Modified = GetQueuedFileModifiedUtc(item),
+                            Modified = modified,
                             AllTags = effectiveTags,
-                            DurationSeconds = durationSeconds
+                            DurationSeconds = durationSeconds,
+                            LastRemoteSearchTime = MediaFileFreshness.IsUnchanged(knownBookFile, item.SizeBytes, modified)
+                                ? knownBookFile?.LastRemoteSearchTime
+                                : null
                         };
                         discoveredByPath[item.Path] = discovered;
                         byPath[item.Path] = item;
@@ -688,7 +761,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                             MediaType = BookFile.DetermineMediaType(qualityModel),
                             ReplicaPaths = new List<string>(),
                             AllTags = meta?.AllTags,
-                            DurationSeconds = meta?.DurationSeconds
+                            DurationSeconds = meta?.DurationSeconds,
+                            LastRemoteSearchTime = meta?.LastRemoteSearchTime
                         });
 
                         pendingUnmappedPaths.Add(filePath);
@@ -810,7 +884,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                 authorId: m.AuthorId,
                                 quality: "Unknown",
                                 errorMessage: applyResult.ReasonCode,
-                                statusError: applyResult.ReasonCode);
+                                statusError: applyResult.ReasonCode,
+                                lastRemoteSearchTime: m.File.LastRemoteSearchTime);
                             matchedPaths.Add(m.File.Path);
 
                             if (applyResult.IsApplied)
@@ -839,7 +914,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
                     var reason = overrideReason ?? u.Reason ?? "No match after drain";
                     QueueUnmappedBookFile(u.File);
-                    _ingestQueue.CompleteItemWithResult(itemRef.Id, u.File.Path, ImportOutcome.Unmapped, errorMessage: reason, statusError: reason);
+                    _ingestQueue.CompleteItemWithResult(
+                        itemRef.Id,
+                        u.File.Path,
+                        ImportOutcome.Unmapped,
+                        errorMessage: reason,
+                        statusError: reason,
+                        lastRemoteSearchTime: u.File.LastRemoteSearchTime);
                     unmatchedPaths.Add(u.File.Path);
                     totalUnmapped++;
                 }
@@ -863,7 +944,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         {
                             discoveredByPath.TryGetValue(item.Path, out var meta);
                             QueueUnmappedBookFilePath(item.Path, meta);
-                            _ingestQueue.CompleteItemWithResult(item.Id, item.Path, ImportOutcome.Unmapped, errorMessage: "Drain local match failed", statusError: "Drain local match failed");
+                            _ingestQueue.CompleteItemWithResult(
+                                item.Id,
+                                item.Path,
+                                ImportOutcome.Unmapped,
+                                errorMessage: "Drain local match failed",
+                                statusError: "Drain local match failed",
+                                lastRemoteSearchTime: meta?.LastRemoteSearchTime);
                             totalUnmapped++;
                         }
                         catch
@@ -992,7 +1079,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                         QueueUnmappedBookFilePath(f.Path, pendingMeta);
                                     }
 
-                                    _ingestQueue.CompleteItemWithResult(itemRef.Id, f.Path, outcome, errorMessage: finalReason, statusError: finalReason);
+                                    _ingestQueue.CompleteItemWithResult(
+                                        itemRef.Id,
+                                        f.Path,
+                                        outcome,
+                                        errorMessage: finalReason,
+                                        statusError: finalReason,
+                                        lastRemoteSearchTime: pendingMeta?.LastRemoteSearchTime);
                                     unmatchedPaths.Add(f.Path);
                                     if (outcome == ImportOutcome.Unmapped)
                                     {
@@ -1060,7 +1153,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
                         discoveredByPath.TryGetValue(item.Path, out var meta);
                         QueueUnmappedBookFilePath(item.Path, meta);
-                        _ingestQueue.CompleteItemWithResult(item.Id, item.Path, ImportOutcome.Unmapped, errorMessage: "DRAIN_NO_RESULT", statusError: "DRAIN_NO_RESULT");
+                        _ingestQueue.CompleteItemWithResult(
+                            item.Id,
+                            item.Path,
+                            ImportOutcome.Unmapped,
+                            errorMessage: "DRAIN_NO_RESULT",
+                            statusError: "DRAIN_NO_RESULT",
+                            lastRemoteSearchTime: meta?.LastRemoteSearchTime);
                         totalUnmapped++;
                     }
 
@@ -1548,11 +1647,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 return true;
             }
 
+            var unchanged = IsKnownFileUnchanged(diskFile, knownFile);
             return filter switch
             {
                 FilterFilesType.None => true,
-                FilterFilesType.Matched => knownFile.EditionId == 0,
-                FilterFilesType.Known => knownFile.EditionId == 0 || !IsKnownFileUnchanged(diskFile, knownFile),
+                FilterFilesType.Matched => !unchanged ||
+                    (knownFile.EditionId == 0 && !knownFile.LastRemoteSearchTime.HasValue),
+                FilterFilesType.Known => !unchanged,
                 _ => throw new ArgumentOutOfRangeException(nameof(filter), filter, "Unrecognized file filter")
             };
         }

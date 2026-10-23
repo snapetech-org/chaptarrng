@@ -63,7 +63,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             public int PurgePaths(IEnumerable<string> paths) => throw new NotImplementedException();
             public void PurgeOldCompleted(int daysToKeep = 14) => throw new NotImplementedException();
             public void RecordImportResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null) => throw new NotImplementedException();
-            public void CompleteItemWithResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null, string statusError = null) => throw new NotImplementedException();
+            public void CompleteItemWithResult(int queueItemId, string path, ImportOutcome outcome, int? bookId = null, int? authorId = null, string quality = null, string errorMessage = null, string statusError = null, DateTime? lastRemoteSearchTime = null) => throw new NotImplementedException();
             public List<ImportResult> GetImportResults(int? commandId = null) => throw new NotImplementedException();
         }
 
