@@ -1,7 +1,15 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Release status (2026-10-22).** ChaptarrNG `v0.9.977` remains the latest
-> public release. Maintainer/operator sign-off is recorded, but technical
+> **Release status (2026-10-23).** ChaptarrNG `v0.9.977` remains the latest
+> public release. ChaptarrNG `main` at `785707bb` restores BookshelfNG's
+> default paged-library behavior and adds OIDC private-address protections;
+> its Release Core suite passed 4,692 tests with 25 skips and no failures.
+> Hosted exact-head validation is incomplete: Build run
+> [39897196030](https://github.com/snapetech-org/chaptarrng/actions/runs/39897196030)
+> has no final conclusion, and its PostgreSQL migration job failed during
+> dependency restore: NuGet downloads ended prematurely and the vulnerability-
+> data service index could not be loaded, so its PostgreSQL build/smoke did
+> not start. Maintainer/operator sign-off is recorded, but technical
 > retirement gates remain open. Keep BookshelfNG in service; do not apply
 > migration, install a bridge, or start ChaptarrNG against BookshelfNG appdata.
 >

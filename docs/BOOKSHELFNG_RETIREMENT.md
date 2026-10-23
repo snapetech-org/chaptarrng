@@ -9,6 +9,20 @@ further user approval is required for that sign-off. It does not replace
 technical evidence for feature parity, provider fulfillment, or installed
 update-channel handoff.
 
+**Latest ChaptarrNG parity and CI — 2026-10-23:** ChaptarrNG `main` commit
+`785707bb3b1a37fd31e88f5421e9b566ea1f1517` restores BookshelfNG's default
+paged-library size, stored-title ordering, author and link includes, and adds
+OIDC private/reserved-address protections. The Release Core suite passed 4,692
+tests with 25 skips and no failures; local Semgrep reported zero findings, and
+the release-note preview passed. Exact-head Build
+[39897196030](https://github.com/snapetech-org/chaptarrng/actions/runs/39897196030)
+has no final conclusion yet. Its PostgreSQL migration job failed at dependency
+restore: the log shows NuGet package downloads returning prematurely and the
+vulnerability-data service index failing to load, so PostgreSQL build and
+smoke steps did not start. Other platform jobs were queued or in progress. The
+public `v0.9.977` release is unchanged. No release or cutover was published or authorized by this source
+commit.
+
 **Current source-built SeerrNG migrated-ID and lifecycle smoke — 2026-10-22:**
 ChaptarrNG commit `e5788975b0071aae0d1990460461b4321dde0e5a` built through
 `Dockerfile.build` and passed both checked-in smoke scripts against SeerrNG
