@@ -630,9 +630,24 @@ deferred service cleanup, and selected data-directory preservation. SQLite
 uses a retained integrity-checked backup and holds a read-only PRAGMA
 data_version guard through preview review. PostgreSQL uses an independent
 schema dump and client-session preflight, but its installed Windows round-trip
-and the account-preservation path still require exact-head hosted confirmation.
-Representative Windows data and real operator rollback remain unaccepted. Keep
-the release freeze in place.
+is still unvalidated end to end.
+
+**Latest Windows validation (2026-10-24):** ChaptarrNG commit `db110883`
+passed exact-head hosted Build [40087832094](https://github.com/snapetech-org/chaptarrng/actions/runs/40087832094)
+on Linux, Windows, and macOS, including PostgreSQL migrations and all three
+Docker compatibility candidates. The Windows installer smoke passed automatic
+rollback after an injected `/ping` failure, a successful migration, deferred
+removal of the old service, and explicit restore after handoff cleanup. It
+verified the restored BookshelfNG data directory, database lineage and records,
+and original `NetworkService` identity. This run exposed and then verified the
+fix for a PowerShell 7 `Add-Type` compilation failure caused by referencing
+`Win32Exception` from the dynamic helper. The smoke uses synthetic data;
+representative Windows data, PostgreSQL installed rollback, live providers,
+operator acceptance, and channel handoff remain open. The push-triggered
+Release run stopped at its readiness preflight, and all publication jobs were
+skipped; no release, package, image, or bridge was published.
+
+Keep the release freeze in place.
 
 **Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19):** The
 Linux app files from Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)

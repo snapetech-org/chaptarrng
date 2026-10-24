@@ -1074,6 +1074,17 @@ deferred service cleanup, and selected data-directory preservation for the
 SQLite installer route. The new Windows PostgreSQL backup/restore extension
 has not yet had an end-to-end Windows service rehearsal.
 
+**Latest Windows service validation (2026-10-24):** ChaptarrNG commit
+`db110883` passed hosted Build [40087832094](https://github.com/snapetech-org/chaptarrng/actions/runs/40087832094).
+The service smoke verified automatic BookshelfNG rollback after an injected
+health-check failure, retry and successful migration, and explicit restore
+after the deferred service cleanup, preserving the original `NetworkService`
+identity and BookshelfNG data. The failed candidate run exposed a PowerShell 7
+dynamic `Add-Type` compilation error for `Win32Exception`; the corrected helper
+now reports native service-control failures with their Win32 error codes.
+This remains synthetic SQLite service evidence. Windows PostgreSQL installed
+rollback and representative operator-data acceptance are still open.
+
 ## Published image smoke test (2026-10-15)
 
 The public standard `v0.9.971` Linux/amd64 image
