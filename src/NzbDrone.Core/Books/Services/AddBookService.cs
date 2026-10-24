@@ -24,7 +24,12 @@ namespace NzbDrone.Core.Books
         Task<List<Book>> AddBooks(List<Book> books, bool doRefresh = true);
     }
 
-    public class AddBookService : IAddBookService
+    public interface IAddBookServiceWithQueueControl : IAddBookService
+    {
+        Task<Book> AddBook(Book book, bool doRefresh, bool queueIfUnavailable);
+    }
+
+    public class AddBookService : IAddBookServiceWithQueueControl
     {
         private readonly IAuthorService _authorService;
         private readonly IAuthorLibraryService _authorLibraryService;
@@ -81,7 +86,12 @@ namespace NzbDrone.Core.Books
             _logger = logger;
         }
 
-        public async Task<Book> AddBook(Book book, bool doRefresh = true)
+        public Task<Book> AddBook(Book book, bool doRefresh = true)
+        {
+            return AddBook(book, doRefresh, queueIfUnavailable: true);
+        }
+
+        public async Task<Book> AddBook(Book book, bool doRefresh, bool queueIfUnavailable)
         {
             _logger.DebugSafe("Adding book {0} with provider IDs - HC: {1}, GR-work: {2}, edition: {3}",
                 book.Title,
@@ -134,7 +144,7 @@ namespace NzbDrone.Core.Books
 
             if (dbBook == null)
             {
-                return await RequestBookThroughAuthorCatalog(book);
+                return await RequestBookThroughAuthorCatalog(book, queueIfUnavailable);
             }
 
             book.UseDbFieldsFrom(dbBook);
@@ -183,7 +193,7 @@ namespace NzbDrone.Core.Books
 
             if (dbAuthor == null)
             {
-                return await RequestBookThroughAuthorCatalog(book);
+                return await RequestBookThroughAuthorCatalog(book, queueIfUnavailable);
             }
 
                 // CRITICAL: Capture monitoring intent BEFORE replacing Author object
@@ -421,7 +431,7 @@ namespace NzbDrone.Core.Books
             return _authorService.GetAuthor(author.Id) ?? author;
         }
 
-        private async Task<Book> RequestBookThroughAuthorCatalog(Book requestedBook)
+        private async Task<Book> RequestBookThroughAuthorCatalog(Book requestedBook, bool queueIfUnavailable)
         {
             var workProviderId = ResolveRequestedWorkProviderId(requestedBook);
             if (string.IsNullOrWhiteSpace(workProviderId))
@@ -452,7 +462,7 @@ namespace NzbDrone.Core.Books
             // pending request forever.
             RemoveMatchingImportListExclusions(requestedBook);
 
-            var config = BuildRequestedBookMonitoringConfig(requestedBook, requestedIds, searchRequested);
+            var config = BuildRequestedBookMonitoringConfig(requestedBook, requestedIds, searchRequested, queueIfUnavailable);
             var author = await _authorLibraryService.AddAuthorAsync(authorProviderId, config);
             if (author?.Id < 0)
             {
@@ -519,7 +529,7 @@ namespace NzbDrone.Core.Books
             }
         }
 
-        private MonitoringConfig BuildRequestedBookMonitoringConfig(Book book, List<string> requestedIds, bool searchRequested)
+        private MonitoringConfig BuildRequestedBookMonitoringConfig(Book book, List<string> requestedIds, bool searchRequested, bool queueIfUnavailable)
         {
             var author = book.Author ?? new Author();
             var mediaType = book.MediaType;
@@ -554,7 +564,7 @@ namespace NzbDrone.Core.Books
                 AudiobookTags = author.AudiobookTags,
                 EbookTags = author.EbookTags,
                 Tags = author.Tags,
-                QueueIfUnavailable = true,
+                QueueIfUnavailable = queueIfUnavailable,
                 MonitorMode = isSpecificBook ? MonitorTypes.SpecificBook : author.AddOptions?.Monitor,
                 SpecificBookProviderIds = new HashSet<string>(requestedIds, StringComparer.OrdinalIgnoreCase),
                 SpecificBookMediaType = mediaType,

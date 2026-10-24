@@ -124,8 +124,9 @@ False gap examples already checked:
 | F8 | The ledger still leaves decision, import, provider, API, and UI source differences open, and 89 prior review fingerprints changed. | **Bounded semantic review, not a demonstrated defect count.** | Compare those families in C4–C6. Record concrete differences as code tasks; close unchanged-equivalent cases with source evidence. Test-only entries remain in the validation queue. |
 
 F1–F4 precede broad QA because they directly affect the stated drop-in and
-automatic-migration contracts. This reassessment does not implement those
-application changes.
+automatic-migration contracts. The assessment itself did not implement those
+application changes. A first, unverified implementation checkpoint is recorded
+in [the Luna code handoff](BOOKSHELFNG_COMPATIBILITY_CODE_HANDOFF.md).
 
 ## 4. Existing implementation to keep and finish
 
@@ -161,8 +162,8 @@ rerunning the entire system while confirmed compatibility defects remain.
 | Order | Work package | Depends on | Current state | Exit condition |
 | ---: | --- | --- | --- | --- |
 | 0 | C0 — Pin baseline and separate review/code/evidence queues | — | Delivered by this assessment | Source pins, reproducible inventory and explicit gap IDs available. |
-| 1 | C1 — Preserve compatibility context and old API address | C0 | Code required: F1/F3 | Migrated installations persist source semantics and accept old-address legacy requests without client reconfiguration. |
-| 2 | C2 — Complete legacy resource, mutation and lifecycle behavior | C1 | Code required: F2; F5 review | Old request/response/identity/monitoring contracts have implemented projections, including split works and pending metadata. |
+| 1 | C1 — Preserve compatibility context and old API address | C0 | Initial code slice implemented, unverified: source profile, source-default provider mode, unchanged API address, native-client marker | Migrated installations persist source semantics and accept old-address legacy requests without client reconfiguration. |
+| 2 | C2 — Complete legacy resource, mutation and lifecycle behavior | C1 | Initial code slice implemented, unverified: single selected-edition add and no legacy pending-import response; broader F2/F5 review remains | Old request/response/identity/monitoring contracts have implemented projections, including split works and pending metadata. |
 | 3 | C3 — Make migration an unattended recoverable transaction | C1/C2 | Code required: F3/F4 | Every promotion boundary is journaled; failures retain or restore the correct app/data/service state. |
 | 4 | C4 — Close acquisition, import and file behavior differences | C2 | Targeted review/ports | Every in-scope semantic difference has a concrete port or supported equivalence rationale; no unknown acquisition/import behavior remains. |
 | 5 | C5 — Close saved settings, provider, auth and integration differences | C1/C2 | Targeted review/ports | Supported saved configurations retain their meaning and all required implementations are wired. |
@@ -330,11 +331,10 @@ external delivery dependencies, and the next executable slice. Stop adding
 unrelated enhancements. Do not gate the next code fix on unavailable operator
 credentials or another full media test run.
 
-**Next implementation commit:** C1's persisted source compatibility context and
-old-address provider-ID handling, followed immediately by C2's unscoped
-book-add/legacy-response behavior. Then complete C3/C7's native package
-preflight and recoverable handoff. These directly address the user's stated
-goal and the confirmed source gaps.
+**Next implementation batch:** complete C3/C7's native package preflight and
+recoverable handoff, then continue the C4-C8 semantic and channel queue. Luna
+should first validate the C1/C2 slice in the [code handoff](BOOKSHELFNG_COMPATIBILITY_CODE_HANDOFF.md)
+and return concrete mismatches for a focused fix pass.
 
 ## 8. Reproduce and refresh this assessment
 

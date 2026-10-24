@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using NzbDrone.Core.Configuration;
 
 namespace Chaptarr.Http.Middleware
 {
@@ -19,7 +20,7 @@ namespace Chaptarr.Http.Middleware
             _next = next;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, IConfigService configService)
         {
             if (context == null)
             {
@@ -35,8 +36,36 @@ namespace Chaptarr.Http.Middleware
             {
                 // Scoped successfully.
             }
+            else if (context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) &&
+                     !IsNativeChaptarrRequest(context) &&
+                     configService?.BookshelfNGDatabaseMigrated == true)
+            {
+                // A migrated BookshelfNG installation keeps its old API address. On that
+                // address bare numeric IDs retain the provider meaning they had before the
+                // conversion; Chaptarr's own prefixed IDs remain valid as well.
+                var dialect = string.Equals(configService.BookshelfNGProviderDialect, "hc", StringComparison.OrdinalIgnoreCase)
+                    ? "hc"
+                    : "gr";
+                context.Items[ReadarrFacadeContext.ItemKey] = new ReadarrFacadeContext(
+                    dialect,
+                    mediaType: null,
+                    prefix: "/api",
+                    isBookshelfCompatibility: true);
+            }
 
             await _next(context);
+        }
+
+        private static bool IsNativeChaptarrRequest(HttpContext context)
+        {
+            return string.Equals(
+                       context.Request.Headers["X-ChaptarrNG-Client"].ToString(),
+                       "native",
+                       StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(
+                       context.Request.Query["chaptarrngClient"].ToString(),
+                       "native",
+                       StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool TryReadarrFacadeScope(HttpContext context)

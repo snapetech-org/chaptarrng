@@ -387,7 +387,10 @@ export const actionHandlers = handleThunks({
         method: 'POST',
         dataType: 'json',
         contentType: 'application/json',
-        headers: { 'X-Api-Key': window.Chaptarr.apiKey },
+        headers: {
+          'X-Api-Key': window.Chaptarr.apiKey,
+          'X-ChaptarrNG-Client': 'native'
+        },
         data: JSON.stringify(v1Payload)
       }).request;
     };

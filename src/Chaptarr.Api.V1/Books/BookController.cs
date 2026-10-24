@@ -1482,12 +1482,17 @@ namespace Chaptarr.Api.V1.Books
 
 			                if (string.IsNullOrWhiteSpace(requestedMediaType))
 			                {
-	                    // Seerr compatibility: when mediaType is omitted, attempt to monitor/add BOTH audiobook and ebook variants.
-	                    // We reuse the same payload and invoke AddBook twice with the appropriate mediaType, but only for
-	                    // media types that are actually configured (or already configured on the existing author).
+                    // Modern unscoped clients may request both format catalogs. A migrated
+                    // BookshelfNG client instead maps its one selected edition to one format.
 		                    _logger.Debug("[AddBook] No mediaType provided; defaulting to BOTH audiobook and ebook");
 
-	                    NormalizeReadarrSingleFields(bookResource, wantAudiobook: true, wantEbook: true);
+                    var legacyMediaType = facadeContext?.IsBookshelfCompatibility == true
+                        ? ResolveBookshelfLegacyAddMediaType(bookResource)
+                        : (BookMediaType?)null;
+                    NormalizeReadarrSingleFields(
+                        bookResource,
+                        wantAudiobook: legacyMediaType == BookMediaType.Audiobook || !legacyMediaType.HasValue,
+                        wantEbook: legacyMediaType == BookMediaType.Ebook || !legacyMediaType.HasValue);
 	                    var existingAuthor = TryGetExistingAuthor(bookResource?.Author);
 
 	                    var canCreateAudiobook = HasConfiguredMediaSettings(bookResource?.Author, BookMediaType.Audiobook);
@@ -1498,6 +1503,15 @@ namespace Chaptarr.Api.V1.Books
 
 	                    var shouldAddAudiobook = canCreateAudiobook || hasExistingAudiobook;
 	                    var shouldAddEbook = canCreateEbook || hasExistingEbook;
+
+                    if (legacyMediaType == BookMediaType.Audiobook)
+                    {
+                        shouldAddEbook = false;
+                    }
+                    else if (legacyMediaType == BookMediaType.Ebook)
+                    {
+                        shouldAddAudiobook = false;
+                    }
 
 	                    if (!shouldAddAudiobook && !shouldAddEbook)
 	                    {
@@ -1532,7 +1546,10 @@ namespace Chaptarr.Api.V1.Books
 
 					                        try
 					                        {
-					                            firstAdded = await _addBookService.AddBook(model, doRefresh: true);
+                                            firstAdded = await AddBookWithQueuePolicy(
+                                                model,
+                                                doRefresh: true,
+                                                queueIfUnavailable: facadeContext?.IsBookshelfCompatibility != true);
 					                            EnsureBookCover(firstAdded.Id, "create");
 					                            didFirstRefresh = true;
 					                        }
@@ -1564,7 +1581,10 @@ namespace Chaptarr.Api.V1.Books
 
 					                        try
 					                        {
-					                            var ebook = await _addBookService.AddBook(model, doRefresh: !didFirstRefresh);
+                                            var ebook = await AddBookWithQueuePolicy(
+                                                model,
+                                                doRefresh: !didFirstRefresh,
+                                                queueIfUnavailable: facadeContext?.IsBookshelfCompatibility != true);
 					                            EnsureBookCover(ebook.Id, "create");
 					                            firstAdded ??= ebook;
 					                        }
@@ -1631,7 +1651,10 @@ namespace Chaptarr.Api.V1.Books
 			                    return addAmbiguity;
 			                }
 
-			                var book = await _addBookService.AddBook(modelToAdd, doRefresh: true);
+                var book = await AddBookWithQueuePolicy(
+                    modelToAdd,
+                    doRefresh: true,
+                    queueIfUnavailable: facadeContext?.IsBookshelfCompatibility != true);
 			                EnsureBookCover(book.Id, "create");
 
 			                return Created(book.Id);
@@ -1807,6 +1830,39 @@ namespace Chaptarr.Api.V1.Books
 		                ? author.AudiobookQualityProfileId.HasValue && !string.IsNullOrWhiteSpace(author.AudiobookRootFolderPath)
 		                : author.EbookQualityProfileId.HasValue && !string.IsNullOrWhiteSpace(author.EbookRootFolderPath);
 		        }
+
+        private static BookMediaType ResolveBookshelfLegacyAddMediaType(BookResource bookResource)
+        {
+            var editions = bookResource?.Editions ?? new List<EditionResource>();
+            var selectedEditions = editions.Where(edition => edition?.Monitored == true).ToList();
+            if (selectedEditions.Count != 1)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(
+                        "Editions",
+                        "BookshelfNG book additions must select exactly one edition; its format determines the catalog entry to add.")
+                });
+            }
+
+            // BookshelfNG represented a work once and carried its selected format on
+            // the monitored edition. Use that same choice when projecting it into the
+            // separate Chaptarr audiobook and ebook catalogs.
+            return selectedEditions[0].IsEbook ? BookMediaType.Ebook : BookMediaType.Audiobook;
+        }
+
+        private Task<NzbDrone.Core.Books.Book> AddBookWithQueuePolicy(
+            NzbDrone.Core.Books.Book book,
+            bool doRefresh,
+            bool queueIfUnavailable)
+        {
+            if (_addBookService is IAddBookServiceWithQueueControl queueControlledService)
+            {
+                return queueControlledService.AddBook(book, doRefresh, queueIfUnavailable);
+            }
+
+            return _addBookService.AddBook(book, doRefresh);
+        }
 
 	        private static bool HasConfiguredMediaSettings(global::Chaptarr.Api.V1.Author.AuthorResource author, BookMediaType mediaType)
 	        {

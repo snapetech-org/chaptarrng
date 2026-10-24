@@ -502,7 +502,7 @@ namespace Chaptarr.Api.V1.Author
                 AudiobookRootFolderPath = authorResource.AudiobookRootFolderPath,
                 EbookRootFolderPath = authorResource.EbookRootFolderPath,
                 LastSelectedMediaType = lastSelectedMediaType,
-                QueueIfUnavailable = queueIfUnavailable,
+                QueueIfUnavailable = facadeContext?.IsBookshelfCompatibility == true ? false : queueIfUnavailable,
                 Tags = authorResource.Tags,
                 SearchForMissingBooks = authorResource.AddOptions?.SearchForMissingBooks,
                 RequestedBy = "ApiV1AuthorAdd",

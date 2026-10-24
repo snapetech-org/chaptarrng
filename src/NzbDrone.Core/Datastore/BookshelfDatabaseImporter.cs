@@ -1954,6 +1954,8 @@ namespace NzbDrone.Core.Datastore
             const string legacyHardcoverTokenKey = "hardcoverauth";
             const string chaptarrHardcoverTokenKey = "hardcoverapitoken";
             const string chaptarrHardcoverEnabledKey = "hardcoverenabled";
+            const string bookshelfProviderDialectKey = "bookshelfngproviderdialect";
+            const string bookshelfCompatibilityProfileVersionKey = "bookshelfngcompatibilityprofileversion";
             const string legacyMetadataSourceKey = "metadatasource";
             const string chaptarrMetadataServerUrlKey = "metadataserverurl";
 
@@ -1971,6 +1973,8 @@ namespace NzbDrone.Core.Datastore
             var legacyHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverEnabledRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverEnabledKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfProviderDialectRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfProviderDialectKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfCompatibilityProfileVersionRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfCompatibilityProfileVersionKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var legacyMetadataSourceRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMetadataSourceKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrMetadataServerUrlRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrMetadataServerUrlKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var autoInitializeAuthorPathsRows = configRows
@@ -1995,6 +1999,11 @@ namespace NzbDrone.Core.Datastore
             if (chaptarrHardcoverEnabledRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate Hardcover mode settings; conversion stopped before promotion.");
+            }
+
+            if (bookshelfProviderDialectRows.Count > 1 || bookshelfCompatibilityProfileVersionRows.Count > 1)
+            {
+                throw new InvalidDataException("BookshelfNG config contains duplicate compatibility profile settings; conversion stopped before promotion.");
             }
 
             if (legacyMetadataSourceRows.Count > 1 || chaptarrMetadataServerUrlRows.Count > 1)
@@ -2101,6 +2110,25 @@ namespace NzbDrone.Core.Datastore
                 bookshelfMigrationMarkerRows[0]["Value"] = "true";
             }
 
+            var nativeHardcoverPrimaryMode = ConfiguredNativeHardcoverPrimaryMode();
+            var sourceProviderDialect = nativeHardcoverPrimaryMode ? "hc" : "gr";
+            UpsertCompatibilityProfileValue(
+                configRows,
+                targetColumns,
+                bookshelfProviderDialectRows,
+                "BookshelfNGProviderDialect",
+                sourceProviderDialect,
+                ref nextGeneratedConfigId,
+                target);
+            UpsertCompatibilityProfileValue(
+                configRows,
+                targetColumns,
+                bookshelfCompatibilityProfileVersionRows,
+                "BookshelfNGCompatibilityProfileVersion",
+                "1",
+                ref nextGeneratedConfigId,
+                target);
+
             var hardcoverTokenDisposition = "no saved Hardcover token was present";
             var legacyHardcoverToken = legacyHardcoverTokenRows.SingleOrDefault();
             if (legacyHardcoverToken != null && !string.IsNullOrWhiteSpace(GetString(legacyHardcoverToken, "Value")))
@@ -2141,24 +2169,24 @@ namespace NzbDrone.Core.Datastore
                 }
             }
 
-            var hardcoverModeDisposition = "no saved Hardcover mode was present; ChaptarrNG's Goodreads default applies";
+            var hardcoverModeDisposition = "BookshelfNG's effective source mode was recorded as " + sourceProviderDialect + "; an explicit ChaptarrNG mode setting was preserved when present";
             if (chaptarrHardcoverEnabledRows.Count == 1)
             {
                 hardcoverModeDisposition = "a saved ChaptarrNG HardcoverEnabled setting was preserved";
             }
-            else if (ConfiguredNativeHardcoverPrimaryMode() == true)
+            else
             {
                 var mappedHardcoverMode = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
                     ["Key"] = "HardcoverEnabled",
-                    ["Value"] = "true"
+                    ["Value"] = nativeHardcoverPrimaryMode ? "true" : "false"
                 };
                 if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
                 {
                     mappedHardcoverMode["Id"] = checked(++nextGeneratedConfigId);
                 }
                 configRows.Add(mappedHardcoverMode);
-                hardcoverModeDisposition = "BookshelfNG's native Hardcover runtime mode was copied to ChaptarrNG HardcoverEnabled";
+                hardcoverModeDisposition = $"BookshelfNG's effective {sourceProviderDialect} runtime mode was copied to ChaptarrNG HardcoverEnabled";
             }
 
             var metadataServerUrlDisposition = "no saved metadata-server URL was present; ChaptarrNG's configured environment or default URL applies";
@@ -2241,7 +2269,36 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Config", sourceCount, 0, sourceCount, 0, 0,
-                "saved configuration is copied with compatible fields; a dedicated BookshelfNG migration marker is retained on the ChaptarrNG database; " + matchSettingDisposition + "; " + hardcoverTokenDisposition + "; " + hardcoverModeDisposition + "; " + metadataServerUrlDisposition + "; " + authorPathSettingDisposition);
+                $"saved configuration is copied with compatible fields; BookshelfNG compatibility profile version 1 records source provider dialect '{sourceProviderDialect}'; a dedicated BookshelfNG migration marker is retained on the ChaptarrNG database; {matchSettingDisposition}; {hardcoverTokenDisposition}; {hardcoverModeDisposition}; {metadataServerUrlDisposition}; {authorPathSettingDisposition}");
+        }
+
+        private static void UpsertCompatibilityProfileValue(
+            List<Dictionary<string, object>> rows,
+            IReadOnlyDictionary<string, ColumnInfo> targetColumns,
+            List<Dictionary<string, object>> matchingRows,
+            string key,
+            string value,
+            ref int nextGeneratedConfigId,
+            DbConnection target)
+        {
+            if (matchingRows.Count == 1)
+            {
+                matchingRows[0]["Key"] = key;
+                matchingRows[0]["Value"] = value;
+                return;
+            }
+
+            var row = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["Key"] = key,
+                ["Value"] = value
+            };
+            if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+            {
+                row["Id"] = checked(++nextGeneratedConfigId);
+            }
+
+            rows.Add(row);
         }
 
         private static void MapBookshelfNewAuthorRoot(
@@ -2513,39 +2570,24 @@ namespace NzbDrone.Core.Datastore
             return prefix + ":" + id;
         }
 
-        private static bool? ConfiguredNativeHardcoverPrimaryMode()
+        private static bool ConfiguredNativeHardcoverPrimaryMode()
         {
-            if (!bool.TryParse(Environment.GetEnvironmentVariable("HARDCOVER"), out var nativeHardcover))
-            {
-                return null;
-            }
-
-            return nativeHardcover &&
+            // Match BookshelfNG's runtime predicate exactly: only HARDCOVER=true
+            // enables native Hardcover IDs; unset and other values use Goodreads.
+            return string.Equals(Environment.GetEnvironmentVariable("HARDCOVER"), "true", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(Environment.GetEnvironmentVariable("HARDCOVER_NATIVE"), "false", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool RequireNativeHardcoverPrimaryMode()
         {
-            var mode = ConfiguredNativeHardcoverPrimaryMode();
-            if (mode.HasValue)
-            {
-                return mode.Value;
-            }
-
-            throw new InvalidDataException(
-                "BookshelfNG contains a bare numeric provider ID, but its primary catalog mode is not explicit. " +
-                "Set HARDCOVER=true to preserve native Hardcover IDs or HARDCOVER=false to preserve Goodreads IDs. " +
-                "The source database was not changed.");
+            return ConfiguredNativeHardcoverPrimaryMode();
         }
 
         private static string NumericProviderDisposition()
         {
-            return ConfiguredNativeHardcoverPrimaryMode() switch
-            {
-                true => "any bare numeric provider IDs are interpreted as Hardcover because native mode is enabled (HARDCOVER=true)",
-                false => "any bare numeric provider IDs are interpreted as Goodreads because native Hardcover mode is disabled",
-                _ => "bare numeric provider IDs require an explicit HARDCOVER=true or HARDCOVER=false source mode; conversion fails closed if any are present"
-            };
+            return ConfiguredNativeHardcoverPrimaryMode()
+                ? "bare numeric provider IDs are interpreted as Hardcover because BookshelfNG's runtime predicate enables native mode"
+                : "bare numeric provider IDs are interpreted as Goodreads because BookshelfNG uses Goodreads when HARDCOVER is unset or not true";
         }
 
         private static void SetProviderColumns(IDictionary<string, object> values, string entityType, string canonicalId)

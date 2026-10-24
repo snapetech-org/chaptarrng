@@ -595,6 +595,16 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("HardcoverEnabled", value); }
         }
 
+        public bool BookshelfNGDatabaseMigrated
+        {
+            get { return GetValueBoolean("BookshelfNGDatabaseMigrated", false); }
+        }
+
+        public string BookshelfNGProviderDialect
+        {
+            get { return GetValue("BookshelfNGProviderDialect", "gr"); }
+        }
+
         public string HardcoverUsername
         {
             get { return GetValue("HardcoverUsername", ""); }

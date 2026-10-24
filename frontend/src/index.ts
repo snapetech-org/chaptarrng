@@ -71,6 +71,7 @@ async function getBootstrapTranslations() {
     const response = await fetch(`${apiRoot}/localization`, {
       headers: {
         'X-Api-Key': window.Chaptarr.apiKey,
+        'X-ChaptarrNG-Client': 'native',
       },
     });
 

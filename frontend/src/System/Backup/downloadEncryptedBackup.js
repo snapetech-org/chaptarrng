@@ -17,6 +17,7 @@ export default async function downloadEncryptedBackup(passphrase) {
     headers: {
       'Content-Type': 'application/json',
       'X-Api-Key': window.Chaptarr.apiKey,
+      'X-ChaptarrNG-Client': 'native',
       'X-Bookshelf-Backup-Passphrase': passphrase
     },
     body: '{}'
