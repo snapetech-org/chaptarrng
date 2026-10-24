@@ -509,6 +509,237 @@ namespace Chaptarr.Core.Test.MediaFiles
         }
 
         [Test]
+        [NonParallelizable]
+        public void real_m4b_tool_should_recover_after_conversion_host_process_is_terminated_when_installed()
+        {
+            if (!OperatingSystem.IsLinux())
+            {
+                Assert.Ignore("The pinned process-termination smoke is run in the Linux M4B tool image.");
+            }
+
+            var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-job-process-crash-{Guid.NewGuid():N}");
+            var sourceDir = Path.Combine(tempDir, "source");
+            var toolDir = Path.Combine(tempDir, "tool");
+            var databasePath = Path.Combine(tempDir, "jobs.db");
+            var wrapperPath = Path.Combine(toolDir, "ffmpeg");
+            var gatePath = Path.Combine(tempDir, "ffmpeg-started");
+            var releasePath = Path.Combine(tempDir, "ffmpeg-release");
+            var workerReadyPath = Path.Combine(tempDir, "conversion-host-ready");
+            var originalFfmpeg = Environment.GetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable);
+            var originalGate = Environment.GetEnvironmentVariable("CHAPTARRNG_M4B_TEST_GATE");
+            var originalRelease = Environment.GetEnvironmentVariable("CHAPTARRNG_M4B_TEST_RELEASE");
+            Process workerProcess = null;
+            ConversionJobService restartedService = null;
+            var interruptedPid = 0;
+
+            Directory.CreateDirectory(sourceDir);
+            Directory.CreateDirectory(toolDir);
+
+            try
+            {
+                if (!File.Exists("/usr/bin/ffmpeg") || !File.Exists("/usr/bin/ffprobe") || !File.Exists("/usr/local/bin/m4b-tool"))
+                {
+                    Assert.Ignore("This smoke requires the pinned FFmpeg, FFprobe, PHP, m4b-tool, and MP4v2 tool image.");
+                }
+
+                var firstTrack = Path.Combine(sourceDir, "01 Opening.mp3");
+                var secondTrack = Path.Combine(sourceDir, "02 The Middle.mp3");
+                var coverPath = Path.Combine(tempDir, "cover.jpg");
+                CreateSyntheticMp3(firstTrack, frequency: 330, title: "Opening", track: 1);
+                CreateSyntheticMp3(secondTrack, frequency: 440, title: "The Middle", track: 2);
+                CreateSyntheticCover(coverPath);
+                CreateFfmpegGateWrapper(wrapperPath, gatePath, releasePath);
+
+                var testAssembly = Path.Combine(TestContext.CurrentContext.TestDirectory, "Chaptarr.Core.Test.dll");
+                Assert.That(File.Exists(testAssembly), Is.True, $"Nested process test assembly was not found at {testAssembly}.");
+
+                var workerStartInfo = new ProcessStartInfo("dotnet")
+                {
+                    WorkingDirectory = TestContext.CurrentContext.TestDirectory,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                workerStartInfo.ArgumentList.Add("vstest");
+                workerStartInfo.ArgumentList.Add(testAssembly);
+                workerStartInfo.ArgumentList.Add("--TestCaseFilter:FullyQualifiedName~crash_worker_should_hold_real_conversion_until_parent_terminates_process");
+                workerStartInfo.Environment["CHAPTARRNG_M4B_CRASH_TEST_ROOT"] = tempDir;
+                workerStartInfo.Environment["CHAPTARRNG_M4B_CRASH_TEST_READY"] = workerReadyPath;
+                workerStartInfo.Environment["CHAPTARRNG_M4B_CRASH_TEST_GATE"] = gatePath;
+                workerStartInfo.Environment["CHAPTARRNG_M4B_CRASH_TEST_RELEASE"] = releasePath;
+                workerStartInfo.Environment["CHAPTARRNG_M4B_CRASH_TEST_FFMPEG"] = wrapperPath;
+
+                var childOutput = new ConcurrentQueue<string>();
+                workerProcess = Process.Start(workerStartInfo);
+                Assert.That(workerProcess, Is.Not.Null, "The isolated conversion host process did not start.");
+                workerProcess.OutputDataReceived += (_, eventArgs) =>
+                {
+                    if (eventArgs.Data != null)
+                    {
+                        childOutput.Enqueue(eventArgs.Data);
+                    }
+                };
+                workerProcess.ErrorDataReceived += (_, eventArgs) =>
+                {
+                    if (eventArgs.Data != null)
+                    {
+                        childOutput.Enqueue(eventArgs.Data);
+                    }
+                };
+                workerProcess.BeginOutputReadLine();
+                workerProcess.BeginErrorReadLine();
+
+                WaitFor(
+                    () => File.Exists(workerReadyPath) || workerProcess.HasExited,
+                    TimeSpan.FromMinutes(2),
+                    "The isolated conversion host did not reach the real FFmpeg gate.");
+
+                if (!File.Exists(workerReadyPath))
+                {
+                    Assert.Fail($"The isolated conversion host exited before reporting readiness (exit={workerProcess.ExitCode}). {string.Join(Environment.NewLine, childOutput)}");
+                }
+
+                Assert.That(File.ReadAllText(workerReadyPath), Is.EqualTo("Converting|1"));
+                Assert.That(File.Exists(gatePath), Is.True, "The worker must be blocked inside real FFmpeg before it is terminated.");
+                interruptedPid = int.Parse(File.ReadAllText(gatePath).Trim());
+
+                workerProcess.Kill(entireProcessTree: true);
+                Assert.That(workerProcess.WaitForExit(15000), Is.True, "The isolated conversion host process tree did not terminate.");
+                WaitFor(() => HasExited(interruptedPid), TimeSpan.FromSeconds(10), "FFmpeg survived abrupt termination of its conversion host process.");
+
+                Assert.That(File.Exists(releasePath), Is.False, "The conversion must be interrupted by process termination, not a graceful release signal.");
+                Assert.That(File.Exists(Path.Combine(tempDir, ".chaptarr-conversions", "crash-download", "work", "book.m4b")), Is.False);
+                Assert.That(File.Exists(Path.Combine(tempDir, ".chaptarr-conversions", "crash-download", "work", "conversion-artifact.json")), Is.False);
+
+                var restartedRepository = CreateRepository(databasePath);
+                var interruptedJob = restartedRepository.FindByDownloadId("crash-download");
+                Assert.That(interruptedJob, Is.Not.Null);
+                Assert.That(interruptedJob.Status, Is.EqualTo(ConversionJobStatus.Converting), "A hard process stop must leave the durable in-flight state for startup reconciliation.");
+                Assert.That(interruptedJob.AttemptCount, Is.EqualTo(1));
+
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable, wrapperPath);
+                Environment.SetEnvironmentVariable("CHAPTARRNG_M4B_TEST_GATE", gatePath);
+                Environment.SetEnvironmentVariable("CHAPTARRNG_M4B_TEST_RELEASE", releasePath);
+                File.Delete(gatePath);
+                File.WriteAllText(releasePath, "continue");
+
+                var restartedTools = new ExternalToolsService(
+                    CreateConfig(),
+                    DispatchProxy.Create<IDiskProvider, RealToolDiskProviderProxy>(),
+                    new TestAppFolderInfo { AppDataFolder = tempDir, StartUpFolder = TestContext.CurrentContext.TestDirectory },
+                    LogManager.GetLogger("ConversionJobProcessCrashFixture"));
+                restartedService = CreateService(restartedRepository, new M4bConversionService(
+                    restartedTools,
+                    DispatchProxy.Create<IDiskProvider, RealToolDiskProviderProxy>(),
+                    CreateConfig(),
+                    LogManager.GetLogger("ConversionJobProcessCrashFixture")));
+                restartedService.Handle(new ApplicationStartedEvent());
+
+                WaitFor(
+                    () => restartedRepository.FindByDownloadId("crash-download")?.Status == ConversionJobStatus.ReadyToImport,
+                    TimeSpan.FromMinutes(2),
+                    "The durable conversion did not recover after its host process was terminated.");
+
+                var resumedJob = restartedRepository.FindByDownloadId("crash-download");
+                var outputPath = Path.Combine(tempDir, ".chaptarr-conversions", "crash-download", "work", "book.m4b");
+                var manifestPath = Path.Combine(tempDir, ".chaptarr-conversions", "crash-download", "work", "conversion-artifact.json");
+                var manifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(File.ReadAllText(manifestPath));
+                Assert.That(resumedJob.AttemptCount, Is.EqualTo(2));
+                Assert.That(File.Exists(outputPath), Is.True);
+                Assert.That(new FileInfo(outputPath).Length, Is.GreaterThan(32 * 1024));
+                Assert.That(manifest.Importable, Is.True);
+                Assert.That(manifest.OutputSha256, Is.EqualTo(ConversionArtifactFingerprint.ComputeSha256(outputPath)));
+            }
+            finally
+            {
+                if (workerProcess != null)
+                {
+                    try
+                    {
+                        if (!workerProcess.HasExited)
+                        {
+                            workerProcess.Kill(entireProcessTree: true);
+                            workerProcess.WaitForExit(15000);
+                        }
+                    }
+                    catch
+                    {
+                    }
+                    workerProcess.Dispose();
+                }
+
+                try { restartedService?.Handle(new ApplicationShutdownRequested()); } catch { }
+                if (interruptedPid > 0)
+                {
+                    WaitFor(() => HasExited(interruptedPid), TimeSpan.FromSeconds(10), "The interrupted FFmpeg process remained after test cleanup.");
+                }
+
+                Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable, originalFfmpeg);
+                Environment.SetEnvironmentVariable("CHAPTARRNG_M4B_TEST_GATE", originalGate);
+                Environment.SetEnvironmentVariable("CHAPTARRNG_M4B_TEST_RELEASE", originalRelease);
+                SqliteConnection.ClearAllPools();
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        [NonParallelizable]
+        public void crash_worker_should_hold_real_conversion_until_parent_terminates_process()
+        {
+            var tempDir = Environment.GetEnvironmentVariable("CHAPTARRNG_M4B_CRASH_TEST_ROOT");
+            var readyPath = Environment.GetEnvironmentVariable("CHAPTARRNG_M4B_CRASH_TEST_READY");
+            var gatePath = Environment.GetEnvironmentVariable("CHAPTARRNG_M4B_CRASH_TEST_GATE");
+            var releasePath = Environment.GetEnvironmentVariable("CHAPTARRNG_M4B_CRASH_TEST_RELEASE");
+            var ffmpegPath = Environment.GetEnvironmentVariable("CHAPTARRNG_M4B_CRASH_TEST_FFMPEG");
+            if (string.IsNullOrWhiteSpace(tempDir) || string.IsNullOrWhiteSpace(readyPath) || string.IsNullOrWhiteSpace(gatePath) ||
+                string.IsNullOrWhiteSpace(releasePath) || string.IsNullOrWhiteSpace(ffmpegPath))
+            {
+                Assert.Ignore("This worker is started only by the abrupt conversion-host recovery test.");
+            }
+
+            if (!File.Exists("/usr/bin/ffmpeg") || !File.Exists("/usr/bin/ffprobe") || !File.Exists("/usr/local/bin/m4b-tool"))
+            {
+                Assert.Ignore("This worker requires the pinned FFmpeg, FFprobe, PHP, m4b-tool, and MP4v2 tool image.");
+            }
+
+            Environment.SetEnvironmentVariable(BookshelfM4bCompatibility.FfmpegPathEnvironmentVariable, ffmpegPath);
+            Environment.SetEnvironmentVariable("CHAPTARRNG_M4B_TEST_GATE", gatePath);
+            Environment.SetEnvironmentVariable("CHAPTARRNG_M4B_TEST_RELEASE", releasePath);
+
+            var databasePath = Path.Combine(tempDir, "jobs.db");
+            var coverPath = Path.Combine(tempDir, "cover.jpg");
+            var firstTrack = Path.Combine(tempDir, "source", "01 Opening.mp3");
+            var secondTrack = Path.Combine(tempDir, "source", "02 The Middle.mp3");
+            var externalTools = new ExternalToolsService(
+                CreateConfig(),
+                DispatchProxy.Create<IDiskProvider, RealToolDiskProviderProxy>(),
+                new TestAppFolderInfo { AppDataFolder = tempDir, StartUpFolder = TestContext.CurrentContext.TestDirectory },
+                LogManager.GetLogger("ConversionJobCrashWorkerFixture"));
+            var request = CreateRealToolRequest(tempDir, "crash-download", coverPath, firstTrack, secondTrack);
+            var repository = CreateRepository(databasePath);
+            var service = CreateService(repository, new M4bConversionService(
+                externalTools,
+                DispatchProxy.Create<IDiskProvider, RealToolDiskProviderProxy>(),
+                CreateConfig(),
+                LogManager.GetLogger("ConversionJobCrashWorkerFixture")));
+
+            service.Enqueue(request);
+            service.Handle(new ApplicationStartedEvent());
+            WaitFor(() => File.Exists(gatePath), TimeSpan.FromSeconds(60), "m4b-tool did not reach the child-process FFmpeg gate.");
+
+            var job = repository.FindByDownloadId(request.DownloadId);
+            Assert.That(job.Status, Is.EqualTo(ConversionJobStatus.Converting));
+            Assert.That(job.AttemptCount, Is.EqualTo(1));
+            Assert.That(File.Exists(request.OutputPath), Is.False);
+            File.WriteAllText(readyPath, $"{job.Status}|{job.AttemptCount}");
+
+            Thread.Sleep(Timeout.Infinite);
+        }
+
+        [Test]
         public void stop_should_cancel_active_durable_job()
         {
             var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-job-cancel-{Guid.NewGuid():N}");
@@ -1052,6 +1283,25 @@ namespace Chaptarr.Core.Test.MediaFiles
                     CoverIsSource = true
                 }
             };
+        }
+
+        private static void CreateFfmpegGateWrapper(string wrapperPath, string gatePath, string releasePath)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(wrapperPath));
+            File.WriteAllText(wrapperPath,
+                "#!/bin/sh\n" +
+                "for arg in \"$@\"; do\n" +
+                "  if [ \"$arg\" = \"-version\" ] || [ \"$arg\" = \"-buildconf\" ] || [ \"$arg\" = \"0:v:0\" ]; then\n" +
+                "    exec /usr/bin/ffmpeg \"$@\"\n" +
+                "  fi\n" +
+                "done\n" +
+                "printf '%s\\n' \"$$\" > \"$CHAPTARRNG_M4B_TEST_GATE\"\n" +
+                "while [ ! -f \"$CHAPTARRNG_M4B_TEST_RELEASE\" ]; do sleep 0.05; done\n" +
+                "exec /usr/bin/ffmpeg \"$@\"\n");
+            File.SetUnixFileMode(wrapperPath,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
         }
 
         private static void CreateSyntheticCover(string path)

@@ -103,13 +103,18 @@ unprobeable-part fallback, and simulated tool failure; two covered embedded
 chapter preservation in Move and Copy modes. The test generated synthetic
 audio. Representative audiobooks and interrupted restart/resume remain open.
 
-On 2026-10-24, the pinned-tool filter passed 9/9 against the current working
-tree. The added conversion-job case pauses FFmpeg launched by m4b-tool, requests
+On 2026-10-24, the pinned-tool filter passed 10/10 against the current working
+tree. The conversion-job case pauses FFmpeg launched by m4b-tool, requests
 application shutdown, checks that the process exits and the durable job is
 requeued, then starts a new worker over the same SQLite job table and verifies
-a successful retry, output promotion, and matching manifest SHA-256. The data
-is synthetic. Representative audiobooks and abrupt whole-application
-process-crash recovery remain open.
+a successful retry, output promotion, and matching manifest SHA-256. The
+filter now also includes a separate child-process case: it kills the process
+hosting `ConversionJobService` while real FFmpeg is blocked, reopens the same
+SQLite job table without a shutdown callback, and verifies startup reconciliation
+retries the job and produces a valid digest-checked artifact. The media is
+synthetic; this exercises the conversion service across abrupt process death,
+not the complete ChaptarrNG host or an installed service. Representative
+audiobooks, full-host crash recovery, and deployment acceptance remain open.
 
 After building the test assembly as in `.github/workflows/build.yml`, run it
 locally with:
@@ -125,9 +130,10 @@ docker run --rm --network none \
     --TestCaseFilter:"FullyQualifiedName~real_m4b_tool_should_"
 ```
 
-This validates synthetic conversion, input and output chapter handling, and
-graceful shutdown/restart recovery. It does not close representative M4B or
-abrupt whole-application crash acceptance.
+This validates synthetic conversion, input and output chapter handling,
+graceful shutdown/restart recovery, and conversion-service recovery after its
+hosting process is killed. It does not close representative M4B, full-host
+crash recovery, or installed-service acceptance.
 
 ```sh
 export SEERRNG_SOURCE="/path/to/seerrng"

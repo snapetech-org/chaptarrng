@@ -11,9 +11,14 @@ relationships unassigned; sidecars and history with an existing source-book
 link follow that format's migrated book row. Unknown extensions remain
 unclassified, and stale choices for currently unambiguous books are ignored.
 
-The Release solution built with 0 warnings and 0 errors, and the Core suite
-passed 4,808 tests with 25 skips and no failures. A local Docker candidate built
-successfully; its frontend emitted the existing 22 CSS-order warnings and its
+The Release solution built with 0 warnings and 0 errors, and the current Core
+suite passed 4,888 tests with 28 skips and no failures. The pinned Linux M4B
+tool filter passed 10/10, including abrupt termination of the process hosting
+`ConversionJobService`, reopening its SQLite job store without a shutdown
+callback, and successful retry with manifest digest verification. This uses
+synthetic audio and is conversion-service process evidence, not a complete
+ChaptarrNG-host or installed-service crash rehearsal. A local Docker candidate
+built successfully; its frontend emitted the existing 22 CSS-order warnings and its
 source-link metadata warnings reflect the Docker build context without `.git`.
 The populated SeerrNG smoke read 13,083 ebook and 6,561 audiobook records,
 checked format-specific statistics and file extensions, and verified restricted
