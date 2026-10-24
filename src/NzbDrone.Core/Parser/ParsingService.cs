@@ -763,7 +763,9 @@ namespace NzbDrone.Core.Parser
             {
                 var allFields = _audioTagService.ReadAllTags(audioFilePath);
 
-                foreach (var field in allFields.Values.SelectMany(v => v))
+                foreach (var field in allFields
+                             .Where(pair => !BookshelfAudioTagFields.IsPrivate(pair.Key))
+                             .SelectMany(pair => pair.Value ?? new List<string>()))
                 {
                     if (!string.IsNullOrWhiteSpace(field) && field.Contains(authorName, StringComparison.OrdinalIgnoreCase))
                     {

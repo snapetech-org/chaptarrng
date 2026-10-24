@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.BookImport.Services;
 using NzbDrone.Core.Parser.Model;
 
@@ -331,7 +332,9 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             }
 
             foreach (var kv in tags
-                         .Where(kv => kv.Key.IsNotNullOrWhiteSpace() && kv.Value != null)
+                         .Where(kv => kv.Key.IsNotNullOrWhiteSpace() &&
+                                      kv.Value != null &&
+                                      !BookshelfAudioTagFields.IsPrivate(kv.Key))
                          .OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
                          .Take(MaxManifestTagFieldsPerFile))
             {

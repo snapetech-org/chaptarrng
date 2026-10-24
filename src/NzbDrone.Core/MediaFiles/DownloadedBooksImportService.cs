@@ -277,7 +277,50 @@ namespace NzbDrone.Core.MediaFiles
                         _logger.Debug("[DOWNLOAD-IMPORT] Auto-adding author '{0}' ({1}) for {2} unmatched file(s)",
                             authorName ?? "<unknown>", authorProviderId, filePaths.Count);
 
-                        var addedAuthor = _authorLibraryService.AddAuthorAsync(authorProviderId, config).GetAwaiter().GetResult();
+                        Author addedAuthor;
+                        var selectedSuggestions = _configService?.BookshelfMatchCompatibility == true
+                            ? group
+                                .Where(item => !string.IsNullOrWhiteSpace(item.Suggestion.BookProviderId))
+                                .GroupBy(item => (QualityMediaTypeHelper.GetMediaTypeFromPath(item.Unmatched.File.Path)
+                                                     ?? BookMediaType.Audiobook).ToString() + "\u001f" +
+                                    item.Suggestion.BookProviderId + "\u001f" +
+                                    (!string.IsNullOrWhiteSpace(item.Suggestion.EditionHardcoverId)
+                                        ? "id:" + item.Suggestion.EditionHardcoverId
+                                        : "title:" + (item.Suggestion.EditionTitle ?? string.Empty)),
+                                    StringComparer.OrdinalIgnoreCase)
+                                .ToList()
+                            : null;
+
+                        if (selectedSuggestions?.Count > 0)
+                        {
+                            addedAuthor = null;
+                            foreach (var selectedGroup in selectedSuggestions)
+                            {
+                                var selectedItem = selectedGroup.First();
+                                var selectedSuggestion = selectedItem.Suggestion;
+                                var selectedPath = selectedItem.Unmatched.File.Path;
+                                var selectedMediaType = QualityMediaTypeHelper.GetMediaTypeFromPath(selectedPath)
+                                    ?? BookMediaType.Audiobook;
+                                var materialized = _authorLibraryService.MaterializeUserSelectedEditionAsync(
+                                        new UserSelectedRemoteEdition
+                                        {
+                                            AuthorProviderId = selectedSuggestion.ProviderId,
+                                            WorkProviderId = selectedSuggestion.BookProviderId,
+                                            EditionProviderId = selectedSuggestion.EditionHardcoverId,
+                                            EditionTitle = selectedSuggestion.EditionTitle,
+                                            MediaType = selectedMediaType,
+                                            QueueIfUnavailable = true
+                                        },
+                                        config)
+                                    .GetAwaiter()
+                                    .GetResult();
+                                addedAuthor = materialized?.Author ?? addedAuthor;
+                            }
+                        }
+                        else
+                        {
+                            addedAuthor = _authorLibraryService.AddAuthorAsync(authorProviderId, config).GetAwaiter().GetResult();
+                        }
 
                         // Pending imports (negative IDs) can't be imported immediately.
                         if (addedAuthor == null || addedAuthor.Id <= 0)
@@ -466,7 +509,32 @@ namespace NzbDrone.Core.MediaFiles
                     {
                         try
                         {
-                            var addedAuthor = _authorLibraryService.AddAuthorAsync(suggestion.ProviderId, config).GetAwaiter().GetResult();
+                            Author addedAuthor;
+                            if (_configService?.BookshelfMatchCompatibility == true &&
+                                !string.IsNullOrWhiteSpace(suggestion.BookProviderId))
+                            {
+                                var suggestedMediaType = QualityMediaTypeHelper.GetMediaTypeFromPath(fileInfo.FullName)
+                                    ?? BookMediaType.Audiobook;
+                                var materialized = _authorLibraryService.MaterializeUserSelectedEditionAsync(
+                                        new UserSelectedRemoteEdition
+                                        {
+                                            AuthorProviderId = suggestion.ProviderId,
+                                            WorkProviderId = suggestion.BookProviderId,
+                                            EditionProviderId = suggestion.EditionHardcoverId,
+                                            EditionTitle = suggestion.EditionTitle,
+                                            MediaType = suggestedMediaType,
+                                            QueueIfUnavailable = true
+                                        },
+                                        config)
+                                    .GetAwaiter()
+                                    .GetResult();
+                                addedAuthor = materialized?.Author;
+                            }
+                            else
+                            {
+                                addedAuthor = _authorLibraryService.AddAuthorAsync(suggestion.ProviderId, config).GetAwaiter().GetResult();
+                            }
+
                             if (addedAuthor != null && addedAuthor.Id > 0)
                             {
                                 var rematchCtx = CreateStrictMatchingContext(false, targetBookIds);

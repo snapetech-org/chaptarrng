@@ -53,6 +53,7 @@ namespace NzbDrone.Core.Books.Services
         public string EditionProviderId { get; init; }
         public string EditionTitle { get; init; }
         public BookMediaType MediaType { get; init; }
+        public bool QueueIfUnavailable { get; init; }
     }
 
     public sealed class UserSelectedEditionMaterialization
@@ -104,11 +105,39 @@ namespace NzbDrone.Core.Books.Services
         public bool? SearchForMissingBooks { get; set; }
         public string RequestedBy { get; set; }
         public string AuthorName { get; set; }
+        public List<UserSelectedRemoteEdition> SelectedRemoteEditions { get; set; }
         
         // Specific book monitoring context (for "None, except this one" or series monitoring)
         public MonitorTypes? MonitorMode { get; set; }
         public HashSet<string> SpecificBookProviderIds { get; set; }  // e.g., ["hc:495645", "hc:495646"]
         public BookMediaType? SpecificBookMediaType { get; set; }
+
+        internal MonitoringConfig Clone()
+        {
+            var clone = (MonitoringConfig)MemberwiseClone();
+            clone.AudiobookBooksToMonitor = AudiobookBooksToMonitor?.ToList();
+            clone.EbookBooksToMonitor = EbookBooksToMonitor?.ToList();
+            clone.AudiobookBooksToSearch = AudiobookBooksToSearch?.ToList();
+            clone.EbookBooksToSearch = EbookBooksToSearch?.ToList();
+            clone.AudiobookTags = AudiobookTags == null ? null : new HashSet<int>(AudiobookTags);
+            clone.EbookTags = EbookTags == null ? null : new HashSet<int>(EbookTags);
+            clone.Tags = Tags == null ? null : new HashSet<int>(Tags);
+            clone.SpecificBookProviderIds = SpecificBookProviderIds == null
+                ? null
+                : new HashSet<string>(SpecificBookProviderIds, StringComparer.OrdinalIgnoreCase);
+            clone.SelectedRemoteEditions = SelectedRemoteEditions?.Select(selection => selection == null
+                ? null
+                : new UserSelectedRemoteEdition
+                {
+                    AuthorProviderId = selection.AuthorProviderId,
+                    WorkProviderId = selection.WorkProviderId,
+                    EditionProviderId = selection.EditionProviderId,
+                    EditionTitle = selection.EditionTitle,
+                    MediaType = selection.MediaType,
+                    QueueIfUnavailable = selection.QueueIfUnavailable
+                }).ToList();
+            return clone;
+        }
 
         public void MergeTagsForMediaType(BookMediaType mediaType, IEnumerable<int> tags)
         {
@@ -576,7 +605,30 @@ namespace NzbDrone.Core.Books.Services
 
             var authorProviderId = NormalizeRequiredProviderId(selection.AuthorProviderId, "author");
             var workProviderId = NormalizeRequiredProviderId(selection.WorkProviderId, "work");
-            var remoteAuthor = await FetchAuthorBlobAsync(authorProviderId);
+            var materializationConfig = selection.QueueIfUnavailable
+                ? BuildSelectedWorkQueueConfig(config, selection, workProviderId)
+                : config;
+
+            Author remoteAuthor;
+            try
+            {
+                remoteAuthor = await FetchAuthorBlobAsync(authorProviderId);
+            }
+            catch (AuthorNotFoundException) when (selection.QueueIfUnavailable && materializationConfig?.IsFromQueue != true)
+            {
+                var queuedAuthor = await AddAuthorAsync(authorProviderId, materializationConfig);
+                return TryMaterializeLocalSelection(queuedAuthor, selection, workProviderId) ??
+                       new UserSelectedEditionMaterialization { Author = queuedAuthor };
+            }
+
+            if (selection.QueueIfUnavailable &&
+                !RemoteAuthorContainsSelectedWork(remoteAuthor, workProviderId, selection.MediaType))
+            {
+                var queuedAuthor = await AddAuthorAsync(authorProviderId, materializationConfig);
+                return TryMaterializeLocalSelection(queuedAuthor, selection, workProviderId) ??
+                       new UserSelectedEditionMaterialization { Author = queuedAuthor };
+            }
+
             RemoteUserSelection remoteTarget = null;
             string editionProviderId = null;
             AmbiguousRemoteEditionException ambiguousEdition = null;
@@ -613,7 +665,7 @@ namespace NzbDrone.Core.Books.Services
 
             if (localAuthor == null)
             {
-                localAuthor = await AddAuthorAsync(authorProviderId, config);
+                localAuthor = await AddAuthorAsync(authorProviderId, materializationConfig);
             }
             else if (_refreshAuthorService != null)
             {
@@ -625,8 +677,7 @@ namespace NzbDrone.Core.Books.Services
 
             if (localAuthor?.Id <= 0)
             {
-                throw new InvalidOperationException(
-                    $"Authoritative metadata author '{authorProviderId}' is not locally available yet.");
+                return new UserSelectedEditionMaterialization { Author = localAuthor };
             }
 
             if (ambiguousEdition != null)
@@ -701,6 +752,145 @@ namespace NzbDrone.Core.Books.Services
                 Author = localAuthor,
                 Book = _bookService.GetBook(localBook.Id) ?? localBook,
                 Edition = _editionService.GetEdition(localEdition.Id) ?? localEdition
+            };
+        }
+
+        private static MonitoringConfig BuildSelectedWorkQueueConfig(
+            MonitoringConfig source,
+            UserSelectedRemoteEdition selection,
+            string workProviderId)
+        {
+            var config = source?.Clone() ?? new MonitoringConfig();
+            config.QueueIfUnavailable = true;
+            config.IsFromQueue = false;
+            config.SpecificBookMediaType = selection.MediaType;
+            config.SpecificBookProviderIds ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            config.SpecificBookProviderIds.Add(workProviderId);
+            config.SelectedRemoteEditions ??= new List<UserSelectedRemoteEdition>();
+            if (!config.SelectedRemoteEditions.Any(existing =>
+                    existing != null &&
+                    existing.MediaType == selection.MediaType &&
+                    string.Equals(existing.WorkProviderId, workProviderId, StringComparison.OrdinalIgnoreCase) &&
+                    (string.IsNullOrWhiteSpace(selection.EditionProviderId)
+                        ? string.IsNullOrWhiteSpace(existing.EditionProviderId) &&
+                          string.Equals(existing.EditionTitle, selection.EditionTitle, StringComparison.OrdinalIgnoreCase)
+                        : string.Equals(existing.EditionProviderId, selection.EditionProviderId, StringComparison.OrdinalIgnoreCase))))
+            {
+                config.SelectedRemoteEditions.Add(new UserSelectedRemoteEdition
+                {
+                    AuthorProviderId = selection.AuthorProviderId,
+                    WorkProviderId = workProviderId,
+                    EditionProviderId = selection.EditionProviderId,
+                    EditionTitle = selection.EditionTitle,
+                    MediaType = selection.MediaType,
+                    QueueIfUnavailable = true
+                });
+            }
+
+            if (selection.MediaType == BookMediaType.Audiobook)
+            {
+                config.CreateAudiobook = true;
+                config.AudiobookBooksToMonitor ??= new List<string>();
+                if (!config.AudiobookBooksToMonitor.Contains(workProviderId, StringComparer.OrdinalIgnoreCase))
+                {
+                    config.AudiobookBooksToMonitor.Add(workProviderId);
+                }
+
+                config.AudiobookMonitorExistingMode ??= MonitorTypes.SpecificBook;
+            }
+            else
+            {
+                config.CreateEbook = true;
+                config.EbookBooksToMonitor ??= new List<string>();
+                if (!config.EbookBooksToMonitor.Contains(workProviderId, StringComparer.OrdinalIgnoreCase))
+                {
+                    config.EbookBooksToMonitor.Add(workProviderId);
+                }
+
+                config.EbookMonitorExistingMode ??= MonitorTypes.SpecificBook;
+            }
+
+            return config;
+        }
+
+        private static bool RemoteAuthorContainsSelectedWork(
+            Author remoteAuthor,
+            string workProviderId,
+            BookMediaType mediaType)
+        {
+            return (remoteAuthor?.Books ?? new List<Book>())
+                .Any(book => book != null &&
+                             book.MediaType == mediaType &&
+                             RemoteBookHasWorkProviderId(book, workProviderId));
+        }
+
+        private UserSelectedEditionMaterialization TryMaterializeLocalSelection(
+            Author author,
+            UserSelectedRemoteEdition selection,
+            string workProviderId)
+        {
+            if (author == null || author.Id <= 0 || _bookService == null || _editionService == null)
+            {
+                return null;
+            }
+
+            var separator = workProviderId.IndexOf(':');
+            if (separator <= 0)
+            {
+                return null;
+            }
+
+            var book = _bookService.FindAllByWorkProviderId(
+                    workProviderId.Substring(0, separator),
+                    ProviderIdHelper.StripPrefix(workProviderId),
+                    selection.MediaType)
+                .FirstOrDefault(candidate => candidate.AuthorId == author.Id);
+            if (book == null)
+            {
+                return null;
+            }
+
+            var editions = _editionService.GetEditionsByBook(book.Id) ?? new List<Edition>();
+            Edition edition;
+            if (!string.IsNullOrWhiteSpace(selection.EditionProviderId))
+            {
+                edition = editions.FirstOrDefault(candidate =>
+                    BookEditionIdentity.EditionMatchesProviderId(candidate, selection.EditionProviderId));
+            }
+            else
+            {
+                var titleMatches = string.IsNullOrWhiteSpace(selection.EditionTitle)
+                    ? new List<Edition>()
+                    : editions.Where(candidate => candidate != null && string.Equals(
+                            candidate.Title?.Trim(),
+                            selection.EditionTitle.Trim(),
+                            StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                if (titleMatches.Count > 1)
+                {
+                    return null;
+                }
+
+                // A title match is the strongest identity available when the catalog
+                // suggestion has no provider edition ID. If it is no longer present,
+                // use the local provider-selected edition as the source-compatible fallback.
+                edition = titleMatches.FirstOrDefault() ??
+                          BookEditionIdentity.GetMonitoredEdition(book) ??
+                          editions.FirstOrDefault(candidate => candidate.Monitored);
+            }
+
+            if (edition == null)
+            {
+                return null;
+            }
+
+            PinUserSelectedBookAndEdition(book, edition, selection.MediaType);
+            return new UserSelectedEditionMaterialization
+            {
+                Author = _authorService?.GetAuthor(author.Id) ?? author,
+                Book = _bookService.GetBook(book.Id) ?? book,
+                Edition = _editionService.GetEdition(edition.Id) ?? edition
             };
         }
 

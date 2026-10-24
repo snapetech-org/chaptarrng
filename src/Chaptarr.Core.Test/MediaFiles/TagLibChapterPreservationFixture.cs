@@ -2,6 +2,8 @@ using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.Text;
+using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.MediaFiles.TagExtraction;
 using NUnit.Framework;
 
 namespace Chaptarr.Core.Test.MediaFiles
@@ -52,6 +54,28 @@ namespace Chaptarr.Core.Test.MediaFiles
             {
                 Assert.That(file.Tag.Title, Is.EqualTo(UpdatedTitle), "The tag write must still update the requested metadata.");
             }
+        }
+
+        [Test]
+        public void should_project_bookshelf_audio_book_and_title_from_taglib_fields()
+        {
+            var path = FindFixturePath();
+            string expectedBook;
+            string expectedTitle;
+
+            using (var file = TagLib.File.Create(path, TagLib.ReadStyle.None))
+            {
+                expectedBook = file.Tag?.Album ?? file.Tag?.AlbumSort ?? string.Empty;
+                expectedTitle = file.Tag?.Title ?? file.Tag?.TitleSort ?? string.Empty;
+            }
+
+            var tags = new TagLibSharpExtractor().ExtractTags(path);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(tags[BookshelfAudioTagFields.Book], Is.EqualTo(new[] { expectedBook }));
+                Assert.That(tags[BookshelfAudioTagFields.Title], Is.EqualTo(new[] { expectedTitle }));
+            });
         }
 
         private static string FindFixturePath()

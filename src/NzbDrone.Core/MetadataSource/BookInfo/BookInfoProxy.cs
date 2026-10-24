@@ -3330,7 +3330,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                         if (prefix == "edition")
                         {
-                            return SearchByGoodreadsBookId(searchId, getAllEditions);
+                            return SearchByGoodreadsBookId(searchId, getAllEditions, mediaType);
                         }
                     }
 
@@ -3508,7 +3508,12 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
         public List<Book> SearchByIsbn(string isbn)
         {
-            return Search(isbn, true);
+            return SearchByIsbn(isbn, null);
+        }
+
+        public List<Book> SearchByIsbn(string isbn, BookMediaType? mediaType)
+        {
+            return Search(isbn, true, mediaType);
         }
 
         private List<Book> SearchByV5WorkId(string foreignWorkId)
@@ -3526,7 +3531,12 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
         public List<Book> SearchByAsin(string asin)
         {
-            return Search(asin, true);
+            return SearchByAsin(asin, null);
+        }
+
+        public List<Book> SearchByAsin(string asin, BookMediaType? mediaType)
+        {
+            return Search(asin, true, mediaType);
         }
 
         private List<Book> Search(string query, bool getAllEditions, BookMediaType? mediaType = null)
@@ -3637,9 +3647,14 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
         public List<Book> SearchByGoodreadsBookId(int id, bool getAllEditions)
         {
+            return SearchByGoodreadsBookId(id, getAllEditions, null);
+        }
+
+        public List<Book> SearchByGoodreadsBookId(int id, bool getAllEditions, BookMediaType? mediaType)
+        {
             try
             {
-                var book = GetEditionInfo(id, getAllEditions);
+                var book = GetEditionInfo(id, getAllEditions, mediaType);
 
                 return new List<Book> { book };
             }
@@ -3667,7 +3682,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             }
         }
 
-        private Book GetEditionInfo(int id, bool getAllEditions)
+        private Book GetEditionInfo(int id, bool getAllEditions, BookMediaType? mediaType = null)
         {
             HttpRequest httpRequest;
             HttpResponse httpResponse;
@@ -3721,7 +3736,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             }
             else if (type == "work")
             {
-                var tuple = PollBook(newId, BookMediaType.Audiobook);
+                var tuple = PollBook(newId, mediaType ?? BookMediaType.Audiobook);
 
                 book = tuple.Item2;
                 authors = tuple.Item3;
@@ -3734,6 +3749,11 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             if (book == null || book.Editions.All(e => !BookEditionIdentity.EditionMatchesProviderId(e, requestedEditionId)))
             {
                 throw new EditionNotFoundException(id.ToString());
+            }
+
+            if (mediaType.HasValue)
+            {
+                book.MediaType = mediaType.Value;
             }
 
             if (!getAllEditions)

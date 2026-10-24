@@ -195,30 +195,35 @@ namespace Chaptarr.Api.V1.BookFiles
                 return resource;
             }
 
-            // Prefer persisted tags from DB; fall back to disk read for legacy files without AllTags
+            // Prefer persisted tags from DB; fall back to disk read for legacy files without AllTags.
+            // Keep the private Bookshelf compatibility projection available to AudioTags while
+            // omitting it from the field-agnostic public Tags map.
+            Dictionary<string, List<string>> audioTags;
             if (bookFile?.AllTags != null && bookFile.AllTags.Count > 0)
             {
-                resource.Tags = bookFile.AllTags;
+                audioTags = bookFile.AllTags;
             }
             else
             {
                 try
                 {
                     var fileInfo = new global::System.IO.Abstractions.FileSystem().FileInfo.New(resource.Path);
-                    resource.Tags = fileInfo.Exists
+                    audioTags = fileInfo.Exists
                         ? _metadataTagService.ReadAllTags(fileInfo) ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
                         : new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                 }
                 catch (Exception ex)
                 {
                     _logger.Warn(ex, "Failed to read tags for book file: {0}", resource.Path);
-                    resource.Tags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+                    audioTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                 }
             }
 
+            resource.Tags = TagExclusionPolicy.ToPublicTags(audioTags);
+
             // Keep the BookshelfNG v1 response field for existing clients while the richer
             // field-agnostic tag map remains available through Tags.
-            resource.AudioTags = BookshelfAudioTagsCompatibilityMapper.ToParsedTrackInfo(bookFile, resource.Tags);
+            resource.AudioTags = BookshelfAudioTagsCompatibilityMapper.ToParsedTrackInfo(bookFile, audioTags);
 
             return resource;
         }

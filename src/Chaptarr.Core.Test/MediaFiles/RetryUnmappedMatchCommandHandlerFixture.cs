@@ -10,6 +10,7 @@ using NzbDrone.Common.Disk;
 using NzbDrone.Core.Authors;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Services;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.BookImport;
@@ -18,6 +19,7 @@ using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.MetadataSource;
 using NzbDrone.Core.MetadataSource.BookInfo;
 using NzbDrone.Core.Parser.Model;
+using NzbDrone.Core.Profiles.Metadata;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.RootFolders;
 
@@ -678,6 +680,62 @@ namespace Chaptarr.Core.Test.MediaFiles
                 .Select(file => file.Id)
                 .Distinct(), Is.EquivalentTo(new[] { 1, 2 }));
             Assert.That(context.Import.Imports, Is.Empty);
+        }
+
+        [Test]
+        public void retry_match_uses_bookshelf_compatibility_for_filename_only_catalog_fallback()
+        {
+            var modified = new DateTime(2026, 7, 4, 1, 0, 0, DateTimeKind.Utc);
+            var file = CreateUnmappedFile(1, "/books/Frank Herbert - 01 - Dune.m4b", modified, 100, "", 60);
+            file.AllTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var config = Chaptarr.Core.Test.ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: true);
+            var context = CreateContext(new[] { file }, current => (modified, current.Size), config);
+            var candidate = new Book
+            {
+                Title = "Dune",
+                HardcoverBookId = "9001",
+                MediaType = BookMediaType.Audiobook,
+                Author = new Author
+                {
+                    Name = "Frank Herbert",
+                    HardcoverAuthorId = "42"
+                },
+                Editions = new List<Edition>
+                {
+                    new Edition
+                    {
+                        Title = "Dune",
+                        ForeignEditionId = "hc-edition-9001",
+                        HardcoverEditionId = "hc-edition-9001",
+                        Format = "Audiobook"
+                    }
+                }
+            };
+            context.CatalogSearch.OnSearch = (title, author, getAllEditions, mediaType) =>
+                title == "Dune" && author == "Frank Herbert" ? new List<Book> { candidate } : new List<Book>();
+            context.Matching.OnMatch = (matchedFiles, restrictToAuthorId, matchingContext, call) => new FileMatchResult
+            {
+                UnmatchedFiles = matchedFiles.Select(discovered => new UnmatchedFile
+                {
+                    File = discovered,
+                    Reason = "NO_MATCH"
+                }).ToArray()
+            };
+
+            context.Sut.Execute(new RetryUnmappedMatchCommand
+            {
+                MediaType = "audiobook",
+                UnmappedFiles = new UnmappedFilesSelection { Scope = "all" }
+            });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.CatalogSearch.Calls, Has.Count.EqualTo(1));
+                Assert.That(context.CatalogSearch.Calls[0].Title, Is.EqualTo("Dune"));
+                Assert.That(context.CatalogSearch.Calls[0].Author, Is.EqualTo("Frank Herbert"));
+                Assert.That(context.CatalogSearch.Calls[0].GetAllEditions, Is.True);
+                Assert.That(context.CatalogSearch.Calls[0].MediaType, Is.EqualTo(BookMediaType.Audiobook));
+            });
         }
 
         [Test]
@@ -1634,7 +1692,11 @@ namespace Chaptarr.Core.Test.MediaFiles
             return CreateContext(files, current => (diskModified, current.Size));
         }
 
-        private static TestContext CreateContext(IEnumerable<BookFile> files, Func<BookFile, (DateTime Modified, long Size)> diskInfo)
+        private static TestContext CreateContext(
+            IEnumerable<BookFile> files,
+            Func<BookFile, (DateTime Modified, long Size)> diskInfo,
+            IConfigService configService = null,
+            IMetadataProfileService metadataProfileService = null)
         {
             var fileList = files.ToList();
             var media = new StubMediaFileService { UnmappedFiles = fileList };
@@ -1685,7 +1747,9 @@ namespace Chaptarr.Core.Test.MediaFiles
                 rootFolders,
                 authorService,
                 catalogSearch,
-                LogManager.GetCurrentClassLogger());
+                LogManager.GetCurrentClassLogger(),
+                configService,
+                metadataProfileService);
 
             return new TestContext(
                 sut, media, metadata, ingestProxy, matching, import, authorLibrary, pendingImports,

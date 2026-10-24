@@ -1,5 +1,27 @@
 # BookshelfNG retirement status
 
+**Bookshelf matching and audiobook-tag compatibility batch (2026-10-24):**
+ChaptarrNG now carries BookshelfNG's legacy weighted candidate scoring,
+per-format author/root profile selection, filename fallback, and ordered
+catalog identification tiers through routine imports and unmapped-match
+retries. The local-to-remote recheck keeps the legacy 85% threshold and only
+replaces a local candidate with a strictly higher remote score; manual import
+preview retains its exact-query boundary, and the newer media identity and
+ambiguity safeguards remain enabled. Pending-author retries now persist
+selected remote editions until the requested work is available. Audio metadata
+preserves BookshelfNG's null-only Album/AlbumSort and Title/TitleSort
+projection—including empty-value behavior—through extraction, matching,
+caching, and compatible API fields; the private projection is filtered from
+public tag responses. The source review and crosswalk are in
+[the workflow parity map](BOOKSHELFNG_WORKFLOW_PARITY.md#bookshelfng-matching-source-crosswalk).
+The serial Release solution build passed with 0 warnings and 0 errors; the
+Release Core console summary reported 4,846 passed, 25 skipped, and 0 failed.
+The raw TRX has 27 `NotExecuted` records while the console summary reports 25
+skips; the console result is recorded here without reconciling that runner
+accounting difference. Local synthetic regressions do not establish live
+provider fulfillment, representative-library acceptance, or installed-channel
+handoff.
+
 **Image dependency/security update (2026-10-23):** ChaptarrNG now uses
 SkiaSharp for resized JPEG, PNG, JFIF, and WebP covers, and PDFsharp 6.2.4 for
 PDF metadata extraction. PDFsharp 6.2.4 targets .NET 10 and retains its MIT

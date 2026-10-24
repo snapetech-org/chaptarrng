@@ -2281,6 +2281,10 @@ namespace NzbDrone.Core.Books
 	        public int IdMatch { get; set; } // 1 for ID hit, 0 otherwise
         public string MatchedBy { get; set; } // ASIN, AUDIBLE_ASIN, ISBN10, ISBN13
         public string MatchedValue { get; set; }
+        // Computed for the selected input's embedded tags when migrated BookshelfNG
+        // matching compatibility is enabled. It follows the selected candidate to
+        // the outer remote-candidate retry without becoming persisted/API state.
+        internal double? BookshelfMatchPercent { get; set; }
     }
 
 	    // Typed DTO for SQLite in-memory grouping — avoids dynamic/binder issues

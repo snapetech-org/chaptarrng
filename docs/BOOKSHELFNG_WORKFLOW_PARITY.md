@@ -209,9 +209,27 @@ ebook records. It does not turn them into one database record or combine their
 monitoring and file state. Cross-format work links rely on canonical work IDs;
 records without shared work identity remain ungrouped.
 
-The BookshelfNG-to-ChaptarrNG path inventory also has unresolved semantic review.
-That inventory is useful for finding code that needs inspection, but a path count
-is not a user-facing feature gap by itself. Keep migration, installed update
-channels, and release readiness in
-[the retirement status](BOOKSHELFNG_RETIREMENT.md), separate from this workflow
-map.
+The two production paths in the BookshelfNG import-matching inventory have now
+been reviewed by behavior. ChaptarrNG's `FileMatchingService` performs the local
+identity and tag-based candidate pass, then consults
+`UnmappedCatalogSuggestionHelper` for the ordered catalog search: ISBN, ASIN,
+Goodreads ID, author plus title, title, a single-file filename title, then
+author. It preserves the legacy 85% remote-recheck threshold and only replaces
+a local candidate when the remote result scores higher. Candidate ties keep the
+original source order. Routine import and review suggestions use this fallback;
+manual import preview retains its exact-query boundary. ChaptarrNG also keeps
+its stricter media-type, identity, and ambiguity checks. This resolves the
+`CandidateService` and `IdentificationService` semantic-review entries at the
+source level; it does not claim that a path-name match alone proves equivalence.
+This review follows BookshelfNG's [`CandidateService`](https://github.com/snapetech-org/bookshelfng/blob/main/src/NzbDrone.Core/MediaFiles/BookImport/Identification/CandidateService.cs), [`IdentificationService`](https://github.com/snapetech-org/bookshelfng/blob/main/src/NzbDrone.Core/MediaFiles/BookImport/Identification/IdentificationService.cs), and [`AudioTag`](https://github.com/snapetech-org/bookshelfng/blob/main/src/NzbDrone.Core/MediaFiles/AudioTag.cs) source.
+
+For audiobook scoring, the compatibility projection now preserves BookshelfNG's
+null-only `Album ?? AlbumSort` and `Title ?? TitleSort` selection, including an
+explicit empty album, and uses the selected book title when nonblank or the
+track title otherwise. The projection survives when FFprobe supplies the final
+tag result, so container-tag normalization cannot erase the distinction. The
+internal projection is retained for matching and kept out of public tag output.
+
+These are source-level parity findings. Migration, installed update channels,
+real-provider fulfillment, representative-library acceptance, and release
+readiness remain tracked separately in [the retirement status](BOOKSHELFNG_RETIREMENT.md).

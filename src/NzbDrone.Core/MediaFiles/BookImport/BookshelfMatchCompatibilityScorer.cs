@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Calibre;
+using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Parser;
 
 namespace NzbDrone.Core.MediaFiles.BookImport
@@ -41,6 +42,40 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         private static readonly Regex YearRegex = new Regex(@"\b(1\d{3}|2\d{3})\b", RegexOptions.Compiled);
         private static readonly string[] EbookFormats = { "Kindle Edition", "Nook", "ebook" };
         private static readonly string[] AudiobookFormats = { "Audiobook", "Audio CD", "Audio Cassette", "Audible Audio", "CD-ROM", "MP3 CD" };
+        private static readonly string[] VariousAuthorTitles = { string.Empty, "various authors", "various", "va", "unknown" };
+        private const string CalibreOverrideMarker = "BOOKSHELF_CALIBRE_OVERRIDE";
+        private const string CalibreTitleOverride = "BOOKSHELF_CALIBRE_TITLE";
+        private const string CalibreAuthorsOverride = "BOOKSHELF_CALIBRE_AUTHORS";
+        private const string CalibreIsbnOverride = "BOOKSHELF_CALIBRE_ISBN";
+        private const string CalibreAsinOverride = "BOOKSHELF_CALIBRE_ASIN";
+        private const string CalibreGoodreadsOverride = "BOOKSHELF_CALIBRE_GOODREADS_ID";
+        private const string BookshelfAudioBook = BookshelfAudioTagFields.Book;
+        private const string BookshelfAudioTitle = BookshelfAudioTagFields.Title;
+
+        internal static Dictionary<string, List<string>> ApplyCalibreMetadata(
+            Dictionary<string, List<string>> sourceTags,
+            string title,
+            IEnumerable<string> authors,
+            string isbn,
+            string asin,
+            string goodreadsId)
+        {
+            var tags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in sourceTags ?? new Dictionary<string, List<string>>())
+            {
+                tags[pair.Key] = pair.Value?.ToList() ?? new List<string>();
+            }
+
+            tags[CalibreOverrideMarker] = new List<string> { "true" };
+            SetOverride(tags, CalibreTitleOverride, title);
+            tags[CalibreAuthorsOverride] = (authors ?? Enumerable.Empty<string>())
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .ToList();
+            SetOverride(tags, CalibreIsbnOverride, isbn);
+            SetOverride(tags, CalibreAsinOverride, asin);
+            SetOverride(tags, CalibreGoodreadsOverride, goodreadsId);
+            return tags;
+        }
 
         public static double GetMatchPercent(
             IReadOnlyList<Dictionary<string, List<string>>> trackTags,
@@ -48,26 +83,27 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             Edition edition,
             Book book,
             BookMediaType mediaType,
-            string preferredEditionTerms = null)
+            string preferredEditionTerms = null,
+            IReadOnlyList<string> filePaths = null)
         {
-            if (candidate == null)
+            if (candidate == null && (edition == null || book == null))
             {
                 return 0;
             }
 
             trackTags ??= Array.Empty<Dictionary<string, List<string>>>();
             var distance = new WeightedDistance();
-            var fileAuthors = GetMostCommonList(trackTags, mediaType);
+            var fileAuthors = GetBookshelfRemoteAuthorSearchTerms(trackTags, mediaType, filePaths);
             var authorVariants = GetAuthorVariants(fileAuthors);
-            var authorName = book?.Author?.Name ?? candidate.AuthorName;
+            var authorName = book?.Author?.Name ?? candidate?.AuthorName;
             distance.AddString("author", authorVariants, authorName);
 
-            var fileTitle = GetMostCommonTitle(trackTags, mediaType);
+            var fileTitle = GetMostCommonTitle(trackTags, mediaType, filePaths);
             var fileTitles = new[] { fileTitle, CleanTitleCruft.Replace(fileTitle ?? string.Empty, string.Empty) }
                 .Where(value => value != null)
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
-            var editionTitle = edition?.Title ?? candidate.EditionTitle;
+            var editionTitle = edition?.Title ?? candidate?.EditionTitle;
             var titleOptions = new List<string>();
             if (!string.IsNullOrWhiteSpace(editionTitle))
             {
@@ -101,7 +137,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             if (titleOptions.Count == 0)
             {
-                titleOptions.Add(candidate.BookTitle ?? string.Empty);
+                titleOptions.Add(candidate?.BookTitle ?? book?.Title ?? string.Empty);
             }
             distance.AddString("book", fileTitles, titleOptions);
 
@@ -109,20 +145,18 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 distance,
                 "isbn",
                 "isbn_missing",
-                mediaType == BookMediaType.Ebook ? GetMostCommon(trackTags, "isbn") : null,
+                GetMostCommonIdentifier(trackTags, "isbn", "isbn", "isbn13", "isbn10", "isbn-13", "isbn-10"),
                 edition?.Isbn13,
                 ValidIsbnRegex);
             AddIdentifierDistance(
                 distance,
                 "asin",
                 "asin_missing",
-                mediaType == BookMediaType.Ebook ? GetMostCommon(trackTags, "asin") : null,
+                GetMostCommonIdentifier(trackTags, "asin", "asin", "audible_asin"),
                 edition?.Asin,
                 ValidAsinRegex);
 
-            var localYear = mediaType == BookMediaType.Audiobook
-                ? GetMostCommonYear(trackTags, "date", "year")
-                : 0;
+            var localYear = GetMostCommonYear(trackTags, "date", "year");
             var releaseDate = edition?.ReleaseDate;
             if (localYear > 0 && releaseDate.HasValue)
             {
@@ -132,16 +166,14 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 distance.AddRatio("year", difference, maximumDifference);
             }
 
-            var localLanguage = mediaType == BookMediaType.Ebook
-                ? GetMostCommonSeparatedValue(trackTags, "language")?.CanonicalizeLanguage()
-                : null;
-            var editionLanguage = mediaType == BookMediaType.Ebook ? edition?.Language?.CanonicalizeLanguage() : null;
+            var localLanguage = GetMostCommonSeparatedValue(trackTags, "language")?.CanonicalizeLanguage();
+            var editionLanguage = edition?.Language?.CanonicalizeLanguage();
             if (!string.IsNullOrWhiteSpace(localLanguage) && !string.IsNullOrWhiteSpace(editionLanguage))
             {
                 distance.AddBool("language", localLanguage != editionLanguage);
             }
 
-            var localPublisher = mediaType == BookMediaType.Ebook ? GetMostCommonSeparatedValue(trackTags, "publisher") : null;
+            var localPublisher = GetMostCommonSeparatedValue(trackTags, "publisher");
             var editionPublisher = edition?.Publisher;
             if (!string.IsNullOrWhiteSpace(localPublisher) && !string.IsNullOrWhiteSpace(editionPublisher))
             {
@@ -153,7 +185,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 // BookshelfNG's AudioTag maps its explicit NARRATOR credit to FileTrackInfo.Narrator.
                 // Performers are also included in the author list, so treating them as narrator
                 // evidence would add a score penalty that the legacy matcher never applied.
-                var fileNarrators = GetNarrators(GetValues(trackTags, "narrator", "narrators"));
+                var fileNarrators = GetLegacyNarrators(trackTags);
                 var editionNarrators = GetNarrators(new[] { edition?.Narrator });
                 if (fileNarrators.Count > 0 && editionNarrators.Count > 0)
                 {
@@ -177,6 +209,44 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             AddPreferredEditionDistance(distance, editionTitle, format, editionPublisher, preferredEditionTerms);
             return 100.0 * (1.0 - distance.NormalizedDistance());
+        }
+
+        internal static string GetBookshelfBookTitle(
+            IReadOnlyList<Dictionary<string, List<string>>> trackTags,
+            BookMediaType mediaType,
+            IReadOnlyList<string> filePaths = null)
+        {
+            return GetMostCommonTitle(trackTags, mediaType, filePaths);
+        }
+
+        internal static List<string> GetBookshelfRemoteAuthorSearchTerms(
+            IReadOnlyList<Dictionary<string, List<string>>> trackTags,
+            BookMediaType mediaType,
+            IReadOnlyList<string> filePaths = null)
+        {
+            var authorLists = trackTags?.Where(tags => tags != null)
+                .Select(tags => GetLegacyAuthors(tags, mediaType))
+                .ToList() ?? new List<List<string>>();
+
+            var filenameEvidence = GetFilenameEvidence(trackTags, mediaType, filePaths);
+            if (filenameEvidence.Count == authorLists.Count)
+            {
+                for (var index = 0; index < authorLists.Count; index++)
+                {
+                    if (authorLists[index].Count == 0 && !string.IsNullOrWhiteSpace(filenameEvidence[index].Author))
+                    {
+                        authorLists[index] = new List<string> { filenameEvidence[index].Author };
+                    }
+                }
+            }
+
+            var authorTitles = authorLists.Select(authors => authors.FirstOrDefault()).ToList();
+            if (IsVariousAuthors(authorTitles))
+            {
+                return new List<string> { "Various Authors" };
+            }
+
+            return GetMostCommonList(authorLists);
         }
 
         private static void AddIdentifierDistance(WeightedDistance distance, string key, string missingKey, string localValue, string editionValue, Regex valid)
@@ -223,6 +293,25 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 .FirstOrDefault();
         }
 
+        private static string GetMostCommonIdentifier(
+            IReadOnlyList<Dictionary<string, List<string>>> trackTags,
+            string calibreOverrideName,
+            params string[] names)
+        {
+            var overrideName = "BOOKSHELF_CALIBRE_" + calibreOverrideName.ToUpperInvariant();
+            var values = (trackTags ?? Array.Empty<Dictionary<string, List<string>>>())
+                .Where(tags => tags != null)
+                .Select(tags => HasCalibreOverride(tags)
+                    ? GetFirstValue(tags, overrideName)
+                    : GetFirstValue(tags, names))
+                .ToList();
+
+            return values.GroupBy(value => value)
+                .OrderByDescending(group => group.Count())
+                .Select(group => group.First())
+                .FirstOrDefault();
+        }
+
         private static string GetMostCommonSeparatedValue(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
         {
             var values = GetTrackValues(trackTags, names)
@@ -246,6 +335,11 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 .Select(tags => GetLegacyAuthors(tags, mediaType))
                 .ToList();
 
+            return GetMostCommonList(perTrack);
+        }
+
+        private static List<string> GetMostCommonList(IReadOnlyList<List<string>> perTrack)
+        {
             return perTrack
                 .GroupBy(values => string.Join(", ", values))
                 .OrderByDescending(group => group.Count())
@@ -255,9 +349,17 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
         private static List<string> GetLegacyAuthors(Dictionary<string, List<string>> tags, BookMediaType mediaType)
         {
+            if (HasCalibreOverride(tags))
+            {
+                return GetValues(tags, CalibreAuthorsOverride);
+            }
+
             if (mediaType == BookMediaType.Ebook)
             {
-                return SplitList(GetFirstValue(tags, "author", "authors"));
+                return GetValues(tags, "author", "authors")
+                    .SelectMany(SplitList)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
             }
 
             var bookAuthors = GetValues(tags, "albumartist", "album artist", "albumartists");
@@ -269,19 +371,68 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             var performers = GetValues(tags, "artist", "performers");
             if (performers.Count == 0)
             {
-                performers = GetValues(tags, "performersort", "artist_sort", "performers_sort");
+                performers = GetValues(tags, "performersort", "artistsort", "artist_sort", "performers_sort");
             }
 
             return bookAuthors.Concat(performers).Distinct().ToList();
         }
 
-        private static string GetMostCommonTitle(IReadOnlyList<Dictionary<string, List<string>>> trackTags, BookMediaType mediaType)
+        private static bool IsVariousAuthors(IReadOnlyList<string> authorTitles)
         {
-            var titles = trackTags?.Where(tags => tags != null)
-                .Select(tags => mediaType == BookMediaType.Audiobook
-                    ? GetLegacyAudioTitle(tags)
-                    : GetFirstValue(tags, "title", "booktitle", "book title"))
-                .ToList() ?? new List<string>();
+            if (authorTitles == null || authorTitles.Count == 0)
+            {
+                return false;
+            }
+
+            var groups = authorTitles.GroupBy(value => value).OrderByDescending(group => group.Count()).ToList();
+            var distinctCount = groups.Count;
+            var mostCommonCount = groups[0].Count();
+            var mostCommonEntry = groups[0].Key;
+
+            foreach (var group in groups.Skip(1))
+            {
+                if (!string.IsNullOrWhiteSpace(mostCommonEntry) &&
+                    !string.IsNullOrWhiteSpace(group.Key) &&
+                    GetLevenshteinCoefficient(mostCommonEntry, group.Key) > 0.9)
+                {
+                    distinctCount--;
+                    mostCommonCount += group.Count();
+                }
+            }
+
+            if (distinctCount > 1 &&
+                (distinctCount / (double)authorTitles.Count > 0.75 ||
+                 mostCommonCount / (double)authorTitles.Count < 0.25))
+            {
+                return true;
+            }
+
+            return VariousAuthorTitles.Contains(mostCommonEntry, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static double GetLevenshteinCoefficient(string first, string second)
+        {
+            return 1.0 - ((double)first.LevenshteinDistance(second) / Math.Max(first.Length, second.Length));
+        }
+
+        private static string GetMostCommonTitle(
+            IReadOnlyList<Dictionary<string, List<string>>> trackTags,
+            BookMediaType mediaType,
+            IReadOnlyList<string> filePaths = null)
+        {
+            var tagSets = trackTags?.Where(tags => tags != null).ToList() ?? new List<Dictionary<string, List<string>>>();
+            var titles = tagSets.Select(tags => GetLegacyTrackTitle(tags, mediaType)).ToList();
+            var filenameEvidence = GetFilenameEvidence(trackTags, mediaType, filePaths);
+            if (filenameEvidence.Count == titles.Count)
+            {
+                for (var index = 0; index < titles.Count; index++)
+                {
+                    if (string.IsNullOrWhiteSpace(titles[index]))
+                    {
+                        titles[index] = filenameEvidence[index].Title;
+                    }
+                }
+            }
 
             return titles.GroupBy(value => value)
                 .OrderByDescending(group => group.Count())
@@ -289,8 +440,52 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 .FirstOrDefault();
         }
 
+        private static string GetLegacyTrackTitle(Dictionary<string, List<string>> tags, BookMediaType mediaType)
+        {
+            return mediaType == BookMediaType.Audiobook
+                ? GetLegacyAudioTitle(tags)
+                : HasCalibreOverride(tags)
+                    ? GetFirstValue(tags, CalibreTitleOverride)
+                    : GetFirstValue(tags, "title", "booktitle", "book title");
+        }
+
+        private static IReadOnlyList<BookshelfMatchCompatibilityFilenameParser.TrackEvidence> GetFilenameEvidence(
+            IReadOnlyList<Dictionary<string, List<string>>> trackTags,
+            BookMediaType mediaType,
+            IReadOnlyList<string> filePaths)
+        {
+            if (filePaths == null || filePaths.Count == 0)
+            {
+                return Array.Empty<BookshelfMatchCompatibilityFilenameParser.TrackEvidence>();
+            }
+
+            var tagSets = trackTags?.Where(tags => tags != null).ToList() ?? new List<Dictionary<string, List<string>>>();
+            if (tagSets.Count != filePaths.Count)
+            {
+                return Array.Empty<BookshelfMatchCompatibilityFilenameParser.TrackEvidence>();
+            }
+
+            var allowUnstructuredSingleFileTitle = tagSets.Count == 1 &&
+                string.IsNullOrWhiteSpace(GetLegacyTrackTitle(tagSets[0], mediaType)) &&
+                GetLegacyAuthors(tagSets[0], mediaType).Count == 0;
+            return BookshelfMatchCompatibilityFilenameParser.Parse(filePaths, allowUnstructuredSingleFileTitle);
+        }
+
         private static string GetLegacyAudioTitle(Dictionary<string, List<string>> tags)
         {
+            if (HasCalibreOverride(tags))
+            {
+                return GetFirstValue(tags, CalibreTitleOverride);
+            }
+
+            if (HasTag(tags, BookshelfAudioBook) || HasTag(tags, BookshelfAudioTitle))
+            {
+                var exactBookTitle = GetFirstValue(tags, BookshelfAudioBook);
+                return !string.IsNullOrWhiteSpace(exactBookTitle)
+                    ? exactBookTitle
+                    : GetFirstValue(tags, BookshelfAudioTitle);
+            }
+
             var bookTitle = GetFirstValue(tags, "album")
                 ?? GetFirstValue(tags, "album_sort", "albumsort", "album sort");
             if (!string.IsNullOrWhiteSpace(bookTitle))
@@ -299,6 +494,11 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             }
 
             return GetFirstValue(tags, "title", "title_sort", "titlesort", "title sort");
+        }
+
+        private static bool HasTag(Dictionary<string, List<string>> tags, string name)
+        {
+            return tags?.Keys.Any(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase)) == true;
         }
 
         private static int GetMostCommonYear(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
@@ -338,6 +538,21 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             }
 
             return null;
+        }
+
+        internal static string GetCalibreGoodreadsId(Dictionary<string, List<string>> tags)
+        {
+            return HasCalibreOverride(tags) ? GetFirstValue(tags, CalibreGoodreadsOverride) : null;
+        }
+
+        internal static bool HasCalibreOverride(Dictionary<string, List<string>> tags)
+        {
+            return tags?.ContainsKey(CalibreOverrideMarker) == true;
+        }
+
+        private static void SetOverride(Dictionary<string, List<string>> tags, string name, string value)
+        {
+            tags[name] = string.IsNullOrWhiteSpace(value) ? new List<string>() : new List<string> { value };
         }
 
         private static List<string> GetValues(IReadOnlyList<Dictionary<string, List<string>>> trackTags, params string[] names)
@@ -441,6 +656,60 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 .Where(value => !string.IsNullOrWhiteSpace(value))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
+        }
+
+        private static List<string> GetLegacyNarrators(IReadOnlyList<Dictionary<string, List<string>>> trackTags)
+        {
+            var values = new List<string>();
+            foreach (var tags in trackTags ?? Array.Empty<Dictionary<string, List<string>>>())
+            {
+                values.AddRange(GetLegacyNarratorValues(tags));
+            }
+
+            return GetNarrators(values);
+        }
+
+        private static List<string> GetLegacyNarratorValues(Dictionary<string, List<string>> tags)
+        {
+            // Match AudioTag's container precedence. In Xiph files, PERFORMER is the
+            // narrator credit and NARRATOR is only its fallback.
+            if (HasTagContainer(tags, "ID3v2:"))
+            {
+                return GetValues(tags, "ID3v2:TXXX:NARRATOR");
+            }
+
+            if (HasTagContainer(tags, "XIPH:"))
+            {
+                var performers = GetValues(tags, "XIPH:PERFORMER");
+                return performers.Count > 0 ? performers : GetValues(tags, "XIPH:NARRATOR");
+            }
+
+            if (HasTagContainer(tags, "APE:"))
+            {
+                return GetValues(tags, "APE:Narrator");
+            }
+
+            if (HasTagContainer(tags, "ASF:"))
+            {
+                return GetValues(tags, "ASF:WM/Narrator");
+            }
+
+            if (HasTagContainer(tags, "MP4:"))
+            {
+                return GetValues(tags, "MP4:----:com.apple.iTunes:NARRATOR", "----:com.apple.iTunes:NARRATOR");
+            }
+
+            if (HasTagContainer(tags, "AUDIBLE:"))
+            {
+                return GetValues(tags, "AUDIBLE:NARRATOR");
+            }
+
+            return GetValues(tags, "NARRATOR", "NARRATORS");
+        }
+
+        private static bool HasTagContainer(Dictionary<string, List<string>> tags, string prefix)
+        {
+            return tags?.Keys.Any(key => key?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == true) == true;
         }
 
         private static void AddPreferredEditionDistance(WeightedDistance distance, string title, string format, string publisher, string preferredEditionTerms)

@@ -291,6 +291,17 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                         {
                             Title = "Dune",
                             HardcoverBookId = "9001",
+                            MediaType = mediaType ?? BookMediaType.Ebook,
+                            Editions = new List<Edition>
+                            {
+                                new Edition
+                                {
+                                    Title = "Dune",
+                                    ForeignEditionId = "hc-edition-9001",
+                                    HardcoverEditionId = "hc-edition-9001",
+                                    Format = "Kindle Edition"
+                                }
+                            },
                             Author = new Author { Name = "Frank Herbert", HardcoverAuthorId = "42" }
                         }
                     };

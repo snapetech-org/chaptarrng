@@ -89,7 +89,7 @@ namespace Chaptarr.Api.V1.ManualImport
                 Rejections = model.Rejections ?? new List<Rejection>(),
                 Warnings = model.Warnings ?? new List<string>(),
                 MatchProvenance = model.MatchProvenance?.Clone(),
-                Tags = model.Tags ?? new Dictionary<string, List<string>>(),
+                Tags = TagExclusionPolicy.ToPublicTags(model.Tags),
                 AudioTags = BookshelfAudioTagsCompatibilityMapper.ToParsedTrackInfo(model.Tags, model.Quality, null, model.DurationSeconds),
 
                 AdditionalFile = model.AdditionalFile,
