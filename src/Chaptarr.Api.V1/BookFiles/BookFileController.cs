@@ -285,6 +285,16 @@ namespace Chaptarr.Api.V1.BookFiles
             return resource;
         }
 
+        protected override bool ShouldBroadcastSyncForResourceId(int id)
+        {
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                return true;
+            }
+
+            return _bookshelfLegacyIdentityMapService?.GetMappingsByTargetIds("BookFile", new[] { id }).Count > 0;
+        }
+
         [HttpGet("{id:int}/download")]
         public ActionResult DownloadBookFile(int id)
         {
@@ -415,7 +425,7 @@ namespace Chaptarr.Api.V1.BookFiles
             if (bookIds.Any())
             {
                 var result = new List<BookFileResource>();
-                var resolvedBookIds = _bookshelfLegacyIdentityMapService?.ResolveBookIds(bookIds, parsedMediaType) ?? bookIds;
+                var resolvedBookIds = HttpContext.ResolveBookshelfLegacyBookIds(_bookshelfLegacyIdentityMapService, bookIds, parsedMediaType);
                 foreach (var bookId in resolvedBookIds)
                 {
                     var book = _bookService.GetBook(bookId);

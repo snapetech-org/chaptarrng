@@ -4,6 +4,7 @@ using Chaptarr.Api.V1.Author;
 using Chaptarr.Api.V1.BookFiles;
 using Chaptarr.Api.V1.Books;
 using Chaptarr.Api.V1.CustomFormats;
+using Chaptarr.Http.Middleware;
 using Chaptarr.Http.REST;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.DecisionEngine;
@@ -50,6 +51,11 @@ namespace Chaptarr.Api.V1.ManualImport
     {
         public static ManualImportResource ToResource(this ManualImportItem model)
         {
+            return ToResource(model, null);
+        }
+
+        public static ManualImportResource ToResource(this ManualImportItem model, ReadarrFacadeContext facadeContext)
+        {
             if (model == null)
             {
                 return null;
@@ -68,11 +74,13 @@ namespace Chaptarr.Api.V1.ManualImport
                 Path = model.Path,
                 Name = model.Name,
                 Size = model.Size,
-                Author = model.Author?.ToResource(),
-                Book = model.Book?.ToResource(),
-                Edition = model.Edition?.ToResource(),
+                Author = model.Author?.ToResource(facadeContext),
+                Book = model.Book?.ToResource(new BookResourceMappingOptions { FacadeContext = facadeContext }),
+                Edition = model.Edition?.ToResource(facadeContext),
                 EditionId = suggestedEdition?.Id > 0 ? suggestedEdition.Id : (int?)null,
-                ForeignEditionId = suggestedForeignEditionId,
+                ForeignEditionId = suggestedEdition == null
+                    ? suggestedForeignEditionId
+                    : (ReadarrFacadeEditionIdentity.BuildForeignEditionId(suggestedEdition, facadeContext) ?? string.Empty),
                 SuggestedForeignAuthorId = model.SuggestedForeignAuthorId,
                 SuggestedAuthorName = model.SuggestedAuthorName,
                 SuggestedForeignBookId = model.SuggestedForeignBookId,

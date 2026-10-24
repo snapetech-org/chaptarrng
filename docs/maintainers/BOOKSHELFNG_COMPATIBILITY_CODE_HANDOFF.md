@@ -1,6 +1,6 @@
 # BookshelfNG compatibility code handoff
 
-This is the fourth code checkpoint after the 2026-10-24 replacement
+This is the fifth code checkpoint after the 2026-10-24 replacement
 reassessment. It is intended for focused validation and refinement before broad
 parity work.
 
@@ -37,6 +37,22 @@ parity work.
   also restore the original `AuthorMetadataId` after metadata rows are merged
   into ChaptarrNG author records. Rename previews include every mapped format
   and project retained book, edition, and file IDs back to the source handles.
+- Legacy local book IDs now resolve only when the persisted BookshelfNG
+  compatibility context is active. Native clients keep using canonical target
+  IDs even when one numeric value overlaps a migrated source ID. The same
+  context-aware resolution covers book editors, book files, editions, queue and
+  history filters, release search, cover paths, rename/retag/convert previews,
+  manual imports, and commands.
+- Manual import now resolves source edition IDs before validating their book,
+  uses the selected file's format to choose the correct split book row when no
+  media type is supplied, and projects nested book, edition, and author
+  metadata IDs back to BookshelfNG IDs in preview and update responses.
+- Command start translates old book IDs only for legacy requests. Command list
+  and detail responses project book IDs in supported command bodies, and
+  mapped command/book/file SignalR changes emit `Sync` so each client reloads
+  through its own API dialect instead of receiving a target ID. Release results
+  and bulk book-editor responses also project split rows back to the old work
+  ID.
 - Linux Debian/PPA, RPM/COPR, and AUR package upgrades now record a durable
   migration-pending marker and a root-only copy of the prior application and
   service unit before replacing an installed BookshelfNG package. The service
@@ -101,6 +117,23 @@ restart acceptance before it can be treated as closed.
    unit/drop-in setups. Confirm successful readiness clears the marker and
    removes only the old application snapshot, while retaining database
    backups.
+7. Start, list, fetch, and cancel commands through the unchanged API address.
+   Confirm supported command bodies send and return BookshelfNG IDs, including
+   multi-format work IDs. Confirm command bodies are not mutated in the queue
+   when a legacy response is projected. Repeat from a native client where the
+   same numeric value is both a source ID and a Chaptarr target ID; the native
+   request must keep the target row. Verify mapped book and file changes
+   publish `Sync`, then confirm old and native clients reload their own
+   projected resources.
+8. Run manual-import preview and update with a split work, one ebook path and
+   one audiobook path, and the same old Book ID. Confirm the selected target
+   row follows the file extension, a submitted legacy Edition ID resolves to
+   its mapped edition, mismatched editions are rejected, and nested response
+   Book/Edition/AuthorMetadata IDs remain in the BookshelfNG dialect.
+9. Fetch release results and save/delete through the bulk book editor on both
+   migrated and native API contexts. Confirm release `BookId`, editor response
+   IDs, monitoring, and deletion stay scoped to the expected legacy work or
+   native target row.
 
 ## Still open after this checkpoint
 

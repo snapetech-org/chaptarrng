@@ -135,8 +135,7 @@ namespace Chaptarr.Api.V1.History
 
             if (bookId.HasValue)
             {
-                var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(new[] { bookId.Value }, parsedMediaType)
-                    ?? new List<int> { bookId.Value };
+                var resolvedBookIds = HttpContext.ResolveBookshelfLegacyBookIds(_legacyIdentityMapService, new[] { bookId.Value }, parsedMediaType);
                 var bookIds = resolvedBookIds.ToArray();
                 pagingSpec.FilterExpressions.Add(h => bookIds.Contains(h.BookId));
             }
@@ -170,8 +169,7 @@ namespace Chaptarr.Api.V1.History
             if (bookId.HasValue)
             {
                 var parsedMediaType = MediaTypeParameterParser.ParseOptional(mediaType);
-                var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(new[] { bookId.Value }, parsedMediaType)
-                    ?? new List<int> { bookId.Value };
+                var resolvedBookIds = HttpContext.ResolveBookshelfLegacyBookIds(_legacyIdentityMapService, new[] { bookId.Value }, parsedMediaType);
                 var history = resolvedBookIds
                     .SelectMany(resolvedBookId => _historyService.GetByBook(resolvedBookId, eventType) ?? new List<EntityHistory>())
                     .GroupBy(entry => entry.Id)

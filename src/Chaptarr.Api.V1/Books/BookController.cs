@@ -950,8 +950,7 @@ namespace Chaptarr.Api.V1.Books
                 var legacyMediaType = MediaTypeParameterParser.ParseOptional(mediaType);
                 if (legacyMediaType.HasValue)
                 {
-                    var resolvedBookIds = _bookshelfLegacyIdentityMapService?.ResolveBookIds(new[] { bookIdInt }, legacyMediaType)
-                        ?? new List<int> { bookIdInt };
+                    var resolvedBookIds = HttpContext.ResolveBookshelfLegacyBookIds(_bookshelfLegacyIdentityMapService, new[] { bookIdInt }, legacyMediaType);
                     return _bookService.GetBooks(resolvedBookIds)
                         .Where(book => book.MediaType == legacyMediaType.Value)
                         .OrderBy(book => book.Id)
@@ -1041,7 +1040,10 @@ namespace Chaptarr.Api.V1.Books
         {
             var ids = sourceIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>();
             var effectiveMediaType = mediaType ?? HttpContext?.GetReadarrFacadeContext()?.MediaType;
-            return _bookshelfLegacyIdentityMapService?.ResolveBookIds(ids, MediaTypeParameterParser.ParseOptional(effectiveMediaType)) ?? ids;
+            return HttpContext.ResolveBookshelfLegacyBookIds(
+                _bookshelfLegacyIdentityMapService,
+                ids,
+                MediaTypeParameterParser.ParseOptional(effectiveMediaType));
         }
 
         private int SelectLegacyPrimaryBookId(IReadOnlyCollection<Book> books)
@@ -2552,13 +2554,14 @@ namespace Chaptarr.Api.V1.Books
         [HttpPut("monitor")]
         public IActionResult SetBooksMonitored([FromBody] BooksMonitoredResource resource, [FromQuery] string mediaType = null)
         {
-            // Native Chaptarr requests use target row IDs. A facade or explicit mediaType can
-            // still resolve BookshelfNG source IDs without toggling the sibling format by accident.
+            // Native Chaptarr requests use target row IDs. Only the persisted legacy
+            // compatibility context interprets source IDs from the old BookshelfNG address.
             var effectiveMediaType = mediaType ?? HttpContext?.GetReadarrFacadeContext()?.MediaType;
             var sourceBookIds = resource?.BookIds ?? new List<int>();
-            var bookIds = string.IsNullOrWhiteSpace(effectiveMediaType)
-                ? sourceBookIds.Where(id => id > 0).Distinct().ToList()
-                : ResolveBookIdsForApi(sourceBookIds, effectiveMediaType);
+            var bookIds = HttpContext.ResolveBookshelfLegacyBookIds(
+                _bookshelfLegacyIdentityMapService,
+                sourceBookIds,
+                MediaTypeParameterParser.ParseOptional(effectiveMediaType));
             _bookService.SetMonitored(bookIds, resource?.Monitored ?? false);
 
             return Accepted(MapToResource(_bookService.GetBooks(bookIds), false));

@@ -50,8 +50,10 @@ namespace Chaptarr.Api.V1.Queue
         public List<QueueResource> GetQueue(int? authorId, [FromQuery] List<int> bookIds, bool includeAuthor = false, bool includeBook = true, [FromQuery] string mediaType = null)
         {
             var effectiveMediaType = mediaType ?? HttpContext?.GetReadarrFacadeContext()?.MediaType;
-            var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(bookIds ?? new List<int>(), MediaTypeParameterParser.ParseOptional(effectiveMediaType))
-                ?? bookIds ?? new List<int>();
+            var resolvedBookIds = HttpContext.ResolveBookshelfLegacyBookIds(
+                _legacyIdentityMapService,
+                bookIds,
+                MediaTypeParameterParser.ParseOptional(effectiveMediaType));
             var queue = QueueMediaTypeFilter.FilterByMediaType(_queueService.GetQueue(), effectiveMediaType);
             var pending = QueueMediaTypeFilter.FilterByMediaType(_pendingReleaseService.GetPendingQueue(), effectiveMediaType);
             var fullQueue = queue.Concat(pending);

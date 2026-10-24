@@ -47,6 +47,22 @@ namespace Chaptarr.Api.V1.Books
             return resource;
         }
 
+        protected override bool ShouldBroadcastSyncForResourceId(int id)
+        {
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                return true;
+            }
+
+            return _bookshelfLegacyIdentityMapService?.GetMappingsByTargetIds("Book", new[] { id }).Count > 0;
+        }
+
+        protected override bool ShouldBroadcastSyncForResource(BookResource resource)
+        {
+            return HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true ||
+                   base.ShouldBroadcastSyncForResource(resource);
+        }
+
         protected override BookResource GetResourceByIdForBroadcast(int id)
         {
             var book = _bookService.GetBook(id);

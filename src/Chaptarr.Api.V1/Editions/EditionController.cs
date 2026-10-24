@@ -39,7 +39,7 @@ namespace NzbDrone.Api.V1.Editions
                 .ToList() ?? new List<int>();
             var effectiveMediaType = mediaType ?? HttpContext?.GetReadarrFacadeContext()?.MediaType;
             var parsedMediaType = MediaTypeParameterParser.ParseOptional(effectiveMediaType);
-            var requestedBookIds = _legacyIdentityMapService?.ResolveBookIds(sourceBookIds, parsedMediaType) ?? sourceBookIds;
+            var requestedBookIds = HttpContext.ResolveBookshelfLegacyBookIds(_legacyIdentityMapService, sourceBookIds, parsedMediaType);
 
             var editions = _editionService.GetEditionsByBook(requestedBookIds);
             var resources = editions.ToResource(HttpContext.GetReadarrFacadeContext());

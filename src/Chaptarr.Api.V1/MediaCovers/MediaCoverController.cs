@@ -70,16 +70,13 @@ namespace Chaptarr.Api.V1.MediaCovers
             }
 
             var mediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
-            var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(new[] { bookId }, mediaType);
-            if (resolvedBookIds != null)
+            var resolvedBookIds = HttpContext.ResolveBookshelfLegacyBookIds(_legacyIdentityMapService, new[] { bookId }, mediaType);
+            if (resolvedBookIds.Count == 0)
             {
-                if (!resolvedBookIds.Any())
-                {
-                    return NotFound();
-                }
-
-                bookId = resolvedBookIds[0];
+                return NotFound();
             }
+
+            bookId = resolvedBookIds[0];
 
             var baseDir = Path.Combine(_appFolderInfo.GetAppDataPath(), "MediaCover", "Books", bookId.ToString());
             var filePath = GetSafePath(baseDir, filename);

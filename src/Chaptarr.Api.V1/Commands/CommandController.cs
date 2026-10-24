@@ -62,7 +62,97 @@ namespace Chaptarr.Api.V1.Commands
 
         protected override CommandResource GetResourceById(int id)
         {
-            return _commandQueueManager.Get(id).ToResource();
+            return MapToResource(_commandQueueManager.Get(id));
+        }
+
+        protected override bool ShouldBroadcastSyncForResource(CommandResource resource)
+        {
+            var bookIds = GetCommandBookIds(resource?.Body).Where(id => id > 0).Distinct().ToList();
+            return bookIds.Count > 0 &&
+                   _bookshelfLegacyIdentityMapService?.GetMappingsByTargetIds("Book", bookIds).Count > 0;
+        }
+
+        private CommandResource MapToResource(CommandModel model)
+        {
+            var resource = model.ToResource();
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                if (resource?.Body != null)
+                {
+                    resource.Body = (Command)STJson.Deserialize(STJson.ToJson(resource.Body), resource.Body.GetType());
+                }
+
+                ProjectLegacyCommandBookIds(resource);
+            }
+
+            return resource;
+        }
+
+        private void ProjectLegacyCommandBookIds(CommandResource resource)
+        {
+            if (resource?.Body == null || _bookshelfLegacyIdentityMapService == null)
+            {
+                return;
+            }
+
+            var bookIds = GetCommandBookIds(resource.Body).Where(id => id > 0).Distinct().ToList();
+            var sourceIdByTargetId = _bookshelfLegacyIdentityMapService
+                .GetMappingsByTargetIds("Book", bookIds)
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
+
+            int ProjectId(int targetId)
+            {
+                return sourceIdByTargetId.TryGetValue(targetId, out var sourceId) ? sourceId : targetId;
+            }
+
+            switch (resource.Body)
+            {
+                case BookSearchCommand command:
+                    command.BookIds = command.BookIds?.Select(ProjectId).Distinct().ToList();
+                    break;
+                case BulkRefreshBookCommand command:
+                    command.BookIds = command.BookIds?.Select(ProjectId).Distinct().ToList();
+                    break;
+                case PushCalibreMetadataCommand command:
+                    command.BookIds = command.BookIds?.Select(ProjectId).Distinct().ToList();
+                    break;
+                case PushGrimmoryMetadataCommand command:
+                    command.BookIds = command.BookIds?.Select(ProjectId).Distinct().ToList();
+                    break;
+                case RePushBookCommand command:
+                    command.BookIds = command.BookIds?.Select(ProjectId).Distinct().ToList();
+                    if (command.BookId > 0)
+                    {
+                        command.BookId = ProjectId(command.BookId);
+                    }
+                    break;
+                case RefreshBookCommand command when command.BookId > 0:
+                    command.BookId = ProjectId(command.BookId.Value);
+                    break;
+                case DownloadBookMediaCommand command:
+                    command.BookIds = command.BookIds?.Select(ProjectId).Distinct().ToList();
+                    if (command.BookId > 0)
+                    {
+                        command.BookId = ProjectId(command.BookId);
+                    }
+                    break;
+            }
+        }
+
+        private static IEnumerable<int> GetCommandBookIds(Command command)
+        {
+            return command switch
+            {
+                BookSearchCommand value => value.BookIds ?? Enumerable.Empty<int>(),
+                BulkRefreshBookCommand value => value.BookIds ?? Enumerable.Empty<int>(),
+                PushCalibreMetadataCommand value => value.BookIds ?? Enumerable.Empty<int>(),
+                PushGrimmoryMetadataCommand value => value.BookIds ?? Enumerable.Empty<int>(),
+                RePushBookCommand value => (value.BookIds ?? new List<int>()).Concat(value.BookId > 0 ? new[] { value.BookId } : Array.Empty<int>()),
+                RefreshBookCommand value => value.BookId > 0 ? new[] { value.BookId.Value } : Array.Empty<int>(),
+                DownloadBookMediaCommand value => (value.BookIds ?? new List<int>()).Concat(value.BookId > 0 ? new[] { value.BookId } : Array.Empty<int>()),
+                _ => Array.Empty<int>()
+            };
         }
 
         [RestPostById]
@@ -87,7 +177,8 @@ namespace Chaptarr.Api.V1.Commands
 
             dynamic command = STJson.Deserialize(body, commandType);
 
-            if (_bookshelfLegacyIdentityMapService != null)
+            if (_bookshelfLegacyIdentityMapService != null &&
+                HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
             {
                 var facadeMediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
                 command = ResolveLegacyBookCommandIds((Command)command, facadeMediaType);
@@ -259,10 +350,13 @@ namespace Chaptarr.Api.V1.Commands
         [HttpGet]
         public List<CommandResource> GetStartedCommands()
         {
-            return _commandQueueManager.All()
+            var resources = _commandQueueManager.All()
                 .OrderBy(c => c.Status, _commandPriorityComparer)
                 .ThenByDescending(c => c.Priority)
-                .ToResource();
+                .Select(MapToResource)
+                .ToList();
+
+            return resources;
         }
 
         [RestDeleteById]

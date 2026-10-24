@@ -37,9 +37,7 @@ namespace Chaptarr.Api.V1.Books
             var mediaType = MediaTypeParameterParser.ParseOptional(effectiveMediaType, allowAll: false);
 
             var requestedBookIds = resource.BookIds ?? new List<int>();
-            var bookIds = string.IsNullOrWhiteSpace(effectiveMediaType)
-                ? requestedBookIds.Where(id => id > 0).Distinct().ToList()
-                : _legacyIdentityMapService?.ResolveBookIds(requestedBookIds, mediaType) ?? requestedBookIds;
+            var bookIds = HttpContext.ResolveBookshelfLegacyBookIds(_legacyIdentityMapService, requestedBookIds, mediaType);
             var booksToUpdate = _bookService.GetBooks(bookIds);
 
             foreach (var book in booksToUpdate)
@@ -61,7 +59,56 @@ namespace Chaptarr.Api.V1.Books
             }
 
             _bookService.UpdateMany(booksToUpdate);
-            return Accepted(booksToUpdate.ToResource());
+            var resources = booksToUpdate.ToResource();
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true && _legacyIdentityMapService != null)
+            {
+                var mappingsByTargetId = _legacyIdentityMapService.GetMappingsByTargetIds("Book", booksToUpdate.Select(book => book.Id))
+                    .GroupBy(mapping => mapping.TargetId)
+                    .ToDictionary(group => group.Key, group => group.First());
+                var legacyMetadataIdByAuthorId = _legacyIdentityMapService.GetMappingsByTargetIds(
+                        "AuthorMetadata",
+                        resources.Where(resource => resource != null).Select(resource => resource.AuthorId))
+                    .GroupBy(mapping => mapping.TargetId)
+                    .Where(group => group.Select(mapping => mapping.SourceId).Distinct().Count() == 1)
+                    .ToDictionary(group => group.Key, group => group.First().SourceId);
+                resources = resources
+                    .Where(resource => resource != null)
+                    .Select(resource =>
+                    {
+                        if (mappingsByTargetId.TryGetValue(resource.Id, out var mapping))
+                        {
+                            resource.Id = mapping.SourceId;
+                            resource.LocalBookId = mapping.SourceId.ToString(global::System.Globalization.CultureInfo.InvariantCulture);
+                            resource.MediaType = null;
+                            resource.AudiobookMonitored = null;
+                            resource.EbookMonitored = null;
+                            resource.LocalAudiobookBooks = null;
+                            resource.LocalEbookBooks = null;
+                        }
+
+                        if (legacyMetadataIdByAuthorId.TryGetValue(resource.AuthorId, out var legacyMetadataId))
+                        {
+                            resource.AuthorMetadataId = legacyMetadataId;
+                            if (resource.Author != null)
+                            {
+                                resource.Author.AuthorMetadataId = legacyMetadataId;
+                            }
+                        }
+
+                        return resource;
+                    })
+                    .GroupBy(resource => resource.Id)
+                    .Select(group =>
+                    {
+                        var resource = group.First();
+                        resource.Monitored = group.Any(item => item.Monitored);
+                        resource.HasFiles = group.Any(item => item.HasFiles);
+                        return resource;
+                    })
+                    .ToList();
+            }
+
+            return Accepted(resources);
         }
 
         [HttpDelete]
@@ -70,9 +117,10 @@ namespace Chaptarr.Api.V1.Books
         {
             var effectiveMediaType = resource.MediaType ?? HttpContext?.GetReadarrFacadeContext()?.MediaType;
             var requestedBookIds = resource.BookIds ?? new List<int>();
-            var bookIds = string.IsNullOrWhiteSpace(effectiveMediaType)
-                ? requestedBookIds.Where(id => id > 0).Distinct().ToList()
-                : _legacyIdentityMapService?.ResolveBookIds(requestedBookIds, MediaTypeParameterParser.ParseOptional(effectiveMediaType)) ?? requestedBookIds;
+            var bookIds = HttpContext.ResolveBookshelfLegacyBookIds(
+                _legacyIdentityMapService,
+                requestedBookIds,
+                MediaTypeParameterParser.ParseOptional(effectiveMediaType));
 
             foreach (var bookId in bookIds)
             {

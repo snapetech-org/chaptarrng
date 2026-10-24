@@ -34,18 +34,16 @@ namespace Chaptarr.Api.V1.Books
 
             if (bookId.HasValue)
             {
-                var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(
+                var resolvedBookIds = HttpContext.ResolveBookshelfLegacyBookIds(
+                    _legacyIdentityMapService,
                     new[] { bookId.Value },
                     MediaTypeParameterParser.ParseOptional(mediaType));
-                if (resolvedBookIds != null)
+                if (resolvedBookIds.Count == 0)
                 {
-                    if (resolvedBookIds.Count == 0)
-                    {
-                        return new List<RetagBookResource>();
-                    }
-
-                    bookId = resolvedBookIds[0];
+                    return new List<RetagBookResource>();
                 }
+
+                bookId = resolvedBookIds[0];
 
                 previews = _metadataTagService.GetRetagPreviewsByBook(bookId.Value);
             }

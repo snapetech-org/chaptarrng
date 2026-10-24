@@ -39,25 +39,21 @@ namespace Chaptarr.Api.V1.Books
                     });
                 }
 
-                var resolvedBookIds = _legacyIdentityMapService?.ResolveBookIds(
+                var resolvedBookIds = HttpContext.ResolveBookshelfLegacyBookIds(
+                    _legacyIdentityMapService,
                     new[] { bookId.Value },
                     MediaTypeParameterParser.ParseOptional(mediaType));
-                if (resolvedBookIds != null)
+                if (resolvedBookIds.Count == 0)
                 {
-                    if (!resolvedBookIds.Any())
-                    {
-                        return NotFound();
-                    }
-
-                    var previews = resolvedBookIds
-                        .Distinct()
-                        .SelectMany(targetBookId => _renameBookFileService.GetRenamePreviews(authorId, targetBookId))
-                        .ToResource();
-                    ProjectLegacyIdentities(previews, bookId.Value);
-                    return previews;
+                    return NotFound();
                 }
 
-                return _renameBookFileService.GetRenamePreviews(authorId, bookId.Value).ToResource();
+                var previews = resolvedBookIds
+                    .Distinct()
+                    .SelectMany(targetBookId => _renameBookFileService.GetRenamePreviews(authorId, targetBookId))
+                    .ToResource();
+                ProjectLegacyIdentities(previews, bookId.Value);
+                return previews;
             }
 
             var authorPreviews = _renameBookFileService

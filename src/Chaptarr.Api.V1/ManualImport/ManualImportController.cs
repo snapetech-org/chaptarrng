@@ -128,8 +128,7 @@ namespace Chaptarr.Api.V1.ManualImport
             try
             {
                 resources = _manualImportService.GetMediaFiles(folder, downloadId, author, filter, replaceExistingFiles, HttpContext.RequestAborted, exactPaths)
-                    .ToResource()
-                    .Select(AddQualityWeight)
+                    .Select(item => AddQualityWeight(item.ToResource(HttpContext?.GetReadarrFacadeContext())))
                     .ToList();
             }
             catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
@@ -157,6 +156,7 @@ namespace Chaptarr.Api.V1.ManualImport
                     .ToList();
             }
 
+            ProjectLegacyIdentities(resources);
             return resources;
         }
 
@@ -175,17 +175,52 @@ namespace Chaptarr.Api.V1.ManualImport
         private List<ManualImportResource> UpdateImportItems(List<ManualImportUpdateResource> resources)
         {
             var items = new List<ManualImportItem>();
-            var mediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
+            var facadeContext = HttpContext?.GetReadarrFacadeContext();
             foreach (var resource in resources)
             {
                 var author = resource.AuthorId.HasValue ? _authorService.GetAuthor(resource.AuthorId.Value) : null;
-                var resolvedBookIds = resource.BookId.HasValue
-                    ? _legacyIdentityMapService?.ResolveBookIds(new[] { resource.BookId.Value }, mediaType) ?? new List<int> { resource.BookId.Value }
-                    : new List<int>();
-                var book = resolvedBookIds.Count > 0 ? _bookService.GetBook(resolvedBookIds[0]) : null;
+                var mediaType = GetImportMediaType(resource.Path, facadeContext?.MediaType);
                 var edition = resource.EditionId.HasValue
-                    ? ResolveLocalEdition(resource.EditionId, book)
-                    : ResolveForeignEdition(resource.ForeignEditionId, book);
+                    ? ResolveLocalEdition(resource.EditionId, null, mediaType)
+                    : ResolveForeignEdition(resource.ForeignEditionId, null);
+
+                if (edition != null && mediaType.HasValue &&
+                    edition.IsEbook != (mediaType.Value == BookMediaType.Ebook))
+                {
+                    throw new BadRequestException("Selected edition does not match the requested media type.");
+                }
+
+                if (!mediaType.HasValue && edition != null)
+                {
+                    mediaType = edition.IsEbook ? BookMediaType.Ebook : BookMediaType.Audiobook;
+                }
+
+                var resolvedBookIds = resource.BookId.HasValue
+                    ? HttpContext.ResolveBookshelfLegacyBookIds(_legacyIdentityMapService, new[] { resource.BookId.Value }, mediaType)
+                    : new List<int>();
+                if (resource.BookId.HasValue && resolvedBookIds.Count == 0)
+                {
+                    throw new BadRequestException("Book ID does not match the requested media type.");
+                }
+
+                NzbDrone.Core.Books.Book book = null;
+                if (edition != null)
+                {
+                    if (resolvedBookIds.Count > 0 && !resolvedBookIds.Contains(edition.BookId))
+                    {
+                        throw new BadRequestException("Selected edition does not belong to selected book.");
+                    }
+
+                    book = _bookService.GetBook(edition.BookId);
+                }
+                else if (resolvedBookIds.Count == 1)
+                {
+                    book = _bookService.GetBook(resolvedBookIds[0]);
+                }
+                else if (resolvedBookIds.Count > 1)
+                {
+                    throw new BadRequestException("Book ID matches both audiobook and ebook. Select an edition or provide a mediaType.");
+                }
 
                 items.Add(new ManualImportItem
                 {
@@ -213,20 +248,127 @@ namespace Chaptarr.Api.V1.ManualImport
                 });
             }
 
-            return _manualImportService.UpdateItems(items).Select(x => x.ToResource()).ToList();
+            var updatedItems = _manualImportService.UpdateItems(items)
+                .Select(item => item.ToResource(facadeContext))
+                .ToList();
+            ProjectLegacyIdentities(updatedItems);
+            return updatedItems;
         }
 
-        private Edition ResolveLocalEdition(int? editionId, Book book)
+        private void ProjectLegacyIdentities(List<ManualImportResource> resources)
         {
-            if (!editionId.HasValue || editionId.Value <= 0 || book == null)
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility != true ||
+                _legacyIdentityMapService == null || resources == null || resources.Count == 0)
+            {
+                return;
+            }
+
+            var bookIds = resources
+                .SelectMany(resource => new[] { resource.Book?.Id ?? 0, resource.Edition?.BookId ?? 0 })
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+            var bookMappingsByTargetId = _legacyIdentityMapService.GetMappingsByTargetIds("Book", bookIds)
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var editionIds = resources
+                .SelectMany(resource => new[] { resource.Edition?.Id ?? 0, resource.EditionId ?? 0 })
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+            var editionMappingsByTargetId = _legacyIdentityMapService.GetMappingsByTargetIds("Edition", editionIds)
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var authorMetadataMappingsByTargetId = _legacyIdentityMapService
+                .GetMappingsByTargetIds("AuthorMetadata", resources
+                    .SelectMany(resource => new[] { resource.Book?.AuthorId ?? 0, resource.Author?.Id ?? 0 }))
+                .GroupBy(mapping => mapping.TargetId)
+                .Where(group => group.Select(mapping => mapping.SourceId).Distinct().Count() == 1)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
+
+            foreach (var resource in resources)
+            {
+                if (resource.Book != null && bookMappingsByTargetId.TryGetValue(resource.Book.Id, out var bookMapping))
+                {
+                    var workBooks = _legacyIdentityMapService.ResolveBookIds(new[] { bookMapping.SourceId });
+                    var targetBooks = _bookService.GetBooks(workBooks).Where(book => book != null).ToList();
+                    resource.Book.Id = bookMapping.SourceId;
+                    resource.Book.LocalBookId = bookMapping.SourceId.ToString(global::System.Globalization.CultureInfo.InvariantCulture);
+                    resource.Book.MediaType = null;
+                    resource.Book.AudiobookMonitored = null;
+                    resource.Book.EbookMonitored = null;
+                    resource.Book.LocalAudiobookBooks = null;
+                    resource.Book.LocalEbookBooks = null;
+                    if (targetBooks.Count > 0)
+                    {
+                        resource.Book.Monitored = targetBooks.Any(book => book.IsMonitored());
+                        resource.Book.HasFiles = targetBooks.Any(book => book.HasFiles) || resource.Book.HasFiles;
+                    }
+                }
+
+                if (resource.Book != null && authorMetadataMappingsByTargetId.TryGetValue(resource.Book.AuthorId, out var legacyMetadataId))
+                {
+                    resource.Book.AuthorMetadataId = legacyMetadataId;
+                    if (resource.Book.Author != null)
+                    {
+                        resource.Book.Author.AuthorMetadataId = legacyMetadataId;
+                    }
+                }
+
+                if (resource.Author != null && authorMetadataMappingsByTargetId.TryGetValue(resource.Author.Id, out var legacyAuthorMetadataId))
+                {
+                    resource.Author.AuthorMetadataId = legacyAuthorMetadataId;
+                }
+
+                if (resource.Edition != null)
+                {
+                    if (editionMappingsByTargetId.TryGetValue(resource.Edition.Id, out var editionMapping))
+                    {
+                        resource.Edition.Id = editionMapping.SourceId;
+                    }
+
+                    if (bookMappingsByTargetId.TryGetValue(resource.Edition.BookId, out var editionBookMapping))
+                    {
+                        resource.Edition.BookId = editionBookMapping.SourceId;
+                    }
+                }
+
+                if (resource.EditionId.HasValue && editionMappingsByTargetId.TryGetValue(resource.EditionId.Value, out var suggestedEditionMapping))
+                {
+                    resource.EditionId = suggestedEditionMapping.SourceId;
+                }
+            }
+        }
+
+        private Edition ResolveLocalEdition(int? editionId, Book book, BookMediaType? mediaType)
+        {
+            if (!editionId.HasValue || editionId.Value <= 0)
             {
                 return null;
+            }
+
+            var localEditionId = editionId.Value;
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true && _legacyIdentityMapService != null)
+            {
+                var mappings = _legacyIdentityMapService.GetMappings("Edition", new[] { localEditionId });
+                if (mappings.Count > 0)
+                {
+                    var matchingMappings = mappings.Where(mapping =>
+                        (!mediaType.HasValue || !mapping.MediaType.HasValue || mapping.MediaType.Value == (int)mediaType.Value) &&
+                        (book == null || mapping.TargetId == book.Id)).ToList();
+                    if (matchingMappings.Count != 1)
+                    {
+                        throw new BadRequestException($"Selected edition {editionId.Value} could not be resolved for the requested media type.");
+                    }
+
+                    localEditionId = matchingMappings[0].TargetId;
+                }
             }
 
             Edition edition;
             try
             {
-                edition = _editionService.GetEdition(editionId.Value);
+                edition = _editionService.GetEdition(localEditionId);
             }
             catch (Exception ex)
             {
@@ -238,7 +380,7 @@ namespace Chaptarr.Api.V1.ManualImport
                 throw new BadRequestException($"Selected edition {editionId.Value} could not be found.");
             }
 
-            if (edition.BookId != book.Id)
+            if (book != null && edition.BookId != book.Id)
             {
                 throw new BadRequestException($"Selected edition {editionId.Value} does not belong to selected book {book.Id}.");
             }
@@ -269,6 +411,28 @@ namespace Chaptarr.Api.V1.ManualImport
             }
 
             return edition;
+        }
+
+        private static BookMediaType? GetImportMediaType(string path, string facadeMediaType)
+        {
+            var scopedMediaType = MediaTypeParameterParser.ParseOptional(facadeMediaType);
+            if (scopedMediaType.HasValue)
+            {
+                return scopedMediaType;
+            }
+
+            var extension = Path.GetExtension(path ?? string.Empty)?.ToLowerInvariant();
+            if (MediaFileExtensions.AudioExtensions.Contains(extension))
+            {
+                return BookMediaType.Audiobook;
+            }
+
+            if (MediaFileExtensions.TextExtensions.Contains(extension))
+            {
+                return BookMediaType.Ebook;
+            }
+
+            return null;
         }
     }
 }
