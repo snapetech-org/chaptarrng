@@ -265,7 +265,7 @@ jobs:
         BOOKSHELF_HARDCOVER_DIGEST: ${{ steps.build_hardcover.outputs.digest }}
         VERSION: ${{ steps.docker-tags.outputs.version }}
         DOCKERHUB_CONFIGURED: ${{ steps.dockerhub-credentials.outputs.configured }}
-        PUBLISH_LEGACY_ALIASES: ${{ inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
+        PUBLISH_LEGACY_ALIASES: ${{ inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
         # GHCR legacy aliases are written by the personal-account bridge
         # repository because this source repository belongs to the org.
         PUBLISH_GHCR_ALIASES: false

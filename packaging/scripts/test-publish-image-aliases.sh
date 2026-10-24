@@ -120,7 +120,7 @@ grep -Fq 'SOURCE_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build.outputs.digest
 grep -Fq 'subject-name: ${{ env.STANDARD_IMAGE }}' "$docker_workflow"
 grep -Fq 'name: Test provider-mode legacy image aliases use matching image digests' "$docker_workflow"
 grep -Fq "legacy_bridge_enabled: \${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}" "$release_workflow"
-grep -Fq "PUBLISH_LEGACY_ALIASES: \${{ inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}" "$docker_workflow"
+grep -Fq "PUBLISH_LEGACY_ALIASES: \${{ inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}" "$docker_workflow"
 grep -Fq 'PUBLISH_GHCR_ALIASES: false' "$docker_workflow"
 for workflow in "$release_workflow" "$docker_workflow" "$package_workflow"; do
   grep -Fq 'run: ./packaging/scripts/require-release-readiness.sh' "$workflow" || {
