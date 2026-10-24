@@ -30,10 +30,12 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             }
 
             public int CallCount { get; private set; }
+            public bool LastInteractiveSearch { get; private set; }
 
-            public List<object> Search(string query)
+            public List<object> Search(string query, bool interactiveSearch = false)
             {
                 CallCount++;
+                LastInteractiveSearch = interactiveSearch;
                 return _handler();
             }
         }
@@ -80,6 +82,15 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 {
                     new SearchJsonResource { WorkId = 101, BookId = 201, Title = "Native Book" }
                 };
+            }
+
+            public Newtonsoft.Json.Linq.JObject ExecuteSearchGraphQl(
+                string operationName,
+                string query,
+                Newtonsoft.Json.Linq.JObject variables,
+                bool interactiveSearch = false)
+            {
+                throw new NotSupportedException();
             }
 
             public AuthorResource GetAuthor(string foreignAuthorId, bool interactiveSearch = false)
@@ -195,6 +206,7 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             Assert.That(proxy.SearchForNewEntity("matt dinniman", "hardcover"), Has.Count.EqualTo(1));
 
             Assert.That(client.CallCount, Is.EqualTo(1));
+            Assert.That(client.LastInteractiveSearch, Is.True);
         }
 
         [Test]

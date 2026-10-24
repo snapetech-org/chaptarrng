@@ -2,33 +2,29 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using NLog;
 using NzbDrone.Common.Extensions;
-using NzbDrone.Common.Http;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Exceptions;
 using NzbDrone.Core.MetadataSource.BookInfo;
 using NzbDrone.Common.Instrumentation;
+using Newtonsoft.Json.Linq;
 
 namespace NzbDrone.Core.MetadataSource.Hardcover
 {
     public interface IHardcoverSearchClient
     {
-        List<object> Search(string query);
+        List<object> Search(string query, bool interactiveSearch = false);
     }
 
     public class HardcoverSearchClient : IHardcoverSearchClient
     {
-        private readonly IHttpClient _httpClient;
         private readonly IConfigService _configService;
+        private readonly IHardcoverMetadataProxy _hardcoverMetadataProxy;
         private readonly Logger _logger;
-        
-        private const string HARDCOVER_ENDPOINT = "https://api.hardcover.app/v1/graphql";
-        private const int TIMEOUT_SECONDS = 8;
+
         private const int MAX_RESULTS_PER_TYPE = 10;
 
         // Hardcover rejects GraphQL operations containing more than five top-level fields.
@@ -85,10 +81,10 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
                         author { id name }
                     }";
 
-        public HardcoverSearchClient(IHttpClient httpClient, IConfigService configService)
+        public HardcoverSearchClient(IConfigService configService, IHardcoverMetadataProxy hardcoverMetadataProxy)
         {
-            _httpClient = httpClient;
-            _configService = configService;
+            _configService = configService ?? throw new ArgumentNullException(nameof(configService));
+            _hardcoverMetadataProxy = hardcoverMetadataProxy ?? throw new ArgumentNullException(nameof(hardcoverMetadataProxy));
             _logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -109,38 +105,14 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
             return sources.Contains(AdditionalMetadataSources.Hardcover);
         }
 
-        private string GetConfiguredApiToken()
-        {
-            var token = Environment.GetEnvironmentVariable("HARDCOVER_AUTH");
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                token = Environment.GetEnvironmentVariable("HARDCOVER_API_KEY");
-            }
-
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                token = _configService.HardcoverApiToken;
-            }
-
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return string.Empty;
-            }
-
-            return token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-                ? token.Substring(7).Trim()
-                : token.Trim();
-        }
-
-        public List<object> Search(string searchTerm)
+        public List<object> Search(string searchTerm, bool interactiveSearch = false)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
             {
                 return new List<object>();
             }
 
-            var token = GetConfiguredApiToken();
-            if ((!_configService.HardcoverEnabled && !IsHardcoverCatalogEnabled()) || string.IsNullOrEmpty(token))
+            if ((!_configService.HardcoverEnabled && !IsHardcoverCatalogEnabled()) || !_hardcoverMetadataProxy.IsConfigured)
             {
                 _logger.Debug("Hardcover search skipped - not enabled or no token configured");
                 return null;
@@ -155,7 +127,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
                     cleanedTerm = cleanedTerm.Substring(0, 200);
                 }
 
-                var results = ExecuteSearch(cleanedTerm);
+                var results = ExecuteSearch(cleanedTerm, interactiveSearch);
 
                 if (results == null)
                 {
@@ -178,7 +150,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
             }
         }
 
-        private List<object> ExecuteSearch(string query)
+        private List<object> ExecuteSearch(string query, bool interactiveSearch)
         {
             var jsonOptions = new JsonSerializerOptions
             {
@@ -192,46 +164,27 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
 
             foreach (var target in SearchTargets)
             {
-                var jsonContent = JsonSerializer.Serialize(new
-                {
-                    query = SEARCH_QUERY,
-                    variables = new
+                var data = _hardcoverMetadataProxy.ExecuteSearchGraphQl(
+                    "ChaptarrSearch",
+                    SEARCH_QUERY,
+                    new JObject
                     {
-                        q = query,
-                        query_type = target.QueryType,
-                        limit = MAX_RESULTS_PER_TYPE,
-                        page = 1
-                    }
-                }, jsonOptions);
-
-                var request = new HttpRequestBuilder(HARDCOVER_ENDPOINT)
-                    .SetHeader("Content-Type", "application/json")
-                    .SetHeader("Accept", "application/json")
-                    .SetHeader("User-Agent", ExternalImageRequestHeaders.GetRandomUserAgent())
-                    .Build();
-
-                request.Method = HttpMethod.Post;
-                request.SetContent(jsonContent);
-
-                // Add Authorization AFTER building to avoid duplication
-                request.Headers.Add("Authorization", $"Bearer {GetConfiguredApiToken()}");
-
-                var response = ExecuteWithRetry(request, out var failureDetail);
-                if (response == null)
-                {
-                    throw new NzbDroneClientException(
-                        HttpStatusCode.ServiceUnavailable,
-                        $"Hardcover {target.QueryType} search failed: {failureDetail ?? "no response"}");
-                }
+                        ["q"] = query,
+                        ["query_type"] = target.QueryType,
+                        ["limit"] = MAX_RESULTS_PER_TYPE,
+                        ["page"] = 1
+                    },
+                    interactiveSearch);
 
                 try
                 {
-                    using var document = JsonDocument.Parse(response.Content);
+                    var envelope = new JObject { ["data"] = data };
+                    using var document = JsonDocument.Parse(envelope.ToString(Newtonsoft.Json.Formatting.None));
                     if (!TryExtractSearchPayload(target.QueryType, document.RootElement, out var searchPayload))
                     {
                         throw new NzbDroneClientException(
                             HttpStatusCode.ServiceUnavailable,
-                            $"Hardcover {target.QueryType} search returned an unusable response: {TruncateForError(response.Content)}");
+                            $"Hardcover {target.QueryType} search returned an unusable response");
                     }
 
                     searchPayloads[target.ResponseProperty] = searchPayload;
@@ -240,22 +193,12 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
                 {
                     throw new NzbDroneClientException(
                         HttpStatusCode.ServiceUnavailable,
-                        $"Hardcover {target.QueryType} search returned unparseable JSON ({ex.Message}): {TruncateForError(response.Content)}");
+                        $"Hardcover {target.QueryType} search returned unparseable JSON ({ex.Message})");
                 }
             }
 
             var combinedContent = JsonSerializer.Serialize(new { data = searchPayloads }, jsonOptions);
-            return ParseSearchResponse(query, combinedContent, jsonOptions);
-        }
-
-        private static string TruncateForError(string content)
-        {
-            if (string.IsNullOrEmpty(content))
-            {
-                return "(empty body)";
-            }
-
-            return content.Length <= 500 ? content : content.Substring(0, 500) + "…";
+            return ParseSearchResponse(query, combinedContent, interactiveSearch);
         }
 
         private bool TryExtractSearchPayload(string queryType, JsonElement root, out JsonElement searchPayload)
@@ -307,99 +250,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
             return true;
         }
 
-        private HttpResponse ExecuteWithRetry(HttpRequest request)
-        {
-            return ExecuteWithRetry(request, out _);
-        }
-
-        private HttpResponse ExecuteWithRetry(HttpRequest request, out string failureDetail)
-        {
-            failureDetail = null;
-            var timeout = TimeSpan.FromSeconds(TIMEOUT_SECONDS);
-
-            for (int attempt = 1; attempt <= 2; attempt++)
-            {
-                HttpResponse response;
-
-                try
-                {
-                    request.RequestTimeout = timeout;
-                    response = _httpClient.Execute(request);
-                }
-                catch (HttpException ex)
-                {
-                    response = ex.Response;
-                    if (response == null)
-                    {
-                        _logger.Warn($"Hardcover API request failed without a response (attempt {attempt}/2): {ex.Message}");
-                        failureDetail = $"request failed without a response: {ex.Message}";
-                        return null;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Warn($"Hardcover API request failed (attempt {attempt}/2): {ex.Message}");
-                    failureDetail = $"request failed: {ex.Message}";
-                    if (attempt == 1 && IsRetryableException(ex))
-                    {
-                        continue;
-                    }
-
-                    return null;
-                }
-
-                if (!response.HasHttpError)
-                {
-                    return response;
-                }
-
-                failureDetail = $"HTTP {(int)response.StatusCode} {response.StatusCode}: {TruncateForError(response.Content)}";
-
-                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    _logger.Warn("Hardcover API returned 401 - invalid or expired token");
-                    return null;
-                }
-
-                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                {
-                    _logger.Warn($"Hardcover API rate limit hit (429) - attempt {attempt}/2");
-                    if (attempt == 1)
-                    {
-                        continue;
-                    }
-
-                    return null;
-                }
-
-                if ((int)response.StatusCode >= 500)
-                {
-                    _logger.Warn($"Hardcover API server error ({response.StatusCode}) - attempt {attempt}/2");
-                    if (attempt == 1)
-                    {
-                        continue;
-                    }
-
-                    return null;
-                }
-
-                // Contract, authorization, and other client errors are not transient.
-                _logger.Error($"Hardcover API error: {failureDetail}");
-                return null;
-            }
-
-            return null;
-        }
-
-        private bool IsRetryableException(Exception ex)
-        {
-            // Retry on network timeouts and temporary connection issues
-            return ex is TimeoutException || 
-                   ex is HttpRequestException ||
-                   ex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private List<object> ParseSearchResponse(string query, string responseContent, JsonSerializerOptions jsonOptions)
+        private List<object> ParseSearchResponse(string query, string responseContent, bool interactiveSearch)
         {
             try
             {
@@ -505,7 +356,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
                 }
 
                 var primaryBooksByAuthorId = new Dictionary<int, List<HardcoverBookResult>>();
-                authors = FilterAuthorsWithPrimaryBooks(authors, jsonOptions, primaryBooksByAuthorId);
+                authors = FilterAuthorsWithPrimaryBooks(authors, primaryBooksByAuthorId, interactiveSearch);
 
                 // Pick one cross-type anchor before replacing any raw book hits. An exact, verified
                 // author name wins the "books about this person" ambiguity; otherwise exact primary
@@ -522,7 +373,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
                     books = byAuthor;
                 }
 
-                EnrichAuthorsAndSeries(authors, seriesResults, jsonOptions);
+                EnrichAuthorsAndSeries(authors, seriesResults, interactiveSearch);
 
                 var orderedResults = OrderSearchResultsAroundAnchor(query, anchor, authors, books, seriesResults);
                 _logger.DebugSafe("Hardcover search anchor for '{0}': {1}; ordered {2} results",
@@ -540,8 +391,8 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
 
         private List<HardcoverAuthorResult> FilterAuthorsWithPrimaryBooks(
             List<HardcoverAuthorResult> authors,
-            JsonSerializerOptions jsonOptions,
-            Dictionary<int, List<HardcoverBookResult>> primaryBooksByAuthorId)
+            Dictionary<int, List<HardcoverBookResult>> primaryBooksByAuthorId,
+            bool interactiveSearch)
         {
             if (authors == null || authors.Count == 0)
             {
@@ -559,7 +410,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
                 candidates.Add((author, authorId));
             }
 
-            var booksByAuthorId = FetchBooksByAuthors(candidates.Select(candidate => candidate.AuthorId), jsonOptions);
+            var booksByAuthorId = FetchBooksByAuthors(candidates.Select(candidate => candidate.AuthorId), interactiveSearch);
             if (booksByAuthorId == null)
             {
                 _logger.Debug("Keeping Hardcover author search hits because the primary-book batch query failed");
@@ -874,7 +725,9 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
             public bool ExactPrimaryLabel { get; }
         }
 
-        private Dictionary<int, List<HardcoverBookResult>> FetchBooksByAuthors(IEnumerable<int> authorIds, JsonSerializerOptions jsonOptions)
+        private Dictionary<int, List<HardcoverBookResult>> FetchBooksByAuthors(
+            IEnumerable<int> authorIds,
+            bool interactiveSearch)
         {
             var ids = authorIds?
                 .Where(id => id > 0)
@@ -899,32 +752,13 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
                 var results = ids.ToDictionary(id => id, _ => new List<HardcoverBookResult>());
                 foreach (var chunk in authorIdChunks)
                 {
-                    var jsonContent = JsonSerializer.Serialize(new
-                    {
-                        query = BuildAuthorBooksBatchQuery(chunk),
-                        variables = new
-                        {
-                            limit = MAX_RESULTS_PER_TYPE
-                        }
-                    }, jsonOptions);
-
-                    var request = new HttpRequestBuilder(HARDCOVER_ENDPOINT)
-                        .SetHeader("Content-Type", "application/json")
-                        .SetHeader("Accept", "application/json")
-                        .SetHeader("User-Agent", ExternalImageRequestHeaders.GetRandomUserAgent())
-                        .Build();
-
-                    request.Method = HttpMethod.Post;
-                    request.SetContent(jsonContent);
-                    request.Headers.Add("Authorization", $"Bearer {GetConfiguredApiToken()}");
-
-                    var response = ExecuteWithRetry(request);
-                    if (response == null || response.HasHttpError || string.IsNullOrWhiteSpace(response.Content))
-                    {
-                        return null;
-                    }
-
-                    using var document = JsonDocument.Parse(response.Content);
+                    var responseData = _hardcoverMetadataProxy.ExecuteSearchGraphQl(
+                        "BooksByAuthors",
+                        BuildAuthorBooksBatchQuery(chunk),
+                        new JObject { ["limit"] = MAX_RESULTS_PER_TYPE },
+                        interactiveSearch);
+                    var envelope = new JObject { ["data"] = responseData };
+                    using var document = JsonDocument.Parse(envelope.ToString(Newtonsoft.Json.Formatting.None));
                     var operation = document.RootElement;
                     if (operation.TryGetProperty("errors", out var errors))
                     {
@@ -1237,7 +1071,10 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
             return null;
         }
 
-        private void EnrichAuthorsAndSeries(List<HardcoverAuthorResult> authors, List<HardcoverSeriesResult> series, JsonSerializerOptions jsonOptions)
+        private void EnrichAuthorsAndSeries(
+            List<HardcoverAuthorResult> authors,
+            List<HardcoverSeriesResult> series,
+            bool interactiveSearch)
         {
             if ((authors == null || authors.Count == 0) && (series == null || series.Count == 0))
             {
@@ -1268,35 +1105,17 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
 
             try
             {
-                var graphqlRequest = new
-                {
-                    query = ENRICHMENT_QUERY,
-                    variables = new
+                var responseData = _hardcoverMetadataProxy.ExecuteSearchGraphQl(
+                    "SearchEnrichment",
+                    ENRICHMENT_QUERY,
+                    new JObject
                     {
-                        author_ids = authorIds,
-                        series_ids = seriesIds
-                    }
-                };
-
-                var jsonContent = JsonSerializer.Serialize(graphqlRequest, jsonOptions);
-
-	                var request = new HttpRequestBuilder(HARDCOVER_ENDPOINT)
-	                    .SetHeader("Content-Type", "application/json")
-	                    .SetHeader("Accept", "application/json")
-	                    .SetHeader("User-Agent", ExternalImageRequestHeaders.GetRandomUserAgent())
-	                    .Build();
-
-                request.Method = HttpMethod.Post;
-                request.SetContent(jsonContent);
-                request.Headers.Add("Authorization", $"Bearer {GetConfiguredApiToken()}");
-
-                var response = ExecuteWithRetry(request);
-                if (response == null || response.HasHttpError || string.IsNullOrWhiteSpace(response.Content))
-                {
-                    return;
-                }
-
-                using var document = JsonDocument.Parse(response.Content);
+                        ["author_ids"] = new JArray(authorIds),
+                        ["series_ids"] = new JArray(seriesIds)
+                    },
+                    interactiveSearch);
+                var envelope = new JObject { ["data"] = responseData };
+                using var document = JsonDocument.Parse(envelope.ToString(Newtonsoft.Json.Formatting.None));
                 if (!document.RootElement.TryGetProperty("data", out var data))
                 {
                     return;

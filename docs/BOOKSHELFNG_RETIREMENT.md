@@ -8,6 +8,19 @@ retained for inspection but cannot be imported or reused. Startup recovery
 continues to adopt validated output or requeue interrupted work. Real-tool
 process-kill/restart and representative-media acceptance remain open.
 
+**Hardcover search request parity (2026-10-24):** The fallback catalog search
+path now sends its entity search, author-book validation, and enrichment queries
+through the same GraphQL executor as native Hardcover lookups. This restores the
+shared request pacing and semaphore, response-header and `Retry-After` pause,
+daily-quota reserve, configured API URL, and transient retry policy. User-driven
+catalog searches carry the interactive quota flag through every query. The
+Release solution build passed with zero warnings or errors; the Release Core
+suite passed 4,880 tests, skipped 25, and failed 0. The TRX records 4,907 rows
+(4,880 passed and 27 `NotExecuted`), retaining the existing two-row runner
+accounting difference. The new cross-path 429 pause and interactive-quota
+fixtures passed. Live-provider behavior and representative migrated settings
+remain open.
+
 **Bookshelf matching and audiobook-tag compatibility batch (2026-10-24):**
 ChaptarrNG now carries BookshelfNG's legacy weighted candidate scoring,
 per-format author/root profile selection, filename fallback, and ordered

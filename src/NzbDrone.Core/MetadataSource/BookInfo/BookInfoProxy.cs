@@ -2645,7 +2645,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                             _hardcoverSearchCache.Remove(cacheKey);
                         }
 
-                        rawHc = _hardcoverSearchClient.Search(title);
+                        rawHc = _hardcoverSearchClient.Search(title, interactiveSearch: true);
 
                         if (rawHc?.Any() == true)
                         {

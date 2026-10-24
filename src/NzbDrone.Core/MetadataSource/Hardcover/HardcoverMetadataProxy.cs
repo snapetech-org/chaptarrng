@@ -27,6 +27,7 @@ namespace NzbDrone.Core.MetadataSource.Hardcover
         bool IsConfigured { get; }
         bool IsNativeEnabled { get; }
         List<SearchJsonResource> Search(string query, bool interactiveSearch = false);
+        JObject ExecuteSearchGraphQl(string operationName, string query, JObject variables, bool interactiveSearch = false);
         AuthorResource GetAuthor(string foreignAuthorId, bool interactiveSearch = false);
         WorkResource GetWork(string foreignWorkId, bool interactiveSearch = false);
         WorkResource GetEdition(string foreignEditionId, bool interactiveSearch = false);
@@ -448,6 +449,11 @@ query GetAuthorEditions($id: Int!, $limit: Int!, $offset: Int!) {
             var cacheKey = normalized.ToLowerInvariant();
 
             return GetCached(_searchCache, cacheKey, () => SearchUncached(normalized, interactiveSearch), TimeSpan.FromMinutes(10));
+        }
+
+        public JObject ExecuteSearchGraphQl(string operationName, string query, JObject variables, bool interactiveSearch = false)
+        {
+            return ExecuteGraphQl(operationName, query, variables ?? new JObject(), interactiveSearch);
         }
 
         public AuthorResource GetAuthor(string foreignAuthorId, bool interactiveSearch = false)
