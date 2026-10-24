@@ -60,7 +60,7 @@ and keeps source presence separate from end-user acceptance.
 | Download a managed file from the library | Book Details > Files provides a download action for the selected book file; the server limits downloads to configured roots. File details and the quality-profile choices in the file editor offer Retry after a failed load; quality changes stay disabled until fresh choices load. | Download ebook and audiobook files through the browser, then verify missing files and paths outside configured roots fail safely; test file-detail and quality-choice retries. |
 | Reuse a torrent already in the download client | Interactive search can adopt a matching torrent by hash, while automatic searches avoid starting a duplicate. The existing client item remains tracked for seeding. | Check wrong categories, completed and active seeds, client restarts, stale matches, and final import against supported clients. |
 | Track imports and retry or cancel preparation | Activity and pending-author import status expose progress and terminal states; retry and cancellation preserve requests shared by multiple users. | Exercise successful fulfillment, partial failure, retry, shared requests, cancellation races, availability/history updates, and restart recovery with the unchanged SeerrNG client. |
-| Merge and preserve audiobook chapters | Quality profiles can opt into multipart M4B merging; conversion preserves tagged track order and chapter metadata, reports progress, and has a safe fallback. Settings > Conversion offers Retry after a failed settings load. Core fixtures also cover startup recovery from a persisted conversion job with a valid retained artifact. | Verify representative M4B and MP3 media in Move and Copy modes, including chapter edits, settings-load retry, conversion failure recovery, cancellation, and an interrupted conversion resumed after an installed-service restart. Synthetic artifact recovery does not close the real-media check. |
+| Merge and preserve audiobook chapters | Quality profiles can opt into multipart M4B merging; conversion preserves tagged track order and chapter metadata, reports progress, and has a safe fallback. Settings > Conversion offers Retry after a failed settings load. Core fixtures cover startup recovery from a persisted conversion job with a valid retained artifact. The pinned real-tool integration test also interrupts the actual FFmpeg child process, restarts a worker over the same SQLite job store, and verifies retry, artifact promotion, and importability with synthetic media. | Verify representative M4B and MP3 media in Move and Copy modes, including chapter edits, settings-load retry, conversion failure recovery, cancellation, and an interrupted conversion resumed through an installed-service restart. Synthetic media does not close the representative-media check. |
 | Import archives and keep separately released parts together | The normal import path can extract supported ZIP, TGZ, and TAR.GZ downloads when no media file is present at the archive root. Numbered audiobook parts import side by side; Media Management > Naming exposes `{ReleasePart}` and `{ReleaseParts}` tokens, while conversion can merge eligible parts. | Check archive limits and nested layouts, separate releases with the same title, naming-token output, collisions, chapter offsets, source retention, and failure recovery with real files. |
 | Move files or change format-specific storage safely | Author and bulk editors provide previewable format-aware moves, collision checks, root containment, and registered-sidecar handling. Unknown files stay outside the move. | Review preview completeness, cross-device moves, collisions, partial-failure rollback, external files, and a large mixed-format library. |
 | Automate additions from lists and notifications | Settings > Import Lists supports Goodreads and Hardcover sources, preview, exclusions, and durable sync history; notification settings include list and import events. | Verify existing Goodreads credentials and Hardcover list responses, private/owned-list behavior, notification delivery, rollback, and secret redaction. |
@@ -82,10 +82,13 @@ accepted by this user-workflow map.
 Completed-download audiobook conversions persist their request and recover at
 startup. Each retry now uses an isolated output path; only a successfully
 validated artifact with a matching version 2 manifest and output SHA-256
-fingerprint is eligible for import.
-Tool-reported failures and output changed after validation are excluded from
-reuse. A real-tool process termination and restart rehearsal remains part of
-acceptance.
+fingerprint is eligible for import. Tool-reported failures and output changed
+after validation are excluded from reuse. The pinned real-tool test now
+interrupts FFmpeg during conversion, verifies that its process exits and no
+artifact is promoted, then starts a new worker over the same SQLite job store
+and verifies retry, promotion, and importability. This covers graceful worker
+restart recovery with synthetic media; abrupt whole-application crash recovery
+and representative operator media remain acceptance work.
 
 The source map includes substantial user-facing coverage, but full live parity
 acceptance is still open. A disposable source build was exercised on
