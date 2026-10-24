@@ -647,6 +647,12 @@ operator acceptance, and channel handoff remain open. The push-triggered
 Release run stopped at its readiness preflight, and all publication jobs were
 skipped; no release, package, image, or bridge was published.
 
+The no-publication candidate-builder checks also passed on this code head for
+the AppImage/Flatpak orchestration and digest-pinned Cloudron, Co-op Cloud, and
+self-hosting Compose bundle. Synthetic tool stubs verified staged identities,
+image-digest propagation, and artifact checksums; this does not establish an
+external package build, install, update, or rollback.
+
 Keep the release freeze in place.
 
 **Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19):** The

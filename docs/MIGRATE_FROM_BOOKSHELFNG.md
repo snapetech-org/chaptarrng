@@ -685,11 +685,13 @@ backup exists.
 This is still source-only migration tooling. The published `v0.9.977` Windows
 binary does not preserve `-data` when registering its service, and the manual
 service-registration commands from earlier drafts are not a supported
-handoff. The PostgreSQL rollback code requires `pg_dump` and `pg_restore`, an
-explicit database user, and no service-only PostgreSQL environment overrides;
-its Windows end-to-end installed rollback remains unvalidated. Multiple
-databases, unsupported schemas, and representative operator-data rollback are
-not covered by this installer. Do not change the
+handoff. The SQLite Windows installed-service route has since passed the
+exact-head service round-trip recorded below. The PostgreSQL rollback code
+requires `pg_dump` and `pg_restore`, an explicit database user, and no
+service-only PostgreSQL environment overrides; its Windows end-to-end
+installed rollback remains unvalidated. Multiple databases, unsupported
+schemas, and representative operator-data rollback are not covered by this
+installer. Do not change the
 service or apply the migration during the release freeze. Keep BookshelfNG
 available until the installer and all retirement acceptance gates have
 passed.
