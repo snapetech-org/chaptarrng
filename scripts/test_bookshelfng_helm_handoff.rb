@@ -227,12 +227,16 @@ assert(release_distribution.include?("MIGRATION_BRIDGE_GATE,,}") &&
        "package retry workflow no longer requires both legacy bridge readiness gates")
 assert(release_distribution.match?(/publish-legacy-helm-bridge:[\s\S]*?vars\.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true'[\s\S]*?vars\.BOOKSHELFNG_RELEASE_READY == 'true'/),
        "Helm publisher is not gated by both retirement readiness variables")
-assert(release_workflow.include?("vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'"),
-       "release workflow no longer passes both readiness gates to legacy publishers")
-assert(release_workflow.include?("publish_legacy_bridge:") && release_workflow.include?("default: false"),
-       "legacy bridge publication is not an explicit opt-in on the release workflow")
-assert(docker_workflow.include?("inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'"),
-       "legacy Docker aliases are not gated by both retirement readiness variables")
+assert(release_workflow.include?("vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'"),
+       "release workflow no longer requires all three readiness gates for legacy publishers")
+legacy_readiness_expression = "vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'"
+assert(release_workflow.include?("dispatch-legacy-ghcr:") &&
+       release_workflow.include?("if: ${{ #{legacy_readiness_expression} }}") &&
+       release_workflow.include?("publish-packages:") &&
+       release_workflow.include?("legacy_bridge_enabled: ${{ #{legacy_readiness_expression} }}"),
+       "legacy bridge publishers are not explicitly gated by all readiness variables")
+assert(docker_workflow.include?("inputs.legacy_bridge_enabled && #{legacy_readiness_expression}"),
+       "legacy Docker aliases are not gated by all readiness variables")
 
 [
   ["missing operator confirmation", ["--set", "bookshelfMigration.providerMode=hardcover", "--set-string", "image.digest=#{DIGEST}"], /confirmed must be true/],
