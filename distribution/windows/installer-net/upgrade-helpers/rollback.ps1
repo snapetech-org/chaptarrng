@@ -116,7 +116,6 @@ if (Test-ServiceAccountNeedsPassword $BookshelfServiceAccount) {
 if (-not ('ChaptarrServiceAccountNative' -as [type])) {
     Add-Type -TypeDefinition @'
 using System;
-using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Security;
 
@@ -140,17 +139,22 @@ public static class ChaptarrServiceAccountNative
     [DllImport("advapi32.dll", SetLastError = true)]
     private static extern bool CloseServiceHandle(IntPtr handle);
 
+    private static InvalidOperationException NativeFailure(string operation)
+    {
+        return new InvalidOperationException(operation + " failed with Win32 error " + Marshal.GetLastWin32Error() + ".");
+    }
+
     public static void SetAccount(string serviceName, string account, SecureString password)
     {
         IntPtr manager = OpenServiceControlManager(null, null, ScManagerConnect);
-        if (manager == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+        if (manager == IntPtr.Zero) throw NativeFailure("OpenSCManagerW");
         IntPtr service = IntPtr.Zero;
         IntPtr passwordPointer = IntPtr.Zero;
         SecureString emptyPassword = null;
         try
         {
             service = OpenService(manager, serviceName, ServiceChangeConfig);
-            if (service == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+            if (service == IntPtr.Zero) throw NativeFailure("OpenServiceW");
             if (password != null) passwordPointer = Marshal.SecureStringToGlobalAllocUnicode(password);
             else if (account.Equals("LocalSystem", StringComparison.OrdinalIgnoreCase) ||
                      account.Equals("NT AUTHORITY\\LocalSystem", StringComparison.OrdinalIgnoreCase) ||
@@ -165,7 +169,7 @@ public static class ChaptarrServiceAccountNative
             }
             if (!ChangeServiceConfig(service, ServiceNoChange, ServiceNoChange, ServiceNoChange,
                     null, null, IntPtr.Zero, null, account, passwordPointer, null))
-                throw new Win32Exception(Marshal.GetLastWin32Error());
+                throw NativeFailure("ChangeServiceConfigW");
         }
         finally
         {
