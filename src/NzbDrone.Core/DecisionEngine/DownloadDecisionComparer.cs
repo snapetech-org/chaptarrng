@@ -40,9 +40,9 @@ namespace NzbDrone.Core.DecisionEngine
                 y.RemoteBook.Release.Title,
                 y.RemoteBook.Release.Size.SizeSuffix());
 
-            if (UsesBookshelfAudioReleasePriority(x, y))
+            if (UsesBookshelfLegacyReleasePriority(x, y))
             {
-                return CompareBookshelfAudioReleases(x, y).Result;
+                return CompareBookshelfLegacyReleases(x, y).Result;
             }
 
             var comparers = new List<(string name, CompareDelegate comparer)>
@@ -82,9 +82,9 @@ namespace NzbDrone.Core.DecisionEngine
                 y.RemoteBook.Release.Title,
                 y.RemoteBook.Release.Size.SizeSuffix());
 
-            if (UsesBookshelfAudioReleasePriority(x, y))
+            if (UsesBookshelfLegacyReleasePriority(x, y))
             {
-                var comparison = CompareBookshelfAudioReleases(x, y);
+                var comparison = CompareBookshelfLegacyReleases(x, y);
                 var reason = comparison.Result == 0
                     ? "Download allowed and meets all requirements"
                     : GetBookshelfPriorityReason(comparison.ComparisonName, x, y, comparison.Result > 0 ? x : y);
@@ -131,14 +131,30 @@ namespace NzbDrone.Core.DecisionEngine
             return new DownloadDecisionComparisonResult(0, reasons);
         }
 
-        private bool UsesBookshelfAudioReleasePriority(DownloadDecision x, DownloadDecision y)
+        private bool UsesBookshelfLegacyReleasePriority(DownloadDecision x, DownloadDecision y)
         {
-            return _configService?.BookshelfMatchCompatibility == true &&
-                   x.RemoteBook.GetPreferredMediaType() == BookMediaType.Audiobook &&
-                   y.RemoteBook.GetPreferredMediaType() == BookMediaType.Audiobook;
+            if (_configService?.BookshelfMatchCompatibility != true || x?.RemoteBook == null || y?.RemoteBook == null)
+            {
+                return false;
+            }
+
+            // BookshelfNG had one release ranking for its book catalog. Preserve it
+            // for both same-format Chaptarr searches after migration; mixed-format
+            // comparisons continue through Chaptarr's format preference path.
+            return GetBookshelfDecisionMediaType(x) == GetBookshelfDecisionMediaType(y);
         }
 
-        private (int Result, string ComparisonName) CompareBookshelfAudioReleases(DownloadDecision x, DownloadDecision y)
+        private static BookMediaType GetBookshelfDecisionMediaType(DownloadDecision decision)
+        {
+            var remoteBook = decision?.RemoteBook;
+            var detected = QualityMediaTypeHelper.DetectMediaType(
+                remoteBook?.ParsedBookInfo?.Quality?.Quality,
+                remoteBook?.Release);
+
+            return detected ?? remoteBook.GetPreferredMediaType();
+        }
+
+        private (int Result, string ComparisonName) CompareBookshelfLegacyReleases(DownloadDecision x, DownloadDecision y)
         {
             var comparers = new (string name, CompareDelegate comparer)[]
             {

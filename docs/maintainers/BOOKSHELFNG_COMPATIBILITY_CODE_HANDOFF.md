@@ -1,6 +1,6 @@
 # BookshelfNG compatibility code handoff
 
-This is the sixth code checkpoint after the 2026-10-24 replacement
+This is the seventh code checkpoint after the 2026-10-24 replacement
 reassessment. It is intended for focused validation and refinement before broad
 parity work.
 
@@ -57,6 +57,9 @@ parity work.
   the original command type and response shape while refreshing both rows. Its
   internal fan-out IDs are removed from compatibility responses after the
   original BookshelfNG work ID is projected back.
+- Migrated installs now use the BookshelfNG release comparer for same-format
+  audiobook and ebook decisions. Mixed-format decisions keep ChaptarrNG's
+  format preference; native installs keep the current comparer.
 - Linux Debian/PPA, RPM/COPR, and AUR package upgrades now record a durable
   migration-pending marker and a root-only copy of the prior application and
   service unit before replacing an installed BookshelfNG package. The service
@@ -140,7 +143,10 @@ restart acceptance before it can be treated as closed.
 9. Fetch release results and save/delete through the bulk book editor on both
    migrated and native API contexts. Confirm release `BookId`, editor response
    IDs, monitoring, and deletion stay scoped to the expected legacy work or
-   native target row.
+   native target row. For migrated installs, compare audiobook and ebook release
+   ordering against BookshelfNG for quality, revision preference, custom format
+   score, protocol, indexer priority, torrent health, release scope, age, and
+   size; confirm mixed-format and native ordering remain unchanged.
 
 ## Still open after this checkpoint
 
