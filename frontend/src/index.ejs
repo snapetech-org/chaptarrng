@@ -66,8 +66,7 @@
       }
       return `${parsed.pathname}${parsed.search}${parsed.hash}`;
     }; %>
-    <!-- nosemgrep: javascript.express.security.audit.xss.ejs.var-in-script-src.var-in-script-src -- generated assets are origin-checked and HTML-escaped before insertion. -->
-    <% for (const scriptSource of htmlWebpackPlugin.files.js) { %><script type="text/javascript" src="<%= safeAssetSource(scriptSource) %>" data-no-hash></script><% } %>
+    <% for (const scriptSource of htmlWebpackPlugin.files.js) { %><script type="text/javascript" src="<%= safeAssetSource(scriptSource) /* nosemgrep: javascript.express.security.audit.xss.ejs.var-in-script-src.var-in-script-src -- safeAssetSource accepts only same-origin build asset URLs and returns a normalized path. */ %>" data-no-hash></script><% } %>
     <% for (const stylesheetSource of htmlWebpackPlugin.files.css) { %><link href="<%= safeAssetSource(stylesheetSource) %>" rel="stylesheet"></link><% } %>
 
     <title>Chaptarr</title>
