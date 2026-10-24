@@ -55,6 +55,7 @@ assert.equal(capabilities.contract, "chaptarrng-seerr-bookshelf");
 assert.equal(capabilities.features?.bookshelfLegacyIdentityMap, true);
 assert.equal(capabilities.features?.pendingAuthorImports, true);
 assert.equal(capabilities.features?.pendingImportCancellation, true);
+assert.equal(capabilities.features?.formatSpecificAvailabilityStatistics, true);
 
 const legacyIdentitiesResponse = await requestWithKey(
   "/bookshelf/legacy-identities?entityType=Book&sourceIds=30",
@@ -134,11 +135,19 @@ assert.equal(
   1,
   "SeerrNG should see the audiobook's file in its format-specific availability"
 );
+assert.equal(legacyAudiobookDetails.statistics?.ebookFileCount, 0);
+assert.equal(legacyAudiobookDetails.statistics?.audiobookFileCount, 1);
+assert.equal(legacyAudiobookDetails.statistics?.ebookSizeOnDisk, 0);
+assert.equal(legacyAudiobookDetails.statistics?.audiobookSizeOnDisk, 100);
 assert.equal(
   legacyEbookDetails.statistics?.bookFileCount,
   1,
   "SeerrNG should see the ebook's file in its format-specific availability"
 );
+assert.equal(legacyEbookDetails.statistics?.ebookFileCount, 1);
+assert.equal(legacyEbookDetails.statistics?.audiobookFileCount, 0);
+assert.equal(legacyEbookDetails.statistics?.ebookSizeOnDisk, 200);
+assert.equal(legacyEbookDetails.statistics?.audiobookSizeOnDisk, 0);
 assert.ok(
   ebookHistory.some(({ id, bookId }) => id === 93 && bookId === legacyEbook.id),
   "The migrated ebook import history should remain attached to the ebook"

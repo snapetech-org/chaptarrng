@@ -20,8 +20,9 @@ namespace NzbDrone.Core.AuthorStats
     {
         private const string _selectTemplate = "SELECT /**select**/ FROM \"Books\" /**join**/ /**innerjoin**/ /**leftjoin**/ /**where**/ /**groupby**/ /**having**/ /**orderby**/";
 
-        private const string _fileStatisticsJoin = "(" + BookFileStatisticsSql.GroupedByBook +
-                                                   @") AS ""FileStatistics"" ON ""FileStatistics"".""BookId"" = ""Books"".""Id""";
+        private static readonly string _fileStatisticsJoin = "(" +
+            BookFileStatisticsSql.GroupedByBookWithFormatStatistics +
+            @") AS ""FileStatistics"" ON ""FileStatistics"".""BookId"" = ""Books"".""Id""";
 
         private readonly IMainDatabase _database;
 
@@ -97,7 +98,7 @@ namespace NzbDrone.Core.AuthorStats
         private static SqlBuilder Builder(DatabaseType databaseType, int? authorId = null)
         {
             var fileStatisticsJoin = authorId.HasValue
-                ? "(" + BookFileStatisticsSql.GroupedByBookForAuthor(authorId.Value) + @") AS ""FileStatistics"" ON ""FileStatistics"".""BookId"" = ""Books"".""Id"""
+                ? "(" + BookFileStatisticsSql.GroupedByBookWithFormatStatisticsForAuthor(authorId.Value) + @") AS ""FileStatistics"" ON ""FileStatistics"".""BookId"" = ""Books"".""Id"""
                 : _fileStatisticsJoin;
 
             return new SqlBuilder(databaseType)
@@ -117,6 +118,10 @@ namespace NzbDrone.Core.AuthorStats
             return $@"{authorColumn}
                      ""Books"".""Id"" AS ""BookId"",
                      COALESCE(""FileStatistics"".""SizeOnDisk"", 0) AS ""SizeOnDisk"",
+                     COALESCE(""FileStatistics"".""EbookFileCount"", 0) AS ""EbookFileCount"",
+                     COALESCE(""FileStatistics"".""AudiobookFileCount"", 0) AS ""AudiobookFileCount"",
+                     COALESCE(""FileStatistics"".""EbookSizeOnDisk"", 0) AS ""EbookSizeOnDisk"",
+                     COALESCE(""FileStatistics"".""AudiobookSizeOnDisk"", 0) AS ""AudiobookSizeOnDisk"",
                      CASE WHEN {monitoredPredicate} THEN 1 ELSE 0 END AS ""TotalBookCount"",
                      CASE WHEN ({monitoredPredicate}) AND COALESCE(""FileStatistics"".""BookFileCount"", 0) > 0 THEN 1 ELSE 0 END AS ""AvailableBookCount"",
                      CASE WHEN ({monitoredPredicate}) AND

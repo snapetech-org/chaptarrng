@@ -39,5 +39,31 @@ namespace Chaptarr.Core.Test.ApiV1
 
             Assert.That(resource.PercentOfBooks, Is.EqualTo(0));
         }
+
+        [Test]
+        public void should_map_format_specific_file_counts_and_sizes()
+        {
+            var model = new BookStatistics
+            {
+                BookFileCount = 3,
+                EbookFileCount = 1,
+                AudiobookFileCount = 2,
+                SizeOnDisk = 450,
+                EbookSizeOnDisk = 100,
+                AudiobookSizeOnDisk = 350
+            };
+
+            var resource = model.ToResource();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(resource.BookFileCount, Is.EqualTo(3));
+                Assert.That(resource.EbookFileCount, Is.EqualTo(1));
+                Assert.That(resource.AudiobookFileCount, Is.EqualTo(2));
+                Assert.That(resource.SizeOnDisk, Is.EqualTo(450));
+                Assert.That(resource.EbookSizeOnDisk, Is.EqualTo(100));
+                Assert.That(resource.AudiobookSizeOnDisk, Is.EqualTo(350));
+            });
+        }
     }
 }
