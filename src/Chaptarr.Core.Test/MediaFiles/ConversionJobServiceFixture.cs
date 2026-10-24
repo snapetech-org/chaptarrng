@@ -70,8 +70,14 @@ namespace Chaptarr.Core.Test.MediaFiles
 
             public ConversionResult ConvertToM4b(string[] inputFiles, string outputFile, ConversionOptions options = null)
             {
-                var workFolder = Directory.GetParent(Path.GetDirectoryName(outputFile));
-                var downloadId = workFolder?.Name ?? outputFile;
+                var directory = new DirectoryInfo(options?.TempDirectory ?? Path.GetDirectoryName(outputFile));
+                while (directory?.Parent != null &&
+                       !directory.Parent.Name.Equals(".chaptarr-conversions", StringComparison.OrdinalIgnoreCase))
+                {
+                    directory = directory.Parent;
+                }
+
+                var downloadId = directory?.Name ?? outputFile;
                 OptionsByDownloadId[downloadId] = options;
 
                 WaitHandle.WaitAny(new[] { options.CancellationToken.WaitHandle, Release.WaitHandle });
@@ -89,6 +95,35 @@ namespace Chaptarr.Core.Test.MediaFiles
                 File.WriteAllText(outputFile, "converted");
                 return new ConversionResult { Success = true };
             }
+
+            public bool CanConvert(string[] inputFiles) => true;
+            public ConversionEstimate EstimateConversion(string[] inputFiles) => new() { CanConvert = true };
+            public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles) => new();
+        }
+
+        private sealed class RetainableFailureConversionService : IM4bConversionService
+        {
+            public ConversionResult ConvertToM4b(string[] inputFiles, string outputFile, ConversionOptions options = null)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(outputFile));
+                File.WriteAllText(outputFile, "readable but tool-reported failure");
+                return new ConversionResult
+                {
+                    Success = false,
+                    RetainOutputOnFailure = true,
+                    ErrorMessage = "synthetic tool failure"
+                };
+            }
+
+            public bool CanConvert(string[] inputFiles) => true;
+            public ConversionEstimate EstimateConversion(string[] inputFiles) => new() { CanConvert = true };
+            public M4bMergeSourceInfo ProbeMergeSources(string[] inputFiles) => new();
+        }
+
+        private sealed class MissingOutputSuccessConversionService : IM4bConversionService
+        {
+            public ConversionResult ConvertToM4b(string[] inputFiles, string outputFile, ConversionOptions options = null)
+                => new() { Success = true };
 
             public bool CanConvert(string[] inputFiles) => true;
             public ConversionEstimate EstimateConversion(string[] inputFiles) => new() { CanConvert = true };
@@ -196,8 +231,12 @@ namespace Chaptarr.Core.Test.MediaFiles
                 };
                 var manifest = new ConversionArtifactManifest
                 {
+                    Version = 1,
+                    Importable = true,
                     CreatedUtc = DateTime.UtcNow,
                     OutputPath = outputPath,
+                    OutputSize = new FileInfo(outputPath).Length,
+                    OutputModifiedUtcTicks = new FileInfo(outputPath).LastWriteTimeUtc.Ticks,
                     TargetQualityId = request.TargetQualityId,
                     TargetQualityName = request.TargetQualityName,
                     AudioBitrate = request.AudioBitrate,
@@ -416,6 +455,140 @@ namespace Chaptarr.Core.Test.MediaFiles
                 var recovered = repository.FindByDownloadId(request.DownloadId);
                 Assert.That(recovered.Status, Is.EqualTo(ConversionJobStatus.Converting));
                 Assert.That(recovered.AttemptCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                service.Handle(new ApplicationShutdownRequested());
+                SqliteConnection.ClearAllPools();
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void retry_after_partial_output_should_use_an_isolated_attempt_and_replace_only_after_success()
+        {
+            var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-job-partial-recovery-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+            var request = CreateRequest(tempDir, "partial-recovery-download");
+            File.WriteAllText(request.OutputPath, "partial output from interrupted process");
+            var partialOutput = new FileInfo(request.OutputPath);
+            File.WriteAllText(
+                Path.Combine(request.WorkFolder, "conversion-artifact.json"),
+                JsonSerializer.Serialize(new ConversionArtifactManifest
+                {
+                    Version = 1,
+                    Importable = true,
+                    CreatedUtc = DateTime.UtcNow,
+                    OutputPath = request.OutputPath,
+                    OutputSize = partialOutput.Length + 1,
+                    OutputModifiedUtcTicks = partialOutput.LastWriteTimeUtc.Ticks,
+                    TargetQualityId = request.TargetQualityId,
+                    TargetQualityName = request.TargetQualityName,
+                    AudioBitrate = request.AudioBitrate,
+                    AudioSampleRate = request.AudioSampleRate,
+                    AudioChannels = request.AudioChannels,
+                    NoConversion = request.NoConversion,
+                    TagMode = request.TagOptions.Mode,
+                    TagSignature = request.TagSignature,
+                    Sources = request.Sources
+                }));
+            var repository = CreateRepository(Path.Combine(tempDir, "jobs.db"));
+            repository.Insert(CreatePersistedJob(request, ConversionJobStatus.Converting, DateTime.UtcNow.AddMinutes(-5)));
+            var converter = new TokenRecordingConversionService();
+            converter.Release.Set();
+            var service = CreateService(repository, converter);
+
+            try
+            {
+                service.Handle(new ApplicationStartedEvent());
+                Assert.That(
+                    SpinWait.SpinUntil(
+                        () => repository.FindByDownloadId(request.DownloadId)?.Status == ConversionJobStatus.ReadyToImport,
+                        TimeSpan.FromSeconds(2)),
+                    Is.True);
+
+                Assert.That(File.ReadAllText(request.OutputPath), Is.EqualTo("converted"));
+                var manifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(
+                    File.ReadAllText(Path.Combine(request.WorkFolder, "conversion-artifact.json")));
+                Assert.That(manifest.Version, Is.EqualTo(1));
+                Assert.That(manifest.Importable, Is.True);
+                Assert.That(manifest.OutputPath, Is.EqualTo(request.OutputPath));
+                Assert.That(manifest.OutputSize, Is.EqualTo(new FileInfo(request.OutputPath).Length));
+                Assert.That(manifest.OutputModifiedUtcTicks, Is.EqualTo(new FileInfo(request.OutputPath).LastWriteTimeUtc.Ticks));
+                Assert.That(converter.OptionsByDownloadId.ContainsKey(request.DownloadId), Is.True);
+            }
+            finally
+            {
+                service.Handle(new ApplicationShutdownRequested());
+                SqliteConnection.ClearAllPools();
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void tool_reported_failure_should_persist_a_nonimportable_retained_artifact()
+        {
+            var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-job-retained-failure-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+            var request = CreateRequest(tempDir, "retained-failure-download");
+            var repository = CreateRepository(Path.Combine(tempDir, "jobs.db"));
+            var converter = new RetainableFailureConversionService();
+            var service = CreateService(repository, converter);
+
+            try
+            {
+                service.Handle(new ApplicationStartedEvent());
+                service.Enqueue(request);
+                Assert.That(
+                    SpinWait.SpinUntil(
+                        () => repository.FindByDownloadId(request.DownloadId)?.Status == ConversionJobStatus.Failed,
+                        TimeSpan.FromSeconds(2)),
+                    Is.True);
+
+                var manifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(
+                    File.ReadAllText(Path.Combine(request.WorkFolder, "conversion-artifact.json")));
+                Assert.That(manifest.Version, Is.EqualTo(1));
+                Assert.That(manifest.Importable, Is.False);
+                Assert.That(new DirectoryInfo(Path.GetDirectoryName(manifest.OutputPath)).Parent.Name, Is.EqualTo("attempts"));
+                Assert.That(File.Exists(manifest.OutputPath), Is.True);
+            }
+            finally
+            {
+                service.Handle(new ApplicationShutdownRequested());
+                SqliteConnection.ClearAllPools();
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void converter_success_without_output_should_fail_instead_of_marking_artifact_ready()
+        {
+            var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-job-missing-output-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+            var request = CreateRequest(tempDir, "missing-output-download");
+            var repository = CreateRepository(Path.Combine(tempDir, "jobs.db"));
+            var service = CreateService(repository, new MissingOutputSuccessConversionService());
+
+            try
+            {
+                service.Enqueue(request);
+                service.Handle(new ApplicationStartedEvent());
+                Assert.That(
+                    SpinWait.SpinUntil(
+                        () => repository.FindByDownloadId(request.DownloadId)?.Status == ConversionJobStatus.Failed,
+                        TimeSpan.FromSeconds(2)),
+                    Is.True);
+                Assert.That(File.Exists(request.OutputPath), Is.False);
+                Assert.That(File.Exists(Path.Combine(request.WorkFolder, "conversion-artifact.json")), Is.False);
             }
             finally
             {

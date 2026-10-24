@@ -1,5 +1,13 @@
 # BookshelfNG retirement status
 
+**M4B recovery hardening (2026-10-24):** Detached conversion retries now write
+to unique staging paths and promote output only after conversion succeeds.
+Versioned artifact manifests record whether an output is importable and its
+size and modification time; readable output from a tool-reported failure is
+retained for inspection but cannot be imported or reused. Startup recovery
+continues to adopt validated output or requeue interrupted work. Real-tool
+process-kill/restart and representative-media acceptance remain open.
+
 **Bookshelf matching and audiobook-tag compatibility batch (2026-10-24):**
 ChaptarrNG now carries BookshelfNG's legacy weighted candidate scoring,
 per-format author/root profile selection, filename fallback, and ordered

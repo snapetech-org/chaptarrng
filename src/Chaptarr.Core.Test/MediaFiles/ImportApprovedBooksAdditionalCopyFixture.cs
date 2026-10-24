@@ -257,6 +257,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             public string LastOutputFile { get; private set; }
             public ConversionOptions LastOptions { get; private set; }
             public bool HasCompleteMergeDurations { get; set; } = true;
+            public bool RetainOutputOnFailure { get; set; }
 
             public bool CanConvert(string[] inputFiles)
             {
@@ -291,10 +292,17 @@ namespace Chaptarr.Core.Test.MediaFiles
                 LastInputFiles = inputFiles;
                 LastOutputFile = outputFile;
                 LastOptions = options;
+                if (RetainOutputOnFailure)
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(outputFile));
+                    File.WriteAllText(outputFile, "readable retained conversion output");
+                }
+
                 return new ConversionResult
                 {
                     Success = false,
-                    ErrorMessage = "synthetic conversion failure"
+                    ErrorMessage = "synthetic conversion failure",
+                    RetainOutputOnFailure = RetainOutputOnFailure
                 };
             }
         }
@@ -4702,8 +4710,9 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
-        [Test]
-        public void should_not_reuse_expired_retained_conversion_artifact()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void should_not_reuse_expired_or_modified_retained_conversion_artifact(bool expire)
         {
             var tempPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-retain-expired-{Guid.NewGuid():N}.mp3");
             var destinationDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-destination-{Guid.NewGuid():N}");
@@ -4759,7 +4768,14 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 var oldOutput = firstConversion.LastOutputFile;
                 var oldAttemptFolder = Path.GetDirectoryName(oldOutput);
-                Directory.SetLastWriteTimeUtc(oldAttemptFolder, DateTime.UtcNow.AddDays(-8));
+                if (expire)
+                {
+                    Directory.SetLastWriteTimeUtc(oldAttemptFolder, DateTime.UtcNow.AddDays(-8));
+                }
+                else
+                {
+                    File.AppendAllText(oldOutput, "changed after validation");
+                }
 
                 var secondConversion = new SuccessfulM4bConversionService();
                 var secondService = new ImportApprovedBooks(
@@ -4801,6 +4817,115 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 Assert.That(secondConversion.ConvertCalls, Is.EqualTo(1));
                 Assert.That(File.Exists(oldOutput), Is.False);
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+
+                if (Directory.Exists(destinationDir))
+                {
+                    Directory.Delete(destinationDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void should_not_reuse_a_readable_output_when_the_converter_reported_failure()
+        {
+            var tempPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-failed-retained-{Guid.NewGuid():N}.mp3");
+            var destinationDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-failed-retained-destination-{Guid.NewGuid():N}");
+            var destinationPath = Path.Combine(destinationDir, "Black Sheep.m4b");
+            File.WriteAllText(tempPath, "fake mp3");
+            Directory.CreateDirectory(destinationDir);
+
+            try
+            {
+                var (_, author, book, edition) = CreateAudiobookConversionGraph(221);
+                var mover = new StubMoveBookFiles { DestinationPath = destinationPath };
+                var failedConversion = new FailingM4bConversionService { RetainOutputOnFailure = true };
+                var firstService = new ImportApprovedBooks(
+                    new StubMediaFileService(),
+                    new StubMetadataTagService(),
+                    Proxy<IMediaInfoExtractor>(),
+                    Proxy<IAuthorService>(),
+                    Proxy<IBookService>(),
+                    CreateEditionService(new List<Edition> { edition }),
+                    Proxy<IRecycleBinProvider>(),
+                    Proxy<IExtraService>(),
+                    mover,
+                    Proxy<IHistoryService>(),
+                    Proxy<NzbDrone.Core.Download.History.IDownloadHistoryService>(),
+                    new NoOpEventAggregator(),
+                    Proxy<IManageCommandQueue>(),
+                    Proxy<ISeriesBookLinkService>(),
+                    Proxy<ISeriesService>(),
+                    Proxy<IQualityProfileService>(),
+                    failedConversion,
+                    LogManager.GetLogger("ImportApprovedBooksAdditionalCopyFixture"));
+
+                List<ImportDecision<LocalBook>> Decisions() => new()
+                {
+                    new(new LocalBook
+                    {
+                        Path = tempPath,
+                        Book = book,
+                        Author = author,
+                        Edition = edition,
+                        Quality = new QualityModel { Quality = Quality.MP3, Revision = new Revision() }
+                    })
+                };
+
+                var firstResults = firstService.Import(
+                    Decisions(),
+                    replaceExisting: false,
+                    downloadClientItem: new DownloadClientItem { DownloadId = "failed-retained-conversion" },
+                    importMode: ImportMode.Move,
+                    cancellationToken: CancellationToken.None);
+
+                Assert.That(firstResults.Single().Result, Is.EqualTo(ImportResultType.Skipped));
+                Assert.That(File.Exists(failedConversion.LastOutputFile), Is.True);
+                var failedManifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(
+                    File.ReadAllText(Path.Combine(Path.GetDirectoryName(failedConversion.LastOutputFile), "conversion-artifact.json")));
+                Assert.That(failedManifest.Version, Is.EqualTo(1));
+                Assert.That(failedManifest.Importable, Is.False);
+
+                var retryConversion = new SuccessfulM4bConversionService();
+                var retryBookService = CreateBookService(new List<Book> { book }).Service;
+                var retryService = new ImportApprovedBooks(
+                    new StubMediaFileService(),
+                    new StubMetadataTagService(),
+                    new StubMediaInfoExtractor(),
+                    Proxy<IAuthorService>(),
+                    retryBookService,
+                    CreateEditionService(new List<Edition> { edition }),
+                    Proxy<IRecycleBinProvider>(),
+                    Proxy<IExtraService>(),
+                    mover,
+                    Proxy<IHistoryService>(),
+                    Proxy<NzbDrone.Core.Download.History.IDownloadHistoryService>(),
+                    new NoOpEventAggregator(),
+                    Proxy<IManageCommandQueue>(),
+                    Proxy<ISeriesBookLinkService>(),
+                    Proxy<ISeriesService>(),
+                    Proxy<IQualityProfileService>(),
+                    retryConversion,
+                    LogManager.GetLogger("ImportApprovedBooksAdditionalCopyFixture"));
+
+                var retryResults = retryService.Import(
+                    Decisions(),
+                    replaceExisting: false,
+                    downloadClientItem: new DownloadClientItem { DownloadId = "failed-retained-conversion" },
+                    importMode: ImportMode.Move,
+                    cancellationToken: CancellationToken.None);
+
+                Assert.That(
+                    retryResults.Single().Result,
+                    Is.EqualTo(ImportResultType.Imported),
+                    $"Retry import errors: {string.Join(" | ", retryResults.Single().Errors)}");
+                Assert.That(retryConversion.ConvertCalls, Is.EqualTo(1));
             }
             finally
             {
@@ -4963,8 +5088,12 @@ namespace Chaptarr.Core.Test.MediaFiles
                 File.WriteAllText(request.OutputPath, "converted m4b");
                 var manifest = new ConversionArtifactManifest
                 {
+                    Version = 1,
+                    Importable = true,
                     CreatedUtc = DateTime.UtcNow,
                     OutputPath = request.OutputPath,
+                    OutputSize = new FileInfo(request.OutputPath).Length,
+                    OutputModifiedUtcTicks = new FileInfo(request.OutputPath).LastWriteTimeUtc.Ticks,
                     TargetQualityId = request.TargetQualityId,
                     TargetQualityName = request.TargetQualityName,
                     AudioBitrate = request.AudioBitrate,

@@ -482,17 +482,22 @@ namespace NzbDrone.Core.MediaFiles
                 }
 
                 var threadPlan = GetThreadPlan(request.ConversionInputFiles.Count, active.TokenBudget);
+                var attemptFolder = Path.Combine(
+                    request.WorkFolder,
+                    "attempts",
+                    $"{job.AttemptCount:D4}-{Guid.NewGuid():N}");
+                var attemptOutputPath = Path.Combine(attemptFolder, Path.GetFileName(request.OutputPath));
                 using var heartbeat = new Timer(_ => TouchHeartbeat(job), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
                 try
                 {
-                    Directory.CreateDirectory(request.WorkFolder);
+                    Directory.CreateDirectory(attemptFolder);
                     var result = _conversionService.ConvertToM4b(
                         request.ConversionInputFiles.ToArray(),
-                        request.OutputPath,
+                        attemptOutputPath,
                         new ConversionOptions
                         {
-                            TempDirectory = request.WorkFolder,
+                            TempDirectory = attemptFolder,
                             AudioBitrate = request.AudioBitrate,
                             AudioSampleRate = request.AudioSampleRate,
                             AudioChannels = request.AudioChannels,
@@ -507,6 +512,7 @@ namespace NzbDrone.Core.MediaFiles
 
                     if (result.Success)
                     {
+                        PromoteAttemptOutput(attemptOutputPath, request.OutputPath);
                         WriteArtifactManifest(request);
                         MarkReady(job, "Converted M4B ready to import");
                     }
@@ -517,10 +523,10 @@ namespace NzbDrone.Core.MediaFiles
                     else
                     {
                         var error = result.ErrorMessage.IsNullOrWhiteSpace() ? "M4B conversion failed" : result.ErrorMessage;
-                        if (result.RetainOutputOnFailure && File.Exists(request.OutputPath))
+                        if (result.RetainOutputOnFailure && File.Exists(attemptOutputPath))
                         {
-                            WriteArtifactManifest(request);
-                            error = $"{error} Converted file retained at: {request.OutputPath}";
+                            WriteArtifactManifest(request, attemptOutputPath, importable: false);
+                            error = $"{error} Converted file retained at: {attemptOutputPath}";
                         }
                         else
                         {
@@ -798,6 +804,7 @@ namespace NzbDrone.Core.MediaFiles
 
             try
             {
+                var output = new FileInfo(request.OutputPath);
                 var manifestPath = Path.Combine(request.WorkFolder, ArtifactManifestFileName);
                 if (!File.Exists(manifestPath))
                 {
@@ -806,12 +813,20 @@ namespace NzbDrone.Core.MediaFiles
 
                 var manifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(File.ReadAllText(manifestPath));
                 return manifest != null &&
+                       manifest.Version == 1 &&
+                       manifest.Importable &&
+                       manifest.OutputPath.PathEquals(request.OutputPath) &&
+                       manifest.OutputSize == output.Length &&
+                       manifest.OutputModifiedUtcTicks == output.LastWriteTimeUtc.Ticks &&
                        manifest.TargetQualityId == request.TargetQualityId &&
+                       string.Equals(manifest.TargetQualityName, request.TargetQualityName, StringComparison.Ordinal) &&
                        manifest.AudioBitrate == request.AudioBitrate &&
                        manifest.AudioSampleRate == request.AudioSampleRate &&
                        manifest.AudioChannels == request.AudioChannels &&
                        manifest.NoConversion == request.NoConversion &&
+                       string.Equals(manifest.TagMode, request.TagOptions?.Mode, StringComparison.Ordinal) &&
                        string.Equals(manifest.TagSignature, request.TagSignature, StringComparison.Ordinal) &&
+                       manifest.Sources != null &&
                        manifest.Sources.Count == request.Sources.Count &&
                        manifest.Sources.Zip(request.Sources, SourcesMatch).All(matches => matches);
             }
@@ -830,12 +845,18 @@ namespace NzbDrone.Core.MediaFiles
                    left.ModifiedUtcTicks == right.ModifiedUtcTicks;
         }
 
-        private static void WriteArtifactManifest(ConversionJobRequest request)
+        private static void WriteArtifactManifest(ConversionJobRequest request, string artifactPath = null, bool importable = true)
         {
+            artifactPath ??= request.OutputPath;
+            var output = new FileInfo(artifactPath);
             var manifest = new ConversionArtifactManifest
             {
+                Version = 1,
+                Importable = importable,
                 CreatedUtc = DateTime.UtcNow,
-                OutputPath = request.OutputPath,
+                OutputPath = artifactPath,
+                OutputSize = output.Length,
+                OutputModifiedUtcTicks = output.LastWriteTimeUtc.Ticks,
                 TargetQualityId = request.TargetQualityId,
                 TargetQualityName = request.TargetQualityName,
                 AudioBitrate = request.AudioBitrate,
@@ -852,6 +873,17 @@ namespace NzbDrone.Core.MediaFiles
             var temporaryPath = manifestPath + ".tmp";
             File.WriteAllText(temporaryPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
             File.Move(temporaryPath, manifestPath, true);
+        }
+
+        private static void PromoteAttemptOutput(string attemptOutputPath, string outputPath)
+        {
+            if (!File.Exists(attemptOutputPath))
+            {
+                throw new FileNotFoundException("The M4B converter reported success without creating its attempt output.", attemptOutputPath);
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+            File.Move(attemptOutputPath, outputPath, overwrite: true);
         }
 
         private void QueueImportSweep()

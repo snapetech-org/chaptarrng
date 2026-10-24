@@ -78,6 +78,13 @@ accepted by this user-workflow map.
 
 ## Known review gaps
 
+Completed-download audiobook conversions persist their request and recover at
+startup. Each retry now uses an isolated output path; only a successfully
+validated artifact with a matching versioned manifest is eligible for import.
+Tool-reported failures and output changed after validation are excluded from
+reuse. A real-tool process termination and restart rehearsal remains part of
+acceptance.
+
 The source map includes substantial user-facing coverage, but full live parity
 acceptance is still open. A disposable source build was exercised on
 2026-10-20 with the checked-in BookshelfNG schema-158 fixture. SeerrNG's
