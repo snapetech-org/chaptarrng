@@ -6,21 +6,28 @@ release-frozen. It does not install a fresh ChaptarrNG instance.
 
 The installer upgrades an existing BookshelfNG Windows service from `Readarr`
 to `Chaptarr`, keeping its selected data directory. It supports SQLite and
-PostgreSQL sources in an existing BookshelfNG installation using its standard
-`NT AUTHORITY\LocalService` service account. Custom service accounts fail
-closed so the installer cannot silently change access to media folders or
-network shares. PostgreSQL handoff requires `pg_dump` and `pg_restore` on `PATH`
-and an explicitly configured `PostgresUser`. Service-only PostgreSQL
-environment overrides also fail closed because the new service cannot inherit
-them safely. Multiple appdata databases, unsupported schemas, and installations
-without the legacy Windows service fail closed and use the documented manual
-migration procedure instead.
+PostgreSQL sources and preserves the existing Windows service account and
+startup policy. Built-in accounts and managed service accounts need no
+password prompt. For a local or domain user account, the installer asks for its
+password before stopping BookshelfNG, keeps it in secure memory only long
+enough to configure Chaptarr, and never saves it in the registry, process
+arguments, environment, or logs. The password is requested again only if a
+later restore must recreate the removed Readarr service. Service-specific
+virtual accounts such as `NT SERVICE\Readarr` cannot transfer to the differently
+named Chaptarr service and fail closed. PostgreSQL handoff requires `pg_dump`
+and `pg_restore` on `PATH` and an explicitly configured `PostgresUser`.
+Service-only PostgreSQL environment overrides also fail closed because the new
+service cannot inherit them safely. Multiple appdata databases, unsupported
+schemas, and installations without the legacy Windows service fail closed and
+use the documented manual migration procedure instead.
 
 ## Migration sequence
 
 The installer requires administrator privileges and performs this sequence:
 
-1. Detect the BookshelfNG `Readarr` service and its configured `-data` directory.
+1. Detect the BookshelfNG `Readarr` service, its account and startup policy, and
+   its configured `-data` directory. Request a custom account password before
+   stopping the service when that account requires one.
 2. Ask whether bare numeric provider IDs represent native Hardcover or Goodreads.
 3. For PostgreSQL, check for the required client tools and an explicit database
    user before stopping the service. Stop BookshelfNG, then require that no
@@ -49,8 +56,9 @@ The installer requires administrator privileges and performs this sequence:
    after preview review.
 6. Show the preview output in the installer log and require a separate apply
    confirmation.
-7. Apply the migration, replace `bin`, remove the `Readarr` service, and register
-   `Chaptarr` with the same explicit data directory.
+7. Apply the migration, replace `bin`, remove the `Readarr` service, register
+   `Chaptarr` with the same explicit data directory, and set its service account
+   to the saved BookshelfNG identity.
 8. Verify the service reaches `RUNNING`, confirm its service command still
    contains the data directory, and check the configured local `/ping` endpoint.
 
@@ -102,7 +110,7 @@ restoration of the BookshelfNG service and database. It retries without the
 conflict, verifies
 the successful Chaptarr handoff and health check, then invokes the installer’s
 explicit restore action and embedded rollback script. The test checks restored
-BookshelfNG lineage, populated records, data directory, and LocalService
+BookshelfNG lineage, populated records, data directory, and NetworkService
 account. It writes a cleanup manifest, then CI exits the smoke process before
 a separate PowerShell step stops and deletes the test services. This releases
 all smoke-process handles before Windows finalizes service deletion. The

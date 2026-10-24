@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.ServiceProcess;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -28,6 +29,8 @@ public static class InstallPipeline
         string? backupPath = null;
         string? stagingDirectory = null;
         string? previousBinDirectory = null;
+        string? bookshelfServiceAccount = null;
+        SecureString? serviceAccountPassword = null;
         var serviceStopped = false;
         var bookshelfWasRunning = false;
         var postgresDatabaseMutationMayHaveStarted = false;
@@ -59,6 +62,7 @@ public static class InstallPipeline
             {
                 return Failure(unsupportedSource, null);
             }
+            bookshelfServiceAccount = ServiceLifecycle.GetBookshelfServiceAccount();
             var postgresSource = BackupService.IsPostgresSource(dataDirectory);
 
             var providerMode = ui.ChooseProviderIdentityMode();
@@ -86,6 +90,17 @@ public static class InstallPipeline
                 if (checkExit != 0)
                 {
                     return Failure($"PostgreSQL backup preflight exited with code {checkExit}. Review the installer log, install pg_dump and pg_restore on PATH, and ensure PostgresUser is explicitly configured.", null);
+                }
+            }
+
+            if (ServiceAccountPolicy.RequiresPassword(bookshelfServiceAccount))
+            {
+                serviceAccountPassword = ui.RequestServiceAccountPassword(bookshelfServiceAccount);
+                if (serviceAccountPassword is null || serviceAccountPassword.Length == 0)
+                {
+                    serviceAccountPassword?.Dispose();
+                    serviceAccountPassword = null;
+                    return Failure("Migration cancelled before the BookshelfNG service was stopped because its Windows service-account password was not provided.", null);
                 }
             }
 
@@ -164,6 +179,7 @@ public static class InstallPipeline
             RegistryService.WriteUpgradeStart(
                 backup.Path,
                 dataDirectory,
+                bookshelfServiceAccount,
                 providerMode.Value.ToString(),
                 BackupService.GetPreviousVersion(dataDirectory),
                 bookshelfServiceStartType.Value,
@@ -300,8 +316,28 @@ public static class InstallPipeline
                 throw new InvalidOperationException($"Chaptarr.Console.exe service registration exited with code {installExit}.");
             }
 
+            var installedServiceAccount = ServiceLifecycle.GetServiceAccount(ServiceLifecycle.ChaptarrServiceName);
+            if (!ServiceAccountPolicy.AreEquivalent(installedServiceAccount, bookshelfServiceAccount))
+            {
+                if (ServiceLifecycle.TryGetStatus(ServiceLifecycle.ChaptarrServiceName) == ServiceControllerStatus.Running &&
+                    !await ServiceLifecycle.StopAsync(
+                            ServiceLifecycle.ChaptarrServiceName,
+                            log,
+                            StopServiceTimeout,
+                            CancellationToken.None).ConfigureAwait(false))
+                {
+                    throw new InvalidOperationException("The default ChaptarrNG service could not be stopped to restore the BookshelfNG service identity.");
+                }
+
+                ServiceLifecycle.SetServiceAccount(
+                    ServiceLifecycle.ChaptarrServiceName,
+                    bookshelfServiceAccount,
+                    serviceAccountPassword);
+                ui.Log($"[pipeline] ChaptarrNG service identity preserved as '{bookshelfServiceAccount}'.");
+            }
+
             ui.SetStep("Verifying ChaptarrNG...", "Waiting for the service and local health endpoint.");
-            if (!await ServiceLifecycle.PollForRunningAsync(
+            if (!await ServiceLifecycle.StartAsync(
                     ServiceLifecycle.ChaptarrServiceName,
                     log,
                     VerifyRunningTimeout,
@@ -354,13 +390,13 @@ public static class InstallPipeline
         }
         catch (OperationCanceledException)
         {
-            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, postgresDatabaseMutationMayHaveStarted, "Migration cancelled.")
+            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, postgresDatabaseMutationMayHaveStarted, bookshelfServiceAccount, serviceAccountPassword, "Migration cancelled.")
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             ui.LogError($"[pipeline] {ex.GetType().Name}: {ex.Message}");
-            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, postgresDatabaseMutationMayHaveStarted, ex.Message)
+            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, postgresDatabaseMutationMayHaveStarted, bookshelfServiceAccount, serviceAccountPassword, ex.Message)
                 .ConfigureAwait(false);
         }
         finally
@@ -369,6 +405,7 @@ public static class InstallPipeline
             {
                 PayloadExtractor.TryDeleteDirectory(stagingDirectory);
             }
+            serviceAccountPassword?.Dispose();
         }
     }
 
@@ -389,26 +426,52 @@ public static class InstallPipeline
                 return Failure("Restore was cancelled before it started.", record.BackupPath);
             }
 
-            ui.SetStep("Restoring BookshelfNG from the migration backup...", record.BackupPath);
-            ui.SetProgressIndeterminate();
-            var exit = await RollbackRunner.RunAsync(
-                record.BackupPath,
-                record.DataDirectory,
-                log,
-                CancellationToken.None,
-                record.BookshelfServiceStartType,
-                record.BookshelfServiceWasRunning,
-                Path.Combine(record.DataDirectory, "bin", "Chaptarr.Console.exe"),
-                restorePostgresDatabase: File.Exists(Path.Combine(record.BackupPath, "postgres-main.dump"))).ConfigureAwait(false);
-            if (exit != 0)
+            var bookshelfServiceAccount = record.BookshelfServiceAccount ?? ServiceAccountPolicy.LocalService;
+            SecureString? serviceAccountPassword = null;
+            var readarrServiceExists = ServiceLifecycle.IsInstalled(ServiceLifecycle.BookshelfServiceName);
+            var readarrAccountMatches = readarrServiceExists && ServiceAccountPolicy.AreEquivalent(
+                ServiceLifecycle.GetServiceAccount(ServiceLifecycle.BookshelfServiceName),
+                bookshelfServiceAccount);
+            if (ServiceAccountPolicy.RequiresPassword(bookshelfServiceAccount) && !readarrAccountMatches)
             {
-                return Failure($"Rollback failed with exit code {exit}. The backup is still available at {record.BackupPath}.", record.BackupPath);
+                serviceAccountPassword = ui.RequestServiceAccountPassword(bookshelfServiceAccount);
+                if (serviceAccountPassword is null || serviceAccountPassword.Length == 0)
+                {
+                    serviceAccountPassword?.Dispose();
+                    serviceAccountPassword = null;
+                    return Failure("Restore was cancelled because the original Windows service-account password was not provided.", record.BackupPath);
+                }
             }
 
-            RecordRollbackTimestamp(ui);
-            ui.SetProgressPercent(100);
-            ui.SetStep("BookshelfNG restored.", "The original Readarr service and database backup are in use again.");
-            return new InstallOutcome(true, record.BackupPath, null);
+            try
+            {
+                ui.SetStep("Restoring BookshelfNG from the migration backup...", record.BackupPath);
+                ui.SetProgressIndeterminate();
+                var exit = await RollbackRunner.RunAsync(
+                    record.BackupPath,
+                    record.DataDirectory,
+                    log,
+                    CancellationToken.None,
+                    record.BookshelfServiceStartType,
+                    record.BookshelfServiceWasRunning,
+                    Path.Combine(record.DataDirectory, "bin", "Chaptarr.Console.exe"),
+                    restorePostgresDatabase: File.Exists(Path.Combine(record.BackupPath, "postgres-main.dump")),
+                    bookshelfServiceAccount: bookshelfServiceAccount,
+                    serviceAccountPassword: serviceAccountPassword).ConfigureAwait(false);
+                if (exit != 0)
+                {
+                    return Failure($"Rollback failed with exit code {exit}. The backup is still available at {record.BackupPath}.", record.BackupPath);
+                }
+
+                RecordRollbackTimestamp(ui);
+                ui.SetProgressPercent(100);
+                ui.SetStep("BookshelfNG restored.", "The original Readarr service and database backup are in use again.");
+                return new InstallOutcome(true, record.BackupPath, null);
+            }
+            finally
+            {
+                serviceAccountPassword?.Dispose();
+            }
         }
         catch (Exception ex)
         {
@@ -428,6 +491,8 @@ public static class InstallPipeline
         bool bookshelfWasRunning,
         int? bookshelfServiceStartType,
         bool restorePostgresDatabase,
+        string? bookshelfServiceAccount,
+        SecureString? serviceAccountPassword,
         string reason)
     {
         ui.LogError($"[pipeline] {reason}");
@@ -458,6 +523,16 @@ public static class InstallPipeline
 
         try
         {
+            var rollbackPassword = serviceAccountPassword;
+            if (!string.IsNullOrWhiteSpace(bookshelfServiceAccount) &&
+                ServiceLifecycle.IsInstalled(ServiceLifecycle.BookshelfServiceName) &&
+                ServiceAccountPolicy.AreEquivalent(
+                    ServiceLifecycle.GetServiceAccount(ServiceLifecycle.BookshelfServiceName),
+                    bookshelfServiceAccount))
+            {
+                rollbackPassword = null;
+            }
+
             var exit = await RollbackRunner.RunAsync(
                 backupPath,
                 dataDirectory,
@@ -466,7 +541,9 @@ public static class InstallPipeline
                 bookshelfServiceStartType,
                 bookshelfWasRunning,
                 ResolveMigrationConsole(dataDirectory, stagingDirectory),
-                restorePostgresDatabase).ConfigureAwait(false);
+                restorePostgresDatabase,
+                bookshelfServiceAccount,
+                rollbackPassword).ConfigureAwait(false);
             if (exit == 0)
             {
                 RecordRollbackTimestamp(ui);

@@ -7,6 +7,8 @@ param(
 
     [string] $ChaptarrConsolePath,
 
+    [string] $BookshelfServiceAccount = 'NT AUTHORITY\LocalService',
+
     [switch] $RestorePostgresDatabase,
 
     [int] $BookshelfServiceStartType = 0,
@@ -28,6 +30,147 @@ $savedStartType = if ($BookshelfServiceStartType -in @(2, 3, 4)) {
     [int] $migrationRecord.BookshelfServiceStartType
 } else {
     2
+}
+
+if ([string]::IsNullOrWhiteSpace($BookshelfServiceAccount)) {
+    $BookshelfServiceAccount = 'NT AUTHORITY\LocalService'
+}
+if ($BookshelfServiceAccount.StartsWith('NT SERVICE\', [StringComparison]::OrdinalIgnoreCase)) {
+    throw "The Readarr service uses service-specific virtual account '$BookshelfServiceAccount', which cannot be reused by the Chaptarr service."
+}
+
+function Normalize-ServiceAccount([string] $Account) {
+    $value = $Account.Trim()
+    if ($value -in @('LocalSystem', 'NT AUTHORITY\LocalSystem', 'NT AUTHORITY\SYSTEM')) { return 'LocalSystem' }
+    if ($value -in @('LocalService', 'NT AUTHORITY\LocalService')) { return 'NT AUTHORITY\LocalService' }
+    if ($value -in @('NetworkService', 'NT AUTHORITY\NetworkService')) { return 'NT AUTHORITY\NetworkService' }
+    return $value
+}
+
+function Test-ServiceAccountNeedsPassword([string] $Account) {
+    $normalized = Normalize-ServiceAccount $Account
+    if ($normalized -in @('LocalSystem', 'NT AUTHORITY\LocalService', 'NT AUTHORITY\NetworkService')) { return $false }
+    return -not $normalized.EndsWith('$')
+}
+
+function Read-ServiceAccountPassword {
+    $inputStream = [Console]::OpenStandardInput()
+    $lengthBytes = New-Object byte[] 4
+    $offset = 0
+    while ($offset -lt 4) {
+        $read = $inputStream.Read($lengthBytes, $offset, 4 - $offset)
+        if ($read -le 0) { throw 'The secure service-account password input was not provided.' }
+        $offset += $read
+    }
+
+    $characterCount = [BitConverter]::ToInt32($lengthBytes, 0)
+    if ($characterCount -lt 1 -or $characterCount -gt 4096) {
+        throw 'The secure service-account password input has an invalid length.'
+    }
+
+    $secretBytes = New-Object byte[] ($characterCount * 2)
+    $offset = 0
+    while ($offset -lt $secretBytes.Length) {
+        $read = $inputStream.Read($secretBytes, $offset, $secretBytes.Length - $offset)
+        if ($read -le 0) { throw 'The secure service-account password input was incomplete.' }
+        $offset += $read
+    }
+
+    $securePassword = New-Object System.Security.SecureString
+    try {
+        for ($index = 0; $index -lt $characterCount; $index++) {
+            $securePassword.AppendChar([BitConverter]::ToChar($secretBytes, $index * 2))
+        }
+        $securePassword.MakeReadOnly()
+        return $securePassword
+    } finally {
+        [Array]::Clear($secretBytes, 0, $secretBytes.Length)
+        [Array]::Clear($lengthBytes, 0, $lengthBytes.Length)
+    }
+}
+
+$readarrServiceKeyPath = 'HKLM:\SYSTEM\CurrentControlSet\Services\Readarr'
+$existingReadarrService = Get-ItemProperty -LiteralPath $readarrServiceKeyPath -ErrorAction SilentlyContinue
+$existingReadarrAccount = if ($existingReadarrService) { [string] $existingReadarrService.ObjectName } else { $null }
+$serviceAccountPassword = $null
+trap {
+    if ($null -ne $serviceAccountPassword) {
+        $serviceAccountPassword.Dispose()
+        $serviceAccountPassword = $null
+    }
+    throw
+}
+if (Test-ServiceAccountNeedsPassword $BookshelfServiceAccount) {
+    if (-not $existingReadarrService -or
+        (Normalize-ServiceAccount $existingReadarrAccount) -ne (Normalize-ServiceAccount $BookshelfServiceAccount)) {
+        $serviceAccountPassword = Read-ServiceAccountPassword
+    }
+}
+
+if (-not ('ChaptarrServiceAccountNative' -as [type])) {
+    Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Security;
+
+public static class ChaptarrServiceAccountNative
+{
+    private const uint ScManagerConnect = 0x0001;
+    private const uint ServiceChangeConfig = 0x0002;
+    private const uint ServiceNoChange = 0xFFFFFFFF;
+
+    [DllImport("advapi32.dll", EntryPoint = "OpenSCManagerW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr OpenServiceControlManager(string machineName, string databaseName, uint access);
+
+    [DllImport("advapi32.dll", EntryPoint = "OpenServiceW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr OpenService(IntPtr manager, string serviceName, uint access);
+
+    [DllImport("advapi32.dll", EntryPoint = "ChangeServiceConfigW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool ChangeServiceConfig(IntPtr service, uint serviceType, uint startType, uint errorControl,
+        string binaryPath, string loadOrderGroup, IntPtr tagId, string dependencies, string serviceStartName,
+        IntPtr password, string displayName);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool CloseServiceHandle(IntPtr handle);
+
+    public static void SetAccount(string serviceName, string account, SecureString password)
+    {
+        IntPtr manager = OpenServiceControlManager(null, null, ScManagerConnect);
+        if (manager == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+        IntPtr service = IntPtr.Zero;
+        IntPtr passwordPointer = IntPtr.Zero;
+        SecureString emptyPassword = null;
+        try
+        {
+            service = OpenService(manager, serviceName, ServiceChangeConfig);
+            if (service == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+            if (password != null) passwordPointer = Marshal.SecureStringToGlobalAllocUnicode(password);
+            else if (account.Equals("LocalSystem", StringComparison.OrdinalIgnoreCase) ||
+                     account.Equals("NT AUTHORITY\\LocalSystem", StringComparison.OrdinalIgnoreCase) ||
+                     account.Equals("NT AUTHORITY\\SYSTEM", StringComparison.OrdinalIgnoreCase) ||
+                     account.Equals("LocalService", StringComparison.OrdinalIgnoreCase) ||
+                     account.Equals("NT AUTHORITY\\LocalService", StringComparison.OrdinalIgnoreCase) ||
+                     account.Equals("NetworkService", StringComparison.OrdinalIgnoreCase) ||
+                     account.Equals("NT AUTHORITY\\NetworkService", StringComparison.OrdinalIgnoreCase))
+            {
+                emptyPassword = new SecureString();
+                passwordPointer = Marshal.SecureStringToGlobalAllocUnicode(emptyPassword);
+            }
+            if (!ChangeServiceConfig(service, ServiceNoChange, ServiceNoChange, ServiceNoChange,
+                    null, null, IntPtr.Zero, null, account, passwordPointer, null))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+        }
+        finally
+        {
+            if (passwordPointer != IntPtr.Zero) Marshal.ZeroFreeGlobalAllocUnicode(passwordPointer);
+            if (emptyPassword != null) emptyPassword.Dispose();
+            if (service != IntPtr.Zero) CloseServiceHandle(service);
+            CloseServiceHandle(manager);
+        }
+    }
+}
+'@
 }
 $bookshelfWasRunning = if ($BookshelfServiceWasRunning -in @(0, 1)) {
     $BookshelfServiceWasRunning -ne 0
@@ -258,8 +401,18 @@ if ([Environment]::ExpandEnvironmentVariables([string] $serviceKey.ImagePath).In
 }
 
 $serviceAccount = [string] $serviceKey.ObjectName
-if (-not [string]::Equals($serviceAccount, 'NT AUTHORITY\LocalService', [StringComparison]::OrdinalIgnoreCase)) {
-    throw "The restored Readarr service uses unsupported account '$serviceAccount'."
+if ((Normalize-ServiceAccount $serviceAccount) -ne (Normalize-ServiceAccount $BookshelfServiceAccount)) {
+    Write-Host "Restoring the original Readarr service identity '$BookshelfServiceAccount'..."
+    [ChaptarrServiceAccountNative]::SetAccount('Readarr', $BookshelfServiceAccount, $serviceAccountPassword)
+    $serviceKey = Get-ItemProperty -Path $readarrServiceKey -ErrorAction Stop
+    $serviceAccount = [string] $serviceKey.ObjectName
+}
+if ((Normalize-ServiceAccount $serviceAccount) -ne (Normalize-ServiceAccount $BookshelfServiceAccount)) {
+    throw "The restored Readarr service uses '$serviceAccount' instead of the saved BookshelfNG identity '$BookshelfServiceAccount'."
+}
+if ($null -ne $serviceAccountPassword) {
+    $serviceAccountPassword.Dispose()
+    $serviceAccountPassword = $null
 }
 
 $restoreStart = Start-Process -FilePath 'sc.exe' -ArgumentList "config Readarr start= $startTypeName" -Wait -PassThru -NoNewWindow

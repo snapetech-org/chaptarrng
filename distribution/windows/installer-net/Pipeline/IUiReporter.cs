@@ -1,3 +1,5 @@
+using System.Security;
+
 namespace ChaptarrNG.Installer.Pipeline;
 
 public enum ProviderIdentityMode
@@ -12,6 +14,7 @@ public interface IUiReporter
     void SetProgressPercent(double percent);
     void SetProgressIndeterminate();
     ProviderIdentityMode? ChooseProviderIdentityMode();
+    SecureString? RequestServiceAccountPassword(string serviceAccount);
     bool ConfirmMigrationApply(ProviderIdentityMode mode, string backupPath);
     void Log(LogLine line);
     void Log(string line);

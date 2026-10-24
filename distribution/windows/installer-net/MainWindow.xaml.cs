@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -140,6 +141,73 @@ public partial class MainWindow : IUiReporter
                 MessageBoxResult.No => ProviderIdentityMode.Goodreads,
                 _ => (ProviderIdentityMode?)null
             };
+        });
+    }
+
+    public SecureString? RequestServiceAccountPassword(string serviceAccount)
+    {
+        return Dispatcher.Invoke(() =>
+        {
+            var passwordBox = new PasswordBox { MinWidth = 360, MaxLength = 4096 };
+            SecureString? capturedPassword = null;
+            var dialog = new Window
+            {
+                Title = "BookshelfNG service account",
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                ResizeMode = ResizeMode.NoResize,
+                ShowInTaskbar = false
+            };
+
+            var content = new StackPanel { Margin = new Thickness(22), MinWidth = 400 };
+            content.Children.Add(new TextBlock
+            {
+                Text = $"Enter the password for the BookshelfNG Windows service account:\n{serviceAccount}",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 12)
+            });
+            content.Children.Add(passwordBox);
+            content.Children.Add(new TextBlock
+            {
+                Text = "The password is held in memory for this migration and is not saved or written to logs.",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 8, 0, 16)
+            });
+
+            var buttons = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+            var cancelButton = new Button { Content = "Cancel", IsCancel = true, MinWidth = 88, Margin = new Thickness(0, 0, 8, 0) };
+            var continueButton = new Button { Content = "Continue", IsDefault = true, MinWidth = 88 };
+            continueButton.Click += (_, _) =>
+            {
+                if (passwordBox.SecurePassword.Length == 0)
+                {
+                    MessageBox.Show(dialog, "Enter the service-account password to continue.", "Password required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    passwordBox.Focus();
+                    return;
+                }
+
+                capturedPassword = passwordBox.SecurePassword.Copy();
+                dialog.DialogResult = true;
+            };
+            buttons.Children.Add(cancelButton);
+            buttons.Children.Add(continueButton);
+            content.Children.Add(buttons);
+            dialog.Content = content;
+            dialog.Loaded += (_, _) => passwordBox.Focus();
+            dialog.Closed += (_, _) => passwordBox.Clear();
+
+            if (dialog.ShowDialog() != true)
+            {
+                capturedPassword?.Dispose();
+                return null;
+            }
+
+            return capturedPassword;
         });
     }
 

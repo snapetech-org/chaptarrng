@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,7 +19,9 @@ public static class RollbackRunner
         int? bookshelfServiceStartType = null,
         bool? bookshelfServiceWasRunning = null,
         string? chaptarrConsolePath = null,
-        bool restorePostgresDatabase = false)
+        bool restorePostgresDatabase = false,
+        string? bookshelfServiceAccount = null,
+        SecureString? serviceAccountPassword = null)
     {
         var scriptPath = ExtractToTemp();
         try
@@ -48,12 +51,18 @@ public static class RollbackRunner
             {
                 arguments.Add("-RestorePostgresDatabase");
             }
+            if (!string.IsNullOrWhiteSpace(bookshelfServiceAccount))
+            {
+                arguments.Add("-BookshelfServiceAccount");
+                arguments.Add(bookshelfServiceAccount);
+            }
 
             var exit = await PowerShellRunner.RunScriptAsync(
                 scriptPath,
                 arguments,
                 log,
-                ct).ConfigureAwait(false);
+                ct,
+                serviceAccountPassword).ConfigureAwait(false);
             log.Report(new LogLine(LogStream.Stdout, $"[rollback] rollback.ps1 exited {exit}."));
             return exit;
         }

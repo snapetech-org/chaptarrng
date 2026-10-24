@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,7 +12,8 @@ public static class PowerShellRunner
         string scriptPath,
         IReadOnlyList<string> scriptArguments,
         IProgress<LogLine> log,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        SecureString? standardInputSecret = null)
     {
         var arguments = new List<string>
         {
@@ -29,6 +31,7 @@ public static class PowerShellRunner
             arguments: arguments,
             workingDirectory: null,
             log: log,
-            ct: ct);
+            ct: ct,
+            standardInputSecret: standardInputSecret);
     }
 }

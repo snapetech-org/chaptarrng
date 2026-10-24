@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.ServiceProcess;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -18,6 +19,9 @@ public static class ServiceLifecycle
     public const string ChaptarrServiceName = "Chaptarr";
     private const string DefaultBookshelfDataDirectory = @"C:\ProgramData\Readarr";
     private static readonly TimeSpan ServiceProcessExitTimeout = TimeSpan.FromSeconds(15);
+    private const uint ScManagerConnect = 0x0001;
+    private const uint ServiceChangeConfig = 0x0002;
+    private const uint ServiceNoChange = 0xFFFFFFFF;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct ServiceStatusProcess
@@ -41,6 +45,99 @@ public static class ServiceLifecycle
         uint bufferSize,
         out uint bytesNeeded);
 
+    [DllImport("advapi32.dll", EntryPoint = "OpenSCManagerW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr OpenServiceControlManager(string? machineName, string? databaseName, uint desiredAccess);
+
+    [DllImport("advapi32.dll", EntryPoint = "OpenServiceW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr OpenService(IntPtr manager, string serviceName, uint desiredAccess);
+
+    [DllImport("advapi32.dll", EntryPoint = "ChangeServiceConfigW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool ChangeServiceConfig(
+        IntPtr service,
+        uint serviceType,
+        uint startType,
+        uint errorControl,
+        string? binaryPathName,
+        string? loadOrderGroup,
+        IntPtr tagId,
+        string? dependencies,
+        string serviceStartName,
+        IntPtr password,
+        string? displayName);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool CloseServiceHandle(IntPtr handle);
+
+    public static void SetServiceAccount(string serviceName, string serviceAccount, SecureString? password)
+    {
+        if (ServiceAccountPolicy.RequiresPassword(serviceAccount) && (password is null || password.Length == 0))
+        {
+            throw new ArgumentException("A password is required for this Windows service account.", nameof(password));
+        }
+
+        if (password is not null && !ServiceAccountPolicy.RequiresPassword(serviceAccount) && password.Length > 0)
+        {
+            throw new ArgumentException("A password must not be supplied for this Windows service account.", nameof(password));
+        }
+
+        var manager = OpenServiceControlManager(null, null, ScManagerConnect);
+        if (manager == IntPtr.Zero)
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not connect to the Windows Service Control Manager.");
+        }
+
+        IntPtr service = IntPtr.Zero;
+        IntPtr passwordPointer = IntPtr.Zero;
+        SecureString? emptyPassword = null;
+        try
+        {
+            service = OpenService(manager, serviceName, ServiceChangeConfig);
+            if (service == IntPtr.Zero)
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), $"Could not open the {serviceName} service for account configuration.");
+            }
+
+            if (password is not null)
+            {
+                passwordPointer = Marshal.SecureStringToGlobalAllocUnicode(password);
+            }
+            else if (ServiceAccountPolicy.UsesEmptyPassword(serviceAccount))
+            {
+                emptyPassword = new SecureString();
+                passwordPointer = Marshal.SecureStringToGlobalAllocUnicode(emptyPassword);
+            }
+
+            if (!ChangeServiceConfig(
+                    service,
+                    ServiceNoChange,
+                    ServiceNoChange,
+                    ServiceNoChange,
+                    null,
+                    null,
+                    IntPtr.Zero,
+                    null,
+                    serviceAccount,
+                    passwordPointer,
+                    null))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), $"Could not set the {serviceName} service account to '{serviceAccount}'.");
+            }
+        }
+        finally
+        {
+            if (passwordPointer != IntPtr.Zero)
+            {
+                Marshal.ZeroFreeGlobalAllocUnicode(passwordPointer);
+            }
+            emptyPassword?.Dispose();
+            if (service != IntPtr.Zero)
+            {
+                CloseServiceHandle(service);
+            }
+            CloseServiceHandle(manager);
+        }
+    }
+
     public static string? GetImagePath(string serviceName)
     {
         using var key = Registry.LocalMachine.OpenSubKey(
@@ -59,8 +156,13 @@ public static class ServiceLifecycle
 
     public static string GetBookshelfServiceAccount()
     {
+        return GetServiceAccount(BookshelfServiceName);
+    }
+
+    public static string GetServiceAccount(string serviceName)
+    {
         using var key = Registry.LocalMachine.OpenSubKey(
-            $@"SYSTEM\CurrentControlSet\Services\{BookshelfServiceName}",
+            $@"SYSTEM\CurrentControlSet\Services\{serviceName}",
             writable: false);
         return key?.GetValue("ObjectName") as string ?? "LocalSystem";
     }
