@@ -33,10 +33,20 @@ not allow moving completed files also keeps the originals. Merging re-encodes
 audio and uses additional CPU; the resulting quality depends on the AAC
 bitrate.
 
+Detached completed-download conversions save their request and recovery state.
+Each retry writes to a unique staging path, and only a successful, validated
+output is promoted to the import path. The versioned manifest records the
+source and conversion settings plus the output size and modification time.
+Readable output from a tool-reported failure stays available for inspection
+but cannot be imported or reused. Startup can resume queued work or hand a
+validated output to the import sweep; real-tool process-kill and restart
+acceptance is still pending.
+
 ChaptarrNG has a recorded six-case synthetic real-tool smoke covering tagged
 track order, chapters and metadata, registration, Move and Copy handling, and
 fallback after tool failures. Those generated files do not establish behavior
-on representative audiobooks or across restart and resume. See the
+on representative audiobooks or real-tool process interruption and restart.
+See the
 [retirement status](BOOKSHELFNG_RETIREMENT.md#audiobook-merge-compatibility)
 for the current evidence and remaining acceptance work. Leave the setting
 unset until a supported release and that acceptance work are complete.

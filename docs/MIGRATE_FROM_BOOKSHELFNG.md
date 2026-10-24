@@ -612,16 +612,55 @@ the retained `readarr.db.bookshelfng-backup-*` database directly inside
 restore also requires `--confirm-stopped`. Keep the independent full-directory
 archive until the restored BookshelfNG instance has been checked.
 
+### Chocolatey identity bridge
+
+The candidate `bookshelfng` Chocolatey package keeps the existing BookshelfNG
+service name and data directory. New installs use
+`%ProgramData%\BookshelfNG\data`; upgrades read and preserve an existing
+`-data` service argument, including a custom path, along with other service
+arguments and startup mode. Before replacing the application files, it stops
+the service and runs the non-mutating ChaptarrNG migration preview. A
+successful upgrade must also pass `/ping` on the saved local port. SQLite
+source backups and independent PostgreSQL `pg_dump` backups remain beside the
+source data. If the new service fails its health check, the package rolls the
+application back and restores the database from its retained backup. If the
+database, application files, or service configuration cannot be restored
+safely, it leaves the service stopped and retains the backup for manual
+recovery. PostgreSQL requires `pg_dump`, `pg_restore`, an explicit
+`PostgresUser`, and no other database clients during the handoff.
+
+BookshelfNG can store bare numeric IDs without recording whether they came
+from Goodreads or native Hardcover. Existing `HARDCOVER` and
+`HARDCOVER_NATIVE` service or machine settings are preserved. If the source
+does not record a mode, specify it during the Chocolatey upgrade so preview,
+conversion, and later service starts agree:
+
+```powershell
+choco upgrade bookshelfng --yes --params "'/ProviderMode=Goodreads'"
+```
+
+Use `/ProviderMode=Hardcover` for native Hardcover IDs. An explicit choice is
+persisted in the BookshelfNG service environment. The source and package
+templates are present, but feed publication and representative installed-data
+acceptance remain open.
+
 ### Windows standalone service migration
 
 The existing BookshelfNG WPF installer still installs and upgrades BookshelfNG.
-ChaptarrNG has a candidate-only WPF migration installer at
-`distribution/windows/installer-net`; it is built for internal Windows CI and
-has not been published. The installer supports one SQLite database and the
-standard `NT AUTHORITY\LocalService` service account. It requires a provider
-identity choice, makes and verifies a full rollback backup, previews before
-apply, and checks the migrated database and ChaptarrNG's local health. A
-read-only SQLite `PRAGMA data_version` guard remains active through preview
+ChaptarrNG has a WPF migration installer at
+`distribution/windows/installer-net`. The release workflow builds a
+versioned installer from the exact Windows release payload and attaches it
+only when the migration-bridge and both release-readiness gates are enabled;
+no such asset is currently published. The installer supports one SQLite or
+PostgreSQL database and preserves the existing BookshelfNG service identity
+for built-in accounts, local or domain users, and group Managed Service
+Accounts. It securely prompts for a password when Windows requires one;
+Readarr-specific virtual service accounts are rejected because Windows binds
+them to the Readarr service name. It requires a provider identity choice, makes
+and verifies a full rollback backup, previews before apply, and checks the
+migrated database and
+ChaptarrNG's local health. A read-only SQLite `PRAGMA data_version` guard
+remains active through preview
 review and blocks committed changes from another connection immediately before
 apply. WAL representation changes are diagnostic and do not count as committed
 database changes.
@@ -638,18 +677,24 @@ Automatic rollback stops ChaptarrNG, restores the verified files and database,
 and reuses the existing Readarr registration when it is still present. It
 restores Readarr's startup mode and starts it only if it was running before the
 migration. If post-exit cleanup already removed the service, rollback recreates
-it with the saved startup mode and supported LocalService identity. The
+it with the saved startup mode and service identity, prompting for the account
+password when needed. The password is not retained in the migration record. The
 installer's **Restore BookshelfNG** action remains available while the retained
 backup exists.
 
 This is still source-only migration tooling. The published `v0.9.977` Windows
 binary does not preserve `-data` when registering its service, and the manual
 service-registration commands from earlier drafts are not a supported
-handoff. Do not change the service or apply the migration during the release
-freeze. PostgreSQL, custom service accounts, multiple databases, unsupported
+handoff. The SQLite Windows installed-service route has since passed the
+exact-head service round-trip recorded below. The PostgreSQL rollback code
+requires `pg_dump` and `pg_restore`, an explicit database user, and no
+service-only PostgreSQL environment overrides; its Windows end-to-end
+installed rollback remains unvalidated. Multiple databases, unsupported
 schemas, and representative operator-data rollback are not covered by this
-installer. Keep BookshelfNG available until the installer and all retirement
-acceptance gates have passed.
+installer. Do not change the
+service or apply the migration during the release freeze. Keep BookshelfNG
+available until the installer and all retirement acceptance gates have
+passed.
 
 ## Update the local MCP connection
 
@@ -1030,6 +1075,17 @@ promotion/rollback cases. A later native Windows service round-trip on Build
 deferred service cleanup, and selected data-directory preservation for the
 SQLite installer route. The new Windows PostgreSQL backup/restore extension
 has not yet had an end-to-end Windows service rehearsal.
+
+**Latest Windows service validation (2026-10-24):** ChaptarrNG commit
+`db110883` passed hosted Build [40087832094](https://github.com/snapetech-org/chaptarrng/actions/runs/40087832094).
+The service smoke verified automatic BookshelfNG rollback after an injected
+health-check failure, retry and successful migration, and explicit restore
+after the deferred service cleanup, preserving the original `NetworkService`
+identity and BookshelfNG data. The failed candidate run exposed a PowerShell 7
+dynamic `Add-Type` compilation error for `Win32Exception`; the corrected helper
+now reports native service-control failures with their Win32 error codes.
+This remains synthetic SQLite service evidence. Windows PostgreSQL installed
+rollback and representative operator-data acceptance are still open.
 
 ## Published image smoke test (2026-10-15)
 

@@ -164,6 +164,20 @@ namespace Chaptarr.Core.Test.Commands
         }
 
         [Test]
+        public void legacy_retry_unmapped_files_command_name_should_remain_available()
+        {
+            var queue = new StubCommandQueue();
+            var controller = CreateController(queue, """{"name":"RetryUnmappedFiles"}""");
+
+            var result = controller.StartCommand(new CommandResource { Name = "RetryUnmappedFiles" });
+
+            Assert.That(queue.WasPushed, Is.True);
+            Assert.That(result.Result, Is.TypeOf<CreatedAtActionResult>());
+            Assert.That(queue.PushedCommand, Is.TypeOf<RetryUnmappedFilesCommand>());
+            Assert.That(queue.PushedCommand.Name, Is.EqualTo("RetryUnmappedFiles"));
+        }
+
+        [Test]
         public void book_search_command_should_resolve_legacy_id_to_both_split_format_rows()
         {
             var queue = new StubCommandQueue();
@@ -297,7 +311,8 @@ namespace Chaptarr.Core.Test.Commands
                     typeof(MissingBookSearchCommand),
                     typeof(CutoffUnmetBookSearchCommand),
                     typeof(MoveAuthorMediaCommand),
-                    typeof(MoveAuthorMediaBatchCommand)
+                    typeof(MoveAuthorMediaBatchCommand),
+                    typeof(RetryUnmappedFilesCommand)
                 }),
                 LogManager.GetCurrentClassLogger(),
                 legacyIdentityMapService);

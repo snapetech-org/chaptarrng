@@ -1,5 +1,6 @@
 using FluentValidation;
 using NzbDrone.Core.Annotations;
+using NzbDrone.Core.Download.Clients;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Validation;
 
@@ -19,7 +20,7 @@ namespace NzbDrone.Core.Download.Clients.Deluge
         }
     }
 
-    public class DelugeSettings : IProviderConfig
+    public class DelugeSettings : IProviderConfig, IBookDownloadCategorySettings
     {
         private static readonly DelugeSettingsValidator Validator = new DelugeSettingsValidator();
 

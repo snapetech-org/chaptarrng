@@ -31,9 +31,10 @@ public static class BackupService
         }
 
         var serviceAccount = ServiceLifecycle.GetBookshelfServiceAccount();
-        if (!string.Equals(serviceAccount, @"NT AUTHORITY\LocalService", StringComparison.OrdinalIgnoreCase))
+        var unsupportedAccount = ServiceAccountPolicy.GetUnsupportedReason(serviceAccount);
+        if (unsupportedAccount is not null)
         {
-            return $"This installer supports the standard BookshelfNG LocalService account only. The Readarr service uses '{serviceAccount}'; use the manual migration path so its service identity and media permissions can be preserved.";
+            return unsupportedAccount;
         }
 
         var serviceStartType = ServiceLifecycle.GetBookshelfServiceStartType();

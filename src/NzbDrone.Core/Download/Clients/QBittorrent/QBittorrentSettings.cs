@@ -1,6 +1,7 @@
 using FluentValidation;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Annotations;
+using NzbDrone.Core.Download.Clients;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Validation;
 
@@ -28,7 +29,7 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
         }
     }
 
-    public class QBittorrentSettings : IProviderConfig
+    public class QBittorrentSettings : IProviderConfig, IBookDownloadCategorySettings
     {
         private static readonly QBittorrentSettingsValidator Validator = new QBittorrentSettingsValidator();
 

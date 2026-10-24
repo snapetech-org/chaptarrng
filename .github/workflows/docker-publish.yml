@@ -200,7 +200,7 @@ jobs:
         provenance: mode=max
 
     - name: Build and push BookshelfNG softcover compatibility image
-      if: steps.docker-tags.outputs.has_tags == 'true'
+      if: steps.docker-tags.outputs.has_tags == 'true' && inputs.legacy_bridge_enabled == true && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'
       id: build_softcover
       uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
       with:
@@ -222,7 +222,7 @@ jobs:
         provenance: mode=max
 
     - name: Build and push BookshelfNG Hardcover compatibility image
-      if: steps.docker-tags.outputs.has_tags == 'true'
+      if: steps.docker-tags.outputs.has_tags == 'true' && inputs.legacy_bridge_enabled == true && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'
       id: build_hardcover
       uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
       with:
@@ -282,7 +282,7 @@ jobs:
         push-to-registry: true
 
     - name: Attest BookshelfNG softcover compatibility image provenance
-      if: steps.docker-tags.outputs.has_tags == 'true'
+      if: steps.docker-tags.outputs.has_tags == 'true' && inputs.legacy_bridge_enabled == true && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'
       uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
       with:
         subject-name: ${{ env.STANDARD_IMAGE }}
@@ -290,7 +290,7 @@ jobs:
         push-to-registry: true
 
     - name: Attest BookshelfNG Hardcover compatibility image provenance
-      if: steps.docker-tags.outputs.has_tags == 'true'
+      if: steps.docker-tags.outputs.has_tags == 'true' && inputs.legacy_bridge_enabled == true && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'
       uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
       with:
         subject-name: ${{ env.STANDARD_IMAGE }}

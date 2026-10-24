@@ -356,14 +356,7 @@ namespace Chaptarr.Http.Authentication
                     // proxy/certificate validation and IPv4/IPv6 fallback behavior as the rest of the app.
                     options.BackchannelTimeout = TimeSpan.FromSeconds(15);
                     options.BackchannelHttpHandler = proxyConfigurationError == null
-                        ? new OidcBackchannelTargetPolicyHandler(allowPrivateIssuer,
-                            new OidcResponseLimitHandler(socketsHttpHandlerFactory.CreateHandler(proxySettings,
-                                allowAutoRedirect: false,
-                                useCookies: false,
-                                credentials: null,
-                                preAuthenticate: false,
-                                maxConnectionsPerServer: 12,
-                                allowPrivateNetworkTargets: allowPrivateIssuer || proxySettings?.IsDirectConnection == false)))
+                        ? OidcBackchannelHandlerFactory.Create(socketsHttpHandlerFactory, proxySettings, allowPrivateIssuer)
                         : new ConfigurationErrorHttpMessageHandler(proxyConfigurationError);
 
                     var legacyRedirectUri = BookshelfOidcEnvironmentSettings.GetRedirectUri();

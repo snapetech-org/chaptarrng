@@ -385,6 +385,15 @@ jobs:
         bash packaging/scripts/test-prepare-bookshelf-desktop-candidates.sh
         bash packaging/scripts/test-build-bookshelf-desktop-candidates.sh
 
+    - name: Verify digest-pinned BookshelfNG container-platform candidates
+      if: runner.os == 'Linux'
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-container-candidates-test
+      run: |
+        bash -n packaging/scripts/build-bookshelf-container-platform-candidates.sh \
+          packaging/scripts/test-build-bookshelf-container-platform-candidates.sh
+        bash packaging/scripts/test-build-bookshelf-container-platform-candidates.sh
+
     - name: Test
       env:
         DIRECT_DOWNLOAD_REQUIRE_PLAYWRIGHT: ${{ runner.os == 'Linux' && 'true' || 'false' }}

@@ -50,8 +50,8 @@ namespace NzbDrone.Core.Download.Clients.RTorrent
         private string GetPostImportCategory(DownloadClientItem downloadClientItem)
         {
             return PostImportCategoryResolver.Resolve(downloadClientItem,
-                Settings.AudiobookCategory,
-                Settings.EbookCategory,
+                BookDownloadCategorySettings.GetCategory(Settings, BookMediaType.Audiobook),
+                BookDownloadCategorySettings.GetCategory(Settings, BookMediaType.Ebook),
                 Settings.AudiobookImportedCategory,
                 Settings.EbookImportedCategory);
         }
@@ -95,8 +95,8 @@ namespace NzbDrone.Core.Download.Clients.RTorrent
         public bool ShouldPreserveItemAfterImport(DownloadClientItem downloadClientItem)
         {
             return PostImportCategoryResolver.IsInResolvedPostImportCategory(downloadClientItem,
-                Settings.AudiobookCategory,
-                Settings.EbookCategory,
+                BookDownloadCategorySettings.GetCategory(Settings, BookMediaType.Audiobook),
+                BookDownloadCategorySettings.GetCategory(Settings, BookMediaType.Ebook),
                 Settings.AudiobookImportedCategory,
                 Settings.EbookImportedCategory);
         }
@@ -105,7 +105,7 @@ namespace NzbDrone.Core.Download.Clients.RTorrent
         {
             var priority = (RTorrentPriority)(remoteBook.IsRecentBook() ? Settings.RecentTvPriority : Settings.OlderTvPriority);
 
-            var category = remoteBook.GetPreferredMediaType() == BookMediaType.Ebook ? Settings.EbookCategory : Settings.AudiobookCategory;
+            var category = BookDownloadCategorySettings.GetCategory(Settings, remoteBook.GetPreferredMediaType());
             _proxy.AddTorrentFromUrl(magnetLink, category, priority, Settings.MusicDirectory, Settings);
 
             var tries = 10;
@@ -126,7 +126,7 @@ namespace NzbDrone.Core.Download.Clients.RTorrent
         {
             var priority = (RTorrentPriority)(remoteBook.IsRecentBook() ? Settings.RecentTvPriority : Settings.OlderTvPriority);
 
-            var category = remoteBook.GetPreferredMediaType() == BookMediaType.Ebook ? Settings.EbookCategory : Settings.AudiobookCategory;
+            var category = BookDownloadCategorySettings.GetCategory(Settings, remoteBook.GetPreferredMediaType());
             _proxy.AddTorrentFromFile(filename, fileContent, category, priority, Settings.MusicDirectory, Settings);
 
             var tries = 10;
@@ -151,10 +151,7 @@ namespace NzbDrone.Core.Download.Clients.RTorrent
 
             _logger.Debug("Retrieved metadata of {0} torrents in client", torrents.Count);
 
-            var categories = new[] { Settings.AudiobookCategory, Settings.EbookCategory }
-                .Where(c => c.IsNotNullOrWhiteSpace())
-                .Distinct(StringComparer.InvariantCultureIgnoreCase)
-                .ToList();
+            var categories = BookDownloadCategorySettings.GetConfiguredCategories(Settings).ToList();
 
             var items = new List<DownloadClientItem>();
             foreach (var torrent in torrents)

@@ -36,7 +36,23 @@ bash packaging/scripts/build-bookshelf-desktop-candidates.sh \
 The builder writes checksummed AppImage and Flatpak artifacts plus a local
 Flatpak repository. It does not install or publish the bundle. The runtime and
 SDK must already be installed; the builder does not change the host's Flatpak
-installation.
+installation. The gated stable-release workflow now builds both candidates
+from the checksum-verified Linux release archive, using a pinned and
+checksum-verified AppImage builder and runtime, and attaches the checksummed
+files to the release only when the ChaptarrNG readiness, BookshelfNG
+retirement, and migration-bridge gates are all enabled. This creates
+version-matched candidates under the existing desktop identities; it does not
+publish an AppImage update feed or a signed Flatpak remote.
+
+The same gated release also packages the Cloudron, Co-op Cloud, and generic
+self-hosting Compose candidates with the exact multi-architecture
+bookshelf-hardcover image digest produced by that release's Docker build.
+Cloudron's app ID and persistent directories, Co-op Cloud's stack and volumes,
+and Compose's container and volumes stay unchanged. The bundle is named
+ChaptarrNG-<version>-bookshelfng-container-platform-candidates.tar.gz and has a
+SHA-256 sidecar; the build script rejects missing or malformed image digests.
+These sources still need their respective platform maintainers and real
+install, update, backup, and rollback acceptance.
 
 StartOS package code lives in the separate `bookshelfng-startos` repository.
 The StartOS note here documents its package and image contract; it does not

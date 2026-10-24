@@ -208,13 +208,13 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        public void should_total_file_sizes_for_author_progress_from_the_index_alone()
+        public void should_use_the_edition_file_index_for_format_aware_author_progress_statistics()
         {
             var plan = PlanFor(AuthorStatisticsRepository.BuildBaseSql(DatabaseType.SQLite));
 
             Assert.Multiple(() =>
             {
-                Assert.That(plan, Has.Some.Contains("COVERING INDEX IX_BookFiles_EditionId_Size"), string.Join(" | ", plan));
+                Assert.That(plan, Has.Some.Contains("INDEX IX_BookFiles_EditionId_Size"), string.Join(" | ", plan));
                 Assert.That(plan, Has.None.EqualTo("SCAN BookFiles"), string.Join(" | ", plan));
             });
         }

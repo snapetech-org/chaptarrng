@@ -73,6 +73,11 @@ readiness_gate="$repo_root/packaging/scripts/require-release-readiness.sh"
 
 grep -Fq 'STANDARD_IMAGE: ghcr.io/snapetech-org/chaptarrng' "$docker_workflow"
 grep -Fq 'REGISTRY: ghcr.io' "$docker_workflow"
+compatibility_publish_gate="if: steps.docker-tags.outputs.has_tags == 'true' && inputs.legacy_bridge_enabled == true && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'"
+[[ "$(grep -Fc "$compatibility_publish_gate" "$docker_workflow")" -eq 4 ]] || {
+  echo 'Both compatibility image pushes and provenance attestations must require all migration release gates.' >&2
+  exit 1
+}
 grep -Fq 'registry: ${{ env.REGISTRY }}' "$docker_workflow"
 grep -Fq 'image="${STANDARD_IMAGE}"' "$docker_workflow"
 grep -Fq 'tags+=("$image:$branch")' "$docker_workflow"

@@ -28,7 +28,7 @@ internal static class WindowsServiceRoundTrip
     private const string BookshelfArchiveSha256 =
         "54200ccd62c3f20d71c52144af0bbb38117150ab04c657263ffb9c7cf1391762";
     private const string BookshelfRegistryKey = @"SOFTWARE\ChaptarrNG\BookshelfMigration";
-    private const string LocalService = @"NT AUTHORITY\LocalService";
+    private const string TestServiceAccount = @"NT AUTHORITY\NetworkService";
     private const int MaxArchiveDownloadAttempts = 3;
 
     public static async Task<int> RunAsync()
@@ -220,7 +220,7 @@ internal static class WindowsServiceRoundTrip
             await RunProcessAsync(
                 Path.Combine(activeBin, "Readarr.Console.exe"),
                 new[] { "/i", $"-data={dataDirectory}", "/nobrowser" }).ConfigureAwait(false);
-            await EnsureLocalServiceAccountAsync(ServiceLifecycle.BookshelfServiceName).ConfigureAwait(false);
+            await EnsureTestServiceAccountAsync(ServiceLifecycle.BookshelfServiceName).ConfigureAwait(false);
             await StartServiceIfStoppedAsync(ServiceLifecycle.BookshelfServiceName).ConfigureAwait(false);
             await WaitForServiceAsync(ServiceLifecycle.BookshelfServiceName, ServiceControllerStatus.Running, TimeSpan.FromSeconds(90))
                 .ConfigureAwait(false);
@@ -271,6 +271,7 @@ internal static class WindowsServiceRoundTrip
                     .ConfigureAwait(false);
                 await WaitForHealthAsync(dataDirectory, TimeSpan.FromSeconds(60)).ConfigureAwait(false);
                 AssertServicePath(ServiceLifecycle.BookshelfServiceName, dataDirectory);
+                AssertServiceAccount(ServiceLifecycle.BookshelfServiceName, "automatic rollback");
                 AssertServiceStartType(ServiceLifecycle.BookshelfServiceName, expected: 2, "automatic rollback");
                 AssertBookshelfWasRunningAtUpgrade(expected: true, "automatic rollback");
                 AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "automatic rollback database");
@@ -299,6 +300,7 @@ internal static class WindowsServiceRoundTrip
             AssertServicePath(ServiceLifecycle.ChaptarrServiceName, dataDirectory);
             await WaitForServiceAsync(ServiceLifecycle.ChaptarrServiceName, ServiceControllerStatus.Running, TimeSpan.FromSeconds(30))
                 .ConfigureAwait(false);
+            AssertServiceAccount(ServiceLifecycle.ChaptarrServiceName, "successful migration handoff");
             if (!ServiceLifecycle.IsInstalled(ServiceLifecycle.BookshelfServiceName) ||
                 ServiceLifecycle.TryGetStatus(ServiceLifecycle.BookshelfServiceName) != ServiceControllerStatus.Stopped)
             {
@@ -443,26 +445,36 @@ internal static class WindowsServiceRoundTrip
     {
         await RunProcessAsync("icacls.exe", new[]
         {
-            binaryDirectory, "/grant", LocalService + ":(OI)(CI)RX", "/T", "/C"
+            binaryDirectory, "/grant", TestServiceAccount + ":(OI)(CI)RX", "/T", "/C"
         }).ConfigureAwait(false);
         await RunProcessAsync("icacls.exe", new[]
         {
-            dataDirectory, "/grant", LocalService + ":(OI)(CI)M", "/T", "/C"
+            dataDirectory, "/grant", TestServiceAccount + ":(OI)(CI)M", "/T", "/C"
         }).ConfigureAwait(false);
     }
 
-    private static async Task EnsureLocalServiceAccountAsync(string serviceName)
+    private static async Task EnsureTestServiceAccountAsync(string serviceName)
     {
-        var account = serviceName == ServiceLifecycle.BookshelfServiceName
-            ? ServiceLifecycle.GetBookshelfServiceAccount()
-            : ReadServiceAccount(serviceName);
-        if (string.Equals(account, LocalService, StringComparison.OrdinalIgnoreCase))
+        var account = ServiceLifecycle.GetServiceAccount(serviceName);
+        if (ServiceAccountPolicy.AreEquivalent(account, TestServiceAccount))
         {
             return;
         }
 
-        await StopServiceAsync(serviceName).ConfigureAwait(false);
-        await RunProcessAsync("sc.exe", new[] { "config", serviceName, "obj=", LocalService }).ConfigureAwait(false);
+        if (ServiceLifecycle.TryGetStatus(serviceName) == ServiceControllerStatus.Running)
+        {
+            await StopServiceAsync(serviceName).ConfigureAwait(false);
+        }
+
+        ServiceLifecycle.SetServiceAccount(serviceName, TestServiceAccount, null);
+    }
+
+    private static void AssertServiceAccount(string serviceName, string phase)
+    {
+        if (!ServiceAccountPolicy.AreEquivalent(ServiceLifecycle.GetServiceAccount(serviceName), TestServiceAccount))
+        {
+            throw new InvalidOperationException($"The {phase} did not preserve the original NetworkService account.");
+        }
     }
 
     private static string? ReadServiceAccount(string serviceName)
@@ -847,9 +859,9 @@ internal static class WindowsServiceRoundTrip
         AssertServiceExecutablePath(
             ServiceLifecycle.BookshelfServiceName,
             Path.Combine(dataDirectory, "bin", "Readarr.Console.exe"));
-        if (!string.Equals(ReadServiceAccount(ServiceLifecycle.BookshelfServiceName), LocalService, StringComparison.OrdinalIgnoreCase))
+        if (!ServiceAccountPolicy.AreEquivalent(ReadServiceAccount(ServiceLifecycle.BookshelfServiceName), TestServiceAccount))
         {
-            throw new InvalidOperationException("The restored Readarr service did not preserve the supported LocalService account.");
+            throw new InvalidOperationException("The restored Readarr service did not preserve the original NetworkService account.");
         }
         AssertServiceStartType(ServiceLifecycle.BookshelfServiceName, expected: 2, "manual restore after handoff cleanup");
         AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "restored BookshelfNG database");
@@ -874,7 +886,9 @@ internal static class WindowsServiceRoundTrip
             FileName = processPath,
             UseShellExecute = false,
             CreateNoWindow = true,
-            WorkingDirectory = AppContext.BaseDirectory
+            WorkingDirectory = AppContext.BaseDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
         };
 
         if (string.Equals(Path.GetFileNameWithoutExtension(processPath), "dotnet", StringComparison.OrdinalIgnoreCase))
@@ -893,6 +907,8 @@ internal static class WindowsServiceRoundTrip
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Could not start the isolated Windows service migration worker.");
+        var standardOutput = process.StandardOutput.ReadToEndAsync();
+        var standardError = process.StandardError.ReadToEndAsync();
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(20));
         try
         {
@@ -901,7 +917,21 @@ internal static class WindowsServiceRoundTrip
         catch (OperationCanceledException)
         {
             try { process.Kill(entireProcessTree: true); } catch { }
+            await process.WaitForExitAsync().ConfigureAwait(false);
+            await Task.WhenAll(standardOutput, standardError).ConfigureAwait(false);
             throw new System.TimeoutException("The Windows service migration worker did not finish within twenty minutes.");
+        }
+
+        var output = await standardOutput.ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(output))
+        {
+            Console.Out.Write(output);
+        }
+
+        var error = await standardError.ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            Console.Error.Write(error);
         }
 
         return process.ExitCode;
@@ -1116,6 +1146,8 @@ internal static class WindowsServiceRoundTrip
         public void SetProgressPercent(double percent) { }
         public void SetProgressIndeterminate() { }
         public ProviderIdentityMode? ChooseProviderIdentityMode() => ProviderIdentityMode.NativeHardcover;
+        public System.Security.SecureString? RequestServiceAccountPassword(string serviceAccount) =>
+            throw new InvalidOperationException($"The smoke test unexpectedly requested a password for '{serviceAccount}'.");
         public bool ConfirmMigrationApply(ProviderIdentityMode mode, string backupPath) => true;
         public void Log(LogLine line) => Console.WriteLine($"[{line.Stream}] {line.Text}");
         public void Log(string line) => Console.WriteLine(line);

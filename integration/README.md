@@ -199,7 +199,9 @@ the adapter then read the audiobook and ebook through their format-specific
 facades, observed each migrated file, and confirmed the ebook history row did
 not leak into audiobook history. The restricted service-key boundary passed,
 and SeerrNG created, polled, and cancelled a synthetic pending import through
-the adapter. ChaptarrNG reported `0.9.978.0`.
+the adapter. The per-book statistics reported the source-compatible ebook and
+audiobook file counts and sizes while retaining aggregate values. ChaptarrNG
+reported `0.9.978.0`.
 
 The Docker build and both smoke scripts completed successfully; the frontend
 build reported the existing 22 CSS-order warnings, and container publishing

@@ -10,6 +10,7 @@ using NzbDrone.Core.Books;
 using NzbDrone.Core.Blocklisting;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Download;
+using NzbDrone.Core.Download.Clients;
 using NzbDrone.Core.MediaFiles.TorrentInfo;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.RemotePathMappings;
@@ -40,10 +41,7 @@ namespace NzbDrone.Core.Download.Clients.Transmission
             var torrents = _proxy.GetTorrents(Settings);
 
             var items = new List<DownloadClientItem>();
-            var configuredCategories = new[] { Settings.AudiobookCategory, Settings.EbookCategory }
-                .Where(c => c.IsNotNullOrWhiteSpace())
-                .Distinct(StringComparer.InvariantCultureIgnoreCase)
-                .ToList();
+            var configuredCategories = BookDownloadCategorySettings.GetConfiguredCategories(Settings).ToList();
 
             foreach (var torrent in torrents)
             {
@@ -61,8 +59,7 @@ namespace NzbDrone.Core.Download.Clients.Transmission
                 {
                     if (configuredCategories.Any())
                     {
-                        var directories = outputPath.FullPath.Split('\\', '/');
-                        matchedCategory = configuredCategories.FirstOrDefault(c => directories.Contains(c, StringComparer.InvariantCultureIgnoreCase));
+                        matchedCategory = BookDownloadCategorySettings.FindCategoryInPath(Settings, outputPath.FullPath);
 
                         if (matchedCategory == null)
                         {
@@ -191,10 +188,7 @@ namespace NzbDrone.Core.Download.Clients.Transmission
             var config = _proxy.GetConfig(Settings);
             var destDir = config.DownloadDir;
 
-            var configuredCategories = new[] { Settings.AudiobookCategory, Settings.EbookCategory }
-                .Where(c => c.IsNotNullOrWhiteSpace())
-                .Distinct(StringComparer.InvariantCultureIgnoreCase)
-                .ToList();
+            var configuredCategories = BookDownloadCategorySettings.GetConfiguredCategories(Settings).ToList();
 
             var outputRootFolders = new List<OsPath>();
 
@@ -269,7 +263,7 @@ namespace NzbDrone.Core.Download.Clients.Transmission
                 return Settings.TvDirectory;
             }
 
-            var category = remoteBook.GetPreferredMediaType() == BookMediaType.Ebook ? Settings.EbookCategory : Settings.AudiobookCategory;
+            var category = BookDownloadCategorySettings.GetCategory(Settings, remoteBook.GetPreferredMediaType());
 
             if (!category.IsNotNullOrWhiteSpace())
             {

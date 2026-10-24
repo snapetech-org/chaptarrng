@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Buffers.Binary;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -108,7 +112,8 @@ public static class ProcessStreamer
         IProgress<LogLine> log,
         CancellationToken ct = default,
         IReadOnlyDictionary<string, string?>? environment = null,
-        Action? onStarted = null)
+        Action? onStarted = null,
+        SecureString? standardInputSecret = null)
     {
         var psi = new ProcessStartInfo
         {
@@ -116,6 +121,7 @@ public static class ProcessStreamer
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = standardInputSecret is not null,
             CreateNoWindow = true,
             WindowStyle = ProcessWindowStyle.Hidden
         };
@@ -178,9 +184,45 @@ public static class ProcessStreamer
             }
         }))
         {
+            if (standardInputSecret is not null)
+            {
+                await WriteSecureStringFrameAsync(proc, standardInputSecret, ct).ConfigureAwait(false);
+            }
+
             await proc.WaitForExitAsync(ct).ConfigureAwait(false);
         }
 
         return proc.ExitCode;
+    }
+
+    private static async Task WriteSecureStringFrameAsync(
+        Process process,
+        SecureString secret,
+        CancellationToken ct)
+    {
+        var byteCount = checked(secret.Length * sizeof(char));
+        var frame = new byte[sizeof(int) + byteCount];
+        var secretPointer = Marshal.SecureStringToGlobalAllocUnicode(secret);
+        try
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(frame.AsSpan(0, sizeof(int)), secret.Length);
+            if (byteCount > 0)
+            {
+                Marshal.Copy(secretPointer, frame, sizeof(int), byteCount);
+            }
+
+            var input = process.StandardInput.BaseStream;
+            await input.WriteAsync(frame.AsMemory(), ct).ConfigureAwait(false);
+            await input.FlushAsync(ct).ConfigureAwait(false);
+            process.StandardInput.Close();
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(frame);
+            if (secretPointer != IntPtr.Zero)
+            {
+                Marshal.ZeroFreeGlobalAllocUnicode(secretPointer);
+            }
+        }
     }
 }

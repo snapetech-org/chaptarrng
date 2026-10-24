@@ -8,6 +8,7 @@ public sealed record UpgradeRecord(
     string? LastUpgradeTime,
     string? BackupPath,
     string? DataDirectory,
+    string? BookshelfServiceAccount,
     string? ProviderMode,
     string? PreviousVersion,
     int? BookshelfServiceStartType,
@@ -32,6 +33,7 @@ public static class RegistryService
             LastUpgradeTime: key.GetValue("LastUpgradeTime") as string,
             BackupPath: key.GetValue("BackupPath") as string,
             DataDirectory: key.GetValue("DataDirectory") as string,
+            BookshelfServiceAccount: key.GetValue("BookshelfServiceAccount") as string,
             ProviderMode: key.GetValue("ProviderMode") as string,
             PreviousVersion: key.GetValue("PreviousVersion") as string,
             BookshelfServiceStartType: key.GetValue("BookshelfServiceStartType") is int startType ? startType : null,
@@ -53,6 +55,7 @@ public static class RegistryService
     public static void WriteUpgradeStart(
         string backupPath,
         string dataDirectory,
+        string bookshelfServiceAccount,
         string providerMode,
         string? previousVersion,
         int bookshelfServiceStartType,
@@ -68,6 +71,7 @@ public static class RegistryService
         key.SetValue("LastUpgradeTime", DateTime.UtcNow.ToString("O"));
         key.SetValue("BackupPath", backupPath);
         key.SetValue("DataDirectory", dataDirectory);
+        key.SetValue("BookshelfServiceAccount", bookshelfServiceAccount);
         key.SetValue("ProviderMode", providerMode);
         key.SetValue("BookshelfServiceStartType", bookshelfServiceStartType, RegistryValueKind.DWord);
         key.SetValue("BookshelfServiceWasRunning", bookshelfServiceWasRunning ? 1 : 0, RegistryValueKind.DWord);

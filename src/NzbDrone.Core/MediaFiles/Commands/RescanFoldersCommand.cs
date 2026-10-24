@@ -55,6 +55,13 @@ namespace NzbDrone.Core.MediaFiles.Commands
         public override bool RequiresDiskAccess => true;
     }
 
+    public class RetryUnmappedFilesCommand : Command
+    {
+        public override bool SendUpdatesToClient => true;
+        public override bool RequiresDiskAccess => true;
+        public override bool IsTypeExclusive => true;
+    }
+
     public class RefreshUnmappedFilesCommand : Command
     {
         public string MediaType { get; set; } // "all", "audiobook", or "ebook"

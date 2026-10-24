@@ -1,8 +1,8 @@
 # Native package channels
 
-Status checked 2026-10-21. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
-is the latest published release; [main](https://github.com/snapetech-org/chaptarrng/tree/main) includes a candidate-
-only BookshelfNG Debian bridge builder. GitHub Release archives are the payload for
+Status checked 2026-10-24. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
+is the latest published release; [main](https://github.com/snapetech-org/chaptarrng/tree/main) includes candidate-only
+BookshelfNG migration and package-bridge tooling. GitHub Release archives are the payload for
 native packages; the standard ChaptarrNG container is built separately from
 the same application source and migration code. Package recipes add service
 and filesystem integration. See the
@@ -31,13 +31,35 @@ For current BookshelfNG migration and legacy-channel acceptance status, see
 | Cloudron | Candidate manifest in `packaging/legacy/cloudron/` | Keeps app ID `tech.snapetech.bookshelfng` | `/config`, `/books`, `/downloads` |
 | Co-op Cloud | Candidate recipe in `packaging/legacy/coop-cloud/bookshelfng/` | Keeps recipe and volume identities `bookshelfng` | `/config`, `/books`, `/downloads` |
 | Self-hosting catalogs | Candidate Compose service in `packaging/legacy/catalogs/` | Keeps container name and named volumes `bookshelfng` | `/config`, `/books`, `/downloads` |
-| StartOS | No ChaptarrNG package update is published | `bookshelfng-startos` keeps package ID `bookshelfng` | `/config`, `/books`, `/downloads` |
+| StartOS | No ChaptarrNG package update is published | `bookshelfng-startos` keeps package ID `bookshelfng` | StartOS 0.4.0.2 or newer; `/config`, `/books`, `/downloads` |
 | Helm | ChaptarrNG `charts/bookshelfng` with a versioned publisher for the existing OCI identity; unpublished while the release freeze is active | `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` | Same Helm release, namespace, `/config` PVC, and volume name |
 
 Legacy package recipes keep the old package identity, service name, and data
 path so a package upgrade can start the normal ChaptarrNG database migration.
 They are a bridge candidate, not proof that every existing install can be
 upgraded safely.
+
+The Chocolatey `bookshelfng` bridge stops the service, runs a read-only
+migration preview, backs up PostgreSQL main/log/cache databases with `pg_dump`
+when PostgreSQL is configured, and checks `/ping` on the saved local port
+before it reports a successful upgrade. New installs use
+`%ProgramData%\BookshelfNG\data`; upgrades preserve a custom `-data` service
+argument and the other NSSM service arguments and settings. PostgreSQL dumps
+and SQLite migration backups stay beside the source data. A failed health
+check rolls back the application payload and restores the source database; if
+the rollback cannot be verified, the service stays stopped and the backup is
+retained for manual recovery. Existing NSSM and machine-level `HARDCOVER` and
+`HARDCOVER_NATIVE` settings are retained. If bare numeric provider IDs have no
+saved mode, pass one explicitly, for example:
+
+```powershell
+choco upgrade bookshelfng --yes --params "'/ProviderMode=Goodreads'"
+```
+
+Use `/ProviderMode=Hardcover` for native Hardcover IDs. An explicit choice is
+stored in the service environment so later Chocolatey updates keep the same
+identity interpretation. A preview that cannot classify IDs fails before the
+package switches the application files.
 
 The Debian candidate recipe and local package builder are in
 `packaging/legacy/debian/` and
@@ -120,7 +142,7 @@ validated or that platform is explicitly retired.
 | Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; a gated legacy `.deb` asset and Launchpad source-package publisher preserve the old service and data identity. An isolated dpkg upgrade/downgrade to the candidate and back preserved a modified conffile and data canary | Validate dependency resolution, real systemd startup, database migration/restore, and PPA/direct-download handoff. External PPA credentials, archive, and enabled series have not been validated, and no candidate is published |
 | AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
-| Chocolatey | `chaptarrng 0.9.973` is moderator-approved; the `.977` update is not on the feed and the earlier `.977` bridge push returned HTTP 403. The approved `.973` package uses the ChaptarrNG service and `%ProgramData%\ChaptarrNG\data`, so it is not an in-place BookshelfNG handoff. | Public `bookshelfng 0.4.21.70` remains | Update the standard `chaptarrng` package to `.977`, then publish a `bookshelfng` identity bridge that retains the legacy service/data path; validate populated-data migration and rollback |
+| Chocolatey | `chaptarrng 0.9.973` is moderator-approved; `.977` is not on the feed and the earlier `.977` bridge push returned HTTP 403. Current source builds a legacy identity bridge that preserves custom service/data paths, previews conversion, handles provider mode, takes PostgreSQL backups, and verifies `/ping`. | Public `bookshelfng 0.4.21.70` remains | Resolve the feed rejection, publish both package updates, and validate populated SQLite/PostgreSQL conversion, rollback, and installed-channel handoff |
 | Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode; fresh installs default to port `8787`, while saved and explicit ports take precedence. | Run the compatibility-default regression checks, then validate all three manifests and old-alias digest routing before enabling the bridge |
 | Helm | A same-name chart and versioned publisher target the existing BookshelfNG OCI identity. Both release-readiness gates, the migration bridge gate, and an explicit bridge opt-in are required. Local build/render and hosted resource-identity checks pass. | No chart is published; the BookshelfNG OCI chart remains unchanged. Existing installs can keep the same chart source after acceptance. | Test a real PVC/GitOps upgrade and rollback before publishing or switching existing installations |
 
@@ -254,13 +276,16 @@ does not change a running container.
 The BookshelfNG Windows WPF installer still installs the old application and
 does not hand off its `Readarr` service. ChaptarrNG now contains a source-only
 WPF migration-installer candidate in `distribution/windows/installer-net`.
-Windows CI builds it as an internal artifact; it is not published. It supports
-one SQLite database, asks for provider mode, creates a verified retained
-backup, previews before apply, then switches to the `Chaptarr` service and
-checks the saved data path and health endpoint. PostgreSQL and multi-database
-installations are rejected. Native Windows migration/rollback, representative
-data, and channel acceptance remain open, so it is not approved for operator
-use. See the [Windows migration procedure](../docs/MIGRATE_FROM_BOOKSHELFNG.md#windows-standalone-service-migration).
+The release workflow builds it from the exact Windows release payload and
+attaches it only when the migration-bridge and both release-readiness gates
+are enabled; no installer asset is currently published. It supports one
+SQLite or PostgreSQL database, asks for provider mode, creates a verified
+retained backup, previews before apply, then switches to the `Chaptarr`
+service and checks the saved data path and health endpoint. It requires the
+standard `NT AUTHORITY\LocalService` account; multiple-database installs are
+rejected. Native Windows PostgreSQL rollback, representative data, and channel
+acceptance remain open, so it is not approved for operator use. See the
+[Windows migration procedure](../docs/MIGRATE_FROM_BOOKSHELFNG.md#windows-standalone-service-migration).
 
 BookshelfNG's in-app updater still checks its existing upstream update service,
 which ChaptarrNG cannot redirect. Automatic migration must therefore use a
@@ -284,14 +309,15 @@ image, followed by install, upgrade, backup, and rollback checks on a StartOS
 device. No handoff has been tested or published.
 
 ChaptarrNG now carries source-only AppImage, Flatpak, Cloudron, Co-op Cloud,
-and self-hosting catalog candidates. The candidates retain the old desktop/app
-IDs, BookshelfNG data directories, Cloudron package ID, container name, port,
-and volume names. They are not published or accepted, and each installation
-channel still needs a built candidate, exact digest or artifact, upgrade
-testing, backup, and rollback. StartOS package source remains in the external
-`bookshelfng-startos` repository and also needs an update and device acceptance.
-See the [legacy channel candidates](legacy/README.md) and
-[BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
+self-hosting catalog, and StartOS candidates. The candidates retain the old
+desktop/app IDs, BookshelfNG data directories, package ID, container name,
+port, and volume names. They are not published or accepted, and each
+installation channel still needs a built candidate, exact digest or artifact,
+upgrade testing, backup, and rollback. The StartOS candidate uses SDK 3.1.0 and
+requires StartOS 0.4.0.2 or newer. The external `bookshelfng-startos` package
+repository has not been modified; its package update and device acceptance
+remain separate handoff work. See the [legacy channel candidates](legacy/README.md)
+and [BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
 
 ## Legacy AppImage, Flatpak, Cloudron, and catalog candidates
 

@@ -19,6 +19,13 @@ databases require separate migrations because the migration tool does not
 merge histories, profiles, or settings. See the
 [BookshelfNG migration guide](MIGRATE_FROM_BOOKSHELFNG.md).
 
+Book statistics preserve the Readarr-compatible aggregate fields and add
+`ebookFileCount`, `audiobookFileCount`, `ebookSizeOnDisk`, and
+`audiobookSizeOnDisk`. These values are derived from each file's supported
+media extension, so integrations can distinguish ebook and audiobook
+availability while older clients continue using `bookFileCount` and
+`sizeOnDisk`.
+
 For a broader overview of maintained behavior beyond the shared Chaptarr base,
 see [ChaptarrNG fork changes and upstream replacement criteria](./FORK_FEATURES.md).
 Chaptarr's current development branch has its own pending-import subsystem;

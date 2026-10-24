@@ -1,15 +1,13 @@
 # StartOS BookshelfNG identity handoff
 
-The existing StartOS wrapper lives in the separate
-[`bookshelfng-startos`](https://github.com/snapetech-org/bookshelfng-startos)
-repository. ChaptarrNG's source image carries the compatible `/init` launcher,
-exposes port `8787` for the BookshelfNG target, and preserves the `/config`,
-`/books`, and `/downloads` mount contract. The StartOS package must keep its
-`bookshelfng` package ID and its `main`, `books`, and `downloads` volume IDs
-when its owner updates the image.
+`candidate/` contains the StartOS wrapper source for the existing BookshelfNG
+package identity. It keeps package ID `bookshelfng`, volume IDs `main`,
+`books`, and `downloads`, the `/config`, `/books`, and `/downloads` mounts,
+and the `/init` startup contract while moving the runtime to ChaptarrNG.
 
-The candidate image target is source-only. The external package still points
-at BookshelfNG; no StartOS package update, device install, backup/restore, or
-rollback has been accepted. Once a compatibility image is released, update the
-external package to its exact digest and validate it on a StartOS device before
-recommending a switch.
+The release candidate builder copies this source into the platform handoff
+bundle and replaces its image placeholder with the exact ChaptarrNG
+multi-architecture Hardcover digest. Do not build or publish the source
+template directly. The external StartOS package repository is not modified by
+this candidate; device install, backup, update, and rollback acceptance still
+belong to that package's handoff.

@@ -2558,7 +2558,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
                         if (result.RetainOutputOnFailure && DestinationFileExists(outputPath))
                         {
-                            WriteConversionArtifactManifest(workFolder, outputPath, inputFiles, convertedQuality, tagOptions, audioBitrate, audioSampleRate, audioChannels, noConversion);
+                            WriteConversionArtifactManifest(workFolder, outputPath, inputFiles, convertedQuality, tagOptions, audioBitrate, audioSampleRate, audioChannels, noConversion, importable: false);
                             error = $"{error} Converted file retained at: {outputPath}";
                         }
 
@@ -2574,7 +2574,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
                     _conversionTrackingService?.Progress(conversionId, 97m, "Finalizing M4B");
 
-                    WriteConversionArtifactManifest(workFolder, outputPath, inputFiles, convertedQuality, tagOptions, audioBitrate, audioSampleRate, audioChannels, noConversion);
+                    WriteConversionArtifactManifest(workFolder, outputPath, inputFiles, convertedQuality, tagOptions, audioBitrate, audioSampleRate, audioChannels, noConversion, importable: true);
                     var convertedLocalBook = CreateGeneratedConversionLocalBook(first, bookDecisions, outputPath, inputFiles, convertedQuality, tagOptions, removeSourcesAfterImport);
 
                     _conversionTrackingService?.Progress(conversionId, 98m, "Preparing import");
@@ -3382,12 +3382,17 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     {
                         var manifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(File.ReadAllText(manifestPath));
                         if (manifest == null ||
+                            manifest.Version != 1 ||
+                            !manifest.Importable ||
                             manifest.TargetQualityId != targetQuality?.Quality?.Id ||
+                            !string.Equals(manifest.TargetQualityName, targetQuality?.Quality?.Name, StringComparison.Ordinal) ||
                             manifest.AudioBitrate != audioBitrate ||
                             manifest.AudioSampleRate != audioSampleRate ||
                             manifest.AudioChannels != audioChannels ||
                             manifest.NoConversion != noConversion ||
+                            !string.Equals(manifest.TagMode, tagOptions?.Mode, StringComparison.Ordinal) ||
                             !string.Equals(manifest.TagSignature, tagSignature, StringComparison.Ordinal) ||
+                            manifest.Sources == null ||
                             !ConversionArtifactSourcesMatch(currentSources, manifest.Sources))
                         {
                             continue;
@@ -3403,9 +3408,17 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         }
 
                         if (!candidateOutput.IsNullOrWhiteSpace() &&
+                            candidateOutput.PathEquals(manifest.OutputPath) &&
                             IsConversionWorkFolder(candidateOutput) &&
                             File.Exists(candidateOutput))
                         {
+                            var output = new FileInfo(candidateOutput);
+                            if (manifest.OutputSize != output.Length ||
+                                manifest.OutputModifiedUtcTicks != output.LastWriteTimeUtc.Ticks)
+                            {
+                                continue;
+                            }
+
                             outputPath = candidateOutput;
                             return true;
                         }
@@ -3428,20 +3441,31 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 int audioBitrate,
                 int audioSampleRate,
                 int audioChannels,
-                bool noConversion)
+                bool noConversion,
+                bool importable)
             {
                 try
                 {
+                    if (outputPath.IsNullOrWhiteSpace() || !File.Exists(outputPath))
+                    {
+                        return;
+                    }
+
                     var sources = BuildConversionArtifactSourceSignatures(inputFiles);
                     if (sources == null || sources.Count == 0)
                     {
                         return;
                     }
 
+                    var output = new FileInfo(outputPath);
                     var manifest = new ConversionArtifactManifest
                     {
+                        Version = 1,
+                        Importable = importable,
                         CreatedUtc = DateTime.UtcNow,
                         OutputPath = outputPath,
+                        OutputSize = output.Length,
+                        OutputModifiedUtcTicks = output.LastWriteTimeUtc.Ticks,
                         TargetQualityId = targetQuality?.Quality?.Id ?? 0,
                         TargetQualityName = targetQuality?.Quality?.Name,
                         AudioBitrate = audioBitrate,
@@ -3454,9 +3478,10 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     };
 
                     Directory.CreateDirectory(workFolder);
-                    File.WriteAllText(
-                        Path.Combine(workFolder, ConversionArtifactManifestFileName),
-                        JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+                    var manifestPath = Path.Combine(workFolder, ConversionArtifactManifestFileName);
+                    var temporaryPath = manifestPath + ".tmp";
+                    File.WriteAllText(temporaryPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+                    File.Move(temporaryPath, manifestPath, true);
                 }
                 catch (Exception ex)
                 {

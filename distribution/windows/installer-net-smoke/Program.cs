@@ -17,6 +17,7 @@ Directory.CreateDirectory(dataDirectory);
 
 try
 {
+    AssertServiceAccountPolicy();
     Write("readarr.db", "database");
     Write("readarr.db-wal", "wal");
     Write("readarr.db-journal", "journal");
@@ -109,6 +110,20 @@ void AssertDatabaseVersionGuard()
     if (!guard.HasChanged)
     {
         throw new InvalidOperationException("The SQLite data-version guard did not detect a commit from another connection.");
+    }
+}
+
+void AssertServiceAccountPolicy()
+{
+    if (ServiceAccountPolicy.RequiresPassword("NT AUTHORITY\\LocalService") ||
+        ServiceAccountPolicy.RequiresPassword("NetworkService") ||
+        ServiceAccountPolicy.RequiresPassword("DOMAIN\\BookshelfGmsa$") ||
+        !ServiceAccountPolicy.RequiresPassword("DOMAIN\\bookshelf-service") ||
+        !ServiceAccountPolicy.AreEquivalent("NetworkService", "NT AUTHORITY\\NetworkService") ||
+        ServiceAccountPolicy.GetUnsupportedReason("NT SERVICE\\Readarr") is null ||
+        ServiceAccountPolicy.GetUnsupportedReason("DOMAIN\\bookshelf-service") is not null)
+    {
+        throw new InvalidOperationException("The BookshelfNG Windows service-account policy does not preserve supported account types safely.");
     }
 }
 

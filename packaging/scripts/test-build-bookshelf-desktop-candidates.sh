@@ -33,6 +33,11 @@ cat > "$work/stubs/appimagetool" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 test "${ARCH:-}" = x86_64
+if [[ -n "${EXPECTED_RUNTIME_FILE:-}" ]]; then
+  test "$1" = --runtime-file
+  test "$2" = "$EXPECTED_RUNTIME_FILE"
+  shift 2
+fi
 test -x "$1/AppRun"
 printf 'synthetic AppImage payload\n' > "$2"
 SH
@@ -81,7 +86,12 @@ SH
 chmod 0755 "$work/stubs/appimagetool" "$work/stubs/flatpak-builder" "$work/stubs/flatpak"
 
 output="$work/candidates"
-PATH="$work/stubs:$PATH" bash "$repo_root/packaging/scripts/build-bookshelf-desktop-candidates.sh" "$archive" "$output"
+runtime_file="$work/runtime-x86_64"
+printf 'pinned runtime fixture\n' > "$runtime_file"
+PATH="$work/stubs:$PATH" \
+  APPIMAGETOOL_RUNTIME_FILE="$runtime_file" \
+  EXPECTED_RUNTIME_FILE="$runtime_file" \
+  bash "$repo_root/packaging/scripts/build-bookshelf-desktop-candidates.sh" "$archive" "$output"
 appimage="$output/ChaptarrNG-0.9.978-bookshelfng-x86_64.AppImage"
 flatpak_bundle="$output/ChaptarrNG-0.9.978-bookshelfng.flatpak"
 test -x "$appimage"

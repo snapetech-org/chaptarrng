@@ -54,6 +54,35 @@ namespace Chaptarr.Core.Test.AuthorStats
         }
 
         [Test]
+        public void should_report_format_specific_file_counts_and_sizes_without_changing_aggregate_totals()
+        {
+            WithRepository((repository, _) =>
+            {
+                var stats = repository.AuthorStatistics(1).ToDictionary(stat => stat.BookId);
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(stats[10].BookFileCount, Is.EqualTo(2));
+                    Assert.That(stats[10].SizeOnDisk, Is.EqualTo(30));
+                    Assert.That(stats[10].EbookFileCount, Is.EqualTo(1));
+                    Assert.That(stats[10].EbookSizeOnDisk, Is.EqualTo(10));
+                    Assert.That(stats[10].AudiobookFileCount, Is.EqualTo(1));
+                    Assert.That(stats[10].AudiobookSizeOnDisk, Is.EqualTo(20));
+
+                    Assert.That(stats[11].EbookFileCount, Is.Zero);
+                    Assert.That(stats[11].AudiobookFileCount, Is.Zero);
+                    Assert.That(stats[11].EbookSizeOnDisk, Is.Zero);
+                    Assert.That(stats[11].AudiobookSizeOnDisk, Is.Zero);
+
+                    Assert.That(stats[12].EbookFileCount, Is.EqualTo(1), "KEPUB is an ebook file type");
+                    Assert.That(stats[12].EbookSizeOnDisk, Is.EqualTo(30));
+                    Assert.That(stats[12].AudiobookFileCount, Is.Zero);
+                    Assert.That(stats[12].AudiobookSizeOnDisk, Is.Zero);
+                });
+            });
+        }
+
+        [Test]
         public void should_follow_edition_repoints_and_count_files_on_unmonitored_editions()
         {
             WithRepository((repository, connectionString) =>
@@ -181,8 +210,8 @@ INSERT INTO ""BookFiles"" (""Id"", ""EditionId"", ""Size"") VALUES
 
                 Assert.That(
                     plan.Count(row => row.Detail.Contains("IX_Editions_BookId_Monitored_Id")),
-                    Is.EqualTo(2),
-                    "The release-date expression appears twice and both lookups must use the BookId-first composite index");
+                    Is.EqualTo(3),
+                    "Both release-date lookups and the format-statistics aggregate must use the BookId-first composite index");
             });
         }
 
@@ -223,7 +252,8 @@ CREATE TABLE ""Editions"" (
 CREATE TABLE ""BookFiles"" (
     ""Id"" INTEGER PRIMARY KEY,
     ""EditionId"" INTEGER NOT NULL,
-    ""Size"" INTEGER NOT NULL
+    ""Size"" INTEGER NOT NULL,
+    ""Path"" TEXT NULL
 );
 
 CREATE INDEX ""IX_Editions_BookId_Monitored_Id""
@@ -242,11 +272,11 @@ INSERT INTO ""Editions"" (""Id"", ""BookId"", ""Monitored"") VALUES
     (101, 10, 1),
     (120, 12, 0),
     (200, 20, 1);
-INSERT INTO ""BookFiles"" (""Id"", ""EditionId"", ""Size"") VALUES
-    (1000, 100, 10),
-    (1001, 101, 20),
-    (1200, 120, 30),
-    (2000, 200, 40);
+INSERT INTO ""BookFiles"" (""Id"", ""EditionId"", ""Size"", ""Path"") VALUES
+    (1000, 100, 10, '/books/first.epub'),
+    (1001, 101, 20, '/books/second.M4B'),
+    (1200, 120, 30, '/books/third.kepub'),
+    (2000, 200, 40, '/books/fourth.FLAC');
 ");
                 }
 

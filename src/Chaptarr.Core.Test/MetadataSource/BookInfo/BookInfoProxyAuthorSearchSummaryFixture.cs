@@ -111,7 +111,7 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 _authorCount = authorCount;
             }
 
-            public List<object> Search(string query)
+            public List<object> Search(string query, bool interactiveSearch = false)
             {
                 return Enumerable.Range(1, _authorCount)
                     .Select(index => (object)new HardcoverAuthorResult
