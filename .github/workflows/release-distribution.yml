@@ -157,7 +157,7 @@ jobs:
     name: Publish ChaptarrNG and BookshelfNG AUR identities
     needs: [credentials, release-target, build-aur]
     if: needs.credentials.outputs.aur == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
@@ -188,6 +188,7 @@ jobs:
           IdentityFile ~/.ssh/aur
           IdentitiesOnly yes
           StrictHostKeyChecking yes
+          ProxyCommand nc -X connect -x 10.0.2.100:3128 %h %p
           UserKnownHostsFile ~/.ssh/known_hosts
           GlobalKnownHostsFile /dev/null
           BatchMode yes
@@ -432,7 +433,7 @@ jobs:
     name: Trigger COPR build
     needs: [credentials, release-target]
     if: needs.credentials.outputs.copr == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - name: Submit verified release tag to the ChaptarrNG COPR webhook
       env:
@@ -457,7 +458,7 @@ jobs:
     name: Trigger legacy bookshelfng COPR package
     needs: [credentials, release-target]
     if: needs.credentials.outputs.bookshelfng_copr == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - name: Submit the release tag to the existing bookshelfng COPR package
       env:
