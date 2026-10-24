@@ -457,6 +457,63 @@ jobs:
         retention-days: 1
         if-no-files-found: error
 
+  windows-migration-installer:
+    name: Build BookshelfNG Windows migration installer
+    needs: [release, standalone-assets]
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: main
+        persist-credentials: false
+
+    - name: Verify checked-out release source
+      env:
+        EXPECTED_RELEASE_SHA: ${{ needs.release.outputs.sha }}
+      shell: bash
+      run: bash packaging/scripts/verify-release-source-sha.sh
+
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      with:
+        dotnet-version: 10.0.402
+
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: chaptarrng-standalone-win-x64
+        path: ${{ runner.temp }}/chaptarrng-standalone-win-x64
+
+    - name: Build and verify the migration installer from the release payload
+      shell: pwsh
+      env:
+        VERSION: ${{ needs.release.outputs.version }}
+      run: |
+        $appDirectory = Join-Path $env:RUNNER_TEMP 'chaptarrng-windows-migration-app'
+        $installerOutput = Join-Path $env:RUNNER_TEMP 'chaptarrng-windows-migration-build'
+        $assetOutput = Join-Path $env:RUNNER_TEMP 'chaptarrng-windows-migration-asset'
+        New-Item -ItemType Directory -Force -Path $appDirectory, $assetOutput | Out-Null
+        $archiveDirectory = Join-Path $env:RUNNER_TEMP 'chaptarrng-standalone-win-x64'
+        $archive = Join-Path $archiveDirectory "ChaptarrNG-$env:VERSION-win-x64.zip"
+        Expand-Archive -LiteralPath $archive -DestinationPath $appDirectory
+        ./packaging/scripts/build-windows-bookshelf-migration-installer.ps1 -AppDirectory $appDirectory -InstallerOutput $installerOutput
+        $assetName = "ChaptarrNG-$env:VERSION-bookshelfng-migration-installer-win-x64.exe"
+        $source = Join-Path $installerOutput 'ChaptarrNG.Installer.exe'
+        $destination = Join-Path $assetOutput $assetName
+        Copy-Item -LiteralPath $source -Destination $destination
+        $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+        Set-Content -LiteralPath "$destination.sha256" -Value "$hash  $assetName" -Encoding ascii
+        if ((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant() -ne $hash) {
+          throw 'The Windows migration installer checksum changed while preparing the release asset.'
+        }
+
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: chaptarrng-windows-migration-installer
+        path: ${{ runner.temp }}/chaptarrng-windows-migration-asset/*
+        retention-days: 1
+        if-no-files-found: error
+
   rpm-source:
     name: Build verified new and legacy COPR source RPMs
     needs: [release, standalone-assets]
@@ -505,7 +562,7 @@ jobs:
         if-no-files-found: error
 
   publish-release:
-    needs: [release, docker, standalone-assets, rpm-source]
+    needs: [release, docker, standalone-assets, rpm-source, windows-migration-installer]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -529,6 +586,12 @@ jobs:
     - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: chaptarrng-rpm-source
+        path: ${{ runner.temp }}/release-assets
+
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
+      with:
+        name: chaptarrng-windows-migration-installer
         path: ${{ runner.temp }}/release-assets
 
     - name: Build the gated BookshelfNG Debian package asset
@@ -566,6 +629,11 @@ jobs:
         asset="ChaptarrNG-${VERSION}-win-x64.zip"
         test -s "$RUNNER_TEMP/release-assets/$asset"
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")
+        if [[ "$LEGACY_BRIDGE_ENABLED" == true ]]; then
+          migration_installer="ChaptarrNG-${VERSION}-bookshelfng-migration-installer-win-x64.exe"
+          test -s "$RUNNER_TEMP/release-assets/$migration_installer"
+          (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$migration_installer.sha256")
+        fi
         srpm="chaptarrng-${VERSION}-1.src.rpm"
         test -s "$RUNNER_TEMP/release-assets/$srpm"
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$srpm.sha256")

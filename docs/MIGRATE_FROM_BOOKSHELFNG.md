@@ -612,16 +612,51 @@ the retained `readarr.db.bookshelfng-backup-*` database directly inside
 restore also requires `--confirm-stopped`. Keep the independent full-directory
 archive until the restored BookshelfNG instance has been checked.
 
+### Chocolatey identity bridge
+
+The candidate `bookshelfng` Chocolatey package keeps the existing BookshelfNG
+service name and data directory. New installs use
+`%ProgramData%\BookshelfNG\data`; upgrades read and preserve an existing
+`-data` service argument, including a custom path, along with other service
+arguments and startup mode. Before replacing the application files, it stops
+the service and runs the non-mutating ChaptarrNG migration preview. A
+successful upgrade must also pass `/ping` on the saved local port. SQLite
+source backups and independent PostgreSQL `pg_dump` backups remain beside the
+source data. If the new service fails its health check, the package rolls the
+application back and restores the database from its retained backup. If the
+database, application files, or service configuration cannot be restored
+safely, it leaves the service stopped and retains the backup for manual
+recovery. PostgreSQL requires `pg_dump`, `pg_restore`, an explicit
+`PostgresUser`, and no other database clients during the handoff.
+
+BookshelfNG can store bare numeric IDs without recording whether they came
+from Goodreads or native Hardcover. Existing `HARDCOVER` and
+`HARDCOVER_NATIVE` service or machine settings are preserved. If the source
+does not record a mode, specify it during the Chocolatey upgrade so preview,
+conversion, and later service starts agree:
+
+```powershell
+choco upgrade bookshelfng --yes --params "'/ProviderMode=Goodreads'"
+```
+
+Use `/ProviderMode=Hardcover` for native Hardcover IDs. An explicit choice is
+persisted in the BookshelfNG service environment. The source and package
+templates are present, but feed publication and representative installed-data
+acceptance remain open.
+
 ### Windows standalone service migration
 
 The existing BookshelfNG WPF installer still installs and upgrades BookshelfNG.
-ChaptarrNG has a candidate-only WPF migration installer at
-`distribution/windows/installer-net`; it is built for internal Windows CI and
-has not been published. The installer supports one SQLite database and the
-standard `NT AUTHORITY\LocalService` service account. It requires a provider
-identity choice, makes and verifies a full rollback backup, previews before
-apply, and checks the migrated database and ChaptarrNG's local health. A
-read-only SQLite `PRAGMA data_version` guard remains active through preview
+ChaptarrNG has a WPF migration installer at
+`distribution/windows/installer-net`. The release workflow builds a
+versioned installer from the exact Windows release payload and attaches it
+only when the migration-bridge and both release-readiness gates are enabled;
+no such asset is currently published. The installer supports one SQLite or
+PostgreSQL database and the standard `NT AUTHORITY\LocalService` service
+account. It requires a provider identity choice, makes and verifies a full
+rollback backup, previews before apply, and checks the migrated database and
+ChaptarrNG's local health. A read-only SQLite `PRAGMA data_version` guard
+remains active through preview
 review and blocks committed changes from another connection immediately before
 apply. WAL representation changes are diagnostic and do not count as committed
 database changes.
@@ -645,11 +680,14 @@ backup exists.
 This is still source-only migration tooling. The published `v0.9.977` Windows
 binary does not preserve `-data` when registering its service, and the manual
 service-registration commands from earlier drafts are not a supported
-handoff. Do not change the service or apply the migration during the release
-freeze. PostgreSQL, custom service accounts, multiple databases, unsupported
-schemas, and representative operator-data rollback are not covered by this
-installer. Keep BookshelfNG available until the installer and all retirement
-acceptance gates have passed.
+handoff. The PostgreSQL rollback code requires `pg_dump` and `pg_restore`, an
+explicit database user, and no service-only PostgreSQL environment overrides;
+its Windows end-to-end installed rollback remains unvalidated. Custom service
+accounts, multiple databases, unsupported schemas, and representative
+operator-data rollback are not covered by this installer. Do not change the
+service or apply the migration during the release freeze. Keep BookshelfNG
+available until the installer and all retirement acceptance gates have
+passed.
 
 ## Update the local MCP connection
 
