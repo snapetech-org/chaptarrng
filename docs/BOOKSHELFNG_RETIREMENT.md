@@ -620,16 +620,19 @@ installer still installs its own Readarr service. The release workflow now
 builds a versioned ChaptarrNG migration installer from the exact Windows
 release payload and attaches it only when the migration-bridge and both
 release-readiness gates are enabled; no such asset is currently published.
-The installer supports SQLite and has a source path for PostgreSQL under the
-standard NT AUTHORITY\LocalService account. Exact-head Build 39365402673
-passed the SQLite service round-trip with injected-health-failure rollback,
-retry, explicit restore, deferred service cleanup, and selected data-directory
-preservation. SQLite uses a retained integrity-checked backup and holds a
-read-only PRAGMA data_version guard through preview review. PostgreSQL uses an
-independent schema dump and client-session preflight, but this new path has not
-yet been bulk-tested or rehearsed end to end on Windows. Custom service
-accounts, representative Windows data, and real operator rollback remain
-unaccepted. Keep the release freeze in place.
+The installer supports SQLite and has a source path for PostgreSQL. Commit
+`43f80580` adds preservation of the existing service identity for built-in
+accounts, local or domain users, and group Managed Service Accounts; it securely
+prompts for credentials when required and rejects Readarr-specific virtual
+service accounts. Exact-head Build 39365402673 passed the SQLite service
+round-trip with injected-health-failure rollback, retry, explicit restore,
+deferred service cleanup, and selected data-directory preservation. SQLite
+uses a retained integrity-checked backup and holds a read-only PRAGMA
+data_version guard through preview review. PostgreSQL uses an independent
+schema dump and client-session preflight, but its installed Windows round-trip
+and the account-preservation path still require exact-head hosted confirmation.
+Representative Windows data and real operator rollback remain unaccepted. Keep
+the release freeze in place.
 
 **Exact-head artifact-based migration-to-SeerrNG smoke (2026-10-19):** The
 Linux app files from Build [39313568727](https://github.com/snapetech-org/chaptarrng/actions/runs/39313568727)

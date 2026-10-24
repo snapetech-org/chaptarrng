@@ -652,9 +652,13 @@ ChaptarrNG has a WPF migration installer at
 versioned installer from the exact Windows release payload and attaches it
 only when the migration-bridge and both release-readiness gates are enabled;
 no such asset is currently published. The installer supports one SQLite or
-PostgreSQL database and the standard `NT AUTHORITY\LocalService` service
-account. It requires a provider identity choice, makes and verifies a full
-rollback backup, previews before apply, and checks the migrated database and
+PostgreSQL database and preserves the existing BookshelfNG service identity
+for built-in accounts, local or domain users, and group Managed Service
+Accounts. It securely prompts for a password when Windows requires one;
+Readarr-specific virtual service accounts are rejected because Windows binds
+them to the Readarr service name. It requires a provider identity choice, makes
+and verifies a full rollback backup, previews before apply, and checks the
+migrated database and
 ChaptarrNG's local health. A read-only SQLite `PRAGMA data_version` guard
 remains active through preview
 review and blocks committed changes from another connection immediately before
@@ -673,7 +677,8 @@ Automatic rollback stops ChaptarrNG, restores the verified files and database,
 and reuses the existing Readarr registration when it is still present. It
 restores Readarr's startup mode and starts it only if it was running before the
 migration. If post-exit cleanup already removed the service, rollback recreates
-it with the saved startup mode and supported LocalService identity. The
+it with the saved startup mode and service identity, prompting for the account
+password when needed. The password is not retained in the migration record. The
 installer's **Restore BookshelfNG** action remains available while the retained
 backup exists.
 
@@ -682,9 +687,9 @@ binary does not preserve `-data` when registering its service, and the manual
 service-registration commands from earlier drafts are not a supported
 handoff. The PostgreSQL rollback code requires `pg_dump` and `pg_restore`, an
 explicit database user, and no service-only PostgreSQL environment overrides;
-its Windows end-to-end installed rollback remains unvalidated. Custom service
-accounts, multiple databases, unsupported schemas, and representative
-operator-data rollback are not covered by this installer. Do not change the
+its Windows end-to-end installed rollback remains unvalidated. Multiple
+databases, unsupported schemas, and representative operator-data rollback are
+not covered by this installer. Do not change the
 service or apply the migration during the release freeze. Keep BookshelfNG
 available until the installer and all retirement acceptance gates have
 passed.
