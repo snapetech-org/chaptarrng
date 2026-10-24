@@ -131,7 +131,14 @@ namespace Chaptarr.Core.Test.Download
                 _client = client;
             }
 
-            public IDownloadClient GetDownloadClient(DownloadProtocol downloadProtocol, BookMediaType mediaType, int indexerId = 0, bool filterBlockedClients = false, HashSet<int> tags = null) => _client;
+            public HashSet<int> LastRequestedTags { get; private set; }
+
+            public IDownloadClient GetDownloadClient(DownloadProtocol downloadProtocol, BookMediaType mediaType, int indexerId = 0, bool filterBlockedClients = false, HashSet<int> tags = null)
+            {
+                LastRequestedTags = tags == null ? null : new HashSet<int>(tags);
+                return _client;
+            }
+
             public IEnumerable<IDownloadClient> GetDownloadClients(bool filterBlockedClients = false) => new[] { _client };
             public IDownloadClient Get(int id) => _client;
         }
@@ -397,13 +404,34 @@ namespace Chaptarr.Core.Test.Download
             });
         }
 
+        [TestCase(false, 101)]
+        [TestCase(true, 7)]
+        public async Task download_client_selection_should_preserve_source_author_tags_for_migrated_profiles(bool bookshelfCompatibility, int expectedTag)
+        {
+            var calls = new List<string>();
+            var remoteBook = RemoteBook();
+            remoteBook.Author.Tags = new HashSet<int> { 7 };
+            remoteBook.Author.AudiobookTags = new HashSet<int> { 101 };
+            remoteBook.Author.EbookTags = new HashSet<int> { 201 };
+            var client = new RecordingDownloadClient(calls);
+            var provider = new SingleDownloadClientProvider(client);
+            var service = CreateService(client, new RecordingSlotGuard(calls, MamUnsatisfiedSlotAvailability.Accept()),
+                provider: provider, bookshelfCompatibility: bookshelfCompatibility);
+
+            await service.DownloadReport(remoteBook, null);
+
+            Assert.That(provider.LastRequestedTags, Is.EquivalentTo(new[] { expectedTag }));
+        }
+
         private static DownloadService CreateService(IDownloadClient client,
                                                       IMamUnsatisfiedSlotGuard guard,
                                                       IEventAggregator eventAggregator = null,
-                                                      IIndexerStatusService indexerStatusService = null)
+                                                      IIndexerStatusService indexerStatusService = null,
+                                                      SingleDownloadClientProvider provider = null,
+                                                      bool bookshelfCompatibility = false)
         {
             return new DownloadService(
-                new SingleDownloadClientProvider(client),
+                provider ?? new SingleDownloadClientProvider(client),
                 Noop<IDownloadClientStatusService>(),
                 Noop<IIndexerFactory>(),
                 indexerStatusService ?? Noop<IIndexerStatusService>(),
@@ -411,6 +439,7 @@ namespace Chaptarr.Core.Test.Download
                 eventAggregator ?? Noop<IEventAggregator>(),
                 Noop<ISeedConfigProvider>(),
                 guard,
+                ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: bookshelfCompatibility),
                 LogManager.GetCurrentClassLogger());
         }
 

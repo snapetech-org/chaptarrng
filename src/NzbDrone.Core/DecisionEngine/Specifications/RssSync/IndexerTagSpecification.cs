@@ -1,5 +1,6 @@
 using System.Linq;
 using NLog;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Datastore;
@@ -14,11 +15,13 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
     {
         private readonly Logger _logger;
         private readonly IIndexerFactory _indexerFactory;
+        private readonly IConfigService _configService;
 
-        public IndexerTagSpecification(Logger logger, IIndexerFactory indexerFactory)
+        public IndexerTagSpecification(Logger logger, IIndexerFactory indexerFactory, IConfigService configService)
         {
             _logger = logger;
             _indexerFactory = indexerFactory;
+            _configService = configService;
         }
 
         public SpecificationPriority Priority => SpecificationPriority.Default;
@@ -45,7 +48,9 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
             // If indexer has tags, check that at least one of them is present on the series
             var indexerTags = indexer.Tags;
             var mediaType = subject.GetPreferredMediaType();
-            var authorTags = subject.Author.GetTagsForMediaType(mediaType);
+            var authorTags = _configService?.BookshelfMatchCompatibility == true
+                ? subject.Author.Tags
+                : subject.Author.GetTagsForMediaType(mediaType);
 
             if (indexerTags.Any() && indexerTags.Intersect(authorTags).Empty())
             {

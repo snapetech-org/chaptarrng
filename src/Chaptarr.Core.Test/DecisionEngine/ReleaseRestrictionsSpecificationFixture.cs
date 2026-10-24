@@ -75,6 +75,21 @@ namespace Chaptarr.Core.Test.DecisionEngine
             Assert.That(decision.CanBypass, Is.False);
         }
 
+        [Test]
+        public void should_match_migrated_release_profile_terms_against_the_original_title()
+        {
+            var profile = new ReleaseProfile
+            {
+                Enabled = true,
+                Required = new List<string> { "dark matter" }
+            };
+
+            var decision = CreateSubject(true, profile).IsSatisfiedBy(BuildRemoteBook("Dark.Matter [EPUB]"), null);
+
+            Assert.That(decision.Accepted, Is.False);
+            Assert.That(decision.CanBypass, Is.False);
+        }
+
         private static ReleaseRestrictionsSpecification CreateSubject(params ReleaseProfile[] profiles)
         {
             return CreateSubject(false, profiles);

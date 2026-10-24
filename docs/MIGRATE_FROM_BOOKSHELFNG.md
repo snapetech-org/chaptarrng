@@ -334,11 +334,12 @@ values as the source install. When native Hardcover mode is active, BookshelfNG
 stores many primary provider IDs as bare numbers; the converter uses
 `HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) to preserve those as
 Hardcover identities. Set `HARDCOVER=false` for a Goodreads-primary source.
-If `HARDCOVER` is unset or invalid, conversion now fails closed when it reaches
-a bare numeric ID instead of silently assigning Goodreads identity. Preview
-reports the selected interpretation for authors, books, editions, and series.
-Changing the mode during conversion can associate every bare numeric ID with
-the wrong provider.
+BookshelfNG's runtime defaults an unset or unrecognized `HARDCOVER` value to
+Goodreads; native Hardcover IDs are selected only when `HARDCOVER=true` and
+`HARDCOVER_NATIVE` is not `false`. The converter now follows that exact
+predicate. Preview reports the selected interpretation for authors, books,
+editions, and series. Changing the mode during conversion can associate every
+bare numeric ID with the wrong provider.
 
 PR #131 candidate commit `12f290bd` now also writes ChaptarrNG's persisted
 `HardcoverEnabled=true` setting when migration runs with native Hardcover mode
@@ -638,8 +639,8 @@ recovery. PostgreSQL requires `pg_dump`, `pg_restore`, an explicit
 BookshelfNG can store bare numeric IDs without recording whether they came
 from Goodreads or native Hardcover. Existing `HARDCOVER` and
 `HARDCOVER_NATIVE` service or machine settings are preserved. If the source
-does not record a mode, specify it during the Chocolatey upgrade so preview,
-conversion, and later service starts agree:
+does not record a mode, the package follows BookshelfNG's Goodreads default.
+Specify a mode only when you want to override that source behavior:
 
 ```powershell
 choco upgrade bookshelfng --yes --params "'/ProviderMode=Goodreads'"
@@ -687,6 +688,14 @@ it with the saved startup mode and service identity, prompting for the account
 password when needed. The password is not retained in the migration record. The
 installer's **Restore BookshelfNG** action remains available while the retained
 backup exists.
+
+When an installed BookshelfNG service is stopped during upgrade, Chocolatey
+now retains the prior app and registers a SYSTEM scheduled task for the first
+service start. It waits for the configured local `/ping` URL and the migrated
+database/provider check; on timeout or service exit it restores the source
+database, prior app, original NSSM settings, both environment blocks, and
+startup mode. The service account is preserved by the installer. The deferred
+task and PostgreSQL restore still need Luna's installed-Windows acceptance.
 
 This is still source-only migration tooling. The published `v0.9.977` Windows
 binary does not preserve `-data` when registering its service, and the manual

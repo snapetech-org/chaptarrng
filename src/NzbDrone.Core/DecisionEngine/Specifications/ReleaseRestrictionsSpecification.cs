@@ -42,6 +42,11 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             _logger.Trace("Checking if release meets restrictions: {0}", subject);
 
             var title = subject.Release.Title;
+            if (_configService?.BookshelfMatchCompatibility == true)
+            {
+                return IsSatisfiedByBookshelfReleaseProfile(title, subject);
+            }
+
             var mediaType = subject.GetPreferredMediaType();
             var tags = subject.Author.GetTagsForMediaType(mediaType);
             var releaseProfiles = _releaseProfileService.EnabledForTags(tags, subject.Release.IndexerId);
@@ -98,6 +103,38 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             }
 
             _logger.Trace("[{0}] No restrictions apply, allowing", subject);
+            return Decision.Accept();
+        }
+
+        private Decision IsSatisfiedByBookshelfReleaseProfile(string title, RemoteBook subject)
+        {
+            // BookshelfNG matched its configured terms against the unmodified release
+            // title and the author's single tag set. Keep that contract for migrated
+            // installs; normalization and split-format tags can change the result.
+            var releaseProfiles = _releaseProfileService.EnabledForTags(subject.Author.Tags, subject.Release.IndexerId);
+
+            foreach (var profile in releaseProfiles.Where(item => item.Required.Any()))
+            {
+                var foundTerms = ContainsAny(profile.Required, title);
+                if (foundTerms.Empty())
+                {
+                    var terms = string.Join(", ", profile.Required);
+                    _logger.TraceSafe("[{0}] does not contain one of the required terms: {1}", title, terms);
+                    return Decision.Reject("Does not contain one of the required terms: {0}", terms);
+                }
+            }
+
+            foreach (var profile in releaseProfiles.Where(item => item.Ignored.Any()))
+            {
+                var foundTerms = ContainsAny(profile.Ignored, title);
+                if (foundTerms.Any())
+                {
+                    var terms = string.Join(", ", foundTerms);
+                    _logger.TraceSafe("[{0}] contains these ignored terms: {1}", title, terms);
+                    return Decision.Reject("Contains these ignored terms: {0}", terms);
+                }
+            }
+
             return Decision.Accept();
         }
 

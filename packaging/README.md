@@ -49,8 +49,9 @@ and SQLite migration backups stay beside the source data. A failed health
 check rolls back the application payload and restores the source database; if
 the rollback cannot be verified, the service stays stopped and the backup is
 retained for manual recovery. Existing NSSM and machine-level `HARDCOVER` and
-`HARDCOVER_NATIVE` settings are retained. If bare numeric provider IDs have no
-saved mode, pass one explicitly, for example:
+`HARDCOVER_NATIVE` settings are retained. If the source did not save a mode,
+BookshelfNG defaults to Goodreads and the bridge keeps that behavior. Pass an
+explicit parameter only to override it, for example:
 
 ```powershell
 choco upgrade bookshelfng --yes --params "'/ProviderMode=Goodreads'"
@@ -323,12 +324,14 @@ and [BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
 
 The AppImage launcher preserves `$XDG_DATA_HOME/bookshelfng`; the Flatpak
 manifest preserves app ID `com.snapetech.BookshelfNG`, its desktop launcher,
-and its sandbox config path. Both launch Chaptarr with the old data directory
-so the normal startup migration sees the existing database and settings. Their
-default provider mode matches the legacy standalone launcher's Goodreads
-behavior; operators whose source used native Hardcover IDs can set
-`HARDCOVER=true` before launch. Updates use each package channel: replace the
-AppImage file or update the Flatpak bundle.
+and its sandbox config path. Both launchers supervise the first startup, check
+the local HTTP endpoint and migrated database, and retain enough state to
+restore the SQLite/PostgreSQL source after a failed or interrupted launch.
+Custom data paths, ports, and URL bases are honored. Their default provider mode
+matches the legacy standalone launcher's Goodreads behavior; operators whose
+source used native Hardcover IDs can set `HARDCOVER=true` before launch. The
+supervisor restores data automatically; replacing the AppImage or reinstalling
+the prior Flatpak bundle remains the executable rollback step.
 
 Cloudron keeps app ID `tech.snapetech.bookshelfng`, port `8787`, `/ping`, and
 all three persistent directories. The Compose candidates keep the `bookshelfng`

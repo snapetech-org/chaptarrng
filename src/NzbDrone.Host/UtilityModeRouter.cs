@@ -1,6 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using NLog;
 using NLog.Extensions.Logging;
 using NzbDrone.Common;
@@ -165,6 +170,18 @@ namespace NzbDrone.Host
                             !string.Equals(providerDialect, "gr", StringComparison.Ordinal))
                         {
                             throw new InvalidDataException("BookshelfNG handoff health check found an invalid source provider dialect.");
+                        }
+
+                        if (_startupContext.Args.TryGetValue("bookshelf-health-url", out var healthUrl))
+                        {
+                            var timeoutSeconds = 5400;
+                            if (_startupContext.Args.TryGetValue("bookshelf-health-timeout-seconds", out var timeoutValue) &&
+                                (!int.TryParse(timeoutValue, out timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 7200))
+                            {
+                                throw new InvalidDataException("BookshelfNG HTTP health timeout must be between 1 and 7200 seconds.");
+                            }
+
+                            WaitForBookshelfHttpReady(healthUrl, timeoutSeconds);
                         }
 
                         var journal = new BookshelfMigrationJournal(new AppFolderInfo(_startupContext).AppDataFolder);
@@ -343,6 +360,43 @@ namespace NzbDrone.Host
                         break;
                     }
             }
+        }
+
+        private static void WaitForBookshelfHttpReady(string healthUrl, int timeoutSeconds)
+        {
+            if (!Uri.TryCreate(healthUrl, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+                !(uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidDataException("BookshelfNG handoff health URL must use HTTP or HTTPS on localhost or a loopback address.");
+            }
+
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Min(3, timeoutSeconds)) };
+            var stopwatch = Stopwatch.StartNew();
+            while (stopwatch.Elapsed.TotalSeconds < timeoutSeconds)
+            {
+                try
+                {
+                    using var response = client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead).GetAwaiter().GetResult();
+                    if (response.StatusCode == HttpStatusCode.OK)
+                    {
+                        Console.WriteLine($"BookshelfNG handoff HTTP health check passed at {uri}.");
+                        return;
+                    }
+                }
+                catch (HttpRequestException)
+                {
+                    // The standalone server can take time to bind after its database is ready.
+                }
+                catch (TaskCanceledException)
+                {
+                    // Retry short connection timeouts until the bounded deadline.
+                }
+
+                Thread.Sleep(1000);
+            }
+
+            throw new TimeoutException($"ChaptarrNG did not return HTTP 200 from {uri} within {timeoutSeconds} seconds.");
         }
 
         private DatabaseConnectionInfo GetPostgresBookshelfDatabase(params DatabaseLineage[] allowedLineages)

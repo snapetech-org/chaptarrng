@@ -4,6 +4,7 @@ using NzbDrone.Common.Cache;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.IndexerSearch.Definitions;
+using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 
@@ -55,6 +56,37 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             var hasFiles = subject.Books.Any(b => b.BookFiles != null && b.BookFiles.Any());
             if (!hasFiles)
             {
+                return Decision.Accept();
+            }
+
+            if (_configService?.BookshelfMatchCompatibility == true)
+            {
+                foreach (var file in subject.Books.SelectMany(book => book.BookFiles ?? new List<BookFile>()))
+                {
+                    if (file?.Quality == null ||
+                        !MediaFileExtensions.AreCompatibleQualities(file.Quality.Quality, subject.ParsedBookInfo.Quality?.Quality))
+                    {
+                        continue;
+                    }
+
+                    var customFormats = _formatService.ParseCustomFormat(file);
+                    var qualityProfile = subject.Author.GetQualityProfileForQuality(subject.ParsedBookInfo.Quality?.Quality);
+                    if (qualityProfile == null)
+                    {
+                        return Decision.Reject("No quality profile configured for {0} files", subject.ParsedBookInfo.Quality?.Quality?.Name ?? "unknown");
+                    }
+
+                    if (!_upgradableSpecification.IsUpgradable(
+                            qualityProfile,
+                            file.Quality,
+                            customFormats,
+                            subject.ParsedBookInfo.Quality,
+                            subject.CustomFormats))
+                    {
+                        return Decision.Reject("Existing files on disk is of equal or higher preference: {0}", file.Quality.Quality.Name);
+                    }
+                }
+
                 return Decision.Accept();
             }
 

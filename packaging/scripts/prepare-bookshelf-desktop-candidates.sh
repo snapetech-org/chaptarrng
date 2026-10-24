@@ -56,6 +56,7 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$work/extracted" "$work/output/appimage/ChaptarrNG.AppDir/usr/bin" \
+  "$work/output/appimage/ChaptarrNG.AppDir/usr/libexec" \
   "$work/output/appimage/ChaptarrNG.AppDir/usr/share/applications" \
   "$work/output/appimage/ChaptarrNG.AppDir/usr/share/icons/hicolor/512x512/apps" \
   "$work/output/flatpak/src"
@@ -121,6 +122,12 @@ appdir="$work/output/appimage/ChaptarrNG.AppDir"
 cp -a "$bundle/." "$appdir/usr/bin/"
 cp "$repo_root/packaging/legacy/appimage/AppRun" "$appdir/AppRun"
 chmod 0755 "$appdir/AppRun"
+cp "$repo_root/packaging/legacy/desktop/bookshelfng-supervisor.sh" \
+  "$appdir/usr/libexec/bookshelfng-supervisor.sh"
+chmod 0755 "$appdir/usr/libexec/bookshelfng-supervisor.sh"
+cp "$repo_root/packaging/legacy/scripts/bookshelfng-journal" \
+  "$appdir/usr/libexec/bookshelfng-journal"
+chmod 0755 "$appdir/usr/libexec/bookshelfng-journal"
 cp "$repo_root/packaging/legacy/appimage/com.snapetech.bookshelfng.desktop" \
   "$appdir/com.snapetech.bookshelfng.desktop"
 cp "$appdir/com.snapetech.bookshelfng.desktop" \
@@ -130,6 +137,10 @@ cp "$repo_root/Logo/512.png" \
   "$appdir/usr/share/icons/hicolor/512x512/apps/bookshelfng.png"
 
 cp -a "$bundle/." "$work/output/flatpak/src/"
+cp "$repo_root/packaging/legacy/desktop/bookshelfng-supervisor.sh" \
+  "$work/output/flatpak/src/bookshelfng-supervisor.sh"
+cp "$repo_root/packaging/legacy/scripts/bookshelfng-journal" \
+  "$work/output/flatpak/src/bookshelfng-journal"
 cp "$repo_root/packaging/legacy/flatpak/com.snapetech.BookshelfNG.desktop" \
   "$work/output/flatpak/src/com.snapetech.BookshelfNG.desktop"
 cp "$repo_root/packaging/legacy/flatpak/com.snapetech.BookshelfNG.metainfo.xml" \

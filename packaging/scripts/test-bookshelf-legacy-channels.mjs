@@ -38,7 +38,19 @@ test('AppImage keeps its desktop identity, BookshelfNG data directory, and Chapt
   assert.match(desktop, /^Name=ChaptarrNG$/m);
   assert.match(desktop, /^Exec=AppRun$/m);
   assert.match(appRun, /XDG_DATA_HOME:-\$HOME\/\.local\/share\}\/bookshelfng/);
-  assert.match(appRun, /exec "\$HERE\/usr\/bin\/Chaptarr" -nobrowser "-data=\$DATA_DIR"/);
+  assert.match(appRun, /exec "\$HERE\/usr\/libexec\/bookshelfng-supervisor\.sh"/);
+  assert.match(appRun, /bookshelfng-supervisor\.sh.*Chaptarr.*DATA_DIR/s);
+  const supervisor = read('packaging/legacy/desktop/bookshelfng-supervisor.sh');
+  assert.match(supervisor, /-preview-bookshelf-migration/);
+  assert.match(supervisor, /-restore-bookshelf/);
+  assert.match(supervisor, /-bookshelf-health-url=/);
+  assert.match(supervisor, /-bookshelf-health-timeout-seconds=/);
+  assert.match(supervisor, /custom_data_argument/);
+  assert.match(supervisor, /BOOKSHELFNG_RETRY_MIGRATION/);
+  assert.match(supervisor, /lock_owner_is_running/);
+  assert.match(supervisor, /Z\*/);
+  assert.match(supervisor, /bookshelfng-journal/);
+  assert.match(supervisor, /channel-state/);
   assert.match(appRun, /HARDCOVER="\$\{HARDCOVER:-false\}"/);
   assert.match(appRun, /CHAPTARR_PACKAGE_UPDATE_MECHANISM:-External/);
   assert.match(appRun, /Replace this AppImage with a newer compatible build/);
@@ -55,12 +67,41 @@ test('Flatpak keeps the installed app ID and BookshelfNG sandbox data directory'
   assert.match(manifest, /install -D -m 0644 com\.snapetech\.BookshelfNG\.metainfo\.xml \/app\/share\/metainfo/);
   assert.match(manifest, /install -D -m 0644 com\.snapetech\.BookshelfNG\.png \/app\/share\/icons/);
   assert.match(manifest, /XDG_CONFIG_HOME:-\$HOME\/\.config\}\/bookshelfng/);
-  assert.match(manifest, /\/app\/lib\/bookshelfng\/Chaptarr -nobrowser/);
+  assert.match(manifest, /\/app\/libexec\/bookshelfng-supervisor\.sh \/app\/lib\/bookshelfng\/Chaptarr/);
+  assert.match(manifest, /install -D -m 0755 bookshelfng-supervisor\.sh \/app\/libexec\/bookshelfng-supervisor\.sh/);
+  assert.match(manifest, /install -D -m 0755 bookshelfng-journal \/app\/libexec\/bookshelfng-journal/);
   assert.match(manifest, /HARDCOVER="\$\{HARDCOVER:-false\}"/);
   assert.match(manifest, /CHAPTARR_PACKAGE_UPDATE_MECHANISM:-External/);
   assert.match(desktop, /^Exec=bookshelfng-wrapper$/m);
   assert.match(desktop, /^Icon=com\.snapetech\.BookshelfNG$/m);
   assert.match(metainfo, /<launchable type="desktop-id">com\.snapetech\.BookshelfNG\.desktop<\/launchable>/);
+});
+
+test('Chocolatey deferred service upgrades retain both NSSM environments and recover after startup failure', () => {
+  const installer = read('packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in');
+  const recovery = read('packaging/legacy/chocolatey/tools/bookshelfng-startup-recovery.ps1');
+
+  assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironment'/);
+  assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironmentExtra'/);
+  assert.match(installer, /MigrationEnvironment = @\(\$effectiveEnvironment\)/);
+  assert.match(installer, /schtasks\.exe \/Create/);
+  assert.match(installer, /HealthUrl = \$healthUrl/);
+  assert.match(installer, /OldAppEnvironmentExtra = @\(\$oldAppEnvironmentExtra\)/);
+  assert.match(installer, /Get-EffectiveExtraEnvironment/);
+  assert.match(installer, /URLBASE/);
+  assert.match(installer, /<EventTrigger>/);
+  assert.doesNotMatch(installer, /<BootTrigger>/);
+  assert.match(recovery, /'AppEnvironment' @\(\$Manifest\.OldAppEnvironment\)/);
+  assert.match(recovery, /'AppEnvironmentExtra' @\(\$Manifest\.OldAppEnvironmentExtra\)/);
+  assert.match(recovery, /-restore-bookshelf-postgres/);
+  assert.match(recovery, /-restore-bookshelf/);
+  assert.match(recovery, /\$manifest\.MigrationEnvironment/);
+  assert.match(recovery, /Write-SharedMigrationJournal/);
+  assert.match(recovery, /intervention-required/);
+  assert.match(recovery, /\$manifest\.State -eq 'healthy'/);
+  assert.match(recovery, /\$manifest\.State -eq 'rolled-back'/);
+  assert.match(recovery, /schtasks\.exe \/Delete/);
+  assert.match(recovery, /PreviousApplicationDirectory/);
 });
 
 test('Cloudron candidate preserves application ID, health endpoint, port, and mounts', () => {

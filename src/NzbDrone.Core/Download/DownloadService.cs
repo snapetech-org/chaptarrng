@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NLog;
@@ -10,6 +11,7 @@ using NzbDrone.Common.TPL;
 using NzbDrone.Core.Download.Clients;
 using NzbDrone.Core.Download.Pending;
 using NzbDrone.Core.Exceptions;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Indexers.MyAnonaMouse;
 using NzbDrone.Core.Messaging.Events;
@@ -33,6 +35,7 @@ namespace NzbDrone.Core.Download
         private readonly IEventAggregator _eventAggregator;
         private readonly ISeedConfigProvider _seedConfigProvider;
         private readonly IMamUnsatisfiedSlotGuard _mamUnsatisfiedSlotGuard;
+        private readonly IConfigService _configService;
         private readonly Logger _logger;
 
         public DownloadService(IProvideDownloadClient downloadClientProvider,
@@ -43,6 +46,7 @@ namespace NzbDrone.Core.Download
                                IEventAggregator eventAggregator,
                                ISeedConfigProvider seedConfigProvider,
                                IMamUnsatisfiedSlotGuard mamUnsatisfiedSlotGuard,
+                               IConfigService configService,
                                Logger logger)
         {
             _downloadClientProvider = downloadClientProvider;
@@ -53,6 +57,7 @@ namespace NzbDrone.Core.Download
             _eventAggregator = eventAggregator;
             _seedConfigProvider = seedConfigProvider;
             _mamUnsatisfiedSlotGuard = mamUnsatisfiedSlotGuard;
+            _configService = configService;
             _logger = logger;
         }
 
@@ -61,7 +66,7 @@ namespace NzbDrone.Core.Download
             var filterBlockedClients = remoteBook.Release.PendingReleaseReason == PendingReleaseReason.DownloadClientUnavailable;
 
             var mediaType = remoteBook.GetPreferredMediaType();
-            var tags = remoteBook.Author?.GetTagsForMediaType(mediaType);
+            var tags = GetDownloadClientTags(remoteBook, mediaType);
 
             var downloadClient = downloadClientId.HasValue
                 ? _downloadClientProvider.Get(downloadClientId.Value)
@@ -75,13 +80,23 @@ namespace NzbDrone.Core.Download
             var filterBlockedClients = remoteBook.Release.PendingReleaseReason == PendingReleaseReason.DownloadClientUnavailable;
 
             var mediaType = remoteBook.GetPreferredMediaType();
-            var tags = remoteBook.Author?.GetTagsForMediaType(mediaType);
+            var tags = GetDownloadClientTags(remoteBook, mediaType);
 
             var downloadClient = downloadClientId.HasValue
                 ? _downloadClientProvider.Get(downloadClientId.Value)
                 : _downloadClientProvider.GetDownloadClient(remoteBook.Release.DownloadProtocol, mediaType, remoteBook.Release.IndexerId, filterBlockedClients, tags);
 
             await DownloadReport(remoteBook, downloadClient, true);
+        }
+
+        private HashSet<int> GetDownloadClientTags(RemoteBook remoteBook, BookMediaType mediaType)
+        {
+            // BookshelfNG used one author tag set to select the download client for
+            // every release. Keep that behavior for imported profiles while native
+            // ChaptarrNG authors continue to use per-format tags.
+            return _configService?.BookshelfMatchCompatibility == true
+                ? remoteBook.Author?.Tags
+                : remoteBook.Author?.GetTagsForMediaType(mediaType);
         }
 
         private async Task DownloadReport(RemoteBook remoteBook, IDownloadClient downloadClient, bool adoptExistingTorrent)

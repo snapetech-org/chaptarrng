@@ -6,6 +6,24 @@ data directories, and named volumes where the channel allows an in-place
 handoff. They do not publish packages, change external catalogs, or approve
 operator migration.
 
+The AppImage and Flatpak launchers now use `desktop/bookshelfng-supervisor.sh`.
+It records first-start state, checks the configured local `/ping` and migrated
+database, and restores the BookshelfNG source data after a failed or interrupted
+startup. A failed cutover requires reopening the old artifact: the AppImage
+file or Flatpak deployment is not replaced by the data supervisor. These
+channel recovery records also write their result and channel identity into the
+shared migration journal in the data directory. The desktop artifacts remain
+source candidates until Luna completes the installed failure/restart checks.
+
+The Chocolatey `bookshelfng` upgrade also arms a SYSTEM scheduled task when the
+existing service is stopped. On its next start it checks the configured local
+health URL and migrated database; failure restores the prior app, data, NSSM
+arguments/settings, both environment blocks, and start mode when safe. Its
+recovery task unregisters itself after a healthy handoff, rollback, or recorded
+intervention, and records its outcome in the shared migration journal. Its
+PostgreSQL credentials and task-trigger behavior still need installed Windows
+acceptance.
+
 The container recipes reference the source-only
 `ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover` target. Before any
 channel update, publish an approved compatibility image, resolve its immutable

@@ -3,6 +3,7 @@ using NLog;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.IndexerSearch.Definitions;
+using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 
@@ -42,6 +43,31 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             if (qualityProfile == null)
             {
                 return Decision.Reject("No quality profile configured for {0} files", subject.ParsedBookInfo.Quality.Quality.Name);
+            }
+
+            if (_configService?.BookshelfMatchCompatibility == true)
+            {
+                foreach (var file in subject.Books.SelectMany(book => book.BookFiles))
+                {
+                    if (file?.Quality == null ||
+                        !MediaFileExtensions.AreCompatibleQualities(file.Quality.Quality, subject.ParsedBookInfo.Quality.Quality))
+                    {
+                        continue;
+                    }
+
+                    var customFormats = _formatService.ParseCustomFormat(file, subject.Author);
+                    if (!_upgradableSpecification.IsUpgradeAllowed(
+                            qualityProfile,
+                            file.Quality,
+                            customFormats,
+                            subject.ParsedBookInfo.Quality,
+                            subject.CustomFormats))
+                    {
+                        return Decision.Reject("Existing files and the Quality profile does not allow upgrades");
+                    }
+                }
+
+                return Decision.Accept();
             }
 
             foreach (var file in SplitPartFileFilter.ComparableFiles(subject, subject.Books.SelectMany(b => b.BookFiles)))

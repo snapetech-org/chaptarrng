@@ -5,6 +5,7 @@ using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.IndexerSearch.Definitions;
+using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 
@@ -40,6 +41,11 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return Decision.Accept();
             }
 
+            if (_configService?.BookshelfMatchCompatibility == true)
+            {
+                return IsBookshelfCutoffNotMet(subject);
+            }
+
             var candidateQuality = QualityConversionHelper.GetEffectiveQualityAfterPlannedConversion(subject.Author, subject.ParsedBookInfo.Quality);
             var qualityProfile = subject.Author.GetQualityProfileForQuality(subject.ParsedBookInfo.Quality.Quality);
             if (qualityProfile == null)
@@ -69,6 +75,39 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                     var qualityCutoff = qualityProfile.Items[qualityCutoffIndex.Index];
 
                     return Decision.Reject("Existing files meets cutoff: {0}", qualityCutoff);
+                }
+            }
+
+            return Decision.Accept();
+        }
+
+        private Decision IsBookshelfCutoffNotMet(RemoteBook subject)
+        {
+            var candidateQuality = subject.ParsedBookInfo.Quality;
+            var qualityProfile = subject.Author.GetQualityProfileForQuality(candidateQuality?.Quality);
+            if (qualityProfile == null)
+            {
+                return Decision.Reject("No quality profile configured for {0} files", candidateQuality?.Quality?.Name ?? "unknown");
+            }
+
+            foreach (var file in subject.Books.SelectMany(book => book.BookFiles ?? new List<BookFile>()))
+            {
+                if (file?.Quality == null ||
+                    !MediaFileExtensions.AreCompatibleQualities(file.Quality.Quality, candidateQuality?.Quality))
+                {
+                    continue;
+                }
+
+                var customFormats = _formatService.ParseCustomFormat(file);
+                if (!_upgradableSpecification.CutoffNotMet(
+                        qualityProfile,
+                        new List<QualityModel> { file.Quality },
+                        customFormats,
+                        candidateQuality))
+                {
+                    var cutoffIndex = qualityProfile.GetIndex(qualityProfile.Cutoff);
+                    var cutoff = qualityProfile.Items[cutoffIndex.Index];
+                    return Decision.Reject("Existing files meets cutoff: {0}", cutoff);
                 }
             }
 

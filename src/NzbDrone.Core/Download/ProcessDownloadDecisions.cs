@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NLog;
+using NzbDrone.Common.Instrumentation;
+using NzbDrone.Core.Books;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.Download.Clients;
 using NzbDrone.Core.Download.Pending;
 using NzbDrone.Core.Exceptions;
 using NzbDrone.Core.Indexers;
-using NzbDrone.Common.Instrumentation;
 
 namespace NzbDrone.Core.Download
 {
@@ -23,16 +25,22 @@ namespace NzbDrone.Core.Download
         private readonly IDownloadService _downloadService;
         private readonly IPrioritizeDownloadDecision _prioritizeDownloadDecision;
         private readonly IPendingReleaseService _pendingReleaseService;
+        private readonly IConfigService _configService;
+        private readonly IBookshelfLegacyIdentityMapService _legacyIdentityMapService;
         private readonly Logger _logger;
 
         public ProcessDownloadDecisions(IDownloadService downloadService,
                                         IPrioritizeDownloadDecision prioritizeDownloadDecision,
                                         IPendingReleaseService pendingReleaseService,
+                                        IConfigService configService,
+                                        IBookshelfLegacyIdentityMapService legacyIdentityMapService,
                                         Logger logger)
         {
             _downloadService = downloadService;
             _prioritizeDownloadDecision = prioritizeDownloadDecision;
             _pendingReleaseService = pendingReleaseService;
+            _configService = configService;
+            _legacyIdentityMapService = legacyIdentityMapService;
             _logger = logger;
         }
 
@@ -40,6 +48,7 @@ namespace NzbDrone.Core.Download
         {
             var qualifiedReports = GetQualifiedReports(decisions);
             var prioritizedDecisions = _prioritizeDownloadDecision.PrioritizeDecisions(qualifiedReports);
+            var legacyBookIds = GetLegacyBookIds(decisions);
             var grabbed = new List<DownloadDecision>();
             var pending = new List<DownloadDecision>();
             var rejected = decisions.Where(d => d.Rejected).ToList();
@@ -54,21 +63,21 @@ namespace NzbDrone.Core.Download
                 var downloadProtocol = report.RemoteBook.Release.DownloadProtocol;
 
                 //Skip if already grabbed
-                if (IsBookProcessed(grabbed, report))
+                if (IsBookProcessed(grabbed, report, legacyBookIds))
                 {
                     continue;
                 }
 
                 if (report.TemporarilyRejected)
                 {
-                    PreparePending(pendingAddQueue, grabbed, pending, report, PendingReleaseReason.Delay);
+                    PreparePending(pendingAddQueue, grabbed, pending, report, PendingReleaseReason.Delay, legacyBookIds);
                     continue;
                 }
 
                 if ((downloadProtocol == DownloadProtocol.Usenet && usenetFailed) ||
                     (downloadProtocol == DownloadProtocol.Torrent && torrentFailed))
                 {
-                    PreparePending(pendingAddQueue, grabbed, pending, report, PendingReleaseReason.DownloadClientUnavailable);
+                    PreparePending(pendingAddQueue, grabbed, pending, report, PendingReleaseReason.DownloadClientUnavailable, legacyBookIds);
                     continue;
                 }
 
@@ -84,7 +93,7 @@ namespace NzbDrone.Core.Download
 
                     case ProcessedDecisionResult.Pending:
                         {
-                            PreparePending(pendingAddQueue, grabbed, pending, report, PendingReleaseReason.Delay);
+                            PreparePending(pendingAddQueue, grabbed, pending, report, PendingReleaseReason.Delay, legacyBookIds);
                             break;
                         }
 
@@ -96,7 +105,7 @@ namespace NzbDrone.Core.Download
 
                     case ProcessedDecisionResult.Failed:
                         {
-                            PreparePending(pendingAddQueue, grabbed, pending, report, PendingReleaseReason.DownloadClientUnavailable);
+                            PreparePending(pendingAddQueue, grabbed, pending, report, PendingReleaseReason.DownloadClientUnavailable, legacyBookIds);
 
                             if (downloadProtocol == DownloadProtocol.Usenet)
                             {
@@ -169,26 +178,53 @@ namespace NzbDrone.Core.Download
             return (decision.Approved || decision.TemporarilyRejected) && decision.RemoteBook.Books.Any();
         }
 
-        private bool IsBookProcessed(List<DownloadDecision> decisions, DownloadDecision report)
+        private IDictionary<int, int> GetLegacyBookIds(IEnumerable<DownloadDecision> decisions)
         {
-            var bookIds = report.RemoteBook.Books.Select(e => e.Id).ToList();
+            if (_configService?.BookshelfMatchCompatibility != true || _legacyIdentityMapService == null)
+            {
+                return new Dictionary<int, int>();
+            }
+
+            var targetIds = decisions
+                .Where(decision => decision?.RemoteBook != null)
+                .SelectMany(decision => decision.RemoteBook.Books ?? new List<Book>())
+                .Select(book => book.Id)
+                .Distinct()
+                .ToList();
+
+            return _legacyIdentityMapService.GetMappingsByTargetIds("Book", targetIds)
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
+        }
+
+        private bool IsBookProcessed(List<DownloadDecision> decisions, DownloadDecision report, IDictionary<int, int> legacyBookIds)
+        {
+            var bookIds = GetBookWorkIds(report.RemoteBook.Books, legacyBookIds);
 
             return decisions.SelectMany(r => r.RemoteBook.Books)
-                            .Select(e => e.Id)
-                            .ToList()
+                            .SelectMany(book => GetBookWorkIds(new[] { book }, legacyBookIds))
                             .Intersect(bookIds)
                             .Any();
         }
 
-        private void PreparePending(List<Tuple<DownloadDecision, PendingReleaseReason>> queue, List<DownloadDecision> grabbed, List<DownloadDecision> pending, DownloadDecision report, PendingReleaseReason reason)
+        private static List<Tuple<bool, int>> GetBookWorkIds(IEnumerable<Book> books, IDictionary<int, int> legacyBookIds)
+        {
+            return books.Select(book => legacyBookIds.TryGetValue(book.Id, out var sourceId)
+                    ? Tuple.Create(true, sourceId)
+                    : Tuple.Create(false, book.Id))
+                .Distinct()
+                .ToList();
+        }
+
+        private void PreparePending(List<Tuple<DownloadDecision, PendingReleaseReason>> queue, List<DownloadDecision> grabbed, List<DownloadDecision> pending, DownloadDecision report, PendingReleaseReason reason, IDictionary<int, int> legacyBookIds)
         {
             // If a release was already grabbed with matching books we should store it as a fallback
             // and filter it out the next time it is processed.
             // If a higher quality release failed to add to the download client, but a lower quality release
             // was sent to another client we still list it normally so it apparent that it'll grab next time.
             // Delayed is treated the same, but only the first is listed the subsequent items as stored as Fallback.
-            if (IsBookProcessed(grabbed, report) ||
-                IsBookProcessed(pending, report))
+            if (IsBookProcessed(grabbed, report, legacyBookIds) ||
+                IsBookProcessed(pending, report, legacyBookIds))
             {
                 reason = PendingReleaseReason.Fallback;
             }

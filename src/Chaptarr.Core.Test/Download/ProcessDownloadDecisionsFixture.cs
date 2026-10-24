@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NLog;
 using NUnit.Framework;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.Clients;
@@ -26,6 +27,8 @@ namespace Chaptarr.Core.Test.Download
                 downloadService,
                 new IdentityPrioritizer(),
                 new NoopPendingReleaseService(),
+                ConfigServiceTestProxy.Create(),
+                new RecordingLegacyIdentityMapService(),
                 LogManager.GetLogger("ProcessDownloadDecisionsFixture"));
 
             var book = new Book { Id = 5792, Title = "Best Served Cold", MediaType = BookMediaType.Ebook };
@@ -40,6 +43,69 @@ namespace Chaptarr.Core.Test.Download
         }
 
         [Test]
+        public async Task bookshelf_compatibility_should_only_grab_one_release_for_a_split_legacy_work()
+        {
+            var downloadService = new RecordingDownloadService();
+            var identityMap = new RecordingLegacyIdentityMapService
+            {
+                Mappings = new List<BookshelfLegacyIdentityMapEntry>
+                {
+                    new() { Source = "BookshelfNG", EntityType = "Book", SourceId = 5792, TargetId = 101, MediaType = (int)BookMediaType.Audiobook },
+                    new() { Source = "BookshelfNG", EntityType = "Book", SourceId = 5792, TargetId = 102, MediaType = (int)BookMediaType.Ebook }
+                }
+            };
+            var subject = new ProcessDownloadDecisions(
+                downloadService,
+                new IdentityPrioritizer(),
+                new NoopPendingReleaseService(),
+                ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: true),
+                identityMap,
+                LogManager.GetLogger("ProcessDownloadDecisionsFixture"));
+            var audiobook = BuildDecision(new Book { Id = 101, Title = "Best Served Cold", MediaType = BookMediaType.Audiobook }, "Best Served Cold Audiobook", Quality.MP3);
+            var ebook = BuildDecision(new Book { Id = 102, Title = "Best Served Cold", MediaType = BookMediaType.Ebook }, "Best Served Cold Ebook", Quality.EPUB);
+
+            var result = await subject.ProcessDecisions(new List<DownloadDecision> { audiobook, ebook });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Grabbed, Has.Count.EqualTo(1));
+                Assert.That(downloadService.Downloaded, Has.Count.EqualTo(1));
+                Assert.That(downloadService.Downloaded[0].Release.Title, Is.EqualTo("Best Served Cold Audiobook"));
+            });
+        }
+
+        [Test]
+        public async Task native_mode_should_keep_split_format_rows_independent()
+        {
+            var downloadService = new RecordingDownloadService();
+            var identityMap = new RecordingLegacyIdentityMapService
+            {
+                Mappings = new List<BookshelfLegacyIdentityMapEntry>
+                {
+                    new() { Source = "BookshelfNG", EntityType = "Book", SourceId = 5792, TargetId = 101, MediaType = (int)BookMediaType.Audiobook },
+                    new() { Source = "BookshelfNG", EntityType = "Book", SourceId = 5792, TargetId = 102, MediaType = (int)BookMediaType.Ebook }
+                }
+            };
+            var subject = new ProcessDownloadDecisions(
+                downloadService,
+                new IdentityPrioritizer(),
+                new NoopPendingReleaseService(),
+                ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: false),
+                identityMap,
+                LogManager.GetLogger("ProcessDownloadDecisionsFixture"));
+            var audiobook = BuildDecision(new Book { Id = 101, Title = "Best Served Cold", MediaType = BookMediaType.Audiobook }, "Best Served Cold Audiobook", Quality.MP3);
+            var ebook = BuildDecision(new Book { Id = 102, Title = "Best Served Cold", MediaType = BookMediaType.Ebook }, "Best Served Cold Ebook", Quality.EPUB);
+
+            var result = await subject.ProcessDecisions(new List<DownloadDecision> { audiobook, ebook });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Grabbed, Has.Count.EqualTo(2));
+                Assert.That(downloadService.Downloaded, Has.Count.EqualTo(2));
+            });
+        }
+
+        [Test]
         public async Task central_mam_slot_race_should_return_the_release_to_the_existing_pending_queue()
         {
             var pending = new RecordingPendingReleaseService();
@@ -47,6 +113,8 @@ namespace Chaptarr.Core.Test.Download
                 new MamSlotBlockedDownloadService(),
                 new IdentityPrioritizer(),
                 pending,
+                ConfigServiceTestProxy.Create(),
+                new RecordingLegacyIdentityMapService(),
                 LogManager.GetLogger("ProcessDownloadDecisionsFixture"));
             var decision = BuildDecision(new Book { Id = 5792, Title = "Book", MediaType = BookMediaType.Ebook }, "Book", Quality.EPUB);
 
@@ -74,6 +142,8 @@ namespace Chaptarr.Core.Test.Download
                 downloadService,
                 new IdentityPrioritizer(),
                 pending,
+                ConfigServiceTestProxy.Create(),
+                new RecordingLegacyIdentityMapService(),
                 LogManager.GetLogger("ProcessDownloadDecisionsFixture"));
             var decision = BuildDecision(
                 new Book { Id = 5792, Title = "Book", MediaType = BookMediaType.Audiobook },
@@ -149,6 +219,27 @@ namespace Chaptarr.Core.Test.Download
             public List<DownloadDecision> PrioritizeDecisions(List<DownloadDecision> decisions)
             {
                 return decisions;
+            }
+        }
+
+        private sealed class RecordingLegacyIdentityMapService : IBookshelfLegacyIdentityMapService
+        {
+            public List<BookshelfLegacyIdentityMapEntry> Mappings { get; set; } = new();
+
+            public List<BookshelfLegacyIdentityMapEntry> GetMappings(string entityType, IEnumerable<int> sourceIds)
+            {
+                return new List<BookshelfLegacyIdentityMapEntry>();
+            }
+
+            public List<BookshelfLegacyIdentityMapEntry> GetMappingsByTargetIds(string entityType, IEnumerable<int> targetIds)
+            {
+                var ids = targetIds.ToHashSet();
+                return Mappings.Where(mapping => mapping.EntityType == entityType && ids.Contains(mapping.TargetId)).ToList();
+            }
+
+            public List<int> ResolveBookIds(IEnumerable<int> sourceIds, BookMediaType? mediaType = null)
+            {
+                return new List<int>();
             }
         }
 

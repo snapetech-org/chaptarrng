@@ -245,12 +245,10 @@ namespace NzbDrone.Core.Download.Pending
                 var firstQuality = g.First().Quality.Quality;
                 var qualityProfile = author?.GetQualityProfileForQuality(firstQuality);
 
-                if (_configService?.BookshelfMatchCompatibility == true &&
-                    g.First().Book.MediaType == BookMediaType.Audiobook &&
-                    qualityProfile?.Items?.Any() == true)
+                if (_configService?.BookshelfMatchCompatibility == true && qualityProfile?.Items?.Any() == true)
                 {
-                    // BookshelfNG selected pending audiobook candidates by its quality and
-                    // revision order, then the legacy author-tag protocol preference. The
+                    // BookshelfNG selected pending candidates by quality and revision, then
+                    // the shared author-tag protocol preference. The
                     // migration marker keeps that visible queue choice for converted installs.
                     return g.OrderByDescending(e => e.Quality, new QualityModelComparer(qualityProfile))
                         .ThenBy(q => PrioritizeBookshelfDownloadProtocol(q.Author, q.Protocol))
@@ -430,7 +428,9 @@ namespace NzbDrone.Core.Download.Pending
         private int GetDelay(RemoteBook remoteBook)
         {
             var mediaType = remoteBook.GetPreferredMediaType();
-            var tags = remoteBook.Author.GetTagsForMediaType(mediaType);
+            var tags = _configService?.BookshelfMatchCompatibility == true
+                ? remoteBook.Author?.Tags
+                : remoteBook.Author?.GetTagsForMediaType(mediaType);
             var delayProfile = _delayProfileService.AllForTags(tags).OrderBy(d => d.Order).First();
             var delay = delayProfile.GetProtocolDelay(remoteBook.Release.DownloadProtocol);
             var minimumAge = _configService.MinimumAge;

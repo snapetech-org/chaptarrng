@@ -13,7 +13,9 @@ mkdir -p "$DATA_DIR"
 # Goodreads-compatible default. Operators whose source used native Hardcover
 # can override this with HARDCOVER=true.
 export HARDCOVER="${HARDCOVER:-false}"
+export BOOKSHELFNG_DESKTOP_CHANNEL=appimage
 export CHAPTARR_PACKAGE_UPDATE_MECHANISM="${CHAPTARR_PACKAGE_UPDATE_MECHANISM:-External}"
 export CHAPTARR_PACKAGE_UPDATE_MECHANISM_MESSAGE="${CHAPTARR_PACKAGE_UPDATE_MECHANISM_MESSAGE:-Replace this AppImage with a newer compatible build.}"
 
-exec "$HERE/usr/bin/Chaptarr" -nobrowser "-data=$DATA_DIR" "$@"
+exec "$HERE/usr/libexec/bookshelfng-supervisor.sh" \
+  "$HERE/usr/bin/Chaptarr" "$DATA_DIR" "$@"
