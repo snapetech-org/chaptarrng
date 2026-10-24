@@ -10,6 +10,17 @@ function read(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
+function readWorkflowJob(workflow, name) {
+  const marker = `\n  ${name}:\n`;
+  const markerIndex = workflow.indexOf(marker);
+  assert.notEqual(markerIndex, -1, `workflow job ${name} exists`);
+  const start = markerIndex + 1;
+  const nextJob = /\n  [a-z0-9-]+:\n/g;
+  nextJob.lastIndex = start + marker.length - 1;
+  const match = nextJob.exec(workflow);
+  return workflow.slice(start, match ? match.index : workflow.length);
+}
+
 test('AppImage keeps its desktop identity, BookshelfNG data directory, and Chaptarr launcher', () => {
   const appRun = read('packaging/legacy/appimage/AppRun');
   const desktop = read('packaging/legacy/appimage/com.snapetech.bookshelfng.desktop');
@@ -75,6 +86,47 @@ test('Co-op Cloud handoff keeps stack volumes and uses the compatibility image',
   assert.match(compose, /bookshelfng_downloads:\/downloads/);
   assert.match(compose, /loadbalancer\.server\.port=8787/);
   assert.match(sample, /^CHAPTARRNG_COMPAT_IMAGE=ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover$/m);
+});
+
+test('release builds and verifies desktop migration candidates only behind all readiness gates', () => {
+  const workflow = read('.github/workflows/release.yml');
+  const builder = read('packaging/scripts/build-bookshelf-desktop-candidates.sh');
+  const desktopJob = readWorkflowJob(workflow, 'legacy-desktop-candidates');
+  const publishJob = readWorkflowJob(workflow, 'publish-release');
+
+  assert.match(desktopJob, /needs: \[release, standalone-assets\]/);
+  assert.match(desktopJob, /EXPECTED_RELEASE_SHA: \$\{\{ needs\.release\.outputs\.sha \}\}/);
+  assert.match(desktopJob, /name: chaptarrng-standalone-linux-x64/);
+  assert.match(desktopJob, /sha256sum --check \"\$archive\.sha256\"/);
+  assert.match(desktopJob, /build-bookshelf-desktop-candidates\.sh/);
+  assert.match(desktopJob, /appimagetool\/releases\/download\/1\.9\.1\/appimagetool-x86_64\.AppImage/);
+  assert.match(desktopJob, /APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0/);
+  assert.match(desktopJob, /APPIMAGE_RUNTIME_SHA256: 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d/);
+  assert.match(desktopJob, /type2-runtime\/releases\/download\/20251108\/runtime-x86_64/);
+  assert.match(desktopJob, /APPIMAGETOOL_RUNTIME_FILE=\$runtime/);
+  assert.match(builder, /appimagetool_runtime_args\+=\(--runtime-file "\$APPIMAGETOOL_RUNTIME_FILE"\)/);
+  const guardedSteps = desktopJob.match(/^      if: .*vars\.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true'.*vars\.CHAPTARRNG_RELEASE_READY == 'true'.*vars\.BOOKSHELFNG_RELEASE_READY == 'true'.*$/gm) ?? [];
+  assert.equal(guardedSteps.length, 5, 'download, build, and upload steps all require every release gate');
+  assert.match(desktopJob, /name: chaptarrng-bookshelfng-desktop-candidates/);
+  assert.match(publishJob, /needs: \[release, docker, standalone-assets, rpm-source, windows-migration-installer, legacy-desktop-candidates\]/);
+  assert.match(publishJob, /name: chaptarrng-bookshelfng-desktop-candidates/);
+  assert.match(publishJob, /ChaptarrNG-\$\{VERSION\}-bookshelfng-x86_64\.AppImage/);
+  assert.match(publishJob, /ChaptarrNG-\$\{VERSION\}-bookshelfng\.flatpak/);
+});
+
+test('release pins Cloudron and Compose candidates to the built compatibility image digest', () => {
+  const workflow = read('.github/workflows/release.yml');
+  const builder = read('packaging/scripts/build-bookshelf-container-platform-candidates.sh');
+  const publishJob = readWorkflowJob(workflow, 'publish-release');
+
+  assert.ok(builder.includes('^sha256:[a-f0-9]{64}$'));
+  assert.ok(builder.includes('tech.snapetech.bookshelfng'));
+  assert.match(builder, /CHAPTARRNG_COMPAT_IMAGE=/);
+  assert.ok(builder.includes('bookshelfng-container-platform-candidates.tar.gz'));
+  assert.ok(publishJob.includes('BOOKSHELF_HARDCOVER_DIGEST: ${{ needs.docker.outputs.bookshelf_hardcover_digest }}'));
+  assert.ok(publishJob.includes('build-bookshelf-container-platform-candidates.sh'));
+  assert.ok(publishJob.includes('bookshelfng-container-platform-candidates.tar.gz'));
+  assert.ok(publishJob.includes('tar -tzf "$RUNNER_TEMP/release-assets/$container_candidates"'));
 });
 
 test('StartOS candidate documents the package identity and external device-acceptance gate', () => {

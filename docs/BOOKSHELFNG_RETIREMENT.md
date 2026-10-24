@@ -1076,6 +1076,17 @@ handling. Keep the BookshelfNG service stopped, retain an independent backup,
 and follow the
 [migration guide](MIGRATE_FROM_BOOKSHELFNG.md).
 
+**BookshelfNG channel build wiring — 2026-10-24:** Docker compatibility-image
+pushes and provenance attestations now require the ChaptarrNG release,
+BookshelfNG retirement, and migration-bridge gates together. A gated stable
+release builds checksum-verified AppImage and Flatpak candidates from the exact
+Linux release archive, then packages Cloudron, Co-op Cloud, and self-hosting
+Compose sources with the exact multi-architecture Hardcover image digest from
+that release. The Windows installer, Debian package, and RPM handoffs remain
+in their existing gated paths. These artifacts are still release candidates:
+they do not update external catalogs or close representative-data, live
+provider, installed-update, or platform rollback acceptance.
+
 ## Legacy install channels
 
 | Channel | Published ChaptarrNG state | BookshelfNG handoff state |

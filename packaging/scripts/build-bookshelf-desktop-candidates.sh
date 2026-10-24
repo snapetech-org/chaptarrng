@@ -68,7 +68,15 @@ bash "$repo_root/packaging/scripts/prepare-bookshelf-desktop-candidates.sh" "$ar
 mkdir -p -- "$output"
 
 appimage="$output/ChaptarrNG-${version}-bookshelfng-x86_64.AppImage"
-ARCH=x86_64 appimagetool "$staged/appimage/ChaptarrNG.AppDir" "$appimage"
+appimagetool_runtime_args=()
+if [[ -n "${APPIMAGETOOL_RUNTIME_FILE:-}" ]]; then
+  if [[ ! -s "$APPIMAGETOOL_RUNTIME_FILE" ]]; then
+    echo "APPIMAGETOOL_RUNTIME_FILE must name a non-empty pinned runtime file." >&2
+    exit 2
+  fi
+  appimagetool_runtime_args+=(--runtime-file "$APPIMAGETOOL_RUNTIME_FILE")
+fi
+ARCH=x86_64 appimagetool "${appimagetool_runtime_args[@]}" "$staged/appimage/ChaptarrNG.AppDir" "$appimage"
 chmod 0755 "$appimage"
 sha256sum "$appimage" > "$appimage.sha256"
 

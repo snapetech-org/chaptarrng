@@ -68,6 +68,14 @@ run_case 'published standard image uses the port-advertising target' bash -c '
   grep -A10 -F "name: Build and push Docker image" "$1" | grep -Fxq "        target: chaptarrng-standard"
 ' _ "$repo_root/.github/workflows/docker-publish.yml"
 
+run_case 'BookshelfNG compatibility images and attestations are behind migration readiness' bash -c '
+  set -euo pipefail
+  expected="if: steps.docker-tags.outputs.has_tags == '\''true'\'' && inputs.legacy_bridge_enabled == true && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == '\''true'\'' && vars.CHAPTARRNG_RELEASE_READY == '\''true'\'' && vars.BOOKSHELFNG_RELEASE_READY == '\''true'\''"
+  [[ "$(grep -Fc "$expected" "$1")" -eq 4 ]]
+  grep -A1 -F "name: Build and push BookshelfNG softcover compatibility image" "$1" | grep -Fq "$expected"
+  grep -A1 -F "name: Build and push BookshelfNG Hardcover compatibility image" "$1" | grep -Fq "$expected"
+' _ "$repo_root/.github/workflows/docker-publish.yml"
+
 run_case 'compatibility image targets preserve provider mode' check_compatibility_provider_modes
 
 run_case 'fresh legacy image defaults to port 8787' bash -c '
