@@ -153,3 +153,23 @@ test('StartOS candidate documents the package identity and external device-accep
   assert.match(manifest, /upstreamRepo: 'https:\/\/github\.com\/snapetech-org\/chaptarrng'/);
   assert.match(manifest, /source: \{ dockerTag: 'ghcr\.io\/snapetech-org\/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' \}/);
 });
+
+test('StartOS candidate uses the patched SDK 3 dependency contract and documents its OS floor', () => {
+  const packageJson = JSON.parse(read('packaging/legacy/startos/candidate/package.json'));
+  const packageLock = JSON.parse(read('packaging/legacy/startos/candidate/package-lock.json'));
+  const readme = read('packaging/legacy/startos/candidate/README.md');
+  const dependencies = read('packaging/legacy/startos/candidate/startos/dependencies.ts');
+  const index = read('packaging/legacy/startos/candidate/startos/index.ts');
+  const init = read('packaging/legacy/startos/candidate/startos/init/index.ts');
+  const manifest = read('packaging/legacy/startos/candidate/startos/manifest/index.ts');
+
+  assert.equal(packageJson.dependencies['@start9labs/start-sdk'], '3.1.0');
+  assert.equal(packageLock.packages[''].dependencies['@start9labs/start-sdk'], '3.1.0');
+  assert.equal(packageLock.packages['node_modules/@start9labs/start-sdk'].version, '3.1.0');
+  assert.match(dependencies, /sdk\.Dependencies\.of\(\)/);
+  assert.match(index, /buildManifest\(versionGraph,\s*sdkManifest,\s*dependencies\)/);
+  assert.match(init, /import \{ dependencies \} from '\.\.\/dependencies'/);
+  assert.match(init, /versionGraph,\s*setInterfaces,\s*dependencies,\s*actions/);
+  assert.doesNotMatch(manifest, /dependencies:\s*\{\s*\}/);
+  assert.match(readme, /StartOS 0\.4\.0\.2 or newer/);
+});

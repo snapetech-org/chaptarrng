@@ -31,7 +31,7 @@ For current BookshelfNG migration and legacy-channel acceptance status, see
 | Cloudron | Candidate manifest in `packaging/legacy/cloudron/` | Keeps app ID `tech.snapetech.bookshelfng` | `/config`, `/books`, `/downloads` |
 | Co-op Cloud | Candidate recipe in `packaging/legacy/coop-cloud/bookshelfng/` | Keeps recipe and volume identities `bookshelfng` | `/config`, `/books`, `/downloads` |
 | Self-hosting catalogs | Candidate Compose service in `packaging/legacy/catalogs/` | Keeps container name and named volumes `bookshelfng` | `/config`, `/books`, `/downloads` |
-| StartOS | No ChaptarrNG package update is published | `bookshelfng-startos` keeps package ID `bookshelfng` | `/config`, `/books`, `/downloads` |
+| StartOS | No ChaptarrNG package update is published | `bookshelfng-startos` keeps package ID `bookshelfng` | StartOS 0.4.0.2 or newer; `/config`, `/books`, `/downloads` |
 | Helm | ChaptarrNG `charts/bookshelfng` with a versioned publisher for the existing OCI identity; unpublished while the release freeze is active | `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` | Same Helm release, namespace, `/config` PVC, and volume name |
 
 Legacy package recipes keep the old package identity, service name, and data
@@ -309,14 +309,15 @@ image, followed by install, upgrade, backup, and rollback checks on a StartOS
 device. No handoff has been tested or published.
 
 ChaptarrNG now carries source-only AppImage, Flatpak, Cloudron, Co-op Cloud,
-and self-hosting catalog candidates. The candidates retain the old desktop/app
-IDs, BookshelfNG data directories, Cloudron package ID, container name, port,
-and volume names. They are not published or accepted, and each installation
-channel still needs a built candidate, exact digest or artifact, upgrade
-testing, backup, and rollback. StartOS package source remains in the external
-`bookshelfng-startos` repository and also needs an update and device acceptance.
-See the [legacy channel candidates](legacy/README.md) and
-[BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
+self-hosting catalog, and StartOS candidates. The candidates retain the old
+desktop/app IDs, BookshelfNG data directories, package ID, container name,
+port, and volume names. They are not published or accepted, and each
+installation channel still needs a built candidate, exact digest or artifact,
+upgrade testing, backup, and rollback. The StartOS candidate uses SDK 3.1.0 and
+requires StartOS 0.4.0.2 or newer. The external `bookshelfng-startos` package
+repository has not been modified; its package update and device acceptance
+remain separate handoff work. See the [legacy channel candidates](legacy/README.md)
+and [BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
 
 ## Legacy AppImage, Flatpak, Cloudron, and catalog candidates
 

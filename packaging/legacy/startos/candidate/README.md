@@ -7,6 +7,9 @@ placeholder in `startos/manifest/index.ts` with the exact published
 multi-architecture digest. The package persists the application database at
 `/config`, the library at `/books`, and download files at `/downloads`.
 
+This candidate uses StartOS SDK 3 and requires StartOS 0.4.0.2 or newer. Update
+StartOS before installing it on an older device.
+
 ```sh
 npm ci
 npm run check
