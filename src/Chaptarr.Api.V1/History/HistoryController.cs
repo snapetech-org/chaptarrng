@@ -66,6 +66,59 @@ namespace Chaptarr.Api.V1.History
             return resource;
         }
 
+        private void ProjectLegacyBookIdentities(IEnumerable<HistoryResource> resources)
+        {
+            var historyResources = resources?.Where(resource => resource != null).ToList();
+            if (historyResources == null || historyResources.Count == 0 ||
+                HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility != true ||
+                _legacyIdentityMapService == null)
+            {
+                return;
+            }
+
+            var mappingsByTargetId = _legacyIdentityMapService
+                .GetMappingsByTargetIds("Book", historyResources.Select(resource => resource.Book?.Id ?? resource.BookId))
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var legacyMetadataIdByAuthorId = _legacyIdentityMapService
+                .GetMappingsByTargetIds("AuthorMetadata", historyResources
+                    .Where(resource => resource.Book != null)
+                    .Select(resource => resource.Book.AuthorId))
+                .GroupBy(mapping => mapping.TargetId)
+                .Where(group => group.Select(mapping => mapping.SourceId).Distinct().Count() == 1)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
+
+            foreach (var resource in historyResources)
+            {
+                if (resource.Book != null && legacyMetadataIdByAuthorId.TryGetValue(resource.Book.AuthorId, out var legacyMetadataId))
+                {
+                    resource.Book.AuthorMetadataId = legacyMetadataId;
+                    if (resource.Book.Author != null)
+                    {
+                        resource.Book.Author.AuthorMetadataId = legacyMetadataId;
+                    }
+                }
+
+                var targetBookId = resource.Book?.Id ?? resource.BookId;
+                if (!mappingsByTargetId.TryGetValue(targetBookId, out var mapping))
+                {
+                    continue;
+                }
+
+                resource.BookId = mapping.SourceId;
+                if (resource.Book != null)
+                {
+                    resource.Book.Id = mapping.SourceId;
+                    resource.Book.LocalBookId = mapping.SourceId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    resource.Book.MediaType = null;
+                    resource.Book.AudiobookMonitored = null;
+                    resource.Book.EbookMonitored = null;
+                    resource.Book.LocalAudiobookBooks = null;
+                    resource.Book.LocalEbookBooks = null;
+                }
+            }
+        }
+
         [HttpGet]
         [Produces("application/json")]
         public PagingResource<HistoryResource> GetHistory([FromQuery] PagingRequestResource paging, bool includeAuthor, bool includeBook, [FromQuery(Name = "eventType")] int[] eventTypes, int? bookId, string downloadId, [FromQuery] string mediaType = null)
@@ -93,13 +146,19 @@ namespace Chaptarr.Api.V1.History
                 pagingSpec.FilterExpressions.Add(h => h.DownloadId == downloadId);
             }
 
-            return pagingSpec.ApplyToPage(spec => _historyService.Paged(spec, parsedMediaType), h => MapToResource(h, includeAuthor, includeBook));
+            var history = pagingSpec.ApplyToPage(spec => _historyService.Paged(spec, parsedMediaType), h => MapToResource(h, includeAuthor, includeBook));
+            ProjectLegacyBookIdentities(history.Records);
+            return history;
         }
 
         [HttpGet("since")]
         public List<HistoryResource> GetHistorySince(DateTime date, EntityHistoryEventType? eventType = null, bool includeAuthor = false, bool includeBook = false, [FromQuery] string mediaType = null)
         {
-            return FilterByMediaType(_historyService.Since(date, eventType), mediaType).Select(h => MapToResource(h, includeAuthor, includeBook)).ToList();
+            var history = FilterByMediaType(_historyService.Since(date, eventType), mediaType)
+                .Select(h => MapToResource(h, includeAuthor, includeBook))
+                .ToList();
+            ProjectLegacyBookIdentities(history);
+            return history;
         }
 
         [HttpGet("author")]
@@ -117,20 +176,24 @@ namespace Chaptarr.Api.V1.History
                     .SelectMany(resolvedBookId => _historyService.GetByBook(resolvedBookId, eventType) ?? new List<EntityHistory>())
                     .GroupBy(entry => entry.Id)
                     .Select(group => group.First());
-                return FilterByMediaType(history, mediaType).Select(h =>
+                var resources = FilterByMediaType(history, mediaType).Select(h =>
                 {
                     h.Author = author;
 
                     return MapToResource(h, includeAuthor, includeBook);
                 }).ToList();
+                ProjectLegacyBookIdentities(resources);
+                return resources;
             }
 
-            return FilterByMediaType(_historyService.GetByAuthor(authorId, eventType), mediaType).Select(h =>
+            var authorHistory = FilterByMediaType(_historyService.GetByAuthor(authorId, eventType), mediaType).Select(h =>
             {
                 h.Author = author;
 
                 return MapToResource(h, includeAuthor, includeBook);
             }).ToList();
+            ProjectLegacyBookIdentities(authorHistory);
+            return authorHistory;
         }
 
         private static IEnumerable<EntityHistory> FilterByMediaType(IEnumerable<EntityHistory> history, string mediaType)

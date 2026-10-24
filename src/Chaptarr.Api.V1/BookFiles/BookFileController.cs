@@ -77,14 +77,71 @@ namespace Chaptarr.Api.V1.BookFiles
 
         private BookFileResource MapToResource(BookFile bookFile)
         {
+            BookFileResource resource;
             if (bookFile.EditionId > 0 && bookFile.Author != null)
             {
-                return bookFile.ToResource(bookFile.Author, _upgradableSpecification);
+                resource = bookFile.ToResource(bookFile.Author, _upgradableSpecification);
             }
             else
             {
-                return bookFile.ToResource();
+                resource = bookFile.ToResource();
             }
+
+            ProjectLegacyBookFileResource(resource);
+            return resource;
+        }
+
+        private BookFileResource MapToResource(BookFile bookFile, NzbDrone.Core.Books.Author author)
+        {
+            var resource = bookFile.ToResource(author, _upgradableSpecification);
+            ProjectLegacyBookFileResource(resource);
+            return resource;
+        }
+
+        private void ProjectLegacyBookFileResource(BookFileResource resource)
+        {
+            if (resource == null || HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility != true ||
+                _bookshelfLegacyIdentityMapService == null)
+            {
+                return;
+            }
+
+            var fileMapping = _bookshelfLegacyIdentityMapService
+                .GetMappingsByTargetIds("BookFile", new[] { resource.Id })
+                .FirstOrDefault();
+            if (fileMapping != null)
+            {
+                resource.Id = fileMapping.SourceId;
+            }
+
+            var bookMapping = _bookshelfLegacyIdentityMapService
+                .GetMappingsByTargetIds("Book", new[] { resource.BookId })
+                .FirstOrDefault();
+            if (bookMapping != null)
+            {
+                resource.BookId = bookMapping.SourceId;
+            }
+        }
+
+        private int ResolveLegacyBookFileId(int sourceId)
+        {
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility != true ||
+                _bookshelfLegacyIdentityMapService == null)
+            {
+                return sourceId;
+            }
+
+            return _bookshelfLegacyIdentityMapService.GetMappings("BookFile", new[] { sourceId })
+                .FirstOrDefault()?.TargetId ?? sourceId;
+        }
+
+        private List<int> ResolveLegacyBookFileIds(IEnumerable<int> sourceIds)
+        {
+            return (sourceIds ?? Enumerable.Empty<int>())
+                .Where(id => id > 0)
+                .Distinct()
+                .Select(ResolveLegacyBookFileId)
+                .ToList();
         }
 
         private List<BookFileResource> MapUnmappedResources(List<BookFile> files)
@@ -188,7 +245,7 @@ namespace Chaptarr.Api.V1.BookFiles
 
         protected override BookFileResource GetResourceById(int id)
         {
-            var bookFile = _mediaFileService.Get(id);
+            var bookFile = _mediaFileService.Get(ResolveLegacyBookFileId(id));
             var resource = MapToResource(bookFile);
             if (resource == null || string.IsNullOrWhiteSpace(resource.Path))
             {
@@ -231,7 +288,7 @@ namespace Chaptarr.Api.V1.BookFiles
         [HttpGet("{id:int}/download")]
         public ActionResult DownloadBookFile(int id)
         {
-            var bookFile = _mediaFileService.Get(id);
+            var bookFile = _mediaFileService.Get(ResolveLegacyBookFileId(id));
 
             if (bookFile == null || bookFile.Path.IsNullOrWhiteSpace())
             {
@@ -349,10 +406,10 @@ namespace Chaptarr.Api.V1.BookFiles
                 // Use mediaType filtering if provided
                 if (normalizedMediaType != null)
                 {
-                    return _mediaFileService.GetFilesByAuthorAndMediaType(authorId.Value, normalizedMediaType).ConvertAll(f => f.ToResource(author, _upgradableSpecification));
+                    return _mediaFileService.GetFilesByAuthorAndMediaType(authorId.Value, normalizedMediaType).ConvertAll(f => MapToResource(f, author));
                 }
 
-                return _mediaFileService.GetFilesByAuthor(authorId.Value).ConvertAll(f => f.ToResource(author, _upgradableSpecification));
+                return _mediaFileService.GetFilesByAuthor(authorId.Value).ConvertAll(f => MapToResource(f, author));
             }
 
             if (bookIds.Any())
@@ -370,7 +427,7 @@ namespace Chaptarr.Api.V1.BookFiles
                     var bookAuthor = _authorService.GetAuthor(book.AuthorId);
                     var bookFiles = _mediaFileService.GetFilesByBook(book.Id);
                     _logger.Debug($"[BOOKFILE-API] Found {bookFiles.Count} files for bookId: {bookId} (Book: {book.Title} by {bookAuthor?.Name})");
-                    result.AddRange(bookFiles.ConvertAll(f => f.ToResource(bookAuthor, _upgradableSpecification)));
+                    result.AddRange(bookFiles.ConvertAll(f => MapToResource(f, bookAuthor)));
                 }
 
                 _logger.Debug($"[BOOKFILE-API] Returning {result.Count} total files for {bookIds.Count} books");
@@ -379,7 +436,7 @@ namespace Chaptarr.Api.V1.BookFiles
             else
             {
                 // trackfiles will come back with the author already populated
-                var bookFiles = _mediaFileService.Get(bookFileIds);
+                var bookFiles = _mediaFileService.Get(ResolveLegacyBookFileIds(bookFileIds));
                 return bookFiles.ConvertAll(e => MapToResource(e));
             }
         }
@@ -387,16 +444,27 @@ namespace Chaptarr.Api.V1.BookFiles
         [RestPutById]
         public ActionResult<BookFileResource> SetQuality([FromBody] BookFileResource bookFileResource)
         {
-            var bookFile = _mediaFileService.Get(bookFileResource.Id);
+            var sourceFileId = bookFileResource.Id;
+            var bookFile = _mediaFileService.Get(ResolveLegacyBookFileId(sourceFileId));
             bookFile.Quality = bookFileResource.Quality;
             _mediaFileService.Update(bookFile);
+
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                var resource = MapToResource(_mediaFileService.Get(bookFile.Id));
+                return AcceptedAtAction(
+                    nameof(GetResourceByIdWithErrorHandler),
+                    new { id = sourceFileId },
+                    resource);
+            }
+
             return Accepted(bookFile.Id);
         }
 
         [HttpPut("editor")]
         public IActionResult SetQuality([FromBody] BookFileListResource resource)
         {
-            var bookFiles = _mediaFileService.Get(resource.BookFileIds);
+            var bookFiles = _mediaFileService.Get(ResolveLegacyBookFileIds(resource.BookFileIds));
 
             foreach (var bookFile in bookFiles)
             {
@@ -408,13 +476,13 @@ namespace Chaptarr.Api.V1.BookFiles
 
             _mediaFileService.Update(bookFiles);
 
-            return Accepted(bookFiles.ConvertAll(f => f.ToResource(bookFiles.First().Author, _upgradableSpecification)));
+            return Accepted(bookFiles.ConvertAll(f => MapToResource(f, bookFiles.First().Author)));
         }
 
         [RestDeleteById]
         public void DeleteBookFile(int id)
         {
-            var bookFile = _mediaFileService.Get(id);
+            var bookFile = _mediaFileService.Get(ResolveLegacyBookFileId(id));
 
             if (bookFile == null)
             {
@@ -434,7 +502,7 @@ namespace Chaptarr.Api.V1.BookFiles
         [HttpDelete("bulk")]
         public object DeleteTrackFiles([FromBody] BookFileListResource resource)
         {
-            var bookFiles = _mediaFileService.Get(resource.BookFileIds);
+            var bookFiles = _mediaFileService.Get(ResolveLegacyBookFileIds(resource.BookFileIds));
 
             foreach (var bookFile in bookFiles)
             {

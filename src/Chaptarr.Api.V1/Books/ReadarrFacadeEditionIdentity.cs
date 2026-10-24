@@ -100,7 +100,7 @@ namespace Chaptarr.Api.V1.Books
         public static List<Edition> FilterAddressableEditions(IEnumerable<Edition> editions, ReadarrFacadeContext facadeContext, string source)
         {
             var editionList = editions?.Where(e => e != null).ToList() ?? new List<Edition>();
-            if (facadeContext == null)
+            if (facadeContext == null || facadeContext.IsBookshelfCompatibility)
             {
                 return editionList;
             }

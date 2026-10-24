@@ -99,7 +99,7 @@ namespace Chaptarr.Api.V1.Books
                           IProviderAliasService providerAliasService = null,
                           IBookshelfLegacyIdentityMapService bookshelfLegacyIdentityMapService = null)
 
-        : base(bookService, seriesBookLinkService, authorStatisticsService, coverMapper, upgradableSpecification, signalRBroadcaster)
+        : base(bookService, seriesBookLinkService, authorStatisticsService, coverMapper, upgradableSpecification, signalRBroadcaster, bookshelfLegacyIdentityMapService, editionService)
 	        {
 	            _authorService = authorService;
 	            _editionService = editionService;
@@ -958,6 +958,20 @@ namespace Chaptarr.Api.V1.Books
                         .FirstOrDefault();
                 }
 
+                if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true &&
+                    _bookshelfLegacyIdentityMapService != null)
+                {
+                    var legacyBookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(new[] { bookIdInt });
+                    if (legacyBookIds.Count > 0)
+                    {
+                        var legacyBooks = _bookService.GetBooks(legacyBookIds)
+                            .Where(book => book != null)
+                            .ToList();
+                        var primaryBookId = SelectLegacyPrimaryBookId(legacyBooks);
+                        return primaryBookId > 0 ? _bookService.GetBook(primaryBookId) : null;
+                    }
+                }
+
                 return _bookService.GetBook(bookIdInt);
             }
 
@@ -1028,6 +1042,37 @@ namespace Chaptarr.Api.V1.Books
             var ids = sourceIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>();
             var effectiveMediaType = mediaType ?? HttpContext?.GetReadarrFacadeContext()?.MediaType;
             return _bookshelfLegacyIdentityMapService?.ResolveBookIds(ids, MediaTypeParameterParser.ParseOptional(effectiveMediaType)) ?? ids;
+        }
+
+        private int SelectLegacyPrimaryBookId(IReadOnlyCollection<Book> books)
+        {
+            if (books == null || books.Count == 0)
+            {
+                return 0;
+            }
+
+            var monitoredBookIds = _editionService.GetEditionsByBook(books.Select(book => book.Id))
+                .Where(edition => edition?.Monitored == true)
+                .Select(edition => edition.BookId)
+                .ToHashSet();
+
+            return SelectLegacyPrimaryBookId(books, monitoredBookIds);
+        }
+
+        private static int SelectLegacyPrimaryBookId(IReadOnlyCollection<Book> books, IReadOnlySet<int> monitoredBookIds)
+        {
+            var monitored = books.Where(book => monitoredBookIds.Contains(book.Id)).ToList();
+            if (monitored.Count > 0)
+            {
+                return monitored.OrderBy(book => book.MediaType).ThenBy(book => book.Id).First().Id;
+            }
+
+            return books
+                .OrderByDescending(book => book.HasFiles)
+                .ThenBy(book => book.MediaType)
+                .ThenBy(book => book.Id)
+                .First()
+                .Id;
         }
 
         private Book ResolveBookForApi(int sourceId, string mediaType = null)
@@ -1302,7 +1347,63 @@ namespace Chaptarr.Api.V1.Books
                 offset, pageSize, sortKey, sortDirection, includeUnmonitored, mediaType, downloaded, monitored, missing, wanted);
             var normalizedMediaType = MediaTypeParameterParser.NormalizeOptional(mediaType);
 
-            // Validate parameters
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                // BookshelfNG clamps these legacy pagination values instead of rejecting them.
+                var legacyOffset = Math.Max(0, offset);
+                var legacyPageSize = Math.Clamp(pageSize, 1, 200);
+                var allBooks = _bookService.GetAllBooks()
+                    .Where(book => book != null)
+                    .ToList();
+                var legacyMappings = _bookshelfLegacyIdentityMapService?.GetMappingsByTargetIds("Book", allBooks.Select(book => book.Id))
+                    .GroupBy(mapping => mapping.TargetId)
+                    .ToDictionary(group => group.Key, group => group.First())
+                    ?? new Dictionary<int, BookshelfLegacyIdentityMapEntry>();
+                var monitoredEditionBookIds = _editionService.GetEditionsByBook(allBooks.Select(book => book.Id))
+                    .Where(edition => edition?.Monitored == true)
+                    .Select(edition => edition.BookId)
+                    .ToHashSet();
+
+                var legacyGroups = allBooks
+                    .GroupBy(book => legacyMappings.TryGetValue(book.Id, out var mapping)
+                        ? (IsLegacy: true, Id: mapping.SourceId)
+                        : (IsLegacy: false, Id: book.Id))
+                    .Select(group =>
+                    {
+                        var rows = group.ToList();
+                        var primaryBookId = SelectLegacyPrimaryBookId(rows, monitoredEditionBookIds);
+                        return new
+                        {
+                            LegacyId = group.Key.Id,
+                            Rows = rows,
+                            Primary = rows.FirstOrDefault(book => book.Id == primaryBookId)
+                        };
+                    })
+                    .Where(group => group.Primary != null)
+                    .OrderBy(group => group.Primary.Title, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(group => group.LegacyId)
+                    .ToList();
+
+                var pageGroups = legacyGroups.Skip(legacyOffset).Take(legacyPageSize).ToList();
+                var pageRows = pageGroups.SelectMany(group => group.Rows).ToList();
+                var legacyStatsByBookId = BuildBookStatisticsById(_authorStatisticsService.AuthorStatistics());
+                var legacyPagedResource = new PagedBookApiResource
+                {
+                    Records = MapToResource(
+                        pageRows,
+                        string.IsNullOrWhiteSpace(include) || IncludeRequested(include, "author"),
+                        legacyStatsByBookId,
+                        includeOverview: IncludeRequested(include, "overview"),
+                        includeLinks: string.IsNullOrWhiteSpace(include) || IncludeRequested(include, "links")),
+                    TotalCount = legacyGroups.Count,
+                    Offset = legacyOffset,
+                    PageSize = legacyPageSize
+                };
+
+                return Ok(legacyPagedResource);
+            }
+
+            // Native ChaptarrNG paging reports invalid values explicitly.
             if (pageSize <= 0 || pageSize > 1000)
             {
                 return BadRequest("Page size must be between 1 and 1000");
@@ -2186,26 +2287,48 @@ namespace Chaptarr.Api.V1.Books
         private ActionResult<BookResource> UpdateBookInternal(BookResource bookResource, bool pinExplicitEditionChange)
         {
             var facadeContext = HttpContext.GetReadarrFacadeContext();
+            var sourceBookId = bookResource.Id;
             var prefixFailures = GetNativePrefixFailures(bookResource, facadeContext);
             if (prefixFailures.Any())
             {
                 throw new ValidationException(prefixFailures);
             }
 
+            var updateMediaType = MediaTypeParameterParser.ParseOptional(facadeContext?.MediaType ?? bookResource.MediaType);
+            if (facadeContext?.IsBookshelfCompatibility == true)
+            {
+                updateMediaType = ResolveBookshelfLegacyUpdateMediaType(bookResource, sourceBookId);
+            }
+
             var resolvedBookIds = ResolveBookIdsForApi(
-                new[] { bookResource.Id },
-                facadeContext?.MediaType ?? bookResource.MediaType);
+                new[] { sourceBookId },
+                updateMediaType.HasValue ? MediaTypeParameterParser.ToApiValue(updateMediaType.Value) : null);
             if (resolvedBookIds.Count == 0)
             {
                 return NotFound();
             }
 
-            bookResource.Id = resolvedBookIds[0];
+            var targetBookId = resolvedBookIds.Count == 1
+                ? resolvedBookIds[0]
+                : SelectLegacyPrimaryBookId(_bookService.GetBooks(resolvedBookIds));
+            if (targetBookId <= 0)
+            {
+                return NotFound();
+            }
+
+            bookResource.Id = targetBookId;
             var book = _bookService.GetBook(bookResource.Id);
             if (book == null)
             {
                 return NotFound();
             }
+
+            bookResource.MediaType ??= MediaTypeParameterParser.ToApiValue(book.MediaType);
+            if (facadeContext?.IsBookshelfCompatibility == true)
+            {
+                ResolveBookshelfLegacyEditionIds(bookResource.Editions, book);
+            }
+
             var wasMonitoredForFacadeMediaType = facadeContext != null &&
                                                  book.IsMonitoredForMediaType(facadeContext.MediaType);
             var beforeMonitoredEditionId = book?.Editions?.SingleOrDefault(e => e != null && e.Monitored)?.Id;
@@ -2254,6 +2377,15 @@ namespace Chaptarr.Api.V1.Books
 
             _editionService.UpdateMany(model.Editions);
 
+            if (facadeContext?.IsBookshelfCompatibility == true &&
+                !bookResource.AudiobookMonitored.HasValue &&
+                !bookResource.EbookMonitored.HasValue)
+            {
+                var sourceWorkIds = _bookshelfLegacyIdentityMapService?.ResolveBookIds(new[] { sourceBookId })
+                    ?? new List<int> { targetBookId };
+                _bookService.SetMonitored(sourceWorkIds, bookResource.Monitored);
+            }
+
             if (beforeMonitoredEditionId != afterMonitoredEditionId)
             {
                 EnsureBookCover(model.Id, "editionSwitch");
@@ -2261,7 +2393,62 @@ namespace Chaptarr.Api.V1.Books
 
             BroadcastResourceChange(ModelAction.Updated, model.Id);
 
+            if (facadeContext?.IsBookshelfCompatibility == true)
+            {
+                var legacyResource = MapToResource(_bookService.GetBook(model.Id), true);
+                return AcceptedAtAction(
+                    nameof(GetResourceByIdWithErrorHandler),
+                    new { id = sourceBookId },
+                    legacyResource);
+            }
+
             return Accepted(model.Id);
+        }
+
+        private BookMediaType? ResolveBookshelfLegacyUpdateMediaType(BookResource resource, int sourceBookId)
+        {
+            var selectedEditions = resource?.Editions?.Where(edition => edition?.Monitored == true).ToList()
+                ?? new List<EditionResource>();
+            if (selectedEditions.Count == 1)
+            {
+                return selectedEditions[0].IsEbook ? BookMediaType.Ebook : BookMediaType.Audiobook;
+            }
+
+            var targetBookIds = _bookshelfLegacyIdentityMapService?.ResolveBookIds(new[] { sourceBookId })
+                ?? new List<int> { sourceBookId };
+            var targetBooks = _bookService.GetBooks(targetBookIds)
+                .Where(book => book != null)
+                .ToList();
+            if (targetBooks.Count == 0)
+            {
+                return null;
+            }
+
+            var primaryBookId = SelectLegacyPrimaryBookId(targetBooks);
+            return targetBooks.FirstOrDefault(book => book.Id == primaryBookId)?.MediaType;
+        }
+
+        private void ResolveBookshelfLegacyEditionIds(IEnumerable<EditionResource> editions, Book targetBook)
+        {
+            var sourceEditions = editions?.Where(edition => edition != null && edition.Id > 0).ToList();
+            if (sourceEditions == null || sourceEditions.Count == 0 || _bookshelfLegacyIdentityMapService == null)
+            {
+                return;
+            }
+
+            var mappings = _bookshelfLegacyIdentityMapService.GetMappings("Edition", sourceEditions.Select(edition => edition.Id));
+            foreach (var edition in sourceEditions)
+            {
+                var mapping = mappings.FirstOrDefault(candidate =>
+                    candidate.SourceId == edition.Id &&
+                    (!candidate.MediaType.HasValue || candidate.MediaType.Value == (int)targetBook.MediaType));
+                if (mapping != null)
+                {
+                    edition.Id = mapping.TargetId;
+                }
+
+                edition.BookId = targetBook.Id;
+            }
         }
 
         internal static bool ShouldApplyFacadeSpecificBookMonitoring(

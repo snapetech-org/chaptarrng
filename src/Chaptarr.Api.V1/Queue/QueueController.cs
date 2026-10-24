@@ -8,6 +8,7 @@ using Chaptarr.Http.REST;
 using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Blocklisting;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Events;
 using NzbDrone.Core.Download;
@@ -39,6 +40,7 @@ namespace Chaptarr.Api.V1.Queue
         private readonly IConversionTrackingService _conversionTrackingService;
         private readonly IConversionJobService _conversionJobService;
         private readonly IDownloadImportModeResolver _downloadImportModeResolver;
+        private readonly IBookshelfLegacyIdentityMapService _legacyIdentityMapService;
 
         public QueueController(IBroadcastSignalRMessage broadcastSignalRMessage,
                            IQueueService queueService,
@@ -51,7 +53,8 @@ namespace Chaptarr.Api.V1.Queue
                            IBlocklistService blocklistService,
                            IConversionTrackingService conversionTrackingService,
                            IDownloadImportModeResolver downloadImportModeResolver,
-                           IConversionJobService conversionJobService = null)
+                           IConversionJobService conversionJobService = null,
+                           IBookshelfLegacyIdentityMapService legacyIdentityMapService = null)
             : base(broadcastSignalRMessage)
         {
             _queueService = queueService;
@@ -64,6 +67,7 @@ namespace Chaptarr.Api.V1.Queue
             _conversionTrackingService = conversionTrackingService;
             _conversionJobService = conversionJobService;
             _downloadImportModeResolver = downloadImportModeResolver;
+            _legacyIdentityMapService = legacyIdentityMapService;
 
             // Get the first available quality profile instead of creating an empty one
             var profiles = qualityProfileService.All();
@@ -197,7 +201,11 @@ namespace Chaptarr.Api.V1.Queue
             var pagingResource = new PagingResource<QueueResource>(paging);
             var pagingSpec = pagingResource.MapToPagingSpec<QueueResource, NzbDrone.Core.Queue.Queue>("timeleft", SortDirection.Ascending);
 
-            return pagingSpec.ApplyToPage((spec) => GetQueue(spec, includeUnknownAuthorItems, mediaType), (q) => MapToResource(q, includeAuthor, includeBook));
+            var queue = pagingSpec.ApplyToPage(
+                spec => GetQueue(spec, includeUnknownAuthorItems, mediaType),
+                item => item.ToResource(includeAuthor, includeBook, HttpContext.GetReadarrFacadeContext()));
+            ProjectLegacyBookIdentities(queue.Records);
+            return queue;
         }
 
         private PagingSpec<NzbDrone.Core.Queue.Queue> GetQueue(PagingSpec<NzbDrone.Core.Queue.Queue> pagingSpec, bool includeUnknownAuthorItems, string mediaType)
@@ -400,9 +408,57 @@ namespace Chaptarr.Api.V1.Queue
             return trackedDownload;
         }
 
-        private QueueResource MapToResource(NzbDrone.Core.Queue.Queue queueItem, bool includeAuthor, bool includeBook)
+        private void ProjectLegacyBookIdentities(IEnumerable<QueueResource> resources)
         {
-            return queueItem.ToResource(includeAuthor, includeBook, HttpContext.GetReadarrFacadeContext());
+            var queueResources = resources?.Where(resource => resource != null).ToList();
+            if (queueResources == null || queueResources.Count == 0 ||
+                HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility != true ||
+                _legacyIdentityMapService == null)
+            {
+                return;
+            }
+
+            var mappingsByTargetId = _legacyIdentityMapService
+                .GetMappingsByTargetIds("Book", queueResources.Select(resource => resource.Book?.Id ?? resource.BookId.GetValueOrDefault()))
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var legacyMetadataIdByAuthorId = _legacyIdentityMapService
+                .GetMappingsByTargetIds("AuthorMetadata", queueResources
+                    .Where(resource => resource.Book != null)
+                    .Select(resource => resource.Book.AuthorId))
+                .GroupBy(mapping => mapping.TargetId)
+                .Where(group => group.Select(mapping => mapping.SourceId).Distinct().Count() == 1)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
+
+            foreach (var resource in queueResources)
+            {
+                if (resource.Book != null && legacyMetadataIdByAuthorId.TryGetValue(resource.Book.AuthorId, out var legacyMetadataId))
+                {
+                    resource.Book.AuthorMetadataId = legacyMetadataId;
+                    if (resource.Book.Author != null)
+                    {
+                        resource.Book.Author.AuthorMetadataId = legacyMetadataId;
+                    }
+                }
+
+                var targetBookId = resource.Book?.Id ?? resource.BookId.GetValueOrDefault();
+                if (!mappingsByTargetId.TryGetValue(targetBookId, out var mapping))
+                {
+                    continue;
+                }
+
+                resource.BookId = mapping.SourceId;
+                if (resource.Book != null)
+                {
+                    resource.Book.Id = mapping.SourceId;
+                    resource.Book.LocalBookId = mapping.SourceId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    resource.Book.MediaType = null;
+                    resource.Book.AudiobookMonitored = null;
+                    resource.Book.EbookMonitored = null;
+                    resource.Book.LocalAudiobookBooks = null;
+                    resource.Book.LocalEbookBooks = null;
+                }
+            }
         }
 
         [NonAction]

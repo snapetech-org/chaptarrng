@@ -58,15 +58,70 @@ namespace Chaptarr.Api.V1.Queue
 
             if (authorId.HasValue)
             {
-                return fullQueue.Where(q => q.Author?.Id == authorId.Value).ToResource(includeAuthor, includeBook, HttpContext.GetReadarrFacadeContext());
+                return MapToResources(fullQueue.Where(q => q.Author?.Id == authorId.Value), includeAuthor, includeBook);
             }
 
             if (resolvedBookIds.Any())
             {
-                return fullQueue.Where(q => q.Book != null && resolvedBookIds.Contains(q.Book.Id)).ToResource(includeAuthor, includeBook, HttpContext.GetReadarrFacadeContext());
+                return MapToResources(fullQueue.Where(q => q.Book != null && resolvedBookIds.Contains(q.Book.Id)), includeAuthor, includeBook);
             }
 
-            return fullQueue.ToResource(includeAuthor, includeBook, HttpContext.GetReadarrFacadeContext());
+            return MapToResources(fullQueue, includeAuthor, includeBook);
+        }
+
+        private List<QueueResource> MapToResources(IEnumerable<NzbDrone.Core.Queue.Queue> queue, bool includeAuthor, bool includeBook)
+        {
+            var resources = queue.ToResource(includeAuthor, includeBook, HttpContext.GetReadarrFacadeContext());
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility != true || _legacyIdentityMapService == null)
+            {
+                return resources;
+            }
+
+            var mappingsByTargetId = _legacyIdentityMapService
+                .GetMappingsByTargetIds("Book", resources
+                    .Where(resource => resource != null)
+                    .Select(resource => resource.Book?.Id ?? resource.BookId.GetValueOrDefault()))
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var legacyMetadataIdByAuthorId = _legacyIdentityMapService
+                .GetMappingsByTargetIds("AuthorMetadata", resources
+                    .Where(resource => resource?.Book != null)
+                    .Select(resource => resource.Book.AuthorId))
+                .GroupBy(mapping => mapping.TargetId)
+                .Where(group => group.Select(mapping => mapping.SourceId).Distinct().Count() == 1)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
+
+            foreach (var resource in resources.Where(resource => resource != null))
+            {
+                if (resource.Book != null && legacyMetadataIdByAuthorId.TryGetValue(resource.Book.AuthorId, out var legacyMetadataId))
+                {
+                    resource.Book.AuthorMetadataId = legacyMetadataId;
+                    if (resource.Book.Author != null)
+                    {
+                        resource.Book.Author.AuthorMetadataId = legacyMetadataId;
+                    }
+                }
+
+                var targetBookId = resource.Book?.Id ?? resource.BookId.GetValueOrDefault();
+                if (!mappingsByTargetId.TryGetValue(targetBookId, out var mapping))
+                {
+                    continue;
+                }
+
+                resource.BookId = mapping.SourceId;
+                if (resource.Book != null)
+                {
+                    resource.Book.Id = mapping.SourceId;
+                    resource.Book.LocalBookId = mapping.SourceId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    resource.Book.MediaType = null;
+                    resource.Book.AudiobookMonitored = null;
+                    resource.Book.EbookMonitored = null;
+                    resource.Book.LocalAudiobookBooks = null;
+                    resource.Book.LocalEbookBooks = null;
+                }
+            }
+
+            return resources;
         }
 
         [NonAction]

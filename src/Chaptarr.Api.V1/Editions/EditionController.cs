@@ -51,7 +51,43 @@ namespace NzbDrone.Api.V1.Editions
 
             AnnotateAudiobookMonitoringStatus(resources, editions, requestedBookIds);
 
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true && _legacyIdentityMapService != null)
+            {
+                ProjectLegacyEditionIdentities(resources);
+            }
+
             return resources;
+        }
+
+        private void ProjectLegacyEditionIdentities(IEnumerable<EditionResource> resources)
+        {
+            var editionResources = resources?.Where(resource => resource != null).ToList();
+            if (editionResources == null || editionResources.Count == 0)
+            {
+                return;
+            }
+
+            var editionMappings = _legacyIdentityMapService
+                .GetMappingsByTargetIds("Edition", editionResources.Select(resource => resource.Id))
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var bookMappings = _legacyIdentityMapService
+                .GetMappingsByTargetIds("Book", editionResources.Select(resource => resource.BookId))
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First());
+
+            foreach (var resource in editionResources)
+            {
+                if (editionMappings.TryGetValue(resource.Id, out var editionMapping))
+                {
+                    resource.Id = editionMapping.SourceId;
+                }
+
+                if (bookMappings.TryGetValue(resource.BookId, out var bookMapping))
+                {
+                    resource.BookId = bookMapping.SourceId;
+                }
+            }
         }
 
         private void AnnotateAudiobookMonitoringStatus(List<EditionResource> resources, List<Edition> editions, List<int> requestedBookIds)

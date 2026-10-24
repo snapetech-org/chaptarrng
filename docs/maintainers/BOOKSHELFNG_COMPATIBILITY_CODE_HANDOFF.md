@@ -1,6 +1,6 @@
 # BookshelfNG compatibility code handoff
 
-This is the third code checkpoint after the 2026-10-24 replacement
+This is the fourth code checkpoint after the 2026-10-24 replacement
 reassessment. It is intended for focused validation and refinement before broad
 parity work.
 
@@ -24,6 +24,19 @@ parity work.
   BookshelfNG's single-work add model. It no longer creates both format rows for
   that legacy request. Legacy author and book adds do not enter ChaptarrNG's
   pending-import protocol.
+- The unchanged `/api/v1` address now projects split audiobook/ebook rows back
+  to one BookshelfNG book ID. The monitored source edition selects the legacy
+  detail row, paged reads retain the old title order and one-work total, edits
+  resolve the submitted edition to its target row, monitoring applies to the
+  legacy work, old pagination values clamp to BookshelfNG's 1–200 page-size and
+  non-negative offset behavior, and edition/file responses translate retained
+  source IDs.
+- Queue and history filters continue to resolve a legacy book ID to all mapped
+  format rows, while queue/history response IDs and included book resources
+  project those rows back to the original BookshelfNG work ID. Book responses
+  also restore the original `AuthorMetadataId` after metadata rows are merged
+  into ChaptarrNG author records. Rename previews include every mapped format
+  and project retained book, edition, and file IDs back to the source handles.
 - Linux Debian/PPA, RPM/COPR, and AUR package upgrades now record a durable
   migration-pending marker and a root-only copy of the prior application and
   service unit before replacing an installed BookshelfNG package. The service
@@ -51,9 +64,19 @@ restart acceptance before it can be treated as closed.
    source databases with bare IDs and already-prefixed IDs. Confirm the source
    backup stays unchanged and duplicate profile keys fail before promotion.
 2. On a migrated database, call unchanged `/api/v1` author/book lookup, add,
-   list, update, and delete routes with bare Goodreads and Hardcover IDs. Check
-   both the provider used internally and the provider ID projected back to the
-   client.
+   list, detail-by-ID, paged list, update, monitor, delete, edition, and book
+   file routes with bare Goodreads and Hardcover IDs. Seed a source work that
+   split into ebook and audiobook rows; verify it appears once, keeps the old
+   ID, resolves the monitored edition on detail/update, combines file counts,
+   and does not edit or delete an unrelated work. Check the provider used
+   internally and the provider ID projected back to the client. Verify queue
+   details, paged queue, history by book, history since, and author history use
+   the old book ID in both `BookId` and included `Book` resources, and preserve
+   the source `AuthorMetadataId` in included and direct book responses. A rename
+   preview for a split work should include both mapped formats with the legacy
+   book/file/edition IDs. Confirm `/books/paged` keeps source title ordering,
+   one-work totals, and BookshelfNG's pagination clamping for negative offsets,
+   zero page size, and sizes over 200.
 3. Repeat native frontend/API calls with `X-ChaptarrNG-Client: native`; confirm
    prefixed IDs stay canonical and bare IDs receive native validation errors.
    Confirm the old `/readarr/{hc|gr}/{ebook|audiobook}` and `/ebook` routes still

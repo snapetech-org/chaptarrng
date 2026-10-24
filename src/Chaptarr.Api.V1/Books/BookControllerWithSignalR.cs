@@ -18,13 +18,17 @@ namespace Chaptarr.Api.V1.Books
         protected readonly IAuthorStatisticsService _authorStatisticsService;
         protected readonly IUpgradableSpecification _qualityUpgradableSpecification;
         protected readonly IMapCoversToLocal _coverMapper;
+        private readonly IBookshelfLegacyIdentityMapService _bookshelfLegacyIdentityMapService;
+        private readonly IEditionService _editionService;
 
         protected BookControllerWithSignalR(IBookService bookService,
                                         ISeriesBookLinkService seriesBookLinkService,
                                         IAuthorStatisticsService authorStatisticsService,
                                         IMapCoversToLocal coverMapper,
                                         IUpgradableSpecification qualityUpgradableSpecification,
-                                        IBroadcastSignalRMessage signalRBroadcaster)
+                                        IBroadcastSignalRMessage signalRBroadcaster,
+                                        IBookshelfLegacyIdentityMapService bookshelfLegacyIdentityMapService = null,
+                                        IEditionService editionService = null)
             : base(signalRBroadcaster)
         {
             _bookService = bookService;
@@ -32,6 +36,8 @@ namespace Chaptarr.Api.V1.Books
             _authorStatisticsService = authorStatisticsService;
             _coverMapper = coverMapper;
             _qualityUpgradableSpecification = qualityUpgradableSpecification;
+            _bookshelfLegacyIdentityMapService = bookshelfLegacyIdentityMapService;
+            _editionService = editionService;
         }
 
         protected override BookResource GetResourceById(int id)
@@ -64,6 +70,9 @@ namespace Chaptarr.Api.V1.Books
             });
 
             MapCoversToLocal(resource);
+
+            ProjectLegacyAuthorMetadataIdentity(resource, book.AuthorId);
+            ProjectLegacyBookshelfResource(resource);
 
             return resource;
         }
@@ -116,7 +125,235 @@ namespace Chaptarr.Api.V1.Books
 
             MapCoversToLocal(result.ToArray());
 
-            return result;
+            return ProjectLegacyBookshelfResources(books, result, resolvedStatsByBookId, facadeContext);
+
+        }
+
+        private void ProjectLegacyBookshelfResource(BookResource resource)
+        {
+            var facadeContext = HttpContext?.GetReadarrFacadeContext();
+            if (resource == null || facadeContext?.IsBookshelfCompatibility != true || _bookshelfLegacyIdentityMapService == null)
+            {
+                return;
+            }
+
+            var mapping = _bookshelfLegacyIdentityMapService
+                .GetMappingsByTargetIds("Book", new[] { resource.Id })
+                .FirstOrDefault();
+
+            if (mapping == null)
+            {
+                return;
+            }
+
+            var sourceWorkBookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(new[] { mapping.SourceId });
+            var sourceWorkBooks = _bookService.GetBooks(sourceWorkBookIds)
+                .Where(book => book != null)
+                .ToList();
+            resource.Id = mapping.SourceId;
+            resource.LocalBookId = mapping.SourceId.ToString(global::System.Globalization.CultureInfo.InvariantCulture);
+            resource.MediaType = null;
+            resource.AudiobookMonitored = null;
+            resource.EbookMonitored = null;
+            resource.LocalAudiobookBooks = null;
+            resource.LocalEbookBooks = null;
+            if (sourceWorkBooks.Count > 0)
+            {
+                resource.Monitored = sourceWorkBooks.Any(book => book.IsMonitored());
+                resource.HasFiles = sourceWorkBooks.Any(book => book.HasFiles) || resource.HasFiles;
+            }
+
+            if (sourceWorkBooks.Count > 1)
+            {
+                var targetIds = sourceWorkBooks.Select(book => book.Id).ToHashSet();
+                var stats = _authorStatisticsService.AuthorStatistics(sourceWorkBooks[0].AuthorId)
+                    ?.BookStatistics
+                    ?.Where(value => targetIds.Contains(value.BookId))
+                    .ToList() ?? new List<BookStatistics>();
+                if (stats.Count > 0)
+                {
+                    resource.Statistics = CombineLegacyBookStatistics(stats).ToResource();
+                    resource.HasFiles = resource.Statistics.BookFileCount > 0;
+                }
+            }
+        }
+
+        private List<BookResource> ProjectLegacyBookshelfResources(
+            List<Book> books,
+            List<BookResource> resources,
+            IReadOnlyDictionary<int, BookStatistics> statisticsByBookId,
+            ReadarrFacadeContext facadeContext)
+        {
+            if (facadeContext?.IsBookshelfCompatibility != true ||
+                _bookshelfLegacyIdentityMapService == null ||
+                books == null || resources == null || books.Count == 0 || resources.Count == 0)
+            {
+                return resources;
+            }
+
+            var mappingsByTargetId = _bookshelfLegacyIdentityMapService
+                .GetMappingsByTargetIds("Book", books.Select(book => book.Id))
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var legacyMetadataIdByAuthorId = _bookshelfLegacyIdentityMapService
+                .GetMappingsByTargetIds("AuthorMetadata", books.Select(book => book.AuthorId))
+                .GroupBy(mapping => mapping.TargetId)
+                .Where(group => group.Select(mapping => mapping.SourceId).Distinct().Count() == 1)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
+            var resourcesByTargetId = resources.ToDictionary(resource => resource.Id);
+            var rowsByLegacyId = new Dictionary<int, List<Book>>();
+            var monitoredEditionBookIds = _editionService == null
+                ? new HashSet<int>()
+                : _editionService.GetEditionsByBook(books.Select(book => book.Id))
+                    .Where(edition => edition?.Monitored == true)
+                    .Select(edition => edition.BookId)
+                    .ToHashSet();
+
+            foreach (var book in books)
+            {
+                if (mappingsByTargetId.TryGetValue(book.Id, out var mapping))
+                {
+                    if (!rowsByLegacyId.TryGetValue(mapping.SourceId, out var rows))
+                    {
+                        rows = new List<Book>();
+                        rowsByLegacyId.Add(mapping.SourceId, rows);
+                    }
+
+                    rows.Add(book);
+                }
+            }
+
+            var resourceByLegacyId = new Dictionary<int, BookResource>();
+            var legacyIdsByTargetId = mappingsByTargetId.Values.ToDictionary(mapping => mapping.TargetId, mapping => mapping.SourceId);
+
+            foreach (var (legacyId, rows) in rowsByLegacyId)
+            {
+                var primaryBookId = SelectLegacyPrimaryBookId(rows, monitoredEditionBookIds);
+                if (!resourcesByTargetId.TryGetValue(primaryBookId, out var resource))
+                {
+                    continue;
+                }
+
+                ProjectLegacyAuthorMetadataIdentity(resource, rows[0].AuthorId, legacyMetadataIdByAuthorId);
+                resource.Id = legacyId;
+                resource.LocalBookId = legacyId.ToString(global::System.Globalization.CultureInfo.InvariantCulture);
+                resource.MediaType = null;
+                resource.AudiobookMonitored = null;
+                resource.EbookMonitored = null;
+                resource.LocalAudiobookBooks = null;
+                resource.LocalEbookBooks = null;
+                resource.Monitored = rows.Any(book => book.IsMonitored());
+
+                var stats = rows
+                    .Select(book => statisticsByBookId != null && statisticsByBookId.TryGetValue(book.Id, out var value) ? value : null)
+                    .Where(value => value != null)
+                    .ToList();
+                if (stats.Count > 0)
+                {
+                    resource.Statistics = CombineLegacyBookStatistics(stats).ToResource();
+                    resource.HasFiles = resource.Statistics.BookFileCount > 0;
+                }
+
+                resourceByLegacyId[legacyId] = resource;
+            }
+
+            var projected = new List<BookResource>();
+            var emittedLegacyIds = new HashSet<int>();
+            foreach (var book in books)
+            {
+                if (legacyIdsByTargetId.TryGetValue(book.Id, out var legacyId))
+                {
+                    if (emittedLegacyIds.Add(legacyId) && resourceByLegacyId.TryGetValue(legacyId, out var resource))
+                    {
+                        projected.Add(resource);
+                    }
+
+                    continue;
+                }
+
+                if (resourcesByTargetId.TryGetValue(book.Id, out var unprojectedResource))
+                {
+                    ProjectLegacyAuthorMetadataIdentity(unprojectedResource, book.AuthorId, legacyMetadataIdByAuthorId);
+                    projected.Add(unprojectedResource);
+                }
+            }
+
+            return projected;
+        }
+
+        private void ProjectLegacyAuthorMetadataIdentity(BookResource resource, int authorId)
+        {
+            var facadeContext = HttpContext?.GetReadarrFacadeContext();
+            if (resource == null || facadeContext?.IsBookshelfCompatibility != true || _bookshelfLegacyIdentityMapService == null)
+            {
+                return;
+            }
+
+            var legacyMetadataIdByAuthorId = _bookshelfLegacyIdentityMapService
+                .GetMappingsByTargetIds("AuthorMetadata", new[] { authorId })
+                .GroupBy(mapping => mapping.TargetId)
+                .Where(group => group.Select(mapping => mapping.SourceId).Distinct().Count() == 1)
+                .ToDictionary(group => group.Key, group => group.First().SourceId);
+            ProjectLegacyAuthorMetadataIdentity(resource, authorId, legacyMetadataIdByAuthorId);
+        }
+
+        private static void ProjectLegacyAuthorMetadataIdentity(
+            BookResource resource,
+            int authorId,
+            IReadOnlyDictionary<int, int> legacyMetadataIdByAuthorId)
+        {
+            if (resource == null || legacyMetadataIdByAuthorId == null ||
+                !legacyMetadataIdByAuthorId.TryGetValue(authorId, out var legacyMetadataId))
+            {
+                return;
+            }
+
+            resource.AuthorMetadataId = legacyMetadataId;
+            if (resource.Author != null)
+            {
+                resource.Author.AuthorMetadataId = legacyMetadataId;
+            }
+        }
+
+        private static BookStatistics CombineLegacyBookStatistics(IReadOnlyCollection<BookStatistics> statistics)
+        {
+            return new BookStatistics
+            {
+                BookFileCount = statistics.Sum(value => value.BookFileCount),
+                EbookFileCount = statistics.Sum(value => value.EbookFileCount),
+                AudiobookFileCount = statistics.Sum(value => value.AudiobookFileCount),
+                BookCount = statistics.Max(value => value.BookCount),
+                AvailableBookCount = statistics.Max(value => value.AvailableBookCount),
+                TotalBookCount = statistics.Max(value => value.TotalBookCount),
+                SizeOnDisk = statistics.Sum(value => value.SizeOnDisk),
+                EbookSizeOnDisk = statistics.Sum(value => value.EbookSizeOnDisk),
+                AudiobookSizeOnDisk = statistics.Sum(value => value.AudiobookSizeOnDisk)
+            };
+        }
+
+        private static int SelectLegacyPrimaryBookId(IReadOnlyCollection<Book> rows, IReadOnlySet<int> monitoredEditionBookIds)
+        {
+            if (rows == null || rows.Count == 0)
+            {
+                return 0;
+            }
+
+            var monitoredRows = rows.Where(book => monitoredEditionBookIds.Contains(book.Id)).ToList();
+            if (monitoredRows.Count > 0)
+            {
+                return monitoredRows
+                    .OrderBy(book => book.MediaType)
+                    .ThenBy(book => book.Id)
+                    .First()
+                    .Id;
+            }
+
+            return rows
+                .OrderByDescending(book => book.HasFiles)
+                .ThenBy(book => book.MediaType)
+                .ThenBy(book => book.Id)
+                .First()
+                .Id;
         }
 
         protected static IReadOnlyDictionary<int, BookStatistics> BuildBookStatisticsById(IEnumerable<AuthorStatistics> authorStatistics)
