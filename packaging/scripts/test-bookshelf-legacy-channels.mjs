@@ -7,10 +7,15 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 function read(relativePath) {
-  return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+  return normalizeLineEndings(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
+}
+
+function normalizeLineEndings(contents) {
+  return contents.replace(/\r\n/g, '\n');
 }
 
 function readWorkflowJob(workflow, name) {
+  workflow = normalizeLineEndings(workflow);
   const marker = `\n  ${name}:\n`;
   const markerIndex = workflow.indexOf(marker);
   assert.notEqual(markerIndex, -1, `workflow job ${name} exists`);
@@ -20,6 +25,11 @@ function readWorkflowJob(workflow, name) {
   const match = nextJob.exec(workflow);
   return workflow.slice(start, match ? match.index : workflow.length);
 }
+
+test('release workflow job extraction accepts Windows CRLF checkouts', () => {
+  const workflow = read('.github/workflows/release.yml').replace(/\n/g, '\r\n');
+  assert.match(readWorkflowJob(workflow, 'legacy-desktop-candidates'), /needs: \[release, standalone-assets\]/);
+});
 
 test('AppImage keeps its desktop identity, BookshelfNG data directory, and Chaptarr launcher', () => {
   const appRun = read('packaging/legacy/appimage/AppRun');
