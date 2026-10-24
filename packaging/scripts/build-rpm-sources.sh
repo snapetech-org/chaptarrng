@@ -34,6 +34,10 @@ build_one() {
   if [[ "$package" == bookshelfng ]]; then
     install -m 0600 "$repo_root/$source_dir/bookshelfng.env" "$top/SOURCES/"
     install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-healthcheck" "$top/SOURCES/"
+    install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-begin" "$top/SOURCES/"
+    install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-prepare" "$top/SOURCES/"
+    install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-cleanup" "$top/SOURCES/"
+    install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-rollback" "$top/SOURCES/"
   fi
   sed "s/__VERSION__/${version}/g" "$repo_root/$spec_template" > "$top/SPECS/${package}.spec"
   rpmbuild -bs --define "_topdir $top" "$top/SPECS/${package}.spec"

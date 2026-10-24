@@ -52,19 +52,22 @@ continue using the same PostgreSQL databases even though the defaults are not
 written to `config.xml`. This is source-candidate behavior; it does not change
 the published `.977` support statement above.
 
-The schema backups remain in the same PostgreSQL database. They are not a
-replacement for an independent database backup. The candidate Windows
-installer requires `pg_dump` and `pg_restore` on `PATH`, an explicit
-`PostgresUser`, and no other client sessions on the selected main, log, and
-cache databases before backup. It stores a verified custom-format dump of each
-unique database's active application schema and restores those dumps before
-reinstalling BookshelfNG. Restore archives are validated before changes and
-each database restore is transactional. It does not capture PostgreSQL roles,
-cluster settings, or unrelated schemas, and it does not replace a full
-operator-managed cluster backup. Keep all database clients stopped through
-preview, review, and apply. The converter's advisory lock
-coordinates ChaptarrNG conversions but does not stop BookshelfNG or other
-database clients from writing.
+The schema backups remain in the same PostgreSQL database. The candidate
+Windows installer and Linux package handoff also require `pg_dump` and
+`pg_restore` on `PATH`, an explicit `PostgresUser`, and no other client sessions
+on the selected main, log, and cache databases before backup. They create
+verified custom-format dumps of each unique database's active application
+schema. Automatic Linux rollback restores main data from the retained source
+schema, restores log/cache from the independent dumps, and keeps the displaced
+ChaptarrNG main schema so post-cutover writes are not overwritten. The current
+dump directory is recorded in
+`.chaptarrng-bookshelfng-postgres-backup-current`. Restore archives are
+validated before changes and each database restore is transactional. These
+backups do not capture PostgreSQL roles, cluster settings, or unrelated
+schemas, and do not replace a full operator-managed cluster backup. Keep all
+database clients stopped through preview, review, and apply. The converter's
+advisory lock coordinates ChaptarrNG conversions but does not stop BookshelfNG
+or other database clients from writing.
 
 Current `main` requires a `VersionInfo` table whose maximum version is between
 1 and 158. BookshelfNG shares migration IDs with its upstream, so valid

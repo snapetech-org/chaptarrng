@@ -11,6 +11,9 @@ fi
 if command -v systemctl >/dev/null 2>&1; then
   systemctl daemon-reload || true
 fi
+if [ -x /usr/lib/chaptarrng/handoff/bookshelfng-prepare ]; then
+  /usr/lib/chaptarrng/handoff/bookshelfng-prepare
+fi
 
 if [ "$1" = configure ]; then
   was_active="$run_dir/bookshelfng-package-was-active"

@@ -153,11 +153,6 @@ namespace NzbDrone.Core.Datastore
             bool previewOnly = false,
             Action<string> migrateBookshelfSource = null)
         {
-            if (string.IsNullOrWhiteSpace(bookshelfBackupPath))
-            {
-                throw new ArgumentException("A retained BookshelfNG database backup path is required.", nameof(bookshelfBackupPath));
-            }
-
             var currentBuilder = new SqliteConnectionStringBuilder(currentConnectionString);
             if (currentBuilder.Mode == SqliteOpenMode.Memory ||
                 string.IsNullOrWhiteSpace(currentBuilder.DataSource) ||
@@ -172,7 +167,16 @@ namespace NzbDrone.Core.Datastore
                 throw new FileNotFoundException("The current ChaptarrNG database does not exist.", currentPath);
             }
 
-            var sourceBackupPath = Path.GetFullPath(bookshelfBackupPath);
+            string sourceBackupPath;
+            if (string.IsNullOrWhiteSpace(bookshelfBackupPath))
+            {
+                sourceBackupPath = FindLatestBookshelfBackup(currentPath);
+            }
+            else
+            {
+                sourceBackupPath = Path.GetFullPath(bookshelfBackupPath);
+            }
+
             if (!File.Exists(sourceBackupPath))
             {
                 throw new FileNotFoundException("The retained BookshelfNG database backup does not exist.", sourceBackupPath);
@@ -280,6 +284,31 @@ namespace NzbDrone.Core.Datastore
                     DeleteDatabaseFiles(stagePath);
                 }
             }
+        }
+
+        private static string FindLatestBookshelfBackup(string currentPath)
+        {
+            var directory = Path.GetDirectoryName(currentPath);
+            var pattern = Path.GetFileName(currentPath) + ".bookshelfng-backup-*.db";
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            var latest = Directory.EnumerateFiles(directory, pattern)
+                .OrderByDescending(path => Path.GetFileName(path), OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+                .FirstOrDefault();
+
+            if (latest == null)
+            {
+                throw new FileNotFoundException(
+                    "No retained BookshelfNG SQLite conversion backup was found beside the current database. The installed application was not changed.",
+                    Path.Combine(directory, pattern));
+            }
+
+            var expectedPrefix = Path.GetFileName(currentPath) + ".bookshelfng-backup-";
+            if (!Path.GetFileName(latest).StartsWith(expectedPrefix, comparison))
+            {
+                throw new InvalidDataException("The newest retained SQLite backup does not belong to the current database. No database was changed.");
+            }
+
+            return latest;
         }
 
         private static void ValidateBookshelfBackup(

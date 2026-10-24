@@ -58,6 +58,10 @@ for pkgbase in chaptarrng-bin bookshelfng-bin; do
     cp "$recipe/bookshelfng.sysusers" "$work/"
     cp "$recipe/bookshelfng.tmpfiles" "$work/"
     cp "$repo_root/packaging/legacy/scripts/bookshelfng-healthcheck" "$work/"
+    cp "$repo_root/packaging/legacy/scripts/bookshelfng-begin" "$work/"
+    cp "$repo_root/packaging/legacy/scripts/bookshelfng-prepare" "$work/"
+    cp "$repo_root/packaging/legacy/scripts/bookshelfng-cleanup" "$work/"
+    cp "$repo_root/packaging/legacy/scripts/bookshelfng-rollback" "$work/"
     cp "$repo_root/packaging/native/chaptarrng.package_info" "$work/"
   fi
   use_local_source=false
@@ -117,6 +121,9 @@ for pkgbase in chaptarrng-bin bookshelfng-bin; do
 
   cp "$work/PKGBUILD" "$output/PKGBUILD"
   cp "$work"/*.install "$work"/*.service "$work"/*.sysusers "$work"/*.tmpfiles "$work"/*.package_info "$output/"
+  if [[ "$pkgbase" == bookshelfng-bin ]]; then
+    cp "$work"/bookshelfng-healthcheck "$work"/bookshelfng-begin "$work"/bookshelfng-prepare "$work"/bookshelfng-cleanup "$work"/bookshelfng-rollback "$output/"
+  fi
   if compgen -G "$work/*.env" >/dev/null; then cp "$work"/*.env "$output/"; fi
   grep -Fqx "pkgbase = $pkgbase" "$output/.SRCINFO"
   awk -v expected="$version" '$1 == "pkgver" && $2 == "=" && $3 == expected { found = 1 } END { exit !found }' "$output/.SRCINFO"

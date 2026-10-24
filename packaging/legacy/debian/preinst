@@ -3,13 +3,44 @@ set -e
 run_dir="${DPKG_ROOT:-}/run"
 root="${DPKG_ROOT:-}"
 source_binary="$root/usr/lib/bookshelfng/Readarr"
+source_dir="$root/usr/lib/bookshelfng"
 target_package_info="$root/usr/lib/chaptarrng/package_info"
 data_dir="$root/var/lib/bookshelfng"
 pending_marker="$data_dir/.chaptarrng-bookshelfng-migration-pending"
+handoff_dir="$data_dir/.chaptarrng-bookshelfng-handoff"
+
+snapshot_source_package() {
+  if [ -f "$handoff_dir/snapshot-ready" ]; then
+    return
+  fi
+
+  rm -rf "$handoff_dir"
+  install -d -m 0700 "$handoff_dir"
+  cp -a "$source_dir" "$handoff_dir/source-app"
+
+  for candidate in "$root/lib/systemd/system/bookshelfng.service" "$root/usr/lib/systemd/system/bookshelfng.service"; do
+    if [ -f "$candidate" ]; then
+      cp -a "$candidate" "$handoff_dir/source-unit"
+      unit_path=${candidate#"$root"}
+      printf '%s\n' "$unit_path" > "$handoff_dir/source-unit-path"
+      break
+    fi
+  done
+
+  bin_entry="$root/usr/bin/bookshelfng"
+  if [ -e "$bin_entry" ] || [ -L "$bin_entry" ]; then
+    cp -a "$bin_entry" "$handoff_dir/source-bin-entry"
+  else
+    touch "$handoff_dir/source-bin-entry-absent"
+  fi
+
+  touch "$handoff_dir/snapshot-ready"
+}
 
 if [ "$1" = install ] || [ "$1" = upgrade ]; then
   if [ ! -e "$target_package_info" ] && [ -x "$source_binary" ]; then
-    mkdir -p "$data_dir"
+    install -d -m 0750 "$data_dir"
+    snapshot_source_package
     touch "$pending_marker"
     chmod 0600 "$pending_marker"
   fi

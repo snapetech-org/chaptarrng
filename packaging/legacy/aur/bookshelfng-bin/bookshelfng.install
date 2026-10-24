@@ -1,12 +1,34 @@
 _service=bookshelfng.service
 _active_marker=/run/bookshelfng-package-was-active
 _source_binary=/usr/lib/bookshelfng/Readarr
+_source_dir=/usr/lib/bookshelfng
 _target_package_info=/usr/lib/chaptarrng/package_info
 _pending_marker=/var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+_handoff_dir=/var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff
+
+set -e
 
 _prepare_handoff() {
   if [[ ! -e "$_target_package_info" && -x "$_source_binary" ]]; then
     install -d -m750 /var/lib/bookshelfng
+    if [[ ! -f "$_handoff_dir/snapshot-ready" ]]; then
+      rm -rf -- "$_handoff_dir"
+      install -d -m700 "$_handoff_dir"
+      cp -a "$_source_dir" "$_handoff_dir/source-app"
+      for _candidate in /lib/systemd/system/bookshelfng.service /usr/lib/systemd/system/bookshelfng.service; do
+        if [[ -f "$_candidate" ]]; then
+          cp -a "$_candidate" "$_handoff_dir/source-unit"
+          printf '%s\n' "$_candidate" > "$_handoff_dir/source-unit-path"
+          break
+        fi
+      done
+      if [[ -e /usr/bin/bookshelfng || -L /usr/bin/bookshelfng ]]; then
+        cp -a /usr/bin/bookshelfng "$_handoff_dir/source-bin-entry"
+      else
+        touch "$_handoff_dir/source-bin-entry-absent"
+      fi
+      touch "$_handoff_dir/snapshot-ready"
+    fi
     install -Dm600 /dev/null "$_pending_marker"
   fi
 
@@ -26,9 +48,11 @@ pre_upgrade() {
 }
 
 _configure_service() {
+  set -e
   systemd-sysusers
   systemd-tmpfiles --create /usr/lib/tmpfiles.d/bookshelfng.conf
   systemctl daemon-reload >/dev/null 2>&1 || true
+  /usr/lib/chaptarrng/handoff/bookshelfng-prepare
   if [[ -e "$_active_marker" ]]; then
     systemctl start "$_service"
     rm -f -- "$_active_marker"

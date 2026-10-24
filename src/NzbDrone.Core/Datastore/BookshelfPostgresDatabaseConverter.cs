@@ -142,9 +142,9 @@ namespace NzbDrone.Core.Datastore
             string bookshelfBackupSchema,
             bool previewOnly = false)
         {
-            if (string.IsNullOrWhiteSpace(bookshelfBackupSchema) ||
-                !bookshelfBackupSchema.StartsWith("bookshelfng_backup_", StringComparison.Ordinal) ||
-                !bookshelfBackupSchema.All(character => char.IsAsciiLetterOrDigit(character) || character == '_'))
+            if (!string.IsNullOrWhiteSpace(bookshelfBackupSchema) &&
+                (!bookshelfBackupSchema.StartsWith("bookshelfng_backup_", StringComparison.Ordinal) ||
+                 !bookshelfBackupSchema.All(character => char.IsAsciiLetterOrDigit(character) || character == '_')))
             {
                 throw new InvalidDataException("A retained BookshelfNG PostgreSQL backup schema name is required. No database was changed.");
             }
@@ -165,6 +165,13 @@ namespace NzbDrone.Core.Datastore
                 if (DatabaseLineageGuard.Detect(connection, DatabaseType.PostgreSQL) != DatabaseLineage.Chaptarr)
                 {
                     throw new InvalidDataException("The current PostgreSQL schema is not a ChaptarrNG database. No database was changed.");
+                }
+
+                bookshelfBackupSchema ??= FindLatestBookshelfBackupSchema(connectionBuilder);
+                if (!bookshelfBackupSchema.StartsWith("bookshelfng_backup_", StringComparison.Ordinal) ||
+                    !bookshelfBackupSchema.All(character => char.IsAsciiLetterOrDigit(character) || character == '_'))
+                {
+                    throw new InvalidDataException("The newest retained PostgreSQL backup schema has an invalid name. No database was changed.");
                 }
 
                 using (var bookshelfBackup = OpenSchemaConnection(connectionBuilder, bookshelfBackupSchema))
@@ -410,6 +417,31 @@ namespace NzbDrone.Core.Datastore
             }
 
             return schema;
+        }
+
+        private static string FindLatestBookshelfBackupSchema(NpgsqlConnectionStringBuilder connectionBuilder)
+        {
+            string latest;
+            using (var connection = new NpgsqlConnection(connectionBuilder.ConnectionString))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+                    SELECT schema_name
+                      FROM information_schema.schemata
+                     WHERE left(schema_name, length(@prefix)) = @prefix
+                     ORDER BY schema_name DESC
+                     LIMIT 1;";
+                AddParameter(command, "@prefix", "bookshelfng_backup_");
+                latest = command.ExecuteScalar()?.ToString();
+            }
+
+            if (string.IsNullOrWhiteSpace(latest))
+            {
+                throw new InvalidDataException("No retained BookshelfNG PostgreSQL backup schema was found. No database was changed.");
+            }
+
+            return latest;
         }
 
         private static void CreateSchema(NpgsqlConnection connection, string schema, DbTransaction transaction = null)

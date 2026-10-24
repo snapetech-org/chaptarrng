@@ -175,16 +175,28 @@ namespace NzbDrone.Host
                     {
                         _appFolderFactory.Register();
                         var database = _connectionStringFactory.MainDbConnection;
-                        if (database.DatabaseType is not (DatabaseType.SQLite or DatabaseType.PostgreSQL) ||
-                            DatabaseLineageGuard.Detect(database.ConnectionString, database.DatabaseType) != DatabaseLineage.Chaptarr)
+                        if (database.DatabaseType is not (DatabaseType.SQLite or DatabaseType.PostgreSQL))
                         {
-                            throw new InvalidDataException("BookshelfNG rollback requires a valid ChaptarrNG SQLite or PostgreSQL database in this data directory.");
+                            throw new InvalidDataException("BookshelfNG rollback requires a SQLite or PostgreSQL database in this data directory.");
                         }
 
                         if (!_startupContext.Args.TryGetValue("bookshelf-backup", out var backupPath) ||
                             string.IsNullOrWhiteSpace(backupPath))
                         {
-                            throw new InvalidOperationException("BookshelfNG rollback requires -bookshelf-backup=/path/to/readarr.db.bookshelfng-backup-....db for SQLite or -bookshelf-backup=bookshelfng_backup_... for PostgreSQL.");
+                            throw new InvalidOperationException("BookshelfNG rollback requires a retained source backup, or -bookshelf-backup=auto to select the newest retained backup.");
+                        }
+
+                        var automaticRollback = string.Equals(backupPath, "auto", StringComparison.OrdinalIgnoreCase);
+                        var lineage = DatabaseLineageGuard.Detect(database.ConnectionString, database.DatabaseType);
+                        if (automaticRollback && lineage == DatabaseLineage.BookshelfNG)
+                        {
+                            Console.WriteLine("The database is still a BookshelfNG database; conversion did not promote a ChaptarrNG target, so no database restore is needed.");
+                            break;
+                        }
+
+                        if (lineage != DatabaseLineage.Chaptarr)
+                        {
+                            throw new InvalidDataException("BookshelfNG rollback requires a valid ChaptarrNG database or an untouched BookshelfNG source database.");
                         }
 
                         var previewOnly = _startupContext.PreviewBookshelfRestore;
@@ -198,7 +210,7 @@ namespace NzbDrone.Host
                         var result = migrationController.RestoreBookshelf(
                             database.ConnectionString,
                             database.DatabaseType,
-                            backupPath,
+                            automaticRollback ? null : backupPath,
                             previewOnly);
                         Console.WriteLine(previewOnly
                             ? $"BookshelfNG rollback preview passed. The current ChaptarrNG database and source backup were not changed: {result.BookshelfBackupPath}"
@@ -242,8 +254,26 @@ namespace NzbDrone.Host
                             throw new InvalidOperationException("Creating an independent PostgreSQL backup requires -confirm-bookshelf-service-stopped. Stop every process using these databases first.");
                         }
 
+                        if (_connectionStringFactory.MainDbConnection.DatabaseType == DatabaseType.SQLite)
+                        {
+                            if (DatabaseLineageGuard.Detect(
+                                    _connectionStringFactory.MainDbConnection.ConnectionString,
+                                    DatabaseType.SQLite) != DatabaseLineage.BookshelfNG)
+                            {
+                                throw new InvalidDataException("BookshelfNG preflight did not find a supported SQLite source database.");
+                            }
+
+                            Console.WriteLine("The configured BookshelfNG database is SQLite; an external PostgreSQL backup is not needed.");
+                            break;
+                        }
+
                         GetPostgresBookshelfDatabase(DatabaseLineage.BookshelfNG);
                         var databases = GetPostgresBackupDatabases();
+                        if (_startupContext.Flags.Contains("bookshelf-postgres-log-cache-only"))
+                        {
+                            databases = databases.Where(database => database.Name != "main").ToArray();
+                        }
+
                         if (!_startupContext.Args.TryGetValue("bookshelf-postgres-backup", out var backupPath) ||
                             string.IsNullOrWhiteSpace(backupPath))
                         {
@@ -271,6 +301,11 @@ namespace NzbDrone.Host
 
                         GetPostgresBookshelfDatabase(DatabaseLineage.BookshelfNG, DatabaseLineage.Chaptarr);
                         var databases = GetPostgresBackupDatabases();
+                        if (_startupContext.Flags.Contains("bookshelf-postgres-log-cache-only"))
+                        {
+                            databases = databases.Where(database => database.Name != "main").ToArray();
+                        }
+
                         if (!_startupContext.Args.TryGetValue("bookshelf-postgres-backup", out var backupPath) ||
                             string.IsNullOrWhiteSpace(backupPath))
                         {

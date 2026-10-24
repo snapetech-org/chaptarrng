@@ -9,8 +9,11 @@ User=bookshelfng
 Group=bookshelfng
 WorkingDirectory=/var/lib/bookshelfng
 EnvironmentFile=-/etc/bookshelfng/bookshelfng.env
+ExecStartPre=+/usr/lib/chaptarrng/handoff/bookshelfng-begin
 ExecStart=/usr/lib/chaptarrng/bin/Chaptarr /nobrowser -data=/var/lib/bookshelfng
 ExecStartPost=/usr/lib/chaptarrng/handoff/bookshelfng-healthcheck
+ExecStartPost=+/usr/lib/chaptarrng/handoff/bookshelfng-cleanup
+ExecStopPost=+/usr/lib/chaptarrng/handoff/bookshelfng-rollback
 Restart=on-failure
 RestartSec=5s
 TimeoutStartSec=900s

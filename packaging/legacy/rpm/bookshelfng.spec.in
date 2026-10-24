@@ -17,6 +17,10 @@ Source3:        bookshelfng.tmpfiles
 Source4:        bookshelfng.env
 Source5:        chaptarrng.package_info
 Source6:        bookshelfng-healthcheck
+Source7:        bookshelfng-begin
+Source8:        bookshelfng-cleanup
+Source9:        bookshelfng-rollback
+Source10:       bookshelfng-prepare
 BuildArch:      x86_64
 Requires:       glibc
 Requires:       libgcc
@@ -24,6 +28,7 @@ Requires:       libstdc++
 Requires:       libicu
 Requires:       openssl-libs
 Requires:       sqlite-libs
+Requires:       util-linux
 Requires:       zlib
 Requires(post): systemd
 Requires(preun): systemd
@@ -55,6 +60,10 @@ install -m 0644 %{SOURCE3} %{buildroot}%{_prefix}/lib/tmpfiles.d/bookshelfng.con
 install -m 0600 %{SOURCE4} %{buildroot}%{_sysconfdir}/bookshelfng/bookshelfng.env
 install -m 0644 %{SOURCE5} %{buildroot}/usr/lib/chaptarrng/package_info
 install -m 0755 %{SOURCE6} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-healthcheck
+install -m 0755 %{SOURCE7} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-begin
+install -m 0755 %{SOURCE8} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-cleanup
+install -m 0755 %{SOURCE9} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-rollback
+install -m 0755 %{SOURCE10} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-prepare
 install -m 0644 LICENSE %{buildroot}%{_licensedir}/bookshelfng/LICENSE
 ln -s ../lib/chaptarrng/bin/Chaptarr %{buildroot}%{_bindir}/bookshelfng
 chmod -R u=rwX,go=rX %{buildroot}/usr/lib/chaptarrng
@@ -63,6 +72,25 @@ chmod -R u=rwX,go=rX %{buildroot}/usr/lib/chaptarrng
 set -e
 if [ ! -e /usr/lib/chaptarrng/package_info ] && [ -x /usr/lib/bookshelfng/Readarr ]; then
   install -d -m 0750 /var/lib/bookshelfng
+  handoff_dir=/var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff
+  if [ ! -f "$handoff_dir/snapshot-ready" ]; then
+    rm -rf "$handoff_dir"
+    install -d -m 0700 "$handoff_dir"
+    cp -a /usr/lib/bookshelfng "$handoff_dir/source-app"
+    for candidate in /lib/systemd/system/bookshelfng.service /usr/lib/systemd/system/bookshelfng.service; do
+      if [ -f "$candidate" ]; then
+        cp -a "$candidate" "$handoff_dir/source-unit"
+        printf '%s\n' "$candidate" > "$handoff_dir/source-unit-path"
+        break
+      fi
+    done
+    if [ -e /usr/bin/bookshelfng ] || [ -L /usr/bin/bookshelfng ]; then
+      cp -a /usr/bin/bookshelfng "$handoff_dir/source-bin-entry"
+    else
+      touch "$handoff_dir/source-bin-entry-absent"
+    fi
+    touch "$handoff_dir/snapshot-ready"
+  fi
   touch /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
   chmod 0600 /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
 fi
@@ -78,8 +106,10 @@ set -e
 systemd-sysusers
 systemd-tmpfiles --create /usr/lib/tmpfiles.d/bookshelfng.conf
 systemctl daemon-reload >/dev/null 2>&1 || :
+/usr/lib/chaptarrng/handoff/bookshelfng-prepare
 
 %posttrans
+set -e
 if [ -e /run/bookshelfng-package-was-active ]; then
   systemctl start bookshelfng.service
   rm -f /run/bookshelfng-package-was-active

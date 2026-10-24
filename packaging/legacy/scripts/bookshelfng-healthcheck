@@ -12,34 +12,38 @@ if [ ! -f "$pending_marker" ]; then
   exit 0
 fi
 
-if command -v systemctl >/dev/null 2>&1; then
-  fragment_path=$(systemctl show --property=FragmentPath --value bookshelfng.service 2>/dev/null || true)
-  dropin_paths=$(systemctl show --property=DropInPaths --value bookshelfng.service 2>/dev/null || true)
-  case "$fragment_path" in
-    ''|/lib/systemd/system/bookshelfng.service|/usr/lib/systemd/system/bookshelfng.service) ;;
-    *)
-      printf '%s\n' operator-review-required > "$handoff_status.tmp"
-      chmod 0600 "$handoff_status.tmp"
-      mv -f "$handoff_status.tmp" "$handoff_status"
-      echo 'BookshelfNG uses a custom systemd unit path; automatic migration readiness was not checked.' >&2
-      exit 0
-      ;;
-  esac
-  if [ -n "$dropin_paths" ]; then
-    printf '%s\n' operator-review-required > "$handoff_status.tmp"
-    chmod 0600 "$handoff_status.tmp"
-    mv -f "$handoff_status.tmp" "$handoff_status"
-    echo 'BookshelfNG has systemd drop-ins; automatic migration readiness was not checked.' >&2
+write_status() {
+  printf '%s\n' "$1" > "$handoff_status.tmp"
+  chmod 0600 "$handoff_status.tmp"
+  mv -f "$handoff_status.tmp" "$handoff_status"
+}
+
+if ! command -v systemctl >/dev/null 2>&1; then
+  write_status operator-review-required
+  echo 'systemd is unavailable; automatic migration readiness was not checked.' >&2
+  exit 0
+fi
+
+fragment_path=$(systemctl show --property=FragmentPath --value bookshelfng.service 2>/dev/null || true)
+dropin_paths=$(systemctl show --property=DropInPaths --value bookshelfng.service 2>/dev/null || true)
+case "$fragment_path" in
+  /lib/systemd/system/bookshelfng.service|/usr/lib/systemd/system/bookshelfng.service) ;;
+  *)
+    write_status operator-review-required
+    echo 'BookshelfNG uses a custom or missing systemd unit; automatic migration readiness was not checked.' >&2
     exit 0
-  fi
+    ;;
+esac
+if [ -n "$dropin_paths" ]; then
+  write_status operator-review-required
+  echo 'BookshelfNG has systemd drop-ins; automatic migration readiness was not checked.' >&2
+  exit 0
 fi
 
 attempt=0
 while [ "$attempt" -lt 840 ]; do
   if /usr/lib/chaptarrng/bin/Chaptarr /check-bookshelf-migration -data="$data_dir" >/dev/null 2>&1; then
-    printf '%s\n' healthy > "$handoff_status.tmp"
-    chmod 0600 "$handoff_status.tmp"
-    mv -f "$handoff_status.tmp" "$handoff_status"
+    write_status healthy
     rm -f "$pending_marker"
     exit 0
   fi
@@ -48,8 +52,6 @@ while [ "$attempt" -lt 840 ]; do
   sleep 1
 done
 
-printf '%s\n' intervention-required > "$handoff_status.tmp"
-chmod 0600 "$handoff_status.tmp"
-mv -f "$handoff_status.tmp" "$handoff_status"
-echo 'BookshelfNG conversion did not produce a readable ChaptarrNG database within 14 minutes. The original database backup was retained; inspect the service log before retrying.' >&2
+write_status intervention-required
+echo 'BookshelfNG conversion did not produce a readable ChaptarrNG database within 14 minutes. Automatic rollback will restore the retained source database and the prior BookshelfNG package if both are valid.' >&2
 exit 1

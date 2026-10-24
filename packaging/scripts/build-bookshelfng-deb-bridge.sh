@@ -61,6 +61,14 @@ install -m 0644 "$repo_root/packaging/legacy/debian/bookshelfng.tmpfiles" \
   "$package_root/usr/lib/tmpfiles.d/bookshelfng.conf"
 install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-healthcheck" \
   "$package_root/usr/lib/chaptarrng/handoff/bookshelfng-healthcheck"
+install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-begin" \
+  "$package_root/usr/lib/chaptarrng/handoff/bookshelfng-begin"
+install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-prepare" \
+  "$package_root/usr/lib/chaptarrng/handoff/bookshelfng-prepare"
+install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-cleanup" \
+  "$package_root/usr/lib/chaptarrng/handoff/bookshelfng-cleanup"
+install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-rollback" \
+  "$package_root/usr/lib/chaptarrng/handoff/bookshelfng-rollback"
 install -m 0755 "$repo_root/packaging/legacy/debian/postinst" "$package_root/DEBIAN/postinst"
 install -m 0755 "$repo_root/packaging/legacy/debian/preinst" "$package_root/DEBIAN/preinst"
 install -m 0755 "$repo_root/packaging/legacy/debian/prerm" "$package_root/DEBIAN/prerm"
