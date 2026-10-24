@@ -20,6 +20,8 @@ on:
         required: false
       BOOKSHELFNG_COPR_WEBHOOK_URL:
         required: false
+      GPG_PRIVATE_KEY:
+        required: false
       CHOCOLATEY_API_KEY:
         required: false
   workflow_dispatch:
@@ -101,6 +103,8 @@ jobs:
       aur: ${{ steps.check.outputs.aur }}
       copr: ${{ steps.check.outputs.copr }}
       bookshelfng_copr: ${{ steps.check.outputs.bookshelfng_copr }}
+      ppa: ${{ steps.check.outputs.ppa }}
+      ppa_series: ${{ steps.check.outputs.ppa_series }}
       chocolatey: ${{ steps.check.outputs.chocolatey }}
     steps:
     - id: check
@@ -108,8 +112,86 @@ jobs:
         AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}
         BOOKSHELFNG_COPR_WEBHOOK_URL: ${{ secrets.BOOKSHELFNG_COPR_WEBHOOK_URL }}
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        LAUNCHPAD_PPA: ${{ vars.LAUNCHPAD_PPA }}
+        LAUNCHPAD_SERIES: ${{ vars.LAUNCHPAD_SERIES }}
         CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
       run: bash packaging/scripts/validate-release-publisher-config.sh publishers
+
+  build-legacy-ppa:
+    name: Build signed BookshelfNG PPA source package (${{ matrix.series.codename }})
+    needs: [credentials, release-target]
+    if: needs.credentials.outputs.ppa == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        series: ${{ fromJSON(needs.credentials.outputs.ppa_series) }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ inputs.tag }}
+        persist-credentials: false
+
+    - name: Install Debian source packaging tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y dpkg-dev gnupg
+
+    - name: Download and verify the release archive
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ inputs.tag }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        asset="ChaptarrNG-${VERSION}-linux-x64.tar.gz"
+        gh release download "$TAG" --pattern "$asset" --pattern "$asset.sha256" --dir "$RUNNER_TEMP"
+        (cd "$RUNNER_TEMP" && sha256sum --check "$asset.sha256")
+
+    - name: Build and sign the source package for this Ubuntu series
+      env:
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        SERIES: ${{ matrix.series.codename }}
+        SERIES_VERSION: ${{ matrix.series.version }}
+        VERSION: ${{ inputs.version }}
+        ARCHIVE_PATH: ${{ runner.temp }}/ChaptarrNG-${{ inputs.version }}-linux-x64.tar.gz
+        OUTPUT_DIR: ${{ runner.temp }}/bookshelfng-ppa/${{ matrix.series.codename }}
+      run: bash packaging/scripts/build-bookshelfng-ppa-source.sh
+
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: bookshelfng-ppa-source-${{ matrix.series.codename }}
+        path: ${{ runner.temp }}/bookshelfng-ppa/${{ matrix.series.codename }}/
+        retention-days: 1
+        if-no-files-found: error
+
+  publish-legacy-ppa:
+    name: Upload gated BookshelfNG source packages to Launchpad
+    needs: [credentials, release-target, build-legacy-ppa]
+    if: needs.credentials.outputs.ppa == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Launchpad upload tool
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y dput
+
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        pattern: bookshelfng-ppa-source-*
+        path: ${{ runner.temp }}/bookshelfng-ppa-packages
+
+    - name: Upload each signed source package
+      env:
+        LAUNCHPAD_PPA: ${{ vars.LAUNCHPAD_PPA }}
+      run: |
+        set -euo pipefail
+        mapfile -d '' changes_files < <(find "$RUNNER_TEMP/bookshelfng-ppa-packages" -type f -name '*_source.changes' -print0)
+        ((${#changes_files[@]} > 0))
+        for changes in "${changes_files[@]}"; do
+          dput "$LAUNCHPAD_PPA" "$changes"
+        done
 
   build-aur:
     name: Validate new and legacy AUR recipes
@@ -527,7 +609,7 @@ jobs:
   distribution-summary:
     name: Report package channel results
     if: always()
-    needs: [release-target, credentials, build-aur, publish-aur, build-chocolatey, publish-chocolatey, trigger-copr, trigger-legacy-copr, publish-legacy-helm-bridge]
+    needs: [release-target, credentials, build-aur, publish-aur, build-chocolatey, publish-chocolatey, build-legacy-ppa, publish-legacy-ppa, trigger-copr, trigger-legacy-copr, publish-legacy-helm-bridge]
     runs-on: ubuntu-latest
     steps:
     - name: Write channel results
@@ -539,6 +621,9 @@ jobs:
         COPR_TRIGGER: ${{ needs.trigger-copr.result }}
         LEGACY_COPR_CONFIGURED: ${{ needs.credentials.outputs.bookshelfng_copr }}
         LEGACY_COPR_TRIGGER: ${{ needs.trigger-legacy-copr.result }}
+        PPA_CONFIGURED: ${{ needs.credentials.outputs.ppa }}
+        PPA_BUILD: ${{ needs.build-legacy-ppa.result }}
+        PPA_UPLOAD: ${{ needs.publish-legacy-ppa.result }}
         CHOCOLATEY_CONFIGURED: ${{ needs.credentials.outputs.chocolatey }}
         LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}
         CHOCOLATEY_BUILD: ${{ needs.build-chocolatey.result }}
@@ -550,6 +635,7 @@ jobs:
           echo "- AUR recipe/build: ${AUR_BUILD}; publisher configured: ${AUR_CONFIGURED}; push: ${AUR_PUSH}"
           echo "- ChaptarrNG COPR publisher configured: ${COPR_CONFIGURED}; trigger: ${COPR_TRIGGER}"
           echo "- Legacy bookshelfng COPR bridge configured: ${LEGACY_COPR_CONFIGURED}; trigger: ${LEGACY_COPR_TRIGGER}"
+          echo "- Legacy BookshelfNG PPA source package configured: ${PPA_CONFIGURED}; build: ${PPA_BUILD}; upload: ${PPA_UPLOAD}"
           echo "- Chocolatey package build: ${CHOCOLATEY_BUILD}; publisher configured: ${CHOCOLATEY_CONFIGURED}; push: ${CHOCOLATEY_PUSH}"
           echo "- Legacy BookshelfNG Helm chart publish: ${LEGACY_HELM_PUBLISH}"
           echo "- BookshelfNG legacy package bridge enabled: ${LEGACY_BRIDGE_ENABLED:-false}"

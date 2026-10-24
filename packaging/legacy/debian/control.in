@@ -1,5 +1,5 @@
 Package: bookshelfng
-Version: __VERSION__-1
+Version: __DEB_VERSION__
 Section: web
 Priority: optional
 Architecture: amd64

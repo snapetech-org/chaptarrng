@@ -616,6 +616,7 @@ jobs:
       AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
       COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}
       BOOKSHELFNG_COPR_WEBHOOK_URL: ${{ secrets.BOOKSHELFNG_COPR_WEBHOOK_URL }}
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
       CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
 
   announce-discord:

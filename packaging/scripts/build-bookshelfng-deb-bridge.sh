@@ -2,6 +2,7 @@
 set -euo pipefail
 
 version="${VERSION:-}"
+deb_version="${DEB_VERSION:-}"
 archive_path="${ARCHIVE_PATH:-}"
 output_dir="${OUTPUT_DIR:-}"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
@@ -12,6 +13,13 @@ if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 if ! dpkg --compare-versions "$version" gt 0.4.21.71; then
   echo 'The bridge version must be newer than the final public BookshelfNG package (0.4.21.71).' >&2
+  exit 2
+fi
+if [[ -z "$deb_version" ]]; then
+  deb_version="${version}-1"
+fi
+if ! dpkg --validate-version "$deb_version" || ! dpkg --compare-versions "$deb_version" gt 0.4.21.71; then
+  echo 'DEB_VERSION must be a valid Debian version newer than the final public BookshelfNG package (0.4.21.71).' >&2
   exit 2
 fi
 if [[ ! -s "$archive_path" || -z "$output_dir" ]]; then
@@ -55,16 +63,20 @@ install -m 0755 "$repo_root/packaging/legacy/debian/preinst" "$package_root/DEBI
 install -m 0755 "$repo_root/packaging/legacy/debian/prerm" "$package_root/DEBIAN/prerm"
 install -m 0755 "$repo_root/packaging/legacy/debian/postrm" "$package_root/DEBIAN/postrm"
 printf '/etc/bookshelfng/bookshelfng.env\n' > "$package_root/DEBIAN/conffiles"
-sed "s/__VERSION__/${version}/g" "$repo_root/packaging/legacy/debian/control.in" \
+sed "s/__DEB_VERSION__/${deb_version}/g" "$repo_root/packaging/legacy/debian/control.in" \
   > "$package_root/DEBIAN/control"
 ln -s ../lib/chaptarrng/bin/Chaptarr "$package_root/usr/bin/bookshelfng"
 chmod -R u=rwX,go=rX "$package_root/usr/lib/chaptarrng"
 chmod 0600 "$package_root/etc/bookshelfng/bookshelfng.env"
 
-output_package="$output_dir/bookshelfng_${version}-1_amd64.deb"
+output_package="$output_dir/bookshelfng_${deb_version}_amd64.deb"
+if [[ -e "$output_package" || -e "${output_package}.sha256" ]]; then
+  echo "Refusing to overwrite an existing BookshelfNG Debian package: $output_package" >&2
+  exit 1
+fi
 dpkg-deb --root-owner-group --build "$package_root" "$output_package"
 test "$(dpkg-deb --field "$output_package" Package)" = bookshelfng
-test "$(dpkg-deb --field "$output_package" Version)" = "${version}-1"
+test "$(dpkg-deb --field "$output_package" Version)" = "$deb_version"
 test "$(dpkg-deb --field "$output_package" Architecture)" = amd64
 (cd "$output_dir" && sha256sum "$(basename "$output_package")" > "$(basename "$output_package").sha256")
 echo "Built candidate-only BookshelfNG Debian bridge: $output_package"
