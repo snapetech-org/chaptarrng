@@ -23,7 +23,9 @@ namespace NzbDrone.Core.Datastore
             Action<string> migrateNativeTarget,
             string mediaMapBasePath,
             bool previewOnly = false,
-            Action<string> migrateBookshelfSource = null)
+            Action<string> migrateBookshelfSource = null,
+            Action<string, string> reportProgress = null,
+            Action<string, string> reportOutcome = null)
         {
             if (migrateNativeTarget == null)
             {
@@ -58,8 +60,16 @@ namespace NzbDrone.Core.Datastore
                     throw new InvalidDataException("The database does not match the supported BookshelfNG PostgreSQL schema.");
                 }
 
+                reportProgress?.Invoke("detected", sourceSchema);
                 var sourceVersion = BookshelfDatabaseImporter.ValidateSourceBackup(sourceConnection);
+                reportProgress?.Invoke("preflighted", sourceSchema);
+                if (!previewOnly)
+                {
+                    var cleanedSchemas = CleanOrphanedTemporarySchemas(sourceConnection, sourceSchema);
+                    reportOutcome?.Invoke("orphan-stages-cleaned", cleanedSchemas.ToString(CultureInfo.InvariantCulture));
+                }
                 CreateConsistentSnapshot(sourceConnection, sourceSchema, snapshotSchema);
+                reportProgress?.Invoke("snapshotted", snapshotSchema);
 
                 if (sourceVersion < SupportedSourceMigration)
                 {
@@ -77,7 +87,12 @@ namespace NzbDrone.Core.Datastore
                     BookshelfDatabaseImporter.ValidateSourceSchema(snapshot);
                 }
 
-                CreateSchema(sourceConnection, stageSchema);
+                using (var stageCreation = sourceConnection.BeginTransaction())
+                {
+                    CreateSchema(sourceConnection, stageSchema, stageCreation);
+                    MarkTemporarySchema(sourceConnection, stageSchema, sourceSchema, stageCreation);
+                    stageCreation.Commit();
+                }
 
                 var stagedConnectionString = BuildSchemaConnectionString(connectionBuilder, stageSchema);
                 migrateNativeTarget(stagedConnectionString);
@@ -102,6 +117,7 @@ namespace NzbDrone.Core.Datastore
                 {
                     throw new InvalidDataException("The staged conversion target did not migrate to a native Chaptarr schema.");
                 }
+                reportProgress?.Invoke("converted", stageSchema);
 
                 if (previewOnly)
                 {
@@ -120,6 +136,15 @@ namespace NzbDrone.Core.Datastore
                     DatabaseLineage.Chaptarr,
                     DatabaseLineage.BookshelfNG);
                 promoted = true;
+                try
+                {
+                    reportProgress?.Invoke("promoted", backupSchema);
+                }
+                catch
+                {
+                    // Promotion is complete. The subsequent package health check can
+                    // reconcile the journal if recording this final checkpoint fails.
+                }
                 return new BookshelfDatabaseConversionResult(backupSchema, importReport, previewOnly: false);
             }
             finally
@@ -215,6 +240,7 @@ namespace NzbDrone.Core.Datastore
 
             using var transaction = connection.BeginTransaction(IsolationLevel.RepeatableRead);
             CreateSchema(connection, snapshotSchema, transaction);
+            MarkTemporarySchema(connection, snapshotSchema, sourceSchema, transaction);
             foreach (var table in tables)
             {
                 using var command = connection.CreateCommand();
@@ -224,6 +250,40 @@ namespace NzbDrone.Core.Datastore
             }
 
             transaction.Commit();
+        }
+
+        private static void MarkTemporarySchema(NpgsqlConnection connection, string temporarySchema, string sourceSchema, DbTransaction transaction = null)
+        {
+            var marker = "chaptarrng-bookshelfng-converter:" + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sourceSchema));
+            Execute(connection, transaction, $"COMMENT ON SCHEMA {Quote(temporarySchema)} IS '{marker}';"); // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- schema is identifier-quoted and marker is fixed text plus Base64.
+        }
+
+        private static int CleanOrphanedTemporarySchemas(NpgsqlConnection connection, string sourceSchema)
+        {
+            var marker = "chaptarrng-bookshelfng-converter:" + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sourceSchema));
+            var schemas = new List<string>();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT n.nspname
+                    FROM pg_namespace n
+                    WHERE (n.nspname LIKE 'bookshelf_snapshot_%' OR n.nspname LIKE 'chaptarr_stage_%')
+                      AND obj_description(n.oid, 'pg_namespace') = @marker
+                    ORDER BY n.nspname;";
+                AddParameter(command, "@marker", marker);
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    schemas.Add(reader.GetString(0));
+                }
+            }
+
+            foreach (var schema in schemas)
+            {
+                DropSchemaIfExists(connection, schema);
+            }
+
+            return schemas.Count;
         }
 
         private static void Promote(

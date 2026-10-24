@@ -18,7 +18,9 @@ namespace NzbDrone.Core.Datastore
             Action<string> migrateNativeTarget,
             Func<SqliteConnection, SqliteConnection, SqliteTransaction, BookshelfDatabaseImportReport> importRows,
             bool previewOnly = false,
-            Action<string> migrateBookshelfSource = null)
+            Action<string> migrateBookshelfSource = null,
+            Action<string, string> reportProgress = null,
+            Action<string, string> reportOutcome = null)
         {
             if (migrateNativeTarget == null)
             {
@@ -64,8 +66,22 @@ namespace NzbDrone.Core.Datastore
 
             try
             {
+                reportProgress?.Invoke("detected", sourcePath);
+
+                using (var source = OpenConnection(sourcePath, SqliteOpenMode.ReadOnly, sourceBuilder))
+                {
+                    BookshelfDatabaseImporter.ValidateSourceBackup(source);
+                }
+
+                reportProgress?.Invoke("preflighted", sourcePath);
+                if (!previewOnly)
+                {
+                    var cleanedStages = CleanOrphanedStageFiles(directory, sourcePath);
+                    reportOutcome?.Invoke("orphan-stages-cleaned", cleanedStages.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
                 CreateConsistentSnapshot(sourcePath, snapshotPath, sourceBuilder);
                 ValidateDatabase(snapshotPath, expectedLineage: DatabaseLineage.BookshelfNG, checkForeignKeys: true);
+                reportProgress?.Invoke("snapshotted", snapshotPath);
 
                 // Keep the consistent snapshot as the untouched rollback source. Run
                 // Bookshelf's released migrations only on a separate disposable copy so
@@ -100,6 +116,7 @@ namespace NzbDrone.Core.Datastore
                 }
 
                 ValidateDatabase(stagePath, expectedLineage: DatabaseLineage.Chaptarr, checkForeignKeys: true);
+                reportProgress?.Invoke("converted", stagePath);
 
                 if (previewOnly)
                 {
@@ -122,6 +139,16 @@ namespace NzbDrone.Core.Datastore
                 // The source snapshot has already been retained as the rollback copy.
                 File.Replace(stagePath, sourcePath, destinationBackupFileName: null);
                 promoted = true;
+                try
+                {
+                    reportProgress?.Invoke("promoted", backupPath);
+                }
+                catch
+                {
+                    // The database has already been atomically promoted. A journal
+                    // filesystem error must not report the successful replacement as
+                    // a failed conversion; the package health check can reconcile it.
+                }
 
                 return new BookshelfDatabaseConversionResult(backupPath, importReport, previewOnly: false);
             }
@@ -584,6 +611,27 @@ namespace NzbDrone.Core.Datastore
             {
                 File.Delete(databasePath);
             }
+        }
+
+        private static int CleanOrphanedStageFiles(string directory, string sourcePath)
+        {
+            var sourceFilePrefix = Path.GetFileName(sourcePath) + ".";
+            var orphanStages = Directory.EnumerateFiles(directory)
+                .Where(path =>
+                {
+                    var name = Path.GetFileName(path);
+                    return name.EndsWith(".db", StringComparison.Ordinal) &&
+                           (name.StartsWith(sourceFilePrefix + "chaptarr-stage-", StringComparison.Ordinal) ||
+                            name.StartsWith(sourceFilePrefix + "bookshelf-migrate-", StringComparison.Ordinal));
+                })
+                .ToArray();
+
+            foreach (var orphan in orphanStages)
+            {
+                DeleteDatabaseFiles(orphan);
+            }
+
+            return orphanStages.Length;
         }
     }
 

@@ -1,6 +1,6 @@
 # BookshelfNG compatibility code handoff
 
-This is the eighth code checkpoint after the 2026-10-24 replacement
+This is the ninth code checkpoint after the 2026-10-24 replacement
 reassessment. It is intended for focused validation and refinement before broad
 parity work.
 
@@ -74,13 +74,21 @@ parity work.
   units or drop-ins restore the previous app and default unit and leave
   migration pending with `operator-review-required`; installs without a valid
   pre-upgrade snapshot block automatic conversion. Debian, RPM, and AUR hooks
-  propagate failed service starts. A retained root-only journal records the
+  propagate failed service starts. A retained private journal, writable only by
+  root and the service account, records the
   detected, snapshotted, preflighted, converted, promoted, healthy, rolled-back,
   and intervention-required states, step outcomes, and SHA-256 fingerprints for
   the source app/database/configuration, service unit, and installed artifact.
   Startup reconciliation observes the current database readiness result after a
   restart; journal fingerprints and outcomes remain after healthy cleanup removes
   the temporary application snapshot.
+- SQLite and PostgreSQL converters now record source detection, preflight,
+  snapshot, validated conversion, and promotion boundaries in that journal.
+  They remove abandoned disposable stage artifacts on a later safe conversion
+  attempt; PostgreSQL temporary schemas carry a source-schema marker so cleanup
+  removes only converter-owned artifacts for the locked source schema. Retained
+  rollback copies remain available. Restore and successful database-readability
+  checks advance the same journal.
 
 The Linux default-unit cutover now has automatic database and application
 rollback code. C3/F4 still needs Luna's package-manager failure-path and
@@ -129,7 +137,7 @@ restart acceptance before it can be treated as closed.
    before database promotion, a missing or invalid backup, and custom
    unit/drop-in setups. Confirm successful readiness clears the marker and
    removes only the old application snapshot, while retaining database
-   backups. Inspect the root-only journal for the expected state sequence,
+   backups. Inspect the private journal for the expected state sequence,
    outcome records, and fingerprints; confirm a restart after promotion
    advances from observed database lineage without replacing original source
    fingerprints.
@@ -166,6 +174,7 @@ restart acceptance before it can be treated as closed.
 - BookshelfNG-to-ChaptarrNG acquisition, import, settings, integration, and UI
   parity reviews from C4-C6 remain open.
 - Channel delivery and installed-upgrade acceptance from C7-C8 remain open.
+- Windows and desktop handoff transactions do not yet use the shared journal.
 - These code slices have not been built or tested. Luna's results should be
   tied to the exact commit that contains them; regressions should be fixed
   before the next code batch.

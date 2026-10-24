@@ -95,6 +95,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             }
 
             var effectiveMigrationContext = migrationContext ?? new MigrationContext(MigrationType.Main);
+            var journal = previewOnly ? null : new BookshelfMigrationJournal(GetJournalDataDirectory(connectionString, databaseType));
             if (databaseType == DatabaseType.PostgreSQL)
             {
                 return new BookshelfPostgresDatabaseConverter().Convert(
@@ -102,7 +103,9 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                     targetConnectionString => MigrateNative(targetConnectionString, effectiveMigrationContext, DatabaseType.PostgreSQL),
                     GetMediaMapBasePath(connectionString, databaseType),
                     previewOnly,
-                    sourceSnapshotConnectionString => MigrateBookshelfSource(sourceSnapshotConnectionString, DatabaseType.PostgreSQL));
+                    sourceSnapshotConnectionString => MigrateBookshelfSource(sourceSnapshotConnectionString, DatabaseType.PostgreSQL),
+                    journal == null ? null : journal.RecordConverterStage,
+                    journal == null ? null : journal.RecordOutcome);
             }
 
             var sourceDatabasePath = Path.GetFullPath(new SqliteConnectionStringBuilder(connectionString).DataSource);
@@ -111,7 +114,9 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 targetConnectionString => MigrateNative(targetConnectionString, effectiveMigrationContext, DatabaseType.SQLite),
                 (source, target, transaction) => BookshelfDatabaseImporter.Import(source, target, transaction, sourceDatabasePath),
                 previewOnly,
-                MigrateBookshelfSource);
+                MigrateBookshelfSource,
+                journal == null ? null : journal.RecordConverterStage,
+                journal == null ? null : journal.RecordOutcome);
         }
 
         public BookshelfDatabaseRollbackResult RestoreBookshelf(
@@ -127,14 +132,56 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
 
             if (databaseType == DatabaseType.PostgreSQL)
             {
-                return new BookshelfPostgresDatabaseConverter().Restore(currentConnectionString, bookshelfBackup, previewOnly);
+                var result = new BookshelfPostgresDatabaseConverter().Restore(currentConnectionString, bookshelfBackup, previewOnly);
+                if (!previewOnly)
+                {
+                    RecordRollbackInJournal(currentConnectionString, databaseType);
+                }
+
+                return result;
             }
 
-            return new BookshelfDatabaseConverter().Restore(
+            var sqliteResult = new BookshelfDatabaseConverter().Restore(
                 currentConnectionString,
                 bookshelfBackup,
                 previewOnly,
                 MigrateBookshelfSource);
+            if (!previewOnly)
+            {
+                RecordRollbackInJournal(currentConnectionString, databaseType);
+            }
+
+            return sqliteResult;
+        }
+
+        private void RecordRollbackInJournal(string connectionString, DatabaseType databaseType)
+        {
+            try
+            {
+                var journal = new BookshelfMigrationJournal(GetJournalDataDirectory(connectionString, databaseType));
+                journal.RecordOutcome("rollback", "restored-source");
+                journal.RecordState("rolled-back");
+            }
+            catch
+            {
+                // Restoring the validated database has already completed. The
+                // package-level rollback hook records its own completion state.
+            }
+        }
+
+        private string GetJournalDataDirectory(string connectionString, DatabaseType databaseType)
+        {
+            if (!string.IsNullOrWhiteSpace(_appFolderInfo?.AppDataFolder))
+            {
+                return _appFolderInfo.AppDataFolder;
+            }
+
+            if (databaseType == DatabaseType.SQLite)
+            {
+                return Path.GetDirectoryName(Path.GetFullPath(new SqliteConnectionStringBuilder(connectionString).DataSource));
+            }
+
+            throw new InvalidOperationException("BookshelfNG migration journaling requires the ChaptarrNG app-data folder.");
         }
 
         private string GetMediaMapBasePath(string connectionString, DatabaseType databaseType)

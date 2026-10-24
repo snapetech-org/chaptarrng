@@ -167,6 +167,10 @@ namespace NzbDrone.Host
                             throw new InvalidDataException("BookshelfNG handoff health check found an invalid source provider dialect.");
                         }
 
+                        var journal = new BookshelfMigrationJournal(new AppFolderInfo(_startupContext).AppDataFolder);
+                        journal.RecordOutcome("health", "database-readable");
+                        journal.RecordState("healthy");
+
                         Console.WriteLine($"BookshelfNG handoff health check passed. The migrated {providerDialect} ChaptarrNG database is readable.");
                         break;
                     }

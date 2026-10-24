@@ -28,6 +28,9 @@ write_atomic() {
 
 mkdir -p "$journal_dir/outcomes" "$journal_dir/fingerprints" "$journal_dir/states"
 chmod 0700 "$journal_dir" "$journal_dir/outcomes" "$journal_dir/fingerprints" "$journal_dir/states"
+if id bookshelfng >/dev/null 2>&1; then
+  chown -R bookshelfng:bookshelfng "$journal_dir" 2>/dev/null || true
+fi
 
 action=${1:-}
 case "$action" in
