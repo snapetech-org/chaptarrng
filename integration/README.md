@@ -122,7 +122,6 @@ recovery behavior only. It does not close representative M4B or restart/resume
 acceptance.
 
 ```sh
-export SIXLABORS_LICENSE_FILE="$HOME/Downloads/sixlabors.lic"
 export SEERRNG_SOURCE="/path/to/seerrng"
 export SEERRNG_NODE_MODULES="$(realpath "$SEERRNG_SOURCE/node_modules")"
 export CHAPTARR_GLOBAL_API_KEY="$(openssl rand -hex 24)"
@@ -139,9 +138,8 @@ docker compose -p chaptarrng-seerrng-smoke \
   -f integration/seerrng-smoke.compose.yml down -v --remove-orphans
 ```
 
-Use distinct test API keys and a valid Six Labors build license. Keep the
-license outside the checkout; `.dockerignore` excludes it from the build
-context, and Compose mounts it only as a BuildKit secret.
+Use distinct test API keys. The application build requires no private
+image-processing license.
 
 The lifecycle probe uses synthetic provider IDs that are expected to be
 unavailable. It verifies that the adapter receives a pending ID, can poll it,

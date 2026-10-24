@@ -1,5 +1,19 @@
 # BookshelfNG retirement status
 
+**Image dependency/security update (2026-10-23):** ChaptarrNG now uses
+SkiaSharp for resized JPEG, PNG, JFIF, and WebP covers, and PDFsharp 6.2.4 for
+PDF metadata extraction. PDFsharp 6.2.4 targets .NET 10 and retains its MIT
+license. Removing ImageSharp and PdfSharpCore also removes the transitive
+ImageSharp dependency and its build-license gates from source, Docker, archive,
+and CI builds. The full application and Core test builds passed with zero
+warnings or errors. Release Core passed 4,808 tests, skipped 25, and failed 0;
+the frontend CommonJS suite passed 126/126, and the production UI bundle,
+typecheck, translation check, Compose validation, and package-graph check all
+passed. The 25 skips require configured PostgreSQL, headless Chromium, or live
+BookLore credentials. This closes the local dependency/code review item;
+hosted exact-head checks, provider, representative-data, and installed-channel
+acceptance remain open.
+
 **Migrated release-decision parity — 2026-10-23:** ChaptarrNG now keeps
 BookshelfNG's non-bypassable required/ignored release-term and quality-profile
 rejections for converted installs, and does not skip cutoff or upgrade checks

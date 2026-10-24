@@ -608,13 +608,6 @@ marketplace.
 
 > **Docker is the primary maintained installation.** Releases also include standalone Linux and Windows archives, with package-manager feeds available on selected platforms. Publication and upgrade coverage varies by channel; check the [package status](packaging/README.md) before choosing one. For a BookshelfNG move, start with the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md). The [unmapped-files guide](docs/UNMAPPED_FILES.md) covers match retries.
 
-ChaptarrNG uses ImageSharp to resize cover images. ImageSharp 4 requires a
-valid Six Labors license when building this direct dependency from source.
-Official ChaptarrNG images contain a licensed build and do not need a build key
-configured at runtime. All use remains subject to Six Labors' license terms.
-See the [ImageSharp build-license guide](docs/development/imagesharp-license.md)
-for eligibility, acquisition, and build setup.
-
 ### Docker
 
 Pull the image:
@@ -826,7 +819,6 @@ Note: the inherited assembly is named `Chaptarr.dll` on Linux/macOS and `Chaptar
 - [MQTT Gateway](docs/MQTT_GATEWAY.md): broker settings, Home Assistant discovery, snapshots, events, and canonical webhook requests
 - [Prometheus metrics](docs/PROMETHEUS_METRICS.md): listener configuration, scrape setup, metric names, and network exposure
 - [Optional diagnostics](docs/OPTIONAL_DIAGNOSTICS.md): explicit opt-in, aggregate event counts, and privacy boundaries
-- [ImageSharp build-license guide](docs/development/imagesharp-license.md): why source builds need a Six Labors license, how to obtain one, and where to configure it
 - [Validation engine guide](docs/development/validation-engine.md): local and CI validation tasks, progress reporting, and receipt checks
 - [Changelog](CHANGELOG.md): release-by-release changes shipped by the fork
 - [SeerrNG Bookshelf backend guide](https://github.com/snapetech-org/seerrng/blob/main/docs/using-seerr/bookshelf-backend.md): setup and request lifecycle

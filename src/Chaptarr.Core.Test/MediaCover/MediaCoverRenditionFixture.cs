@@ -18,9 +18,7 @@ using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.MediaCover.Commands;
 using NzbDrone.Core.Messaging.Commands;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 
 namespace Chaptarr.Core.Test.MediaCover
 {
@@ -676,7 +674,7 @@ namespace Chaptarr.Core.Test.MediaCover
             var httpClient = DispatchProxy.Create<IHttpClient, ImageHttpClientProxy>();
             var responses = (ImageHttpClientProxy)(object)httpClient;
             var mascotBytes = Convert.FromBase64String(MascotWebpBase64);
-            var realImageBytes = BuildPngBytes(32, 48, new Rgba32(30, 120, 210));
+            var realImageBytes = BuildPngBytes(32, 48, new SKColor(30, 120, 210));
             responses.ResponseQueue.Enqueue(mascotBytes); // range/header probe
             responses.ResponseQueue.Enqueue(mascotBytes); // full download
             responses.ResponseQueue.Enqueue(realImageBytes); // range/header probe
@@ -1078,11 +1076,11 @@ namespace Chaptarr.Core.Test.MediaCover
             Assert.That(mapper.CanHandle("/MediaCover/Books/12/cover-metadata.json"), Is.False);
         }
 
-        [TestCase(".png", "PNG")]
-        [TestCase(".jpeg", "JPEG")]
-        [TestCase(".jfif", "JPEG")]
-        [TestCase(".webp", "WEBP")]
-        public void image_resizer_should_preserve_the_destination_file_format(string extension, string expectedFormat)
+        [TestCase(".png", SKEncodedImageFormat.Png)]
+        [TestCase(".jpeg", SKEncodedImageFormat.Jpeg)]
+        [TestCase(".jfif", SKEncodedImageFormat.Jpeg)]
+        [TestCase(".webp", SKEncodedImageFormat.Webp)]
+        public void image_resizer_should_preserve_the_destination_file_format(string extension, SKEncodedImageFormat expectedFormat)
         {
             var folder = Path.Combine(Path.GetTempPath(), "chaptarr-image-resizer-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(folder);
@@ -1091,15 +1089,59 @@ namespace Chaptarr.Core.Test.MediaCover
 
             try
             {
-                using (var image = new Image<Rgba32>(20, 40))
-                {
-                    image.Save(source, new PngEncoder());
-                }
+                CreatePng(source, 20, 40);
 
                 new ImageResizer(null, null).Resize(source, destination, 10);
 
-                Assert.That(Image.DetectFormat(destination)?.Name, Is.EqualTo(expectedFormat));
-                Assert.That(Image.Identify(destination)?.Height, Is.EqualTo(10));
+                using var codec = SKCodec.Create(destination);
+                using var resized = SKBitmap.Decode(destination);
+                Assert.That(codec, Is.Not.Null);
+                Assert.That(codec!.EncodedFormat, Is.EqualTo(expectedFormat));
+                Assert.That(resized!.Height, Is.EqualTo(10));
+                Assert.That(resized.Width, Is.EqualTo(5));
+            }
+            finally
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+        }
+
+        private static void CreatePng(string path, int width, int height)
+        {
+            using var surface = SKSurface.Create(new SKImageInfo(width, height));
+            if (surface == null)
+            {
+                throw new InvalidOperationException("Could not create a test image surface.");
+            }
+
+            surface.Canvas.Clear(SKColors.White);
+            using var image = surface.Snapshot();
+            using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+            if (encoded == null)
+            {
+                throw new InvalidOperationException("Could not encode the test image.");
+            }
+
+            using var output = File.Create(path);
+            encoded.SaveTo(output);
+        }
+
+        [Test]
+        public void image_resizer_should_remove_stale_output_when_source_cannot_be_decoded()
+        {
+            var folder = Path.Combine(Path.GetTempPath(), "chaptarr-image-resizer-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder);
+            var source = Path.Combine(folder, "invalid.png");
+            var destination = Path.Combine(folder, "resized.png");
+
+            try
+            {
+                File.WriteAllText(source, "not an image");
+                File.WriteAllText(destination, "stale output");
+
+                Assert.Throws<InvalidDataException>(() => new ImageResizer(null, null).Resize(source, destination, 10));
+
+                Assert.That(File.Exists(destination), Is.False);
             }
             finally
             {
@@ -1446,11 +1488,24 @@ namespace Chaptarr.Core.Test.MediaCover
             };
         }
 
-        private static byte[] BuildPngBytes(int width, int height, Rgba32 color)
+        private static byte[] BuildPngBytes(int width, int height, SKColor color)
         {
-            using var image = new Image<Rgba32>(width, height, color);
+            using var surface = SKSurface.Create(new SKImageInfo(width, height));
+            if (surface == null)
+            {
+                throw new InvalidOperationException("Could not create a test image surface.");
+            }
+
+            surface.Canvas.Clear(color);
+            using var image = surface.Snapshot();
+            using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+            if (encoded == null)
+            {
+                throw new InvalidOperationException("Could not encode the test image.");
+            }
+
             using var stream = new MemoryStream();
-            image.Save(stream, new PngEncoder());
+            encoded.SaveTo(stream);
             return stream.ToArray();
         }
     }

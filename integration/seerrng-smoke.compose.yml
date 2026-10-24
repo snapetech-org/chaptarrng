@@ -39,8 +39,6 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile.build
-      secrets:
-        - SIXLABORS_LICENSE_KEY
     environment:
       CHAPTARR__AUTH__APIKEY: ${CHAPTARR_GLOBAL_API_KEY:?Set CHAPTARR_GLOBAL_API_KEY}
       CHAPTARR__AUTH__SEERRAPIKEY: ${CHAPTARR_SEERR_API_KEY:?Set CHAPTARR_SEERR_API_KEY}
@@ -84,7 +82,3 @@ services:
 volumes:
   chaptarrng-smoke-config:
   chaptarrng-smoke-books:
-
-secrets:
-  SIXLABORS_LICENSE_KEY:
-    file: ${SIXLABORS_LICENSE_FILE:?Set SIXLABORS_LICENSE_FILE to the Six Labors build license}

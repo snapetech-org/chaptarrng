@@ -88,8 +88,6 @@ jobs:
     if: needs.preflight.outputs.release_requested == 'true'
     needs: preflight
     uses: ./.github/workflows/build.yml
-    secrets:
-      SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
     permissions:
       actions: read
       contents: read
@@ -258,7 +256,6 @@ jobs:
     needs: release
     uses: ./.github/workflows/docker-publish.yml
     secrets:
-      SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     permissions:
@@ -383,14 +380,8 @@ jobs:
         name: chaptarrng-platform-runtime-packs
         path: ${{ runner.temp }}/platform-runtime-packs
 
-    - name: Require ImageSharp build license
-      env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
-      run: test -n "$SIXLABORS_LICENSE_KEY"
-
     - name: Build standalone application archive
       env:
-        SIXLABORS_LICENSE_KEY: ${{ secrets.SIXLABORS_LICENSE_KEY }}
         CUSTOM_RUNTIME_PACKS_DIR: ${{ runner.temp }}/platform-runtime-packs/packages
         DOTNET_ROOT: /usr/share/dotnet
         DOTNETVERSION: 10.0.402

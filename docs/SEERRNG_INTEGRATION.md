@@ -140,14 +140,12 @@ Build its server first with `pnpm build:server`, then run the integration
 Compose file from the ChaptarrNG repository. It uses named disposable volumes;
 the fixture seeds a BookshelfNG migration-158 SQLite database before
 ChaptarrNG starts, so normal startup performs the conversion. Set the absolute
-SeerrNG checkout and `node_modules` paths, the Six Labors license-file path,
-and distinct random values for `CHAPTARR_GLOBAL_API_KEY` and
-`CHAPTARR_SEERR_API_KEY`:
+SeerrNG checkout and `node_modules` paths, then use distinct random values for
+`CHAPTARR_GLOBAL_API_KEY` and `CHAPTARR_SEERR_API_KEY`:
 
 ```sh
 export SEERRNG_SOURCE=/path/to/seerrng
 export SEERRNG_NODE_MODULES=/path/to/seerrng/node_modules
-export SIXLABORS_LICENSE_FILE=/path/to/sixlabors.lic
 export CHAPTARR_GLOBAL_API_KEY='use-a-separate-long-random-key'
 export CHAPTARR_SEERR_API_KEY='use-another-long-random-key'
 

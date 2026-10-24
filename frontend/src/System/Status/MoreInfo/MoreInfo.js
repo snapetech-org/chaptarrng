@@ -21,14 +21,6 @@ class MoreInfo extends Component {
             <Link to="https://github.com/snapetech-org/chaptarrng#documentation">{translate('Wiki')}</Link>
           </DescriptionListItemDescription>
 
-          <DescriptionListItemTitle>{translate('ImageSharpBuildLicense')}</DescriptionListItemTitle>
-          <DescriptionListItemDescription>
-            {translate('ImageSharpBuildLicenseDescription')}{' '}
-            <Link to="https://github.com/snapetech-org/chaptarrng/blob/main/docs/development/imagesharp-license.md">
-              {translate('ImageSharpLicenseGuide')}
-            </Link>
-          </DescriptionListItemDescription>
-
           {/* No Reddit entry: r/chaptarr is already taken and not affiliated with Chaptarr, and no official subreddit is planned. */}
 
           <DescriptionListItemTitle>{translate('Discord')}</DescriptionListItemTitle>

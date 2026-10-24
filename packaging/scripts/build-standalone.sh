@@ -43,18 +43,6 @@ if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
   bash packaging/scripts/install-extra-platform-runtime-packs.sh "$rid" "$(dirname "$runtime_packs")" "$dotnet_root"
 fi
 
-if [[ -z "${SIXLABORS_LICENSE_KEY:-}" ]]; then
-  echo "SIXLABORS_LICENSE_KEY must be available to the build process." >&2
-  exit 2
-fi
-sixlabors_license_args=()
-if [[ -n "${SIXLABORS_LICENSE_FILE:-}" ]]; then
-  if [[ ! -s "$SIXLABORS_LICENSE_FILE" ]]; then
-    echo "Six Labors license file does not exist or is empty: $SIXLABORS_LICENSE_FILE" >&2
-    exit 2
-  fi
-  sixlabors_license_args+=("-p:SixLaborsLicenseFile=$SIXLABORS_LICENSE_FILE")
-fi
 if [[ ! -s _output/UI/index.html ]]; then
   echo "Build the frontend first; _output/UI/index.html is missing." >&2
   exit 2
@@ -84,7 +72,6 @@ dotnet publish src/NzbDrone.Console/Chaptarr.Console.csproj \
   --runtime "$rid" \
   --self-contained true \
   -p:UseAppHost=true \
-  "${sixlabors_license_args[@]}" \
   --verbosity minimal \
   "${restore_sources[@]}" \
   --output "$bundle"
@@ -95,7 +82,6 @@ dotnet publish src/NzbDrone.Update/Chaptarr.Update.csproj \
   --runtime "$rid" \
   --self-contained true \
   -p:UseAppHost=true \
-  "${sixlabors_license_args[@]}" \
   --verbosity minimal \
   "${restore_sources[@]}" \
   --output "$bundle/Chaptarr.Update"

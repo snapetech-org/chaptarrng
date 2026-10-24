@@ -184,7 +184,8 @@ namespace NzbDrone.Host
             }
 
             return new HostBuilder()
-                .UseContentRoot(Directory.GetCurrentDirectory())
+                // Resolve packaged application files independently of the process working directory.
+                .UseContentRoot(AppContext.BaseDirectory)
                 .UseServiceProviderFactory(new DryIocServiceProviderFactory(new Container(rules => rules.WithNzbDroneRules())))
                 .ConfigureContainer<IContainer>(c =>
                 {
