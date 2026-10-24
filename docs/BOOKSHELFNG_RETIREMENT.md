@@ -32,6 +32,21 @@ closes the reviewed local converter and API-classification code gap, not
 representative media/playback, live-provider, installed rollback, hosted
 exact-head, platform/channel handoff, or production cutover acceptance.
 
+**Exact-head populated migration and SeerrNG smoke (2026-10-24):** ChaptarrNG
+`9bf2cf654ce01dfb25d41a59525ce8e4dca39a29` built through the checked-in
+`Dockerfile.build` and passed both SeerrNG Compose smoke scripts against
+SeerrNG `f7769b65baa0b0d37ca9c5c37ecd860cde0f06a6`. Normal startup converted
+the disposable populated BookshelfNG migration-158 fixture. SeerrNG's compiled
+`ReadarrAPI` read the migrated ebook and audiobook libraries, format-specific
+file counts, and history with the restricted service key; administrative and
+unrelated command access was denied. The adapter created, polled, and cancelled
+a synthetic pending import and observed its terminal cancellation state. The
+fixture, media placeholders, and keys were synthetic. This does not establish
+live provider fulfillment, successful request retries, full availability and
+history parity, representative operator data or media, installed rollback,
+channel handoff, or cutover acceptance. The exact-head hosted build was still
+running when this smoke was recorded.
+
 **Provider-mode image alias correction (2026-10-24):** The gated compatibility
 publisher now maps `latest`, `main`, `master`, and `hardcover` to the pinned
 Hardcover compatibility image, and maps `softcover` to the pinned Goodreads
