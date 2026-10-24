@@ -129,6 +129,7 @@ jobs:
         bash packaging/scripts/test-dispatch-ghcr-release-bridge.sh
         bash packaging/scripts/test-release-readiness-gate.sh
         bash packaging/scripts/test-bookshelfng-deb-publish-gate.sh
+        bash packaging/scripts/test-bookshelfng-ppa-publish-gate.sh
 
     - name: Test release publisher configuration preflight
       if: matrix.os == 'ubuntu-latest'
@@ -150,6 +151,12 @@ jobs:
       env:
         TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-deb-bridge-test
       run: bash packaging/scripts/test-build-bookshelfng-deb-bridge.sh
+
+    - name: Test candidate BookshelfNG Launchpad source package
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-ppa-source-test
+      run: bash packaging/scripts/test-build-bookshelfng-ppa-source.sh
 
     - name: Test BookshelfNG host migration helper
       if: matrix.os == 'ubuntu-latest'

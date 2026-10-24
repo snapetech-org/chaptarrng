@@ -11,6 +11,7 @@ using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.Books.Calibre;
 using NzbDrone.Core.Books.Extensions;
 
 using NzbDrone.Core.MediaFiles.BookImport.Services;
@@ -136,6 +137,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         private readonly IEditionService _editionService;
         private readonly IEditionRepository _editionRepository;
         private readonly IMediaInfoExtractor _mediaInfoExtractor;
+        private readonly IMetadataProfileService _metadataProfileService;
+        private readonly IMediaFileService _mediaFileService;
+        private readonly IMetadataTagService _metadataTagService;
+        private readonly System.IO.Abstractions.IFileSystem _fileSystem;
+        private readonly ICalibreProxy _calibreProxy;
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, BookshelfCalibreMetadataCacheEntry> _bookshelfCalibreMetadataCache = new System.Collections.Concurrent.ConcurrentDictionary<string, BookshelfCalibreMetadataCacheEntry>(StringComparer.OrdinalIgnoreCase);
+        private static readonly TimeSpan BookshelfCalibreMetadataCacheTtl = TimeSpan.FromMinutes(5);
 
         private readonly AsyncLocal<RejectionCaptureContext> _rejectionCapture = new AsyncLocal<RejectionCaptureContext>();
         private readonly AsyncLocal<IMatchingTraceSink> _matchingTraceSink = new AsyncLocal<IMatchingTraceSink>();
@@ -247,6 +255,17 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         {
             var memo = _perFileFtsMemo.Value;
             return memo == null ? _bookService.GetBook(bookId) : memo.GetBook(bookId, _bookService.GetBook);
+        }
+
+        internal string GetBookshelfPreferredEditionTerms(Author author, string filePath, BookMediaType mediaType)
+        {
+            return BookshelfMatchCompatibilityProfileResolver.GetPreferredEditionTerms(
+                author,
+                filePath,
+                mediaType,
+                _metadataProfileService,
+                _rootFolderService,
+                _logger);
         }
 
         private List<Book> GetBooksForMatching(List<int> bookIds)
@@ -675,6 +694,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         /// </summary>
         internal static bool IsExcludedFromMatching(string key) => TagExclusionPolicy.IsExcludedFromMatching(key);
 
+        internal static bool NeedsBookshelfAudioTagProjection(string path, IDictionary<string, List<string>> tags)
+        {
+            return !string.IsNullOrWhiteSpace(path) &&
+                   MediaFileExtensions.AudioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) &&
+                   !BookshelfAudioTagFields.HasProjection(tags);
+        }
+
         private static readonly Regex AsinRegex = new Regex(@"\bB[0-9A-Z]{9}\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         public FileMatchingService(
@@ -695,7 +721,12 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             IEditionRepository editionRepository,
             IMediaInfoExtractor mediaInfoExtractor,
             Logger logger,
-            ISearchForNewBook catalogSearch = null)
+            ISearchForNewBook catalogSearch = null,
+            IMetadataProfileService metadataProfileService = null,
+            IMediaFileService mediaFileService = null,
+            IMetadataTagService metadataTagService = null,
+            System.IO.Abstractions.IFileSystem fileSystem = null,
+            ICalibreProxy calibreProxy = null)
         {
             _matchingLogger = matchingLogger;
             _v5MatchingService = v5MatchingService;
@@ -714,6 +745,11 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             _editionService = editionService;
             _editionRepository = editionRepository;
             _mediaInfoExtractor = mediaInfoExtractor;
+            _metadataProfileService = metadataProfileService;
+            _mediaFileService = mediaFileService;
+            _metadataTagService = metadataTagService;
+            _fileSystem = fileSystem;
+            _calibreProxy = calibreProxy;
             _logger = logger;
         }
 
@@ -777,6 +813,215 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 string.Equals(rejection.FallbackDisposition, "contradictory", StringComparison.OrdinalIgnoreCase));
         }
 
+        private void PopulateBookshelfCompatibilityTrackTags(IEnumerable<DiscoveredFileWithMetadata> files)
+        {
+            foreach (var file in files?.Where(item => item != null).Distinct() ?? Enumerable.Empty<DiscoveredFileWithMetadata>())
+            {
+                if (file.BookshelfMatchCompatibilityTrackTags?.Count > 0)
+                {
+                    continue;
+                }
+
+                if (file.GroupMemberTags?.Count > 0)
+                {
+                    file.BookshelfMatchCompatibilityTrackTags = file.GroupMemberPaths?.Count == file.GroupMemberTags.Count
+                        ? file.GroupMemberTags
+                            .Select((tags, index) => BuildBookshelfCompatibilityTrackTags(tags, file.GroupMemberPaths[index]))
+                            .ToList()
+                        : file.GroupMemberTags;
+                    continue;
+                }
+
+                var rawTags = file.AllTags ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+                file.BookshelfMatchCompatibilityTrackTags = new[] { BuildBookshelfCompatibilityTrackTags(rawTags, file.Path) };
+            }
+        }
+
+        private Dictionary<string, List<string>> BuildBookshelfCompatibilityTrackTags(
+            Dictionary<string, List<string>> sourceTags,
+            string path)
+        {
+            var rawTags = sourceTags ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                var calibreMetadata = GetBookshelfCalibreMetadata(path);
+                return calibreMetadata == null
+                    ? rawTags
+                    : BookshelfMatchCompatibilityScorer.ApplyCalibreMetadata(
+                        rawTags,
+                        calibreMetadata.Title,
+                        calibreMetadata.Authors,
+                        calibreMetadata.Isbn,
+                        calibreMetadata.Asin,
+                        calibreMetadata.GoodreadsId);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException && ex is not OperationCanceledException)
+            {
+                _logger.Debug(ex, "Could not augment BookshelfNG-compatible metadata from Calibre for {0}", path);
+                return rawTags;
+            }
+        }
+
+        internal static Dictionary<string, List<string>> BuildBookshelfCalibreRecallTags(
+            Dictionary<string, List<string>> sourceTags,
+            IReadOnlyList<Dictionary<string, List<string>>> compatibilityTrackTags,
+            BookMediaType mediaType,
+            IReadOnlyList<string> filePaths)
+        {
+            if (compatibilityTrackTags?.Any(BookshelfMatchCompatibilityScorer.HasCalibreOverride) != true)
+            {
+                return sourceTags ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var tags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in sourceTags ?? new Dictionary<string, List<string>>())
+            {
+                tags[pair.Key] = pair.Value?.ToList() ?? new List<string>();
+            }
+            var replacedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "BOOK", "BOOKTITLE", "BOOK TITLE", "TITLE", "TITLESORT", "TITLE_SORT", "TITLE SORT",
+                "ALBUM", "ALBUMSORT", "ALBUM_SORT", "ALBUM SORT",
+                "AUTHOR", "AUTHORS", "ARTIST", "PERFORMERS", "ALBUMARTIST", "ALBUM ARTIST", "ALBUMARTISTS",
+                "ALBUMARTISTSORT", "ALBUMARTIST_SORT", "ALBUM ARTIST SORT", "ARTISTSORT", "ARTIST_SORT", "PERFORMERSORT", "PERFORMERS_SORT",
+                "ISBN", "ISBN13", "ISBN10", "ISBN-13", "ISBN-10", "ISBN_13", "ISBN_10",
+                "ASIN", "AUDIBLE_ASIN", "GOODREADS_ID", "GOODREADS_BOOK_ID", "GOODREADS_EDITION_ID", "GOODREADS_WORK_ID", "GR_ID"
+            };
+
+            foreach (var key in tags.Keys.Where(key => replacedFields.Contains(key) || key.StartsWith("BOOKSHELF_CALIBRE_", StringComparison.OrdinalIgnoreCase)).ToList())
+            {
+                tags.Remove(key);
+            }
+
+            var title = BookshelfMatchCompatibilityScorer.GetBookshelfBookTitle(compatibilityTrackTags, mediaType, filePaths);
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                tags[mediaType == BookMediaType.Audiobook ? "ALBUM" : "TITLE"] = new List<string> { title };
+            }
+
+            var authors = BookshelfMatchCompatibilityScorer.GetBookshelfRemoteAuthorSearchTerms(compatibilityTrackTags, mediaType, filePaths);
+            if (authors.Count > 0)
+            {
+                tags[mediaType == BookMediaType.Audiobook ? "ALBUMARTIST" : "AUTHOR"] = authors;
+            }
+
+            var isbn = GetMostCommonBookshelfCalibreOverride(compatibilityTrackTags, "BOOKSHELF_CALIBRE_ISBN");
+            if (!string.IsNullOrWhiteSpace(isbn))
+            {
+                tags["ISBN"] = new List<string> { isbn };
+            }
+
+            var asin = GetMostCommonBookshelfCalibreOverride(compatibilityTrackTags, "BOOKSHELF_CALIBRE_ASIN");
+            if (!string.IsNullOrWhiteSpace(asin))
+            {
+                tags["ASIN"] = new List<string> { asin };
+            }
+
+            return tags;
+        }
+
+        private static string GetMostCommonBookshelfCalibreOverride(
+            IReadOnlyList<Dictionary<string, List<string>>> compatibilityTrackTags,
+            string key)
+        {
+            return (compatibilityTrackTags ?? Array.Empty<Dictionary<string, List<string>>>())
+                .Where(tags => tags != null && BookshelfMatchCompatibilityScorer.HasCalibreOverride(tags))
+                .Select(tags => tags.FirstOrDefault(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase)).Value?.FirstOrDefault())
+                .GroupBy(value => value, StringComparer.Ordinal)
+                .OrderByDescending(group => group.Count())
+                .Select(group => group.First())
+                .FirstOrDefault();
+        }
+
+        private BookshelfCalibreMetadata GetBookshelfCalibreMetadata(string path)
+        {
+            if (_calibreProxy == null || _rootFolderService == null || string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            var rootFolder = _rootFolderService.GetBestRootFolder(path);
+            if (rootFolder?.IsCalibreLibrary != true || rootFolder.CalibreSettings == null)
+            {
+                return null;
+            }
+
+            var calibreId = _calibreProxy.GetCalibreIdForPath(path, rootFolder.CalibreSettings);
+            if (calibreId <= 0)
+            {
+                return null;
+            }
+
+            var cacheKey = $"{rootFolder.Id}\u001f{calibreId}";
+            var now = DateTime.UtcNow;
+            if (_bookshelfCalibreMetadataCache.TryGetValue(cacheKey, out var cached) && cached.ExpiresAtUtc > now)
+            {
+                return cached.Metadata;
+            }
+
+            var calibreBook = _calibreProxy.GetBook(calibreId, rootFolder.CalibreSettings);
+            if (calibreBook == null)
+            {
+                return null;
+            }
+
+            var metadata = new BookshelfCalibreMetadata
+            {
+                Title = calibreBook.Title,
+                Authors = calibreBook.Authors?.Where(author => !string.IsNullOrWhiteSpace(author)).ToArray() ?? Array.Empty<string>(),
+                Isbn = GetBookshelfCalibreIdentifier(calibreBook, "isbn"),
+                Asin = GetBookshelfCalibreIdentifier(calibreBook, "mobi-asin") ?? GetBookshelfCalibreIdentifier(calibreBook, "asin"),
+                GoodreadsId = GetBookshelfCalibreIdentifier(calibreBook, "goodreads")
+            };
+
+            _bookshelfCalibreMetadataCache[cacheKey] = new BookshelfCalibreMetadataCacheEntry
+            {
+                Metadata = metadata,
+                ExpiresAtUtc = now + BookshelfCalibreMetadataCacheTtl
+            };
+            return metadata;
+        }
+
+        private static string GetBookshelfCalibreIdentifier(CalibreBook book, string key)
+        {
+            if (book?.Identifiers == null || string.IsNullOrWhiteSpace(key))
+            {
+                return null;
+            }
+
+            if (book.Identifiers.TryGetValue(key, out var value))
+            {
+                return value;
+            }
+
+            return book.Identifiers.FirstOrDefault(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase)).Value;
+        }
+
+        private static List<Dictionary<string, List<string>>> BuildBookshelfCompatibilityGroupTags(IEnumerable<DiscoveredFileWithMetadata> members)
+        {
+            return (members ?? Enumerable.Empty<DiscoveredFileWithMetadata>())
+                .Select(member => member?.BookshelfMatchCompatibilityTrackTags?.Count == 1
+                    ? member.BookshelfMatchCompatibilityTrackTags[0]
+                    : member?.AllTags)
+                .Select(tags => tags ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        private sealed class BookshelfCalibreMetadata
+        {
+            public string Title { get; init; }
+            public string[] Authors { get; init; }
+            public string Isbn { get; init; }
+            public string Asin { get; init; }
+            public string GoodreadsId { get; init; }
+        }
+
+        private sealed class BookshelfCalibreMetadataCacheEntry
+        {
+            public BookshelfCalibreMetadata Metadata { get; init; }
+            public DateTime ExpiresAtUtc { get; init; }
+        }
+
         [Obsolete("Use the 3-parameter overload and explicitly specify forDownloads")]
         public Task<FileMatchResult> MatchFilesToLibraryAsync(DiscoveredFileWithMetadata[] filesWithMetadata)
         {
@@ -801,9 +1046,38 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         public async Task<FileMatchResult> MatchFilesToLibraryAsync(DiscoveredFileWithMetadata[] filesWithMetadata, int? restrictToAuthorId, MatchingContext context)
         {
             context ??= new MatchingContext();
+            if (_configService?.BookshelfMatchCompatibility == true)
+            {
+                PopulateBookshelfCompatibilityTrackTags(filesWithMetadata);
+            }
+
             var result = await WithPerFileFtsMemo(
                 context.PerFileMatching,
                 () => MatchFilesToLibraryCoreAsync(filesWithMetadata, restrictToAuthorId, context));
+
+            var useBookshelfMatchCompatibility = _configService?.BookshelfMatchCompatibility == true;
+            var bookshelfMinimumMatchPercent = _configService?.BookImportMinimumMatchPercent ?? 70;
+            var remoteRetryProbes = new Dictionary<UnmatchedFile, FileMatch>();
+            if (useBookshelfMatchCompatibility && context.AllowCatalogSearch && _catalogSearch != null)
+            {
+                foreach (var match in result?.MatchedFiles ?? Array.Empty<FileMatch>())
+                {
+                    if (match?.File == null ||
+                        !match.BookshelfMatchPercent.HasValue ||
+                        match.BookshelfMatchPercent.Value >= 85 ||
+                        match.BookshelfMatchPercent.Value < bookshelfMinimumMatchPercent)
+                    {
+                        continue;
+                    }
+
+                    var probe = new UnmatchedFile
+                    {
+                        File = match.File,
+                        Reason = $"The local BookshelfNG-compatible match scored {match.BookshelfMatchPercent.Value:F1}%; checking the catalog for a better candidate."
+                    };
+                    remoteRetryProbes.Add(probe, match);
+                }
+            }
 
             var catalogSearchIsBookScoped = context.TargetBookIds?.Any(id => id > 0) == true ||
                 context.HardAllowedBookIds?.Any(id => id > 0) == true;
@@ -823,10 +1097,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 }
             }
 
+            var catalogCandidates = (result?.UnmatchedFiles ?? Array.Empty<UnmatchedFile>())
+                .Concat(remoteRetryProbes.Keys)
+                .ToArray();
             if (context.AllowCatalogSearch &&
                 !catalogSearchIsBookScoped &&
                 (!restrictToAuthorId.HasValue || allowedCatalogAuthor != null) &&
-                result.UnmatchedFiles?.Length > 0 &&
+                catalogCandidates.Length > 0 &&
                 _catalogSearch != null)
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
@@ -835,10 +1112,41 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     UnmappedCatalogSuggestionHelper.AddSuggestions(
                         _catalogSearch,
                         _logger,
-                        result.UnmatchedFiles,
+                        catalogCandidates,
                         allowedCatalogAuthor,
                         context.CancellationToken,
-                        stopAfterFirstCandidate: true);
+                        stopAfterFirstCandidate: true,
+                        useBookshelfMatchCompatibility,
+                        bookshelfMinimumMatchPercent,
+                        preferredEditionTermsResolver: (author, unmatched, mediaType) =>
+                            GetBookshelfPreferredEditionTerms(author, unmatched?.File?.Path, mediaType),
+                        allowFallbackTiers: !context.SuppressNegativeUnitCache);
+
+                    if (remoteRetryProbes.Count > 0)
+                    {
+                        var rerouted = new HashSet<FileMatch>();
+                        var remoteMatches = new List<UnmatchedFile>();
+                        foreach (var pair in remoteRetryProbes)
+                        {
+                            var localScore = pair.Value.BookshelfMatchPercent.Value;
+                            var remoteSuggestion = pair.Key.PotentialAuthors?.FirstOrDefault();
+                            if (UnmappedCatalogSuggestionHelper.IsBookshelfRemoteCandidateBetter(localScore, remoteSuggestion))
+                            {
+                                rerouted.Add(pair.Value);
+                                remoteMatches.Add(pair.Key);
+                            }
+                        }
+
+                        if (rerouted.Count > 0)
+                        {
+                            result.MatchedFiles = result.MatchedFiles
+                                .Where(match => !rerouted.Contains(match))
+                                .ToArray();
+                            result.UnmatchedFiles = (result.UnmatchedFiles ?? Array.Empty<UnmatchedFile>())
+                                .Concat(remoteMatches)
+                                .ToArray();
+                        }
+                    }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException &&
                     ex is not OutOfMemoryException &&
@@ -1115,6 +1423,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     GroupMemberTags = files
                         .Select(member => member?.AllTags ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase))
                         .ToList(),
+                    GroupMemberPaths = files.Select(member => member?.Path).ToList(),
+                    BookshelfMatchCompatibilityTrackTags = BuildBookshelfCompatibilityGroupTags(files),
                     DurationSeconds = groupMatchDurationSeconds
                 };
 
@@ -1160,6 +1470,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                     Modified = f.Modified,
                                     AllTags = tags,
                                     GroupMemberTags = f.GroupMemberTags,
+                                    GroupMemberPaths = f.GroupMemberPaths,
+                                    BookshelfMatchCompatibilityTrackTags = f.BookshelfMatchCompatibilityTrackTags,
                                     DurationSeconds = f.DurationSeconds
                                 }, tags, mediaType, pinnedFirstCrack, out var matchedNarrator);
 
@@ -1206,6 +1518,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                 Modified = f.Modified,
                                 AllTags = tags,
                                 GroupMemberTags = f.GroupMemberTags,
+                                GroupMemberPaths = f.GroupMemberPaths,
+                                BookshelfMatchCompatibilityTrackTags = f.BookshelfMatchCompatibilityTrackTags,
                                 DurationSeconds = f.DurationSeconds
                             }, mediaType, authorId, disablePathFallback: disablePathFallback, inferAuthorFromPathDuringPathFallback: true, unscoped: false, hardAllowedBookIds: hardAllowedBookIds),
                             rejections);
@@ -1225,6 +1539,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                         Modified = f.Modified,
                                         AllTags = tags,
                                         GroupMemberTags = f.GroupMemberTags,
+                                        GroupMemberPaths = f.GroupMemberPaths,
+                                        BookshelfMatchCompatibilityTrackTags = f.BookshelfMatchCompatibilityTrackTags,
                                         DurationSeconds = f.DurationSeconds
                                     }, mediaType, restrictToAuthorId: null, disablePathFallback: isRestrictedAuthorRootFolder || disablePathFallback, inferAuthorFromPathDuringPathFallback: false, unscoped: true, hardAllowedBookIds: hardAllowedBookIds),
                                     rejections);
@@ -1244,6 +1560,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                     Modified = f.Modified,
                                     AllTags = tags,
                                     GroupMemberTags = f.GroupMemberTags,
+                                    GroupMemberPaths = f.GroupMemberPaths,
+                                    BookshelfMatchCompatibilityTrackTags = f.BookshelfMatchCompatibilityTrackTags,
                                     DurationSeconds = f.DurationSeconds
                                 };
 
@@ -1571,6 +1889,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                 GroupMemberTags = unitFiles
                                     .Select(member => member?.AllTags ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase))
                                     .ToList(),
+                                GroupMemberPaths = unitFiles.Select(member => member?.Path).ToList(),
+                                BookshelfMatchCompatibilityTrackTags = BuildBookshelfCompatibilityGroupTags(unitFiles),
                                 DurationSeconds = unitMatchDurationSeconds
                             };
 
@@ -2150,6 +2470,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                             GroupMemberTags = subgroup.Files
                                 .Select(member => member?.AllTags ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase))
                                 .ToList(),
+                            GroupMemberPaths = subgroup.Files.Select(member => member?.Path).ToList(),
+                            BookshelfMatchCompatibilityTrackTags = BuildBookshelfCompatibilityGroupTags(subgroup.Files),
                             DurationSeconds = subgroupMatchDurationSeconds
                         };
 
@@ -4558,8 +4880,15 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             var embeddedTags = file.AllTags ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             var hasEmbeddedTags = embeddedTags.Count > 0;
-            var mainTags = hasEmbeddedTags
-                ? CategorizeTagsForHolyGrail(embeddedTags)
+            var recallTags = _configService?.BookshelfMatchCompatibility == true
+                ? BuildBookshelfCalibreRecallTags(
+                    embeddedTags,
+                    file.BookshelfMatchCompatibilityTrackTags,
+                    mediaType,
+                    file.GroupMemberPaths?.Count > 0 ? file.GroupMemberPaths : new[] { file.Path })
+                : embeddedTags;
+            var mainTags = hasEmbeddedTags || recallTags.Count > 0
+                ? CategorizeTagsForHolyGrail(recallTags)
                 : new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             var stopwatch = Stopwatch.StartNew();
             var identifierEvidence = ExtractIdentifierEvidence(file, embeddedTags);
@@ -4721,6 +5050,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     fileDurationSeconds: fileDurationSeconds,
                     onContradictoryEvidence: () => embeddedContradiction = true,
                     groupMemberTags: file.GroupMemberTags,
+                    bookshelfCompatibilityTrackTags: file.BookshelfMatchCompatibilityTrackTags,
+                    groupMemberPaths: file.GroupMemberPaths,
                     hardAllowedBookIds: hardAllowedBookIds,
                     seriesPositionTags: embeddedTags);
                 var match = matchResult?.Match;
@@ -4808,6 +5139,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     var matchResult = RunFtsWithSmokeTest(authorId, pathTokens, mediaType, "path-tags", pathTags, file.Path,
                         fileDurationSeconds: fileDurationSeconds,
                         allowNarratorEvidence: false,
+                        bookshelfCompatibilityTrackTags: file.BookshelfMatchCompatibilityTrackTags,
+                        groupMemberPaths: file.GroupMemberPaths,
                         hardAllowedBookIds: hardAllowedBookIds,
                         seriesPositionTags: embeddedTags);
                     var match = matchResult?.Match;
@@ -6285,6 +6618,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             bool allowNarratorEvidence = true,
             Action onContradictoryEvidence = null,
             IReadOnlyList<Dictionary<string, List<string>>> groupMemberTags = null,
+            IReadOnlyList<Dictionary<string, List<string>>> bookshelfCompatibilityTrackTags = null,
+            IReadOnlyList<string> groupMemberPaths = null,
             IReadOnlySet<int> hardAllowedBookIds = null,
             Dictionary<string, List<string>> seriesPositionTags = null)
         {
@@ -6384,6 +6719,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             // Series info comes from DB only. Tag labels are never trusted.
 
                 var booksById = new Dictionary<int, Book>();
+                var bookshelfExistingTrackTagsByBookId = new Dictionary<int, List<Dictionary<string, List<string>>>>();
+                var bookshelfExistingTrackPathsByBookId = new Dictionary<int, List<string>>();
 
                 var stagedFtsUsed = false;
                 var stagedFieldQueries = new List<EditionFtsFieldQuery>();
@@ -6711,6 +7048,90 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 catch
                 {
                     // best-effort book cache — non-fatal if it fails
+                }
+
+                if (useBookshelfMatchCompatibility && _mediaFileService != null && booksById.Count > 0)
+                {
+                    try
+                    {
+                        var bookIdByEditionId = booksById.Values
+                            .Where(book => book?.Editions != null)
+                            .SelectMany(book => book.Editions
+                                .Where(edition => edition != null && edition.Id > 0)
+                                .Select(edition => new { edition.Id, BookId = book.Id }))
+                            .GroupBy(item => item.Id)
+                            .ToDictionary(group => group.Key, group => group.First().BookId);
+                        var existingFiles = _mediaFileService.GetFilesByBooks(booksById.Keys.ToList()) ?? new List<BookFile>();
+                        foreach (var existingFile in existingFiles)
+                        {
+                            if (existingFile == null ||
+                                !bookIdByEditionId.TryGetValue(existingFile.EditionId, out var existingBookId) ||
+                                string.Equals(existingFile.Path, filePath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+
+                            var existingTags = existingFile.AllTags;
+                            if (((existingTags == null || existingTags.Count == 0) ||
+                                 NeedsBookshelfAudioTagProjection(existingFile.Path, existingTags)) &&
+                                _metadataTagService != null &&
+                                _fileSystem != null &&
+                                !string.IsNullOrWhiteSpace(existingFile.Path))
+                            {
+                                try
+                                {
+                                    existingTags = _metadataTagService.ReadAllTags(_fileSystem.FileInfo.New(existingFile.Path));
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Debug(ex, "Could not re-read tags for existing file {0} during BookshelfNG-compatible scoring", existingFile.Path);
+                                }
+                            }
+
+                            existingTags ??= new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+                            var compatibilityTags = existingTags;
+                            try
+                            {
+                                var calibreMetadata = GetBookshelfCalibreMetadata(existingFile.Path);
+                                if (calibreMetadata != null)
+                                {
+                                    compatibilityTags = BookshelfMatchCompatibilityScorer.ApplyCalibreMetadata(
+                                        existingTags,
+                                        calibreMetadata.Title,
+                                        calibreMetadata.Authors,
+                                        calibreMetadata.Isbn,
+                                        calibreMetadata.Asin,
+                                        calibreMetadata.GoodreadsId);
+                                }
+                            }
+                            catch (Exception ex) when (ex is not OutOfMemoryException && ex is not OperationCanceledException)
+                            {
+                                _logger.Debug(ex, "Could not augment existing file metadata from Calibre for BookshelfNG-compatible scoring: {0}", existingFile.Path);
+                            }
+
+                            if (!bookshelfExistingTrackTagsByBookId.TryGetValue(existingBookId, out var trackTags))
+                            {
+                                trackTags = new List<Dictionary<string, List<string>>>();
+                                bookshelfExistingTrackTagsByBookId[existingBookId] = trackTags;
+                            }
+
+                            trackTags.Add(compatibilityTags);
+                            if (!bookshelfExistingTrackPathsByBookId.TryGetValue(existingBookId, out var trackPaths))
+                            {
+                                trackPaths = new List<string>();
+                                bookshelfExistingTrackPathsByBookId[existingBookId] = trackPaths;
+                            }
+
+                            trackPaths.Add(existingFile.Path);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Debug(ex, "Could not load existing file tags for BookshelfNG-compatible scoring");
+                        bookshelfExistingTrackTagsByBookId.Clear();
+                        bookshelfExistingTrackPathsByBookId.Clear();
+                    }
                 }
 
                 HashSet<int> stagedPreferredBookIds = null;
@@ -7733,14 +8154,33 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         var localTrackTags = groupMemberTags?.Count > 0
                             ? groupMemberTags
                             : new[] { allTags };
-                        var preferredEditionTerms = candidateBookForLegacyScore?.Author?.GetMetadataProfileFor(mediaType)?.PreferredEditionTerms;
+                        var legacyTrackTags = bookshelfCompatibilityTrackTags?.Count > 0
+                            ? bookshelfCompatibilityTrackTags.ToList()
+                            : localTrackTags.ToList();
+                        var legacyTrackPaths = groupMemberPaths?.Count > 0
+                            ? groupMemberPaths.ToList()
+                            : new List<string> { filePath };
+                        if (bookshelfExistingTrackTagsByBookId.TryGetValue(result.BookId, out var existingTrackTags))
+                        {
+                            legacyTrackTags.AddRange(existingTrackTags);
+                        }
+                        if (bookshelfExistingTrackPathsByBookId.TryGetValue(result.BookId, out var existingTrackPaths))
+                        {
+                            legacyTrackPaths.AddRange(existingTrackPaths);
+                        }
+
+                        var preferredEditionTerms = GetBookshelfPreferredEditionTerms(
+                            candidateBookForLegacyScore?.Author,
+                            filePath,
+                            mediaType);
                         var legacyMatchPercent = BookshelfMatchCompatibilityScorer.GetMatchPercent(
-                            localTrackTags,
+                            legacyTrackTags,
                             result,
                             legacyEdition,
                             candidateBookForLegacyScore,
                             mediaType,
-                            preferredEditionTerms);
+                            preferredEditionTerms,
+                            legacyTrackPaths);
                         if (legacyMatchPercent < bookshelfMinimumMatchPercent)
                         {
                             RecordCandidateRejection(
@@ -7751,6 +8191,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         }
 
                         scoredCandidate.BookshelfMatchPercent = legacyMatchPercent;
+                        scoredCandidate.BookshelfCandidateOrder = ftsResults.IndexOf(result);
+                        result.BookshelfMatchPercent = legacyMatchPercent;
                     }
                     scoredCandidate.HasDurationProof = audiobookDurationMatches;
                     scoredCandidate.HasDirectEditionTitleProof = HasStrongDirectEditionTitleEvidence(directEditionEvidence);
@@ -8162,6 +8604,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             {
                 public EditionFtsMatch Match { get; set; }
                 public double? BookshelfMatchPercent { get; set; }
+                public int BookshelfCandidateOrder { get; set; } = int.MaxValue;
                 public int LeftoverCount { get; set; }
                 public IReadOnlyList<string> Leftovers { get; set; } = Array.Empty<string>();
                 public int NarratorTier { get; set; }
@@ -9833,6 +10276,11 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     {
                         return legacyCompare;
                     }
+
+                    // BookshelfNG keeps the first provider candidate on an exact
+                    // score tie. Preserve the local candidate sequence in migrated
+                    // mode instead of letting ChaptarrNG's newer tie-breakers alter it.
+                    return b.BookshelfCandidateOrder.CompareTo(a.BookshelfCandidateOrder);
                 }
 
                 return mediaType == BookMediaType.Ebook
@@ -13309,7 +13757,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     EditionId = match.EditionId,
                     MatchedVia = match.MatchedVia,
                     Provenance = match.Provenance?.Clone(),
-                    IdentityProof = match.IdentityProof
+                    IdentityProof = match.IdentityProof,
+                    BookshelfMatchPercent = match.BookshelfMatchPercent
                 };
             var effectivePathFallbackUsed = pathFallbackUsed;
             if (effectivePathFallbackUsed != true &&
@@ -13687,7 +14136,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 EditionId = ftsMatch.EditionId,
                 MatchedVia = matchedVia,
                 Provenance = provenance,
-                IdentityProof = identityProof
+                IdentityProof = identityProof,
+                BookshelfMatchPercent = ftsMatch.BookshelfMatchPercent
             };
         }
 
@@ -13716,7 +14166,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 EditionId = match.EditionId,
                 MatchedVia = match.MatchedVia,
                 Provenance = BuildMemberMatchProvenance(match.Provenance, memberProof, file),
-                IdentityProof = memberProof
+                IdentityProof = memberProof,
+                BookshelfMatchPercent = match.BookshelfMatchPercent
             };
         }
 

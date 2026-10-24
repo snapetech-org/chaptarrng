@@ -142,7 +142,7 @@ namespace NzbDrone.Core.MediaFiles
             }
 
             // Convert to JSON with compact formatting
-            return JsonConvert.SerializeObject(tags, Formatting.None);
+            return JsonConvert.SerializeObject(TagExclusionPolicy.ToPublicTags(tags), Formatting.None);
         }
 
         private void CleanupTags(Dictionary<string, List<string>> tags)
@@ -243,6 +243,14 @@ namespace NzbDrone.Core.MediaFiles
 
             tags = DeserializeTags(tagsJson);
             CleanupTags(tags);
+
+            if (MediaFileExtensions.AudioExtensions.Contains(file.Extension) &&
+                !BookshelfAudioTagFields.HasProjection(tags))
+            {
+                // Older audio cache rows predate the Bookshelf-compatible null/empty
+                // projection. Re-read once and replace the stale row with current metadata.
+                return false;
+            }
 
             if (!TagExtractionResult.TryParseStorageValue(extractionStatus, out disposition))
             {

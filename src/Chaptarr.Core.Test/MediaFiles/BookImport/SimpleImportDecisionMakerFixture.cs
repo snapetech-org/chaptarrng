@@ -12,6 +12,7 @@ using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.BookImport;
 using NzbDrone.Core.MediaFiles.BookImport.Identification;
 using NzbDrone.Core.Parser.Model;
+using NzbDrone.Core.Qualities;
 
 namespace Chaptarr.Core.Test.MediaFiles.BookImport
 {
@@ -185,6 +186,21 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                 }
 
                 throw new NotImplementedException($"Test proxy does not implement IEditionService.{targetMethod?.Name}");
+            }
+        }
+
+        private class MediaFileServiceProxy : DispatchProxy
+        {
+            public List<BookFile> BookFiles { get; set; } = new List<BookFile>();
+
+            protected override object Invoke(MethodInfo targetMethod, object[] args)
+            {
+                if (targetMethod?.Name == nameof(IMediaFileService.GetFilesByBook))
+                {
+                    return BookFiles;
+                }
+
+                throw new NotImplementedException($"Test proxy does not implement IMediaFileService.{targetMethod?.Name}");
             }
         }
 
@@ -518,6 +534,83 @@ namespace Chaptarr.Core.Test.MediaFiles.BookImport
                     Assert.That(localBook.Book, Is.SameAs(localMatchedBook));
                     Assert.That(localBook.Edition, Is.SameAs(localEdition));
                     Assert.That(((FileMatchingServiceProxy)(object)fileMatchingService).HolyGrailAuthorIds, Is.Empty);
+                });
+            }
+            finally
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+
+        [Test]
+        public void migrated_manual_preview_should_reject_a_same_size_compatible_existing_file()
+        {
+            var path = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"manual-preview-same-size-{Guid.NewGuid():N}.epub");
+            const string content = "same size";
+            File.WriteAllText(path, content);
+
+            try
+            {
+                var localAuthor = new Author { Id = 42, Name = "Suggested Author" };
+                var localEdition = new Edition { Id = 200, BookId = 100, Title = "Local Matched Edition" };
+                var localMatchedBook = new Book
+                {
+                    Id = 100,
+                    Title = "Local Matched Book",
+                    Author = localAuthor,
+                    Editions = new List<Edition> { localEdition }
+                };
+                var existingPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "existing-other-edition.epub");
+                var mediaFileService = DispatchProxy.Create<IMediaFileService, MediaFileServiceProxy>();
+                ((MediaFileServiceProxy)(object)mediaFileService).BookFiles = new List<BookFile>
+                {
+                    new BookFile
+                    {
+                        Path = existingPath,
+                        Size = new FileInfo(path).Length,
+                        Quality = new QualityModel(Quality.EPUB)
+                    }
+                };
+
+                var authorService = DispatchProxy.Create<IAuthorService, AuthorServiceProxy>();
+                ((AuthorServiceProxy)(object)authorService).LocalAuthor = localAuthor;
+                var bookService = DispatchProxy.Create<IBookService, BookServiceProxy>();
+                ((BookServiceProxy)(object)bookService).Book = localMatchedBook;
+                var fileMatchingService = DispatchProxy.Create<IFileMatchingService, FileMatchingServiceProxy>();
+                ((FileMatchingServiceProxy)(object)fileMatchingService).GroupedResult = new FileMatch
+                {
+                    AuthorId = localAuthor.Id,
+                    AuthorName = localAuthor.Name,
+                    BookId = localMatchedBook.Id,
+                    BookTitle = localMatchedBook.Title,
+                    EditionId = localEdition.Id
+                };
+
+                var sut = new SimpleImportDecisionMaker(
+                    metadataTagService: DispatchProxy.Create<IMetadataTagService, MetadataTagServiceProxy>(),
+                    fileMatchingService: fileMatchingService,
+                    authorService: authorService,
+                    bookService: bookService,
+                    editionService: DispatchProxy.Create<IEditionService, ThrowingProxy<IEditionService>>(),
+                    mediaFileService: mediaFileService,
+                    logger: LogManager.GetCurrentClassLogger(),
+                    configService: ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: true));
+
+                var decisions = sut.GetImportDecisions(
+                    new List<IFileInfo> { new FileSystem().FileInfo.New(path) },
+                    idOverrides: null,
+                    itemInfo: new ImportDecisionMakerInfo(),
+                    config: new ImportDecisionMakerConfig { Filter = FilterFilesType.None, NewDownload = true, IncludeExisting = true });
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(decisions, Has.Count.EqualTo(1));
+                    Assert.That(decisions[0].Approved, Is.False);
+                    Assert.That(decisions[0].Rejections.Select(rejection => rejection.Reason),
+                        Does.Contain(BookshelfSameFileCompatibility.RejectionReason));
                 });
             }
             finally

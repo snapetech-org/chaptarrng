@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.BookImport.Identification;
@@ -28,6 +29,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         private readonly IBookService _bookService;
         private readonly IEditionService _editionService;
         private readonly IMediaFileService _mediaFileService;
+        private readonly IConfigService _configService;
         private readonly Logger _logger;
 
         private sealed class ManualPreviewCandidate
@@ -43,7 +45,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                          IBookService bookService,
                                          IEditionService editionService,
                                          IMediaFileService mediaFileService,
-                                         Logger logger)
+                                         Logger logger,
+                                         IConfigService configService = null)
         {
             _metadataTagService = metadataTagService;
             _fileMatchingService = fileMatchingService;
@@ -51,6 +54,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             _bookService = bookService;
             _editionService = editionService;
             _mediaFileService = mediaFileService;
+            _configService = configService;
             _logger = logger;
         }
 
@@ -246,8 +250,39 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 }
             }
 
+            ApplyBookshelfSameFileRejections(decisions);
+
             _logger.Debug("SimpleImportDecisionMaker created {0} decisions", decisions.Count);
             return decisions;
+        }
+
+        private void ApplyBookshelfSameFileRejections(IEnumerable<ImportDecision<LocalBook>> decisions)
+        {
+            if (_configService?.BookshelfMatchCompatibility != true)
+            {
+                return;
+            }
+
+            var existingFilesByBookId = new Dictionary<int, List<BookFile>>();
+            foreach (var decision in decisions)
+            {
+                var localBook = decision?.Item;
+                if (localBook?.Book?.Id <= 0 || string.IsNullOrWhiteSpace(localBook.Path))
+                {
+                    continue;
+                }
+
+                if (!existingFilesByBookId.TryGetValue(localBook.Book.Id, out var existingFiles))
+                {
+                    existingFiles = _mediaFileService.GetFilesByBook(localBook.Book.Id) ?? new List<BookFile>();
+                    existingFilesByBookId[localBook.Book.Id] = existingFiles;
+                }
+
+                if (BookshelfSameFileCompatibility.HasSameSizeCompatibleFile(localBook, existingFiles))
+                {
+                    decision.Reject(new Rejection(BookshelfSameFileCompatibility.RejectionReason));
+                }
+            }
         }
 
         private void ApplyManualPreviewMatches(

@@ -25,7 +25,9 @@ namespace Chaptarr.Core.Test.MediaFiles
                 ReadAllTagsCalls++;
                 return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    { "title", new List<string> { "Test Audio" } }
+                    { "title", new List<string> { "Test Audio" } },
+                    { BookshelfAudioTagFields.Book, new List<string> { "Test Audio" } },
+                    { BookshelfAudioTagFields.Title, new List<string> { "Test Audio" } }
                 };
             }
 
@@ -34,7 +36,9 @@ namespace Chaptarr.Core.Test.MediaFiles
                 ReadAllTagsAndDurationCalls++;
                 return (new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    { "title", new List<string> { "Test Audio" } }
+                    { "title", new List<string> { "Test Audio" } },
+                    { BookshelfAudioTagFields.Book, new List<string> { "Test Audio" } },
+                    { BookshelfAudioTagFields.Title, new List<string> { "Test Audio" } }
                 }, 123);
             }
 
@@ -597,6 +601,47 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Assert.Throws<TagExtractionException>(() =>
                     service.ReadAllTagsAndDuration(new FileSystem().FileInfo.New(path)));
                 Assert.That(cache.UpsertCalls, Is.Zero);
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Test]
+        public void should_reextract_audio_cache_rows_without_bookshelf_tag_projection()
+        {
+            const long unixEpochTicks = 621355968000000000L;
+            var root = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"metatag_legacy_audio_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(root);
+            var path = Path.Combine(root, "legacy.m4b");
+            File.WriteAllText(path, "audio");
+
+            try
+            {
+                var file = new FileSystem().FileInfo.New(path);
+                var cache = new RecordingFileTagCacheRepository();
+                var mtimeNs = Math.Max(0, file.LastWriteTimeUtc.Ticks - unixEpochTicks) * 100;
+                cache.SeedLegacy(path, mtimeNs, file.Length, "{\"album\":[\"Legacy Book\"]}", 20);
+
+                var currentTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [BookshelfAudioTagFields.Book] = new List<string> { string.Empty },
+                    [BookshelfAudioTagFields.Title] = new List<string> { "Current Track Title" },
+                    ["album_sort"] = new List<string> { "Must Not Replace Empty Album" }
+                };
+                var audio = new ResultAudioTagService(currentTags, 20);
+                var service = new MetadataTagService(audio, new CountingEBookTagService(), LogManager.GetLogger("test"), cache);
+
+                var result = service.ReadAllTagsAndDuration(file);
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(audio.ReadCalls, Is.EqualTo(1));
+                    Assert.That(result.Tags[BookshelfAudioTagFields.Book], Is.EqualTo(new[] { string.Empty }));
+                    Assert.That(result.Tags[BookshelfAudioTagFields.Title], Is.EqualTo(new[] { "Current Track Title" }));
+                    Assert.That(cache.UpsertCalls, Is.EqualTo(1));
+                });
             }
             finally
             {

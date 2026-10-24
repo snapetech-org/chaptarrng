@@ -8,12 +8,14 @@ using NzbDrone.Common.Disk;
 using NzbDrone.Core.Authors;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Services;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.MediaFiles.BookImport;
 using NzbDrone.Core.MediaFiles.BookImport.Manual;
 using NzbDrone.Core.MediaFiles.BookImport.Services;
 using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.MetadataSource;
+using NzbDrone.Core.Profiles.Metadata;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.RootFolders;
 
@@ -35,6 +37,8 @@ namespace NzbDrone.Core.MediaFiles.Commands
         private readonly IRootFolderService _rootFolderService;
         private readonly IAuthorService _authorService;
         private readonly ISearchForNewBook _catalogSearch;
+        private readonly IConfigService _configService;
+        private readonly IMetadataProfileService _metadataProfileService;
         private readonly Logger _logger;
 
         public RetryUnmappedMatchCommandHandler(
@@ -52,7 +56,9 @@ namespace NzbDrone.Core.MediaFiles.Commands
             IRootFolderService rootFolderService,
             IAuthorService authorService,
             ISearchForNewBook catalogSearch,
-            Logger logger)
+            Logger logger,
+            IConfigService configService = null,
+            IMetadataProfileService metadataProfileService = null)
         {
             _mediaFileService = mediaFileService;
             _metadataTagService = metadataTagService;
@@ -68,6 +74,8 @@ namespace NzbDrone.Core.MediaFiles.Commands
             _rootFolderService = rootFolderService;
             _authorService = authorService;
             _catalogSearch = catalogSearch;
+            _configService = configService;
+            _metadataProfileService = metadataProfileService;
             _logger = logger;
         }
 
@@ -174,7 +182,28 @@ namespace NzbDrone.Core.MediaFiles.Commands
 
         private int AddCatalogSearchSuggestions(IReadOnlyCollection<UnmatchedFile> unmatchedFiles)
         {
-            return UnmappedCatalogSuggestionHelper.AddSuggestions(_catalogSearch, _logger, unmatchedFiles);
+            var useBookshelfMatchCompatibility = _configService?.BookshelfMatchCompatibility == true;
+            var added = UnmappedCatalogSuggestionHelper.AddSuggestions(
+                _catalogSearch,
+                _logger,
+                unmatchedFiles,
+                stopAfterFirstCandidate: useBookshelfMatchCompatibility,
+                useBookshelfMatchCompatibility: useBookshelfMatchCompatibility,
+                minimumMatchPercent: _configService?.BookImportMinimumMatchPercent ?? 70,
+                preferredEditionTermsResolver: useBookshelfMatchCompatibility
+                    ? (author, unmatched, mediaType) => BookshelfMatchCompatibilityProfileResolver.GetPreferredEditionTerms(
+                        author,
+                        unmatched?.File?.Path,
+                        mediaType,
+                        _metadataProfileService,
+                        _rootFolderService,
+                        _logger)
+                    : null);
+
+            return added > 0
+                ? added
+                : (unmatchedFiles ?? Array.Empty<UnmatchedFile>())
+                    .Count(unmatched => unmatched?.PotentialAuthors?.Any(author => !string.IsNullOrWhiteSpace(author?.ProviderId)) == true);
         }
 
         private DiscoveredFileWithMetadata BuildDiscoveredFile(BookFile file)

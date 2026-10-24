@@ -279,6 +279,7 @@ namespace NzbDrone.Core.Books.Commands
 
                 if (addedAuthor != null && addedAuthor.Id > 0)
                 {
+                    addedAuthor = await MaterializeSelectedRemoteEditions(config, addedAuthor);
                     var requestedWorks = GetRequestedWorks(item);
                     ResolveLocalBooks(requestedWorks, addedAuthor);
 
@@ -418,7 +419,10 @@ namespace NzbDrone.Core.Books.Commands
                 AudiobookBooksToMonitor = audiobookMonitorTargets,
                 AudiobookBooksToSearch = audiobookSearchTargets,
                 EbookBooksToMonitor = ebookMonitorTargets,
-                EbookBooksToSearch = ebookSearchTargets
+                EbookBooksToSearch = ebookSearchTargets,
+                SelectedRemoteEditions = string.IsNullOrWhiteSpace(item.SelectedRemoteEditions)
+                    ? new List<UserSelectedRemoteEdition>()
+                    : JsonConvert.DeserializeObject<List<UserSelectedRemoteEdition>>(item.SelectedRemoteEditions) ?? new List<UserSelectedRemoteEdition>()
             };
 
             // Deserialize tags if present
@@ -438,6 +442,41 @@ namespace NzbDrone.Core.Books.Commands
             }
 
             return config;
+        }
+
+        private async Task<Author> MaterializeSelectedRemoteEditions(MonitoringConfig config, Author author)
+        {
+            foreach (var selection in config?.SelectedRemoteEditions ?? new List<UserSelectedRemoteEdition>())
+            {
+                if (selection == null ||
+                    string.IsNullOrWhiteSpace(selection.AuthorProviderId) ||
+                    string.IsNullOrWhiteSpace(selection.WorkProviderId))
+                {
+                    throw new InvalidOperationException("Pending selected-edition request is missing its author or work identity.");
+                }
+
+                var materialized = await _authorLibraryService.MaterializeUserSelectedEditionAsync(
+                    new UserSelectedRemoteEdition
+                    {
+                        AuthorProviderId = selection.AuthorProviderId,
+                        WorkProviderId = selection.WorkProviderId,
+                        EditionProviderId = selection.EditionProviderId,
+                        EditionTitle = selection.EditionTitle,
+                        MediaType = selection.MediaType,
+                        QueueIfUnavailable = false
+                    },
+                    config);
+
+                if (materialized?.Author?.Id != author.Id || materialized.Book == null || materialized.Edition == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Pending selected edition '{selection.EditionProviderId ?? selection.EditionTitle}' for work '{selection.WorkProviderId}' could not be materialized.");
+                }
+
+                author = materialized.Author;
+            }
+
+            return author;
         }
 
         private Author ApplyRequestedMonitoring(PendingAuthorImport item, Author author, List<RequestedWork> requestedWorks)

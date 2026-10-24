@@ -411,6 +411,36 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     continue;
                 }
 
+                // Check if any existing files would be replaced
+                var existingFiles = _mediaFileService.GetFilesByBook(book.Id);
+
+                // BookshelfNG rejects a candidate whose size matches an already-imported file of a
+                // compatible format. Keep that legacy guard on migrated installations, while leaving
+                // ChaptarrNG's normal multi-edition behavior unchanged for fresh libraries.
+                if (_configService?.BookshelfMatchCompatibility == true)
+                {
+                    var sameSizeDuplicates = bookDecisions
+                        .Where(decision => BookshelfSameFileCompatibility.HasSameSizeCompatibleFile(decision.Item, existingFiles))
+                        .ToList();
+
+                    foreach (var duplicate in sameSizeDuplicates)
+                    {
+                        duplicate.Reject(new Rejection(BookshelfSameFileCompatibility.RejectionReason));
+                        importResults.Add(new ImportResult(duplicate, BookshelfSameFileCompatibility.RejectionReason));
+                        bookDecisions.Remove(duplicate);
+                        if (downloadClientItem != null)
+                        {
+                            hasRejectedTrackedDownloadDecisions = true;
+                        }
+                    }
+
+                    if (bookDecisions.Count == 0)
+                    {
+                        _logger.Debug("[BOOKSHELF-COMPAT] All files for book {0} matched an existing compatible file size; skipping import", book.Id);
+                        continue;
+                    }
+                }
+
                 bookDecisions = SelectSingleEbookAlternative(bookDecisions, author, importResults);
                 if (!bookDecisions.Any())
                 {
@@ -432,9 +462,6 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 var firstDecision = bookDecisions.First();
                 var localBook = firstDecision.Item;
                 var qualityProfile = author.GetQualityProfileForQuality(localBook.Quality.Quality);
-
-                // Check if any existing files would be replaced
-                var existingFiles = _mediaFileService.GetFilesByBook(book.Id);
 
                 // Log the existing files situation
                 _logger.Debug("[UPGRADE-CHECK] Book '{0}' (ID: {1}) has {2} existing files",

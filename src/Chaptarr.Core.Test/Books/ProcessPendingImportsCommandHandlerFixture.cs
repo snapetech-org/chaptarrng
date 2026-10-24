@@ -189,6 +189,7 @@ namespace Chaptarr.Core.Test.Books
             public AuthorTerminalException Terminal { get; set; }
             public Author AddedAuthor { get; set; }
             public MonitoringConfig LastConfig { get; private set; }
+            public List<UserSelectedRemoteEdition> MaterializeCalls { get; } = new();
 
             protected override object Invoke(MethodInfo targetMethod, object[] args)
             {
@@ -201,6 +202,18 @@ namespace Chaptarr.Core.Test.Books
                     }
 
                     return Task.FromResult(AddedAuthor);
+                }
+
+                if (targetMethod?.Name == nameof(IAuthorLibraryService.MaterializeUserSelectedEditionAsync))
+                {
+                    var selection = (UserSelectedRemoteEdition)args[0];
+                    MaterializeCalls.Add(selection);
+                    return Task.FromResult(new UserSelectedEditionMaterialization
+                    {
+                        Author = AddedAuthor,
+                        Book = new Book { Id = 77, AuthorId = AddedAuthor.Id, MediaType = selection.MediaType },
+                        Edition = new Edition { Id = 88, BookId = 77 }
+                    });
                 }
 
                 throw new NotImplementedException($"Test proxy does not implement IAuthorLibraryService.{targetMethod?.Name}");
@@ -472,6 +485,57 @@ namespace Chaptarr.Core.Test.Books
             Assert.That(config.EbookBooksToMonitor, Is.EqualTo(new[] { "hc:ebook" }));
             Assert.That(config.SpecificBookProviderIds, Is.Null);
             Assert.That(config.SpecificBookMediaType, Is.Null);
+        }
+
+        [Test]
+        public void deferred_import_should_materialize_the_exact_saved_remote_edition_before_completing()
+        {
+            var pendingImportService = new StubPendingAuthorImportService();
+            var pending = Pending(162);
+            pending.AudiobookStatus = PendingImportStatus.Pending;
+            pending.AudiobookBooksToMonitor = "[\"hc:audio\"]";
+            pending.SelectedRemoteEditions = "[{\"AuthorProviderId\":\"hc:author\",\"WorkProviderId\":\"hc:audio\",\"EditionProviderId\":\"hc:edition:audio\",\"EditionTitle\":\"Selected narration\",\"MediaType\":0,\"QueueIfUnavailable\":true}]";
+            pendingImportService.DueResponses.Enqueue(new List<PendingAuthorImport> { pending });
+
+            var author = new Author { Id = 42, Name = "Deferred Author" };
+            var commandQueue = new RecordingCommandQueue();
+            var eventAggregator = new RecordingEventAggregator();
+            var authorLibrary = DispatchProxy.Create<IAuthorLibraryService, AuthorLibraryProxy>();
+            ((AuthorLibraryProxy)authorLibrary).AddedAuthor = author;
+            var authorService = DispatchProxy.Create<IAuthorService, AuthorServiceProxy>();
+            ((AuthorServiceProxy)authorService).CurrentAuthor = author;
+            var bookService = DispatchProxy.Create<IBookService, BookServiceProxy>();
+            ((BookServiceProxy)bookService).Books.Add(new Book
+            {
+                Id = 77,
+                AuthorId = author.Id,
+                MediaType = BookMediaType.Audiobook,
+                HardcoverBookId = "hc:audio",
+                Author = author
+            });
+            var handler = new ProcessPendingImportsCommandHandler(
+                pendingImportService,
+                authorLibrary,
+                authorService,
+                bookService,
+                DispatchProxy.Create<IProvideBookInfo, BookInfoProxy>(),
+                commandQueue,
+                eventAggregator,
+                new StubExclusionService(),
+                LogManager.GetCurrentClassLogger());
+
+            handler.Execute(new ProcessPendingImportsCommand());
+
+            var libraryProxy = (AuthorLibraryProxy)authorLibrary;
+            Assert.Multiple(() =>
+            {
+                Assert.That(libraryProxy.MaterializeCalls, Has.Count.EqualTo(1));
+                Assert.That(libraryProxy.MaterializeCalls[0].WorkProviderId, Is.EqualTo("hc:audio"));
+                Assert.That(libraryProxy.MaterializeCalls[0].EditionProviderId, Is.EqualTo("hc:edition:audio"));
+                Assert.That(libraryProxy.MaterializeCalls[0].QueueIfUnavailable, Is.False);
+                Assert.That(pendingImportService.RetryReasons, Is.Empty);
+                Assert.That(pendingImportService.DeletedIds, Does.Contain(pending.Id));
+            });
         }
         [Test]
         public void should_not_emit_import_complete_while_continue_drain_has_more_due_items()

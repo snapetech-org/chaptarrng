@@ -46,7 +46,11 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             IReadOnlyCollection<UnmatchedFile> unmatchedFiles,
             Author allowedAuthor = null,
             CancellationToken cancellationToken = default,
-            bool stopAfterFirstCandidate = false)
+            bool stopAfterFirstCandidate = false,
+            bool useBookshelfMatchCompatibility = false,
+            int minimumMatchPercent = 70,
+            Func<Author, UnmatchedFile, BookMediaType, string> preferredEditionTermsResolver = null,
+            bool allowFallbackTiers = true)
         {
             if (catalogSearch == null)
             {
@@ -57,11 +61,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             var queries = (unmatchedFiles ?? Array.Empty<UnmatchedFile>())
                 .Where(unmatched => unmatched?.File?.Path != null &&
+                    !unmatched.CatalogSearchAttempted &&
                     unmatched.PotentialAuthors?.Any(author => !string.IsNullOrWhiteSpace(author?.ProviderId)) != true)
                 .Select(unmatched => TryBuildCatalogSearchQuery(
                     unmatched.File,
                     out var query,
-                    routineMatching: stopAfterFirstCandidate)
+                    routineMatching: stopAfterFirstCandidate,
+                    useBookshelfMatchCompatibility: useBookshelfMatchCompatibility)
                     ? new CatalogSearchQueryItem(unmatched, query)
                     : null)
                 .Where(item => item != null)
@@ -84,6 +90,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         // leave this null so a later scan can retry the failed search.
                         if (item?.Unmatched?.File != null)
                         {
+                            item.Unmatched.CatalogSearchAttempted = true;
                             item.Unmatched.File.LastRemoteSearchTime = null;
                         }
                     }
@@ -92,14 +99,49 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     var identifierResults = new List<Book>();
                     var catalogSearchSucceeded = false;
 
-                    void RecordSearch(CatalogSearchOutcome outcome, ICollection<Book> destination)
+                    int AddTierSuggestions(IEnumerable<Book> books, CatalogSearchQuery candidateQuery = null)
+                    {
+                        candidateQuery ??= query;
+                        if (stopAfterFirstCandidate && useBookshelfMatchCompatibility)
+                        {
+                            var results = (books ?? Enumerable.Empty<Book>()).ToList();
+                            var added = 0;
+                            foreach (var item in queryGroup)
+                            {
+                                var suggestion = BuildBookshelfCompatibilitySuggestion(
+                                    results,
+                                    candidateQuery,
+                                    allowedAuthor,
+                                    item?.Unmatched,
+                                    GetCompatibilityTrackTags(item?.Unmatched?.File),
+                                    minimumMatchPercent,
+                                    preferredEditionTermsResolver);
+                                if (suggestion == null)
+                                {
+                                    continue;
+                                }
+
+                                item.Unmatched.PotentialAuthors = new[] { suggestion };
+                                added++;
+                            }
+
+                            return added;
+                        }
+
+                        return AddSuggestion(queryGroup, BuildExactCatalogSuggestion(books, candidateQuery, allowedAuthor));
+                    }
+
+                    void RecordSearch(CatalogSearchOutcome outcome, ICollection<Book> destination, bool countsAsSuccessfulSearch = true)
                     {
                         if (outcome == null)
                         {
                             return;
                         }
 
-                        catalogSearchSucceeded |= outcome.Succeeded;
+                        if (countsAsSuccessfulSearch)
+                        {
+                            catalogSearchSucceeded |= outcome.Succeeded;
+                        }
                         foreach (var result in outcome.Results)
                         {
                             destination.Add(result);
@@ -126,13 +168,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     if (!string.IsNullOrWhiteSpace(query.Isbn))
                     {
                         RecordSearch(SearchCatalog(logger, "ISBN", query.Title,
-                            () => catalogSearch.SearchByIsbn(query.Isbn), query.MediaType, cancellationToken), identifierResults);
+                            () => catalogSearch.SearchByIsbn(query.Isbn, query.MediaType), query.MediaType, cancellationToken), identifierResults);
                     }
 
                     if (!string.IsNullOrWhiteSpace(query.Asin))
                     {
                         RecordSearch(SearchCatalog(logger, "ASIN", query.Title,
-                            () => catalogSearch.SearchByAsin(query.Asin), query.MediaType, cancellationToken), identifierResults);
+                            () => catalogSearch.SearchByAsin(query.Asin, query.MediaType), query.MediaType, cancellationToken), identifierResults);
                     }
 
                     if (!string.IsNullOrWhiteSpace(query.ProviderId))
@@ -142,7 +184,9 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                             int.TryParse(query.ProviderId.Substring("gr:".Length), NumberStyles.None, CultureInfo.InvariantCulture, out goodreadsId))
                         {
                             RecordSearch(SearchCatalog(logger, "Goodreads ID", query.Title,
-                                () => catalogSearch.SearchByGoodreadsBookId(goodreadsId, getAllEditions: true), query.MediaType, cancellationToken), identifierResults);
+                                () => catalogSearch.SearchByGoodreadsBookId(goodreadsId, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken),
+                                identifierResults,
+                                countsAsSuccessfulSearch: !useBookshelfMatchCompatibility);
                         }
                         else
                         {
@@ -151,10 +195,9 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         }
                     }
 
-                    var suggestion = BuildExactCatalogSuggestion(identifierResults, query, allowedAuthor);
-                    if (identifierResults.Count > 0 && stopAfterFirstCandidate)
+                    if (HasCatalogCandidateEditions(identifierResults) && stopAfterFirstCandidate)
                     {
-                        Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                        Interlocked.Add(ref suggestionsAdded, AddTierSuggestions(identifierResults));
                         StampSuccessfulSearch();
                         return;
                     }
@@ -172,24 +215,40 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                 () => catalogSearch.SearchForNewBook(query.Title, query.Author, getAllEditions: false, mediaType: query.MediaType), query.MediaType, cancellationToken), results);
                         }
 
-                        suggestion = BuildExactCatalogSuggestion(results, query, allowedAuthor);
-                        Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                        Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, BuildExactCatalogSuggestion(results, query, allowedAuthor)));
                         StampSuccessfulSearch();
                         return;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(query.Title) && !string.IsNullOrWhiteSpace(query.Author))
+                    if (!string.IsNullOrWhiteSpace(query.Title))
                     {
-                        var authorTitleSearch = SearchCatalog(logger, "author/title", query.Title,
-                            () => catalogSearch.SearchForNewBook(query.Title, query.Author, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
-                        catalogSearchSucceeded |= authorTitleSearch.Succeeded;
-                        suggestion = BuildExactCatalogSuggestion(authorTitleSearch.Results, query, allowedAuthor);
-                        if (authorTitleSearch.Results.Count > 0)
+                        var authorTerms = stopAfterFirstCandidate && useBookshelfMatchCompatibility
+                            ? query.AuthorSearchTerms
+                            : string.IsNullOrWhiteSpace(query.Author) ? new List<string>() : new List<string> { query.Author };
+                        var authorTitleResults = new List<Book>();
+
+                        foreach (var authorTerm in authorTerms)
                         {
-                            Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                            var authorTitleSearch = SearchCatalog(logger, "author/title", query.Title,
+                                () => catalogSearch.SearchForNewBook(query.Title, authorTerm, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
+                            catalogSearchSucceeded |= authorTitleSearch.Succeeded;
+                            authorTitleResults.AddRange(authorTitleSearch.Results);
+                        }
+
+                        if (HasCatalogCandidateEditions(authorTitleResults))
+                        {
+                            Interlocked.Add(ref suggestionsAdded, AddTierSuggestions(authorTitleResults));
                             StampSuccessfulSearch();
                             return;
                         }
+                    }
+
+                    if (!allowFallbackTiers)
+                    {
+                        // Manual preview keeps the user's exact query scope and does not
+                        // fan out to title-only, filename, or author-only catalog searches.
+                        StampSuccessfulSearch();
+                        return;
                     }
 
                     if (!string.IsNullOrWhiteSpace(query.Title))
@@ -197,10 +256,9 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         var titleSearch = SearchCatalog(logger, "title", query.Title,
                             () => catalogSearch.SearchForNewBook(query.Title, null, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
                         catalogSearchSucceeded |= titleSearch.Succeeded;
-                        suggestion = BuildExactCatalogSuggestion(titleSearch.Results, query, allowedAuthor);
-                        if (titleSearch.Results.Count > 0)
+                        if (HasCatalogCandidateEditions(titleSearch.Results))
                         {
-                            Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                            Interlocked.Add(ref suggestionsAdded, AddTierSuggestions(titleSearch.Results));
                             StampSuccessfulSearch();
                             return;
                         }
@@ -212,22 +270,31 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         var filenameSearch = SearchCatalog(logger, "filename title", query.FileNameTitle,
                             () => catalogSearch.SearchForNewBook(query.FileNameTitle, null, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
                         catalogSearchSucceeded |= filenameSearch.Succeeded;
-                        suggestion = BuildExactCatalogSuggestion(filenameSearch.Results, filenameQuery, allowedAuthor);
-                        if (filenameSearch.Results.Count > 0)
+                        if (HasCatalogCandidateEditions(filenameSearch.Results))
                         {
-                            Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                            Interlocked.Add(ref suggestionsAdded, AddTierSuggestions(filenameSearch.Results, filenameQuery));
                             StampSuccessfulSearch();
                             return;
                         }
                     }
 
-                    if (!string.IsNullOrWhiteSpace(query.Author))
+                    if (stopAfterFirstCandidate && useBookshelfMatchCompatibility
+                        ? query.AuthorSearchTerms.Count > 0
+                        : !string.IsNullOrWhiteSpace(query.Author))
                     {
-                        var authorSearch = SearchCatalog(logger, "author", query.Author,
-                            () => catalogSearch.SearchForNewBook(query.Author, null, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
-                        catalogSearchSucceeded |= authorSearch.Succeeded;
-                        suggestion = BuildExactCatalogSuggestion(authorSearch.Results, query, allowedAuthor);
-                        Interlocked.Add(ref suggestionsAdded, AddSuggestion(queryGroup, suggestion));
+                        var authorTerms = stopAfterFirstCandidate && useBookshelfMatchCompatibility
+                            ? query.AuthorSearchTerms
+                            : string.IsNullOrWhiteSpace(query.Author) ? new List<string>() : new List<string> { query.Author };
+                        var authorResults = new List<Book>();
+                        foreach (var authorTerm in authorTerms)
+                        {
+                            var authorSearch = SearchCatalog(logger, "author", authorTerm,
+                                () => catalogSearch.SearchForNewBook(authorTerm, null, getAllEditions: true, mediaType: query.MediaType), query.MediaType, cancellationToken);
+                            catalogSearchSucceeded |= authorSearch.Succeeded;
+                            authorResults.AddRange(authorSearch.Results);
+                        }
+
+                        Interlocked.Add(ref suggestionsAdded, AddTierSuggestions(authorResults));
                     }
 
                     StampSuccessfulSearch();
@@ -251,7 +318,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
 
             if (suggestionsAdded > 0)
             {
-                logger.Info("[CATALOG-MATCH] Added {0} exact-identity catalog suggestions", suggestionsAdded);
+                logger.Info("[CATALOG-MATCH] Added {0} catalog suggestions", suggestionsAdded);
             }
 
             return suggestionsAdded;
@@ -311,12 +378,190 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             return count;
         }
 
+        private static IReadOnlyList<Dictionary<string, List<string>>> GetCompatibilityTrackTags(DiscoveredFileWithMetadata file)
+        {
+            if (file?.BookshelfMatchCompatibilityTrackTags?.Count > 0)
+            {
+                return file.BookshelfMatchCompatibilityTrackTags;
+            }
+
+            if (file?.GroupMemberTags?.Count > 0)
+            {
+                return file.GroupMemberTags;
+            }
+
+            return file?.AllTags == null
+                ? Array.Empty<Dictionary<string, List<string>>>()
+                : new[] { file.AllTags };
+        }
+
+        private static IReadOnlyList<string> GetCompatibilityTrackPaths(DiscoveredFileWithMetadata file)
+        {
+            if (file?.GroupMemberPaths?.Count > 0)
+            {
+                return file.GroupMemberPaths;
+            }
+
+            return string.IsNullOrWhiteSpace(file?.Path)
+                ? Array.Empty<string>()
+                : new[] { file.Path };
+        }
+
+        private static bool HasCatalogCandidateEditions(IEnumerable<Book> books)
+        {
+            return books?.Any(book => book?.Editions?.Any(edition => edition != null) == true) == true;
+        }
+
+        internal static bool IsBookshelfRemoteCandidateBetter(double localMatchPercent, AuthorSuggestion remoteSuggestion)
+        {
+            return remoteSuggestion != null && remoteSuggestion.Confidence * 100.0 > localMatchPercent;
+        }
+
+        private static AuthorSuggestion BuildBookshelfCompatibilitySuggestion(
+            IEnumerable<Book> results,
+            CatalogSearchQuery query,
+            Author allowedAuthor,
+            UnmatchedFile unmatched,
+            IReadOnlyList<Dictionary<string, List<string>>> trackTags,
+            int minimumMatchPercent,
+            Func<Author, UnmatchedFile, BookMediaType, string> preferredEditionTermsResolver)
+        {
+            if (minimumMatchPercent is < 50 or > 99)
+            {
+                return null;
+            }
+
+            var candidates = new List<(Book Book, Edition Edition, double Score, int Order, string AuthorProviderId, string WorkProviderId, string EditionProviderId)>();
+            var seenEditions = new HashSet<string>(StringComparer.Ordinal);
+            var order = 0;
+
+            foreach (var book in results ?? Enumerable.Empty<Book>())
+            {
+                if (book == null || book.MediaType != query.MediaType ||
+                    (allowedAuthor != null && !AuthorIdentity.MatchesByProviderIdIntersection(allowedAuthor, book.Author)))
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(query.ProviderId) &&
+                    !BookIdentity.GetStableWorkProviderIdentityTokens(book).Contains(query.ProviderId) &&
+                    !BookIdentity.GetEditionProviderIdentityTokens(book).Contains(query.ProviderId))
+                {
+                    continue;
+                }
+
+                var authorProviderId = NormalizeProviderId(AuthorIdentity.GetPreferredProviderId(book.Author), null);
+                var workProviderId = NormalizeProviderId(GetPreferredWorkProviderId(book), null);
+                if (string.IsNullOrWhiteSpace(authorProviderId) ||
+                    string.IsNullOrWhiteSpace(workProviderId) ||
+                    string.IsNullOrWhiteSpace(book.Author?.Name))
+                {
+                    continue;
+                }
+
+                foreach (var edition in book.Editions ?? new List<Edition>())
+                {
+                    if (edition == null)
+                    {
+                        continue;
+                    }
+
+                    // CandidateService de-duplicates on ForeignEditionId in provider order.
+                    // Keep that identity and ordering so equal-distance candidates resolve the
+                    // same way as BookshelfNG.
+                    if (!seenEditions.Add(edition.ForeignEditionId))
+                    {
+                        continue;
+                    }
+
+                    var candidateOrder = order++;
+                    var editionProviderId = GetPreferredEditionProviderId(edition);
+
+                    var preferredEditionAuthor = allowedAuthor ?? book.Author;
+                    var preferredEditionTerms = preferredEditionTermsResolver?.Invoke(preferredEditionAuthor, unmatched, query.MediaType) ??
+                        preferredEditionAuthor?.GetMetadataProfileFor(query.MediaType)?.PreferredEditionTerms;
+                    var score = BookshelfMatchCompatibilityScorer.GetMatchPercent(
+                        trackTags,
+                        candidate: null,
+                        edition,
+                        book,
+                        query.MediaType,
+                        preferredEditionTerms,
+                        GetCompatibilityTrackPaths(unmatched?.File));
+                    if (score < minimumMatchPercent)
+                    {
+                        continue;
+                    }
+
+                    candidates.Add((book, edition, score, candidateOrder, authorProviderId, workProviderId, editionProviderId));
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                return null;
+            }
+
+            // BookshelfNG retains provider ordering for equal scores because it only replaces
+            // the current winner when the next candidate has a strictly smaller distance.
+            var best = candidates
+                .OrderByDescending(candidate => candidate.Score)
+                .ThenBy(candidate => candidate.Order)
+                .First();
+
+            return new AuthorSuggestion
+            {
+                ProviderId = best.AuthorProviderId,
+                AuthorName = best.Book.Author.Name,
+                Confidence = best.Score / 100.0,
+                BookProviderId = best.WorkProviderId,
+                BookTitle = best.Book.Title,
+                EditionHardcoverId = best.EditionProviderId,
+                EditionTitle = best.Edition?.Title
+            };
+        }
+
+        private static string GetPreferredEditionProviderId(Edition edition)
+        {
+            if (edition == null)
+            {
+                return null;
+            }
+
+            var trustedId = BookEditionIdentity.GetTrustedForeignEditionId(edition);
+            if (!string.IsNullOrWhiteSpace(trustedId))
+            {
+                return trustedId;
+            }
+
+            foreach (var (provider, value) in new[]
+                     {
+                         ("ol", edition.OpenLibraryEditionId),
+                         ("gb", edition.GoogleBooksEditionId)
+                     })
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                var providerId = NormalizeProviderId(value, provider);
+                if (!string.IsNullOrWhiteSpace(providerId))
+                {
+                    return providerId;
+                }
+            }
+
+            return NormalizeProviderId(edition.ForeignEditionId, null);
+        }
+
         private static CatalogSearchQuery CopyWithTitle(CatalogSearchQuery query, string title)
         {
             return new CatalogSearchQuery
             {
                 Title = title,
                 Author = query.Author,
+                AuthorSearchTerms = query.AuthorSearchTerms,
                 NormalizedTitle = NormalizeCatalogEvidence(title),
                 NormalizedAuthor = query.NormalizedAuthor,
                 Isbn = query.Isbn,
@@ -343,7 +588,11 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             }
         }
 
-        private static bool TryBuildCatalogSearchQuery(DiscoveredFileWithMetadata file, out CatalogSearchQuery query, bool routineMatching)
+        private static bool TryBuildCatalogSearchQuery(
+            DiscoveredFileWithMetadata file,
+            out CatalogSearchQuery query,
+            bool routineMatching,
+            bool useBookshelfMatchCompatibility)
         {
             query = null;
             if (file == null || string.IsNullOrWhiteSpace(file.Path))
@@ -364,24 +613,61 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 ? new[] { "ALBUMARTIST", "AUTHOR", "ARTIST" }
                 : new[] { "AUTHOR", "ARTIST", "ALBUMARTIST" };
 
-            var title = GetSingleTagValue(file.AllTags, titleKeys);
-            var author = GetSingleTagValue(file.AllTags, authorKeys);
+            var compatibilityTrackTags = useBookshelfMatchCompatibility
+                ? GetCompatibilityTrackTags(file)
+                : null;
+            var compatibilityTrackPaths = useBookshelfMatchCompatibility
+                ? GetCompatibilityTrackPaths(file)
+                : null;
+            var title = useBookshelfMatchCompatibility
+                ? BookshelfMatchCompatibilityScorer.GetBookshelfBookTitle(compatibilityTrackTags, mediaType.Value, compatibilityTrackPaths)
+                : GetSingleTagValue(file.AllTags, titleKeys);
+            var authorSearchTerms = useBookshelfMatchCompatibility
+                ? BookshelfMatchCompatibilityScorer.GetBookshelfRemoteAuthorSearchTerms(compatibilityTrackTags, mediaType.Value, compatibilityTrackPaths)
+                : GetMostCommonAuthorSearchTerms(file, authorKeys);
+            var author = useBookshelfMatchCompatibility
+                ? authorSearchTerms.FirstOrDefault()
+                : GetSingleTagValue(file.AllTags, authorKeys);
             var normalizedTitle = NormalizeCatalogEvidence(title);
             var normalizedAuthor = NormalizeCatalogEvidence(author);
-            var fileNameTitle = !routineMatching || file.GroupMemberTags?.Count > 1
+            var hasMultipleTracks = useBookshelfMatchCompatibility
+                ? compatibilityTrackTags?.Count > 1 || compatibilityTrackPaths?.Count > 1
+                : file.GroupMemberTags?.Count > 1;
+            var fileNameTitle = !routineMatching || hasMultipleTracks
                 ? null
                 : Path.GetFileNameWithoutExtension(file.Path)
                     ?.Replace('.', ' ')
                     .Replace('_', ' ')
                     .Replace('-', ' ')
                     .Trim();
-            if (NormalizeCatalogEvidence(fileNameTitle) == normalizedTitle)
+            if (useBookshelfMatchCompatibility
+                ? string.Equals(fileNameTitle, title, StringComparison.InvariantCultureIgnoreCase)
+                : NormalizeCatalogEvidence(fileNameTitle) == normalizedTitle)
             {
                 fileNameTitle = null;
             }
-            var isbn = NormalizeCatalogIsbn(GetSingleTagValue(file.AllTags, "ISBN", "ISBN13", "ISBN10", "ISBN-13", "ISBN-10"));
-            var asin = NormalizeCatalogAsin(GetSingleTagValue(file.AllTags, "ASIN", "AUDIBLE_ASIN"));
-            if (!TryGetProviderIdEvidence(file.AllTags, out var providerIdEvidence))
+            if (useBookshelfMatchCompatibility && string.IsNullOrWhiteSpace(title))
+            {
+                // CandidateService exits before filename fallback when BookshelfNG could not
+                // produce a BookTitle from the file's parsed tags.
+                fileNameTitle = null;
+            }
+
+            var isbn = useBookshelfMatchCompatibility
+                ? GetConsensusLegacyIdentifier(compatibilityTrackTags, NormalizeCatalogIsbn, "ISBN", "ISBN13", "ISBN10", "ISBN-13", "ISBN-10")
+                : NormalizeCatalogIsbn(GetSingleTagValue(file.AllTags, "ISBN", "ISBN13", "ISBN10", "ISBN-13", "ISBN-10"));
+            var asin = useBookshelfMatchCompatibility
+                ? GetConsensusLegacyIdentifier(compatibilityTrackTags, NormalizeCatalogAsin, "ASIN", "AUDIBLE_ASIN")
+                : NormalizeCatalogAsin(GetSingleTagValue(file.AllTags, "ASIN", "AUDIBLE_ASIN"));
+            if (useBookshelfMatchCompatibility && asin?.Length != 10)
+            {
+                asin = null;
+            }
+            ProviderIdEvidence providerIdEvidence;
+            var providerIdIsValid = useBookshelfMatchCompatibility
+                ? TryGetBookshelfGoodreadsEvidence(compatibilityTrackTags, out providerIdEvidence)
+                : TryGetProviderIdEvidence(file.AllTags, out providerIdEvidence);
+            if (!providerIdIsValid && !useBookshelfMatchCompatibility)
             {
                 return false;
             }
@@ -399,6 +685,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             {
                 Title = title,
                 Author = author,
+                AuthorSearchTerms = authorSearchTerms,
                 NormalizedTitle = normalizedTitle,
                 NormalizedAuthor = normalizedAuthor,
                 Isbn = isbn,
@@ -407,10 +694,93 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 GoodreadsEditionLookup = providerIdEvidence?.GoodreadsEditionLookup == true,
                 FileNameTitle = fileNameTitle,
                 MediaType = mediaType.Value,
-                Key = $"{(int)mediaType.Value}\u001f{normalizedTitle}\u001f{normalizedAuthor}\u001f{isbn}\u001f{asin}\u001f{providerIdEvidence?.ProviderId}\u001f{providerIdEvidence?.GoodreadsEditionLookup}\u001f{NormalizeCatalogEvidence(fileNameTitle)}"
+                Key = $"{(int)mediaType.Value}\u001f{normalizedTitle}\u001f{normalizedAuthor}\u001f{string.Join("\u001e", authorSearchTerms.Select(NormalizeCatalogEvidence))}\u001f{isbn}\u001f{asin}\u001f{providerIdEvidence?.ProviderId}\u001f{providerIdEvidence?.GoodreadsEditionLookup}\u001f{NormalizeCatalogEvidence(fileNameTitle)}"
             };
 
             return true;
+        }
+
+        private static string GetConsensusLegacyIdentifier(
+            IReadOnlyList<Dictionary<string, List<string>>> trackTags,
+            Func<string, string> normalize,
+            params string[] names)
+        {
+            if (trackTags == null || trackTags.Count == 0)
+            {
+                return null;
+            }
+
+            var values = trackTags
+                .Select(tags => BookshelfMatchCompatibilityScorer.HasCalibreOverride(tags)
+                    ? GetFirstTagValue(tags, "BOOKSHELF_CALIBRE_" + names[0].ToUpperInvariant())
+                    : GetFirstTagValue(tags, names))
+                .Select(value => normalize == null
+                    ? (string.IsNullOrWhiteSpace(value) ? null : value.Trim())
+                    : normalize(value))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            return values.Count == 1 ? values[0] : null;
+        }
+
+        private static string GetFirstTagValue(Dictionary<string, List<string>> tags, params string[] names)
+        {
+            foreach (var name in names ?? Array.Empty<string>())
+            {
+                var entry = tags?.FirstOrDefault(pair => string.Equals(pair.Key, name, StringComparison.OrdinalIgnoreCase));
+                var value = entry?.Value?.FirstOrDefault();
+                if (value != null)
+                {
+                    return value;
+                }
+            }
+
+            return null;
+        }
+
+        private static List<string> GetMostCommonAuthorSearchTerms(DiscoveredFileWithMetadata file, IReadOnlyCollection<string> keys)
+        {
+            IEnumerable<Dictionary<string, List<string>>> tagSets = file?.GroupMemberTags?.Count > 0
+                ? file.GroupMemberTags
+                : new[] { file?.AllTags };
+
+            var candidates = tagSets
+                .Select(tags => GetAuthorSearchTerms(tags, keys))
+                .Where(values => values.Count > 0)
+                .GroupBy(values => string.Join("\u001f", values), StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(group => group.Count())
+                .FirstOrDefault();
+
+            return candidates?.FirstOrDefault() ?? new List<string>();
+        }
+
+        private static List<string> GetAuthorSearchTerms(Dictionary<string, List<string>> tags, IReadOnlyCollection<string> keys)
+        {
+            if (tags == null)
+            {
+                return new List<string>();
+            }
+
+            foreach (var key in keys ?? Array.Empty<string>())
+            {
+                var entry = tags.FirstOrDefault(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase));
+                if (entry.Key == null)
+                {
+                    continue;
+                }
+
+                var values = (entry.Value ?? new List<string>())
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (values.Count > 0)
+                {
+                    return values;
+                }
+            }
+
+            return new List<string>();
         }
 
         private static bool TryGetProviderIdEvidence(Dictionary<string, List<string>> tags, out ProviderIdEvidence providerIdEvidence)
@@ -485,6 +855,66 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             providerIdEvidence = new ProviderIdEvidence(
                 distinctIds[0],
                 evidence.Any(item => item.GoodreadsEditionLookup));
+            return true;
+        }
+
+        private static bool TryGetBookshelfGoodreadsEvidence(
+            IReadOnlyList<Dictionary<string, List<string>>> trackTags,
+            out ProviderIdEvidence providerIdEvidence)
+        {
+            providerIdEvidence = null;
+            if (trackTags == null || trackTags.Count == 0)
+            {
+                return true;
+            }
+
+            var goodreadsValues = new List<string>();
+            foreach (var tags in trackTags)
+            {
+                if (!TryGetBookshelfGoodreadsValue(tags, out var value))
+                {
+                    // An ambiguous or invalid tag disables only the Goodreads ID tier;
+                    // BookshelfNG continues to its text search tiers in this case.
+                    return true;
+                }
+
+                goodreadsValues.Add(value);
+            }
+
+            var consensus = goodreadsValues.Distinct(StringComparer.Ordinal).ToList();
+            if (consensus.Count != 1 || !int.TryParse(consensus[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) || id <= 0)
+            {
+                return true;
+            }
+
+            providerIdEvidence = new ProviderIdEvidence("gr:" + id.ToString(CultureInfo.InvariantCulture), true);
+            return true;
+        }
+
+        private static bool TryGetBookshelfGoodreadsValue(Dictionary<string, List<string>> tags, out string value)
+        {
+            value = null;
+            if (BookshelfMatchCompatibilityScorer.HasCalibreOverride(tags))
+            {
+                value = GetSingleTagValue(tags, "BOOKSHELF_CALIBRE_GOODREADS_ID");
+                return true;
+            }
+
+            var names = GoodreadsWorkIdTagNames.Concat(GoodreadsEditionIdTagNames).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var values = (tags ?? new Dictionary<string, List<string>>())
+                .Where(pair => names.Contains(pair.Key))
+                .SelectMany(pair => pair.Value ?? new List<string>())
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => item.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            if (values.Count > 1)
+            {
+                return false;
+            }
+
+            value = values.FirstOrDefault();
             return true;
         }
 
@@ -789,6 +1219,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         {
             public string Title { get; set; }
             public string Author { get; set; }
+            public List<string> AuthorSearchTerms { get; set; } = new List<string>();
             public string NormalizedTitle { get; set; }
             public string NormalizedAuthor { get; set; }
             public string Isbn { get; set; }

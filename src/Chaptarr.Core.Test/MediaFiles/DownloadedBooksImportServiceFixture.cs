@@ -166,12 +166,22 @@ namespace Chaptarr.Core.Test.MediaFiles
         private sealed class StubAuthorLibraryService : IAuthorLibraryService
         {
             public List<(string providerId, MonitoringConfig config)> AddCalls { get; } = new();
+            public List<(UserSelectedRemoteEdition selection, MonitoringConfig config)> MaterializeCalls { get; } = new();
             public Author ResultAuthor { get; set; }
+            public UserSelectedEditionMaterialization MaterializedResult { get; set; }
 
             public Task<Author> AddAuthorAsync(string providerId, MonitoringConfig config = null)
             {
                 AddCalls.Add((providerId, config));
                 return Task.FromResult(ResultAuthor);
+            }
+
+            public Task<UserSelectedEditionMaterialization> MaterializeUserSelectedEditionAsync(
+                UserSelectedRemoteEdition selection,
+                MonitoringConfig config)
+            {
+                MaterializeCalls.Add((selection, config));
+                return Task.FromResult(MaterializedResult);
             }
 
             public Task<Author> AddAuthorMonitoringBookAsync(string authorProviderId, string bookProviderId) => throw new NotImplementedException();
@@ -607,7 +617,7 @@ namespace Chaptarr.Core.Test.MediaFiles
         }
 
         [Test]
-        public void should_auto_add_suggested_author_and_rematch_during_manual_download_import()
+        public void should_materialize_suggested_work_without_edition_id_and_rematch_during_manual_download_import()
         {
             var tempDir = Path.Combine(Path.GetTempPath(), "chaptarr-tests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tempDir);
@@ -643,7 +653,8 @@ namespace Chaptarr.Core.Test.MediaFiles
                                 {
                                     ProviderId = "hc:123",
                                     AuthorName = "Test Author",
-                                    Confidence = 0.8
+                                    Confidence = 0.8,
+                                    BookProviderId = "hc:9001"
                                 }
                             }
                         }
@@ -701,11 +712,15 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 var authorLibraryService = new StubAuthorLibraryService
                 {
-                    ResultAuthor = new Author { Id = 7, Name = "Test Author" }
+                    ResultAuthor = new Author { Id = 7, Name = "Test Author" },
+                    MaterializedResult = new UserSelectedEditionMaterialization
+                    {
+                        Author = new Author { Id = 7, Name = "Test Author" }
+                    }
                 };
 
                 var importOrchestrator = DispatchProxy.Create<IImportOrchestrator, ThrowingProxy<IImportOrchestrator>>();
-                var configService = ConfigServiceTestProxy.Create();
+                var configService = ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: true);
                 var historyService = DispatchProxy.Create<IHistoryService, HistoryServiceProxy>();
                 var eventAggregator = DispatchProxy.Create<IEventAggregator, ThrowingProxy<IEventAggregator>>();
                 var runtimeInfo = DispatchProxy.Create<NzbDrone.Common.EnvironmentInfo.IRuntimeInfo, ThrowingProxy<NzbDrone.Common.EnvironmentInfo.IRuntimeInfo>>();
@@ -731,9 +746,15 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 _ = service.ProcessPath(filePath, ImportMode.Auto, author: null, downloadClientItem: null);
 
-                Assert.That(authorLibraryService.AddCalls, Has.Count.EqualTo(1));
-                Assert.That(authorLibraryService.AddCalls[0].providerId, Is.EqualTo("hc:123"));
-                Assert.That(authorLibraryService.AddCalls[0].config.AudiobookRootFolderPath, Is.EqualTo("/library/audiobooks"));
+                Assert.That(authorLibraryService.AddCalls, Is.Empty);
+                Assert.That(authorLibraryService.MaterializeCalls, Has.Count.EqualTo(1));
+                Assert.That(authorLibraryService.MaterializeCalls[0].selection.AuthorProviderId, Is.EqualTo("hc:123"));
+                Assert.That(authorLibraryService.MaterializeCalls[0].selection.WorkProviderId, Is.EqualTo("hc:9001"));
+                Assert.That(authorLibraryService.MaterializeCalls[0].selection.EditionProviderId, Is.Null);
+                Assert.That(authorLibraryService.MaterializeCalls[0].selection.EditionTitle, Is.Null);
+                Assert.That(authorLibraryService.MaterializeCalls[0].selection.MediaType, Is.EqualTo(BookMediaType.Audiobook));
+                Assert.That(authorLibraryService.MaterializeCalls[0].selection.QueueIfUnavailable, Is.True);
+                Assert.That(authorLibraryService.MaterializeCalls[0].config.AudiobookRootFolderPath, Is.EqualTo("/library/audiobooks"));
                 Assert.That(matchingService.Calls.Select(c => c.RestrictToAuthorId).ToList(), Is.EqualTo(new List<int?> { null, 7 }));
 
                 Assert.That(importApproved.Decisions, Has.Count.EqualTo(1));
@@ -3573,7 +3594,13 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
-        private static DownloadedBooksImportService CreateParityReviewService(StubFileMatchingService matchingService, StubMetadataTagService tagsService, RecordingImportApprovedBooks importApproved)
+        private static DownloadedBooksImportService CreateParityReviewService(
+            StubFileMatchingService matchingService,
+            StubMetadataTagService tagsService,
+            RecordingImportApprovedBooks importApproved,
+            StubAuthorLibraryService authorLibraryService = null,
+            StubRootFolderService rootFolderService = null,
+            bool bookshelfMatchCompatibility = false)
         {
             var bookService = DispatchProxy.Create<IBookService, BookServiceProxy>();
             ((BookServiceProxy)(object)bookService).Book = new Book { Id = 5150, AuthorId = 4242, Title = "Galileo and the Solar System" };
@@ -3593,14 +3620,116 @@ namespace Chaptarr.Core.Test.MediaFiles
                 authorService,
                 editionService,
                 DispatchProxy.Create<IImportOrchestrator, ThrowingProxy<IImportOrchestrator>>(),
-                new StubAuthorLibraryService(),
-                new StubRootFolderService(),
-                ConfigServiceTestProxy.Create(),
+                authorLibraryService ?? new StubAuthorLibraryService(),
+                rootFolderService ?? new StubRootFolderService(),
+                ConfigServiceTestProxy.Create(bookshelfMatchCompatibility: bookshelfMatchCompatibility),
                 DispatchProxy.Create<IHistoryService, HistoryServiceProxy>(),
                 DispatchProxy.Create<IEventAggregator, ThrowingProxy<IEventAggregator>>(),
                 DispatchProxy.Create<NzbDrone.Common.EnvironmentInfo.IRuntimeInfo, ThrowingProxy<NzbDrone.Common.EnvironmentInfo.IRuntimeInfo>>(),
                 DispatchProxy.Create<IMediaInfoExtractor, ThrowingProxy<IMediaInfoExtractor>>(),
                 LogManager.GetCurrentClassLogger());
+        }
+
+        [Test]
+        public void should_materialize_the_selected_work_during_folder_download_import()
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), "chaptarr-tests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            var filePath = Path.Combine(tempDir, "Test.m4b");
+            File.WriteAllBytes(filePath, new byte[] { 1, 2, 3, 4 });
+
+            try
+            {
+                var tagsService = new StubMetadataTagService
+                {
+                    Tags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["artist"] = new List<string> { "Test Author" },
+                        ["album"] = new List<string> { "Test Book" }
+                    }
+                };
+                var matchingService = new StubFileMatchingService
+                {
+                    InitialResult = new FileMatchResult
+                    {
+                        MatchedFiles = Array.Empty<FileMatch>(),
+                        UnmatchedFiles = new[]
+                        {
+                            new UnmatchedFile
+                            {
+                                File = new DiscoveredFileWithMetadata
+                                {
+                                    Path = filePath,
+                                    Size = 4,
+                                    Modified = DateTime.UtcNow,
+                                    AllTags = tagsService.Tags
+                                },
+                                Reason = "No local match",
+                                PotentialAuthors = new[]
+                                {
+                                    new AuthorSuggestion
+                                    {
+                                        ProviderId = "hc:123",
+                                        AuthorName = "Test Author",
+                                        Confidence = 0.8,
+                                        BookProviderId = "hc:9001"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    UseRematchResultWhenAuthorRestricted = true,
+                    RematchResult = new FileMatchResult
+                    {
+                        MatchedFiles = new[]
+                        {
+                            CreateMatchedFile(filePath, tagsService.Tags, 4242, "Test Author", 5150, "Test Book", 9101)
+                        },
+                        UnmatchedFiles = Array.Empty<UnmatchedFile>()
+                    }
+                };
+                var authorLibraryService = new StubAuthorLibraryService
+                {
+                    MaterializedResult = new UserSelectedEditionMaterialization
+                    {
+                        Author = new Author { Id = 4242, Name = "Test Author" }
+                    }
+                };
+                var rootFolderService = new StubRootFolderService
+                {
+                    RootFolders = new List<RootFolder>
+                    {
+                        new RootFolder
+                        {
+                            Path = "/library/audiobooks",
+                            FolderType = FolderType.Audiobook,
+                            AudiobookSettings = "{\"QualityProfileId\":1,\"MetadataProfileId\":1,\"MonitorExisting\":1,\"MonitorFuture\":true}"
+                        }
+                    }
+                };
+                var importApproved = new RecordingImportApprovedBooks();
+                var service = CreateParityReviewService(
+                    matchingService,
+                    tagsService,
+                    importApproved,
+                    authorLibraryService,
+                    rootFolderService,
+                    bookshelfMatchCompatibility: true);
+
+                _ = service.ProcessPath(tempDir, ImportMode.Auto);
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(authorLibraryService.MaterializeCalls, Has.Count.EqualTo(1));
+                    Assert.That(authorLibraryService.MaterializeCalls[0].selection.WorkProviderId, Is.EqualTo("hc:9001"));
+                    Assert.That(authorLibraryService.MaterializeCalls[0].selection.QueueIfUnavailable, Is.True);
+                    Assert.That(importApproved.Decisions.Any(decision => decision.Approved), Is.True);
+                });
+            }
+            finally
+            {
+                try { Directory.Delete(tempDir, recursive: true); } catch { }
+            }
         }
 
         [Test]

@@ -614,6 +614,7 @@ namespace Chaptarr.Core.Test.MediaFiles
         {
             public bool SkipFreeSpaceCheckWhenImporting { get; set; }
             public bool KeepExistingLibraryFileOnImportConflict { get; set; }
+            public bool BookshelfMatchCompatibility { get; set; }
             public ProperDownloadTypes DownloadPropersAndRepacks { get; set; } = ProperDownloadTypes.PreferAndUpgrade;
             public int MinimumFreeSpaceWhenImporting { get; set; } = 100;
             public int AudiobookConversionConcurrentConversions { get; set; } = 1;
@@ -629,6 +630,11 @@ namespace Chaptarr.Core.Test.MediaFiles
                 if (targetMethod?.Name == "get_KeepExistingLibraryFileOnImportConflict")
                 {
                     return KeepExistingLibraryFileOnImportConflict;
+                }
+
+                if (targetMethod?.Name == "get_BookshelfMatchCompatibility")
+                {
+                    return BookshelfMatchCompatibility;
                 }
 
                 if (targetMethod?.Name == "get_DownloadPropersAndRepacks")
@@ -747,13 +753,15 @@ namespace Chaptarr.Core.Test.MediaFiles
         private static IConfigService CreateConfigService(
             int concurrentConversions = 1,
             int maxCpuThreads = 4,
-            bool keepExistingLibraryFileOnImportConflict = false)
+            bool keepExistingLibraryFileOnImportConflict = false,
+            bool bookshelfMatchCompatibility = false)
         {
             var proxy = DispatchProxy.Create<IConfigService, ConfigServiceProxy>();
             var config = (ConfigServiceProxy)(object)proxy;
             config.AudiobookConversionConcurrentConversions = concurrentConversions;
             config.AudiobookConversionMaxCpuThreads = maxCpuThreads;
             config.KeepExistingLibraryFileOnImportConflict = keepExistingLibraryFileOnImportConflict;
+            config.BookshelfMatchCompatibility = bookshelfMatchCompatibility;
             return proxy;
         }
 
@@ -1773,6 +1781,43 @@ namespace Chaptarr.Core.Test.MediaFiles
         }
 
         [Test]
+        public void migrated_import_should_reject_a_same_size_compatible_file_even_when_it_is_another_edition()
+        {
+            var outcome = RunDuplicateImportScenario(
+                Quality.EPUB,
+                Quality.EPUB,
+                existingEditionIdOverride: 931,
+                replaceExisting: false,
+                bookshelfMatchCompatibility: true,
+                existingContent: "same size",
+                incomingContent: "same size");
+
+            Assert.That(outcome.Results, Has.Count.EqualTo(1));
+            Assert.That(outcome.Results[0].Result, Is.EqualTo(ImportResultType.Rejected));
+            Assert.That(outcome.Results[0].Errors, Does.Contain(BookshelfSameFileCompatibility.RejectionReason));
+            Assert.That(outcome.MediaFileService.ReplaceCalls, Is.Zero);
+            Assert.That(outcome.MediaFileService.FilesByBook, Has.Count.EqualTo(1));
+            Assert.That(outcome.ExistingFilesOnDisk, Is.True);
+            Assert.That(outcome.SourceFilesOnDisk, Is.True);
+        }
+
+        [Test]
+        public void fresh_import_should_keep_chaptarr_multi_edition_behavior_for_a_same_size_file()
+        {
+            var outcome = RunDuplicateImportScenario(
+                Quality.EPUB,
+                Quality.EPUB,
+                existingEditionIdOverride: 931,
+                replaceExisting: false,
+                existingContent: "same size",
+                incomingContent: "same size");
+
+            Assert.That(outcome.Results, Has.Count.EqualTo(1));
+            Assert.That(outcome.Results[0].Result, Is.EqualTo(ImportResultType.Imported));
+            Assert.That(outcome.MediaFileService.FilesByBook, Has.Count.EqualTo(2));
+        }
+
+        [Test]
         public void automatic_import_should_not_replace_a_multi_part_audiobook_duplicate()
         {
             var outcome = RunDuplicateImportScenario(Quality.MP3, Quality.MP3, fileCount: 3);
@@ -2114,6 +2159,7 @@ namespace Chaptarr.Core.Test.MediaFiles
             bool replaceExisting = true,
             bool downloadForced = false,
             bool keepExistingLibraryFileOnImportConflict = false,
+            bool bookshelfMatchCompatibility = false,
             bool isGeneratedConversion = false,
             string existingContent = "existing",
             string incomingContent = "incoming")
@@ -2233,6 +2279,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                         Path = existingPath,
                         EditionId = otherEdition?.Id ?? edition.Id,
                         Edition = otherEdition ?? edition,
+                        Size = new FileInfo(existingPath).Length,
                         Part = i + 1,
                         PartCount = fileCount,
                         LastRemoteSearchTime = existingLastRemoteSearchTime,
@@ -2322,7 +2369,9 @@ namespace Chaptarr.Core.Test.MediaFiles
                     Proxy<IM4bConversionService>(),
                     LogManager.GetLogger("ImportApprovedBooksAdditionalCopyFixture"),
                     diskProvider: duplicateScenarioDisk,
-                    configService: CreateConfigService(keepExistingLibraryFileOnImportConflict: keepExistingLibraryFileOnImportConflict),
+                    configService: CreateConfigService(
+                        keepExistingLibraryFileOnImportConflict: keepExistingLibraryFileOnImportConflict,
+                        bookshelfMatchCompatibility: bookshelfMatchCompatibility),
                     customFormatCalculationService: customFormats);
 
                 var results = service.Import(

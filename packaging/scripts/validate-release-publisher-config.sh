@@ -33,6 +33,7 @@ aur=false
 copr=false
 bookshelfng_copr=false
 ppa=false
+ppa_series_json='[{"codename":"noble","version":"24.04"}]'
 chocolatey=false
 
 skip() {
@@ -65,10 +66,13 @@ else
 fi
 
 ppa_target="${LAUNCHPAD_PPA:-}"
-if [[ -z "${GPG_PRIVATE_KEY:-}" || -z "$ppa_target" ]]; then
-  skip PPA 'GPG_PRIVATE_KEY and LAUNCHPAD_PPA are both required; the PPA publisher will not run.'
+ppa_series="${LAUNCHPAD_SERIES:-}"
+if [[ -z "${GPG_PRIVATE_KEY:-}" || -z "$ppa_target" || -z "$ppa_series" ]]; then
+  skip PPA 'GPG_PRIVATE_KEY, LAUNCHPAD_PPA, and LAUNCHPAD_SERIES are required; the PPA publisher will not run.'
 elif [[ ! "$ppa_target" =~ ^ppa:~?[A-Za-z0-9][A-Za-z0-9.+_-]*/[A-Za-z0-9][A-Za-z0-9.+_-]*$ ]]; then
   skip PPA 'LAUNCHPAD_PPA must use the form ppa:<owner>/<archive>; update the Actions secret or variable.'
+elif [[ ! "$ppa_series" =~ ^[a-z][a-z0-9]+(,[a-z][a-z0-9]+)*$ ]]; then
+  skip PPA 'LAUNCHPAD_SERIES must be a comma-separated list of Ubuntu series codenames enabled on the configured PPA.'
 else
   gpg_home="$tmp_dir/gnupg"
   mkdir -m 0700 "$gpg_home"
@@ -76,15 +80,56 @@ else
     ! GNUPGHOME="$gpg_home" gpg --batch --with-colons --list-secret-keys 2>/dev/null | awk -F: '$1 == "sec" { found = 1 } END { exit !found }'; then
     skip PPA 'GPG_PRIVATE_KEY is not an importable private signing key; update the Actions secret.'
   else
-    shorthand="${ppa_target#ppa:}"
-    owner="${shorthand%%/*}"
-    archive="${shorthand#*/}"
-    owner="${owner#\~}"
-    archive_api="https://api.launchpad.net/1.0/~${owner}/%2Barchive/ubuntu/${archive}"
-    if curl --fail --silent --show-error --max-time 20 "$archive_api" >/dev/null 2>&1; then
-      ppa=true
+    signing_fingerprint="$(GNUPGHOME="$gpg_home" gpg --batch --with-colons --list-secret-keys 2>/dev/null | awk -F: '$1 == "fpr" { print $10; exit }')"
+    printf 'ChaptarrNG PPA signing preflight\n' > "$tmp_dir/gpg-check.txt"
+    if ! [[ "$signing_fingerprint" =~ ^[A-Fa-f0-9]{40,64}$ ]] || \
+      ! GNUPGHOME="$gpg_home" gpg --batch --yes --local-user "$signing_fingerprint" \
+        --detach-sign --output "$tmp_dir/gpg-check.sig" "$tmp_dir/gpg-check.txt" >/dev/null 2>&1; then
+      skip PPA 'GPG_PRIVATE_KEY cannot sign without interactive input; provide an unattended signing key.'
     else
-      skip PPA 'The configured Launchpad PPA could not be found through its public API; check its owner and archive name.'
+      shorthand="${ppa_target#ppa:}"
+      owner="${shorthand%%/*}"
+      archive="${shorthand#*/}"
+      owner="${owner#\~}"
+      archive_api="https://api.launchpad.net/1.0/~${owner}/%2Barchive/ubuntu/${archive}"
+      if archive_data="$(curl --fail --silent --show-error --max-time 20 "$archive_api" 2>/dev/null)" && \
+        jq -e --arg archive "$archive" '.name == $archive and (.owner_link | type == "string")' <<< "$archive_data" >/dev/null 2>&1; then
+        IFS=',' read -r -a series_list <<< "$ppa_series"
+        ppa_series_json='['
+        series_valid=true
+        declare -A seen_series=()
+        for series in "${series_list[@]}"; do
+          if [[ -n "${seen_series[$series]:-}" ]]; then
+            series_valid=false
+            break
+          fi
+          seen_series["$series"]=true
+          series_api="https://api.launchpad.net/1.0/ubuntu/${series}"
+          if ! series_data="$(curl --fail --silent --show-error --max-time 20 "$series_api" 2>/dev/null)"; then
+            series_valid=false
+            break
+          fi
+          if ! jq -e '.active == true and (.version | type == "string")' <<< "$series_data" >/dev/null 2>&1; then
+            series_valid=false
+            break
+          fi
+          series_version="$(jq -r '.version' <<< "$series_data")"
+          if [[ ! "$series_version" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+            series_valid=false
+            break
+          fi
+          ppa_series_json+="{\"codename\":\"${series}\",\"version\":\"${series_version}\"},"
+        done
+        if [[ "$series_valid" == true ]]; then
+          ppa_series_json="${ppa_series_json%,}]"
+          ppa=true
+        else
+          ppa_series_json='[{"codename":"noble","version":"24.04"}]'
+          skip PPA 'A configured Launchpad series is duplicated, inactive, or could not be found through the public API; use active codenames enabled on the PPA.'
+        fi
+      else
+        skip PPA 'The configured Launchpad PPA could not be found through its public API; check its owner and archive name.'
+      fi
     fi
   fi
 fi
@@ -102,5 +147,6 @@ fi
   printf 'copr=%s\n' "$copr"
   printf 'bookshelfng_copr=%s\n' "$bookshelfng_copr"
   printf 'ppa=%s\n' "$ppa"
+  printf 'ppa_series=%s\n' "$ppa_series_json"
   printf 'chocolatey=%s\n' "$chocolatey"
 } >> "$GITHUB_OUTPUT"

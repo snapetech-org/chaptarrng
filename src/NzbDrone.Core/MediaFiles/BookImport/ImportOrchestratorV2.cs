@@ -9,6 +9,7 @@ using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Services;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Instrumentation;
+using NzbDrone.Core.Configuration;
 
 using NzbDrone.Core.MediaFiles.BookImport.Services;
 using NzbDrone.Core.MediaFiles;
@@ -23,6 +24,7 @@ using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using System.IO;
 using NzbDrone.Core.Parser.Model;
+using NzbDrone.Core.Qualities;
 
 namespace NzbDrone.Core.MediaFiles.BookImport
 {
@@ -49,6 +51,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         private readonly IAuthorFolderMatchingService _authorFolderMatchingService;
         private readonly Logger _logger;
         private readonly IEventAggregator _eventAggregator;
+        private readonly IConfigService _configService;
         private int? _commandId;
         private int _stagingTotal;
         private int _stagingProcessed;
@@ -94,6 +97,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 IMediaFileRepository mediaFileRepository,
             IAuthorFolderMatchingService authorFolderMatchingService,
             IEventAggregator eventAggregator,
+            IConfigService configService,
             Logger logger)
             {
                 _ingestQueue = ingestQueue;
@@ -113,6 +117,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             _authorFolderMatchingService = authorFolderMatchingService;
             _logger = logger;
             _eventAggregator = eventAggregator;
+            _configService = configService;
         }
 
         public async Task<OrchestratorImportResult> ProcessFilesAsync(
@@ -1035,7 +1040,52 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                                 continue;
                             }
 
-                            author = await _authorLibraryService.AddAuthorAsync(providerId, config);
+                            var selectedSuggestions = _configService?.BookshelfMatchCompatibility == true
+                                ? group
+                                    .Where(item => !string.IsNullOrWhiteSpace(item.Suggestion.BookProviderId))
+                                    .GroupBy(item => (QualityMediaTypeHelper.GetMediaTypeFromPath(item.Unmatched.File.Path)
+                                                         ?? BookMediaType.Audiobook).ToString() + "\u001f" +
+                                        item.Suggestion.BookProviderId + "\u001f" +
+                                        (!string.IsNullOrWhiteSpace(item.Suggestion.EditionHardcoverId)
+                                            ? "id:" + item.Suggestion.EditionHardcoverId
+                                            : "title:" + (item.Suggestion.EditionTitle ?? string.Empty)),
+                                        StringComparer.OrdinalIgnoreCase)
+                                    .ToList()
+                                : null;
+
+                            if (selectedSuggestions?.Count > 0)
+                            {
+                                author = null;
+                                foreach (var selectedGroup in selectedSuggestions)
+                                {
+                                    var selectedItem = selectedGroup.First();
+                                    var selectedSuggestion = selectedItem.Suggestion;
+                                    var selectedMediaType = QualityMediaTypeHelper.GetMediaTypeFromPath(selectedItem.Unmatched.File.Path)
+                                        ?? BookMediaType.Audiobook;
+                                    var materialized = await _authorLibraryService.MaterializeUserSelectedEditionAsync(
+                                        new UserSelectedRemoteEdition
+                                        {
+                                            AuthorProviderId = selectedSuggestion.ProviderId,
+                                            WorkProviderId = selectedSuggestion.BookProviderId,
+                                            EditionProviderId = selectedSuggestion.EditionHardcoverId,
+                                            EditionTitle = selectedSuggestion.EditionTitle,
+                                            MediaType = selectedMediaType,
+                                            QueueIfUnavailable = true
+                                        },
+                                        config);
+                                    author = materialized?.Author ?? author;
+                                }
+
+                                if (author == null)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"The BookshelfNG-compatible catalog selection for author '{providerId}' was not materialized.");
+                                }
+                            }
+                            else
+                            {
+                                author = await _authorLibraryService.AddAuthorAsync(providerId, config);
+                            }
 
                             // Pending imports (negative IDs) can't be imported immediately.
                             if (author == null || author.Id <= 0)

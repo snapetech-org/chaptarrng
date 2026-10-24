@@ -26,7 +26,13 @@ namespace Chaptarr.Api.V1.BookFiles
             MediaInfoModel mediaInfo,
             int? durationSeconds = null)
         {
-            var title = First(tags, "TITLE");
+            var title = HasKey(tags, BookshelfAudioTagFields.Title)
+                ? FirstIncludingEmpty(tags, BookshelfAudioTagFields.Title)
+                : FirstIncludingEmpty(tags, "TITLE") ?? First(tags, "TITLESORT", "TITLE_SORT", "TITLE SORT");
+            var book = HasKey(tags, BookshelfAudioTagFields.Book)
+                ? FirstIncludingEmpty(tags, BookshelfAudioTagFields.Book)
+                : FirstIncludingEmpty(tags, "ALBUM") ?? First(tags, "ALBUMSORT", "ALBUM_SORT", "ALBUM SORT");
+            var bookTitle = string.IsNullOrWhiteSpace(book) ? title : book;
 
             return new ParsedTrackInfo
             {
@@ -35,7 +41,7 @@ namespace Chaptarr.Api.V1.BookFiles
                 Authors = Values(tags, "ALBUMARTIST", "ALBUM ARTIST", "ARTIST", "AUTHORS", "AUTHOR")
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList(),
-                BookTitle = First(tags, "ALBUM", "BOOK", "BOOKTITLE") ?? title,
+                BookTitle = bookTitle,
                 SeriesTitle = First(tags, "SERIES", "SERIES_TITLE"),
                 SeriesIndex = First(tags, "SERIESNUMBER", "SERIESINDEX", "PARTNUMBER"),
                 Isbn = First(tags, "ISBN"),
@@ -83,6 +89,30 @@ namespace Chaptarr.Api.V1.BookFiles
         private static string First(IDictionary<string, List<string>> tags, params string[] keys)
         {
             return Values(tags, keys).FirstOrDefault();
+        }
+
+        private static string FirstIncludingEmpty(IDictionary<string, List<string>> tags, params string[] keys)
+        {
+            if (tags == null)
+            {
+                return null;
+            }
+
+            foreach (var key in keys)
+            {
+                var pair = tags.FirstOrDefault(entry => string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase));
+                if (pair.Key != null && pair.Value?.Count > 0)
+                {
+                    return pair.Value[0];
+                }
+            }
+
+            return null;
+        }
+
+        private static bool HasKey(IDictionary<string, List<string>> tags, string key)
+        {
+            return tags?.Keys.Any(candidate => string.Equals(candidate, key, StringComparison.OrdinalIgnoreCase)) == true;
         }
 
         private static int ParseInt(string value)

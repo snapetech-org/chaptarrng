@@ -71,7 +71,16 @@ disabled until representative-data rollback and channel acceptance pass.
 The stable release workflow now attaches the legacy `.deb` and checksum only
 after an explicit bridge request and when the migration and both release
 readiness gates are true. Those gates remain closed; this workflow has not
-published a bridge asset. No Launchpad PPA bridge is configured yet.
+published a bridge asset. The gated Launchpad publisher now builds signed
+source packages from the checksum-verified Linux x64 release archive for each
+configured Ubuntu series, uses Launchpad's numeric series version in the Debian
+revision, then lets Launchpad build the `.deb`. It requires
+the `GPG_PRIVATE_KEY` Actions secret and `LAUNCHPAD_PPA` plus
+`LAUNCHPAD_SERIES` repository variables, as well as the same migration and
+release-readiness gates. Launchpad does not accept direct binary-package
+uploads; see its [PPA upload instructions](https://help.launchpad.net/Packaging/PPA/Uploading).
+The external PPA credentials, archive, and enabled series still need to be
+validated; this change has not uploaded a source package.
 
 The legacy environment-file conffile is byte-for-byte identical to the final
 public BookshelfNG package. Keeping that checksum stable avoids an unnecessary
@@ -108,7 +117,7 @@ validated or that platform is explicitly retired.
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
 | --- | --- | --- | --- |
-| Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; an isolated dpkg upgrade/downgrade to the candidate and back preserved a modified conffile and data canary | Validate dependency resolution, real systemd startup, database migration/restore, and the PPA/direct-download update path; no candidate is published |
+| Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; a gated legacy `.deb` asset and Launchpad source-package publisher preserve the old service and data identity. An isolated dpkg upgrade/downgrade to the candidate and back preserved a modified conffile and data canary | Validate dependency resolution, real systemd startup, database migration/restore, and PPA/direct-download handoff. External PPA credentials, archive, and enabled series have not been validated, and no candidate is published |
 | AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
 | COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
 | Chocolatey | `chaptarrng 0.9.973` is moderator-approved; the `.977` update is not on the feed and the earlier `.977` bridge push returned HTTP 403. The approved `.973` package uses the ChaptarrNG service and `%ProgramData%\ChaptarrNG\data`, so it is not an in-place BookshelfNG handoff. | Public `bookshelfng 0.4.21.70` remains | Update the standard `chaptarrng` package to `.977`, then publish a `bookshelfng` identity bridge that retains the legacy service/data path; validate populated-data migration and rollback |
@@ -124,12 +133,13 @@ operator database. The candidate BookshelfNG package itself was not published.
 
 Before a release can publish, the workflow validates AUR private-key
 usability, package-scoped ChaptarrNG and BookshelfNG COPR webhook formats,
-Launchpad signing-key import, PPA name and public API lookup, and Chocolatey
-key shape. Invalid optional publisher settings skip that channel without
+Launchpad signing-key import, PPA name and public API lookup, configured Ubuntu
+series, and Chocolatey key shape. Invalid optional publisher settings skip that channel without
 writing credential values to the workflow summary. The main release preflight
 also validates the Discord webhook before artifact or image publishing. These
-checks do not establish publisher authorization or channel acceptance; no
-Launchpad PPA bridge is configured.
+checks do not establish publisher authorization or channel acceptance. The
+Launchpad publisher remains unpublished and still requires the migration and
+release-readiness gates.
 
 The `v0.9.977` release and standard image were published successfully. The
 Chocolatey `chaptarrng 0.9.973` package was approved on October 20, 2026. It

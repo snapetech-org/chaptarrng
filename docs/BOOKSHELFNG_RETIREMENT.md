@@ -1,5 +1,40 @@
 # BookshelfNG retirement status
 
+**Bookshelf matching and audiobook-tag compatibility batch (2026-10-24):**
+ChaptarrNG now carries BookshelfNG's legacy weighted candidate scoring,
+per-format author/root profile selection, filename fallback, and ordered
+catalog identification tiers through routine imports and unmapped-match
+retries. The local-to-remote recheck keeps the legacy 85% threshold and only
+replaces a local candidate with a strictly higher remote score; manual import
+preview retains its exact-query boundary, and the newer media identity and
+ambiguity safeguards remain enabled. Pending-author retries now persist
+selected remote editions until the requested work is available. Audio metadata
+preserves BookshelfNG's null-only Album/AlbumSort and Title/TitleSort
+projection—including empty-value behavior—through extraction, matching,
+caching, and compatible API fields; the private projection is filtered from
+public tag responses. The source review and crosswalk are in
+[the workflow parity map](BOOKSHELFNG_WORKFLOW_PARITY.md#import-and-media-source-path-crosswalk).
+The completed same-file guard was validated with a serial Release solution
+build (0 warnings, 0 errors) and the full Release Core suite (4,859 passed, 25
+skipped, 0 failed). All three new same-size compatibility cases passed. The TRX
+contains 4,886 rows: 4,859 `Passed` and 27 `NotExecuted`, while the console
+summary counts 4,884 total with 25 skipped; the two-row runner accounting
+difference remains recorded rather than inferred away. Local synthetic
+regressions do not establish live-provider fulfillment,
+representative-library acceptance, or installed-channel handoff.
+
+**BookshelfNG same-file import guard (2026-10-24):** Migrated installations
+reject a candidate when an existing book file has the same size and a
+compatible format, including a file assigned to another edition. Manual import
+preview and final import use the same migration-gated check; same-path files
+follow the source rule, while explicit generated conversions remain exempt.
+Fresh installations keep ChaptarrNG's multi-edition behavior. The Release
+solution build and full Core suite passed; the migrated-preview rejection, the
+migrated final-import rejection, and the fresh-install allowance all passed.
+This closes the newly reviewed `SameFileSpecification.cs` source-path gap
+only; live-provider, representative-data, installed-channel, and rollback
+acceptance remain open.
+
 **Image dependency/security update (2026-10-23):** ChaptarrNG now uses
 SkiaSharp for resized JPEG, PNG, JFIF, and WebP covers, and PDFsharp 6.2.4 for
 PDF metadata extraction. PDFsharp 6.2.4 targets .NET 10 and retains its MIT
@@ -1042,7 +1077,7 @@ and follow the
 
 | Channel | Published ChaptarrNG state | BookshelfNG handoff state |
 | --- | --- | --- |
-| Debian / Ubuntu `.deb` and PPA | No ChaptarrNG package is published. | A candidate `bookshelfng` Debian package recipe and builder install the ChaptarrNG release payload while retaining the service, environment file, and `/var/lib/bookshelfng` data path. The checksum-verified public `.71` package upgraded to the local `.977` candidate and back in Debian Trixie with real dependency resolution and no conffile prompt. A systemd-running container upgraded an active `.71` service to the candidate and passed `/ping`; after restoring the pre-upgrade data copy, downgrade to `.71` restarted the service and passed `/ping`. This used a fresh empty `.71` database and synthetic canaries, not representative data. PPA publication, real-host acceptance, and representative-data rollback remain open. |
+| Debian / Ubuntu `.deb` and PPA | No ChaptarrNG package is published. | The gated `bookshelfng` `.deb` release asset and Launchpad source-package publisher preserve the service, environment file, and `/var/lib/bookshelfng` data path. The checksum-verified public `.71` package upgraded to the local `.977` candidate and back in Debian Trixie with real dependency resolution and no conffile prompt. A systemd-running container upgraded an active `.71` service and passed `/ping`; after restoring the pre-upgrade data copy, downgrade to `.71` restarted the service and passed `/ping`. This used a fresh empty `.71` database and synthetic canaries, not representative data. External PPA credentials, archive, and enabled series remain unvalidated, and no PPA package has been uploaded. Real-host acceptance and representative-data rollback remain open. |
 | Docker / GHCR | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same published multi-architecture image digest. | Legacy aliases remain unchanged. Commit `68c9bdbb` adds compatibility targets: `latest`, `main`, and `hardcover` preserve native Hardcover mode; `softcover` preserves Goodreads mode. Fresh data directories use port `8787`, while a saved `config.xml` port or explicit `Chaptarr__Server__Port` takes precedence. Commit `2d6124e2` also fixes Docker image metadata: the two compatibility targets expose only `8787/tcp`, while the standard target exposes only `8789/tcp`. Local Linux/amd64 builds of all three targets and their image metadata checks passed. The GHCR multi-architecture image build, manifests, and alias dispatch were not run or published. The bridge stays disabled, and pinned version tags and digests still need an operator change. |
 | AUR | `chaptarrng-bin 0.9.977-1` is published. | `bookshelfng-bin 0.4.21.71-1` remains public. A local `.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and active systemd service handoff checks. The test used a network-isolated Arch container and a synthetic migration-158 database; representative operator data and host-specific settings remain open. |
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |

@@ -271,6 +271,16 @@ namespace NzbDrone.Core.Books.Services
                         updated = true;
                     }
 
+                    if (TryMergeSelectedRemoteEditions(
+                            existing.SelectedRemoteEditions,
+                            config.SelectedRemoteEditions,
+                            providerId,
+                            out var selectedRemoteEditions))
+                    {
+                        existing.SelectedRemoteEditions = selectedRemoteEditions;
+                        updated = true;
+                    }
+
                     // Preserve discovered author folder path if provided and not already set
                     if (string.IsNullOrWhiteSpace(existing.DiscoveredAuthorFolderPath) && !string.IsNullOrWhiteSpace(config.DiscoveredAuthorFolderPath))
                     {
@@ -317,6 +327,9 @@ namespace NzbDrone.Core.Books.Services
                     RequestedBy = config.RequestedBy,
                     SearchForMissingBooks = config.SearchForMissingBooks ?? false,
                     LastSelectedMediaType = config.LastSelectedMediaType,
+                    SelectedRemoteEditions = config.SelectedRemoteEditions?.Any() == true
+                        ? JsonConvert.SerializeObject(config.SelectedRemoteEditions)
+                        : null,
                     Version = 1
                 };
 
@@ -400,7 +413,84 @@ namespace NzbDrone.Core.Books.Services
             return config?.AudiobookBooksToMonitor?.Any() == true ||
                    config?.AudiobookBooksToSearch?.Any() == true ||
                    config?.EbookBooksToMonitor?.Any() == true ||
-                   config?.EbookBooksToSearch?.Any() == true;
+                   config?.EbookBooksToSearch?.Any() == true ||
+                   config?.SelectedRemoteEditions?.Any() == true;
+        }
+
+        private bool TryMergeSelectedRemoteEditions(
+            string existingJson,
+            IEnumerable<UserSelectedRemoteEdition> incoming,
+            string providerId,
+            out string serialized)
+        {
+            serialized = existingJson;
+            var incomingSelections = (incoming ?? Enumerable.Empty<UserSelectedRemoteEdition>())
+                .Where(selection => selection != null && !string.IsNullOrWhiteSpace(selection.WorkProviderId))
+                .ToList();
+            if (incomingSelections.Count == 0)
+            {
+                return false;
+            }
+
+            List<UserSelectedRemoteEdition> selections;
+            try
+            {
+                selections = string.IsNullOrWhiteSpace(existingJson)
+                    ? new List<UserSelectedRemoteEdition>()
+                    : JsonConvert.DeserializeObject<List<UserSelectedRemoteEdition>>(existingJson) ?? new List<UserSelectedRemoteEdition>();
+            }
+            catch (JsonException ex)
+            {
+                _logger.ErrorSafe(ex, "[PENDING-IMPORT] Cannot merge selected-edition requests for {0}: persisted request data is invalid", providerId);
+                throw new InvalidOperationException($"Pending selected-edition data for author {providerId} is invalid.", ex);
+            }
+
+            var changed = false;
+            foreach (var selection in incomingSelections)
+            {
+                var existing = selections.FirstOrDefault(candidate =>
+                    candidate != null &&
+                    candidate.MediaType == selection.MediaType &&
+                    string.Equals(candidate.WorkProviderId, selection.WorkProviderId, StringComparison.OrdinalIgnoreCase) &&
+                    (string.IsNullOrWhiteSpace(selection.EditionProviderId)
+                        ? string.IsNullOrWhiteSpace(candidate.EditionProviderId) &&
+                          string.Equals(candidate.EditionTitle, selection.EditionTitle, StringComparison.OrdinalIgnoreCase)
+                        : string.Equals(candidate.EditionProviderId, selection.EditionProviderId, StringComparison.OrdinalIgnoreCase)));
+
+                if (existing == null)
+                {
+                    selections.Add(new UserSelectedRemoteEdition
+                    {
+                        AuthorProviderId = selection.AuthorProviderId,
+                        WorkProviderId = selection.WorkProviderId,
+                        EditionProviderId = selection.EditionProviderId,
+                        EditionTitle = selection.EditionTitle,
+                        MediaType = selection.MediaType,
+                        QueueIfUnavailable = true
+                    });
+                    changed = true;
+                }
+                else if (string.IsNullOrWhiteSpace(existing.EditionTitle) && !string.IsNullOrWhiteSpace(selection.EditionTitle))
+                {
+                    selections[selections.IndexOf(existing)] = new UserSelectedRemoteEdition
+                    {
+                        AuthorProviderId = existing.AuthorProviderId,
+                        WorkProviderId = existing.WorkProviderId,
+                        EditionProviderId = existing.EditionProviderId,
+                        EditionTitle = selection.EditionTitle,
+                        MediaType = existing.MediaType,
+                        QueueIfUnavailable = true
+                    };
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                serialized = JsonConvert.SerializeObject(selections);
+            }
+
+            return changed;
         }
 
         private static bool MergeExistingMonitorMode(
