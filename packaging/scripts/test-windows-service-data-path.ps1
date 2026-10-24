@@ -7,6 +7,11 @@ $ErrorActionPreference = 'Stop'
 function Protect-DiagnosticLine([string] $line) {
   $line = [regex]::Replace(
     $line,
+    '(?i)((?:--|/)[\w-]*(?:api[-_]?key|access[-_]?token|refresh[-_]?token|token|password|passwd|secret|authorization)\s+)(?:"[^"]*"|''[^'']*''|[^\s,;]+)',
+    '$1<redacted>'
+  )
+  $line = [regex]::Replace(
+    $line,
     '(?i)(\b[\w-]*(?:api[-_]?key|token|password|secret|authorization)\b["'']?\s*[:=]\s*)(?:"[^"]*"|''[^'']*''|(?:Bearer|Basic)\s+\S+|[^,\s;}\]]+)',
     '$1<redacted>'
   )
@@ -22,13 +27,14 @@ function Test-DiagnosticRedaction {
   $samples = @(
     'apiKey=smoke-api-secret',
     '{"accessToken":"smoke-token-secret","accessTokenSecret":"smoke-oauth-secret"}',
+    'Chaptarr.Console.exe --api-key smoke-cli-api-secret --oauth-token "smoke-cli-oauth-secret"',
     'Authorization: Bearer smoke-bearer-secret',
     '<apiKey>smoke-xml-secret</apiKey>'
   )
 
   foreach ($sample in $samples) {
     $redacted = Protect-DiagnosticLine $sample
-    if ($redacted -match 'smoke-(?:api|token|oauth|bearer|xml)-secret') {
+    if ($redacted -match 'smoke-(?:api|token|oauth|bearer|xml|cli-api|cli-oauth)-secret') {
       throw 'The Windows service diagnostic redactor left a synthetic secret in its output.'
     }
   }
