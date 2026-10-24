@@ -24892,6 +24892,10 @@
             "type": "string",
             "nullable": true
           },
+          "experienceMode": {
+            "type": "string",
+            "nullable": true
+          },
           "addNewDefaultMediaType": {
             "type": "string",
             "nullable": true

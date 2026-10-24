@@ -184,6 +184,10 @@ class UISettings extends Component {
       { key: 'ebook', value: translate('EbookLabel') },
       { key: 'both', value: translate('AudiobooksAndEbooks') }
     ];
+    const experienceModeOptions = [
+      { key: 'simple', value: translate('SimpleExperience') },
+      { key: 'advanced', value: translate('AdvancedExperience') }
+    ];
 
     return (
       <PageContent title={translate('UISettings')}>
@@ -200,6 +204,20 @@ class UISettings extends Component {
 
           {hasSettings && !isFetching && !error && (
             <Form id="uiSettings" {...otherProps}>
+              <FieldSet legend={translate('ExperienceMode')}>
+                <FormGroup>
+                  <FormLabel>{translate('ExperienceMode')}</FormLabel>
+                  <FormInputGroup
+                    type={inputTypes.SELECT}
+                    name="experienceMode"
+                    values={experienceModeOptions}
+                    helpText={translate('ExperienceModeHelpText')}
+                    onChange={onInputChange}
+                    {...settings.experienceMode}
+                  />
+                </FormGroup>
+              </FieldSet>
+
               <FieldSet legend={translate('AddNewItem')}>
                 <FormGroup>
                   <FormLabel>{translate('DefaultFormatForNewItems')}</FormLabel>

@@ -20,12 +20,33 @@ if ($env:ChocolateyPackageParameters) {
   $packageParameters = $env:ChocolateyPackageParameters.Trim().Trim('"').Trim("'")
 }
 $requestedProviderMode = $null
+$requestedMigrationMode = 'automatic'
 if (-not [string]::IsNullOrWhiteSpace($packageParameters)) {
-  $parameterMatch = [regex]::Match($packageParameters, '(?i)^[/-]ProviderMode\s*[:=]\s*(?<mode>Hardcover|Goodreads)$')
-  if (-not $parameterMatch.Success) {
-    throw "Unsupported bookshelfng migration package parameter. Use /ProviderMode=Hardcover or /ProviderMode=Goodreads."
+  $seenParameters = @{}
+  foreach ($parameter in ($packageParameters -split '\s+' | Where-Object { $_ })) {
+    $parameterMatch = [regex]::Match($parameter, '(?i)^[/-](?<name>ProviderMode|MigrationMode)\s*[:=]\s*(?<value>[^\s]+)$')
+    if (-not $parameterMatch.Success) {
+      throw "Unsupported bookshelfng package parameter '$parameter'. Use /ProviderMode=Hardcover|Goodreads and /MigrationMode=automatic|ask|manual."
+    }
+    $name = $parameterMatch.Groups['name'].Value.ToLowerInvariant()
+    if ($seenParameters.ContainsKey($name)) {
+      throw "The bookshelfng package parameter $name was specified more than once."
+    }
+    $seenParameters[$name] = $parameterMatch.Groups['value'].Value
   }
-  $requestedProviderMode = $parameterMatch.Groups['mode'].Value
+
+  if ($seenParameters.ContainsKey('providermode')) {
+    if ($seenParameters['providermode'] -notmatch '^(?i:Hardcover|Goodreads)$') {
+      throw 'ProviderMode must be Hardcover or Goodreads.'
+    }
+    $requestedProviderMode = $seenParameters['providermode']
+  }
+  if ($seenParameters.ContainsKey('migrationmode')) {
+    if ($seenParameters['migrationmode'] -notmatch '^(?i:automatic|ask|manual)$') {
+      throw 'MigrationMode must be automatic, ask, or manual.'
+    }
+    $requestedMigrationMode = $seenParameters['migrationmode'].ToLowerInvariant()
+  }
 }
 
 function Get-BookshelfServiceEnvironment {
@@ -407,9 +428,40 @@ if ($hadService) {
 }
 
 $dataDir = [IO.Path]::GetFullPath($dataDir)
-Complete-PriorBookshelfHandoff
 $hadApp = Test-Path -LiteralPath $appDir
 $sqliteSourceExisted = Test-Path -LiteralPath (Join-Path $dataDir 'readarr.db')
+$postgresSourceForChoice = Test-BookshelfPostgresSource $serviceEnvironment
+$alreadyMigratedForChoice = $false
+$choiceConsolePath = if ($oldApplication) { $oldApplication.Trim().Trim('"') } else { '' }
+if ($hadService -and (Test-Path -LiteralPath $choiceConsolePath) -and
+    [IO.Path]::GetFileName($choiceConsolePath) -match '(?i)^Chaptarr(?:\.Console)?\.exe$') {
+  $migrationStateExit = Invoke-BookshelfUtility $choiceConsolePath @(
+    '-check-bookshelf-migration',
+    "-data=$dataDir"
+  ) $effectiveEnvironment
+  $alreadyMigratedForChoice = $migrationStateExit -eq 0
+}
+$hasMigrationDataForChoice = $false
+if (-not $alreadyMigratedForChoice) {
+  $hasMigrationDataForChoice = $hadService -or $sqliteSourceExisted -or $postgresSourceForChoice
+}
+
+if ($hasMigrationDataForChoice -and $requestedMigrationMode -eq 'manual') {
+  throw "MigrationMode=manual cancelled this package update before stopping BookshelfNG or changing its files. Use the ChaptarrNG Console migration commands in docs/MIGRATE_FROM_BOOKSHELFNG.md, then rerun the package update."
+}
+
+if ($hasMigrationDataForChoice -and $requestedMigrationMode -eq 'ask') {
+  if ([Console]::IsInputRedirected) {
+    throw 'MigrationMode=ask requires an interactive terminal. No files, service settings, or databases were changed; rerun with MigrationMode=automatic or MigrationMode=manual.'
+  }
+
+  $migrationChoice = Read-Host 'Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically. [y/N]'
+  if ($migrationChoice -notmatch '^(?i:y|yes)$') {
+    throw 'BookshelfNG replacement cancelled before staging files or stopping the service. Run with MigrationMode=manual to review the independent migration steps.'
+  }
+}
+
+Complete-PriorBookshelfHandoff
 $backupNamesBefore = @(Get-ChildItem -LiteralPath $dataDir -Filter 'readarr.db.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue | ForEach-Object Name)
 $configPath = Join-Path $dataDir 'config.xml'
 if (Test-Path -LiteralPath $configPath) {

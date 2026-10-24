@@ -47,7 +47,8 @@ class PageHeader extends Component {
 
   render() {
     const {
-      onSidebarToggle
+      onSidebarToggle,
+      experienceMode
     } = this.props;
 
     return (
@@ -91,6 +92,7 @@ class PageHeader extends Component {
           />
           <PageHeaderActionsMenuConnector
             onKeyboardShortcutsPress={this.onOpenKeyboardShortcutsModal}
+            experienceMode={experienceMode}
           />
         </div>
 
@@ -105,6 +107,7 @@ class PageHeader extends Component {
 
 PageHeader.propTypes = {
   onSidebarToggle: PropTypes.func.isRequired,
+  experienceMode: PropTypes.oneOf(['simple', 'advanced']).isRequired,
   bindShortcut: PropTypes.func.isRequired
 };
 

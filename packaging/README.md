@@ -62,6 +62,20 @@ stored in the service environment so later Chocolatey updates keep the same
 identity interpretation. A preview that cannot classify IDs fails before the
 package switches the application files.
 
+The transition package keeps unattended updates automatic by default. To ask
+before any service stop or application staging, use
+`choco upgrade bookshelfng --yes --params "'/MigrationMode=ask'"`; answering
+No cancels the update and leaves BookshelfNG in place. Use
+`/MigrationMode=manual` to cancel without prompting and follow the standalone
+Console migration steps in
+[`docs/MIGRATE_FROM_BOOKSHELFNG.md`](../docs/MIGRATE_FROM_BOOKSHELFNG.md).
+Debian, RPM, and AUR hooks accept the same `automatic`, `ask`, and `manual`
+choices through `BOOKSHELFNG_MIGRATION_MODE`. AppImage and Flatpak launchers
+also honor that variable on first migration launch. An interactive prompt
+requires a terminal except when `zenity` is available for the desktop dialog.
+Desktop choices defer data conversion at launch; they do not undo an AppImage
+download or Flatpak deployment.
+
 The Debian candidate recipe and local package builder are in
 `packaging/legacy/debian/` and
 `packaging/scripts/build-bookshelfng-deb-bridge.sh`. The builder consumes the

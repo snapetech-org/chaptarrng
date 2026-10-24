@@ -78,6 +78,7 @@ class Page extends Component {
       isSmallScreen,
       isSidebarVisible,
       enableColorImpairedMode,
+      experienceMode,
       authenticationEnabled,
       onSidebarToggle,
       onSidebarVisibleChange
@@ -90,6 +91,7 @@ class Page extends Component {
 
           <PageHeader
             onSidebarToggle={onSidebarToggle}
+            experienceMode={experienceMode}
           />
 
           <div className={styles.main}>
@@ -97,6 +99,7 @@ class Page extends Component {
               location={location}
               isSmallScreen={isSmallScreen}
               isSidebarVisible={isSidebarVisible}
+              experienceMode={experienceMode}
               onSidebarVisibleChange={onSidebarVisibleChange}
             />
 
@@ -135,6 +138,7 @@ Page.propTypes = {
   isUpdated: PropTypes.bool.isRequired,
   isDisconnected: PropTypes.bool.isRequired,
   enableColorImpairedMode: PropTypes.bool.isRequired,
+  experienceMode: PropTypes.oneOf(['simple', 'advanced']).isRequired,
   authenticationEnabled: PropTypes.bool.isRequired,
   onResize: PropTypes.func.isRequired,
   onSidebarToggle: PropTypes.func.isRequired,

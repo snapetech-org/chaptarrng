@@ -373,3 +373,7 @@ snapshot regeneration, 37 local document links and count reconciliation. The
 repository's staged Semgrep scan ran 290 applicable rules on the audit script
 with zero findings; the pre-push image-alias/readiness regression script passed.
 These regression scripts do not enable or change a live readiness gate.
+
+## Operator experience and migration choices
+
+The source now includes a persistent Simple / Advanced UI experience choice and explicit automatic, ask, and manual migration timing across the legacy Windows, Debian, RPM, AUR, AppImage, and Flatpak paths. BookshelfNG imports select Simple by default; new ChaptarrNG installs select Advanced. Package `ask` defaults to No and cancels before mutation. Manual mode points users to the Console preview/apply workflow, then back to the package transition. Luna still owns acceptance builds and installed-channel validation.

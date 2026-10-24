@@ -710,6 +710,22 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("EnableColorImpairedMode", value); }
         }
 
+        public string ExperienceMode
+        {
+            get
+            {
+                var defaultMode = BookshelfMatchCompatibility ? "simple" : "advanced";
+                var mode = GetValue("ExperienceMode", defaultMode);
+                return string.Equals(mode, "simple", StringComparison.OrdinalIgnoreCase) ? "simple" : "advanced";
+            }
+
+            set
+            {
+                var mode = string.Equals(value, "simple", StringComparison.OrdinalIgnoreCase) ? "simple" : "advanced";
+                SetValue("ExperienceMode", mode);
+            }
+        }
+
         public int UILanguage
         {
             get { return GetValueInt("UILanguage", (int)Language.English); }

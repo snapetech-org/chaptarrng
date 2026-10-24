@@ -13,10 +13,15 @@ import styles from './PageHeaderActionsMenu.css';
 function PageHeaderActionsMenu(props) {
   const {
     formsAuth,
+    experienceMode,
     onKeyboardShortcutsPress,
+    onExperienceModePress,
     onRestartPress,
     onShutdownPress
   } = props;
+  const experienceModeLabel = experienceMode === 'simple' ?
+    'SwitchToAdvancedExperience' :
+    'SwitchToSimpleExperience';
 
   return (
     <div>
@@ -34,6 +39,14 @@ function PageHeaderActionsMenu(props) {
               name={icons.KEYBOARD}
             />
             {translate('KeyboardShortcuts')}
+          </MenuItem>
+
+          <MenuItem onPress={onExperienceModePress}>
+            <Icon
+              className={styles.itemIcon}
+              name={icons.SETTINGS}
+            />
+            {translate(experienceModeLabel)}
           </MenuItem>
 
           <MenuItemSeparator />
@@ -81,7 +94,9 @@ function PageHeaderActionsMenu(props) {
 
 PageHeaderActionsMenu.propTypes = {
   formsAuth: PropTypes.bool.isRequired,
+  experienceMode: PropTypes.oneOf(['simple', 'advanced']).isRequired,
   onKeyboardShortcutsPress: PropTypes.func.isRequired,
+  onExperienceModePress: PropTypes.func.isRequired,
   onRestartPress: PropTypes.func.isRequired,
   onShutdownPress: PropTypes.func.isRequired
 };

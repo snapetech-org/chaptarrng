@@ -14,7 +14,8 @@ import {
   fetchLanguages,
   fetchMetadataProfiles,
   fetchQualityProfiles,
-  fetchUISettings
+  fetchUISettings,
+  setAdvancedSettings
 } from 'Store/Actions/settingsActions';
 import { fetchStatus } from 'Store/Actions/systemActions';
 import { fetchTags } from 'Store/Actions/tagActions';
@@ -151,14 +152,18 @@ const selectErrors = createSelector(
 
 function createMapStateToProps() {
   return createSelector(
+    (state) => state.settings.advancedSettings,
     (state) => state.settings.ui.item.enableColorImpairedMode,
+    (state) => state.settings.ui.item.experienceMode,
     selectIsPopulated,
     selectErrors,
     selectAppProps,
     createDimensionsSelector(),
     createSystemStatusSelector(),
     (
+      advancedSettings,
       enableColorImpairedMode,
+      experienceMode,
       isPopulated,
       errors,
       app,
@@ -171,7 +176,9 @@ function createMapStateToProps() {
         isPopulated,
         isSmallScreen: dimensions.isSmallScreen,
         authenticationEnabled: systemStatus.authentication !== 'none',
-        enableColorImpairedMode
+        enableColorImpairedMode,
+        advancedSettings,
+        experienceMode: experienceMode || 'advanced'
       };
     }
   );
@@ -223,6 +230,9 @@ function createMapDispatchToProps(dispatch, props) {
     },
     onSidebarVisibleChange(isSidebarVisible) {
       dispatch(setIsSidebarVisible({ isSidebarVisible }));
+    },
+    onAdvancedSettingsChange(advancedSettings) {
+      dispatch(setAdvancedSettings(advancedSettings));
     }
   };
 }
@@ -261,6 +271,12 @@ class PageConnector extends Component {
 
   //
   // Listeners
+
+  componentDidUpdate() {
+    if (this.props.experienceMode === 'simple' && this.props.advancedSettings) {
+      this.props.onAdvancedSettingsChange(false);
+    }
+  }
 
   onSidebarToggle = () => {
     this.props.onSidebarVisibleChange(!this.props.isSidebarVisible);
@@ -322,6 +338,8 @@ class PageConnector extends Component {
       dispatchFetchStatus,
       dispatchFetchTranslations,
       dispatchFetchHardcoverConfig,
+      advancedSettings,
+      onAdvancedSettingsChange,
       ...otherProps
     } = this.props;
 
@@ -378,7 +396,10 @@ PageConnector.propTypes = {
   dispatchFetchStatus: PropTypes.func.isRequired,
   dispatchFetchTranslations: PropTypes.func.isRequired,
   dispatchFetchHardcoverConfig: PropTypes.func.isRequired,
-  onSidebarVisibleChange: PropTypes.func.isRequired
+  onSidebarVisibleChange: PropTypes.func.isRequired,
+  advancedSettings: PropTypes.bool.isRequired,
+  experienceMode: PropTypes.oneOf(['simple', 'advanced']).isRequired,
+  onAdvancedSettingsChange: PropTypes.func.isRequired
 };
 
 export default withRouter(

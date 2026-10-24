@@ -10,6 +10,30 @@ set -e
 
 _prepare_handoff() {
   if [[ ! -e "$_target_package_info" && -x "$_source_binary" ]]; then
+    migration_mode=${BOOKSHELFNG_MIGRATION_MODE:-automatic}
+    case "$migration_mode" in
+      automatic) ;;
+      manual)
+        echo 'BookshelfNG replacement cancelled before changes. Review docs/MIGRATE_FROM_BOOKSHELFNG.md and run the ChaptarrNG Console migration commands when ready.' >&2
+        exit 1
+        ;;
+      ask)
+        if [ ! -r /dev/tty ]; then
+          echo 'Interactive migration choice requested but no terminal is available. Set BOOKSHELFNG_MIGRATION_MODE=automatic or manual.' >&2
+          exit 1
+        fi
+        printf 'Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically. [y/N] ' >/dev/tty
+        IFS= read -r migration_choice </dev/tty || migration_choice=
+        case "$migration_choice" in
+          y|Y|yes|YES|Yes) ;;
+          *) echo 'BookshelfNG replacement cancelled; the service and data were left untouched.' >&2; exit 1 ;;
+        esac
+        ;;
+      *)
+        echo 'BOOKSHELFNG_MIGRATION_MODE must be automatic, ask, or manual.' >&2
+        exit 1
+        ;;
+    esac
     install -d -m750 /var/lib/bookshelfng
     if [[ ! -f "$_handoff_dir/snapshot-ready" ]]; then
       rm -rf -- "$_handoff_dir"

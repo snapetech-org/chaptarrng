@@ -28,6 +28,110 @@ converts a supported BookshelfNG database automatically. Do not run normal
 ChaptarrNG startup against BookshelfNG appdata while cutover readiness remains
 incomplete.
 
+## Choose the migration timing
+
+Legacy package updates keep automatic migration as the unattended default. To
+choose before a package transition, set `MigrationMode=ask` for Chocolatey or
+`BOOKSHELFNG_MIGRATION_MODE=ask` for Debian, RPM, or AUR. The prompt defaults
+to **No**. Declining cancels the package transition before it stops the
+service, stages new application files, or changes the database. Use
+`MigrationMode=manual` or `BOOKSHELFNG_MIGRATION_MODE=manual` to cancel a
+package transition without prompting and follow the standalone migration steps
+below.
+
+AppImage and Flatpak read `BOOKSHELFNG_MIGRATION_MODE` at first launch of the
+new artifact. There, **No** or `manual` skips startup conversion and leaves
+the source database untouched; it does not undo an AppImage download or a
+Flatpak deployment. After a manual conversion, launch the desktop app again.
+
+Chocolatey examples:
+
+```powershell
+choco upgrade bookshelfng --yes --params "'/MigrationMode=ask'"
+choco upgrade bookshelfng --yes --params "'/MigrationMode=manual'"
+```
+
+For Debian, RPM, and AUR package hooks, the environment variable accepts
+`automatic`, `ask`, or `manual`. `ask` requires a terminal; a package
+transaction without one stops safely and asks you to select `automatic` or
+`manual` explicitly. For example:
+
+```sh
+sudo env BOOKSHELFNG_MIGRATION_MODE=ask apt-get upgrade bookshelfng
+sudo env BOOKSHELFNG_MIGRATION_MODE=ask dnf upgrade bookshelfng
+BOOKSHELFNG_MIGRATION_MODE=ask yay -S bookshelfng-bin
+```
+
+The desktop supervisor accepts the same variable. AppImage and Flatpak use a
+GUI confirmation when `zenity` is available; Flatpak can pass it to one
+launch with
+`flatpak run --env=BOOKSHELFNG_MIGRATION_MODE=ask com.snapetech.BookshelfNG`.
+
+### Migrate with the standalone ChaptarrNG Console
+
+Download and extract the matching ChaptarrNG release archive for the host.
+Stop BookshelfNG and every other process using its data directory, then run a
+read-only preview. Apply only after reviewing a successful preview. The apply
+command retains a BookshelfNG backup. Once it succeeds, rerun the package
+transition in its default `automatic` mode (do not pass `manual`); the package
+will validate the converted target database and skip a second conversion. If
+the data directory already passes `-check-bookshelf-migration`, skip apply and
+complete the package transition.
+
+On Windows, run PowerShell as an account that can stop the service and access
+the BookshelfNG data directory:
+
+```powershell
+Stop-Service -Name BookshelfNG
+$console = 'C:\path\to\Chaptarr.Console.exe'
+$data = 'C:\ProgramData\BookshelfNG\data'
+& $console -preview-bookshelf-migration "-data=$data"
+if ($LASTEXITCODE -ne 0) { throw 'Migration preview failed; do not apply.' }
+& $console -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=$data"
+if ($LASTEXITCODE -ne 0) { throw 'Migration did not complete; preserve the reported backups.' }
+# Then rerun the Chocolatey transition in its default automatic mode.
+choco upgrade bookshelfng --yes
+```
+
+On Linux, replace the paths with the extracted Console and installed data
+directory:
+
+```sh
+sudo systemctl stop bookshelfng.service
+console=/path/to/Chaptarr
+data=/var/lib/bookshelfng
+"$console" -preview-bookshelf-migration "-data=$data" || exit 1
+"$console" -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=$data" || exit 1
+```
+
+After applying, complete the package transition using the package source
+already configured on that host:
+
+| Platform | Package transition |
+| --- | --- |
+| Debian or Ubuntu | `sudo apt-get install --only-upgrade bookshelfng` |
+| Fedora | `sudo dnf upgrade bookshelfng` |
+| Arch AUR | `yay -S bookshelfng-bin` |
+
+For PostgreSQL, run the Console with the same database connection environment
+used by the BookshelfNG service and ensure its PostgreSQL backup tools are
+available. Keep the service stopped until the package transition is complete.
+If preview or apply reports an error, preserve the source database and every
+reported backup for review; do not restart the old service after apply has
+begun.
+
+## Choose the user experience
+
+ChaptarrNG stores the selected experience with the UI settings. A migrated
+BookshelfNG database defaults to **Simple**, which keeps the common author and
+book lists, Bookshelf, Add New, calendar, queue, missing books, core settings,
+and basic system pages in the navigation. Fresh ChaptarrNG installs default to
+**Advanced**, with the full navigation available. Switch at any time from the
+top-right menu or under **Settings → UI → Experience**. The mode changes
+navigation density and hides advanced form fields in Simple mode; it does not
+change library data or remove configuration. The separate Advanced Settings
+control continues to show or hide advanced fields in Advanced mode.
+
 The ChaptarrNG source also includes
 [`scripts/bookshelfng-to-chaptarrng.sh`](../scripts/bookshelfng-to-chaptarrng.sh),
 a host-side helper for Docker installations. Each action first creates a

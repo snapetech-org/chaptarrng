@@ -28,19 +28,23 @@ const links = [
     children: [
       {
         title: () => translate('Authors'),
-        to: '/authors'
+        to: '/authors',
+        simple: true
       },
       {
         title: () => translate('Books'),
-        to: '/books'
+        to: '/books',
+        simple: true
       },
       {
         title: () => translate('AddNew'),
-        to: '/add/search'
+        to: '/add/search',
+        simple: true
       },
       {
         title: () => translate('Bookshelf'),
-        to: '/shelf'
+        to: '/shelf',
+        simple: true
       },
       {
         title: () => translate('UnmappedFiles'),
@@ -52,7 +56,8 @@ const links = [
   {
     iconName: icons.CALENDAR,
     title: () => translate('Calendar'),
-    to: '/calendar'
+    to: '/calendar',
+    simple: true
   },
 
   {
@@ -63,11 +68,13 @@ const links = [
       {
         title: () => translate('Queue'),
         to: '/activity/queue',
-        statusComponent: QueueStatusConnector
+        statusComponent: QueueStatusConnector,
+        simple: true
       },
       {
         title: () => translate('History'),
-        to: '/activity/history'
+        to: '/activity/history',
+        simple: true
       },
       {
         title: () => translate('Blocklist'),
@@ -87,7 +94,8 @@ const links = [
     children: [
       {
         title: () => translate('Missing'),
-        to: '/wanted/missing'
+        to: '/wanted/missing',
+        simple: true
       },
       {
         title: () => translate('CutoffUnmet'),
@@ -143,11 +151,13 @@ const links = [
       },
       {
         title: () => translate('General'),
-        to: '/settings/general'
+        to: '/settings/general',
+        simple: true
       },
       {
         title: () => translate('Ui'),
-        to: '/settings/ui'
+        to: '/settings/ui',
+        simple: true
       }
     ]
   },
@@ -160,11 +170,13 @@ const links = [
       {
         title: () => translate('Status'),
         to: '/system/status',
-        statusComponent: HealthStatusConnector
+        statusComponent: HealthStatusConnector,
+        simple: true
       },
       {
         title: () => translate('Quickstart'),
-        to: '/system/quickstart'
+        to: '/system/quickstart',
+        simple: true
       },
       {
         title: () => translate('Tasks'),
@@ -172,11 +184,13 @@ const links = [
       },
       {
         title: () => translate('Backup'),
-        to: '/system/backup'
+        to: '/system/backup',
+        simple: true
       },
       {
         title: () => translate('Updates'),
-        to: '/system/updates'
+        to: '/system/updates',
+        simple: true
       },
       {
         title: () => translate('Events'),
@@ -441,7 +455,7 @@ class PageSidebar extends Component {
   // Render
 
   render() {
-    const { location, isSmallScreen } = this.props;
+    const { location, isSmallScreen, experienceMode } = this.props;
 
     const { top, height, transition, transform } = this.state;
 
@@ -450,6 +464,10 @@ class PageSidebar extends Component {
       location.pathname.substr(urlBase.length) || '/' :
       location.pathname;
     const activeParent = getActiveParent(pathname);
+    const visibleLinks = experienceMode === 'simple' ? links.map((link) => ({
+      ...link,
+      children: link.children && link.children.filter((child) => child.simple)
+    })) : links;
 
     let containerStyle = {};
     let sidebarStyle = {};
@@ -476,7 +494,7 @@ class PageSidebar extends Component {
       >
         <ScrollerComponent className={styles.sidebar} style={sidebarStyle}>
           <div className={styles.sidebarContent}>
-            {links.map((link) => {
+            {visibleLinks.map((link) => {
               const childWithStatusComponent = find(link.children, (child) => {
                 return !!child.statusComponent;
               });
@@ -536,6 +554,7 @@ PageSidebar.propTypes = {
   location: locationShape.isRequired,
   isSmallScreen: PropTypes.bool.isRequired,
   isSidebarVisible: PropTypes.bool.isRequired,
+  experienceMode: PropTypes.oneOf(['simple', 'advanced']).isRequired,
   onSidebarVisibleChange: PropTypes.func.isRequired
 };
 

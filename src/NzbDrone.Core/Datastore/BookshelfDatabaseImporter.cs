@@ -1950,6 +1950,7 @@ namespace NzbDrone.Core.Datastore
             const string legacyMatchKey = "bookimportminimummatchpercent";
             const string chaptarrStrictnessKey = "bookmatchingstrictness";
             const string chaptarrMatchCompatibilityKey = "bookshelfmatchcompatibility";
+            const string chaptarrExperienceModeKey = "experiencemode";
             const string bookshelfMigrationMarkerKey = "bookshelfngdatabasemigrated";
             const string legacyHardcoverTokenKey = "hardcoverauth";
             const string chaptarrHardcoverTokenKey = "hardcoverapitoken";
@@ -1969,6 +1970,7 @@ namespace NzbDrone.Core.Datastore
             var legacyRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMatchKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var strictnessRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrStrictnessKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var matchCompatibilityRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrMatchCompatibilityKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var experienceModeRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrExperienceModeKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var bookshelfMigrationMarkerRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfMigrationMarkerKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var legacyHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrHardcoverTokenRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverTokenKey, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -1981,9 +1983,9 @@ namespace NzbDrone.Core.Datastore
                 .Where(row => string.Equals(GetString(row, "Key"), "AutoInitializeFormatSpecificAuthorPaths", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            if (legacyRows.Count > 1 || strictnessRows.Count > 1 || matchCompatibilityRows.Count > 1)
+            if (legacyRows.Count > 1 || strictnessRows.Count > 1 || matchCompatibilityRows.Count > 1 || experienceModeRows.Count > 1)
             {
-                throw new InvalidDataException("BookshelfNG config contains duplicate match settings; conversion stopped before promotion.");
+                throw new InvalidDataException("BookshelfNG config contains duplicate match/experience settings; conversion stopped before promotion.");
             }
 
             if (bookshelfMigrationMarkerRows.Count > 1)
@@ -2089,6 +2091,30 @@ namespace NzbDrone.Core.Datastore
                      !bool.TryParse(GetString(matchCompatibilityRows[0], "Value"), out _))
             {
                 throw new InvalidDataException("BookshelfNG BookshelfMatchCompatibility must be true or false; conversion stopped before promotion.");
+            }
+
+            if (experienceModeRows.Count == 0)
+            {
+                var experienceMode = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["Key"] = "ExperienceMode",
+                    ["Value"] = "simple"
+                };
+                if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+                {
+                    experienceMode["Id"] = checked(++nextGeneratedConfigId);
+                }
+                configRows.Add(experienceMode);
+            }
+            else
+            {
+                var experienceModeValue = GetString(experienceModeRows[0], "Value");
+                if (!string.Equals(experienceModeValue, "simple", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(experienceModeValue, "advanced", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException("BookshelfNG config contains an invalid ChaptarrNG experience mode; conversion stopped before promotion.");
+                }
+                experienceModeRows[0]["Value"] = experienceModeValue.ToLowerInvariant();
             }
 
             if (bookshelfMigrationMarkerRows.Count == 0)

@@ -278,6 +278,47 @@ if [ "$resuming" != true ] && [ ! -f "$sqlite_source" ] && [ "$postgres_source" 
   launch_without_migration "$@"
 fi
 
+if [ "$resuming" != true ]; then
+  migration_mode=${BOOKSHELFNG_MIGRATION_MODE:-automatic}
+  case "$migration_mode" in
+    automatic) ;;
+    manual)
+      manual_message='BookshelfNG conversion is deferred. The source database was left untouched. Review the ChaptarrNG migration guide before applying the conversion.'
+      if command -v zenity >/dev/null 2>&1; then
+        zenity --info --title='ChaptarrNG migration deferred' --text="$manual_message" >/dev/null 2>&1 || true
+      fi
+      printf '%s\n' 'BookshelfNG conversion was deferred; its source database was not changed.' \
+        'Extract the ChaptarrNG package, stop BookshelfNG, then run:' >&2
+      printf '  "%s" -preview-bookshelf-migration "-data=%s"\n' "$console" "$data_dir" >&2
+      printf '  "%s" -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=%s"\n' "$console" "$data_dir" >&2
+      exit 0
+      ;;
+    ask)
+      if command -v zenity >/dev/null 2>&1; then
+        if ! zenity --question --default-cancel --title='ChaptarrNG migration' \
+          --text='Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically and its source retained for rollback.'; then
+          echo 'BookshelfNG conversion deferred. The source database was left untouched.' >&2
+          exit 0
+        fi
+      elif [ -r /dev/tty ]; then
+        printf 'Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically. [y/N] ' >/dev/tty
+        IFS= read -r migration_choice </dev/tty || migration_choice=
+        case "$migration_choice" in
+          y|Y|yes|YES|Yes) ;;
+          *) echo 'BookshelfNG conversion deferred. The source database was left untouched.' >&2; exit 0 ;;
+        esac
+      else
+        echo 'MigrationMode=ask needs zenity or an interactive terminal. The source database was left untouched.' >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo 'BOOKSHELFNG_MIGRATION_MODE must be automatic, ask, or manual.' >&2
+      exit 2
+      ;;
+  esac
+fi
+
 if ! command -v setsid >/dev/null 2>&1 || ! setsid --help 2>&1 | grep -q -- '--wait'; then
   echo 'BookshelfNG desktop migration requires util-linux setsid with --wait so failed startup can stop the complete application process tree.' >&2
   exit 1

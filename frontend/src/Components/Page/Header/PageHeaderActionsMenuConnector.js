@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
+import { saveUISettings, setUISettingsValue } from 'Store/Actions/settingsActions';
 import { restart, shutdown } from 'Store/Actions/systemActions';
 import PageHeaderActionsMenu from './PageHeaderActionsMenu';
 
@@ -16,11 +17,6 @@ function createMapStateToProps() {
   );
 }
 
-const mapDispatchToProps = {
-  restart,
-  shutdown
-};
-
 class PageHeaderActionsMenuConnector extends Component {
 
   //
@@ -34,6 +30,12 @@ class PageHeaderActionsMenuConnector extends Component {
     this.props.shutdown();
   };
 
+  onExperienceModePress = () => {
+    const experienceMode = this.props.experienceMode === 'simple' ? 'advanced' : 'simple';
+    this.props.setUISettingsValue({ name: 'experienceMode', value: experienceMode });
+    this.props.saveUISettings();
+  };
+
   //
   // Render
 
@@ -43,6 +45,7 @@ class PageHeaderActionsMenuConnector extends Component {
         {...this.props}
         onRestartPress={this.onRestartPress}
         onShutdownPress={this.onShutdownPress}
+        onExperienceModePress={this.onExperienceModePress}
       />
     );
   }
@@ -50,7 +53,17 @@ class PageHeaderActionsMenuConnector extends Component {
 
 PageHeaderActionsMenuConnector.propTypes = {
   restart: PropTypes.func.isRequired,
-  shutdown: PropTypes.func.isRequired
+  shutdown: PropTypes.func.isRequired,
+  experienceMode: PropTypes.oneOf(['simple', 'advanced']).isRequired,
+  setUISettingsValue: PropTypes.func.isRequired,
+  saveUISettings: PropTypes.func.isRequired
+};
+
+const mapDispatchToProps = {
+  restart,
+  shutdown,
+  setUISettingsValue,
+  saveUISettings
 };
 
 export default connect(createMapStateToProps, mapDispatchToProps)(PageHeaderActionsMenuConnector);
