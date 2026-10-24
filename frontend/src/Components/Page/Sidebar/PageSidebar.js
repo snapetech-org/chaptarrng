@@ -285,6 +285,8 @@ class PageSidebar extends Component {
   }
 
   componentDidMount() {
+    this._setInertAttribute();
+
     if (this.props.isSmallScreen) {
       window.addEventListener('click', this.onWindowClick, { capture: true });
       window.addEventListener('scroll', this.onWindowScroll);
@@ -307,6 +309,8 @@ class PageSidebar extends Component {
     } else if (transform === -SIDEBAR_WIDTH && isSidebarVisible) {
       this.props.onSidebarVisibleChange(false);
     }
+
+    this._setInertAttribute();
   }
 
   componentWillUnmount() {
@@ -327,6 +331,18 @@ class PageSidebar extends Component {
 
   _setSidebarRef = (ref) => {
     this._sidebarRef = ref;
+  };
+
+  _setInertAttribute = () => {
+    if (!this._sidebarRef) {
+      return;
+    }
+
+    if (this.props.isSmallScreen && !this.props.isSidebarVisible) {
+      this._sidebarRef.setAttribute('inert', '');
+    } else {
+      this._sidebarRef.removeAttribute('inert');
+    }
   };
 
   _setSidebarTransform(isSidebarVisible, transition, callback) {
@@ -451,11 +467,25 @@ class PageSidebar extends Component {
     this.props.onSidebarVisibleChange(false);
   };
 
+  onKeyDown = (event) => {
+    if (event.key === 'Escape' && this.props.isSmallScreen && this.props.isSidebarVisible) {
+      this.props.onSidebarVisibleChange(false);
+      const toggleButton = document.getElementById('sidebar-toggle-button');
+
+      if (toggleButton) {
+        toggleButton.focus();
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
   //
   // Render
 
   render() {
-    const { location, isSmallScreen, experienceMode } = this.props;
+    const { location, isSmallScreen, isSidebarVisible, experienceMode } = this.props;
 
     const { top, height, transition, transform } = this.state;
 
@@ -491,9 +521,15 @@ class PageSidebar extends Component {
         ref={this._setSidebarRef}
         className={classNames(styles.sidebarContainer)}
         style={containerStyle}
+        aria-hidden={isSmallScreen && !isSidebarVisible}
+        onKeyDown={this.onKeyDown}
       >
         <ScrollerComponent className={styles.sidebar} style={sidebarStyle}>
-          <div className={styles.sidebarContent}>
+          <nav
+            id="primary-navigation"
+            className={styles.sidebarContent}
+            aria-label={translate('PrimaryNavigation')}
+          >
             {visibleLinks.map((link) => {
               const childWithStatusComponent = find(link.children, (child) => {
                 return !!child.statusComponent;
@@ -541,7 +577,7 @@ class PageSidebar extends Component {
                 </PageSidebarItem>
               );
             })}
-          </div>
+          </nav>
 
           <MessagesConnector />
         </ScrollerComponent>

@@ -48,6 +48,7 @@ class PageHeader extends Component {
   render() {
     const {
       onSidebarToggle,
+      isSidebarVisible,
       experienceMode
     } = this.props;
 
@@ -76,6 +77,8 @@ class PageHeader extends Component {
             id="sidebar-toggle-button"
             name={icons.NAVBAR_COLLAPSE}
             aria-label={translate('ToggleNavigation')}
+            aria-expanded={isSidebarVisible}
+            aria-controls="primary-navigation"
             onPress={onSidebarToggle}
           />
         </div>
@@ -108,6 +111,7 @@ class PageHeader extends Component {
 
 PageHeader.propTypes = {
   onSidebarToggle: PropTypes.func.isRequired,
+  isSidebarVisible: PropTypes.bool.isRequired,
   experienceMode: PropTypes.oneOf(['simple', 'advanced']).isRequired,
   bindShortcut: PropTypes.func.isRequired
 };

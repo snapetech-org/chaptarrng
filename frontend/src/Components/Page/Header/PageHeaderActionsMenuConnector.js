@@ -61,6 +61,7 @@ class PageHeaderActionsMenuConnector extends Component {
         <Button
           className={styles.experienceModeButton}
           aria-label={translate(experienceModeButtonLabel)}
+          aria-pressed={isSimpleExperience}
           title={translate(nextExperienceModeLabel)}
           onPress={this.onExperienceModePress}
         >

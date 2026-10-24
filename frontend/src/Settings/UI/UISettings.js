@@ -1,3 +1,4 @@
+import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Alert from 'Components/Alert';
@@ -14,6 +15,7 @@ import SettingsToolbarConnector from 'Settings/SettingsToolbarConnector';
 import themes from 'Styles/Themes';
 import titleCase from 'Utilities/String/titleCase';
 import translate from 'Utilities/String/translate';
+import styles from './UISettings.css';
 
 function getLocale() {
   return document.documentElement.lang || navigator.language || 'en';
@@ -185,9 +187,19 @@ class UISettings extends Component {
       { key: 'both', value: translate('AudiobooksAndEbooks') }
     ];
     const experienceModeOptions = [
-      { key: 'simple', value: translate('SimpleExperience') },
-      { key: 'advanced', value: translate('AdvancedExperience') }
+      {
+        key: 'simple',
+        label: translate('SimpleExperience'),
+        description: translate('SimpleExperienceDescription')
+      },
+      {
+        key: 'advanced',
+        label: translate('AdvancedExperience'),
+        description: translate('AdvancedExperienceDescription')
+      }
     ];
+    const experienceModeSetting = settings.experienceMode || {};
+    const experienceMode = experienceModeSetting.value || 'advanced';
 
     return (
       <PageContent title={translate('UISettings')}>
@@ -206,15 +218,50 @@ class UISettings extends Component {
             <Form id="uiSettings" {...otherProps}>
               <FieldSet legend={translate('ExperienceMode')}>
                 <FormGroup>
-                  <FormLabel name="experienceMode">{translate('ExperienceMode')}</FormLabel>
-                  <FormInputGroup
-                    type={inputTypes.SELECT}
-                    name="experienceMode"
-                    values={experienceModeOptions}
-                    helpText={translate('ExperienceModeHelpText')}
-                    onChange={onInputChange}
-                    {...settings.experienceMode}
-                  />
+                  <p id="experience-mode-help" className={styles.experienceModeHelpText}>
+                    {translate('ExperienceModeHelpText')}
+                  </p>
+
+                  <div className={styles.experienceModeOptions}>
+                    {experienceModeOptions.map((option) => {
+                      const labelId = `experience-mode-${option.key}-label`;
+                      const descriptionId = `experience-mode-${option.key}-description`;
+
+                      return (
+                        <label
+                          key={option.key}
+                          className={classNames(
+                            styles.experienceModeOption,
+                            experienceMode === option.key && styles.isSelected
+                          )}
+                        >
+                          <input
+                            id={`experience-mode-${option.key}`}
+                            className={styles.experienceModeRadio}
+                            type="radio"
+                            name="experienceMode"
+                            value={option.key}
+                            checked={experienceMode === option.key}
+                            aria-labelledby={labelId}
+                            aria-describedby={`experience-mode-help ${descriptionId}`}
+                            onChange={() => {
+                              onInputChange({ name: 'experienceMode', value: option.key });
+                            }}
+                          />
+
+                          <span className={styles.experienceModeText}>
+                            <span id={labelId} className={styles.experienceModeTitle}>
+                              {option.label}
+                            </span>
+
+                            <span id={descriptionId} className={styles.experienceModeDescription}>
+                              {option.description}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </FormGroup>
               </FieldSet>
 

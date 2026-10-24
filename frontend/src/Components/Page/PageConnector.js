@@ -272,8 +272,10 @@ class PageConnector extends Component {
   //
   // Listeners
 
-  componentDidUpdate() {
-    if (this.props.experienceMode === 'simple' && this.props.advancedSettings) {
+  componentDidUpdate(prevProps) {
+    if (prevProps.experienceMode !== this.props.experienceMode) {
+      this.props.onAdvancedSettingsChange(this.props.experienceMode === 'advanced');
+    } else if (this.props.experienceMode === 'simple' && this.props.advancedSettings) {
       this.props.onAdvancedSettingsChange(false);
     }
   }
