@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using FluentValidation;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Annotations;
+using NzbDrone.Core.Download.Clients;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Validation;
 
@@ -59,7 +60,7 @@ namespace NzbDrone.Core.Download.Clients.DownloadStation
         }
     }
 
-    public class DownloadStationSettings : IProviderConfig
+    public class DownloadStationSettings : IProviderConfig, IBookDownloadCategorySettings
     {
         private static readonly DownloadStationSettingsValidator Validator = new DownloadStationSettingsValidator();
 

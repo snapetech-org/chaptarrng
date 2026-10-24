@@ -1,6 +1,7 @@
 using FluentValidation;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Annotations;
+using NzbDrone.Core.Download.Clients;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Validation;
 
@@ -21,7 +22,7 @@ namespace NzbDrone.Core.Download.Clients.RTorrent
         }
     }
 
-    public class RTorrentSettings : IProviderConfig
+    public class RTorrentSettings : IProviderConfig, IBookDownloadCategorySettings
     {
         private static readonly RTorrentSettingsValidator Validator = new RTorrentSettingsValidator();
 
