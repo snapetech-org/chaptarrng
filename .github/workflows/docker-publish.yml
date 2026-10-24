@@ -1,6 +1,7 @@
+# ng-runner-policy: hosted-first-v1
 name: Docker Build and Publish
 
-# Never fires on its own. release.yml calls it after a version bump and CI pass.
+# Never fires on its own. release.yml calls it after a v<semver> tag passes CI.
 on:
   workflow_call:
     inputs:
@@ -38,13 +39,13 @@ env:
 
 jobs:
   require-release-readiness:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-require-release-readiness"]}}', github.run_id)) || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ inputs.sha }}
         persist-credentials: false
 
     - name: Require retirement release readiness
@@ -55,7 +56,7 @@ jobs:
 
   build-and-push:
     needs: require-release-readiness
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-build-and-push"]}}', github.run_id)) || 'ubuntu-latest' }}
     outputs:
       image_digest: ${{ steps.build.outputs.digest }}
       bookshelf_softcover_digest: ${{ steps.build_softcover.outputs.digest }}

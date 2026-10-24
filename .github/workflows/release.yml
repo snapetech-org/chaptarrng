@@ -1,10 +1,10 @@
+# ng-runner-policy: hosted-first-v1
 name: Release
 
-# A version bump merged to the maintained stable main branch starts a release.
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -15,25 +15,39 @@ concurrency:
 
 jobs:
   preflight:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-preflight"]}}', github.run_id)) || 'ubuntu-latest' }}
     outputs:
       release_requested: ${{ steps.release-request.outputs.release_requested }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ github.ref }}
+        fetch-depth: 0
         persist-credentials: false
 
-    - name: Detect a new stable version
+    - name: Validate release tag and source
       id: release-request
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         set -euo pipefail
+        tag="$GITHUB_REF_NAME"
+        if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+          echo "Expected a stable v<semver> release tag, found $tag." >&2
+          exit 1
+        fi
         version="$(python3 -c "import json; print(json.load(open('package.json', encoding='utf-8'))['version'])")"
-        if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-          echo "Expected a stable SemVer version in package.json, found $version." >&2
+        if [[ "$tag" != "v$version" ]]; then
+          echo "Release tag $tag does not match package.json version $version." >&2
+          exit 1
+        fi
+        python3 build-tools/version_guard.py sync
+        python3 build-tools/version_guard.py release-tag --tag "$tag"
+        git fetch --no-tags origin main
+        release_sha="$(git rev-parse "${tag}^{commit}")"
+        if ! git merge-base --is-ancestor "$release_sha" origin/main; then
+          echo "Release tag $tag must point to a commit on origin/main." >&2
           exit 1
         fi
 
@@ -50,22 +64,12 @@ jobs:
         is_newer="$(python3 -c 'import sys; current=tuple(map(int, sys.argv[1].split("."))); latest=tuple(map(int, sys.argv[2].split("."))) if sys.argv[2] else (); print(str(current > latest).lower())' "$version" "$latest_version")"
 
         if [[ "$is_newer" != true ]]; then
-          echo "Version $version is not newer than the latest published stable release ${latest_tag:-<none>}; skipping release publication."
-          echo 'release_requested=false' >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
-        echo "Version $version is newer than ${latest_tag:-<none>}; starting the stable release pipeline."
-        echo 'release_requested=true' >> "$GITHUB_OUTPUT"
-
-    - name: Require a releasable branch
-      shell: bash
-      run: |
-        set -euo pipefail
-        if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
-          echo "Releases must run from main; selected ref is $GITHUB_REF."
+          echo "Version $version is not newer than the latest published stable release ${latest_tag:-<none>}." >&2
           exit 1
         fi
+
+        echo "Release tag $tag is valid and newer than ${latest_tag:-<none>}."
+        echo 'release_requested=true' >> "$GITHUB_OUTPUT"
 
     - name: Require retirement release readiness
       if: steps.release-request.outputs.release_requested == 'true'
@@ -90,7 +94,7 @@ jobs:
 
   release:
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-release"]}}', github.run_id)) || 'ubuntu-latest' }}
     permissions:
       contents: write
     outputs:
@@ -116,11 +120,6 @@ jobs:
       with:
         tool: git-cliff
 
-    - name: Configure release commit identity
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
     - name: Resolve source head
       id: source
       run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -134,30 +133,31 @@ jobs:
       run: |
         set -euo pipefail
         VERSION="$(python3 -c "import json; print(json.load(open('package.json', encoding='utf-8'))['version'])")"
-        echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+        [[ "$GITHUB_REF_NAME" == "v$VERSION" ]]
+        echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
     - name: Guard - tag matches versions
       run: python3 build-tools/version_guard.py release-tag --tag "${{ steps.tag.outputs.tag }}"
 
-    - name: Guard - selected branch has not advanced
+    - name: Guard - release tag still points to validated source
       env:
         SOURCE_SHA: ${{ steps.source.outputs.sha }}
       shell: bash
       run: |
         set -euo pipefail
-        REMOTE_HEAD_SHA="$(git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | awk '{print $1}')"
-        if [[ -z "$REMOTE_HEAD_SHA" ]]; then
-          echo "Unable to resolve the current remote head for $GITHUB_REF_NAME."
+        TAG_SHA="$(git rev-parse "${GITHUB_REF_NAME}^{commit}")"
+        if [[ "$TAG_SHA" != "$SOURCE_SHA" ]]; then
+          echo "Release tag $GITHUB_REF_NAME resolves to $TAG_SHA, expected $SOURCE_SHA."
           exit 1
         fi
-        if [[ "$REMOTE_HEAD_SHA" != "$SOURCE_SHA" ]]; then
-          echo "$GITHUB_REF_NAME advanced to $REMOTE_HEAD_SHA while this run validated $SOURCE_SHA."
-          echo "Run the release workflow again so the published image includes the current branch head."
+        git fetch --no-tags origin main
+        if ! git merge-base --is-ancestor "$SOURCE_SHA" origin/main; then
+          echo "Release tag $GITHUB_REF_NAME no longer points to an origin/main commit."
           exit 1
         fi
 
-    - name: Generate and commit changelog
+    - name: Generate release changelog
       id: changelog
       env:
         TAG: ${{ steps.tag.outputs.tag }}
@@ -201,20 +201,7 @@ jobs:
           exit 1
         }
 
-        node scripts/prepend-changelog-section.mjs \
-          --current "$current_changelog" \
-          --existing CHANGELOG.md \
-          --output CHANGELOG.md
-        git add CHANGELOG.md
-        if ! git diff --cached --quiet; then
-          git commit \
-            -m "chore(release): prepare $TAG" \
-            -m "release-note: none"
-        fi
-        git push origin HEAD:refs/heads/main
-
-        prepared_sha="$(git rev-parse HEAD)"
-        echo "sha=$prepared_sha" >> "$GITHUB_OUTPUT"
+        echo "sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
         delimiter="release_body_$GITHUB_RUN_ID"
         {
           echo "release_body<<$delimiter"
@@ -222,46 +209,17 @@ jobs:
           echo "$delimiter"
         } >> "$GITHUB_OUTPUT"
 
-    - name: Create tag if absent
+    - name: Verify release tag
       env:
         TAG: ${{ steps.tag.outputs.tag }}
         RELEASE_SHA: ${{ steps.changelog.outputs.sha }}
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
       run: |
         set -euo pipefail
-        CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-        if [[ "$CURRENT_MAIN_SHA" != "$RELEASE_SHA" ]]; then
-          echo "main advanced to $CURRENT_MAIN_SHA before tag creation; rerun the release workflow."
+        TAG_SHA="$(git rev-parse "${TAG}^{commit}")"
+        if [[ "$TAG_SHA" != "$RELEASE_SHA" ]]; then
+          echo "Release tag $TAG resolves to $TAG_SHA, expected $RELEASE_SHA." >&2
           exit 1
-        fi
-        REMOTE_SHA="$(git ls-remote --tags origin "refs/tags/$TAG^{}" | awk '{print $1}' || true)"
-        if [[ -z "$REMOTE_SHA" ]]; then
-          REMOTE_SHA="$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}' || true)"
-        fi
-
-        if gh release view "$TAG" --json isDraft --jq .isDraft >/dev/null 2>&1; then
-          IS_PUBLISHED="$(gh release view "$TAG" --json isDraft --jq '.isDraft | not')"
-          if [[ "$IS_PUBLISHED" == "true" ]]; then
-            echo "Release $TAG is already published. Bump the version before creating another release."
-            exit 1
-          fi
-        fi
-
-        if [[ -n "$REMOTE_SHA" && "$REMOTE_SHA" != "$RELEASE_SHA" ]]; then
-          IS_DRAFT="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || echo false)"
-          if [[ "$IS_DRAFT" != "true" ]]; then
-            echo "Tag $TAG already exists at $REMOTE_SHA but release commit is $RELEASE_SHA."
-            echo "Published release tags cannot be moved; bump the version before creating another release."
-            exit 1
-          fi
-
-          echo "Moving draft tag $TAG from $REMOTE_SHA to validated release commit $RELEASE_SHA."
-          git tag --force "$TAG" "$RELEASE_SHA"
-          git push --force origin "refs/tags/$TAG:refs/tags/$TAG"
-        elif [[ -z "$REMOTE_SHA" ]]; then
-          git tag "$TAG" "$RELEASE_SHA"
-          git push origin "refs/tags/$TAG:refs/tags/$TAG"
         fi
 
     - name: Create draft release
@@ -307,14 +265,14 @@ jobs:
       id-token: write
     with:
       sha: ${{ needs.release.outputs.sha }}
-      branch: ${{ github.ref_name }}
+      branch: main
       legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
 
   dispatch-legacy-ghcr:
     name: Dispatch personal-account BookshelfNG GHCR bridge
     needs: [release, docker, publish-release]
     if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-dispatch-legacy-ghcr"]}}', github.run_id)) || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -348,7 +306,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
@@ -381,7 +339,7 @@ jobs:
   standalone-assets:
     name: Build ${{ matrix.rid }} standalone release asset
     needs: [release, platform-runtime-packs]
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-{1}-standalone-assets"]}}', github.run_id, strategy.job-index)) || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -391,7 +349,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
@@ -596,13 +554,13 @@ jobs:
   rpm-source:
     name: Build verified new and legacy COPR source RPMs
     needs: [release, standalone-assets]
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-rpm-source"]}}', github.run_id)) || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
@@ -642,13 +600,13 @@ jobs:
 
   publish-release:
     needs: [release, docker, standalone-assets, rpm-source, windows-migration-installer, legacy-desktop-candidates]
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-publish-release"]}}', github.run_id)) || 'ubuntu-latest' }}
     permissions:
       contents: write
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
@@ -762,12 +720,11 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: ${{ needs.release.outputs.tag }}
         RELEASE_BODY: ${{ needs.release.outputs.release_body }}
-        BRANCH: ${{ github.ref_name }}
       shell: bash
       run: |
         set -euo pipefail
-        if [[ "$BRANCH" != "main" ]]; then
-          echo "Stable releases must be published from main."
+        if [[ "$GITHUB_REF" != "refs/tags/$TAG" ]]; then
+          echo "Stable releases must be published from the matching v<semver> tag."
           exit 1
         fi
         notes="$RUNNER_TEMP/chaptarrng-release-notes.md"
@@ -798,7 +755,7 @@ jobs:
   announce-discord:
     name: Announce release to Discord
     needs: [release, docker, publish-release]
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-announce-discord"]}}', github.run_id)) || 'ubuntu-latest' }}
     permissions:
       contents: read
     env:
@@ -811,7 +768,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source

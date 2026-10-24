@@ -1,3 +1,4 @@
+# ng-runner-policy: hosted-first-v1
 name: Publish package-manager channels
 
 on:
@@ -46,7 +47,7 @@ permissions:
 jobs:
   release-target:
     name: Validate published release target
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-release-target"]}}', github.run_id)) || 'ubuntu-latest' }}
     outputs:
       tag: ${{ steps.target.outputs.tag }}
       version: ${{ steps.target.outputs.version }}
@@ -98,7 +99,7 @@ jobs:
 
   credentials:
     name: Check optional publisher credentials
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-credentials"]}}', github.run_id)) || 'ubuntu-latest' }}
     outputs:
       aur: ${{ steps.check.outputs.aur }}
       copr: ${{ steps.check.outputs.copr }}
@@ -196,7 +197,7 @@ jobs:
   build-aur:
     name: Validate new and legacy AUR recipes
     needs: [release-target]
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-build-aur"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -238,7 +239,7 @@ jobs:
     name: Publish ChaptarrNG and BookshelfNG AUR identities
     needs: [credentials, release-target, build-aur]
     if: needs.credentials.outputs.aur == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-publish-aur"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
@@ -269,6 +270,7 @@ jobs:
           IdentityFile ~/.ssh/aur
           IdentitiesOnly yes
           StrictHostKeyChecking yes
+          ProxyCommand nc -X connect -x 10.0.2.100:3128 %h %p
           UserKnownHostsFile ~/.ssh/known_hosts
           GlobalKnownHostsFile /dev/null
           BatchMode yes
@@ -540,7 +542,7 @@ jobs:
     name: Trigger COPR build
     needs: [credentials, release-target]
     if: needs.credentials.outputs.copr == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-trigger-copr"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - name: Submit verified release tag to the ChaptarrNG COPR webhook
       env:
@@ -565,7 +567,7 @@ jobs:
     name: Trigger legacy bookshelfng COPR package
     needs: [credentials, release-target]
     if: needs.credentials.outputs.bookshelfng_copr == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-trigger-legacy-copr"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - name: Submit the release tag to the existing bookshelfng COPR package
       env:
@@ -590,7 +592,7 @@ jobs:
     name: Publish the BookshelfNG Helm chart identity
     needs: [release-target]
     if: needs.release-target.outputs.legacy_bridge_enabled == 'true' && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-publish-legacy-helm-bridge"]}}', github.run_id)) || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write
@@ -637,7 +639,7 @@ jobs:
     name: Report package channel results
     if: always()
     needs: [release-target, credentials, build-aur, publish-aur, build-chocolatey, publish-chocolatey, build-legacy-ppa, publish-legacy-ppa, trigger-copr, trigger-legacy-copr, publish-legacy-helm-bridge]
-    runs-on: ubuntu-latest
+    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('["push","workflow_dispatch","schedule","release","repository_dispatch"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-distribution-summary"]}}', github.run_id)) || 'ubuntu-latest' }}
     steps:
     - name: Write channel results
       env:

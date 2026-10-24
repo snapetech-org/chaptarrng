@@ -60,9 +60,17 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn('"ng-shared-main-chaptarrng"', runner)
         self.assertIn('"ng-main-run-{0}"', runner)
         self.assertIn("github.run_id", runner)
-        self.assertIn("github.event_name == 'push'", runner)
-        self.assertIn("github.event_name == 'workflow_dispatch'", runner)
-        self.assertIn("github.ref == 'refs/heads/main'", runner)
+        self.assertIn(
+            "contains(fromJSON('[\"push\",\"workflow_dispatch\",\"schedule\",\"release\",\"repository_dispatch\"]'), github.event_name)",
+            runner,
+        )
+        self.assertIn(
+            "github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))",
+            runner,
+        )
+        self.assertIn("vars.NG_HOSTED_FIRST", runner)
+        self.assertIn("vars.NG_FORCE_JIT", runner)
+        self.assertIn("github.run_attempt > 1", runner)
         self.assertIn("|| matrix.os", runner)
         self.assertNotIn("TRUSTED_MAIN_RUNNERS_ENABLED", source)
 
@@ -70,9 +78,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         source = WORKFLOW.read_text(encoding="utf-8")
         docker_job = job_block(source, "docker-compatibility-build")
         expected_proxy_gate = (
-            "BUILDKIT_EGRESS_PROXY: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || "
-            "github.event_name == 'workflow_dispatch') && github.ref == "
-            "'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}"
+            "BUILDKIT_EGRESS_PROXY: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (contains(fromJSON('[\"push\",\"workflow_dispatch\",\"schedule\",\"release\",\"repository_dispatch\"]'), github.event_name) && (github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')))) && 'http://10.0.2.100:3128' || '' }}"
         )
         self.assertIn(expected_proxy_gate, docker_job)
 

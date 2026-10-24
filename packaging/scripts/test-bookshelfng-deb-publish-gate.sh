@@ -6,11 +6,17 @@ release_workflow="$repo_root/.github/workflows/release.yml"
 distribution_workflow="$repo_root/.github/workflows/release-distribution.yml"
 
 grep -Fq '  push:' "$release_workflow"
-grep -Fq '      - main' "$release_workflow"
+grep -Fq "      - 'v*'" "$release_workflow"
+if grep -Fq '    branches:' "$release_workflow"; then
+  echo 'Stable releases must start from release tags, not branch pushes.' >&2
+  exit 1
+fi
 grep -Fq 'release_requested: ${{ steps.release-request.outputs.release_requested }}' "$release_workflow"
 grep -Fq 'gh release list --limit 100' "$release_workflow"
-if grep -Fq '  workflow_dispatch:' "$release_workflow"; then
-  echo 'Stable releases must start automatically from main pushes.' >&2
+grep -Fq 'Expected a stable v<semver> release tag' "$release_workflow"
+grep -Fq 'Release tag $tag does not match package.json version $version.' "$release_workflow"
+if grep -Fq 'git push origin HEAD:refs/heads/main' "$release_workflow"; then
+  echo 'Release builds must not modify main after a tag is created.' >&2
   exit 1
 fi
 grep -Fq 'packaging/scripts/require-release-readiness.sh' "$release_workflow"
