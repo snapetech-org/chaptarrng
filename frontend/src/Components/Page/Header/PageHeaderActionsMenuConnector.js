@@ -2,9 +2,12 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
+import Button from 'Components/Link/Button';
 import { saveUISettings, setUISettingsValue } from 'Store/Actions/settingsActions';
 import { restart, shutdown } from 'Store/Actions/systemActions';
+import translate from 'Utilities/String/translate';
 import PageHeaderActionsMenu from './PageHeaderActionsMenu';
+import styles from './PageHeaderActionsMenu.css';
 
 function createMapStateToProps() {
   return createSelector(
@@ -40,13 +43,36 @@ class PageHeaderActionsMenuConnector extends Component {
   // Render
 
   render() {
+    const {
+      experienceMode,
+      ...menuProps
+    } = this.props;
+
+    const isSimpleExperience = experienceMode === 'simple';
+    const nextExperienceModeLabel = isSimpleExperience ?
+      'SwitchToAdvancedExperience' :
+      'SwitchToSimpleExperience';
+    const experienceModeButtonLabel = isSimpleExperience ?
+      'SimpleExperienceToggleLabel' :
+      'AdvancedExperienceToggleLabel';
+
     return (
-      <PageHeaderActionsMenu
-        {...this.props}
-        onRestartPress={this.onRestartPress}
-        onShutdownPress={this.onShutdownPress}
-        onExperienceModePress={this.onExperienceModePress}
-      />
+      <>
+        <Button
+          className={styles.experienceModeButton}
+          aria-label={translate(experienceModeButtonLabel)}
+          title={translate(nextExperienceModeLabel)}
+          onPress={this.onExperienceModePress}
+        >
+          {translate(isSimpleExperience ? 'SimpleModeLabel' : 'AdvancedModeLabel')}
+        </Button>
+
+        <PageHeaderActionsMenu
+          {...menuProps}
+          onRestartPress={this.onRestartPress}
+          onShutdownPress={this.onShutdownPress}
+        />
+      </>
     );
   }
 }

@@ -75,6 +75,7 @@ class PageHeader extends Component {
           <IconButton
             id="sidebar-toggle-button"
             name={icons.NAVBAR_COLLAPSE}
+            aria-label={translate('ToggleNavigation')}
             onPress={onSidebarToggle}
           />
         </div>

@@ -39,10 +39,19 @@ service, stages new application files, or changes the database. Use
 package transition without prompting and follow the standalone migration steps
 below.
 
+| Choice | What happens |
+| --- | --- |
+| Automatic | Package transitions convert BookshelfNG data automatically; this remains the unattended default. Desktop launchers convert at first launch. |
+| Ask | Package prompts default to No and cancel before package or data changes. Desktop No defers conversion and exits the new launcher with the source database unchanged. |
+| Manual | Cancels package transitions before mutation. Desktop launchers skip conversion. Use the standalone Console to preview and apply when ready. |
+
 AppImage and Flatpak read `BOOKSHELFNG_MIGRATION_MODE` at first launch of the
 new artifact. There, **No** or `manual` skips startup conversion and leaves
 the source database untouched; it does not undo an AppImage download or a
-Flatpak deployment. After a manual conversion, launch the desktop app again.
+Flatpak deployment. Declining exits the new desktop launcher; use your previous
+AppImage or restore the previous Flatpak deployment if you want to keep using
+BookshelfNG before migrating. After a manual conversion, launch the desktop app
+again.
 
 Chocolatey examples:
 
@@ -126,8 +135,9 @@ ChaptarrNG stores the selected experience with the UI settings. A migrated
 BookshelfNG database defaults to **Simple**, which keeps the common author and
 book lists, Bookshelf, Add New, calendar, queue, missing books, core settings,
 and basic system pages in the navigation. Fresh ChaptarrNG installs default to
-**Advanced**, with the full navigation available. Switch at any time from the
-top-right menu or under **Settings → UI → Experience**. The mode changes
+**Advanced**, with the full navigation available. The header shows the current
+mode and provides a one-click switch. The same choice is available under
+**Settings → UI → Experience**. The mode changes
 navigation density and hides advanced form fields in Simple mode; it does not
 change library data or remove configuration. The separate Advanced Settings
 control continues to show or hide advanced fields in Advanced mode.

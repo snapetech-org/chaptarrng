@@ -378,3 +378,7 @@ weaken the default issuer-target restrictions.
 The UI stores a Simple or Advanced experience choice. Migrated BookshelfNG databases default to Simple; fresh ChaptarrNG installs default to Advanced. Verify the global menu and Settings → UI selector persist across restart, Simple mode exposes the routine library workflow and hides advanced navigation and form controls, and switching back restores the full ChaptarrNG navigation.
 
 Legacy package transitions retain automatic migration for unattended upgrades and accept an explicit `ask` or `manual` choice. Verify a declined or manual package choice stops before service or file mutation, and verify desktop first-launch deferral leaves source data untouched. Luna owns the platform acceptance run; builds and runtime checks are intentionally not performed in this code handoff.
+
+### Experience-control accessibility acceptance
+
+Verify the header mode control is visible at desktop and narrow widths, has a useful screen-reader label for both current mode and next action, responds to keyboard activation, and retains a visible focus indicator. Verify the navigation toggle has a descriptive accessible name and the current destination is exposed with `aria-current="page"`. Verify Simple and Advanced remain selectable and persisted from Settings → UI.

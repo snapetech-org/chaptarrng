@@ -283,7 +283,7 @@ if [ "$resuming" != true ]; then
   case "$migration_mode" in
     automatic) ;;
     manual)
-      manual_message='BookshelfNG conversion is deferred. The source database was left untouched. Review the ChaptarrNG migration guide before applying the conversion.'
+      manual_message='BookshelfNG conversion is deferred. The source database was left untouched. Preview and apply the conversion using the ChaptarrNG Console; full steps: https://github.com/snapetech-org/chaptarrng/blob/main/docs/MIGRATE_FROM_BOOKSHELFNG.md'
       if command -v zenity >/dev/null 2>&1; then
         zenity --info --title='ChaptarrNG migration deferred' --text="$manual_message" >/dev/null 2>&1 || true
       fi
@@ -295,8 +295,10 @@ if [ "$resuming" != true ]; then
       ;;
     ask)
       if command -v zenity >/dev/null 2>&1; then
-        if ! zenity --question --default-cancel --title='ChaptarrNG migration' \
+        if ! zenity --question --default-cancel --ok-label='Replace now' --cancel-label='Not now' --title='ChaptarrNG migration' \
           --text='Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically and its source retained for rollback.'; then
+          zenity --info --title='Migration deferred' \
+            --text='No database changes were made. Relaunch your previous AppImage or restore the previous Flatpak deployment. Use the migration guide to convert manually.' >/dev/null 2>&1 || true
           echo 'BookshelfNG conversion deferred. The source database was left untouched.' >&2
           exit 0
         fi

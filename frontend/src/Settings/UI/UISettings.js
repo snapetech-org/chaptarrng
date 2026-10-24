@@ -206,7 +206,7 @@ class UISettings extends Component {
             <Form id="uiSettings" {...otherProps}>
               <FieldSet legend={translate('ExperienceMode')}>
                 <FormGroup>
-                  <FormLabel>{translate('ExperienceMode')}</FormLabel>
+                  <FormLabel name="experienceMode">{translate('ExperienceMode')}</FormLabel>
                   <FormInputGroup
                     type={inputTypes.SELECT}
                     name="experienceMode"
