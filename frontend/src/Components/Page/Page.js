@@ -44,6 +44,16 @@ class Page extends Component {
     if (prevProps.isDisconnected !== isDisconnected) {
       this.setState({ isConnectionLostModalOpen: isDisconnected });
     }
+
+    if (prevProps.location.pathname !== this.props.location.pathname) {
+      const mainContent = document.getElementById('main-content');
+      const portalRoot = document.getElementById('portal-root');
+      const modalHasFocus = portalRoot && portalRoot.contains(document.activeElement);
+
+      if (mainContent && !modalHasFocus) {
+        mainContent.focus();
+      }
+    }
   }
 
   componentWillUnmount() {
