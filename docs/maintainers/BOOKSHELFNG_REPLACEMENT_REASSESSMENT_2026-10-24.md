@@ -164,11 +164,11 @@ rerunning the entire system while confirmed compatibility defects remain.
 | 0 | C0 — Pin baseline and separate review/code/evidence queues | — | Delivered by this assessment | Source pins, reproducible inventory and explicit gap IDs available. |
 | 1 | C1 — Preserve compatibility context and old API address | C0 | Initial code slice implemented, unverified: source profile, source-default provider mode, unchanged API address, native-client marker | Migrated installations persist source semantics and accept old-address legacy requests without client reconfiguration. |
 | 2 | C2 — Complete legacy resource, mutation and lifecycle behavior | C1 | Initial code slice implemented, unverified: single selected-edition add and no legacy pending-import response; broader F2/F5 review remains | Old request/response/identity/monitoring contracts have implemented projections, including split works and pending metadata. |
-| 3 | C3 — Make migration an unattended recoverable transaction | C1/C2 | Code required: F3/F4 | Every promotion boundary is journaled; failures retain or restore the correct app/data/service state. |
+| 3 | C3 — Make migration an unattended recoverable transaction | C1/C2 | Partial code, unverified: Linux package handoff marker and post-start database-readiness check; automatic app/data rollback and restart reconciliation remain open | Every promotion boundary is journaled; failures retain or restore the correct app/data/service state. |
 | 4 | C4 — Close acquisition, import and file behavior differences | C2 | Targeted review/ports | Every in-scope semantic difference has a concrete port or supported equivalence rationale; no unknown acquisition/import behavior remains. |
 | 5 | C5 — Close saved settings, provider, auth and integration differences | C1/C2 | Targeted review/ports | Supported saved configurations retain their meaning and all required implementations are wired. |
 | 6 | C6 — Close user workflow and preference differences | C2/C4/C5 | Targeted review/ports | Each BookshelfNG user task has a reachable implemented path with retained intent/preferences and usable failure recovery. |
-| 7 | C7 — Finish native installation adapters | C3/C5 | Code/integration required | Windows, Debian/PPA, RPM/COPR, AUR and desktop adapters invoke the same handoff contract. |
+| 7 | C7 — Finish native installation adapters | C3/C5 | Partial code, unverified: Debian/PPA, RPM/COPR, and AUR now share a post-start readiness contract; Windows parity and automatic Linux rollback remain open | Windows, Debian/PPA, RPM/COPR, AUR and desktop adapters invoke the same handoff contract. |
 | 8 | C8 — Finish channel delivery and compatibility artifacts | C3/C7 | Code/integration required: F6/F7 | Every supported channel has a buildable adapter and exact delivery path, with unreachable historical installs explicitly identified. |
 | 9 | V0 — Assemble differential/upgrade acceptance harness | C1–C8 | Extend existing harnesses | Reproducible old/new scenarios, artifact pins and machine-readable per-contract results. |
 | 10 | V1 — Build and deterministic behavior campaign | V0 | Pending at final code candidate | Unit, contract, frontend and platform builds pass; all differences triaged and fixed. |
@@ -331,10 +331,11 @@ external delivery dependencies, and the next executable slice. Stop adding
 unrelated enhancements. Do not gate the next code fix on unavailable operator
 credentials or another full media test run.
 
-**Next implementation batch:** complete C3/C7's native package preflight and
-recoverable handoff, then continue the C4-C8 semantic and channel queue. Luna
-should first validate the C1/C2 slice in the [code handoff](BOOKSHELFNG_COMPATIBILITY_CODE_HANDOFF.md)
-and return concrete mismatches for a focused fix pass.
+**Next implementation batch:** add automatic application/data rollback and
+restart reconciliation to the Linux handoff, then continue the C4-C8 semantic
+and channel queue. Luna should validate the C1/C2 slice and the Linux readiness
+check in the [code handoff](BOOKSHELFNG_COMPATIBILITY_CODE_HANDOFF.md), then
+return concrete mismatches for a focused fix pass.
 
 ## 8. Reproduce and refresh this assessment
 

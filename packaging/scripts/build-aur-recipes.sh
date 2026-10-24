@@ -57,6 +57,7 @@ for pkgbase in chaptarrng-bin bookshelfng-bin; do
     cp "$recipe/bookshelfng.env" "$work/"
     cp "$recipe/bookshelfng.sysusers" "$work/"
     cp "$recipe/bookshelfng.tmpfiles" "$work/"
+    cp "$repo_root/packaging/legacy/scripts/bookshelfng-healthcheck" "$work/"
     cp "$repo_root/packaging/native/chaptarrng.package_info" "$work/"
   fi
   use_local_source=false

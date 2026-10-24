@@ -33,6 +33,7 @@ build_one() {
   install -m 0644 "$repo_root/packaging/native/chaptarrng.package_info" "$top/SOURCES/"
   if [[ "$package" == bookshelfng ]]; then
     install -m 0600 "$repo_root/$source_dir/bookshelfng.env" "$top/SOURCES/"
+    install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-healthcheck" "$top/SOURCES/"
   fi
   sed "s/__VERSION__/${version}/g" "$repo_root/$spec_template" > "$top/SPECS/${package}.spec"
   rpmbuild -bs --define "_topdir $top" "$top/SPECS/${package}.spec"

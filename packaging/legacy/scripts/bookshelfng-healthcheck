@@ -1,0 +1,55 @@
+#!/bin/sh
+set -eu
+
+data_dir=/var/lib/bookshelfng
+pending_marker="$data_dir/.chaptarrng-bookshelfng-migration-pending"
+handoff_status="$data_dir/.chaptarrng-bookshelfng-handoff-status"
+
+# Native BookshelfNG packages preserve stopped/disabled service state. The
+# marker is created only when a package manager replaces an installed legacy
+# binary, so ordinary ChaptarrNG starts do not require a migration marker.
+if [ ! -f "$pending_marker" ]; then
+  exit 0
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+  fragment_path=$(systemctl show --property=FragmentPath --value bookshelfng.service 2>/dev/null || true)
+  dropin_paths=$(systemctl show --property=DropInPaths --value bookshelfng.service 2>/dev/null || true)
+  case "$fragment_path" in
+    ''|/lib/systemd/system/bookshelfng.service|/usr/lib/systemd/system/bookshelfng.service) ;;
+    *)
+      printf '%s\n' operator-review-required > "$handoff_status.tmp"
+      chmod 0600 "$handoff_status.tmp"
+      mv -f "$handoff_status.tmp" "$handoff_status"
+      echo 'BookshelfNG uses a custom systemd unit path; automatic migration readiness was not checked.' >&2
+      exit 0
+      ;;
+  esac
+  if [ -n "$dropin_paths" ]; then
+    printf '%s\n' operator-review-required > "$handoff_status.tmp"
+    chmod 0600 "$handoff_status.tmp"
+    mv -f "$handoff_status.tmp" "$handoff_status"
+    echo 'BookshelfNG has systemd drop-ins; automatic migration readiness was not checked.' >&2
+    exit 0
+  fi
+fi
+
+attempt=0
+while [ "$attempt" -lt 840 ]; do
+  if /usr/lib/chaptarrng/bin/Chaptarr /check-bookshelf-migration -data="$data_dir" >/dev/null 2>&1; then
+    printf '%s\n' healthy > "$handoff_status.tmp"
+    chmod 0600 "$handoff_status.tmp"
+    mv -f "$handoff_status.tmp" "$handoff_status"
+    rm -f "$pending_marker"
+    exit 0
+  fi
+
+  attempt=$((attempt + 1))
+  sleep 1
+done
+
+printf '%s\n' intervention-required > "$handoff_status.tmp"
+chmod 0600 "$handoff_status.tmp"
+mv -f "$handoff_status.tmp" "$handoff_status"
+echo 'BookshelfNG conversion did not produce a readable ChaptarrNG database within 14 minutes. The original database backup was retained; inspect the service log before retrying.' >&2
+exit 1

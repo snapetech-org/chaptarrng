@@ -1,7 +1,15 @@
 _service=bookshelfng.service
 _active_marker=/run/bookshelfng-package-was-active
+_source_binary=/usr/lib/bookshelfng/Readarr
+_target_package_info=/usr/lib/chaptarrng/package_info
+_pending_marker=/var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
 
-pre_upgrade() {
+_prepare_handoff() {
+  if [[ ! -e "$_target_package_info" && -x "$_source_binary" ]]; then
+    install -d -m750 /var/lib/bookshelfng
+    install -Dm600 /dev/null "$_pending_marker"
+  fi
+
   rm -f -- "$_active_marker"
   if systemctl is-active --quiet "$_service"; then
     install -Dm600 /dev/null "$_active_marker"
@@ -9,20 +17,30 @@ pre_upgrade() {
   fi
 }
 
-post_install() {
-  systemd-sysusers
-  systemd-tmpfiles --create /usr/lib/tmpfiles.d/bookshelfng.conf
-  systemctl daemon-reload >/dev/null 2>&1 || true
+pre_install() {
+  _prepare_handoff
 }
 
-post_upgrade() {
+pre_upgrade() {
+  _prepare_handoff
+}
+
+_configure_service() {
   systemd-sysusers
   systemd-tmpfiles --create /usr/lib/tmpfiles.d/bookshelfng.conf
   systemctl daemon-reload >/dev/null 2>&1 || true
   if [[ -e "$_active_marker" ]]; then
-    rm -f -- "$_active_marker"
     systemctl start "$_service"
+    rm -f -- "$_active_marker"
   fi
+}
+
+post_install() {
+  _configure_service
+}
+
+post_upgrade() {
+  _configure_service
 }
 
 pre_remove() {

@@ -16,6 +16,7 @@ Source2:        bookshelfng.sysusers
 Source3:        bookshelfng.tmpfiles
 Source4:        bookshelfng.env
 Source5:        chaptarrng.package_info
+Source6:        bookshelfng-healthcheck
 BuildArch:      x86_64
 Requires:       glibc
 Requires:       libgcc
@@ -43,6 +44,7 @@ tar -xzf %{SOURCE0} --strip-components=1 -C .
 
 %install
 install -d %{buildroot}/usr/lib/chaptarrng/bin
+install -d %{buildroot}/usr/lib/chaptarrng/handoff
 install -d %{buildroot}%{_bindir} %{buildroot}%{_licensedir}/bookshelfng
 install -d %{buildroot}%{_sysconfdir}/bookshelfng %{buildroot}%{_unitdir}
 install -d %{buildroot}%{_prefix}/lib/sysusers.d %{buildroot}%{_prefix}/lib/tmpfiles.d
@@ -52,29 +54,35 @@ install -m 0644 %{SOURCE2} %{buildroot}%{_prefix}/lib/sysusers.d/bookshelfng.con
 install -m 0644 %{SOURCE3} %{buildroot}%{_prefix}/lib/tmpfiles.d/bookshelfng.conf
 install -m 0600 %{SOURCE4} %{buildroot}%{_sysconfdir}/bookshelfng/bookshelfng.env
 install -m 0644 %{SOURCE5} %{buildroot}/usr/lib/chaptarrng/package_info
+install -m 0755 %{SOURCE6} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-healthcheck
 install -m 0644 LICENSE %{buildroot}%{_licensedir}/bookshelfng/LICENSE
 ln -s ../lib/chaptarrng/bin/Chaptarr %{buildroot}%{_bindir}/bookshelfng
 chmod -R u=rwX,go=rX %{buildroot}/usr/lib/chaptarrng
 
 %pre
-if [ "$1" -gt 1 ]; then
-  if systemctl is-active --quiet bookshelfng.service; then
-    touch /run/bookshelfng-package-was-active
-    systemctl stop bookshelfng.service
-  fi
+set -e
+if [ ! -e /usr/lib/chaptarrng/package_info ] && [ -x /usr/lib/bookshelfng/Readarr ]; then
+  install -d -m 0750 /var/lib/bookshelfng
+  touch /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+  chmod 0600 /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+fi
+if systemctl is-active --quiet bookshelfng.service; then
+  touch /run/bookshelfng-package-was-active
+  systemctl stop bookshelfng.service
 fi
 getent group bookshelfng >/dev/null || groupadd --system bookshelfng
 getent passwd bookshelfng >/dev/null || useradd --system --gid bookshelfng --home-dir /var/lib/bookshelfng --shell /sbin/nologin bookshelfng
 
 %post
-systemd-sysusers >/dev/null 2>&1 || :
-systemd-tmpfiles --create /usr/lib/tmpfiles.d/bookshelfng.conf >/dev/null 2>&1 || :
+set -e
+systemd-sysusers
+systemd-tmpfiles --create /usr/lib/tmpfiles.d/bookshelfng.conf
 systemctl daemon-reload >/dev/null 2>&1 || :
 
 %posttrans
 if [ -e /run/bookshelfng-package-was-active ]; then
-  rm -f /run/bookshelfng-package-was-active
   systemctl start bookshelfng.service
+  rm -f /run/bookshelfng-package-was-active
 fi
 
 %preun

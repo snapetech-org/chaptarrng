@@ -6,6 +6,7 @@ using NLog.Extensions.Logging;
 using NzbDrone.Common;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Processes;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Migration.Framework;
 using NzbDrone.Host.AccessControl;
@@ -26,6 +27,7 @@ namespace NzbDrone.Host
         private readonly IRemoteAccessAdapter _remoteAccessAdapter;
         private readonly IAppFolderFactory _appFolderFactory;
         private readonly IConnectionStringFactory _connectionStringFactory;
+        private readonly IConfigService _configService;
         private readonly IStartupContext _startupContext;
         private readonly Logger _logger;
 
@@ -35,6 +37,7 @@ namespace NzbDrone.Host
                       IRemoteAccessAdapter remoteAccessAdapter,
                       IAppFolderFactory appFolderFactory,
                       IConnectionStringFactory connectionStringFactory,
+                      IConfigService configService,
                       IStartupContext startupContext,
                       Logger logger)
         {
@@ -44,6 +47,7 @@ namespace NzbDrone.Host
             _remoteAccessAdapter = remoteAccessAdapter;
             _appFolderFactory = appFolderFactory;
             _connectionStringFactory = connectionStringFactory;
+            _configService = configService;
             _startupContext = startupContext;
             _logger = logger;
         }
@@ -138,6 +142,32 @@ namespace NzbDrone.Host
                             Console.WriteLine("BLOCKED: " + issue);
                         }
 
+                        break;
+                    }
+
+                case ApplicationModes.CheckBookshelfMigration:
+                    {
+                        _appFolderFactory.Register();
+                        var database = _connectionStringFactory.MainDbConnection;
+                        if (database.DatabaseType is not (DatabaseType.SQLite or DatabaseType.PostgreSQL) ||
+                            DatabaseLineageGuard.Detect(database.ConnectionString, database.DatabaseType) != DatabaseLineage.Chaptarr)
+                        {
+                            throw new InvalidDataException("BookshelfNG handoff health check did not find a readable ChaptarrNG database.");
+                        }
+
+                        if (!_configService.BookshelfNGDatabaseMigrated)
+                        {
+                            throw new InvalidDataException("BookshelfNG handoff health check did not find the persisted migration marker.");
+                        }
+
+                        var providerDialect = _configService.BookshelfNGProviderDialect;
+                        if (!string.Equals(providerDialect, "hc", StringComparison.Ordinal) &&
+                            !string.Equals(providerDialect, "gr", StringComparison.Ordinal))
+                        {
+                            throw new InvalidDataException("BookshelfNG handoff health check found an invalid source provider dialect.");
+                        }
+
+                        Console.WriteLine($"BookshelfNG handoff health check passed. The migrated {providerDialect} ChaptarrNG database is readable.");
                         break;
                     }
 

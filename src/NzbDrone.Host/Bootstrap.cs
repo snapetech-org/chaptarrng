@@ -252,6 +252,7 @@ namespace NzbDrone.Host
             }
 
             var migrateBookshelf = startupContext.MigrateBookshelf || startupContext.PreviewBookshelfMigration;
+            var checkBookshelfMigration = startupContext.CheckBookshelfMigration;
             var restoreBookshelf = startupContext.RestoreBookshelf || startupContext.PreviewBookshelfRestore;
             var postgresBackupMode = startupContext.CheckBookshelfPostgresBackup ||
                 startupContext.BackupBookshelfPostgres ||
@@ -260,7 +261,9 @@ namespace NzbDrone.Host
                 (startupContext.CheckBookshelfPostgresBackup ? 1 : 0) +
                 (startupContext.BackupBookshelfPostgres ? 1 : 0) +
                 (startupContext.RestoreBookshelfPostgres ? 1 : 0);
-            if (postgresUtilityCount > 1 || (postgresBackupMode && (migrateBookshelf || restoreBookshelf)))
+            if (postgresUtilityCount > 1 ||
+                (postgresBackupMode && (migrateBookshelf || restoreBookshelf || checkBookshelfMigration)) ||
+                (checkBookshelfMigration && (migrateBookshelf || restoreBookshelf)))
             {
                 throw new InvalidOperationException("Choose one BookshelfNG migration or PostgreSQL backup utility command at a time.");
             }
@@ -293,6 +296,11 @@ namespace NzbDrone.Host
             if (migrateBookshelf)
             {
                 return ApplicationModes.MigrateBookshelf;
+            }
+
+            if (checkBookshelfMigration)
+            {
+                return ApplicationModes.CheckBookshelfMigration;
             }
 
             if (OsInfo.IsWindows && startupContext.RegisterUrl)

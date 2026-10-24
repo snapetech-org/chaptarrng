@@ -39,6 +39,7 @@ mkdir -p "$package_root/DEBIAN" "$package_root/usr/lib/chaptarrng/bin" \
   "$package_root/usr/bin" "$package_root/etc/bookshelfng" \
   "$package_root/lib/systemd/system" "$package_root/usr/lib/sysusers.d" \
   "$package_root/usr/lib/tmpfiles.d" "$package_root/usr/share/doc/bookshelfng"
+mkdir -p "$package_root/usr/lib/chaptarrng/handoff"
 mkdir -p "$payload"
 tar -xzf "$archive_path" --strip-components=1 -C "$payload"
 if [[ ! -x "$payload/Chaptarr" || ! -f "$payload/LICENSE" ]]; then
@@ -58,6 +59,8 @@ install -m 0644 "$repo_root/packaging/legacy/debian/bookshelfng.sysusers" \
   "$package_root/usr/lib/sysusers.d/bookshelfng.conf"
 install -m 0644 "$repo_root/packaging/legacy/debian/bookshelfng.tmpfiles" \
   "$package_root/usr/lib/tmpfiles.d/bookshelfng.conf"
+install -m 0755 "$repo_root/packaging/legacy/scripts/bookshelfng-healthcheck" \
+  "$package_root/usr/lib/chaptarrng/handoff/bookshelfng-healthcheck"
 install -m 0755 "$repo_root/packaging/legacy/debian/postinst" "$package_root/DEBIAN/postinst"
 install -m 0755 "$repo_root/packaging/legacy/debian/preinst" "$package_root/DEBIAN/preinst"
 install -m 0755 "$repo_root/packaging/legacy/debian/prerm" "$package_root/DEBIAN/prerm"

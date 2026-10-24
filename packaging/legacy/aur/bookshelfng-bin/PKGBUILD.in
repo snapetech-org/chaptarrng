@@ -18,11 +18,13 @@ source=("https://github.com/snapetech/chaptarrng/releases/download/v${pkgver}/Ch
         'bookshelfng.sysusers'
         'bookshelfng.tmpfiles'
         'bookshelfng.install'
+        'bookshelfng-healthcheck'
         'chaptarrng.package_info')
-sha256sums=('__ARCHIVE_SHA256__' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+sha256sums=('__ARCHIVE_SHA256__' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
 
 package() {
   install -d "${pkgdir}/usr/lib/chaptarrng/bin" "${pkgdir}/usr/lib/systemd/system"
+  install -d "${pkgdir}/usr/lib/chaptarrng/handoff"
   install -d "${pkgdir}/usr/lib/sysusers.d" "${pkgdir}/usr/lib/tmpfiles.d"
   install -d "${pkgdir}/usr/bin" "${pkgdir}/etc/bookshelfng"
   tar -xzf "${srcdir}/ChaptarrNG-${pkgver}-linux-x64.tar.gz" --strip-components=1 -C "${pkgdir}/usr/lib/chaptarrng/bin"
@@ -31,6 +33,7 @@ package() {
   install -Dm644 "${srcdir}/bookshelfng.sysusers" "${pkgdir}/usr/lib/sysusers.d/bookshelfng.conf"
   install -Dm644 "${srcdir}/bookshelfng.tmpfiles" "${pkgdir}/usr/lib/tmpfiles.d/bookshelfng.conf"
   install -Dm644 "${srcdir}/chaptarrng.package_info" "${pkgdir}/usr/lib/chaptarrng/package_info"
+  install -Dm755 "${srcdir}/bookshelfng-healthcheck" "${pkgdir}/usr/lib/chaptarrng/handoff/bookshelfng-healthcheck"
   install -Dm644 "${pkgdir}/usr/lib/chaptarrng/bin/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
   ln -s ../lib/chaptarrng/bin/Chaptarr "${pkgdir}/usr/bin/bookshelfng"
   chmod -R u=rwX,go=rX "${pkgdir}/usr/lib/chaptarrng"

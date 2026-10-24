@@ -9,6 +9,7 @@ namespace NzbDrone.Host
         Service,
         RegisterUrl,
         MigrateBookshelf,
+        CheckBookshelfMigration,
         RestoreBookshelf,
         CheckBookshelfPostgresBackup,
         BackupBookshelfPostgres,
