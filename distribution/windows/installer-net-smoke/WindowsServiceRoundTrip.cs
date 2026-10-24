@@ -886,7 +886,9 @@ internal static class WindowsServiceRoundTrip
             FileName = processPath,
             UseShellExecute = false,
             CreateNoWindow = true,
-            WorkingDirectory = AppContext.BaseDirectory
+            WorkingDirectory = AppContext.BaseDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
         };
 
         if (string.Equals(Path.GetFileNameWithoutExtension(processPath), "dotnet", StringComparison.OrdinalIgnoreCase))
@@ -905,6 +907,8 @@ internal static class WindowsServiceRoundTrip
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Could not start the isolated Windows service migration worker.");
+        var standardOutput = process.StandardOutput.ReadToEndAsync();
+        var standardError = process.StandardError.ReadToEndAsync();
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(20));
         try
         {
@@ -913,7 +917,21 @@ internal static class WindowsServiceRoundTrip
         catch (OperationCanceledException)
         {
             try { process.Kill(entireProcessTree: true); } catch { }
+            await process.WaitForExitAsync().ConfigureAwait(false);
+            await Task.WhenAll(standardOutput, standardError).ConfigureAwait(false);
             throw new System.TimeoutException("The Windows service migration worker did not finish within twenty minutes.");
+        }
+
+        var output = await standardOutput.ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(output))
+        {
+            Console.Out.Write(output);
+        }
+
+        var error = await standardError.ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            Console.Error.Write(error);
         }
 
         return process.ExitCode;
