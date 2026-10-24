@@ -61,6 +61,33 @@ grep -Fxq "CHAPTARRNG_COMPAT_IMAGE=$image" "$stage/coop-cloud/bookshelfng/.env.s
 grep -Fq "$compose_default" "$stage/catalogs/compose.yaml"
 grep -Fq "Release multi-architecture image: \`$image\`" "$stage/README.md"
 
+startos_manifest="$stage/startos/startos/manifest/index.ts"
+startos_version="$stage/startos/startos/versions/current.ts"
+test -s "$stage/startos/package-lock.json"
+grep -Fq "id: 'bookshelfng'" "$startos_manifest"
+grep -Fq "volumes: ['main', 'books', 'downloads']" "$startos_manifest"
+grep -Fq "arch: ['x86_64', 'aarch64']" "$startos_manifest"
+grep -Fq "source: { dockerTag: '$image' }" "$startos_manifest"
+if grep -Fq '__BOOKSHELF_HARDCOVER_DIGEST__' "$startos_manifest"; then
+  echo "StartOS manifest retained its source digest placeholder." >&2
+  exit 1
+fi
+if grep -Fq 'docker.io/snapetech/bookshelfng:' "$startos_manifest"; then
+  echo "StartOS manifest retained the BookshelfNG runtime image." >&2
+  exit 1
+fi
+grep -Fq "version: '0.4.21:2'" "$startos_version"
+grep -Fq "imageId: 'bookshelfng'" "$stage/startos/startos/main.ts"
+grep -Fq "mountpoint: '/config'" "$stage/startos/startos/main.ts"
+grep -Fq "mountpoint: '/books'" "$stage/startos/startos/main.ts"
+grep -Fq "mountpoint: '/downloads'" "$stage/startos/startos/main.ts"
+grep -Fq "exec: { command: ['/init'] }" "$stage/startos/startos/main.ts"
+grep -Fq 'https://github.com/snapetech-org/chaptarrng' "$startos_manifest"
+grep -Fq 'export const uiPort = 8787' "$stage/startos/startos/utils.ts"
+npm --prefix "$stage/startos" ci --ignore-scripts --no-audit --no-fund
+npm --prefix "$stage/startos" run check
+npm --prefix "$stage/startos" run build
+
 if VERSION=0.9.978 BOOKSHELF_HARDCOVER_DIGEST=not-a-digest OUTPUT_DIR="$work/invalid" bash "$script" >/dev/null 2>&1; then
   echo "Container candidate builder accepted an unverified image reference." >&2
   exit 1

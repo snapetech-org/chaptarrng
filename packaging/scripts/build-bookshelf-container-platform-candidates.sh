@@ -50,12 +50,13 @@ PY
 trap cleanup EXIT
 
 stage="$work/bookshelfng-container-platform-candidates"
-mkdir -p "$stage/cloudron" "$stage/coop-cloud/bookshelfng" "$stage/catalogs"
+mkdir -p "$stage/cloudron" "$stage/coop-cloud/bookshelfng" "$stage/catalogs" "$stage/startos"
 cp "$repo_root/packaging/legacy/cloudron/Dockerfile" "$stage/cloudron/Dockerfile"
 cp "$repo_root/packaging/legacy/cloudron/CloudronManifest.json" "$stage/cloudron/CloudronManifest.json"
 cp "$repo_root/packaging/legacy/coop-cloud/bookshelfng/compose.yml" "$stage/coop-cloud/bookshelfng/compose.yml"
 cp "$repo_root/packaging/legacy/coop-cloud/bookshelfng/.env.sample" "$stage/coop-cloud/bookshelfng/.env.sample"
 cp "$repo_root/packaging/legacy/catalogs/compose.yaml" "$stage/catalogs/compose.yaml"
+cp -a "$repo_root/packaging/legacy/startos/candidate/." "$stage/startos/"
 
 python3 - "$stage/cloudron/CloudronManifest.json" "$VERSION" <<'PY'
 import json
@@ -79,6 +80,13 @@ import sys
 root = pathlib.Path(sys.argv[1])
 image = sys.argv[2]
 version = sys.argv[3]
+startos_manifest = root / "startos" / "startos" / "manifest" / "index.ts"
+startos_text = startos_manifest.read_text(encoding="utf-8")
+placeholder = "ghcr.io/snapetech-org/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__"
+if startos_text.count(placeholder) != 1:
+    raise SystemExit("StartOS manifest did not contain exactly one image digest placeholder.")
+startos_manifest.write_text(startos_text.replace(placeholder, image), encoding="utf-8")
+
 legacy_tag = "ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover"
 dockerfile_old = (
     "# This compatibility image tag is a source candidate. Before a Cloudron update\n"
@@ -123,10 +131,11 @@ ChaptarrNG release: $VERSION
 
 Release multi-architecture image: \`$image\`
 
-This bundle contains the Cloudron app source, the Co-op Cloud recipe, and the
-self-hosting Compose candidate. Each points to the exact image digest produced
-by the gated ChaptarrNG release workflow. The existing BookshelfNG app, stack,
-container, and volume identities remain in place.
+This bundle contains the Cloudron app source, the Co-op Cloud recipe, the
+self-hosting Compose candidate, and the StartOS package source. Each points to
+the exact image digest produced by the gated ChaptarrNG release workflow. The
+existing BookshelfNG app, stack, package, container, and volume identities
+remain in place.
 
 These files are handoff candidates for their platform maintainers. They do not
 update external catalogs or establish platform install, backup, or rollback

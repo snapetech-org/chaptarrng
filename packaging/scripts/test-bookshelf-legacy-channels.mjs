@@ -141,9 +141,15 @@ test('release pins Cloudron and Compose candidates to the built compatibility im
 
 test('StartOS candidate documents the package identity and external device-acceptance gate', () => {
   const readme = read('packaging/legacy/startos/README.md');
+  const manifest = read('packaging/legacy/startos/candidate/startos/manifest/index.ts');
 
-  assert.match(readme, /bookshelfng-startos/);
-  assert.match(readme, /`bookshelfng` package ID/);
-  assert.match(readme, /preserves the `\/config`,\s*`\/books`, and `\/downloads` mount contract/);
-  assert.match(readme, /no StartOS package update,\s*device install,\s*backup\/restore,\s*or\s+rollback has been accepted/i);
+  assert.match(readme, /`candidate\/` contains the StartOS wrapper source/);
+  assert.match(readme, /package ID `bookshelfng`/);
+  assert.match(readme, /volume IDs `main`,\s*`books`, and `downloads`/);
+  assert.match(readme, /`\/config`, `\/books`, and `\/downloads`/);
+  assert.match(readme, /exact ChaptarrNG\s+multi-architecture Hardcover digest/);
+  assert.match(readme, /device install, backup, update, and rollback acceptance still\s+belong to that package's handoff/i);
+  assert.match(manifest, /packageRepo: 'https:\/\/github\.com\/snapetech\/bookshelfng-startos'/);
+  assert.match(manifest, /upstreamRepo: 'https:\/\/github\.com\/snapetech-org\/chaptarrng'/);
+  assert.match(manifest, /source: \{ dockerTag: 'ghcr\.io\/snapetech-org\/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' \}/);
 });

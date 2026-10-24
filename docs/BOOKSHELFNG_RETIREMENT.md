@@ -647,11 +647,14 @@ operator acceptance, and channel handoff remain open. The push-triggered
 Release run stopped at its readiness preflight, and all publication jobs were
 skipped; no release, package, image, or bridge was published.
 
-The no-publication candidate-builder checks also passed on this code head for
-the AppImage/Flatpak orchestration and digest-pinned Cloudron, Co-op Cloud, and
-self-hosting Compose bundle. Synthetic tool stubs verified staged identities,
-image-digest propagation, and artifact checksums; this does not establish an
-external package build, install, update, or rollback.
+The no-publication desktop-candidate check passed for AppImage/Flatpak staging,
+and the container-platform check passed for the digest-pinned Cloudron, Co-op
+Cloud, self-hosting Compose, and StartOS bundle. StartOS source passed `npm
+ci`, the TypeScript check, and the `ncc` build with a synthetic image digest;
+the legacy-channel contract suite passed 9/9. Synthetic tool stubs verified
+staged identities, image-digest propagation, and artifact checksums. These
+source/build checks do not establish an external StartOS package build,
+installation, update, backup, or rollback.
 
 Keep the release freeze in place.
 
@@ -1104,12 +1107,15 @@ and follow the
 pushes and provenance attestations now require the ChaptarrNG release,
 BookshelfNG retirement, and migration-bridge gates together. A gated stable
 release builds checksum-verified AppImage and Flatpak candidates from the exact
-Linux release archive, then packages Cloudron, Co-op Cloud, and self-hosting
-Compose sources with the exact multi-architecture Hardcover image digest from
-that release. The Windows installer, Debian package, and RPM handoffs remain
-in their existing gated paths. These artifacts are still release candidates:
-they do not update external catalogs or close representative-data, live
-provider, installed-update, or platform rollback acceptance.
+Linux release archive, then packages Cloudron, Co-op Cloud, self-hosting
+Compose, and StartOS sources with the exact multi-architecture Hardcover image
+digest from that release. The StartOS source preserves the `bookshelfng`
+package and volume identities and is type-checked and bundled, but no `.s9pk`
+has been submitted or installed. The Windows installer, Debian package, and
+RPM handoffs remain in their existing gated paths. These artifacts are still
+release candidates: they do not update external catalogs or close
+representative-data, live provider, installed-update, or platform rollback
+acceptance.
 
 ## Legacy install channels
 
@@ -1121,7 +1127,7 @@ provider, installed-update, or platform rollback acceptance.
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |
 | Chocolatey | `chaptarrng 0.9.973` remains the moderator-approved public package; `.977` is not on the feed. The current source bridge retains the BookshelfNG service identity, configured data path and NSSM arguments, previews migration, preserves or explicitly accepts provider mode, backs up PostgreSQL sources, checks `/ping`, and restores data and app files on startup failure. It leaves the service stopped if rollback cannot be verified. | The [Chocolatey feed](https://community.chocolatey.org/packages/bookshelfng) still lists BookshelfNG `0.4.21.70`; its final GitHub release is `0.4.21.71`. The bridge is unpublished; the prior `.977` push returned HTTP 403. Resolve the feed rejection, then validate populated SQLite/PostgreSQL conversion, rollback, and installed-channel handoff. |
 | Unraid | The ChaptarrNG template is maintained separately. | The legacy-template handoff is in [BookshelfNG Unraid PR #5](https://github.com/snapetech-org/bookshelfng-unraid/pull/5); its XML and settings-preservation check passed, but the Community Applications upgrade and rollback flow has not been tested. Existing installs still need a template update. |
-| StartOS | No ChaptarrNG update is published. | The parked `bookshelfng-startos` package still pins `docker.io/snapetech/bookshelfng:hardcover-v0.4.21.37`; it keeps package ID `bookshelfng`, backs up `main`, `books`, and `downloads`, mounts `/config`, `/books`, and `/downloads`, exposes `8787`, and starts `/init`. A local Linux/amd64 production-image candidate from commit `2d6124e2` was exercised through a wrapper that invoked `/init` with no arguments and no CMD. With network disabled and task-scoped copies of populated BookshelfNG databases, it converted schema 158 to 121, retained saved port `8787`, Forms authentication, and the API key, returned `/ping` HTTP 200, passed the image health check, and passed SQLite integrity and foreign-key checks. Docker image metadata exposes only `8787/tcp` for the Bookshelf target. This is image and copied-database evidence only: `/books` and `/downloads` were empty, and no StartOS package build, device install/update, backup, or rollback was tested. The local amd64 BuildKit syntax check for linux/arm64 passed, but a full aarch64 image build could not execute because this host has no arm64 emulator. The StartOS ARM64 image build remains open. The package remains on the BookshelfNG image, and no handoff has been published. |
+| StartOS | No ChaptarrNG package update is published. | ChaptarrNG now carries a StartOS package source candidate in `packaging/legacy/startos/candidate/`; the release handoff bundle pins its image to the exact multi-architecture Hardcover digest and preserves package ID `bookshelfng`, volume IDs `main`, `books`, and `downloads`, `/config`, `/books`, and `/downloads`, port `8787`, and `/init`. Candidate TypeScript check and bundle build are part of the no-publish packaging test. The external `bookshelfng-startos` package has not been changed; no `.s9pk` has been submitted, installed, updated, backed up, or rolled back on a StartOS device. Existing local Linux/amd64 image and copied-database evidence from commit `2d6124e2` passed `/ping` and SQLite integrity checks, but used empty `/books` and `/downloads`; full aarch64 image/package and device acceptance remain open. |
 | Helm | A same-name compatibility chart is in ChaptarrNG `main`; its versioned publisher targets the existing BookshelfNG OCI chart identity and requires both release-readiness gates, the migration bridge gate, and an explicit bridge request. The publisher has not run during the freeze. | Local build and chart contract checks cover the preserved release, StatefulSet, Service, selectors, port, `/config` mount, PVC, both provider modes, and pinned image. No chart is published; installed PVC upgrade, GitOps sync, and rollback remain open. Existing installs can keep the same chart source after acceptance, while pinned/offline archives need a manual update. |
 | AppImage | ChaptarrNG Linux x64 standalone archives are available. | Source-only launcher candidate keeps desktop ID `com.snapetech.bookshelfng`, `$XDG_DATA_HOME/bookshelfng`, and launches `Chaptarr` with the legacy data path. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper. The rebuilt local `.978` AppImage passed a same-path update, path-preservation, and rollback rehearsal from the checksum-verified public `.71` package using a synthetic schema-158 fixture. Representative-data and live-channel acceptance remain open. |
 | Flatpak | ChaptarrNG Linux x64 standalone archives are available. | Source-only manifest keeps app ID `com.snapetech.BookshelfNG`, desktop launcher, and sandbox config path `bookshelfng`; updates use Flatpak. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper. The rebuilt local `.978` bundle passed an in-place app-ID update, path-preservation, and rollback rehearsal from the checksum-verified public `.71` bundle using a synthetic schema-158 fixture. Representative-data and live-channel acceptance remain open. |
