@@ -40,14 +40,17 @@ source and conversion settings plus the output size, modification time, and
 SHA-256 digest; recovery verifies the full output content before reuse.
 Readable output from a tool-reported failure stays available for inspection
 but cannot be imported or reused. Startup can resume queued work or hand a
-validated output to the import sweep; real-tool process-kill and restart
-acceptance is still pending.
+validated output to the import sweep.
 
 ChaptarrNG has a recorded six-case synthetic real-tool smoke covering tagged
 track order, chapters and metadata, registration, Move and Copy handling, and
 fallback after tool failures. Those generated files do not establish behavior
-on representative audiobooks or real-tool process interruption and restart.
-See the
+on representative audiobooks. On 2026-10-24, the pinned Linux tool suite passed
+9/9 cases, including a real m4b-tool/FFmpeg interruption during application
+shutdown, durable requeue, a new worker instance resuming from the same SQLite
+job table, and verification of the promoted output's manifest hash. This
+covers the graceful shutdown recovery path with synthetic audio; representative
+media and abrupt whole-application process-crash recovery remain open. See the
 [retirement status](BOOKSHELFNG_RETIREMENT.md#audiobook-merge-compatibility)
 for the current evidence and remaining acceptance work. Leave the setting
 unset until a supported release and that acceptance work are complete.

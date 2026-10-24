@@ -305,7 +305,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: docker build -f integration/Dockerfile.m4b-test -t chaptarrng-m4b-test:ci integration
 
-    - name: Test real M4B merge and fallback
+    - name: Test real M4B merge, fallback, and restart recovery
       if: matrix.os == 'ubuntu-latest'
       run: |
         docker run --rm --network none \

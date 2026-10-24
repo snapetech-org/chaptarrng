@@ -103,6 +103,14 @@ unprobeable-part fallback, and simulated tool failure; two covered embedded
 chapter preservation in Move and Copy modes. The test generated synthetic
 audio. Representative audiobooks and interrupted restart/resume remain open.
 
+On 2026-10-24, the pinned-tool filter passed 9/9 against the current working
+tree. The added conversion-job case pauses FFmpeg launched by m4b-tool, requests
+application shutdown, checks that the process exits and the durable job is
+requeued, then starts a new worker over the same SQLite job table and verifies
+a successful retry, output promotion, and matching manifest SHA-256. The data
+is synthetic. Representative audiobooks and abrupt whole-application
+process-crash recovery remain open.
+
 After building the test assembly as in `.github/workflows/build.yml`, run it
 locally with:
 
@@ -118,8 +126,8 @@ docker run --rm --network none \
 ```
 
 This validates synthetic conversion, input and output chapter handling, and
-recovery behavior only. It does not close representative M4B or restart/resume
-acceptance.
+graceful shutdown/restart recovery. It does not close representative M4B or
+abrupt whole-application crash acceptance.
 
 ```sh
 export SEERRNG_SOURCE="/path/to/seerrng"

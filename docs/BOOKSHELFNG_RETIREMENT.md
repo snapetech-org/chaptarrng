@@ -14,8 +14,9 @@ or alias was published.
 manifests include the output's SHA-256 digest. Startup recovery and import-time
 reuse now verify the full file content as well as path, size, timestamp,
 conversion settings, and source metadata. Version 1 manifests are not reusable.
-This strengthens local artifact validation; real-tool interruption/restart
-and representative-media acceptance remain open.
+This strengthens local artifact validation. Real-tool shutdown/restart recovery
+passed the pinned Linux integration suite described below; representative-media
+acceptance remains open.
 
 **M4B recovery hardening (2026-10-24):** Detached conversion retries now write
 to unique staging paths and promote output only after conversion succeeds.
@@ -23,7 +24,23 @@ Version 2 artifact manifests record whether an output is importable, its size,
 modification time, and SHA-256 digest; readable output from a tool-reported
 failure is retained for inspection but cannot be imported or reused. Startup
 recovery continues to adopt validated output or requeue interrupted work.
-Real-tool process-kill/restart and representative-media acceptance remain open.
+The pinned Linux tool image passed 9/9 real-tool cases, including shutdown
+cancellation, durable requeue, worker restart against the same SQLite job
+store, successful retry, output promotion, and manifest digest verification.
+This uses synthetic audio; representative media and abrupt whole-application
+crash recovery remain open.
+
+**Real-tool conversion restart smoke (2026-10-24):** The new
+`real_m4b_tool_should_resume_after_application_restart_interrupts_conversion_when_installed`
+case gates FFmpeg after the real `m4b-tool` starts, requests application
+shutdown, verifies the child process exits and the persisted job returns to
+`Queued`, then starts a new `ConversionJobService` over the same job database.
+The resumed attempt reaches `ReadyToImport`, promotes a validated M4B, and
+records a SHA-256 digest matching the output. The pinned-tool filter passed
+9/9 cases on the current source. The inputs are generated synthetic audio, and
+the test restarts the conversion worker rather than killing the ChaptarrNG
+application process; representative-media and abrupt process-crash acceptance
+remain open.
 
 **Hardcover search request parity (2026-10-24):** The fallback catalog search
 path now sends its entity search, author-book validation, and enrichment queries
