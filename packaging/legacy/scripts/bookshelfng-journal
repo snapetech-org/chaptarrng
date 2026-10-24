@@ -1,0 +1,86 @@
+#!/bin/sh
+set -eu
+
+data_dir=${BOOKSHELF_DATA_DIR:-/var/lib/bookshelfng}
+journal_dir="$data_dir/.chaptarrng-bookshelfng-journal"
+
+fail() {
+  echo "BookshelfNG handoff journal: $*" >&2
+  exit 2
+}
+
+valid_key() {
+  case "$1" in
+    ''|*[!A-Za-z0-9_.-]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+write_atomic() {
+  target=$1
+  value=$2
+  tmp="$target.tmp.$$"
+  umask 077
+  printf '%s\n' "$value" > "$tmp"
+  chmod 0600 "$tmp"
+  mv -f "$tmp" "$target"
+}
+
+mkdir -p "$journal_dir/outcomes" "$journal_dir/fingerprints" "$journal_dir/states"
+chmod 0700 "$journal_dir" "$journal_dir/outcomes" "$journal_dir/fingerprints" "$journal_dir/states"
+
+action=${1:-}
+case "$action" in
+  state)
+    state=${2:-}
+    case "$state" in
+      detected|preflighted|snapshotted|converted|promoted|healthy|rolled-back|intervention-required) ;;
+      *) fail "invalid state '$state'" ;;
+    esac
+    now=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+    write_atomic "$journal_dir/state" "$state"
+    write_atomic "$journal_dir/states/$state" "$now"
+    ;;
+  outcome)
+    name=${2:-}
+    value=${3:-}
+    valid_key "$name" || fail 'outcome name must use letters, numbers, dot, underscore, or dash'
+    case "$value" in
+      ''|*[!A-Za-z0-9:._-]*) fail 'outcome value must be a non-empty token' ;;
+    esac
+    write_atomic "$journal_dir/outcomes/$name" "$value"
+    ;;
+  fingerprint)
+    name=${2:-}
+    path=${3:-}
+    refresh=${4:-}
+    valid_key "$name" || fail 'fingerprint name must use letters, numbers, dot, underscore, or dash'
+    [ -n "$path" ] || fail 'fingerprint path is required'
+    target="$journal_dir/fingerprints/$name"
+    if [ -f "$target" ] && [ "$refresh" != --refresh ]; then
+      exit 0
+    fi
+    resolved_path=$path
+    if [ -L "$path" ]; then
+      resolved_path=$(readlink -f -- "$path") || fail "cannot resolve fingerprint path '$path'"
+    fi
+    if [ -f "$resolved_path" ]; then
+      value=$(sha256sum -- "$resolved_path" | awk '{ print "sha256:" $1 }')
+    elif [ -d "$resolved_path" ]; then
+      value=$(find "$resolved_path" -type f -print0 | sort -z | xargs -0 -r sha256sum | sha256sum | awk '{ print "sha256:" $1 }')
+    else
+      value=missing
+    fi
+    write_atomic "$target" "$value"
+    ;;
+  get-state)
+    if [ -f "$journal_dir/state" ]; then
+      cat "$journal_dir/state"
+    else
+      printf '%s\n' unknown
+    fi
+    ;;
+  *)
+    fail 'usage: bookshelfng-journal state STATE | outcome NAME VALUE | fingerprint NAME PATH [--refresh] | get-state'
+    ;;
+esac

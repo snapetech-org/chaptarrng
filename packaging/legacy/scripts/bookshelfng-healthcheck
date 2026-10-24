@@ -4,6 +4,7 @@ set -eu
 data_dir=/var/lib/bookshelfng
 pending_marker="$data_dir/.chaptarrng-bookshelfng-migration-pending"
 handoff_status="$data_dir/.chaptarrng-bookshelfng-handoff-status"
+journal=/usr/lib/chaptarrng/handoff/bookshelfng-journal
 
 # Native BookshelfNG packages preserve stopped/disabled service state. The
 # marker is created only when a package manager replaces an installed legacy
@@ -16,6 +17,14 @@ write_status() {
   printf '%s\n' "$1" > "$handoff_status.tmp"
   chmod 0600 "$handoff_status.tmp"
   mv -f "$handoff_status.tmp" "$handoff_status"
+  case "$1" in
+    healthy|rolled-back)
+      "$journal" state "$1"
+      ;;
+    operator-review-required|intervention-required)
+      "$journal" state intervention-required
+      ;;
+  esac
 }
 
 if ! command -v systemctl >/dev/null 2>&1; then
@@ -43,6 +52,11 @@ fi
 attempt=0
 while [ "$attempt" -lt 840 ]; do
   if /usr/lib/chaptarrng/bin/Chaptarr /check-bookshelf-migration -data="$data_dir" >/dev/null 2>&1; then
+    "$journal" outcome conversion verified
+    "$journal" state converted
+    "$journal" outcome promotion verified
+    "$journal" state promoted
+    "$journal" outcome health database-readable
     write_status healthy
     rm -f "$pending_marker"
     exit 0

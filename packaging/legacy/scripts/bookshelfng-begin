@@ -4,6 +4,7 @@ set -eu
 data_dir=/var/lib/bookshelfng
 pending_marker="$data_dir/.chaptarrng-bookshelfng-migration-pending"
 handoff_status="$data_dir/.chaptarrng-bookshelfng-handoff-status"
+journal=/usr/lib/chaptarrng/handoff/bookshelfng-journal
 
 if [ ! -f "$pending_marker" ]; then
   exit 0
@@ -13,6 +14,11 @@ write_status() {
   printf '%s\n' "$1" > "$handoff_status.tmp"
   chmod 0600 "$handoff_status.tmp"
   mv -f "$handoff_status.tmp" "$handoff_status"
+  case "$1" in
+    operator-review-required|preflight-failed|intervention-required)
+      "$journal" state intervention-required
+      ;;
+  esac
 }
 
 handoff_dir="$data_dir/.chaptarrng-bookshelfng-handoff"
@@ -51,6 +57,10 @@ write_status preflighting
 if runuser --preserve-environment --user bookshelfng -- \
   /usr/lib/chaptarrng/bin/Chaptarr /check-bookshelf-migration \
   -data="$data_dir" >/dev/null 2>&1; then
+  "$journal" outcome conversion already-promoted
+  "$journal" state converted
+  "$journal" outcome promotion verified
+  "$journal" state promoted
   write_status starting
   exit 0
 fi
@@ -80,4 +90,11 @@ else
   rmdir "$postgres_backup_dir"
 fi
 
+"$journal" outcome preflight verified
+if [ -f "$handoff_dir/postgres-backup-ready" ]; then
+  "$journal" outcome source-backup retained
+else
+  "$journal" outcome source-backup not-required
+fi
+"$journal" state preflighted
 write_status starting

@@ -1,6 +1,6 @@
 # BookshelfNG compatibility code handoff
 
-This is the seventh code checkpoint after the 2026-10-24 replacement
+This is the eighth code checkpoint after the 2026-10-24 replacement
 reassessment. It is intended for focused validation and refinement before broad
 parity work.
 
@@ -74,7 +74,13 @@ parity work.
   units or drop-ins restore the previous app and default unit and leave
   migration pending with `operator-review-required`; installs without a valid
   pre-upgrade snapshot block automatic conversion. Debian, RPM, and AUR hooks
-  propagate failed service starts.
+  propagate failed service starts. A retained root-only journal records the
+  detected, snapshotted, preflighted, converted, promoted, healthy, rolled-back,
+  and intervention-required states, step outcomes, and SHA-256 fingerprints for
+  the source app/database/configuration, service unit, and installed artifact.
+  Startup reconciliation observes the current database readiness result after a
+  restart; journal fingerprints and outcomes remain after healthy cleanup removes
+  the temporary application snapshot.
 
 The Linux default-unit cutover now has automatic database and application
 rollback code. C3/F4 still needs Luna's package-manager failure-path and
@@ -123,7 +129,10 @@ restart acceptance before it can be treated as closed.
    before database promotion, a missing or invalid backup, and custom
    unit/drop-in setups. Confirm successful readiness clears the marker and
    removes only the old application snapshot, while retaining database
-   backups.
+   backups. Inspect the root-only journal for the expected state sequence,
+   outcome records, and fingerprints; confirm a restart after promotion
+   advances from observed database lineage without replacing original source
+   fingerprints.
 7. Start, list, fetch, and cancel commands through the unchanged API address.
    Confirm supported command bodies send and return BookshelfNG IDs, including
    multi-format work IDs. For a `RefreshBook` command targeting a work split

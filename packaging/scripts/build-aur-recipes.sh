@@ -62,6 +62,7 @@ for pkgbase in chaptarrng-bin bookshelfng-bin; do
     cp "$repo_root/packaging/legacy/scripts/bookshelfng-prepare" "$work/"
     cp "$repo_root/packaging/legacy/scripts/bookshelfng-cleanup" "$work/"
     cp "$repo_root/packaging/legacy/scripts/bookshelfng-rollback" "$work/"
+    cp "$repo_root/packaging/legacy/scripts/bookshelfng-journal" "$work/"
     cp "$repo_root/packaging/native/chaptarrng.package_info" "$work/"
   fi
   use_local_source=false
@@ -122,7 +123,7 @@ for pkgbase in chaptarrng-bin bookshelfng-bin; do
   cp "$work/PKGBUILD" "$output/PKGBUILD"
   cp "$work"/*.install "$work"/*.service "$work"/*.sysusers "$work"/*.tmpfiles "$work"/*.package_info "$output/"
   if [[ "$pkgbase" == bookshelfng-bin ]]; then
-    cp "$work"/bookshelfng-healthcheck "$work"/bookshelfng-begin "$work"/bookshelfng-prepare "$work"/bookshelfng-cleanup "$work"/bookshelfng-rollback "$output/"
+    cp "$work"/bookshelfng-healthcheck "$work"/bookshelfng-begin "$work"/bookshelfng-prepare "$work"/bookshelfng-cleanup "$work"/bookshelfng-rollback "$work"/bookshelfng-journal "$output/"
   fi
   if compgen -G "$work/*.env" >/dev/null; then cp "$work"/*.env "$output/"; fi
   grep -Fqx "pkgbase = $pkgbase" "$output/.SRCINFO"

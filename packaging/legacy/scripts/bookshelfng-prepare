@@ -5,6 +5,7 @@ data_dir=/var/lib/bookshelfng
 pending_marker="$data_dir/.chaptarrng-bookshelfng-migration-pending"
 handoff_status="$data_dir/.chaptarrng-bookshelfng-handoff-status"
 handoff_dir="$data_dir/.chaptarrng-bookshelfng-handoff"
+journal=/usr/lib/chaptarrng/handoff/bookshelfng-journal
 
 write_status() {
   printf '%s\n' "$1" > "$handoff_status.tmp"
@@ -16,8 +17,27 @@ if [ ! -f "$pending_marker" ]; then
   exit 0
 fi
 
+if [ "$("$journal" get-state)" = unknown ]; then
+  "$journal" state detected
+fi
+
+if [ -f "$handoff_dir/snapshot-ready" ]; then
+  "$journal" fingerprint source-app "$handoff_dir/source-app"
+  "$journal" fingerprint source-unit "$handoff_dir/source-unit"
+  "$journal" fingerprint source-database-readarr "$data_dir/readarr.db"
+  "$journal" fingerprint source-database-audioarr "$data_dir/audioarr.db"
+  "$journal" fingerprint source-config "$data_dir/config.xml"
+  "$journal" fingerprint source-environment /etc/bookshelfng/bookshelfng.env
+  "$journal" outcome source-snapshot success
+  "$journal" state snapshotted
+fi
+
+"$journal" fingerprint target-artifact /usr/lib/chaptarrng/bin/Chaptarr --refresh
+"$journal" fingerprint target-package-info /usr/lib/chaptarrng/package_info --refresh
+
 if ! command -v systemctl >/dev/null 2>&1; then
   write_status operator-review-required
+  "$journal" state intervention-required
   exit 0
 fi
 
@@ -35,6 +55,7 @@ case "$fragment_path" in
 esac
 
 write_status operator-review-required
+"$journal" state intervention-required
 if [ ! -f "$handoff_dir/snapshot-ready" ] ||
    [ ! -x "$handoff_dir/source-app/Readarr" ]; then
   echo 'Custom BookshelfNG service configuration needs operator review; no original application snapshot is available to restore.' >&2

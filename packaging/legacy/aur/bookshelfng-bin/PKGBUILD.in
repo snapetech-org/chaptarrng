@@ -23,8 +23,9 @@ source=("https://github.com/snapetech/chaptarrng/releases/download/v${pkgver}/Ch
         'bookshelfng-prepare'
         'bookshelfng-cleanup'
         'bookshelfng-rollback'
+        'bookshelfng-journal'
         'chaptarrng.package_info')
-sha256sums=('__ARCHIVE_SHA256__' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+sha256sums=('__ARCHIVE_SHA256__' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
 
 package() {
   install -d "${pkgdir}/usr/lib/chaptarrng/bin" "${pkgdir}/usr/lib/systemd/system"
@@ -42,6 +43,7 @@ package() {
   install -Dm755 "${srcdir}/bookshelfng-prepare" "${pkgdir}/usr/lib/chaptarrng/handoff/bookshelfng-prepare"
   install -Dm755 "${srcdir}/bookshelfng-cleanup" "${pkgdir}/usr/lib/chaptarrng/handoff/bookshelfng-cleanup"
   install -Dm755 "${srcdir}/bookshelfng-rollback" "${pkgdir}/usr/lib/chaptarrng/handoff/bookshelfng-rollback"
+  install -Dm755 "${srcdir}/bookshelfng-journal" "${pkgdir}/usr/lib/chaptarrng/handoff/bookshelfng-journal"
   install -Dm644 "${pkgdir}/usr/lib/chaptarrng/bin/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
   ln -s ../lib/chaptarrng/bin/Chaptarr "${pkgdir}/usr/bin/bookshelfng"
   chmod -R u=rwX,go=rX "${pkgdir}/usr/lib/chaptarrng"

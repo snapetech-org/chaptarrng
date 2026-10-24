@@ -21,6 +21,7 @@ Source7:        bookshelfng-begin
 Source8:        bookshelfng-cleanup
 Source9:        bookshelfng-rollback
 Source10:       bookshelfng-prepare
+Source11:       bookshelfng-journal
 BuildArch:      x86_64
 Requires:       glibc
 Requires:       libgcc
@@ -64,6 +65,7 @@ install -m 0755 %{SOURCE7} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-b
 install -m 0755 %{SOURCE8} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-cleanup
 install -m 0755 %{SOURCE9} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-rollback
 install -m 0755 %{SOURCE10} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-prepare
+install -m 0755 %{SOURCE11} %{buildroot}/usr/lib/chaptarrng/handoff/bookshelfng-journal
 install -m 0644 LICENSE %{buildroot}%{_licensedir}/bookshelfng/LICENSE
 ln -s ../lib/chaptarrng/bin/Chaptarr %{buildroot}%{_bindir}/bookshelfng
 chmod -R u=rwX,go=rX %{buildroot}/usr/lib/chaptarrng
