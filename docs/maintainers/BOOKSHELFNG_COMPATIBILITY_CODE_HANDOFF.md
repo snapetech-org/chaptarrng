@@ -382,3 +382,7 @@ Legacy package transitions retain automatic migration for unattended upgrades an
 ### Experience-control accessibility acceptance
 
 Verify the header mode control is visible at desktop and narrow widths, has a useful screen-reader label for both current mode and next action, responds to keyboard activation, and retains a visible focus indicator. Verify the navigation toggle has a descriptive accessible name and the current destination is exposed with `aria-current="page"`. Verify Simple and Advanced remain selectable and persisted from Settings → UI.
+
+Also verify that the Simple and Advanced choices are individually labelled radio cards with readable descriptions and visible selected/focus states. Use the skip link and confirm focus reaches the main landmark. After route navigation, focus should move to the main landmark unless a modal owns focus. With reduced motion enabled, the route transition should not fade or hide content.
+
+On a narrow viewport, verify the navigation toggle announces its expanded state and controls the named primary-navigation landmark. The closed sidebar must be absent from keyboard navigation; Escape should close an open sidebar and return focus to its toggle. Resize across the mobile breakpoint and repeat outside-click and touch navigation checks, including a swipe that begins at the leftmost screen edge.
