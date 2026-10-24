@@ -275,6 +275,7 @@ class PageSidebar extends Component {
     this._touchStartX = null;
     this._touchStartY = null;
     this._sidebarRef = null;
+    this._smallScreenListenersBound = false;
 
     this.state = {
       top: dimensions.headerHeight,
@@ -286,15 +287,7 @@ class PageSidebar extends Component {
 
   componentDidMount() {
     this._setInertAttribute();
-
-    if (this.props.isSmallScreen) {
-      window.addEventListener('click', this.onWindowClick, { capture: true });
-      window.addEventListener('scroll', this.onWindowScroll);
-      window.addEventListener('touchstart', this.onTouchStart);
-      window.addEventListener('touchmove', this.onTouchMove);
-      window.addEventListener('touchend', this.onTouchEnd);
-      window.addEventListener('touchcancel', this.onTouchCancel);
-    }
+    this._syncSmallScreenListeners();
   }
 
   componentDidUpdate(prevProps) {
@@ -311,19 +304,14 @@ class PageSidebar extends Component {
     }
 
     this._setInertAttribute();
+
+    if (prevProps.isSmallScreen !== this.props.isSmallScreen) {
+      this._syncSmallScreenListeners();
+    }
   }
 
   componentWillUnmount() {
-    if (this.props.isSmallScreen) {
-      window.removeEventListener('click', this.onWindowClick, {
-        capture: true
-      });
-      window.removeEventListener('scroll', this.onWindowScroll);
-      window.removeEventListener('touchstart', this.onTouchStart);
-      window.removeEventListener('touchmove', this.onTouchMove);
-      window.removeEventListener('touchend', this.onTouchEnd);
-      window.removeEventListener('touchcancel', this.onTouchCancel);
-    }
+    this._removeSmallScreenListeners();
   }
 
   //
@@ -342,6 +330,42 @@ class PageSidebar extends Component {
       this._sidebarRef.setAttribute('inert', '');
     } else {
       this._sidebarRef.removeAttribute('inert');
+    }
+  };
+
+  _addSmallScreenListeners = () => {
+    if (this._smallScreenListenersBound) {
+      return;
+    }
+
+    window.addEventListener('click', this.onWindowClick, { capture: true });
+    window.addEventListener('scroll', this.onWindowScroll);
+    window.addEventListener('touchstart', this.onTouchStart);
+    window.addEventListener('touchmove', this.onTouchMove);
+    window.addEventListener('touchend', this.onTouchEnd);
+    window.addEventListener('touchcancel', this.onTouchCancel);
+    this._smallScreenListenersBound = true;
+  };
+
+  _removeSmallScreenListeners = () => {
+    if (!this._smallScreenListenersBound) {
+      return;
+    }
+
+    window.removeEventListener('click', this.onWindowClick, { capture: true });
+    window.removeEventListener('scroll', this.onWindowScroll);
+    window.removeEventListener('touchstart', this.onTouchStart);
+    window.removeEventListener('touchmove', this.onTouchMove);
+    window.removeEventListener('touchend', this.onTouchEnd);
+    window.removeEventListener('touchcancel', this.onTouchCancel);
+    this._smallScreenListenersBound = false;
+  };
+
+  _syncSmallScreenListeners = () => {
+    if (this.props.isSmallScreen) {
+      this._addSmallScreenListeners();
+    } else {
+      this._removeSmallScreenListeners();
     }
   };
 
@@ -368,7 +392,7 @@ class PageSidebar extends Component {
 
     if (
       !sidebar.contains(event.target) &&
-      !toggleButton.contains(event.target) &&
+      (!toggleButton || !toggleButton.contains(event.target)) &&
       this.props.isSidebarVisible
     ) {
       event.preventDefault();
@@ -383,13 +407,14 @@ class PageSidebar extends Component {
 
   onTouchStart = (event) => {
     const touches = event.touches;
-    const touchStartX = touches[0].pageX;
-    const touchStartY = touches[0].pageY;
-    const isSidebarVisible = this.props.isSidebarVisible;
 
     if (touches.length !== 1) {
       return;
     }
+
+    const touchStartX = touches[0].pageX;
+    const touchStartY = touches[0].pageY;
+    const isSidebarVisible = this.props.isSidebarVisible;
 
     if (isSidebarVisible && (touchStartX > SIDEBAR_WIDTH || touchStartX < SIDEBAR_WIDTH - 30)) {
       return;
@@ -403,13 +428,14 @@ class PageSidebar extends Component {
 
   onTouchMove = (event) => {
     const touches = event.touches;
+
+    if (touches.length !== 1 || this._touchStartX == null) {
+      return;
+    }
+
     const currentTouchX = touches[0].pageX;
     // const currentTouchY = touches[0].pageY;
     // const isSidebarVisible = this.props.isSidebarVisible;
-
-    if (!this._touchStartX) {
-      return;
-    }
 
     // This is a bit funky when trying to close and you scroll
     // vertical too much by mistake, commenting out for now.
@@ -440,11 +466,12 @@ class PageSidebar extends Component {
 
   onTouchEnd = (event) => {
     const touches = event.changedTouches;
-    const currentTouch = touches[0].pageX;
 
-    if (!this._touchStartX) {
+    if (!touches.length || this._touchStartX == null) {
       return;
     }
+
+    const currentTouch = touches[0].pageX;
 
     if (currentTouch > this._touchStartX && currentTouch > 50) {
       this._setSidebarTransform(true, 'none');
