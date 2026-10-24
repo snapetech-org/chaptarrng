@@ -1,5 +1,32 @@
 # BookshelfNG retirement status
 
+**BookshelfNG edition and unmapped-file migration parity (2026-10-24):** The
+converter now classifies editions using ebook, audiobook, print, narrator, and
+recognized linked-file evidence. It creates format-specific edition rows when
+needed, keeps provider identity on one row, and routes files, sidecars, and
+history to their matching format. Ambiguous editions retain the conservative
+review/map workflow. A recognized extension now also classifies files whose
+source `EditionId` is zero or missing, while leaving their book and edition
+relationships unassigned; sidecars and history with an existing source-book
+link follow that format's migrated book row. Unknown extensions remain
+unclassified, and stale choices for currently unambiguous books are ignored.
+
+The Release solution built with 0 warnings and 0 errors, and the Core suite
+passed 4,808 tests with 25 skips and no failures. A local Docker candidate built
+successfully; its frontend emitted the existing 22 CSS-order warnings and its
+source-link metadata warnings reflect the Docker build context without `.git`.
+The populated SeerrNG smoke read 13,083 ebook and 6,561 audiobook records,
+checked format-specific statistics and file extensions, and verified restricted
+key boundaries. Its admin-key unmapped queries returned 6,150 ebook and 20
+audiobook files, all still without a book link. Offline reconciliation found
+27,532 source and target book files with matching IDs, paths, sizes, qualities,
+and parts; all 1,910 history IDs were retained; both databases passed SQLite
+integrity checks; and the target had zero foreign-key errors or recognized
+extension misroutes. The private source snapshot hash remained unchanged. This
+closes the reviewed local converter and API-classification code gap, not
+representative media/playback, live-provider, installed rollback, hosted
+exact-head, platform/channel handoff, or production cutover acceptance.
+
 **Provider-mode image alias correction (2026-10-24):** The gated compatibility
 publisher now maps `latest`, `main`, `master`, and `hardcover` to the pinned
 Hardcover compatibility image, and maps `softcover` to the pinned Goodreads

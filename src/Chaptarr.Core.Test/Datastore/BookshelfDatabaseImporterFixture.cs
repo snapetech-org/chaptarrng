@@ -1615,13 +1615,165 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_route_a_print_edition_with_an_ebook_file_to_the_ebook_catalog()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    UPDATE Editions SET IsEbook = 0, Format = 'Paperback', Narrator = NULL WHERE Id = 40;
+                    UPDATE BookFiles SET Path = '/library/Fixture Author/print-edition.epub' WHERE Id = 50;";
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE MediaType = 0;"), Is.Zero,
+                    "IsEbook=false alone must not turn a print edition with an ebook file into an audiobook");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 30 AND MediaType = 1;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND IsEbook = 0 AND MediaType = 1 AND ReadingFormatId = 1;"), Is.EqualTo(1),
+                    "a paperback edition stays a physical edition in the ebook catalog");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id IN (50, 51) AND MediaType = 'ebook';"), Is.EqualTo(2));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 50 AND EditionId = 40;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_preserve_an_unclassified_edition_in_both_catalogs_by_default()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    UPDATE Editions SET IsEbook = 0, Format = NULL, Narrator = NULL WHERE Id = 40;
+                    UPDATE BookFiles SET Path = '/library/Fixture Author/book.unknown' WHERE Id = 50;";
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            var review = File.ReadAllText(_sourcePath + ".bookshelf-media-review.json");
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id IN (30, 31) AND (MediaType = 0 AND AudiobookMonitored = 1 OR MediaType = 1 AND EbookMonitored = 1);"), Is.EqualTo(2));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND MediaType = 0 AND ForeignEditionId = 'hc:audio-40';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id > 41 AND BookId = 31 AND MediaType = 1 AND ForeignEditionId IS NULL AND Links = '[]';"), Is.EqualTo(1));
+                Assert.That(review, Does.Contain("no format metadata or recognized linked file"));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_apply_an_explicit_media_map_to_an_unclassified_edition()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    UPDATE Editions SET IsEbook = 0, Format = NULL, Narrator = NULL, Monitored = 0 WHERE Id = 40;
+                    UPDATE BookFiles SET Path = '/library/Fixture Author/book.unknown' WHERE Id = 50;";
+                command.ExecuteNonQuery();
+            }
+
+            File.WriteAllText(_sourcePath + ".bookshelf-media-map.json", """
+                {
+                  "version": 1,
+                  "books": [
+                    { "sourceBookId": 30, "mediaType": "audiobook" }
+                  ]
+                }
+                """);
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND MediaType = 0 AND IsEbook = 0;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id > 41 AND BookId = 31;"), Is.Zero,
+                    "an explicit audiobook choice must not create an ebook clone for an unknown edition");
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT MediaType FROM BookFiles WHERE Id = 50;"), Is.EqualTo("audiobook"));
+                Assert.That(File.Exists(_sourcePath + ".bookshelf-media-review.json"), Is.False);
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_clone_an_explicit_edition_when_its_files_cover_both_media_formats()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    UPDATE Editions SET Isbn13 = '9780000000002', Asin = 'B000000002' WHERE Id = 40;
+                    INSERT INTO BookFiles (Id, EditionId, CalibreId, Quality, Size, DateAdded, MediaInfo, Modified, Path, Part)
+                    VALUES (52, 40, 0, '{}', 150, '2026-01-04', '{}', '2026-01-04', '/library/Fixture Author/ebook-copy.epub', 0);
+                    INSERT INTO ExtraFiles (Id, AuthorId, BookId, BookFileId, RelativePath, Extension, Added, LastUpdated)
+                    VALUES (62, 20, 30, 52, 'ebook-cover.jpg', 'jpg', '2026-01-04', '2026-01-04');
+                    INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
+                    VALUES (94, 'ebook-copy.epub', '2026-01-04', '{}', '{""FileId"":""52"",""ImportedPath"":""/library/Fixture Author/ebook-copy.epub""}', 3, 'download-94', 20, 30);
+                    INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
+                    VALUES (95, 'untracked.epub', '2026-01-05', '{}', '{}', 3, 'download-95', 20, 30);
+                    INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
+                    VALUES (96, 'ebook-copy.epub', '2026-01-05', '{}', '{""FileId"":""52""}', 3, 'download-96', 20, 0);";
+                command.ExecuteNonQuery();
+            }
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND BookId = 30 AND IsEbook = 0 AND MediaType = 0 AND ReadingFormatId = 2 AND NarratorNames LIKE '%A Narrator%';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id = 40 AND Isbn13 = '9780000000002' AND Asin = 'B000000002';"), Is.EqualTo(1),
+                    "the original edition retains its provider and catalog identifiers");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Editions WHERE Id > 41 AND BookId = 31 AND IsEbook = 1 AND MediaType = 1 AND ReadingFormatId = 3 AND ForeignEditionId IS NULL AND Isbn13 IS NULL AND Asin IS NULL AND NarratorNames = '[]';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Links FROM Editions WHERE Id > 41 AND BookId = 31;"), Is.EqualTo("[]"),
+                    "a synthetic media edition must not duplicate provider links");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookshelfLegacyIdentityMap WHERE Source = 'BookshelfNG' AND EntityType = 'Edition' AND SourceId = 40 AND ((TargetId = 40 AND MediaType = 0) OR (TargetId > 41 AND MediaType = 1));"), Is.EqualTo(2));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 50 AND EditionId = 40 AND MediaType = 'audiobook';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 52 AND EditionId > 41 AND MediaType = 'ebook';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM ExtraFiles WHERE Id = 62 AND BookId = 31 AND BookFileId = 52;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 94 AND BookId = 31 AND EditionId > 41 AND Data LIKE '%\"FileId\":\"52\"%';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 95 AND BookId = 31 AND EditionId IS NULL;"), Is.EqualTo(1),
+                    "an extension-bearing history event without a linked file should still follow its media-specific book");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND BookId = 31 AND EditionId > 41;"), Is.EqualTo(1),
+                    "a file-specific event with no source BookId should follow the linked file");
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+        }
+
+        [Test]
         public void should_refuse_multiple_monitored_editions_of_the_same_media_format()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))
             {
                 source.Open();
                 using var command = source.CreateCommand();
-                command.CommandText = "UPDATE Editions SET IsEbook = 0, Monitored = 1;";
+                command.CommandText = @"
+                    UPDATE Editions SET IsEbook = 0, Monitored = 1;
+                    UPDATE BookFiles SET Path = '/library/Fixture Author/second.m4b' WHERE Id = 51;";
                 command.ExecuteNonQuery();
             }
 
@@ -1813,7 +1965,7 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        public void should_preserve_unmapped_source_files_without_inventing_media_or_edition_relationships()
+        public void should_preserve_unmapped_source_files_without_inventing_book_or_edition_relationships()
         {
             using (var source = new SqliteConnection(_sourceConnectionString))
             {
@@ -1821,6 +1973,8 @@ namespace Chaptarr.Core.Test.Datastore
                 using var command = source.CreateCommand();
                 command.CommandText = @"
                     UPDATE BookFiles SET EditionId = 0 WHERE Id = 50;
+                    INSERT INTO BookFiles (Id, EditionId, CalibreId, Quality, Size, DateAdded, MediaInfo, Modified, Path, Part)
+                    VALUES (53, 0, 0, '{}', 150, '2026-01-05', '{}', '2026-01-05', '/library/Fixture Author/unknown.bin', 0);
                     INSERT INTO ExtraFiles (Id, AuthorId, BookId, BookFileId, RelativePath, Extension, Added, LastUpdated)
                     VALUES (62, 20, 30, 50, 'linked-cover.jpg', 'jpg', '2026-01-05', '2026-01-05');
                     INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
@@ -1843,7 +1997,9 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 50 AND EditionId = 0 AND MediaType = '' AND UnmappedReason LIKE '%not inferred%';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 50 AND EditionId = 0 AND MediaType = 'audiobook' AND UnmappedReason LIKE '%recognized path extension%' AND UnmappedReason LIKE '%relationships remain unassigned%';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 53 AND EditionId = 0 AND MediaType = '' AND UnmappedReason LIKE '%not inferred%';"), Is.EqualTo(1),
+                    "an unrecognized extension must not be used to classify an orphan file");
                 Assert.That(QueryScalar<string>(_sourcePath, "SELECT Path FROM BookFiles WHERE Id = 50;"), Is.EqualTo("/library/Fixture Author/book.m4b"));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM ExtraFiles WHERE Id = 62 AND BookId = 30 AND BookFileId = 50;"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM MetadataFiles WHERE Id = 63 AND BookId = 30 AND BookFileId = 50;"), Is.EqualTo(1));
@@ -1868,13 +2024,13 @@ namespace Chaptarr.Core.Test.Datastore
                 using var command = source.CreateCommand();
                 command.CommandText = @"
                     INSERT INTO BookFiles (Id, EditionId, CalibreId, Quality, Size, DateAdded, MediaInfo, Modified, Path, Part)
-                    VALUES (52, 9999, 0, '{}', 300, '2026-01-04', '{}', '2026-01-04', '/library/Fixture Author/unmapped.m4b', 0);
+                    VALUES (52, 9999, 0, '{}', 300, '2026-01-04', '{}', '2026-01-04', '/library/Fixture Author/unmapped.epub', 0);
                     INSERT INTO ExtraFiles (Id, AuthorId, BookId, BookFileId, RelativePath, Extension, Added, LastUpdated)
                     VALUES (64, 20, 30, 52, 'unmapped-cover.jpg', 'jpg', '2026-01-06', '2026-01-06');
                     INSERT INTO MetadataFiles (Id, AuthorId, Consumer, Type, RelativePath, LastUpdated, BookId, BookFileId, Extension)
                     VALUES (65, 20, 'AudioBookShelf', 0, 'unmapped.opf', '2026-01-06', 30, 52, 'opf');
                     INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
-                    VALUES (95, 'unmapped.m4b', '2026-01-06', '{}', '{""FileId"":""52"",""ImportedPath"":""/library/Fixture Author/unmapped.m4b""}', 3, 'download-95', 20, 30);";
+                    VALUES (95, 'unmapped.epub', '2026-01-06', '{}', '{""FileId"":""52"",""ImportedPath"":""/library/Fixture Author/unmapped.epub""}', 3, 'download-95', 20, 30);";
                 command.ExecuteNonQuery();
             }
 
@@ -1886,10 +2042,10 @@ namespace Chaptarr.Core.Test.Datastore
 
             Assert.Multiple(() =>
             {
-                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 52 AND EditionId = 0 AND MediaType = '' AND UnmappedReason LIKE '%missing edition%' AND Path = '/library/Fixture Author/unmapped.m4b';"), Is.EqualTo(1));
-                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM ExtraFiles WHERE Id = 64 AND BookId = 30 AND BookFileId = 52;"), Is.EqualTo(1));
-                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM MetadataFiles WHERE Id = 65 AND BookId = 30 AND BookFileId = 52;"), Is.EqualTo(1));
-                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 95 AND BookId = 30 AND EditionId IS NULL AND Data LIKE '%\"FileId\":\"52\"%';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM BookFiles WHERE Id = 52 AND EditionId = 0 AND MediaType = 'ebook' AND UnmappedReason LIKE '%missing edition%' AND UnmappedReason LIKE '%relationships remain unassigned%' AND Path = '/library/Fixture Author/unmapped.epub';"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM ExtraFiles WHERE Id = 64 AND BookId = 31 AND BookFileId = 52;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM MetadataFiles WHERE Id = 65 AND BookId = 31 AND BookFileId = 52;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 95 AND BookId = 31 AND EditionId IS NULL AND Data LIKE '%\"FileId\":\"52\"%';"), Is.EqualTo(1));
                 Assert.That(result.ImportReport.Tables["BookFiles"].TargetMapping, Does.Contain("missing edition 1"));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
@@ -1956,13 +2112,52 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        public void should_refuse_a_stale_media_map_when_the_current_source_has_no_ambiguous_books()
+        public void should_ignore_a_stale_media_choice_when_the_book_is_now_classified()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    UPDATE Editions SET Monitored = 0;
+                    UPDATE Editions SET Format = 'Paperback', Narrator = NULL WHERE Id = 40;
+                    UPDATE BookFiles SET Path = '/library/Fixture Author/ebook-only.epub' WHERE Id = 50;";
+                command.ExecuteNonQuery();
+            }
+
+            File.WriteAllText(_sourcePath + ".bookshelf-media-map.json", """
+                {
+                  "version": 1,
+                  "books": [
+                    { "sourceBookId": 30, "mediaType": "both" }
+                  ]
+                }
+                """);
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE MediaType = 0;"), Is.Zero);
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books WHERE Id = 30 AND MediaType = 1 AND EbookMonitored = 1;"), Is.EqualTo(1));
+                Assert.That(File.Exists(_sourcePath + ".bookshelf-media-map.json"), Is.True);
+                Assert.That(File.Exists(_sourcePath + ".bookshelf-media-review.json"), Is.False);
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+        }
+
+        [Test]
+        public void should_refuse_a_media_map_id_missing_from_the_current_source()
         {
             File.WriteAllText(_sourcePath + ".bookshelf-media-map.json", """
                 {
                   "version": 1,
                   "books": [
-                    { "sourceBookId": 30, "mediaType": "ebook" }
+                    { "sourceBookId": 9999, "mediaType": "ebook" }
                   ]
                 }
                 """);
@@ -1973,14 +2168,11 @@ namespace Chaptarr.Core.Test.Datastore
                     _sourceConnectionString,
                     new MigrationContext(MigrationType.Main),
                     DatabaseType.SQLite));
-            var review = File.ReadAllText(_sourcePath + ".bookshelf-media-review.json");
 
             Assert.Multiple(() =>
             {
-                Assert.That(exception.Message, Does.Contain("not ambiguous in the current source"));
+                Assert.That(exception.Message, Does.Contain("do not exist in the current source"));
                 Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(before));
-                Assert.That(review, Does.Contain("\"books\""));
-                Assert.That(review, Does.Not.Contain("\"sourceBookId\": 30"));
                 Assert.That(Directory.GetFiles(_directory, "*.bookshelfng-backup-*.db"), Is.Empty);
             });
         }

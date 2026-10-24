@@ -17,6 +17,7 @@ using NzbDrone.Core.ImportLists;
 using NzbDrone.Core.ImportLists.Goodreads;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.MetadataSource.BookInfo;
+using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Notifications;
 
 namespace NzbDrone.Core.Datastore
@@ -152,7 +153,9 @@ namespace NzbDrone.Core.Datastore
             if (transaction == null) throw new ArgumentNullException(nameof(transaction));
 
             ValidateSourceSchema(source);
-            var mediaChoices = BookshelfBookMediaMapping.Load(source, sourceDatabasePath);
+            var mediaInference = BookshelfMediaTypeInference.Read(source);
+            var mediaChoices = BookshelfBookMediaMapping.Load(source, sourceDatabasePath, mediaInference);
+            mediaInference.ApplyMediaChoices(mediaChoices);
             DeferForeignKeys(target, transaction);
             ClearTarget(target, transaction);
 
@@ -161,9 +164,8 @@ namespace NzbDrone.Core.Datastore
             var metadataProfiles = ImportMetadataProfiles(source, target, transaction, report);
             var rootFolders = ImportRootFolders(source, target, transaction, qualityProfiles, metadataProfiles, report);
             var authors = ImportAuthors(source, target, transaction, qualityProfiles, metadataProfiles, rootFolders, report);
-            var bookMediaTypes = ReadBookMediaTypes(source);
-            var books = ImportBooks(source, target, transaction, authors, bookMediaTypes, mediaChoices, report);
-            var editions = ImportEditions(source, target, transaction, books, report);
+            var books = ImportBooks(source, target, transaction, authors, mediaInference.Books, mediaChoices, report);
+            var editions = ImportEditions(source, target, transaction, books, mediaInference.Editions, report);
             var files = ImportBookFiles(source, target, transaction, editions, report);
 
             ImportExtraFiles(source, target, transaction, books, files, report);
@@ -535,49 +537,19 @@ namespace NzbDrone.Core.Datastore
             SetIfPresent(values, "Genres", "[]");
         }
 
-        private static Dictionary<int, BookMediaState> ReadBookMediaTypes(DbConnection source)
-        {
-            var result = new Dictionary<int, BookMediaState>();
-            foreach (var row in ReadRows(source, "Editions"))
-            {
-                var bookId = GetInt(row, "BookId");
-                var isEbook = GetNullableBool(row, "IsEbook").GetValueOrDefault();
-                var mediaType = isEbook ? 1 : 0;
-                if (!result.TryGetValue(bookId, out var state))
-                {
-                    state = new BookMediaState();
-                    result[bookId] = state;
-                }
-
-                state.MediaTypes.Add(mediaType);
-                if (GetBoolean(row, "Monitored"))
-                {
-                    if (!state.MonitoredEditionIdsByMediaType.TryAdd(
-                            mediaType,
-                            NormalizeSourceId(GetString(row, "ForeignEditionId"), "edition")))
-                    {
-                        var format = mediaType == 1 ? "ebook" : "audiobook";
-                        throw new InvalidDataException($"BookshelfNG book {bookId} has more than one monitored {format} edition; conversion stopped before promotion.");
-                    }
-                }
-            }
-
-            return result;
-        }
-
         private static Dictionary<int, BookMap> ImportBooks(
             DbConnection source,
             DbConnection target,
             DbTransaction transaction,
             IReadOnlyDictionary<int, AuthorMap> authors,
-            IReadOnlyDictionary<int, BookMediaState> bookMediaTypes,
+            IReadOnlyDictionary<int, BookshelfBookMediaState> bookMediaTypes,
             IReadOnlyDictionary<int, BookshelfMediaChoice> mediaChoices,
             BookshelfDatabaseImportReport report)
         {
             var sourceCount = CountRows(source, "Books");
             var targetColumns = GetColumns(target, "Books");
             var result = new Dictionary<int, BookMap>();
-            var nextId = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(\"Id\"), 0) + 1 FROM \"Books\";"), CultureInfo.InvariantCulture);
+            var nextId = Convert.ToInt64(Scalar(source, "SELECT COALESCE(MAX(\"Id\"), 0) + 1 FROM \"Books\";"), CultureInfo.InvariantCulture);
 
             foreach (var row in ReadRows(source, "Books"))
             {
@@ -591,7 +563,7 @@ namespace NzbDrone.Core.Datastore
                 }
 
                 bookMediaTypes.TryGetValue(sourceId, out var mediaState);
-                mediaState ??= new BookMediaState();
+                mediaState ??= new BookshelfBookMediaState();
                 var hasAudio = mediaState.MediaTypes.Contains(0);
                 var hasEbook = mediaState.MediaTypes.Contains(1);
                 if (!hasAudio && !hasEbook)
@@ -655,7 +627,22 @@ namespace NzbDrone.Core.Datastore
 
                 var mapping = new Dictionary<int, int>();
                 if (hasAudio) mapping[0] = sourceId;
-                if (hasEbook) mapping[1] = hasAudio ? nextId++ : sourceId;
+                if (hasEbook)
+                {
+                    if (hasAudio)
+                    {
+                        if (nextId > int.MaxValue)
+                        {
+                            throw new InvalidDataException("BookshelfNG book IDs leave no room for a synthetic book row; conversion stopped before promotion.");
+                        }
+
+                        mapping[1] = checked((int)nextId++);
+                    }
+                    else
+                    {
+                        mapping[1] = sourceId;
+                    }
+                }
 
                 var foreignBookId = GetString(row, "ForeignBookId");
                 var canonicalBookId = NormalizeSourceId(foreignBookId, "book");
@@ -674,7 +661,7 @@ namespace NzbDrone.Core.Datastore
                     values["AudiobookMonitored"] = mediaType == 0 && mediaMonitored;
                     values["EbookMonitored"] = mediaType == 1 && mediaMonitored;
                     values["ForeignEditionId"] = mediaState.MonitoredEditionIdsByMediaType.TryGetValue(mediaType, out var monitoredEditionId)
-                        ? monitoredEditionId
+                        ? NormalizeSourceId(monitoredEditionId, "edition")
                         : null;
                     values["BaseBookId"] = canonicalBookId;
                     values["AnyEditionOk"] = GetBoolean(row, "AnyEditionOk");
@@ -689,8 +676,8 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Books", sourceCount, 0, sourceCount, 0, 0,
-                $"BookshelfNG books are split by the source editions' media types and linked to the preserved managed author ID; " +
-                $"{mediaChoices.Count(x => x.Value == BookshelfMediaChoice.Both)} ambiguous books are monitored in both catalogs and " +
+                $"BookshelfNG books are split by inferred source edition formats and recognized file types, then linked to the preserved managed author ID; " +
+                $"{mediaChoices.Count(x => x.Value == BookshelfMediaChoice.Both)} ambiguous books retain both catalog records with monitoring preserved from the source and " +
                 $"{mediaChoices.Count(x => x.Value == BookshelfMediaChoice.BothUnmonitored)} are kept in both catalogs without monitoring per the fallback or explicit media map; " +
                 $"{NumericProviderDisposition()}");
             return result;
@@ -701,11 +688,16 @@ namespace NzbDrone.Core.Datastore
             DbConnection target,
             DbTransaction transaction,
             IReadOnlyDictionary<int, BookMap> books,
+            IReadOnlyDictionary<int, BookshelfEditionMediaState> inferredEditions,
             BookshelfDatabaseImportReport report)
         {
             var sourceCount = CountRows(source, "Editions");
             var targetColumns = GetColumns(target, "Editions");
             var result = new Dictionary<int, EditionMap>();
+            var additionalMediaRows = 0;
+            var nextSyntheticEditionId = Convert.ToInt64(
+                Scalar(source, "SELECT COALESCE(MAX(\"Id\"), 0) + 1 FROM \"Editions\";"),
+                CultureInfo.InvariantCulture);
 
             foreach (var row in ReadRows(source, "Editions"))
             {
@@ -716,35 +708,82 @@ namespace NzbDrone.Core.Datastore
                     throw new InvalidDataException($"BookshelfNG edition {GetInt(row, "Id")} references missing book {sourceBookId}.");
                 }
 
-                var ebook = GetNullableBool(row, "IsEbook").GetValueOrDefault();
-                var mediaType = ebook ? 1 : 0;
-                if (!book.TargetIds.TryGetValue(mediaType, out var targetBookId))
+                var sourceEditionId = GetInt(row, "Id");
+                if (!inferredEditions.TryGetValue(sourceEditionId, out var mediaState) || mediaState.MediaTypes.Count == 0)
                 {
-                    throw new InvalidDataException($"BookshelfNG edition {GetInt(row, "Id")} has a media type with no target book row.");
+                    throw new InvalidDataException($"BookshelfNG edition {sourceEditionId} has no resolved media type.");
                 }
 
+                var primaryMediaType = mediaState.PreferredMediaType ?? mediaState.MediaTypes.Min();
                 var foreignEditionId = NormalizeSourceId(GetString(row, "ForeignEditionId"), "edition");
-                var sourceEditionId = GetInt(row, "Id");
-                var values = Intersect(row, targetColumns);
-                values["Id"] = sourceEditionId;
-                values["BookId"] = targetBookId;
-                values["IsEbook"] = ebook;
-                values["MediaType"] = mediaType;
-                values["ForeignEditionId"] = foreignEditionId;
-                SetProviderColumns(values, "Edition", foreignEditionId);
-                SetIfPresent(values, "Images", PreserveJsonArrayOrEmpty(GetValue(row, "Images")));
-                SetIfPresent(values, "Links", PreserveJsonArrayOrEmpty(GetValue(row, "Links")));
                 var narrator = GetString(row, "Narrator")?.Trim();
-                SetIfPresent(values, "NarratorNames", JsonConvert.SerializeObject(
-                    string.IsNullOrWhiteSpace(narrator) ? Array.Empty<string>() : new[] { narrator }));
-                SetIfPresent(values, "ProviderUrls", "{}");
-                InsertRow(target, transaction, "Editions", targetColumns, values);
-                RecordBookshelfLegacyIdentity(target, transaction, "Edition", sourceEditionId, sourceEditionId, mediaType);
-                result[sourceEditionId] = new EditionMap(sourceEditionId, sourceBookId, mediaType, targetBookId, foreignEditionId);
+                var targetByMediaType = new Dictionary<int, EditionTargetMap>();
+
+                foreach (var mediaType in mediaState.MediaTypes.OrderBy(x => x))
+                {
+                    if (!book.TargetIds.TryGetValue(mediaType, out var targetBookId))
+                    {
+                        throw new InvalidDataException($"BookshelfNG edition {sourceEditionId} has a media type with no target book row.");
+                    }
+
+                    var isPrimary = mediaType == primaryMediaType;
+                    var targetEditionId = sourceEditionId;
+                    if (!isPrimary)
+                    {
+                        if (nextSyntheticEditionId > int.MaxValue)
+                        {
+                            throw new InvalidDataException("BookshelfNG edition IDs leave no room for a synthetic edition row; conversion stopped before promotion.");
+                        }
+
+                        targetEditionId = checked((int)nextSyntheticEditionId++);
+                        additionalMediaRows++;
+                    }
+
+                    var readingFormatId = mediaState.ReadingFormatIdsByMediaType.TryGetValue(mediaType, out var inferredReadingFormatId)
+                        ? inferredReadingFormatId
+                        : mediaType == 1 ? 3 : 2;
+                    var targetForeignEditionId = isPrimary ? foreignEditionId : null;
+                    var values = Intersect(row, targetColumns);
+                    values["Id"] = targetEditionId;
+                    values["BookId"] = targetBookId;
+                    values["IsEbook"] = readingFormatId == 3;
+                    values["MediaType"] = mediaType;
+                    values["ForeignEditionId"] = targetForeignEditionId;
+                    SetIfPresent(values, "ReadingFormatId", readingFormatId);
+                    SetProviderColumns(values, "Edition", targetForeignEditionId);
+                    SetIfPresent(values, "Narrator", mediaType == 0 ? narrator : null);
+                    if (!isPrimary)
+                    {
+                        SetIfPresent(values, "Format", mediaType == 1 ? "Ebook" : "Audiobook");
+                        SetIfPresent(values, "Isbn13", null);
+                        SetIfPresent(values, "Asin", null);
+                        SetIfPresent(values, "GoodreadsEditionId", null);
+                        SetIfPresent(values, "HardcoverEditionId", null);
+                        SetIfPresent(values, "OpenLibraryEditionId", null);
+                        SetIfPresent(values, "AudibleASIN", null);
+                        SetIfPresent(values, "GoogleBooksEditionId", null);
+                        SetIfPresent(values, "LibraryThingEditionId", null);
+                    }
+                    SetIfPresent(values, "Images", PreserveJsonArrayOrEmpty(GetValue(row, "Images")));
+                    SetIfPresent(values, "Links", isPrimary ? PreserveJsonArrayOrEmpty(GetValue(row, "Links")) : "[]");
+                    SetIfPresent(values, "NarratorNames", JsonConvert.SerializeObject(
+                        mediaType == 0 && !string.IsNullOrWhiteSpace(narrator) ? new[] { narrator } : Array.Empty<string>()));
+                    SetIfPresent(values, "ProviderUrls", "{}");
+                    InsertRow(target, transaction, "Editions", targetColumns, values);
+                    RecordBookshelfLegacyIdentity(target, transaction, "Edition", sourceEditionId, targetEditionId, mediaType);
+                    targetByMediaType.Add(mediaType, new EditionTargetMap(targetEditionId, targetBookId));
+                }
+
+                result[sourceEditionId] = new EditionMap(
+                    sourceEditionId,
+                    sourceBookId,
+                    primaryMediaType,
+                    foreignEditionId,
+                    targetByMediaType);
             }
 
             report.RecordTable("Editions", sourceCount, 0, sourceCount, 0, 0,
-                "edition rows and IDs are preserved and attached to the corresponding audiobook or ebook book row; " + NumericProviderDisposition());
+                $"source edition rows retain their IDs and provider identity; {additionalMediaRows} additional media-specific rows are created when linked files span formats or ambiguous editions are preserved in both catalogs, and formats are stored in ReadingFormatId; " + NumericProviderDisposition());
             return result;
         }
 
@@ -760,12 +799,16 @@ namespace NzbDrone.Core.Datastore
             var result = new Dictionary<int, BookFileMap>();
             var filesWithoutEditionId = 0;
             var filesWithMissingEdition = 0;
+            var filesRoutedByExtension = 0;
+            var unmappedFilesTypedByExtension = 0;
 
             foreach (var row in ReadRows(source, "BookFiles"))
             {
                 EnsureAllSourceValuesMapped(row, targetColumns, "BookFiles");
                 var sourceFileId = GetInt(row, "Id");
                 var sourceEditionId = GetInt(row, "EditionId");
+                var path = GetString(row, "Path");
+                var hasPathMediaType = BookshelfMediaTypeInference.TryGetMediaTypeFromPath(path, out var pathMediaType);
                 if (sourceEditionId == 0 || !editions.TryGetValue(sourceEditionId, out var edition))
                 {
                     if (sourceEditionId == 0)
@@ -784,48 +827,70 @@ namespace NzbDrone.Core.Datastore
                     orphanValues["Modified"] = orphanModified;
                     orphanValues["DateAdded"] = GetValue(row, "DateAdded") ?? orphanModified;
                     orphanValues["MediaInfo"] = GetValue(row, "MediaInfo") ?? "{}";
-                    SetIfPresent(orphanValues, "MediaType", string.Empty);
+                    SetIfPresent(orphanValues, "MediaType", hasPathMediaType ? pathMediaType == 1 ? "ebook" : "audiobook" : string.Empty);
                     SetIfPresent(orphanValues, "UnmappedReason", sourceEditionId == 0
-                        ? "Source file had no linked edition; its media type and book relationship were not inferred."
-                        : "Source file referenced a missing edition; its media type and book relationship were not inferred.");
+                        ? hasPathMediaType
+                            ? "Source file had no linked edition; its media type was inferred from its recognized path extension, but its book and edition relationships remain unassigned."
+                            : "Source file had no linked edition; its media type and book relationship were not inferred."
+                        : hasPathMediaType
+                            ? "Source file referenced a missing edition; its media type was inferred from its recognized path extension, but its book and edition relationships remain unassigned."
+                            : "Source file referenced a missing edition; its media type and book relationship were not inferred.");
                     SetIfPresent(orphanValues, "Part", GetValue(row, "Part") ?? 0);
                     SetIfPresent(orphanValues, "IndexerFlags", GetValue(row, "IndexerFlags") ?? 0);
                     InsertRow(target, transaction, "BookFiles", targetColumns, orphanValues);
-                    RecordBookshelfLegacyIdentity(target, transaction, "BookFile", sourceFileId, sourceFileId, null);
+                    RecordBookshelfLegacyIdentity(target, transaction, "BookFile", sourceFileId, sourceFileId, hasPathMediaType ? pathMediaType : null);
+                    if (hasPathMediaType)
+                    {
+                        unmappedFilesTypedByExtension++;
+                    }
+
                     result[sourceFileId] = new BookFileMap(
                         sourceFileId,
                         0,
-                        -1,
+                        hasPathMediaType ? pathMediaType : -1,
                         0,
                         0,
-                        GetString(row, "Path"));
+                        path);
                     continue;
                 }
 
                 var modified = GetValue(row, "Modified") ?? GetValue(row, "DateAdded") ?? DateTime.UnixEpoch;
                 var dateAdded = GetValue(row, "DateAdded") ?? modified;
+                var mediaType = hasPathMediaType
+                    ? pathMediaType
+                    : edition.PrimaryMediaType;
+                if (!edition.TargetsByMediaType.TryGetValue(mediaType, out var editionTarget))
+                {
+                    throw new InvalidDataException($"BookshelfNG book file {sourceFileId} has a media type with no matching target edition.");
+                }
+
+                if (hasPathMediaType)
+                {
+                    filesRoutedByExtension++;
+                }
+
                 var values = Intersect(row, targetColumns);
                 values["Id"] = sourceFileId;
-                values["EditionId"] = sourceEditionId;
+                values["EditionId"] = editionTarget.Id;
                 values["Modified"] = modified;
                 values["DateAdded"] = dateAdded;
                 values["MediaInfo"] = GetValue(row, "MediaInfo") ?? "{}";
-                values["MediaType"] = edition.MediaType == 1 ? "ebook" : "audiobook";
+                values["MediaType"] = mediaType == 1 ? "ebook" : "audiobook";
                 SetIfPresent(values, "Part", GetValue(row, "Part") ?? 0);
                 SetIfPresent(values, "IndexerFlags", GetValue(row, "IndexerFlags") ?? 0);
                 InsertRow(target, transaction, "BookFiles", targetColumns, values);
-                RecordBookshelfLegacyIdentity(target, transaction, "BookFile", sourceFileId, sourceFileId, edition.MediaType);
+                RecordBookshelfLegacyIdentity(target, transaction, "BookFile", sourceFileId, sourceFileId, mediaType);
                 result[sourceFileId] = new BookFileMap(
                     sourceFileId,
                     edition.SourceBookId,
-                    edition.MediaType,
-                    edition.TargetBookId,
-                    sourceEditionId,
-                    GetString(row, "Path"));
+                    mediaType,
+                    editionTarget.TargetBookId,
+                    editionTarget.Id,
+                    path);
             }
 
             report.RecordTable("BookFiles", sourceCount, 0, sourceCount, 0, 0,
-                $"book-file IDs and paths plus LastRemoteSearchTime are preserved when present; linked files retain their edition-derived media type; unmapped file counts by cause: EditionId=0 {filesWithoutEditionId}, missing edition {filesWithMissingEdition}");
+                $"book-file IDs and paths plus LastRemoteSearchTime are preserved when present; {filesRoutedByExtension} linked files and {unmappedFilesTypedByExtension} unlinked files are classified by recognized path extension while no book or edition relationship is inferred for unmapped rows; unmapped file counts by cause: EditionId=0 {filesWithoutEditionId}, missing edition {filesWithMissingEdition}");
             return result;
         }
 
@@ -860,6 +925,10 @@ namespace NzbDrone.Core.Datastore
                     if (file.TargetBookId > 0)
                     {
                         targetBookId = file.TargetBookId;
+                    }
+                    else if (file.MediaType >= 0 && book.TargetIds.TryGetValue(file.MediaType, out var mediaSpecificBookId))
+                    {
+                        targetBookId = mediaSpecificBookId;
                     }
                 }
 
@@ -920,7 +989,9 @@ namespace NzbDrone.Core.Datastore
                             throw new InvalidDataException($"BookshelfNG metadata file {GetInt(row, "Id")} references missing book {sourceBookId.Value}.");
                         }
 
-                        values["BookId"] = linkedBook.TargetIds.Values.OrderBy(x => x).First();
+                        values["BookId"] = file.MediaType >= 0 && linkedBook.TargetIds.TryGetValue(file.MediaType, out var mediaSpecificBookId)
+                            ? mediaSpecificBookId
+                            : linkedBook.TargetIds.Values.OrderBy(x => x).First();
                     }
                     else if (file.TargetBookId > 0)
                     {
@@ -1238,6 +1309,9 @@ namespace NzbDrone.Core.Datastore
                 var sourceBookId = GetNullableInt(row, "BookId");
                 var targetBookId = sourceBookId.GetValueOrDefault();
                 var historyFile = FindHistoryFile(row, files, out var ambiguousFileMatch);
+                int? historyMediaType = historyFile is { MediaType: >= 0 }
+                    ? historyFile.MediaType
+                    : FindHistoryMediaType(row);
                 if (ambiguousFileMatch)
                 {
                     ambiguousFileReferences++;
@@ -1264,12 +1338,23 @@ namespace NzbDrone.Core.Datastore
                         // original payload, but do not invent a file or edition link.
                         conflictingFileReferences++;
                         historyFile = null;
+                        historyMediaType = null;
                     }
 
                     if (historyFile?.TargetBookId > 0)
                     {
                         targetBookId = historyFile.TargetBookId;
                     }
+                    else if (historyMediaType.HasValue && book.TargetIds.TryGetValue(historyMediaType.Value, out var formatSpecificBookId))
+                    {
+                        targetBookId = formatSpecificBookId;
+                    }
+                }
+                else if (historyFile?.TargetBookId > 0)
+                {
+                    // Legacy history may omit BookId while still naming a source BookFile.
+                    // Follow that file so the event remains visible in its format-scoped history.
+                    targetBookId = historyFile.TargetBookId;
                 }
 
                 var values = Intersect(row, targetColumns);
@@ -1326,6 +1411,39 @@ namespace NzbDrone.Core.Datastore
             }
 
             return matches.SingleOrDefault();
+        }
+
+        private static int? FindHistoryMediaType(IReadOnlyDictionary<string, object> row)
+        {
+            var candidatePaths = new List<string> { GetString(row, "SourceTitle") };
+            var dataText = GetString(row, "Data");
+            if (!string.IsNullOrWhiteSpace(dataText))
+            {
+                try
+                {
+                    var data = JObject.Parse(dataText);
+                    candidatePaths.AddRange(new[]
+                    {
+                        data.GetValue("Path", StringComparison.OrdinalIgnoreCase)?.Value<string>(),
+                        data.GetValue("ImportedPath", StringComparison.OrdinalIgnoreCase)?.Value<string>(),
+                        data.GetValue("SourcePath", StringComparison.OrdinalIgnoreCase)?.Value<string>()
+                    });
+                }
+                catch (JsonException)
+                {
+                    // Preserve an opaque legacy payload and use the source title if it identifies a format.
+                }
+            }
+
+            foreach (var path in candidatePaths.Where(x => !string.IsNullOrWhiteSpace(x)))
+            {
+                if (BookshelfMediaTypeInference.TryGetMediaTypeFromPath(path, out var mediaType))
+                {
+                    return mediaType;
+                }
+            }
+
+            return null;
         }
 
         private static void ImportLists(
@@ -2857,13 +2975,14 @@ namespace NzbDrone.Core.Datastore
 
         private sealed record BookMap(int SourceId, Dictionary<int, int> TargetIds, string ProviderId, int AuthorId);
 
-        private sealed class BookMediaState
-        {
-            public HashSet<int> MediaTypes { get; } = new();
-            public Dictionary<int, string> MonitoredEditionIdsByMediaType { get; } = new();
-        }
+        private sealed record EditionMap(
+            int Id,
+            int SourceBookId,
+            int PrimaryMediaType,
+            string ProviderId,
+            Dictionary<int, EditionTargetMap> TargetsByMediaType);
 
-        private sealed record EditionMap(int Id, int SourceBookId, int MediaType, int TargetBookId, string ProviderId);
+        private sealed record EditionTargetMap(int Id, int TargetBookId);
 
         private sealed record BookFileMap(int Id, int SourceBookId, int MediaType, int TargetBookId, int TargetEditionId, string Path);
 

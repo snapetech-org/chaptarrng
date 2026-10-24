@@ -29,7 +29,15 @@ namespace NzbDrone.Core.Datastore
             DbConnection source,
             string sourceDatabasePath)
         {
-            var required = FindRequiredMappings(source);
+            return Load(source, sourceDatabasePath, BookshelfMediaTypeInference.Read(source));
+        }
+
+        internal static IReadOnlyDictionary<int, BookshelfMediaChoice> Load(
+            DbConnection source,
+            string sourceDatabasePath,
+            BookshelfMediaTypeInference mediaInference)
+        {
+            var required = FindRequiredMappings(source, mediaInference);
             var reviewPath = Path.GetFullPath(sourceDatabasePath) + ".bookshelf-media-review.json";
             var mapPath = Path.GetFullPath(sourceDatabasePath) + ".bookshelf-media-map.json";
             if (!File.Exists(mapPath))
@@ -88,12 +96,13 @@ namespace NzbDrone.Core.Datastore
             }
 
             var requiredIds = required.Select(x => x.SourceBookId).ToHashSet();
-            var unexpectedIds = choices.Keys.Except(requiredIds).OrderBy(x => x).ToArray();
+            var sourceBookIds = GetSourceBookIds(source);
+            var unexpectedIds = choices.Keys.Except(sourceBookIds).OrderBy(x => x).ToArray();
             if (unexpectedIds.Length > 0)
             {
                 WriteReview(reviewPath, required, choices);
                 throw new InvalidDataException(
-                    $"BookshelfNG media map '{mapPath}' contains IDs that are not ambiguous in the current source ({string.Join(", ", unexpectedIds)}). The source database was not changed.");
+                    $"BookshelfNG media map '{mapPath}' contains source book IDs that do not exist in the current source ({string.Join(", ", unexpectedIds)}). The source database was not changed.");
             }
 
             var missingCount = required.Count(x => !choices.ContainsKey(x.SourceBookId));
@@ -104,7 +113,23 @@ namespace NzbDrone.Core.Datastore
             }
 
             RemoveStaleReview(reviewPath);
-            return choices;
+            // Source evidence can change the set of ambiguous books between preview and apply.
+            // Keep the sidecar intact, but only let choices for currently required books affect import.
+            return choices.Where(x => requiredIds.Contains(x.Key)).ToDictionary(x => x.Key, x => x.Value);
+        }
+
+        private static HashSet<int> GetSourceBookIds(DbConnection source)
+        {
+            using var command = source.CreateCommand();
+            command.CommandText = "SELECT \"Id\" FROM \"Books\";";
+            var result = new HashSet<int>();
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                result.Add(Convert.ToInt32(reader.GetValue(0), CultureInfo.InvariantCulture));
+            }
+
+            return result;
         }
 
         private static void RemoveStaleReview(string path)
@@ -119,21 +144,18 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
-        private static List<ReviewBook> FindRequiredMappings(DbConnection source)
+        private static List<ReviewBook> FindRequiredMappings(
+            DbConnection source,
+            BookshelfMediaTypeInference mediaInference)
         {
             using var command = source.CreateCommand();
             command.CommandText = @"
                 SELECT b.""Id"",
                        COALESCE(b.""Title"", ''),
                        COALESCE(am.""Name"", ''),
-                       b.""Monitored"",
-                       COUNT(e.""Id""),
-                       COUNT(DISTINCT CASE WHEN e.""Id"" IS NOT NULL THEN CASE WHEN COALESCE(e.""IsEbook"", FALSE) = TRUE THEN 1 ELSE 0 END END),
-                       SUM(CASE WHEN e.""Monitored"" = TRUE THEN 1 ELSE 0 END)
+                       b.""Monitored""
                 FROM ""Books"" b
                 LEFT JOIN ""AuthorMetadata"" am ON am.""Id"" = b.""AuthorMetadataId""
-                LEFT JOIN ""Editions"" e ON e.""BookId"" = b.""Id""
-                GROUP BY b.""Id"", b.""Title"", am.""Name"", b.""Monitored""
                 ORDER BY b.""Id"";";
 
             var result = new List<ReviewBook>();
@@ -144,9 +166,11 @@ namespace NzbDrone.Core.Datastore
                 var title = reader.GetString(1);
                 var author = reader.GetString(2);
                 var monitored = Convert.ToInt32(reader.GetValue(3), CultureInfo.InvariantCulture) != 0;
-                var editionCount = Convert.ToInt32(reader.GetValue(4), CultureInfo.InvariantCulture);
-                var mediaTypeCount = Convert.ToInt32(reader.GetValue(5), CultureInfo.InvariantCulture);
-                var monitoredEditionCount = Convert.ToInt32(reader.GetValue(6) is DBNull ? 0 : reader.GetValue(6), CultureInfo.InvariantCulture);
+                mediaInference.Books.TryGetValue(sourceBookId, out var state);
+                var editionCount = state?.Editions.Count ?? 0;
+                var mediaTypeCount = state?.MediaTypes.Count ?? 0;
+                var monitoredEditionCount = state?.MonitoredEditionIdsByMediaType.Count ?? 0;
+                var ambiguousEdition = state?.Editions.Any(x => x.IsAmbiguous) == true;
 
                 if (editionCount == 0)
                 {
@@ -159,15 +183,22 @@ namespace NzbDrone.Core.Datastore
                         Reason = "No source edition row identifies this work as an audiobook or ebook."
                     });
                 }
-                else if (monitored && mediaTypeCount > 1 && monitoredEditionCount == 0)
+                else if (mediaTypeCount == 0 ||
+                         ambiguousEdition ||
+                         (mediaTypeCount > 1 &&
+                          monitored && monitoredEditionCount == 0))
                 {
                     result.Add(new ReviewBook
                     {
                         SourceBookId = sourceBookId,
                         Title = title,
                         Author = author,
-                        Monitored = true,
-                        Reason = "The work has audiobook and ebook editions, but no edition is selected for monitoring."
+                        Monitored = monitored,
+                        Reason = ambiguousEdition
+                            ? "The work has an edition with no format metadata or recognized linked file; it is preserved in both catalogs unless the media map selects one."
+                            : mediaTypeCount == 0
+                            ? "The source editions have no linked media files or format metadata that identifies their media type."
+                            : "The work has audiobook and ebook editions, but no edition is selected for monitoring."
                     });
                 }
             }

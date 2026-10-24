@@ -106,7 +106,6 @@ the durable identity for newly built integrations.
 
 **Prior PR #131 application-code validation (2026-10-19):** Code snapshot `0612cb4c90b75818e5349eb868cc0638825de02a` passed exact-head Build [39239940373](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940373): Linux, macOS, and Windows tests, PostgreSQL migration smoke, native-runner receipt reconciliation, and the release-note contract all passed. CodeQL [39239934583](https://github.com/snapetech-org/chaptarrng/actions/runs/39239934583), security [39239940344](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940344), NuGet submission [39239932165](https://github.com/snapetech-org/chaptarrng/actions/runs/39239932165), and dependency review [39239940313](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940313) passed. Disposable-fork validation [39239940512](https://github.com/snapetech-org/chaptarrng/actions/runs/39239940512) was skipped by its external-fork gate. SeerrNG's adapter and request-route suite at source commit `b810153c` passed 4 files / 283 tests. The Linux artifact also passed the earlier empty-library API and authorization smoke. The populated source-build check on later code is recorded below.
 
-
 **Prior candidate code CI (2026-10-19):** ChaptarrNG PR #131 head `38be9422a0390c0b3d4d1c453ec14b25d3aa99a4` includes portable BookshelfNG BKSENC01 `.enc` backup export and restore. After two compile fixes and a cleanup-callback test-fixture correction, exact-head Build [39267876585](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876585) passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks. CodeQL [118112421054](https://github.com/snapetech-org/chaptarrng/runs/118112421054), security analysis [39267876503](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876503), and dependency review [39267876754](https://github.com/snapetech-org/chaptarrng/actions/runs/39267876754) passed. Disposable-fork validation was skipped by its external-fork gate. This is code validation only; migration, parity, installed rollback, update-channel, and operator-acceptance gates remain open.
 
 **M4B fix and previous exact-head validation (2026-10-19):** PR #131 commit
@@ -423,10 +422,10 @@ explicit `BookMatchingStrictness`, migration also maps a saved legacy threshold
 to the closest policy band:
 
 | BookshelfNG percentage | ChaptarrNG mode |
-| --- | --- |
-| 50–66 | Aggressive |
-| 67–82 | Balanced |
-| 83–99 | Strict |
+| ---------------------- | --------------- |
+| 50–66                  | Aggressive      |
+| 67–82                  | Balanced        |
+| 83–99                  | Strict          |
 
 An explicit ChaptarrNG mode is preserved and remains an additional matching
 safety policy; it does not disable the migrated numeric score gate. The
@@ -501,17 +500,23 @@ value if it was explicitly set. Preview, apply, and automatic startup must use
 the same provider-mode values.
 
 Some source records have no edition rows, so their media type cannot be
-determined from the database. A monitored mixed-format book can also have no
-selected edition. With no media map, preview and startup preserve each
-unresolved book in both ChaptarrNG catalogs. A source-monitored book remains
-monitored in both target formats; a source-unmonitored book remains
-unmonitored in both. This preserves the legacy book-level monitoring choice
-without guessing the intended format. The private review file records the
-ambiguity, and a media map can narrow the book to one format. A temporary
-duplicate title can appear across the ebook and audiobook catalogs; the
-fallback does not infer a format for an editionless work or move its media
-files. For a mixed-format book with no selected edition, its existing editions
-and file rows remain.
+determined from the database. `IsEbook=false` also covers both audio and print
+editions. ChaptarrNG uses edition format and narrator evidence plus recognized
+linked-file extensions to distinguish them. When neither source metadata nor a
+recognized file identifies an edition, preview and startup preserve it in both
+target catalogs by default, with the legacy provider identity kept on the
+audiobook row. The private review file records that ambiguity, and a media map
+can narrow the edition to one format or preserve both without monitoring.
+Source-monitored works with unresolved format evidence remain monitored in
+both target formats; source-unmonitored works remain unmonitored in both. A
+temporary duplicate title can appear across the ebook and audiobook catalogs.
+Physical editions stay in the ebook catalog with their physical reading-format
+ID; linked files and file-specific history follow the target row matching the
+file extension when it is recognized.
+
+A monitored mixed-format book can also have no selected edition. For that
+case, the same fallback preserves both target formats and their source
+editions and files, while a media map can choose which format is monitored.
 
 The current ChaptarrNG migration candidate maps legacy
 `MetadataFiles.Consumer=Readarr` rows to `LegacyAudiobookshelfMetadata`. This
@@ -526,11 +531,9 @@ monitoring state, reason, and the chosen fallback. On Unix it is created with
 owner-only permissions because it contains library metadata. When a source
 book is monitored but no edition identifies its format, the fallback creates
 both ChaptarrNG media records and preserves monitoring for both. An
-unmonitored source book remains unmonitored in both records. This keeps the
-source book-level monitoring choice active, but cannot identify which format
-the operator intended. Use the review file and optional media map to narrow an
-ambiguous book to one format. The normal startup log gives the review file
-path.
+unmonitored source book remains unmonitored in both records. Use the review
+file and optional media map to narrow an ambiguous edition or book to one
+format. The normal startup log gives the review file path.
 
 When one audiobook edition and one ebook edition are selected for the same
 BookshelfNG work, conversion preserves each selection on its matching
@@ -539,10 +542,13 @@ conversion stops before promotion because ChaptarrNG has one selected-edition
 field per format record. Correct that selection in BookshelfNG and preview
 again; the source database remains available for another attempt.
 
-To choose formats during conversion, set every `mediaType` to `audiobook`,
-`ebook`, `both`, or `both-unmonitored`, then save the completed document as
-`readarr.db.bookshelf-media-map.json` beside `readarr.db`. For a book without
-editions, the map creates the corresponding ChaptarrNG media record or records.
+To choose formats during conversion, set each required `mediaType` to
+`audiobook`, `ebook`, `both`, or `both-unmonitored`. Save the completed
+document as `readarr.db.bookshelf-media-map.json` beside `readarr.db`. For a
+book without editions, the map creates the corresponding ChaptarrNG media
+record or records.
+For an ambiguous edition, it selects which media-specific target edition rows
+are created.
 For a monitored mixed-format book without a selected edition, the map controls
 which existing formats are monitored while preserving all source editions and
 files. `both-unmonitored` retains both formats without starting searches. Run
@@ -550,10 +556,10 @@ preview again with the map in place. Normal startup uses the same map and
 converter, so no separate migration build is needed.
 
 The map is tied to source book IDs and the current ambiguous-record set. If the
-database changes after review, preview rejects missing entries and stale
-choices. It also rejects map entries for books that are no longer ambiguous,
-including when the current source needs no map; remove stale entries or use the
-updated review file, then preview again instead of guessing.
+database changes after review, preview rejects missing entries for unresolved
+books and entries for IDs absent from the source. A choice for an existing
+book that no longer needs a decision is ignored and the sidecar is retained;
+remove stale entries as housekeeping or use the updated review file.
 
 Once the retirement gates close and apply is approved, either let normal
 startup apply conversion or run the explicit apply command once:
@@ -969,8 +975,7 @@ foreign-key violations. Their original `config.xml` files retained
 API key values after startup; no credential value is recorded here. A request
 to `/api/v1/system/status` without an API key returned HTTP 401 on the
 converted audiobook copy. The original source snapshots stayed byte-unchanged,
-and both live BookshelfNG services remained up and answered `/ping` with HTTP
-200.
+and both live BookshelfNG services remained up and answered `/ping` with HTTP 200.
 
 This verifies normal startup and configuration preservation for these two
 isolated SQLite snapshots. The configured library directories were not mounted
@@ -1019,7 +1024,12 @@ passed SQLite integrity and foreign-key checks. The importer retained source
 file rows with `EditionId=0`, BookshelfNG's intentional unmapped-file
 sentinel, without inferring an edition, book, or media type. A focused fixture
 also verifies that explicit sidecar and history links to such a file remain
-attached correctly. Volatile command queue/execution, provider health/cursor,
+attached correctly. Current importer code infers only the media type for a
+sentinel or missing-edition file when its path has a recognized ebook or
+audiobook extension; its `EditionId` and book relationship remain unassigned.
+Sidecars and history that already name a source book use that inferred format
+to select the corresponding split book row. Unknown extensions remain
+unclassified. Volatile command queue/execution, provider health/cursor,
 scheduled-task, and source `VersionInfo` state is deliberately recreated;
 acquisition history is migrated.
 

@@ -134,6 +134,7 @@ export SEERRNG_SOURCE="/path/to/seerrng"
 export SEERRNG_NODE_MODULES="$(realpath "$SEERRNG_SOURCE/node_modules")"
 export CHAPTARR_GLOBAL_API_KEY="$(openssl rand -hex 24)"
 export CHAPTARR_SEERR_API_KEY="$(openssl rand -hex 24)"
+export CHAPTARR_HARDCOVER_MODE=false # true only if the source ran native Hardcover
 
 docker compose -p chaptarrng-seerrng-smoke \
   -f integration/seerrng-smoke.compose.yml \
@@ -154,6 +155,94 @@ unavailable. It verifies that the adapter receives a pending ID, can poll it,
 and can cancel it; cancellation remains queryable as a terminal `Failed` state
 with `LastError` set to `Cancelled by user`. The ChaptarrNG configuration and
 book volumes are disposable; remove them with the `down -v` command above.
+
+## Populated BookshelfNG library smoke
+
+`seerrng-populated-library-smoke.compose.yml` runs the current source build
+against a private copy of a populated BookshelfNG SQLite config. It performs
+the normal schema conversion on startup, then uses SeerrNG's compiled
+`ReadarrAPI` to read every ebook and audiobook page, check format-scoped file
+availability, reconcile format statistics against each sampled file's path
+extension, sample files and book history, and confirm the restricted key
+cannot access host configuration, command, or global unmapped-file routes. It
+uses a separate disposable admin key to verify ebook and audiobook unmapped
+filters return recognized file types without assigning book relationships.
+The app and smoke runner
+share an internal-only Docker network; the app has no published host port or
+provider/network egress. The probe makes no writes through the API. Its output
+contains aggregate counts only, with no titles, identifiers, paths, or
+credentials.
+
+Stop BookshelfNG and copy its config directory, including `readarr.db` and any
+SQLite journal files, into a private task-scoped location. Never mount the
+installed appdata or the original database. Keep both source and converted
+backups private because they can contain credentials and user library
+metadata.
+
+```sh
+export CHAPTARR_POPULATED_CONFIG="/tmp/chaptarrng-populated/config"
+install -d -m 700 "$CHAPTARR_POPULATED_CONFIG"
+cp -a "/path/to/stopped-bookshelfng-config/." \
+  "$CHAPTARR_POPULATED_CONFIG/"
+chmod -R go-rwx "$CHAPTARR_POPULATED_CONFIG"
+
+export SEERRNG_SOURCE="/path/to/seerrng"
+export SEERRNG_NODE_MODULES="$(realpath "$SEERRNG_SOURCE/node_modules")"
+export CHAPTARR_GLOBAL_API_KEY="$(openssl rand -hex 24)"
+export CHAPTARR_SEERR_API_KEY="$(openssl rand -hex 24)"
+export CHAPTARR_HARDCOVER_MODE=false # true only if the source ran native Hardcover
+
+docker compose -p chaptarrng-populated-library-smoke \
+  -f integration/seerrng-populated-library-smoke.compose.yml \
+  build chaptarrng
+docker compose -p chaptarrng-populated-library-smoke \
+  -f integration/seerrng-populated-library-smoke.compose.yml \
+  up -d chaptarrng
+docker compose -p chaptarrng-populated-library-smoke \
+  -f integration/seerrng-populated-library-smoke.compose.yml \
+  run --rm --no-deps smoke
+docker compose -p chaptarrng-populated-library-smoke \
+  -f integration/seerrng-populated-library-smoke.compose.yml \
+  down --remove-orphans
+```
+
+After all containers stop, remove only the task-owned config copy and image:
+
+```sh
+docker image rm chaptarrng-populated-library-smoke:local
+```
+
+Do not retain or publish app logs without reviewing them for source metadata.
+The smoke validates migrated database/API behavior; it does not prove that
+media files are present or playable, that providers successfully fulfill
+requests, or that an installed update channel can roll back.
+
+During conversion, `IsEbook=false` is not sufficient to classify a BookshelfNG
+edition as an audiobook because it also covers print editions. ChaptarrNG uses
+explicit ebook, audiobook, narrator, and print-format metadata for editions,
+and routes linked files by recognized path extension. A physical edition stays
+physical in the ebook catalog; when edition metadata and linked files identify
+different formats, or its files span both formats, conversion creates a second
+media-specific target edition without duplicating its provider identity. Each
+file, sidecar, and file-specific history event follows the matching target
+edition. If neither edition metadata nor a linked file identifies the format,
+the default conversion retains the ambiguous edition in both catalogs and
+records the legacy provider identity on the audiobook row. The private media
+map can narrow that edition to one format or keep both unmonitored.
+
+For files whose source `EditionId` is zero or points to a missing edition, a
+recognized path extension sets only `BookFiles.MediaType`; the row remains
+unlinked from any book or edition. Sidecars and history that already identify
+the source book use that inferred file format to select the corresponding
+split book row. Unknown extensions stay unclassified.
+
+If an existing media map contains a choice for a source book that is now
+unambiguous, conversion keeps the map file but ignores that stale choice. A map
+entry for a book ID absent from the current source still stops conversion.
+
+Set `CHAPTARR_HARDCOVER_MODE` from the source deployment, not by guessing from
+numeric IDs. BookshelfNG's default is Goodreads when `HARDCOVER` is unset;
+native Hardcover mode must be explicitly enabled in the source deployment.
 
 ## Populated migration source-build run (2026-10-19)
 
