@@ -13,14 +13,27 @@ preserves BookshelfNG's null-only Album/AlbumSort and Title/TitleSort
 projection—including empty-value behavior—through extraction, matching,
 caching, and compatible API fields; the private projection is filtered from
 public tag responses. The source review and crosswalk are in
-[the workflow parity map](BOOKSHELFNG_WORKFLOW_PARITY.md#bookshelfng-matching-source-crosswalk).
-The serial Release solution build passed with 0 warnings and 0 errors; the
-Release Core console summary reported 4,846 passed, 25 skipped, and 0 failed.
-The raw TRX has 27 `NotExecuted` records while the console summary reports 25
-skips; the console result is recorded here without reconciling that runner
-accounting difference. Local synthetic regressions do not establish live
-provider fulfillment, representative-library acceptance, or installed-channel
-handoff.
+[the workflow parity map](BOOKSHELFNG_WORKFLOW_PARITY.md#import-and-media-source-path-crosswalk).
+The completed same-file guard was validated with a serial Release solution
+build (0 warnings, 0 errors) and the full Release Core suite (4,859 passed, 25
+skipped, 0 failed). All three new same-size compatibility cases passed. The TRX
+contains 4,886 rows: 4,859 `Passed` and 27 `NotExecuted`, while the console
+summary counts 4,884 total with 25 skipped; the two-row runner accounting
+difference remains recorded rather than inferred away. Local synthetic
+regressions do not establish live-provider fulfillment,
+representative-library acceptance, or installed-channel handoff.
+
+**BookshelfNG same-file import guard (2026-10-24):** Migrated installations
+reject a candidate when an existing book file has the same size and a
+compatible format, including a file assigned to another edition. Manual import
+preview and final import use the same migration-gated check; same-path files
+follow the source rule, while explicit generated conversions remain exempt.
+Fresh installations keep ChaptarrNG's multi-edition behavior. The Release
+solution build and full Core suite passed; the migrated-preview rejection, the
+migrated final-import rejection, and the fresh-install allowance all passed.
+This closes the newly reviewed `SameFileSpecification.cs` source-path gap
+only; live-provider, representative-data, installed-channel, and rollback
+acceptance remain open.
 
 **Image dependency/security update (2026-10-23):** ChaptarrNG now uses
 SkiaSharp for resized JPEG, PNG, JFIF, and WebP covers, and PDFsharp 6.2.4 for
