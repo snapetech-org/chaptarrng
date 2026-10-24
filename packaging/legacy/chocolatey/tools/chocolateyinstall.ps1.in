@@ -373,6 +373,16 @@ try {
     $service = Get-Service -Name 'BookshelfNG' -ErrorAction Stop
     $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(60))
     Wait-BookshelfServiceReady $healthPort
+    if ($hasMigrationData) {
+      $readinessConsole = Join-Path $appDir 'bin\Chaptarr.Console.exe'
+      $readinessExit = Invoke-BookshelfUtility $readinessConsole @(
+        '-check-bookshelf-migration',
+        "-data=$dataDir"
+      ) $effectiveEnvironment
+      if ($readinessExit -ne 0) {
+        throw "ChaptarrNG started, but the migrated BookshelfNG database and provider profile were not readable (exit code $readinessExit)."
+      }
+    }
   }
 
   if (Test-Path $backupDir) {

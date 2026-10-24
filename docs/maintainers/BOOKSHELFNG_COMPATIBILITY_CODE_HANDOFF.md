@@ -89,6 +89,10 @@ parity work.
   removes only converter-owned artifacts for the locked source schema. Retained
   rollback copies remain available. Restore and successful database-readability
   checks advance the same journal.
+- When a Windows Chocolatey upgrade starts ChaptarrNG during installation, the
+  installer now checks the migrated database lineage and persisted source
+  provider dialect after `/ping` before it removes the prior app snapshot. The
+  converter milestones use the same data-directory journal on Windows.
 
 The Linux default-unit cutover now has automatic database and application
 rollback code. C3/F4 still needs Luna's package-manager failure-path and
@@ -164,6 +168,11 @@ restart acceptance before it can be treated as closed.
    ordering against BookshelfNG for quality, revision preference, custom format
    score, protocol, indexer priority, torrent health, release scope, age, and
    size; confirm mixed-format and native ordering remain unchanged.
+10. Upgrade an active Windows Chocolatey BookshelfNG service. After `/ping`
+    succeeds, confirm `/check-bookshelf-migration` validates the target database
+    and provider dialect before the installer discards the prior application.
+    Force that check to fail and confirm the installer restores the database,
+    previous application, service settings, environment, and prior running state.
 
 ## Still open after this checkpoint
 
@@ -174,7 +183,9 @@ restart acceptance before it can be treated as closed.
 - BookshelfNG-to-ChaptarrNG acquisition, import, settings, integration, and UI
   parity reviews from C4-C6 remain open.
 - Channel delivery and installed-upgrade acceptance from C7-C8 remain open.
-- Windows and desktop handoff transactions do not yet use the shared journal.
+- Windows Chocolatey converter checkpoints are journaled, but its package-level
+  prior-app/service handoff and deferred-start recovery are not yet coordinated
+  through that journal. Desktop handoffs also remain outside the shared journal.
 - These code slices have not been built or tested. Luna's results should be
   tied to the exact commit that contains them; regressions should be fixed
   before the next code batch.

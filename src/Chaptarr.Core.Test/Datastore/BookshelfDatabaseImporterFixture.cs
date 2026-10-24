@@ -687,23 +687,21 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        public void should_fail_closed_when_bare_numeric_provider_ids_have_no_explicit_source_mode()
+        public void should_use_bookshelf_goodreads_default_when_bare_numeric_provider_ids_have_no_mode_override()
         {
             SetBareNumericProviderIds();
-            var sourceBefore = File.ReadAllBytes(_sourcePath);
 
-            var exception = Assert.Throws<InvalidDataException>(() =>
-                new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
-                    _sourceConnectionString,
-                    new MigrationContext(MigrationType.Main),
-                    DatabaseType.SQLite));
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
 
             Assert.Multiple(() =>
             {
-                Assert.That(exception.Message, Does.Contain("primary catalog mode is not explicit"));
-                Assert.That(exception.Message, Does.Contain("HARDCOVER=true"));
-                Assert.That(exception.Message, Does.Contain("HARDCOVER=false"));
-                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBefore));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsAuthorId FROM Authors WHERE Id = 20;"), Is.EqualTo("gr:10"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsWorkId FROM Books WHERE Id = 30;"), Is.EqualTo("gr:30"));
+                Assert.That(QueryScalar<long>(_sourcePath, "SELECT GoodreadsEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo(40));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGProviderDialect';"), Is.EqualTo("gr"));
             });
         }
 
