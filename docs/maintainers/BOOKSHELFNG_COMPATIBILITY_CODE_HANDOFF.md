@@ -1,6 +1,6 @@
 # BookshelfNG compatibility code handoff
 
-This is the fifth code checkpoint after the 2026-10-24 replacement
+This is the sixth code checkpoint after the 2026-10-24 replacement
 reassessment. It is intended for focused validation and refinement before broad
 parity work.
 
@@ -53,6 +53,10 @@ parity work.
   through its own API dialect instead of receiving a target ID. Release results
   and bulk book-editor responses also project split rows back to the old work
   ID.
+- A legacy `RefreshBook` command that resolves to both format rows now keeps
+  the original command type and response shape while refreshing both rows. Its
+  internal fan-out IDs are removed from compatibility responses after the
+  original BookshelfNG work ID is projected back.
 - Linux Debian/PPA, RPM/COPR, and AUR package upgrades now record a durable
   migration-pending marker and a root-only copy of the prior application and
   service unit before replacing an installed BookshelfNG package. The service
@@ -119,7 +123,10 @@ restart acceptance before it can be treated as closed.
    backups.
 7. Start, list, fetch, and cancel commands through the unchanged API address.
    Confirm supported command bodies send and return BookshelfNG IDs, including
-   multi-format work IDs. Confirm command bodies are not mutated in the queue
+   multi-format work IDs. For a `RefreshBook` command targeting a work split
+   across both formats, confirm both rows refresh while the command name remains
+   `RefreshBook` and its legacy body retains the scalar work ID. Confirm command
+   bodies are not mutated in the queue
    when a legacy response is projected. Repeat from a native client where the
    same numeric value is both a source ID and a Chaptarr target ID; the native
    request must keep the target row. Verify mapped book and file changes

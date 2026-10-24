@@ -127,8 +127,20 @@ namespace Chaptarr.Api.V1.Commands
                         command.BookId = ProjectId(command.BookId);
                     }
                     break;
-                case RefreshBookCommand command when command.BookId > 0:
-                    command.BookId = ProjectId(command.BookId.Value);
+                case RefreshBookCommand command:
+                    command.BookIds = command.BookIds?.Select(ProjectId).Distinct().ToList();
+                    if (command.BookId > 0)
+                    {
+                        command.BookId = ProjectId(command.BookId.Value);
+                    }
+
+                    // RefreshBookCommand is a one-work command in BookshelfNG.
+                    // Hide the internal fan-out list and keep its original body shape.
+                    if (command.BookIds?.Count > 0)
+                    {
+                        command.BookId ??= command.BookIds[0];
+                        command.BookIds = null;
+                    }
                     break;
                 case DownloadBookMediaCommand command:
                     command.BookIds = command.BookIds?.Select(ProjectId).Distinct().ToList();
@@ -149,7 +161,7 @@ namespace Chaptarr.Api.V1.Commands
                 PushCalibreMetadataCommand value => value.BookIds ?? Enumerable.Empty<int>(),
                 PushGrimmoryMetadataCommand value => value.BookIds ?? Enumerable.Empty<int>(),
                 RePushBookCommand value => (value.BookIds ?? new List<int>()).Concat(value.BookId > 0 ? new[] { value.BookId } : Array.Empty<int>()),
-                RefreshBookCommand value => value.BookId > 0 ? new[] { value.BookId.Value } : Array.Empty<int>(),
+                RefreshBookCommand value => (value.BookIds ?? new List<int>()).Concat(value.BookId > 0 ? new[] { value.BookId.Value } : Array.Empty<int>()),
                 DownloadBookMediaCommand value => (value.BookIds ?? new List<int>()).Concat(value.BookId > 0 ? new[] { value.BookId } : Array.Empty<int>()),
                 _ => Array.Empty<int>()
             };
@@ -281,7 +293,9 @@ namespace Chaptarr.Api.V1.Commands
                     var refreshedBookIds = _bookshelfLegacyIdentityMapService.ResolveBookIds(new[] { refreshBookCommand.BookId.Value }, mediaType);
                     if (refreshedBookIds.Count > 1)
                     {
-                        return new BulkRefreshBookCommand(refreshedBookIds);
+                        refreshBookCommand.BookIds = refreshedBookIds;
+                        refreshBookCommand.BookId = refreshedBookIds[0];
+                        break;
                     }
 
                     if (refreshedBookIds.Count == 1)

@@ -1510,6 +1510,16 @@ namespace NzbDrone.Core.Books
 
         public void Execute(RefreshBookCommand message)
         {
+            if (message.BookIds?.Count > 0)
+            {
+                foreach (var book in _bookService.GetBooks(message.BookIds))
+                {
+                    RefreshBookInfo(book);
+                }
+
+                return;
+            }
+
             if (message.BookId.HasValue)
             {
                 var book = _bookService.GetBook(message.BookId.Value);
