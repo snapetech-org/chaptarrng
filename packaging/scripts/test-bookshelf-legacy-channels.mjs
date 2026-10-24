@@ -46,6 +46,12 @@ test('AppImage keeps its desktop identity, BookshelfNG data directory, and Chapt
   assert.match(supervisor, /-bookshelf-health-url=/);
   assert.match(supervisor, /-bookshelf-health-timeout-seconds=/);
   assert.match(supervisor, /custom_data_argument/);
+  assert.match(supervisor, /expect_data_value/);
+  assert.match(supervisor, /health_authority/);
+  assert.match(supervisor, /setsid/);
+  assert.match(supervisor, /--wait/);
+  assert.match(supervisor, /app_pid_file/);
+  assert.match(supervisor, /terminate_app_tree/);
   assert.match(supervisor, /BOOKSHELFNG_RETRY_MIGRATION/);
   assert.match(supervisor, /lock_owner_is_running/);
   assert.match(supervisor, /Z\*/);
@@ -88,6 +94,8 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(installer, /HealthUrl = \$healthUrl/);
   assert.match(installer, /OldAppEnvironmentExtra = @\(\$oldAppEnvironmentExtra\)/);
   assert.match(installer, /Get-EffectiveExtraEnvironment/);
+  assert.match(installer, /targetDatabaseExit = Invoke-BookshelfUtility/);
+  assert.match(installer, /BookshelfSource = -not \$alreadyMigrated/);
   assert.match(installer, /URLBASE/);
   assert.match(installer, /<EventTrigger>/);
   assert.doesNotMatch(installer, /<BootTrigger>/);
@@ -102,6 +110,8 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(recovery, /\$manifest\.State -eq 'rolled-back'/);
   assert.match(recovery, /schtasks\.exe \/Delete/);
   assert.match(recovery, /PreviousApplicationDirectory/);
+  assert.match(recovery, /if \(\$bookshelfSource\)/);
+  assert.match(recovery, /ChaptarrNG database was preserved/);
 });
 
 test('Cloudron candidate preserves application ID, health endpoint, port, and mounts', () => {

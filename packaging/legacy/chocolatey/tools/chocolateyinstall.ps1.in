@@ -214,7 +214,7 @@ function Wait-BookshelfServiceReady {
       throw 'The ChaptarrNG process did not remain running under the BookshelfNG service identity.'
     }
     try {
-      $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 2
+      $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 2 -MaximumRedirection 0
       if ($response.StatusCode -eq 200) { return }
     } catch { }
     if ($stopwatch.Elapsed.TotalSeconds -lt 90) { Start-Sleep -Seconds 2 }
@@ -331,7 +331,7 @@ function Complete-PriorBookshelfHandoff {
               [StringComparison]::OrdinalIgnoreCase)) {
           throw 'The BookshelfNG service does not point to the expected ChaptarrNG executable.'
         }
-        $response = Invoke-WebRequest -Uri $previousHandoff.HealthUrl -UseBasicParsing -TimeoutSec 3
+        $response = Invoke-WebRequest -Uri $previousHandoff.HealthUrl -UseBasicParsing -TimeoutSec 3 -MaximumRedirection 0
         if ($response.StatusCode -eq 200) {
           $healthExit = Invoke-BookshelfUtility $exePath @('-check-bookshelf-migration', "-data=$($previousHandoff.DataDirectory)") @($previousHandoff.MigrationEnvironment)
           if ($healthExit -eq 0) {
@@ -379,6 +379,7 @@ $backupNamesBefore = @()
 $postgresBackupDirectory = $null
 $migrationDatabaseMutationMayHaveStarted = $false
 $deferredRecoveryArmed = $false
+$alreadyMigrated = $false
 $providerMode = $null
 $effectiveEnvironment = @()
 $healthPort = 8789
@@ -492,7 +493,15 @@ try {
     $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
   }
 
-  if ($hasMigrationData -and $postgresSource) {
+  if ($hasMigrationData) {
+    $targetDatabaseExit = Invoke-BookshelfUtility $previewConsole @(
+      '-check-bookshelf-migration',
+      "-data=$dataDir"
+    ) $effectiveEnvironment
+    $alreadyMigrated = $targetDatabaseExit -eq 0
+  }
+
+  if ($hasMigrationData -and $postgresSource -and -not $alreadyMigrated) {
     $checkExit = Invoke-BookshelfUtility $previewConsole @(
       '-check-bookshelf-postgres-backup',
       '-confirm-bookshelf-service-stopped',
@@ -518,7 +527,7 @@ try {
     }
   }
 
-  if ($hasMigrationData) {
+  if ($hasMigrationData -and -not $alreadyMigrated) {
     $previewExit = Invoke-BookshelfUtility $previewConsole @(
       '-preview-bookshelf-migration',
       "-data=$dataDir"
@@ -560,6 +569,7 @@ try {
       SqliteBackupNamesBefore = @($backupNamesBefore)
       PostgresSource = $postgresSource
       PostgresBackupDirectory = $postgresBackupDirectory
+      BookshelfSource = -not $alreadyMigrated
     }
     Write-BookshelfHandoffManifest $manifest
     $deferredRecoveryArmed = $true
@@ -655,7 +665,13 @@ try {
     }
   }
 
-  if ($migrationDatabaseMutationMayHaveStarted) {
+  if ($alreadyMigrated -and $migrationDatabaseMutationMayHaveStarted) {
+    # The previous package may have applied ChaptarrNG schema changes before
+    # failing. A BookshelfNG backup cannot safely roll this target database
+    # back, so retain it and leave the restored prior app stopped for review.
+    $databaseRollbackSafe = $false
+    Write-Warning 'The install failed after a ChaptarrNG database was detected. The target database was preserved; the prior application was restored and the service will remain stopped until database compatibility is reviewed.'
+  } elseif ($migrationDatabaseMutationMayHaveStarted) {
     if (-not $serviceStopped) {
       $databaseRollbackSafe = $false
     } elseif ($postgresSource) {

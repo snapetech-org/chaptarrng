@@ -121,43 +121,50 @@ function Restore-PreviousBookshelf {
   $console = $Manifest.ConsolePath
   $dataDir = $Manifest.DataDirectory
   $environmentEntries = @($Manifest.MigrationEnvironment)
-  $sourceStillReadable = Invoke-BookshelfUtility $console @(
-    '-preview-bookshelf-migration',
-    "-data=$dataDir"
-  ) $environmentEntries
+  $bookshelfSource = $true
+  if ($Manifest.PSObject.Properties.Name -contains 'BookshelfSource') {
+    $bookshelfSource = [bool] $Manifest.BookshelfSource
+  }
 
-  if ($sourceStillReadable -ne 0) {
-    if ($Manifest.PostgresSource) {
-      if (-not $Manifest.PostgresBackupDirectory -or
-          -not (Test-Path -LiteralPath $Manifest.PostgresBackupDirectory) -or
-          -not (Get-ChildItem -LiteralPath $Manifest.PostgresBackupDirectory -Filter 'postgres-main.dump' -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
-        throw 'The PostgreSQL source is not readable and its complete pre-cutover backup is unavailable; the current database was left untouched.'
+  if ($bookshelfSource) {
+    $sourceStillReadable = Invoke-BookshelfUtility $console @(
+      '-preview-bookshelf-migration',
+      "-data=$dataDir"
+    ) $environmentEntries
+
+    if ($sourceStillReadable -ne 0) {
+      if ($Manifest.PostgresSource) {
+        if (-not $Manifest.PostgresBackupDirectory -or
+            -not (Test-Path -LiteralPath $Manifest.PostgresBackupDirectory) -or
+            -not (Get-ChildItem -LiteralPath $Manifest.PostgresBackupDirectory -Filter 'postgres-main.dump' -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+          throw 'The PostgreSQL source is not readable and its complete pre-cutover backup is unavailable; the current database was left untouched.'
+        }
+
+        $restoreExit = Invoke-BookshelfUtility $console @(
+          '-restore-bookshelf-postgres',
+          '-confirm-bookshelf-service-stopped',
+          "-bookshelf-postgres-backup=$($Manifest.PostgresBackupDirectory)",
+          "-data=$dataDir"
+        ) $environmentEntries
+        if ($restoreExit -ne 0) { throw "The retained PostgreSQL source backup could not be restored (exit $restoreExit)." }
+      } elseif ($Manifest.SqliteSourceExisted) {
+        $oldBackups = @($Manifest.SqliteBackupNamesBefore)
+        $newBackup = Get-ChildItem -LiteralPath $dataDir -Filter 'readarr.db.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue |
+          Where-Object { $_.Name -notin $oldBackups } |
+          Sort-Object LastWriteTimeUtc -Descending |
+          Select-Object -First 1
+        if (-not $newBackup) {
+          throw 'No new BookshelfNG SQLite source snapshot is available; the current database was left untouched.'
+        }
+
+        $restoreExit = Invoke-BookshelfUtility $console @(
+          '-restore-bookshelf',
+          '-confirm-bookshelf-service-stopped',
+          "-bookshelf-backup=$($newBackup.FullName)",
+          "-data=$dataDir"
+        ) $environmentEntries
+        if ($restoreExit -ne 0) { throw "The retained SQLite source backup could not be restored (exit $restoreExit)." }
       }
-
-      $restoreExit = Invoke-BookshelfUtility $console @(
-        '-restore-bookshelf-postgres',
-        '-confirm-bookshelf-service-stopped',
-        "-bookshelf-postgres-backup=$($Manifest.PostgresBackupDirectory)",
-        "-data=$dataDir"
-      ) $environmentEntries
-      if ($restoreExit -ne 0) { throw "The retained PostgreSQL source backup could not be restored (exit $restoreExit)." }
-    } elseif ($Manifest.SqliteSourceExisted) {
-      $oldBackups = @($Manifest.SqliteBackupNamesBefore)
-      $newBackup = Get-ChildItem -LiteralPath $dataDir -Filter 'readarr.db.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -notin $oldBackups } |
-        Sort-Object LastWriteTimeUtc -Descending |
-        Select-Object -First 1
-      if (-not $newBackup) {
-        throw 'No new BookshelfNG SQLite source snapshot is available; the current database was left untouched.'
-      }
-
-      $restoreExit = Invoke-BookshelfUtility $console @(
-        '-restore-bookshelf',
-        '-confirm-bookshelf-service-stopped',
-        "-bookshelf-backup=$($newBackup.FullName)",
-        "-data=$dataDir"
-      ) $environmentEntries
-      if ($restoreExit -ne 0) { throw "The retained SQLite source backup could not be restored (exit $restoreExit)." }
     }
   }
 
@@ -181,14 +188,23 @@ function Restore-PreviousBookshelf {
   Restore-Environment $nssm 'AppEnvironmentExtra' @($Manifest.OldAppEnvironmentExtra)
   Set-NssmValue $nssm 'Start' $Manifest.OldStart
 
-  Write-EventLog -LogName Application -Source 'ChaptarrNG BookshelfNG Migration' -EventId 4202 -EntryType Warning -Message 'The deferred BookshelfNG migration failed its startup health check. The original application and source database were restored.' -ErrorAction SilentlyContinue
-  Write-SharedMigrationJournal -DataDirectory $dataDir -State 'rolled-back' -OutcomeName 'channel-state' -OutcomeValue 'rolled-back'
-  $Manifest.State = 'rolled-back'
-  $Manifest.LastError = ''
+  if ($bookshelfSource) {
+    Write-EventLog -LogName Application -Source 'ChaptarrNG BookshelfNG Migration' -EventId 4202 -EntryType Warning -Message 'The deferred BookshelfNG migration failed its startup health check. The original application and source database were restored.' -ErrorAction SilentlyContinue
+    $Manifest.State = 'rolled-back'
+    Write-SharedMigrationJournal -DataDirectory $dataDir -State 'rolled-back' -OutcomeName 'channel-state' -OutcomeValue 'rolled-back'
+  } else {
+    Write-EventLog -LogName Application -Source 'ChaptarrNG BookshelfNG Migration' -EventId 4206 -EntryType Error -Message 'A deferred ChaptarrNG update failed its startup health check. The previous application and service settings were restored, but the ChaptarrNG database was preserved and the service remains stopped for compatibility review.' -ErrorAction SilentlyContinue
+    $Manifest.State = 'intervention-required'
+    Write-SharedMigrationJournal -DataDirectory $dataDir -State 'intervention-required' -OutcomeName 'channel-state' -OutcomeValue 'intervention-required'
+  }
+  if ($bookshelfSource) {
+    $Manifest.LastError = ''
+  }
   Write-Manifest $Manifest
-  if ($Manifest.WasRunning) {
+  if ($bookshelfSource -and $Manifest.WasRunning) {
     Start-Service -Name 'BookshelfNG' -ErrorAction Stop
   }
+  return $Manifest.State
 }
 
 try {
@@ -239,7 +255,7 @@ try {
 
     $uri = $manifest.HealthUrl
     try {
-      $response = Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 2
+      $response = Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 2 -MaximumRedirection 0
       if ($response.StatusCode -eq 200) {
         $healthExit = Invoke-BookshelfUtility $manifest.ConsolePath @(
           '-check-bookshelf-migration',
@@ -280,7 +296,7 @@ try {
   Write-SharedMigrationJournal -DataDirectory $manifest.DataDirectory -State 'intervention-required' -OutcomeName 'channel-state' -OutcomeValue 'intervention-required'
   Write-Manifest $manifest
   try {
-    Restore-PreviousBookshelf $manifest
+    $rollbackState = Restore-PreviousBookshelf $manifest
   } catch {
     $manifest.State = 'intervention-required'
     $manifest.LastError = $_.Exception.Message
@@ -290,7 +306,10 @@ try {
   }
 
   & schtasks.exe /Delete /TN $taskName /F 2>$null | Out-Null
-  $manifest.State = 'rolled-back'
-  $manifest.LastError = ''
+  $manifest.State = $rollbackState
+  if ($rollbackState -eq 'rolled-back') {
+    $manifest.LastError = ''
+  }
   Write-Manifest $manifest
+  if ($rollbackState -ne 'rolled-back') { exit 2 }
 }

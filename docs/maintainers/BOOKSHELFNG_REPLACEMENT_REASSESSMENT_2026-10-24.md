@@ -3,13 +3,14 @@
 Assessment date: **2026-10-24**. Requested outcome: **100% behavioral drop-in
 replacement, including automatic backend migration for existing installations**.
 
-**ChaptarrNG is substantially implemented, but it is not yet a 1:1 drop-in.**
-The immediate code priority is unchanged-client compatibility at the existing
-API address, followed by unattended installation handoff. Repeating the entire
-acceptance checklist before resolving those contracts will not close the goal.
-Confidence: **high** for the source findings below; **unknown** for unexecuted
-runtime and installed-channel outcomes. No defensible overall completion
-percentage follows from file counts, test counts, or route counts.
+**The source-review and code pass is complete for the listed C4–C6 behavior
+families, but ChaptarrNG is not yet an accepted 1:1 drop-in.** The unchanged
+client facade, one-work add behavior, provider dialect persistence, and default
+Linux/Windows/desktop recovery paths now have code implementations. Confidence:
+**high** for the source findings and reviewed code paths; **unknown** for
+unexecuted provider, representative-data, and installed-channel outcomes. No
+defensible overall completion percentage follows from file counts, test counts,
+or route counts.
 
 This document is the current **execution order** for this goal. The
 [retirement record](../BOOKSHELFNG_RETIREMENT.md),
@@ -93,7 +94,10 @@ equivalence or retirement decisions.
 The **393** split into **129 backend-code paths, 64 frontend paths, 66 test
 paths, 66 build/install/tooling paths, 35 documentation paths, and 33 other
 build/manifests**. The report includes every path so the next pass can work a
-bounded queue. Existing mappings are not a complete semantic review.
+bounded queue. The earlier mappings did not complete semantic review; the
+behavior families now reviewed and their source/target fingerprints are
+recorded in the [compatibility code handoff](BOOKSHELFNG_COMPATIBILITY_CODE_HANDOFF.md).
+This does not claim runtime equivalence.
 
 False gap examples already checked:
 
@@ -114,19 +118,20 @@ False gap examples already checked:
 
 | ID | Finding and source evidence | Classification / confidence | Required disposition |
 | --- | --- | --- | --- |
-| F1 | [`RequiresProviderPrefix`](../../src/Chaptarr.Http/Middleware/ReadarrFacadeProviderIdTranslator.cs) rejects unqualified IDs when facade context is absent. [`ServarrMediaTypeScopeMiddleware`](../../src/Chaptarr.Http/Middleware/ServarrMediaTypeScopeMiddleware.cs) creates that context from prefixed routes, not the unchanged `/api/v1` address. `AuthorController.AddAuthor` uses the rejection. | **Confirmed code gap; high.** A valid legacy bare-ID client request is not transparently accepted at its old address. | Persist the source dialect during migration and project legacy requests at the old address without asking clients to change URLs. Keep canonical IDs internally and native-request validation explicit. |
-| F2 | [`BookController.AddBook`](../../src/Chaptarr.Api.V1/Books/BookController.cs) attempts both configured formats when `mediaType` is absent. Author/book add paths can return pending-request `202` resources. BookshelfNG's old add paths return the created resource after their add service. | **Confirmed contract differences; high.** Whether each client tolerates them is unknown. | Define legacy request/response and one-work versus per-format semantics. Do not make an unchanged client infer a new format or pending-resource protocol. |
+| F1 | [`RequiresProviderPrefix`](../../src/Chaptarr.Http/Middleware/ReadarrFacadeProviderIdTranslator.cs) rejected unqualified IDs when facade context was absent. The migration now persists the effective source dialect and applies it at the unchanged `/api/v1` address, while native requests keep canonical-ID validation. | **Code implemented; high source confidence, runtime unverified.** | Luna verifies bare Goodreads and Hardcover IDs at the old address, native marker behavior, and numeric collisions against migrated data. |
+| F2 | [`BookController.AddBook`](../../src/Chaptarr.Api.V1/Books/BookController.cs) previously added both formats for an unscoped request and could use the pending-import response. The legacy branch now selects the single monitored edition's format and disables the pending-import protocol. | **Code implemented; high source confidence, runtime unverified.** | Luna verifies one-work creation, selected-edition identity, unavailable metadata errors, and unchanged native multi-format behavior. |
 | F3 | BookshelfNG itself selects native Hardcover IDs only when `HARDCOVER=true` and `HARDCOVER_NATIVE` is not `false`; an unset mode is Goodreads. Debian/PPA, RPM/COPR, and AUR preserve the BookshelfNG service environment file and invoke conversion under that unit environment. Chocolatey reads the old NSSM environment and passes it into preview/migration. The importer persists the effective dialect. | **Code path present, unverified; high.** The previous fail-closed assessment treated an unset mode as unknown, but that contradicts BookshelfNG's runtime predicate. | Keep the exact runtime predicate and verify env-file/NSSM propagation for both explicit modes and the unset Goodreads default. Never infer mode from numeric IDs. |
-| F4 | Linux Debian/PPA, RPM/COPR and AUR hooks preserve the prior app/unit, gate migration readiness, and restore SQLite/PostgreSQL source data plus the app/unit after startup failure. A private journal records package state, converter snapshot/stage/promotion boundaries, outcomes and source/config/artifact fingerprints. Windows Chocolatey has a protected deferred-start manifest and service-start task that waits for HTTP plus database health, then restores SQLite/PostgreSQL data, the prior app, both NSSM environment blocks, arguments, and start mode on failure. AppImage/Flatpak wrappers supervise first startup, recover source data after an interrupted/failed launch, and record channel state in the shared journal. | **Code implemented, unverified; high.** Linux package restart reconciliation, Windows task triggers/permissions, desktop process recovery, and PostgreSQL access still need acceptance. | Exercise converter and installed-channel interruption/retry boundaries, including service restart, app relaunch, and exact environment restoration. |
+| F4 | Linux Debian/PPA, RPM/COPR and AUR hooks preserve the prior app/unit, gate readiness, and restore SQLite/PostgreSQL source data after startup failure. Windows Chocolatey has protected deferred-start recovery, captures both NSSM environments and distinguishes BookshelfNG source rollback from a failed target-to-target update. AppImage/Flatpak supervise the first launch, require `setsid --wait`, stop the full app process group, recover source data after interruption, and record channel state. | **Recovery code implemented, unverified; high source confidence.** | Luna exercises real package managers, Windows task registration/permissions, target-to-target failure preservation, desktop process-tree shutdown, PostgreSQL access, restart reconciliation and retry. |
 | F5 | [`BookshelfBookMediaMapping`](../../src/NzbDrone.Core/Datastore/BookshelfBookMediaMapping.cs) preserves source book monitoring on each inferred target format row; the C4 compatibility path now gates RSS decisions through BookshelfNG's legacy author/book monitor columns. | **Source path reviewed; code implemented, runtime unverified.** | Test monitored and unmonitored source authors, selected editions, mixed-format rows, and ambiguous mappings. Keep the source work projection and mapped row IDs scoped correctly. |
 | F6 | BookshelfNG [`ReadarrCloudRequestBuilder`](https://github.com/snapetech-org/bookshelfng/blob/d42ec2aba1e411f4fb538d4d7201f6930898a91e/src/NzbDrone.Common/Cloud/ReadarrCloudRequestBuilder.cs) points at `https://readarr.servarr.com/v1/`; its update provider requests that service. | **Confirmed delivery limitation; high.** A new ChaptarrNG release does not make that old updater discover it. | Provide a supported transition/bootstrap delivery route for installed native copies and a maintained subsequent update channel. Explicitly distinguish old unreachable clients from clients already receiving owned package updates. |
 | F7 | Mode-specific container aliases, Helm bridge, desktop candidates, Windows migration, and platform manifests exist. Several external channel handoffs are still candidates; the source workflow gates intentionally prevent publication. | **Mixed integration and qualification work; high** for source presence, **unknown** for untested live channels. | Finish missing channel adapters/publish inputs, then validate and publish the exact accepted artifacts. Do not equate an unflipped gate with missing application code. |
-| F8 | The ledger still leaves broad decision/import, provider/settings, API, and UI source differences open, and 89 prior review fingerprints changed. This batch source-compared the release decision specifications, corrected source tag selection in protocol/delay/indexer/pending/download-client paths, restored source-work duplicate-grab suppression across split media IDs, reviewed provider-contract migration, and checked the native UI request identity headers. | **Release-decision semantics and known provider-contract import are source-reviewed; C4 download completion, matching/import/filesystem and catalog refresh remain open; C5 auth/webhook/external integration behavior and C6 user workflows remain open.** | Continue with download/import/file effects and catalog refresh, then authentication/integrations and user workflows. Record each reviewed source/target blob and disposition; do not call a family closed from this focused slice. |
+| F8 | The earlier source ledger left broad C4 acquisition/matching/filesystem/catalog, C5 provider/settings/auth/webhook, and C6 UI workflows for review. The current code handoff records pinned source/target fingerprints and a disposition for each behavior family, including the webhook source-ID projection fix. | **Source-level semantic reviews are complete for the listed C4–C6 families. Runtime equivalence, saved provider behavior, and UI outcomes remain unverified.** | Luna validates same-input decisions, realistic files/libraries, live providers, legacy webhook payloads, and migrated/native frontend flows. Record any mismatches as focused code fixes against the named contract. |
 
 F1–F4 precede broad QA because they directly affect the stated drop-in and
-automatic-migration contracts. The assessment itself did not implement those
-application changes. A first, unverified implementation checkpoint is recorded
-in [the Luna code handoff](BOOKSHELFNG_COMPATIBILITY_CODE_HANDOFF.md).
+automatic-migration contracts. The current continuation checkpoint implements
+the listed API, provider-dialect, and channel-recovery changes. Luna's runtime
+acceptance remains open and is recorded in
+[the code handoff](BOOKSHELFNG_COMPATIBILITY_CODE_HANDOFF.md).
 
 ## 4. Existing implementation to keep and finish
 
@@ -135,15 +140,15 @@ that every platform/provider has passed acceptance.
 
 | Capability | Existing implementation / evidence | Remaining type of work |
 | --- | --- | --- |
-| Normal-startup conversion | Lineage detection, embedded older Bookshelf migration chain, staged SQLite conversion, integrity checks, retained source copy, atomic database replacement, preview and restore | Extend handoff context and cross-platform failure recovery; then qualified populated-data validation. |
-| PostgreSQL conversion | Database selection, staged conversion/schema promotion, restore, external backup helper and synthetic fixtures | Supported-version/privilege matrix, real data, interruption and installed-host validation; do not call the whole converter absent. |
-| Library identity and format split | Edition/file-format inference; `BookshelfLegacyIdentityMap`; book, edition, file, sidecar and history remapping | Close legacy projection/default semantics and old/new ID use across every mutation and response. |
-| Import/search decisions | Numeric threshold compatibility, weighted legacy scoring, catalog fallback tiers, download ordering, same-file guard, persisted remote-search marker | Review remaining semantic differences and exercise decisions on identical inputs. |
+| Normal-startup conversion | Lineage detection, embedded older Bookshelf migration chain, staged SQLite conversion, integrity checks, retained source copy, atomic database replacement, preview and restore | Recovery code is present across the listed local channels; validate populated data, process interruption, restart and rollback on installed hosts. |
+| PostgreSQL conversion | Database selection, staged conversion/schema promotion, restore, external backup helper and synthetic fixtures | Supported-version/privilege matrix, real data, service-account access, interruption and installed-host validation. |
+| Library identity and format split | Edition/file-format inference; `BookshelfLegacyIdentityMap`; book, edition, file, sidecar and history remapping | Source-level legacy projection/default semantics have dispositions in the code handoff; validate every mutation/response family with migrated and colliding IDs. |
+| Import/search decisions | Numeric threshold compatibility, weighted legacy scoring, catalog fallback tiers, download ordering, same-file guard, persisted remote-search marker | Source-level review is recorded; compare same inputs, real providers and representative files. |
 | Media processing | M4B compatibility, track/chapter/tag handling, failure fallback, copy/move handling, durable jobs, SHA-256 artifact manifests | Complete-host/process-tree interruption, representative media, other shipped platforms and end-to-end import validation. |
-| Provider/settings ecosystem | Supplemental catalogs; Goodreads OAuth/list/write paths; MAM wedge behavior; legacy client categories; notification/settings contracts; legacy metadata consumer | Saved-settings equivalence and live provider behavior, with code fixes only for concrete differences. |
+| Provider/settings ecosystem | Supplemental catalogs; Goodreads OAuth/list/write paths; MAM wedge behavior; legacy client categories; notification/settings contracts; legacy metadata consumer | Source-level contracts and migration aliases are reviewed; validate saved credentials, live requests, webhook IDs and provider limits. |
 | External clients | Capabilities, scoped facades, restricted keys, legacy identity maps, pending-import lifecycle, SeerrNG smoke and populated-library smoke | F1/F2, complete successful acquisition, retry/shared-request races, availability/history and unchanged-client validation. |
-| UI workflows | Workflow crosswalk, mixed-format views, monitoring, import/recovery, bulk actions, retry/error states, preference migration | Outcome-by-outcome parity review, old bookmarks/state, keyboard/mobile and actual packaged-app validation. |
-| Installed packages | Windows/Chocolatey migration logic; Debian/AUR/RPM identity bridges; AppImage/Flatpak; Helm; container mode aliases; StartOS candidate | Linux orchestration and source-mode capture, external catalog/feed completion, then installed update/rollback tests. |
+| UI workflows | Workflow crosswalk, mixed-format views, monitoring, import/recovery, bulk actions, retry/error states, preference migration | Source-level review is recorded for the primary migrated/native flows; validate old bookmarks/state, keyboard/mobile and actual packaged-app behavior. |
+| Installed packages | Windows/Chocolatey migration logic; Debian/AUR/RPM identity bridges; AppImage/Flatpak; Helm; container mode aliases; StartOS candidate | Recovery code is present for default Linux units, Windows Chocolatey and desktop first launch. External catalog/feed delivery and installed update/rollback acceptance remain. |
 
 The latest committed evidence reports a Release Core run of **4,888 passed,
 28 skipped**, a **10-case real-tool conversion suite**, populated library API
@@ -163,11 +168,11 @@ rerunning the entire system while confirmed compatibility defects remain.
 | ---: | --- | --- | --- | --- |
 | 0 | C0 — Pin baseline and separate review/code/evidence queues | — | Delivered by this assessment | Source pins, reproducible inventory and explicit gap IDs available. |
 | 1 | C1 — Preserve compatibility context and old API address | C0 | Initial code slice implemented, unverified: source profile, source-default provider mode, unchanged API address, native-client marker | Migrated installations persist source semantics and accept old-address legacy requests without client reconfiguration. |
-| 2 | C2 — Complete legacy resource, mutation and lifecycle behavior | C1 | Partial code, unverified: one-work add, no legacy pending-import response, split-row IDs across book/edition/file/queue/history/rename/release/editor/manual-import/command resources, source-edition resolution for manual import, native-vs-legacy local-ID routing, mapped SignalR `Sync`, and multi-row `RefreshBook` fan-out preserving its old command type; broader F2/F5 review remains | Old request/response/identity/monitoring contracts have implemented projections, including split works and pending metadata. |
+| 2 | C2 — Complete legacy resource, mutation and lifecycle behavior | C1 | Code implemented for the listed request, response, command, and identity paths; source review complete for the named F2/F5 contracts; runtime unverified. | Old request/response/identity/monitoring contracts have implemented projections, including split works and pending metadata. |
 | 3 | C3 — Make migration an unattended recoverable transaction | C1/C2 | Linux package handoff and converter journals exist; Windows deferred-start and desktop recovery now write channel outcomes to the shared journal; all unverified | Every promotion boundary is journaled or reconciled; failures retain or restore the correct app/data/service state. |
-| 4 | C4 — Close acquisition, import and file behavior differences | C2 | Source review/ports cover release decisions, shared-tag delay/protocol/indexer/pending/download-client selection, torrent seeder rejection, legacy monitoring, and source-work duplicate-grab suppression across split media IDs. Matching/import/filesystem and catalog refresh remain open; code unverified. | Every in-scope semantic difference has a concrete port or supported equivalence rationale; no unknown acquisition/import behavior remains. |
-| 5 | C5 — Close saved settings, provider, auth and integration differences | C1/C2 | Known provider-contract migration is source-reviewed: renamed Readarr import-list alias, source provider inventory, Goodreads OAuth settings, Hardcover token, and fail-closed handling of unknown settings. Auth, webhook, external integration, and runtime behavior remain open. | Supported saved configurations retain their meaning and all required implementations are wired. |
-| 6 | C6 — Close user workflow and preference differences | C2/C4/C5 | Native request identity has been reviewed across the global AJAX client, bootstrap localization, encrypted backup fetch, and SSE. Search/edit/settings/mixed-format user workflows remain open. | Each BookshelfNG user task has a reachable implemented path with retained intent/preferences and usable failure recovery. |
+| 4 | C4 — Close acquisition, import and file behavior differences | C2 | Source-level semantic review is complete for the listed release/download, matching/import/filesystem, and catalog families; source behavior and target fingerprints/dispositions are recorded in the code handoff. Runtime equivalence remains unverified. | Every in-scope semantic difference has a concrete port or supported equivalence rationale; no unknown acquisition/import behavior remains. |
+| 5 | C5 — Close saved settings, provider, auth and integration differences | C1/C2 | Source-level review is complete for the listed provider contracts, saved settings/auth behavior, and webhook identity. Recognized settings are mapped, unknown meaningful settings fail closed, and private OIDC issuers remain blocked by default. External integrations and runtime behavior remain unverified. | Supported saved configurations retain their meaning and all required implementations are wired. |
+| 6 | C6 — Close user workflow and preference differences | C2/C4/C5 | Source-level review is complete for the listed search/add, bookshelf, unmapped-file retry, settings, request-identity, and primary migrated/native UI flows; the workflow crosswalk and code handoff record the dispositions. Runtime form, accessibility, and mixed-format outcomes remain unverified. | Each BookshelfNG user task has a reachable implemented path with retained intent/preferences and usable failure recovery. |
 | 7 | C7 — Finish native installation adapters | C3/C5 | Partial code, unverified: Linux package hooks, Chocolatey active/deferred checks, and AppImage/Flatpak supervised first-launch recovery are present; Windows/desktop channel outcomes now join the shared journal | Windows, Debian/PPA, RPM/COPR, AUR and desktop adapters invoke a recoverable handoff contract and pass installed-upgrade acceptance. |
 | 8 | C8 — Finish channel delivery and compatibility artifacts | C3/C7 | Code/integration required: F6/F7 | Every supported channel has a buildable adapter and exact delivery path, with unreachable historical installs explicitly identified. |
 | 9 | V0 — Assemble differential/upgrade acceptance harness | C1–C8 | Extend existing harnesses | Reproducible old/new scenarios, artifact pins and machine-readable per-contract results. |
@@ -244,19 +249,20 @@ Recovery must not overwrite newer data blindly. A rollback after users have
 written to ChaptarrNG must preserve those writes separately and state that the
 restored source is the pre-cutover state.
 
-### C4–C6 — Burn down the semantic queue by outcome
+### C4–C6 — Source review complete; validate outcomes
 
-These are finite **review-and-port** packages, not instructions to rewrite all
-129 backend or 64 frontend files. Use the snapshot's pending and changed-review
-paths, then the workflow crosswalk, in this order:
+The code handoff records the completed source comparisons and fingerprints for
+these behavior families. This order is now Luna's validation sequence, not an
+open source-review queue. It is not an instruction to rewrite all 129 backend
+or 64 frontend files:
 
-| Priority | Behavior family | Focused source targets / comparisons |
+| Validation order | Behavior family | Luna evidence needed |
 | ---: | --- | --- |
-| 1 | Release decisions and download lifecycle | `DecisionEngine/Specifications`, comparer, `ProcessDownloadDecisions`, `CompletedDownloadService`, monitoring, ignored downloads, torrent/Usenet bases; quality/custom-format cutoffs, delays, RSS/history, tags, duplicate/adopt behavior, retries and client cleanup. |
-| 2 | Matching and filesystem effects | `BookshelfMatchCompatibility*`, current identification pipeline, `DiskScanService`, `ImportApprovedBooks`, manual/downloaded import, `FileNameBuilder`, rename/move/delete, extras/sidecars; exact threshold/tie/order, format roots, collision, hardlink/copy/move and no duplicate ownership. |
-| 3 | Catalog refresh and saved providers | `BookInfoProxy`, supplemental metadata, Hardcover/Goodreads, import-list sync, per-field preferences, edition/series/narrator identity, rate-limit state, enabled provider settings and credential preservation. Include legacy OAuth/write/list providers and optional Direct Download dependencies. |
-| 4 | Settings/auth/external integrations | Config resource aliases, roots/profiles, OIDC/reverse proxy, API keys, webhooks/custom-script environment, all notification destinations, backup/encryption, MQTT, metrics and diagnostics settings. Preserve behavior without weakening current access controls. |
-| 5 | User workflows | `frontend/src/Books`, `Bookshelf`, `Author`, `UnmappedFiles`, `Search`, `Settings`, `Store`; old bookmarks, sorting/filters, bulk selection, mixed formats, preference migration, loading/retry/cancellation and accessibility. Treat dependency/build manifests separately from these user tasks. |
+| 1 | Release decisions and download lifecycle | Identical releases, tags, queue state, adoption, completion, retries and cleanup on migrated and native profiles. |
+| 2 | Matching and filesystem effects | Exact threshold/tie/fallback inputs; real roots, collisions, hardlinks/copy/move, sidecars, restart and no duplicate ownership. |
+| 3 | Catalog refresh and saved providers | Goodreads/Hardcover/catalog requests, import-list state, credentials, preferences, rate limits and provider failure retry. |
+| 4 | Settings/auth/external integrations | Saved config aliases, OIDC/reverse proxy, API keys, webhook IDs, notifications, backup/encryption, MQTT, metrics and diagnostics; retain current access controls. |
+| 5 | User workflows | Books/Bookshelf/Author/Unmapped Files/Search/Settings/Store, old bookmarks, sorting/filtering, mixed formats, bulk selection, preference migration, retry/cancel/error and accessibility. |
 
 For every reviewed item record source/target blobs, the user-observable contract,
 one of `implemented-equivalent`, `code-change-required`, or `validation-only`,
@@ -269,9 +275,9 @@ runtime capability. Revalidate only affected contract families after a fix.
 | Channel family | Code/integration remaining before acceptance | Final acceptance exercise |
 | --- | --- | --- |
 | GHCR and Docker Hub aliases | Reuse mode-specific digest publication and existing readiness gates; establish the source-mode/profile and failure-recovery contract for automatic container startup. | Pull/update the **old mutable reference** on amd64 and arm64 with unchanged mounts, key, port and URL; verify conversion, reads and recovery. Immutable pins get a documented one-time image change. |
-| Debian/PPA, AUR, RPM/COPR | Add shared source-mode preflight and journaled health/rollback hooks; preserve custom systemd overrides, environment, UID/GID and file access. Complete publisher inputs rather than rebuild the already-present package identities. | Upgrade the actual old package using apt/pacman/dnf with real dependencies and systemd; no `--nodeps` or mocked service for acceptance. |
-| Windows installer and Chocolatey | Chocolatey now registers deferred-start recovery for stopped services, captures both NSSM environment blocks, checks configured HTTP plus database health, and records channel outcomes in the shared journal. Feed/identity delivery and service-account PostgreSQL access remain. | Upgrade active and stopped installed services with real NSSM settings; pass and fail startup; verify both environments, arguments, start mode, URL base, SQLite restore, PostgreSQL backup/restore, task cleanup and retry. Resolve actual feed publication before claiming channel completion. |
-| AppImage and Flatpak | Wrappers preserve desktop IDs/data paths, supervise HTTP plus database health, persist startup state, and restore the source database after failure/interruption. They cannot swap the old desktop artifact back themselves; old artifact reinstall remains the channel rollback step. Actual update delivery metadata remains. | Same-path/app-ID update, sandbox/permissions, populated SQLite/PostgreSQL data, custom data/port/URL base, failed launch, interrupted restart recovery, and reinstall/verify the prior artifact. |
+| Debian/PPA, AUR, RPM/COPR | Shared source-mode preflight and journaled health/rollback hooks are present for default systemd units; custom overrides are preserved and require operator review. | Upgrade the actual old package using apt/pacman/dnf with real dependencies and systemd; inject start/stop/restart failures and verify data, environment, UID/GID, journal and rollback. |
+| Windows installer and Chocolatey | Chocolatey registers deferred-start recovery, captures both NSSM environment blocks, checks configured HTTP plus database health, preserves a failed target database and records channel outcomes. Feed/identity delivery and service-account PostgreSQL access remain. | Upgrade active and stopped installed services with real NSSM settings; pass/fail source migration and target-to-target update; verify environments, arguments, start mode, URL base, SQLite/PostgreSQL recovery, task cleanup, preserved target DB and retry. |
+| AppImage and Flatpak | Wrappers preserve desktop IDs/data paths, supervise HTTP plus database health, persist state, require `setsid --wait`, stop the app process group and restore source data after failure/interruption. Old artifact reinstall remains the rollback step. | Same-path/app-ID update, sandbox permissions, SQLite/PostgreSQL data, spaced/equal `-data`, custom port/URL base, failed/interrupted launch, process-tree cleanup and reopening the prior artifact. |
 | Helm and Unraid | Reuse chart/template candidates; finish old-identity version/catalog delivery and profile/rollback hooks. | Existing release/PVC or CA installation updates normally; no replacement empty volume, new base URL or lost environment. Exercise GitOps reconciliation and rollback. |
 | StartOS | Complete and integrate the existing SDK candidate into the external package repository/feed; finish the `.s9pk` artifact workflow. | Real device update/backup/restore for supported architecture and version, retaining package/volume IDs and `/init`. |
 | Cloudron and Co-op Cloud | Finish source candidates into the actual feed/recipe and update lifecycle, including the common preflight and recovery contract. | Real platform-managed install/update/rollback with persistent volumes and reverse proxy. |
@@ -331,11 +337,12 @@ external delivery dependencies, and the next executable slice. Stop adding
 unrelated enhancements. Do not gate the next code fix on unavailable operator
 credentials or another full media test run.
 
-**Next implementation batch:** continue the C4-C8 semantic and channel queue,
-starting with Luna's validation of the C1/C2 slice, migrated release ordering,
-converter journal checkpoints, and Linux package journal/restart behavior in
-the [code handoff](BOOKSHELFNG_COMPATIBILITY_CODE_HANDOFF.md). Use the concrete
-mismatches and interruption results for a focused fix pass.
+**Next batch:** Luna runs the V1–V4 acceptance matrix in the
+[code handoff](BOOKSHELFNG_COMPATIBILITY_CODE_HANDOFF.md), beginning with
+same-input C1–C6 behavior and the implemented Windows, desktop, and Linux
+recovery paths. Finish any remaining C7–C8 delivery adapters after their
+required channel inputs are available. Turn concrete mismatches into focused
+code fixes and rerun the owning acceptance cases.
 
 ## 8. Reproduce and refresh this assessment
 

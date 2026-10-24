@@ -17,8 +17,20 @@ record_journal() {
 }
 custom_data_argument=false
 custom_data_count=0
+expect_data_value=false
 for argument in "$@"; do
+  if [ "$expect_data_value" = true ]; then
+    custom_data_count=$((custom_data_count + 1))
+    data_dir=$argument
+    expect_data_value=false
+    custom_data_argument=true
+    continue
+  fi
   case "$argument" in
+    -data|--data)
+      expect_data_value=true
+      custom_data_argument=true
+      ;;
     -data=*|--data=*)
       custom_data_count=$((custom_data_count + 1))
       data_dir=${argument#*=}
@@ -26,7 +38,7 @@ for argument in "$@"; do
       ;;
   esac
 done
-if [ "$custom_data_count" -gt 1 ] || [ -z "$data_dir" ]; then
+if [ "$expect_data_value" = true ] || [ "$custom_data_count" -gt 1 ] || [ -z "$data_dir" ]; then
   echo 'BookshelfNG desktop launcher received multiple or empty data-directory arguments.' >&2
   exit 2
 fi
@@ -35,6 +47,8 @@ state_file="$data_dir/.chaptarrng-bookshelfng-desktop-handoff"
 metadata_dir="$data_dir/.chaptarrng-bookshelfng-desktop-handoff-data"
 lock_dir="$data_dir/.chaptarrng-bookshelfng-desktop.lock"
 app_pid=''
+app_launcher_pid=''
+app_process_group=''
 health_pid=''
 healthy=false
 resuming=false
@@ -70,6 +84,26 @@ process_is_running() {
   return 0
 }
 
+process_group_is_running() {
+  process_group=$1
+  case "$process_group" in ''|*[!0-9]*) return 1 ;; esac
+  ps -eo pgid=,stat= 2>/dev/null | awk -v group="$process_group" '$1 == group && $2 !~ /^Z/ { live = 1 } END { exit !live }'
+}
+
+terminate_app_tree() {
+  if [ -n "$app_process_group" ]; then
+    kill -TERM -- "-$app_process_group" 2>/dev/null || true
+    stop_deadline=$(( $(date +%s) + 30 ))
+    while process_group_is_running "$app_process_group" && [ "$(date +%s)" -lt "$stop_deadline" ]; do sleep 1; done
+    if process_group_is_running "$app_process_group"; then kill -KILL -- "-$app_process_group" 2>/dev/null || true; fi
+  elif [ -n "$app_pid" ] && process_is_running "$app_pid"; then
+    kill -TERM "$app_pid" 2>/dev/null || true
+    stop_deadline=$(( $(date +%s) + 30 ))
+    while process_is_running "$app_pid" && [ "$(date +%s)" -lt "$stop_deadline" ]; do sleep 1; done
+    if process_is_running "$app_pid"; then kill -KILL "$app_pid" 2>/dev/null || true; fi
+  fi
+}
+
 lock_owner_is_running() {
   process_pid=$1
   case "$process_pid" in ''|*[!0-9]*) return 1 ;; esac
@@ -80,10 +114,8 @@ lock_owner_is_running() {
 }
 
 cleanup() {
-  if [ "$healthy" != true ]; then
-    if [ -n "$health_pid" ] && process_is_running "$health_pid"; then kill -TERM "$health_pid" 2>/dev/null || true; fi
-    if [ -n "$app_pid" ] && process_is_running "$app_pid"; then kill -TERM "$app_pid" 2>/dev/null || true; fi
-  fi
+  if [ -n "$health_pid" ] && process_is_running "$health_pid"; then kill -TERM "$health_pid" 2>/dev/null || true; fi
+  terminate_app_tree
   rm -rf "$lock_dir"
   rm -f "$state_file.tmp-$$"
 }
@@ -246,6 +278,11 @@ if [ "$resuming" != true ] && [ ! -f "$sqlite_source" ] && [ "$postgres_source" 
   launch_without_migration "$@"
 fi
 
+if ! command -v setsid >/dev/null 2>&1 || ! setsid --help 2>&1 | grep -q -- '--wait'; then
+  echo 'BookshelfNG desktop migration requires util-linux setsid with --wait so failed startup can stop the complete application process tree.' >&2
+  exit 1
+fi
+
 if [ "$resuming" != true ]; then
   if ! "$console" -preview-bookshelf-migration "-data=$data_dir"; then
     write_state intervention-required
@@ -310,8 +347,24 @@ for name in CHAPTARR__SERVER__URLBASE READARR__SERVER__URLBASE AUDIOARR__SERVER_
   eval "value=\${$name:-}"
   if [ -n "$value" ]; then url_base=$(printf '%s' "$value" | sed 's#^/*##;s#/*$##'); break; fi
 done
+expect_server_argument=''
 for argument in "$@"; do
+  if [ -n "$expect_server_argument" ]; then
+    case "$expect_server_argument" in
+      port)
+        case "$argument" in ''|*[!0-9]*) ;; *) health_port=$argument ;; esac
+        ;;
+      urlbase)
+        url_base=$argument
+        url_base=$(printf '%s' "$url_base" | sed 's#^/*##;s#/*$##')
+        ;;
+    esac
+    expect_server_argument=''
+    continue
+  fi
   case "$argument" in
+    -port|--port) expect_server_argument=port ;;
+    -urlbase|--urlbase) expect_server_argument=urlbase ;;
     -port=*|--port=*)
       value=${argument#*=}
       case "$value" in ''|*[!0-9]*) ;; *) health_port=$value ;; esac
@@ -322,22 +375,89 @@ for argument in "$@"; do
       ;;
   esac
 done
+if [ -n "$expect_server_argument" ]; then
+  write_state intervention-required
+  echo "BookshelfNG desktop launcher received $expect_server_argument without a value." >&2
+  exit 1
+fi
 if [ "$health_port" -lt 1 ] || [ "$health_port" -gt 65535 ]; then
   write_state intervention-required
   echo "BookshelfNG desktop port is invalid: $health_port" >&2
   exit 1
 fi
 health_url=${BOOKSHELFNG_HEALTH_URL:-http://127.0.0.1:$health_port${url_base:+/$url_base}/ping}
+case "$health_url" in
+  http://*|https://*) ;;
+  *)
+    write_state intervention-required
+    echo 'BookshelfNG desktop health URL must use local HTTP or HTTPS.' >&2
+    exit 1
+    ;;
+esac
+health_authority=${health_url#*://}
+health_authority=${health_authority%%/*}
+case "$health_authority" in
+  *'@'*)
+    write_state intervention-required
+    echo 'BookshelfNG desktop health URL cannot include credentials.' >&2
+    exit 1
+    ;;
+esac
+case "$health_authority" in
+  localhost|127.0.0.1|'[::1]') ;;
+  localhost:*|127.0.0.1:*|'[::1]:*')
+    health_port_override=${health_authority##*:}
+    case "$health_port_override" in ''|*[!0-9]*)
+      write_state intervention-required
+      echo 'BookshelfNG desktop health URL has an invalid port.' >&2
+      exit 1
+      ;;
+    esac
+    if [ "$health_port_override" -lt 1 ] || [ "$health_port_override" -gt 65535 ]; then
+      write_state intervention-required
+      echo 'BookshelfNG desktop health URL has an invalid port.' >&2
+      exit 1
+    fi
+    ;;
+  *)
+    write_state intervention-required
+    echo 'BookshelfNG desktop health URL must target localhost, 127.0.0.1, or [::1].' >&2
+    exit 1
+    ;;
+esac
 timeout_seconds=${BOOKSHELFNG_STARTUP_TIMEOUT_SECONDS:-5400}
 case "$timeout_seconds" in ''|*[!0-9]*) timeout_seconds=5400 ;; esac
 if [ "$timeout_seconds" -lt 1 ] || [ "$timeout_seconds" -gt 7200 ]; then timeout_seconds=5400; fi
 
+app_pid_file="$lock_dir/app.pid"
 if [ "$custom_data_argument" = true ]; then
-  "$app" -nobrowser "$@" &
+  setsid --wait sh -c 'printf "%s\n" "$$" > "$1"; shift; exec "$@"' bookshelfng-app "$app_pid_file" "$app" -nobrowser "$@" &
 else
-  "$app" -nobrowser "-data=$data_dir" "$@" &
+  setsid --wait sh -c 'printf "%s\n" "$$" > "$1"; shift; exec "$@"' bookshelfng-app "$app_pid_file" "$app" -nobrowser "-data=$data_dir" "$@" &
 fi
-app_pid=$!
+app_launcher_pid=$!
+app_start_deadline=$(( $(date +%s) + 10 ))
+while [ ! -s "$app_pid_file" ] && [ "$(date +%s)" -lt "$app_start_deadline" ]; do
+  if ! process_is_running "$app_launcher_pid"; then break; fi
+  sleep 0.1
+done
+app_pid=$(cat "$app_pid_file" 2>/dev/null || true)
+case "$app_pid" in ''|*[!0-9]*) app_pid='' ;; esac
+if [ -n "$app_pid" ]; then
+  observed_group=$(ps -o pgid= -p "$app_pid" 2>/dev/null | tr -d '[:space:]' || true)
+  if [ "$observed_group" = "$app_pid" ]; then
+    app_process_group=$observed_group
+  else
+    echo 'The desktop application did not enter its isolated process group; stopping before the migration health check.' >&2
+    terminate_app_tree
+    wait "$app_launcher_pid" 2>/dev/null || true
+    exit 1
+  fi
+else
+  echo 'The desktop application did not start; no migration health check was run.' >&2
+  wait "$app_launcher_pid" 2>/dev/null || true
+  exit 1
+fi
 "$console" -check-bookshelf-migration "-data=$data_dir" \
   "-bookshelf-health-url=$health_url" \
   "-bookshelf-health-timeout-seconds=$timeout_seconds" >/dev/null 2>&1 &
@@ -364,19 +484,14 @@ done
 if [ "$healthy" = true ]; then
   write_state healthy
   rm -rf "$metadata_dir"
-  wait "$app_pid"
+  wait "$app_launcher_pid"
   exit $?
 fi
 
 if process_is_running "$health_pid"; then kill -TERM "$health_pid" 2>/dev/null || true; fi
-if process_is_running "$app_pid"; then
-  kill -TERM "$app_pid" 2>/dev/null || true
-  stop_deadline=$(( $(date +%s) + 30 ))
-  while process_is_running "$app_pid" && [ "$(date +%s)" -lt "$stop_deadline" ]; do sleep 1; done
-  if process_is_running "$app_pid"; then kill -KILL "$app_pid" 2>/dev/null || true; fi
-fi
+terminate_app_tree
 wait "$health_pid" 2>/dev/null || true
-wait "$app_pid" 2>/dev/null || true
+wait "$app_launcher_pid" 2>/dev/null || true
 
 if restore_source_database; then
   write_state rolled-back

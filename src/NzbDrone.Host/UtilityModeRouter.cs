@@ -371,7 +371,12 @@ namespace NzbDrone.Host
                 throw new InvalidDataException("BookshelfNG handoff health URL must use HTTP or HTTPS on localhost or a loopback address.");
             }
 
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Min(3, timeoutSeconds)) };
+            using var handler = new HttpClientHandler
+            {
+                AllowAutoRedirect = false,
+                UseProxy = false
+            };
+            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(Math.Min(3, timeoutSeconds)) };
             var stopwatch = Stopwatch.StartNew();
             while (stopwatch.Elapsed.TotalSeconds < timeoutSeconds)
             {

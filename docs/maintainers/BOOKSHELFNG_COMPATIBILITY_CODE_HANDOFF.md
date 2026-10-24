@@ -1,8 +1,8 @@
 # BookshelfNG compatibility code handoff
 
-This is the tenth code checkpoint after the 2026-10-24 replacement
-reassessment. It is intended for focused validation and refinement before broad
-parity work.
+This continuation checkpoint closes the current source-level C4–C6 review
+families and adds the remaining Windows, desktop, and webhook recovery fixes
+before Luna's installed-channel and workflow acceptance.
 
 ## Implemented in this checkpoint
 
@@ -105,7 +105,22 @@ parity work.
   HTTP plus database health. It records `starting`, `healthy`, `rolled-back`, or
   `intervention-required`, writes channel outcome/state into the shared
   migration journal, and restores source data after a failed/interrupted first
-  launch. Reopening the old artifact remains the executable rollback.
+  launch. Spaced and equals-form `-data`, `-port`, and `-urlbase` arguments are
+  parsed so health checks use the actual application settings. The health URL
+  is restricted to loopback; HTTP checks do not follow redirects or use
+  proxies. The launcher supervises and stops the full application process group
+  on failure or launcher exit. Migration refuses to start unless
+  `setsid --wait` is available. Reopening the old artifact remains the
+  executable rollback.
+- A stopped Windows Chocolatey upgrade now distinguishes a BookshelfNG source
+  database from an already converted ChaptarrNG database. A failed deferred
+  target-to-target update restores the prior app and NSSM settings, preserves
+  the ChaptarrNG database, keeps the service stopped, records
+  `intervention-required`, and retains the health failure reason. It does not
+  try to restore a BookshelfNG backup over a ChaptarrNG database.
+- Standard webhook events now project mapped migrated books back to their
+  BookshelfNG source IDs. Native ChaptarrNG books continue to use their target
+  IDs; imported BookFile IDs already retain their source values.
 - A source-pinned C4 pass added migrated-profile branches for BookshelfNG's
   raw-title release terms, quality-first upgrade/cutoff rules, shared author
   tags in delay/protocol/indexer/pending-queue/download-client selection,
@@ -115,8 +130,11 @@ parity work.
   now resolves split target rows back to one BookshelfNG work ID, so an
   audiobook and ebook row from one legacy work cannot both be grabbed in one
   RSS pass. Source/target blob IDs and dispositions are recorded below.
-  Matching/import/filesystem, provider and UI workflows still need their own
-  semantic review.
+  The C4 download, matching/import/filesystem and catalog paths; C5 provider,
+  settings/auth and webhook contracts; and C6 request identity and primary UI
+  workflows have now had source-level semantic review. Dispositions and
+  fingerprints follow below. This closes code review only; Luna still owns
+  fixture, live-provider, user-workflow and installed-channel acceptance.
 
 The Linux default-unit cutover now has automatic database and application
 rollback code. C3/F4 still needs Luna's package-manager failure-path and
@@ -175,7 +193,7 @@ format change; the accepted/rejected decision and reason are unchanged.
 | Acceptance ID | Contract reviewed | Source path (source blob) | Target path (target blob) | Disposition |
 | --- | --- | --- | --- | --- |
 | C5-01 | Preserve known provider implementations, settings contracts, and credentials; map the renamed Readarr import-list provider; block any unknown implementation or meaningful setting before apply. | `src/NzbDrone.Core/ImportLists/Readarr/ReadarrImport.cs` (`7e9a83545d0751276fbe39cbe2922458dfa15bd5`) | `BookshelfDatabaseImporter.cs` (`814a5ba92795834a7006ff80ac38c31969c56843`), `ChaptarrImport.cs` (`93c069f4ec543395f0de59b43f54c5aef01be442`) | `implemented-equivalent` for recognized contracts; unsupported values fail closed |
-| C6-01 | Keep native ChaptarrNG API calls on canonical IDs after migration, including the global AJAX client, direct encrypted-backup fetch, bootstrap localization fetch, and native SSE query. Login localization and `/initialize.json` carry no provider IDs and do not require an identity dialect. | `frontend/src/Utilities/createAjaxRequest.js` (`0f025d74c3f4f680f34df3aa65a71525f9def5fc`) | same path (`32896f9d098402458300a7463cac574ce313acaa`); direct-call paths reviewed: `frontend/src/System/Backup/downloadEncryptedBackup.js`, `frontend/src/index.ts`, `frontend/src/Services/SeriesEnrichmentService.js` | `implemented-equivalent` for native request context; broad UI workflow review remains open |
+| C6-01 | Keep native ChaptarrNG API calls on canonical IDs after migration, including the global AJAX client, direct encrypted-backup fetch, bootstrap localization fetch, and native SSE query. Login localization and `/initialize.json` carry no provider IDs and do not require an identity dialect. | `frontend/src/Utilities/createAjaxRequest.js` (`0f025d74c3f4f680f34df3aa65a71525f9def5fc`) | same path (`32896f9d098402458300a7463cac574ce313acaa`); direct-call paths reviewed: `frontend/src/System/Backup/downloadEncryptedBackup.js`, `frontend/src/index.ts`, `frontend/src/Services/SeriesEnrichmentService.js` | `implemented-equivalent` for native request context; user-workflow source review is recorded in C6-02, with runtime acceptance still open |
 
 C5-01 was checked against the pinned source provider inventory: all source
 download-client base providers have corresponding target providers; the
@@ -186,6 +204,30 @@ Hardcover API token have explicit migration handling. The importer disables
 and blocks unknown provider contracts or meaningful settings instead of
 silently dropping them. This does not close auth, webhook, or external-service
 runtime acceptance.
+
+## Broader C4–C6 source review dispositions
+
+The following behavior families were compared against the pinned BookshelfNG
+source at `d42ec2aba1e411f4fb538d4d7201f6930898a91e`. These are semantic
+reviews of the source/target paths, not claims that every external service or
+installed workflow has passed runtime acceptance. The detailed user-task
+crosswalk remains in [BOOKSHELFNG_WORKFLOW_PARITY.md](../BOOKSHELFNG_WORKFLOW_PARITY.md).
+
+| Acceptance ID | Contract reviewed | Source fingerprints | Target fingerprints | Disposition |
+| --- | --- | --- | --- | --- |
+| C4-31 | Download selection, adoption, ignored-download event, completion and import lifecycle. Migrated author tags select clients as in BookshelfNG; download matching carries the source author/work context. ChaptarrNG additionally snapshots client files, verifies the expected target set and supports detached conversion/retry. | `DownloadService.cs` (`a61b2393ab7730d6307a8d099bcd6b534260f6f6`); `CompletedDownloadService.cs` (`80118ccba67a2f1c31ce7b667e648992c0f3b57e`); `IgnoredDownloadService.cs` (`b9cd799a8bee04508826995dde460367d91c2c45`) | `DownloadService.cs` (`0bd75d9ae29c8747984e0019255fad7d1f8f6218`); `CompletedDownloadService.cs` (`37ad9980081383f8a59982d0abf9b1ae4a489a63`); `IgnoredDownloadService.cs` (`8c812800c9e673b9187e1345b7eb8a06e2090e94`); `TrackedDownloadAlreadyImported.cs` (`7c177df31f042c191d305faa1302dd66cfdbf24e`) | `validation-only` for the legacy successful path and client-selection contract; retry, strict-verification and crash-recovery behavior needs Luna's same-input fault cases. |
+| C4-32 | Local candidate scoring, ordered catalog fallback, remote recheck threshold, ties, close-match threshold, same-file rejection and manual/automatic decision split. The migrated path keeps the BookshelfNG score weights and default minimum of 70, 85% remote recheck, fallback order and source candidate order; target identity/ambiguity guards remain active. | `CandidateService.cs` (`2931adfd9453c2fb9a8d06a90b6571101f46da3e`); `IdentificationService.cs` (`8e0377de5447d5b99c1f5cb30da153ff23a2b4aa`); `DistanceCalculator.cs` (`44834d0a0bb0eed4a830cf650b7e8ea2f6c167b7`); `CloseAlbumMatchSpecification.cs` (`d3aaeda9f4db1ff8ed09b019c20adfb45f788272`); `SameFileSpecification.cs` (`32b8e9e8d42342f3b5fda924cba80b8709209840`); `ImportDecisionMaker.cs` (`d1f22d0fdaa93f4e330c6ce48af7156c9e3d710a`) | `FileMatchingService.cs` (`ca7c3ec07050f12f016a560acb4d0aa8fd5aec1d`); `UnmappedCatalogSuggestionHelper.cs` (`61e56d2a082d4065f910f3cf09fbd0d0084c7755`); `BookshelfMatchCompatibilityScorer.cs` (`0458c32b0882293bb130d0257b9231d557f875db`); `BookshelfSameFileCompatibility.cs` (`cbc03dff9818b5916c31e925544fbac82ca2558d`); `SimpleImportDecisionMaker.cs` (`257114b5da9d9361e4b8c91214b0692de891ce8e`); `ImportOrchestratorV2.cs` (`60b6805354fb9418a6ef6ff96764f9c9859ac6de`) | `implemented-equivalent` for migrated scoring, fallback and same-file contracts; provider/fault and representative-file acceptance remains open. |
+| C4-33 | Disk scans, import approval, destination naming, format-root containment, free-space and same-file safety, sidecars and move/copy effects. The mapped target paths preserve normal import outcomes and add staged/contained writes and collision checks. | `DiskScanService.cs` (`ca8327f67e9fe21f0ff4aff7b09837ad759a268c`); `ImportApprovedBooks.cs` (`8fa84834a512aaf5c03778a6b3243675f497c3c5`); `FileNameBuilder.cs` (`1a1d476aa785631fbbb00c821a49380314e3ba5b`); `DownloadedBooksImportService.cs` (`1d259a5de9cc78f4699d0aabe595285e9dd9e90b`) | `DiskScanService.cs` (`6e1664fa9c0d8a2c8bd12fd31789f9d5a92f9141`); `ImportApprovedBooks.cs` (`6da8d5c19ddf328492b17deee83ac1aaef503152`); `FileNameBuilder.cs` (`4323e6a15c09071a531eaa98364d649419551d96`); `DownloadedBooksImportService.cs` (`cfdd658d9514b8b9e8bc168591188f3bee64f3e2`) | `validation-only` for normal filesystem outcomes; real files, mounts, collisions and interruption remain Luna acceptance. |
+| C4-34 | Catalog refresh, supplemental metadata, field preferences, import-list sync and provider-state commit behavior. Current proxy and sync paths were compared with source behavior and the fallback/order contracts in the workflow crosswalk; no additional source-level code gap was found. | `BookInfoProxy.cs` (`03eedae79255edbc9d0d2a8c630a75cd5f2b3cc7`); `AdditionalBookMetadataProxy.cs` (`024643f01466b68903fe5ed72071da6480930510`); `ImportListSyncService.cs` (`dd3e645ad6357f000a52d5d2144c9f0f4ba2b0a2`) | `BookInfoProxy.cs` (`8543c75cafa7c44a2405d4d6540a9acf8d3c1798`); `AdditionalBookMetadataProxy.cs` (`d51dda2aba0b862539b13d6cc7d28e5eec899227`); `ImportListSyncService.cs` (`b31de2154e00bfd71df4f86d220a170c0767953a`) | `validation-only`; live catalogs, provider rate limits, saved credentials and scheduled sync need acceptance. |
+| C5-02 | Standard webhook and Notifiarr payload identity and settings/auth compatibility. Mapped migrated book events now expose the source BookshelfNG work ID, while native target-only books retain their ChaptarrNG ID. Source/target provider, config-file, API-key and OIDC paths were also reviewed. | `WebhookBase.cs` (`6b4fd963bb438550d29a1e44b6c371adf1d2da5b`); `WebhookBook.cs` (`c94c02a7df7f0d374884d3923a3e3f25dda5948b`); `Notifiarr.cs` (`16df64ac88d6fc94d047611406e64c0e55fc5cfb`); `ConfigFileProvider.cs` (`ea860905319f4f20c2cbde6ffc22947f86df7da0`); `ApiKeyAuthenticationHandler.cs` (`3c01ae35ad7972b98fd8e399b5d03117be9de2df`); `OidcBackchannelHandler.cs` (`61882ba594f4b348ef47a99d713cc4d52e0755bd`) | `WebhookBase.cs` (`a3ca1f53265b6eeeb5992731130937ba139c4cb5`); `WebhookBook.cs` (`681cb52cd11c7bd6f3b15fcffb7c43919facdbd4`); `Notifiarr.cs` (`95785c5a2e00b07b7811868835a77b626f4518ad`); `ConfigFileProvider.cs` (`4509bd5c07582de655727ea978502f80449c0f81`); `ApiKeyAuthenticationHandler.cs` (`1288c0cb501014db888a7684b26015d2a44ff144`); `OidcBackchannelHandlerFactory.cs` (`66ddd2d6bd87343f74e193eab20f78c07e604273`) | `implemented-equivalent` for saved setting aliases and legacy webhook IDs. Private OIDC issuers remain blocked by default and require the documented explicit allow setting; preserve that access-control boundary. |
+| C6-02 | Search/add, bookshelf grouping, unmapped-file retry, security settings and direct/native API request identity. The common client and direct backup fetch retain native IDs; native UI requests carry the native marker, while unchanged `/api/v1` clients use the migration facade. User-task paths are mapped in the workflow crosswalk. | `AddNewItem.js` (`55eb0b44b28aca8603acc91507efed5033e93479`); `Bookshelf.js` (`9e7d0f3535c8cef5bee97c5f122a74812152052d`); `UnmappedFilesTable.js` (`cf4eac2593d3a7b3822dfb7e6b47069db6abce4d`); `SecuritySettings.js` (`2d4cabdeca37c95729b2c0e269abe19516170a9b`); `downloadEncryptedBackup.js` (`45422149336ea5cc8b497656c54e477cdc41a7d8`); `index.ts` (`d3445e4da6cf169cec03aebce945c40e32b26e50`) | `AddNewItem.js` (`cd5fb4f696b7aa80afdc62125272290434ffe0e9`); `Bookshelf.js` (`9c714cb9f065409c724c1b6fb38a163523fe87bc`); `UnmappedFilesTable.js` (`fb4def5075b51d521058b6403632c9457fbc8983`); `SecuritySettings.js` (`430434db67ce1ae8674491d6052c72dd5a190984`); `downloadEncryptedBackup.js` (`d4c574214d191730aaff570e92533cb6fcca691a`); `index.ts` (`2e7987ec9b19fd65f16443a02279b10f851c1bc6`) | `validation-only` for source-level workflow identity and mapped surfaces; loading, editing, mixed-format, mobile/keyboard and migrated-browser acceptance remains open. |
+
+The source-level C4–C6 review queue is closed for these behavior families. The
+remaining work is Luna's acceptance of same-input outcomes, failure/restart
+behavior, live providers and actual installed channels. One documented
+authentication compatibility boundary remains: private OIDC issuers need
+`BOOKSHELF_OIDC_ALLOW_PRIVATE_ISSUER=true`; the migration does not silently
+weaken the default issuer-target restrictions.
 
 ## Luna validation queue
 
@@ -274,9 +316,11 @@ runtime acceptance.
     startup for SQLite and PostgreSQL, plus process interruption after database
     promotion. Preserve default and explicit `-data` paths, config/environment/
     CLI port and URL-base overrides, source backups, and readable recovery
-    state. Reopen the old artifact after rollback and confirm it reads the
-    restored source database. Test single-instance locking and retry only after
-    a recorded rollback.
+    state. Force process-tree descendants and the launcher to stop during
+    health validation; confirm no app/worker process is left behind. Reopen the
+    old artifact after rollback and confirm it reads the restored source
+    database. Test single-instance locking and retry only after a recorded
+    rollback.
 13. On migrated fixtures, compare release-profile raw-title terms, quality vs
     custom-format ranking, proper/revision behavior, cutoff, compatible formats,
     RSS/history, delay/protocol/indexer tags, pending queue winner, monitored
@@ -301,6 +345,11 @@ runtime acceptance.
     forms. Verify native API calls retain canonical target IDs, source calls
     retain BookshelfNG IDs, and every direct UI API/SSE request uses the right
     native request marker or intentionally has no provider-ID context.
+17. For standard Webhook grab, import, book-added, book-delete and file-delete
+    events, confirm a mapped migrated book uses its original BookshelfNG ID,
+    the source author and file IDs remain stable, and a target-only ChaptarrNG
+    book keeps its target ID. Repeat after a migrated book is split across
+    audiobook and ebook target rows.
 
 ## Still open after this checkpoint
 
@@ -308,18 +357,18 @@ runtime acceptance.
   service units. It remains unaccepted until Luna exercises every package
   manager's service failure and restart behavior, especially when systemd
   executes `ExecStopPost` after a failed `ExecStartPost`.
-- The reviewed C4 release-decision and duplicate-grab contracts are implemented
-  but unverified. Remaining C4 download completion, matching/import/filesystem,
-  catalog refresh and media workflows remain open. C5 provider contract import
-  is source-reviewed, while broader auth, webhook, external integration, and
-  runtime behavior remain open. C6 native request identity is source-reviewed;
-  the user-facing search, edit, settings, mixed-format, and recovery workflows
-  still need their own semantic review.
+- C4 download, matching/import/filesystem and catalog paths; C5 provider,
+  settings/auth and webhook identity; and C6 request identity and primary UI
+  workflows now have source-level dispositions above. Same-input decisions,
+  provider requests, representative files, form outcomes and recovery paths
+  remain runtime acceptance work for Luna.
 - Channel delivery and installed-upgrade acceptance from C7-C8 remain open.
-- Windows Chocolatey deferred-start and desktop first-launch recovery now
-  coordinate channel outcomes with the shared migration journal. They have no
-  Luna installed-channel acceptance yet. Desktop executable rollback still
-  requires reinstalling/reopening the old artifact.
+- Windows Chocolatey deferred-start recovery distinguishes source migration
+  rollback from target-to-target update failure; desktop first-launch recovery
+  requires and supervises `setsid --wait`. Both coordinate outcomes with the
+  shared migration journal and have no Luna installed-channel acceptance yet.
+  Desktop executable rollback still requires reinstalling/reopening the old
+  artifact.
 - These code slices have not been built or tested. Luna's results should be
   tied to the exact commit that contains them; regressions should be fixed
   before the next code batch.
