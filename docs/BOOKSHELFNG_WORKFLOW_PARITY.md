@@ -1,5 +1,10 @@
 # BookshelfNG user workflow parity map
 
+For the current code-first completion sequence and concrete unchanged-client
+gaps, use the [2026-10-24 replacement reassessment](maintainers/BOOKSHELFNG_REPLACEMENT_REASSESSMENT_2026-10-24.md).
+This crosswalk records implementation and acceptance evidence; its older
+milestones are not a current missing-code count.
+
 This map compares the everyday work a BookshelfNG user needs to do in ChaptarrNG.
 It describes source affordances, not a published image. BookshelfNG retirement
 is not yet accepted, so ChaptarrNG releases and migration channels remain

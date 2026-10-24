@@ -5,6 +5,7 @@ installation choices.
 
 ## BookshelfNG migration
 
+- [Replacement reassessment and completion order](maintainers/BOOKSHELFNG_REPLACEMENT_REASSESSMENT_2026-10-24.md): current source findings and the code-first plan for 1:1 compatibility and automatic installed migration.
 - [Retirement status](BOOKSHELFNG_RETIREMENT.md): current release state, validation, and open acceptance gates.
 - [Move an installation](MIGRATE_FROM_BOOKSHELFNG.md): supported source schemas, backup, preview, apply, rollback, and channel limits.
 - [Workflow parity](BOOKSHELFNG_WORKFLOW_PARITY.md): BookshelfNG user workflows and the remaining operator checks.

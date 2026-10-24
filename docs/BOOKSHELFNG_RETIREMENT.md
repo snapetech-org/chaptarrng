@@ -1,5 +1,13 @@
 # BookshelfNG retirement status
 
+**Execution plan (2026-10-24):** The [replacement reassessment](maintainers/BOOKSHELFNG_REPLACEMENT_REASSESSMENT_2026-10-24.md)
+separates confirmed compatibility code gaps, source-review work, and validation
+from the historical evidence below. It prioritizes unchanged-client behavior at
+the existing API address and recoverable automatic installation handoff, then
+the remaining semantic review, comprehensive tests, refinement and delivery.
+Use that dependency order for the 100% drop-in goal; old path counts are not
+missing-feature counts. This planning update changes no release gate.
+
 **BookshelfNG edition and unmapped-file migration parity (2026-10-24):** The
 converter now classifies editions using ebook, audiobook, print, narrator, and
 recognized linked-file evidence. It creates format-specific edition rows when
