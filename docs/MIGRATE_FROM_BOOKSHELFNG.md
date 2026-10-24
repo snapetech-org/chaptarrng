@@ -790,9 +790,11 @@ database.
 Change the image to ChaptarrNG and retain the old host paths, container mount
 targets, and port mapping. For a manual cutover, set `HARDCOVER=true` for a
 native Hardcover BookshelfNG source or `HARDCOVER=false` for a Goodreads-primary
-source. The source compatibility image targets select the matching mode for the
-legacy mutable aliases and use port `8787` with a fresh data directory. They
-have not been published or enabled while the release freeze is active; a saved
+source. The compatibility aliases map `latest`, `main`, `master`, and
+`hardcover` to the native Hardcover target, and `softcover` to the Goodreads
+target; release automation verifies each alias against its mode-specific image
+digest. Those images use port `8787` with a fresh data directory. They have not
+been published or enabled while the release freeze is active; a saved
 `config.xml` port or explicit `Chaptarr__Server__Port` setting takes precedence.
 The ordinary ChaptarrNG image still defaults to `8789` for fresh installs. For
 an installation that used the default BookshelfNG port, the shape is:

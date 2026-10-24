@@ -813,7 +813,7 @@ namespace NzbDrone.Core.MediaFiles
 
                 var manifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(File.ReadAllText(manifestPath));
                 return manifest != null &&
-                       manifest.Version == 1 &&
+                       manifest.Version == ConversionArtifactManifest.CurrentVersion &&
                        manifest.Importable &&
                        manifest.OutputPath.PathEquals(request.OutputPath) &&
                        manifest.OutputSize == output.Length &&
@@ -828,7 +828,8 @@ namespace NzbDrone.Core.MediaFiles
                        string.Equals(manifest.TagSignature, request.TagSignature, StringComparison.Ordinal) &&
                        manifest.Sources != null &&
                        manifest.Sources.Count == request.Sources.Count &&
-                       manifest.Sources.Zip(request.Sources, SourcesMatch).All(matches => matches);
+                       manifest.Sources.Zip(request.Sources, SourcesMatch).All(matches => matches) &&
+                       ConversionArtifactFingerprint.Matches(request.OutputPath, manifest.OutputSha256);
             }
             catch
             {
@@ -851,12 +852,13 @@ namespace NzbDrone.Core.MediaFiles
             var output = new FileInfo(artifactPath);
             var manifest = new ConversionArtifactManifest
             {
-                Version = 1,
+                Version = ConversionArtifactManifest.CurrentVersion,
                 Importable = importable,
                 CreatedUtc = DateTime.UtcNow,
                 OutputPath = artifactPath,
                 OutputSize = output.Length,
                 OutputModifiedUtcTicks = output.LastWriteTimeUtc.Ticks,
+                OutputSha256 = ConversionArtifactFingerprint.ComputeSha256(artifactPath),
                 TargetQualityId = request.TargetQualityId,
                 TargetQualityName = request.TargetQualityName,
                 AudioBitrate = request.AudioBitrate,

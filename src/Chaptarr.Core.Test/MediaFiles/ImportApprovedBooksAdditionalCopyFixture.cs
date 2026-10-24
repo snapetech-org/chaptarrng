@@ -4710,9 +4710,10 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void should_not_reuse_expired_or_modified_retained_conversion_artifact(bool expire)
+        [TestCase("expired")]
+        [TestCase("changed-size")]
+        [TestCase("changed-content")]
+        public void should_not_reuse_expired_or_modified_retained_conversion_artifact(string invalidation)
         {
             var tempPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-retain-expired-{Guid.NewGuid():N}.mp3");
             var destinationDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-destination-{Guid.NewGuid():N}");
@@ -4768,13 +4769,22 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 var oldOutput = firstConversion.LastOutputFile;
                 var oldAttemptFolder = Path.GetDirectoryName(oldOutput);
-                if (expire)
+                if (invalidation == "expired")
                 {
                     Directory.SetLastWriteTimeUtc(oldAttemptFolder, DateTime.UtcNow.AddDays(-8));
                 }
-                else
+                else if (invalidation == "changed-size")
                 {
                     File.AppendAllText(oldOutput, "changed after validation");
+                }
+                else
+                {
+                    var lastWriteTimeUtc = File.GetLastWriteTimeUtc(oldOutput);
+                    var content = File.ReadAllBytes(oldOutput);
+                    Assert.That(content.Length, Is.GreaterThan(0));
+                    content[0] ^= 0xff;
+                    File.WriteAllBytes(oldOutput, content);
+                    File.SetLastWriteTimeUtc(oldOutput, lastWriteTimeUtc);
                 }
 
                 var secondConversion = new SuccessfulM4bConversionService();
@@ -4889,7 +4899,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Assert.That(File.Exists(failedConversion.LastOutputFile), Is.True);
                 var failedManifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(
                     File.ReadAllText(Path.Combine(Path.GetDirectoryName(failedConversion.LastOutputFile), "conversion-artifact.json")));
-                Assert.That(failedManifest.Version, Is.EqualTo(1));
+                Assert.That(failedManifest.Version, Is.EqualTo(ConversionArtifactManifest.CurrentVersion));
                 Assert.That(failedManifest.Importable, Is.False);
 
                 var retryConversion = new SuccessfulM4bConversionService();
@@ -5088,12 +5098,13 @@ namespace Chaptarr.Core.Test.MediaFiles
                 File.WriteAllText(request.OutputPath, "converted m4b");
                 var manifest = new ConversionArtifactManifest
                 {
-                    Version = 1,
+                    Version = ConversionArtifactManifest.CurrentVersion,
                     Importable = true,
                     CreatedUtc = DateTime.UtcNow,
                     OutputPath = request.OutputPath,
                     OutputSize = new FileInfo(request.OutputPath).Length,
                     OutputModifiedUtcTicks = new FileInfo(request.OutputPath).LastWriteTimeUtc.Ticks,
+                    OutputSha256 = ConversionArtifactFingerprint.ComputeSha256(request.OutputPath),
                     TargetQualityId = request.TargetQualityId,
                     TargetQualityName = request.TargetQualityName,
                     AudioBitrate = request.AudioBitrate,

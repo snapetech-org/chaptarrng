@@ -35,8 +35,9 @@ bitrate.
 
 Detached completed-download conversions save their request and recovery state.
 Each retry writes to a unique staging path, and only a successful, validated
-output is promoted to the import path. The versioned manifest records the
-source and conversion settings plus the output size and modification time.
+output is promoted to the import path. Version 2 of the manifest records the
+source and conversion settings plus the output size, modification time, and
+SHA-256 digest; recovery verifies the full output content before reuse.
 Readable output from a tool-reported failure stays available for inspection
 but cannot be imported or reused. Startup can resume queued work or hand a
 validated output to the import sweep; real-tool process-kill and restart

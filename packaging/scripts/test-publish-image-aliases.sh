@@ -36,7 +36,15 @@ while (($#)); do
 done
 [[ -n "$target" && -n "$metadata" && -n "$source" ]]
 printf '%s\t%s\n' "$target" "$source" >> "$PUBLISH_LOG"
-printf '{"containerimage.descriptor":{"digest":"%s"}}\n' "$MOCK_METADATA_DIGEST" > "$metadata"
+if [[ "$source" == "docker.io/snapetech/chaptarrng:$VERSION" ]]; then
+  digest="$MOCK_STANDARD_DIGEST"
+else
+  digest="${source##*@}"
+fi
+if [[ "$target" == "$MOCK_BAD_TARGET" ]]; then
+  digest="$MOCK_WRONG_DIGEST"
+fi
+printf '{"containerimage.descriptor":{"digest":"%s"}}\n' "$digest" > "$metadata"
 MOCK_DOCKER
 
 cat > "$work/bin/skopeo" <<'MOCK_SKOPEO'
@@ -45,12 +53,28 @@ set -euo pipefail
 [[ "$1" == --authfile ]]
 case "$3" in
   copy)
-    printf 'copy\t%s\t%s\n' "${@: -2:1}" "${@: -1}" >> "$SKOPEO_LOG"
+    source="${@: -2:1}"
+    target="${@: -1}"
+    case "$source" in
+      *"@$MOCK_HARDCOVER_DIGEST") manifest="$MOCK_HARDCOVER_MANIFEST" ;;
+      *"@$MOCK_SOFTCOVER_DIGEST") manifest="$MOCK_SOFTCOVER_MANIFEST" ;;
+      *"@$MOCK_STANDARD_DIGEST") manifest="$MOCK_STANDARD_MANIFEST" ;;
+      *) echo "Unexpected Skopeo source: $source" >&2; exit 2 ;;
+    esac
+    printf 'copy\t%s\t%s\n' "$source" "$target" >> "$SKOPEO_LOG"
+    printf '%s\t%s\n' "$target" "$manifest" >> "$SKOPEO_STATE"
     ;;
   inspect)
     [[ "$4" == --raw ]]
-    printf 'inspect\t%s\n' "$5" >> "$SKOPEO_LOG"
-    printf '%s\n' "$MOCK_MANIFEST"
+    target="$5"
+    printf 'inspect\t%s\n' "$target" >> "$SKOPEO_LOG"
+    if [[ "$target" == "docker://docker.io/snapetech/chaptarrng:$VERSION" && "$MOCK_BAD_DOCKERHUB_VERSION" == "true" ]]; then
+      printf '%s\n' "$MOCK_WRONG_MANIFEST"
+    else
+      manifest="$(awk -F '\t' -v target="$target" '$1 == target { value = $2 } END { print value }' "$SKOPEO_STATE")"
+      [[ -n "$manifest" ]]
+      printf '%s\n' "$manifest"
+    fi
     ;;
   *)
     exit 2
@@ -60,9 +84,17 @@ MOCK_SKOPEO
 
 chmod 0700 "$work/bin/docker" "$work/bin/skopeo"
 
-manifest='{"schemaVersion":2}'
+manifest='{"schemaVersion":2,"provider":"standard"}'
+softcover_manifest='{"schemaVersion":2,"provider":"goodreads"}'
+hardcover_manifest='{"schemaVersion":2,"provider":"hardcover"}'
+wrong_manifest='{"schemaVersion":2,"provider":"wrong"}'
 digest="sha256:$(printf '%s\n' "$manifest" | sha256sum | cut -d ' ' -f1)"
+softcover_digest="sha256:$(printf '%s\n' "$softcover_manifest" | sha256sum | cut -d ' ' -f1)"
+hardcover_digest="sha256:$(printf '%s\n' "$hardcover_manifest" | sha256sum | cut -d ' ' -f1)"
+wrong_digest="sha256:$(printf '%s\n' "$wrong_manifest" | sha256sum | cut -d ' ' -f1)"
 source="ghcr.io/snapetech-org/chaptarrng@${digest}"
+softcover_source="ghcr.io/snapetech-org/chaptarrng@${softcover_digest}"
+hardcover_source="ghcr.io/snapetech-org/chaptarrng@${hardcover_digest}"
 script="$repo_root/packaging/scripts/publish-image-aliases.sh"
 docker_workflow="$repo_root/.github/workflows/docker-publish.yml"
 release_workflow="$repo_root/.github/workflows/release.yml"
@@ -86,6 +118,7 @@ grep -Fq 'tags+=("$image:latest")' "$docker_workflow"
 grep -Fq 'tags+=("$image:stable")' "$docker_workflow"
 grep -Fq 'SOURCE_IMAGE: ${{ env.STANDARD_IMAGE }}@${{ steps.build.outputs.digest }}' "$docker_workflow"
 grep -Fq 'subject-name: ${{ env.STANDARD_IMAGE }}' "$docker_workflow"
+grep -Fq 'name: Test provider-mode legacy image aliases use matching image digests' "$docker_workflow"
 grep -Fq "legacy_bridge_enabled: \${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}" "$release_workflow"
 grep -Fq "PUBLISH_LEGACY_ALIASES: \${{ inputs.legacy_bridge_enabled && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}" "$docker_workflow"
 grep -Fq 'PUBLISH_GHCR_ALIASES: false' "$docker_workflow"
@@ -129,12 +162,13 @@ fi
 
 run_aliases() {
   local configured="$1"
-  local expected_metadata_digest="$2"
-  local inspected_manifest="$3"
-  local publish_ghcr="${4:-false}"
-  local publish_legacy="${5:-false}"
+  local publish_ghcr="${2:-false}"
+  local publish_legacy="${3:-false}"
+  local bad_target="${4:-}"
+  local bad_dockerhub_version="${5:-false}"
   : > "$work/publish.log"
   : > "$work/skopeo.log"
+  : > "$work/skopeo-state.tsv"
   : > "$work/summary.md"
   PATH="$work/bin:$PATH" \
     HOME="$work/home" \
@@ -142,10 +176,23 @@ run_aliases() {
     GITHUB_STEP_SUMMARY="$work/summary.md" \
     PUBLISH_LOG="$work/publish.log" \
     SKOPEO_LOG="$work/skopeo.log" \
+    SKOPEO_STATE="$work/skopeo-state.tsv" \
     SOURCE_IMAGE="$source" \
     EXPECTED_DIGEST="$digest" \
-    MOCK_METADATA_DIGEST="$expected_metadata_digest" \
-    MOCK_MANIFEST="$inspected_manifest" \
+    BOOKSHELF_HARDCOVER_IMAGE="$hardcover_source" \
+    BOOKSHELF_HARDCOVER_DIGEST="$hardcover_digest" \
+    BOOKSHELF_SOFTCOVER_IMAGE="$softcover_source" \
+    BOOKSHELF_SOFTCOVER_DIGEST="$softcover_digest" \
+    MOCK_STANDARD_DIGEST="$digest" \
+    MOCK_HARDCOVER_DIGEST="$hardcover_digest" \
+    MOCK_SOFTCOVER_DIGEST="$softcover_digest" \
+    MOCK_STANDARD_MANIFEST="$manifest" \
+    MOCK_HARDCOVER_MANIFEST="$hardcover_manifest" \
+    MOCK_SOFTCOVER_MANIFEST="$softcover_manifest" \
+    MOCK_WRONG_MANIFEST="$wrong_manifest" \
+    MOCK_WRONG_DIGEST="$wrong_digest" \
+    MOCK_BAD_TARGET="$bad_target" \
+    MOCK_BAD_DOCKERHUB_VERSION="$bad_dockerhub_version" \
     VERSION=1.2.3 \
     DOCKERHUB_CONFIGURED="$configured" \
     PUBLISH_GHCR_ALIASES="$publish_ghcr" \
@@ -153,60 +200,59 @@ run_aliases() {
     bash "$script"
 }
 
-run_aliases false "$digest" "$manifest" false false
+run_aliases false false false
 [[ ! -s "$work/publish.log" ]]
 grep -Fq 'GHCR legacy aliases: skipped because the BookshelfNG migration bridge is disabled.' "$work/summary.md"
 grep -Fq 'Docker Hub image aliases: skipped' "$work/summary.md"
 
-run_aliases false "$digest" "$manifest" true true
+run_aliases false true true
 printf '%s\t%s\n' \
-  ghcr.io/snapetech/bookshelfng:latest "$source" \
-  ghcr.io/snapetech/bookshelfng:main "$source" \
-  ghcr.io/snapetech/bookshelfng:master "$source" \
-  ghcr.io/snapetech/bookshelfng:hardcover "$source" \
-  ghcr.io/snapetech/bookshelfng:softcover "$source" > "$work/expected-ghcr.log"
+  ghcr.io/snapetech/bookshelfng:latest "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:main "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:master "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:hardcover "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:softcover "$softcover_source" > "$work/expected-ghcr.log"
 cmp "$work/expected-ghcr.log" "$work/publish.log"
-grep -Fq 'standard image digest' "$work/summary.md"
+grep -Fq "verified image digest $hardcover_digest" "$work/summary.md"
+grep -Fq "verified image digest $softcover_digest" "$work/summary.md"
 grep -Fq 'Docker Hub image aliases: skipped' "$work/summary.md"
 
-run_aliases true "$digest" "$manifest" true true
+run_aliases true true true
 dockerhub_source="docker.io/snapetech/chaptarrng:1.2.3"
 printf '%s\t%s\n' \
-  ghcr.io/snapetech/bookshelfng:latest "$source" \
-  ghcr.io/snapetech/bookshelfng:main "$source" \
-  ghcr.io/snapetech/bookshelfng:master "$source" \
-  ghcr.io/snapetech/bookshelfng:hardcover "$source" \
-  ghcr.io/snapetech/bookshelfng:softcover "$source" \
+  ghcr.io/snapetech/bookshelfng:latest "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:main "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:master "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:hardcover "$hardcover_source" \
+  ghcr.io/snapetech/bookshelfng:softcover "$softcover_source" \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:master "$dockerhub_source" \
-  docker.io/snapetech/chaptarrng:stable "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:latest "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:main "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:master "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:hardcover "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:softcover "$dockerhub_source" > "$work/expected-both.log"
+  docker.io/snapetech/chaptarrng:stable "$dockerhub_source" > "$work/expected-both.log"
 cmp "$work/expected-both.log" "$work/publish.log"
 grep -Fq "docker.io/snapetech/chaptarrng:1.2.3: mirrored with the standard image digest $digest" "$work/summary.md"
-[[ "$(wc -l < "$work/skopeo.log")" -eq 2 ]]
+for alias in latest main master hardcover; do
+  expected_copy="$(printf 'copy\tdocker://%s\tdocker://docker.io/snapetech/bookshelfng:%s' "$hardcover_source" "$alias")"
+  grep -Fq "$expected_copy" "$work/skopeo.log"
+  grep -Fq "docker.io/snapetech/bookshelfng:$alias: published with the verified compatibility image digest $hardcover_digest" "$work/summary.md"
+done
+expected_copy="$(printf 'copy\tdocker://%s\tdocker://docker.io/snapetech/bookshelfng:softcover' "$softcover_source")"
+grep -Fq "$expected_copy" "$work/skopeo.log"
+grep -Fq "docker.io/snapetech/bookshelfng:softcover: published with the verified compatibility image digest $softcover_digest" "$work/summary.md"
+[[ "$(wc -l < "$work/skopeo.log")" -eq 12 ]]
 
-run_aliases true "$digest" "$manifest" false true
+run_aliases true false true
 dockerhub_source="docker.io/snapetech/chaptarrng:1.2.3"
 printf '%s\t%s\n' \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:main "$dockerhub_source" \
   docker.io/snapetech/chaptarrng:master "$dockerhub_source" \
-  docker.io/snapetech/chaptarrng:stable "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:latest "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:main "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:master "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:hardcover "$dockerhub_source" \
-  docker.io/snapetech/bookshelfng:softcover "$dockerhub_source" > "$work/expected-dockerhub-only.log"
+  docker.io/snapetech/chaptarrng:stable "$dockerhub_source" > "$work/expected-dockerhub-only.log"
 cmp "$work/expected-dockerhub-only.log" "$work/publish.log"
 grep -Fq 'GHCR legacy aliases: skipped because GHCR alias publication was disabled' "$work/summary.md"
-[[ "$(wc -l < "$work/skopeo.log")" -eq 2 ]]
+[[ "$(wc -l < "$work/skopeo.log")" -eq 12 ]]
 
-run_aliases true "$digest" "$manifest" false false
+run_aliases true false false
 dockerhub_source="docker.io/snapetech/chaptarrng:1.2.3"
 printf '%s\t%s\n' \
   docker.io/snapetech/chaptarrng:latest "$dockerhub_source" \
@@ -217,18 +263,18 @@ cmp "$work/expected-standard-dockerhub.log" "$work/publish.log"
 grep -Fq 'Docker Hub BookshelfNG aliases: skipped because the migration bridge is disabled.' "$work/summary.md"
 [[ "$(wc -l < "$work/skopeo.log")" -eq 2 ]]
 
-if run_aliases false 'sha256:deadbeef' "$manifest" true true > /dev/null 2>&1; then
+if run_aliases false true true 'ghcr.io/snapetech/bookshelfng:softcover' > /dev/null 2>&1; then
   echo 'A legacy tag with a different published digest was accepted.' >&2
   exit 1
 fi
 [[ "$(wc -l < "$work/publish.log")" -eq 5 ]]
-grep -Fq "expected $digest" "$work/summary.md"
+grep -Fq "expected $softcover_digest" "$work/summary.md"
 
-if run_aliases true "$digest" '{"schemaVersion":3}' true true > /dev/null 2>&1; then
+if run_aliases true false true '' true > /dev/null 2>&1; then
   echo 'A Docker Hub manifest with a different digest was accepted.' >&2
   exit 1
 fi
-[[ "$(wc -l < "$work/publish.log")" -eq 5 ]]
+[[ ! -s "$work/publish.log" ]]
 grep -Fq 'Docker Hub version mirror digest was' "$work/summary.md"
 
 echo 'Legacy image alias tests passed.'

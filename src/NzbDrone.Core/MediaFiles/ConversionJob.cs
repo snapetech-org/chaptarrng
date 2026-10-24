@@ -66,12 +66,15 @@ namespace NzbDrone.Core.MediaFiles
 
     public class ConversionArtifactManifest
     {
+        public const int CurrentVersion = 2;
+
         public int Version { get; set; }
         public bool Importable { get; set; }
         public DateTime CreatedUtc { get; set; }
         public string OutputPath { get; set; }
         public long OutputSize { get; set; }
         public long OutputModifiedUtcTicks { get; set; }
+        public string OutputSha256 { get; set; }
         public int TargetQualityId { get; set; }
         public string TargetQualityName { get; set; }
         public int AudioBitrate { get; set; }

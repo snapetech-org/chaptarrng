@@ -73,7 +73,7 @@ jobs:
         ref: ${{ inputs.sha }}
         fetch-depth: 0
 
-    - name: Test legacy image aliases use the standard image digest
+    - name: Test provider-mode legacy image aliases use matching image digests
       run: bash packaging/scripts/test-publish-image-aliases.sh
 
     - name: Set up QEMU for target-platform runtime steps

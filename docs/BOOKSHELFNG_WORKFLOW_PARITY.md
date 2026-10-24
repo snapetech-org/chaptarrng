@@ -81,7 +81,8 @@ accepted by this user-workflow map.
 
 Completed-download audiobook conversions persist their request and recover at
 startup. Each retry now uses an isolated output path; only a successfully
-validated artifact with a matching versioned manifest is eligible for import.
+validated artifact with a matching version 2 manifest and output SHA-256
+fingerprint is eligible for import.
 Tool-reported failures and output changed after validation are excluded from
 reuse. A real-tool process termination and restart rehearsal remains part of
 acceptance.

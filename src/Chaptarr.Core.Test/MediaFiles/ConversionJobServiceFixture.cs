@@ -231,12 +231,13 @@ namespace Chaptarr.Core.Test.MediaFiles
                 };
                 var manifest = new ConversionArtifactManifest
                 {
-                    Version = 1,
+                    Version = ConversionArtifactManifest.CurrentVersion,
                     Importable = true,
                     CreatedUtc = DateTime.UtcNow,
                     OutputPath = outputPath,
                     OutputSize = new FileInfo(outputPath).Length,
                     OutputModifiedUtcTicks = new FileInfo(outputPath).LastWriteTimeUtc.Ticks,
+                    OutputSha256 = ConversionArtifactFingerprint.ComputeSha256(outputPath),
                     TargetQualityId = request.TargetQualityId,
                     TargetQualityName = request.TargetQualityName,
                     AudioBitrate = request.AudioBitrate,
@@ -436,6 +437,67 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
+        [TestCase(1, false)]
+        [TestCase(2, true)]
+        public void startup_should_requeue_artifact_without_current_version_or_matching_fingerprint(int manifestVersion, bool corruptOutput)
+        {
+            var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-job-content-check-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+            var request = CreateRequest(tempDir, "content-check-download");
+            File.WriteAllText(request.OutputPath, "converted");
+            var originalTimestamp = File.GetLastWriteTimeUtc(request.OutputPath);
+            var manifest = new ConversionArtifactManifest
+            {
+                Version = manifestVersion,
+                Importable = true,
+                CreatedUtc = DateTime.UtcNow,
+                OutputPath = request.OutputPath,
+                OutputSize = new FileInfo(request.OutputPath).Length,
+                OutputModifiedUtcTicks = originalTimestamp.Ticks,
+                OutputSha256 = ConversionArtifactFingerprint.ComputeSha256(request.OutputPath),
+                TargetQualityId = request.TargetQualityId,
+                TargetQualityName = request.TargetQualityName,
+                AudioBitrate = request.AudioBitrate,
+                AudioSampleRate = request.AudioSampleRate,
+                AudioChannels = request.AudioChannels,
+                NoConversion = request.NoConversion,
+                TagMode = request.TagOptions.Mode,
+                TagSignature = request.TagSignature,
+                Sources = request.Sources
+            };
+            File.WriteAllText(Path.Combine(request.WorkFolder, "conversion-artifact.json"), JsonSerializer.Serialize(manifest));
+
+            if (corruptOutput)
+            {
+                File.WriteAllText(request.OutputPath, "corrupted");
+                File.SetLastWriteTimeUtc(request.OutputPath, originalTimestamp);
+            }
+
+            var repository = CreateRepository(Path.Combine(tempDir, "jobs.db"));
+            repository.Insert(CreatePersistedJob(request, ConversionJobStatus.Converting, DateTime.UtcNow.AddMinutes(-5)));
+            var converter = new BlockingConversionService();
+            var service = CreateService(repository, converter);
+
+            try
+            {
+                service.Handle(new ApplicationStartedEvent());
+                Assert.That(converter.Started.Wait(TimeSpan.FromSeconds(2)), Is.True);
+
+                var recovered = repository.FindByDownloadId(request.DownloadId);
+                Assert.That(recovered.Status, Is.EqualTo(ConversionJobStatus.Converting));
+                Assert.That(recovered.AttemptCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                service.Handle(new ApplicationShutdownRequested());
+                SqliteConnection.ClearAllPools();
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
         [Test]
         public void startup_should_requeue_conversion_without_valid_artifact_and_run_it()
         {
@@ -479,12 +541,13 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Path.Combine(request.WorkFolder, "conversion-artifact.json"),
                 JsonSerializer.Serialize(new ConversionArtifactManifest
                 {
-                    Version = 1,
+                    Version = ConversionArtifactManifest.CurrentVersion,
                     Importable = true,
                     CreatedUtc = DateTime.UtcNow,
                     OutputPath = request.OutputPath,
                     OutputSize = partialOutput.Length + 1,
                     OutputModifiedUtcTicks = partialOutput.LastWriteTimeUtc.Ticks,
+                    OutputSha256 = ConversionArtifactFingerprint.ComputeSha256(request.OutputPath),
                     TargetQualityId = request.TargetQualityId,
                     TargetQualityName = request.TargetQualityName,
                     AudioBitrate = request.AudioBitrate,
@@ -513,11 +576,12 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Assert.That(File.ReadAllText(request.OutputPath), Is.EqualTo("converted"));
                 var manifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(
                     File.ReadAllText(Path.Combine(request.WorkFolder, "conversion-artifact.json")));
-                Assert.That(manifest.Version, Is.EqualTo(1));
+                Assert.That(manifest.Version, Is.EqualTo(ConversionArtifactManifest.CurrentVersion));
                 Assert.That(manifest.Importable, Is.True);
                 Assert.That(manifest.OutputPath, Is.EqualTo(request.OutputPath));
                 Assert.That(manifest.OutputSize, Is.EqualTo(new FileInfo(request.OutputPath).Length));
                 Assert.That(manifest.OutputModifiedUtcTicks, Is.EqualTo(new FileInfo(request.OutputPath).LastWriteTimeUtc.Ticks));
+                Assert.That(manifest.OutputSha256, Is.EqualTo(ConversionArtifactFingerprint.ComputeSha256(request.OutputPath)));
                 Assert.That(converter.OptionsByDownloadId.ContainsKey(request.DownloadId), Is.True);
             }
             finally
@@ -553,7 +617,7 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 var manifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(
                     File.ReadAllText(Path.Combine(request.WorkFolder, "conversion-artifact.json")));
-                Assert.That(manifest.Version, Is.EqualTo(1));
+                Assert.That(manifest.Version, Is.EqualTo(ConversionArtifactManifest.CurrentVersion));
                 Assert.That(manifest.Importable, Is.False);
                 Assert.That(new DirectoryInfo(Path.GetDirectoryName(manifest.OutputPath)).Parent.Name, Is.EqualTo("attempts"));
                 Assert.That(File.Exists(manifest.OutputPath), Is.True);

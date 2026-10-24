@@ -3382,7 +3382,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     {
                         var manifest = JsonSerializer.Deserialize<ConversionArtifactManifest>(File.ReadAllText(manifestPath));
                         if (manifest == null ||
-                            manifest.Version != 1 ||
+                            manifest.Version != ConversionArtifactManifest.CurrentVersion ||
                             !manifest.Importable ||
                             manifest.TargetQualityId != targetQuality?.Quality?.Id ||
                             !string.Equals(manifest.TargetQualityName, targetQuality?.Quality?.Name, StringComparison.Ordinal) ||
@@ -3414,7 +3414,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         {
                             var output = new FileInfo(candidateOutput);
                             if (manifest.OutputSize != output.Length ||
-                                manifest.OutputModifiedUtcTicks != output.LastWriteTimeUtc.Ticks)
+                                manifest.OutputModifiedUtcTicks != output.LastWriteTimeUtc.Ticks ||
+                                !ConversionArtifactFingerprint.Matches(candidateOutput, manifest.OutputSha256))
                             {
                                 continue;
                             }
@@ -3460,12 +3461,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     var output = new FileInfo(outputPath);
                     var manifest = new ConversionArtifactManifest
                     {
-                        Version = 1,
+                        Version = ConversionArtifactManifest.CurrentVersion,
                         Importable = importable,
                         CreatedUtc = DateTime.UtcNow,
                         OutputPath = outputPath,
                         OutputSize = output.Length,
                         OutputModifiedUtcTicks = output.LastWriteTimeUtc.Ticks,
+                        OutputSha256 = ConversionArtifactFingerprint.ComputeSha256(outputPath),
                         TargetQualityId = targetQuality?.Quality?.Id ?? 0,
                         TargetQualityName = targetQuality?.Quality?.Name,
                         AudioBitrate = audioBitrate,
