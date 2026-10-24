@@ -94,11 +94,17 @@ $existingReadarrService = Get-ItemProperty -LiteralPath $readarrServiceKeyPath -
 $existingReadarrAccount = if ($existingReadarrService) { [string] $existingReadarrService.ObjectName } else { $null }
 $serviceAccountPassword = $null
 trap {
+    $rollbackError = $_
     if ($null -ne $serviceAccountPassword) {
-        $serviceAccountPassword.Dispose()
+        try { $serviceAccountPassword.Dispose() }
+        catch { }
         $serviceAccountPassword = $null
     }
-    throw
+    $errorType = $rollbackError.Exception.GetType().Name
+    $errorLine = $rollbackError.InvocationInfo.ScriptLineNumber
+    $errorMessage = $rollbackError.Exception.Message
+    [Console]::Error.WriteLine(('[rollback] {0} at rollback.ps1:{1}: {2}' -f $errorType, $errorLine, $errorMessage))
+    exit 1
 }
 if (Test-ServiceAccountNeedsPassword $BookshelfServiceAccount) {
     if (-not $existingReadarrService -or
