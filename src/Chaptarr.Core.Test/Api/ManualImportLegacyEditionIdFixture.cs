@@ -4,6 +4,7 @@ using System.Reflection;
 using Chaptarr.Api.V1.ManualImport;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
 using NLog;
 using NUnit.Framework;
 using NzbDrone.Core.Books;
@@ -65,11 +66,18 @@ namespace Chaptarr.Core.Test.Api
                 Title = "Selected edition"
             };
             editionServiceProxy.Edition = expectedEdition;
+            var bookService = new Mock<IBookService>();
+            bookService.Setup(service => service.GetBook(expectedEdition.BookId)).Returns(new Book
+            {
+                Id = expectedEdition.BookId,
+                Author = new Author { Id = 4, Name = "Fixture Author" },
+                Title = "Fixture Book"
+            });
             var controller = new ManualImportController(
                 manualImportService,
                 null,
                 editionService,
-                null,
+                bookService.Object,
                 null,
                 null,
                 LogManager.GetCurrentClassLogger())

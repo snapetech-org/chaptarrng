@@ -105,6 +105,7 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(recovery, /-restore-bookshelf/);
   assert.match(recovery, /\$manifest\.MigrationEnvironment/);
   assert.match(recovery, /Write-SharedMigrationJournal/);
+  assert.match(recovery, /\[IO\.File\]::WriteAllText\(\$temporaryPath, "\$State`n", \$utf8\)/);
   assert.match(recovery, /intervention-required/);
   assert.match(recovery, /\$manifest\.State -eq 'healthy'/);
   assert.match(recovery, /\$manifest\.State -eq 'rolled-back'/);

@@ -117,7 +117,7 @@ namespace Chaptarr.Core.Test.Api
         [Test]
         public void should_resolve_a_migrated_bookshelf_id_to_the_requested_media_type()
         {
-            var legacyIdentityMap = new Mock<IBookshelfLegacyIdentityMapService>();
+            var legacyIdentityMap = CreateLegacyIdentityMapMock();
             legacyIdentityMap
                 .Setup(service => service.ResolveBookIds(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 30 })), BookMediaType.Ebook))
                 .Returns(new List<int> { 31 });
@@ -149,7 +149,7 @@ namespace Chaptarr.Core.Test.Api
         [Test]
         public void should_resolve_a_migrated_bookshelf_id_when_getting_one_book_by_id()
         {
-            var legacyIdentityMap = new Mock<IBookshelfLegacyIdentityMapService>();
+            var legacyIdentityMap = CreateLegacyIdentityMapMock();
             legacyIdentityMap
                 .Setup(service => service.ResolveBookIds(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 30 })), BookMediaType.Ebook))
                 .Returns(new List<int> { 31 });
@@ -182,7 +182,7 @@ namespace Chaptarr.Core.Test.Api
         [Test]
         public void should_download_media_for_every_format_of_an_unscoped_migrated_book_id()
         {
-            var legacyIdentityMap = new Mock<IBookshelfLegacyIdentityMapService>();
+            var legacyIdentityMap = CreateLegacyIdentityMapMock();
             legacyIdentityMap
                 .Setup(service => service.ResolveBookIds(It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 30 })), null))
                 .Returns(new List<int> { 30, 31 });
@@ -214,7 +214,7 @@ namespace Chaptarr.Core.Test.Api
             authorStatistics.Setup(service => service.AuthorStatistics(It.IsAny<string>()))
                 .Returns(new List<AuthorStatistics>());
 
-            return new BookController(
+            var controller = new BookController(
                 authorService: null,
                 bookService: bookService,
                 addBookService: null,
@@ -235,13 +235,24 @@ namespace Chaptarr.Core.Test.Api
                 qualityProfileExistsValidator: new QualityProfileExistsValidator(null),
                 metadataProfileExistsValidator: new MetadataProfileExistsValidator(null),
                 logger: LogManager.GetCurrentClassLogger(),
-                bookshelfLegacyIdentityMapService: legacyIdentityMap)
+                bookshelfLegacyIdentityMapService: legacyIdentityMap);
+            var context = new DefaultHttpContext();
+            if (legacyIdentityMap != null)
             {
-                ControllerContext = new ControllerContext
-                {
-                    HttpContext = new DefaultHttpContext()
-                }
-            };
+                context.Items[ReadarrFacadeContext.ItemKey] = new ReadarrFacadeContext("hc", null, "/api", isBookshelfCompatibility: true);
+            }
+
+            controller.ControllerContext = new ControllerContext { HttpContext = context };
+            return controller;
+        }
+
+        private static Mock<IBookshelfLegacyIdentityMapService> CreateLegacyIdentityMapMock()
+        {
+            var identityMap = new Mock<IBookshelfLegacyIdentityMapService>();
+            identityMap
+                .Setup(service => service.GetMappingsByTargetIds(It.IsAny<string>(), It.IsAny<IEnumerable<int>>()))
+                .Returns(new List<BookshelfLegacyIdentityMapEntry>());
+            return identityMap;
         }
     }
 }

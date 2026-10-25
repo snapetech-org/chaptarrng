@@ -196,7 +196,7 @@ namespace Chaptarr.Core.Test.Commands
         {
             var queue = new StubCommandQueue();
             var identityMap = new StubLegacyIdentityMapService();
-            var facadeContext = new ReadarrFacadeContext("hc", "ebook", "/readarr/hc/ebook");
+            var facadeContext = new ReadarrFacadeContext("hc", "ebook", "/readarr/hc/ebook", isBookshelfCompatibility: true);
             var controller = CreateController(
                 queue,
                 """{"name":"BookSearch","bookIds":[30]}""",
@@ -210,7 +210,7 @@ namespace Chaptarr.Core.Test.Commands
         }
 
         [Test]
-        public void refresh_book_command_should_expand_a_split_legacy_id_to_bulk_refresh()
+        public void refresh_book_command_should_keep_its_contract_and_refresh_both_split_rows()
         {
             var queue = new StubCommandQueue();
             var identityMap = new StubLegacyIdentityMapService();
@@ -218,8 +218,8 @@ namespace Chaptarr.Core.Test.Commands
 
             controller.StartCommand(new CommandResource { Name = "RefreshBook" });
 
-            Assert.That(queue.PushedCommand, Is.TypeOf<BulkRefreshBookCommand>());
-            Assert.That(((BulkRefreshBookCommand)queue.PushedCommand).BookIds, Is.EqualTo(new[] { 30, 61 }));
+            Assert.That(queue.PushedCommand, Is.TypeOf<RefreshBookCommand>());
+            Assert.That(((RefreshBookCommand)queue.PushedCommand).BookIds, Is.EqualTo(new[] { 30, 61 }));
         }
 
         [Test]
@@ -227,7 +227,7 @@ namespace Chaptarr.Core.Test.Commands
         {
             var queue = new StubCommandQueue();
             var identityMap = new StubLegacyIdentityMapService();
-            var facadeContext = new ReadarrFacadeContext("hc", "ebook", "/readarr/hc/ebook");
+            var facadeContext = new ReadarrFacadeContext("hc", "ebook", "/readarr/hc/ebook", isBookshelfCompatibility: true);
             var controller = CreateController(
                 queue,
                 """{"name":"RefreshBook","bookId":30}""",
@@ -320,6 +320,9 @@ namespace Chaptarr.Core.Test.Commands
             var context = new DefaultHttpContext();
             context.Request.Method = "POST";
             context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+            facadeContext ??= legacyIdentityMapService == null
+                ? null
+                : new ReadarrFacadeContext("hc", null, "/api", isBookshelfCompatibility: true);
             if (facadeContext != null)
             {
                 context.Items[ReadarrFacadeContext.ItemKey] = facadeContext;

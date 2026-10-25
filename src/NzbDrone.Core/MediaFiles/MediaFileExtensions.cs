@@ -94,6 +94,21 @@ namespace NzbDrone.Core.MediaFiles
             return GetQualityForExtension(extension);
         }
 
+        public static bool AreCompatibleQualities(Quality existing, Quality incoming)
+        {
+            var existingIsAudio = QualityMediaTypeHelper.IsAudiobookQuality(existing);
+            var incomingIsAudio = QualityMediaTypeHelper.IsAudiobookQuality(incoming);
+
+            if (existingIsAudio || incomingIsAudio)
+            {
+                return existingIsAudio && incomingIsAudio;
+            }
+
+            // Ebook quality IDs identify formats. An EPUB should neither block nor replace
+            // a MOBI/AZW3/PDF file, while an EPUB can still be upgraded by another EPUB.
+            return existing == incoming;
+        }
+
         public static bool IsMatroskaAudioExtension(string extension)
         {
             return string.Equals(extension, MatroskaAudioExtension, StringComparison.OrdinalIgnoreCase);

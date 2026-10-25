@@ -67,6 +67,9 @@ namespace Chaptarr.Api.V1.ManualImport
                 ?? model.Book?.Editions?.FirstOrDefault();
             var suggestedForeignEditionId = BookEditionIdentity.GetTrustedForeignEditionId(suggestedEdition)
                 ?? model.SuggestedForeignEditionId;
+            var foreignEditionId = suggestedEdition == null
+                ? suggestedForeignEditionId
+                : ReadarrFacadeEditionIdentity.BuildForeignEditionId(suggestedEdition, facadeContext);
 
             return new ManualImportResource
             {
@@ -78,9 +81,7 @@ namespace Chaptarr.Api.V1.ManualImport
                 Book = model.Book?.ToResource(new BookResourceMappingOptions { FacadeContext = facadeContext }),
                 Edition = model.Edition?.ToResource(facadeContext),
                 EditionId = suggestedEdition?.Id > 0 ? suggestedEdition.Id : (int?)null,
-                ForeignEditionId = suggestedEdition == null
-                    ? suggestedForeignEditionId
-                    : (ReadarrFacadeEditionIdentity.BuildForeignEditionId(suggestedEdition, facadeContext) ?? string.Empty),
+                ForeignEditionId = string.IsNullOrWhiteSpace(foreignEditionId) ? null : foreignEditionId,
                 SuggestedForeignAuthorId = model.SuggestedForeignAuthorId,
                 SuggestedAuthorName = model.SuggestedAuthorName,
                 SuggestedForeignBookId = model.SuggestedForeignBookId,

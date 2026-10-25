@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Chaptarr.Core.Test;
 using Chaptarr.Http.Middleware;
 using Microsoft.AspNetCore.Http;
 using NUnit.Framework;
@@ -31,7 +32,7 @@ namespace Chaptarr.Core.Test.Http
             context.Request.Path = path;
             context.Request.QueryString = new QueryString("?apikey=abc&term=work:123");
 
-            await middleware.InvokeAsync(context);
+            await middleware.InvokeAsync(context, ConfigServiceTestProxy.Create());
 
             Assert.That(sawPath, Is.EqualTo("/api/v1/book/lookup"));
             Assert.That(sawMediaType, Is.EqualTo(expectedMediaType));
@@ -59,7 +60,7 @@ namespace Chaptarr.Core.Test.Http
             context.Request.Path = path;
             context.Request.QueryString = new QueryString("?apikey=abc&term=work:123");
 
-            await middleware.InvokeAsync(context);
+            await middleware.InvokeAsync(context, ConfigServiceTestProxy.Create());
 
             Assert.That(sawPath, Is.EqualTo("/api/v1/book/lookup"));
             Assert.That(sawMediaType, Is.EqualTo(expectedMediaType));
@@ -82,7 +83,7 @@ namespace Chaptarr.Core.Test.Http
             var context = new DefaultHttpContext();
             context.Request.Path = "/ebook";
 
-            await middleware.InvokeAsync(context);
+            await middleware.InvokeAsync(context, ConfigServiceTestProxy.Create());
 
             Assert.That(sawPath, Is.EqualTo("/ebook"));
         }
@@ -102,7 +103,7 @@ namespace Chaptarr.Core.Test.Http
             context.Request.Path = "/ebook/api/v1/book/lookup";
             context.Request.QueryString = new QueryString("?mediaType=audiobook&apikey=abc");
 
-            await middleware.InvokeAsync(context);
+            await middleware.InvokeAsync(context, ConfigServiceTestProxy.Create());
 
             Assert.That(sawQuery, Does.Contain("mediaType=audiobook"));
             Assert.That(sawQuery, Does.Not.Contain("mediaType=ebook"));

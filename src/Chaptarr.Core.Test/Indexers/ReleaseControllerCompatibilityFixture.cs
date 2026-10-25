@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Chaptarr.Api.V1.Indexers;
+using Chaptarr.Http.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -139,10 +140,13 @@ namespace Chaptarr.Core.Test.Indexers
                 logger: LogManager.GetLogger(nameof(ReleaseControllerCompatibilityFixture)),
                 bookshelfLegacyIdentityMapService: identityMapService);
 
-            controller.ControllerContext = new ControllerContext
+            var context = new DefaultHttpContext();
+            if (identityMapService != null)
             {
-                HttpContext = new DefaultHttpContext()
-            };
+                context.Items[ReadarrFacadeContext.ItemKey] = new ReadarrFacadeContext("hc", null, "/api", isBookshelfCompatibility: true);
+            }
+
+            controller.ControllerContext = new ControllerContext { HttpContext = context };
 
             return controller;
         }

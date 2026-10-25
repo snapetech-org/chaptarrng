@@ -37,7 +37,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var subject = BuildRemoteBook(author, book, Quality.M4B, Quality.M4B);
             var criteria = BuildBookSearchCriteria(author, book, interactiveSearch: true);
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, criteria);
 
             Assert.That(result.Accepted, Is.True);
@@ -51,7 +51,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var subject = BuildRemoteBook(author, book, Quality.M4B, Quality.M4B);
             var criteria = BuildBookSearchCriteria(author, book, interactiveSearch: false);
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, criteria);
 
             Assert.That(result.Accepted, Is.False);
@@ -66,7 +66,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var criteria = BuildBookSearchCriteria(author, book, interactiveSearch: false);
             criteria.MonitoredBooksOnly = false;
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, criteria);
 
             Assert.That(result.Accepted, Is.True);
@@ -80,7 +80,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var book = BuildBook(author, audiobookMonitored: true);
             var subject = BuildRemoteBook(author, book, Quality.M4B, Quality.M4B);
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, searchCriteria: null);
 
             Assert.That(result.Accepted, Is.True);
@@ -95,7 +95,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             book.LazyAuthor = null;
             var subject = BuildRemoteBook(author, book, Quality.M4B, Quality.M4B);
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, searchCriteria: null);
 
             Assert.That(result.Accepted, Is.True);
@@ -110,7 +110,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var book = BuildBook(author, audiobookMonitored: true);
             var subject = BuildRemoteBook(author, book, Quality.M4B, Quality.M4B);
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, searchCriteria: null);
 
             Assert.Multiple(() =>
@@ -128,7 +128,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var book = BuildBook(author, audiobookMonitored: false);
             var subject = BuildRemoteBook(author, book, Quality.M4B, Quality.M4B);
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, searchCriteria: null);
 
             Assert.Multiple(() =>
@@ -146,7 +146,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var subject = BuildRemoteBook(author, book, Quality.M4B, Quality.M4B, isMatch: false);
             var criteria = BuildBookSearchCriteria(author, book, interactiveSearch: true);
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, criteria);
 
             Assert.That(result.Accepted, Is.True);
@@ -160,7 +160,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var subject = BuildRemoteBook(author, book, Quality.M4B, Quality.M4B);
             var criteria = BuildAuthorSearchCriteria(author, book);
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, criteria);
 
             Assert.That(result.Accepted, Is.False);
@@ -175,7 +175,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
             var subject = BuildRemoteBook(author, differentBook, Quality.M4B, Quality.M4B);
             var criteria = BuildBookSearchCriteria(author, requestedBook, interactiveSearch: true);
 
-            var result = new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(LogManager.GetCurrentClassLogger())
+            var result = CreateMonitoredBookSpecification()
                 .IsSatisfiedBy(subject, criteria);
 
             Assert.That(result.Accepted, Is.False);
@@ -401,6 +401,13 @@ namespace Chaptarr.Core.Test.DecisionEngine
                 .IsSatisfiedBy(subject, criteria);
 
             Assert.That(result.Accepted, Is.False);
+        }
+
+        private static NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification CreateMonitoredBookSpecification()
+        {
+            return new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(
+                ConfigServiceTestProxy.Create(),
+                LogManager.GetCurrentClassLogger());
         }
 
         private static Author BuildAuthor(bool monitored, bool upgradeAllowed = true, Quality cutoffQuality = null, Quality convertToQuality = null)

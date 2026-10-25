@@ -28,11 +28,15 @@ function Write-SharedMigrationJournal {
       }
 
       $timestamp = [DateTime]::UtcNow.ToString('o')
-      foreach ($targetPath in @((Join-Path $statesDirectory $State), (Join-Path $journalDirectory 'state'))) {
-        $temporaryPath = "$targetPath.tmp-$([Guid]::NewGuid().ToString('N'))"
-        [IO.File]::WriteAllText($temporaryPath, "$timestamp`n", $utf8)
-        Move-Item -LiteralPath $temporaryPath -Destination $targetPath -Force
-      }
+      $stateMarkerPath = Join-Path $statesDirectory $State
+      $temporaryPath = "$stateMarkerPath.tmp-$([Guid]::NewGuid().ToString('N'))"
+      [IO.File]::WriteAllText($temporaryPath, "$timestamp`n", $utf8)
+      Move-Item -LiteralPath $temporaryPath -Destination $stateMarkerPath -Force
+
+      $currentStatePath = Join-Path $journalDirectory 'state'
+      $temporaryPath = "$currentStatePath.tmp-$([Guid]::NewGuid().ToString('N'))"
+      [IO.File]::WriteAllText($temporaryPath, "$State`n", $utf8)
+      Move-Item -LiteralPath $temporaryPath -Destination $currentStatePath -Force
     }
 
     if (-not [string]::IsNullOrWhiteSpace($OutcomeName)) {

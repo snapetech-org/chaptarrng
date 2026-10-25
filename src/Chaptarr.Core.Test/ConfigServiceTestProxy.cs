@@ -10,6 +10,8 @@ namespace Chaptarr.Core.Test
         public BookMatchingStrictness BookMatchingStrictness { get; set; } = BookMatchingStrictness.Balanced;
         public int BookImportMinimumMatchPercent { get; set; } = 70;
         public bool BookshelfMatchCompatibility { get; set; }
+        public bool BookshelfNGDatabaseMigrated { get; set; }
+        public string BookshelfNGProviderDialect { get; set; } = string.Empty;
         public int MinimumAge { get; set; }
         public int RssSyncInterval { get; set; }
         public bool UsePathAsTagsFallback { get; set; } = true;
@@ -58,6 +60,16 @@ namespace Chaptarr.Core.Test
             {
                 BookshelfMatchCompatibility = (bool)args[0];
                 return null;
+            }
+
+            if (targetMethod?.Name == "get_BookshelfNGDatabaseMigrated")
+            {
+                return BookshelfNGDatabaseMigrated;
+            }
+
+            if (targetMethod?.Name == "get_BookshelfNGProviderDialect")
+            {
+                return BookshelfNGProviderDialect;
             }
 
             if (targetMethod?.Name == "get_MinimumAge")

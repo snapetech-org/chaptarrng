@@ -774,7 +774,7 @@ namespace Chaptarr.Core.Test.DecisionEngine
                 new List<IDecisionEngineSpecification>
                 {
                     new ReleaseTitleMatchSpecification(logger, configService),
-                    new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(logger),
+                    new NzbDrone.Core.DecisionEngine.Specifications.RssSync.MonitoredBookSpecification(configService, logger),
                     new MonitoredMediaTypeSpecification(logger)
                 },
                 parsingService,

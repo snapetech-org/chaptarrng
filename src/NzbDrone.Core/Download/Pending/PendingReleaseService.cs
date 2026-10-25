@@ -245,7 +245,9 @@ namespace NzbDrone.Core.Download.Pending
                 var firstQuality = g.First().Quality.Quality;
                 var qualityProfile = author?.GetQualityProfileForQuality(firstQuality);
 
-                if (_configService?.BookshelfMatchCompatibility == true && qualityProfile?.Items?.Any() == true)
+                if (_configService?.BookshelfMatchCompatibility == true &&
+                    QualityMediaTypeHelper.IsAudiobookQuality(firstQuality) &&
+                    qualityProfile?.Items?.Any() == true)
                 {
                     // BookshelfNG selected pending candidates by quality and revision, then
                     // the shared author-tag protocol preference. The

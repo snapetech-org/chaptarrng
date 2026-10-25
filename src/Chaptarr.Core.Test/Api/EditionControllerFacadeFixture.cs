@@ -161,6 +161,8 @@ namespace Chaptarr.Core.Test.Api
                     HttpContext = new DefaultHttpContext()
                 }
             };
+            controller.ControllerContext.HttpContext.Items[ReadarrFacadeContext.ItemKey] =
+                new ReadarrFacadeContext("hc", null, "/api", isBookshelfCompatibility: true);
 
             controller.GetEditions(new List<int> { 10 });
 

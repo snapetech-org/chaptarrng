@@ -30,6 +30,8 @@ namespace Chaptarr.Core.Test.Datastore
             source.Open();
             using var command = source.CreateCommand();
             command.CommandText = @"
+                CREATE TABLE VersionInfo (Version INTEGER NOT NULL);
+                INSERT INTO VersionInfo VALUES (158);
                 CREATE TABLE AuthorMetadata (Id INTEGER PRIMARY KEY, ForeignAuthorId TEXT NOT NULL);
                 CREATE TABLE Authors (
                     Id INTEGER PRIMARY KEY,
@@ -55,6 +57,13 @@ namespace Chaptarr.Core.Test.Datastore
             {
                 Directory.Delete(_directory, recursive: true);
             }
+        }
+
+        private static BookshelfDatabaseImportReport CreateImportReport()
+        {
+            var report = new BookshelfDatabaseImportReport();
+            report.RecordTable("VersionInfo", 1, 0, 0, 0, 1, "Chaptarr migration history is created independently.");
+            return report;
         }
 
         [Test]
@@ -92,7 +101,7 @@ namespace Chaptarr.Core.Test.Datastore
                     insert.Parameters.AddWithValue("@ebook", "/books/ebook");
                     insert.ExecuteNonQuery();
 
-                    var report = new BookshelfDatabaseImportReport();
+                    var report = CreateImportReport();
                     report.RecordTable("AuthorMetadata", 1, 0, 1, 0, 0, "merged into target Authors metadata");
                     report.RecordTable("Authors", 1, 0, 1, 0, 0, "converted to a managed target Author");
                     report.RecordTable("Books", 1, 0, 1, 0, 0, "mapped to target Books");
@@ -120,7 +129,7 @@ namespace Chaptarr.Core.Test.Datastore
                 CreateNativeTarget,
                 (source, target, transaction) =>
                 {
-                    var report = new BookshelfDatabaseImportReport();
+                    var report = CreateImportReport();
                     report.RecordTable("AuthorMetadata", 1, 0, 1, 0, 0, "merged into target Authors metadata");
                     report.RecordTable("Authors", 1, 0, 1, 0, 0, "converted to a managed target Author");
                     report.RecordTable("Books", 1, 0, 1, 0, 0, "mapped to target Books");
@@ -133,7 +142,7 @@ namespace Chaptarr.Core.Test.Datastore
             {
                 Assert.That(result.PreviewOnly, Is.True);
                 Assert.That(result.BackupPath, Is.Null);
-                Assert.That(result.ImportReport.Tables.Count, Is.EqualTo(4));
+                Assert.That(result.ImportReport.Tables.Count, Is.EqualTo(5));
                 Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
                 Assert.That(ReadBookId(_sourcePath), Is.EqualTo("fixture-book"));
                 Assert.That(Directory.GetFiles(_directory, "*.chaptarr-stage-*.db"), Is.Empty);
@@ -159,7 +168,7 @@ namespace Chaptarr.Core.Test.Datastore
                 CreateNativeTarget,
                 (source, target, transaction) =>
                 {
-                    var report = new BookshelfDatabaseImportReport();
+                    var report = CreateImportReport();
                     report.RecordTable("AuthorMetadata", 1, 0, 1, 0, 0, "merged into target Authors metadata");
                     report.RecordTable("Authors", 1, 0, 1, 0, 0, "converted to a managed target Author");
                     report.RecordTable("Books", 1, 0, 1, 0, 0, "mapped to target Books");
@@ -185,7 +194,7 @@ namespace Chaptarr.Core.Test.Datastore
             var exception = Assert.Throws<InvalidOperationException>(() => new BookshelfDatabaseConverter().Convert(
                 _sourceConnectionString,
                 CreateNativeTarget,
-                (source, target, transaction) => new BookshelfDatabaseImportReport(),
+                (source, target, transaction) => CreateImportReport(),
                 previewOnly: true));
 
             Assert.That(exception.Message, Does.Contain("Another BookshelfNG database conversion"));
@@ -201,7 +210,7 @@ namespace Chaptarr.Core.Test.Datastore
                 CreateNativeTarget,
                 (source, target, transaction) =>
                 {
-                    var report = new BookshelfDatabaseImportReport();
+                    var report = CreateImportReport();
                     report.RecordTable("Authors", 1, 0, 1, 0, 0, "converted to a managed target Author");
                     report.RecordTable("AuthorMetadata", 1, 0, 1, 0, 0, "merged into target Authors metadata");
                     return report;
@@ -227,7 +236,7 @@ namespace Chaptarr.Core.Test.Datastore
                 CreateNativeTarget,
                 (source, target, transaction) =>
                 {
-                    var report = new BookshelfDatabaseImportReport();
+                    var report = CreateImportReport();
                     report.RecordTable("Authors", 1, 0, 1, 0, 0, "converted to a managed target Author");
                     report.RecordTable("AuthorMetadata", 1, 0, 1, 0, 0, "merged into target Authors metadata");
                     report.RecordTable("Books", 1, 0, 0, 0, 0, "pending target mapping");
@@ -255,7 +264,7 @@ namespace Chaptarr.Core.Test.Datastore
                 CreateNativeTarget,
                 (source, target, transaction) =>
                 {
-                    var report = new BookshelfDatabaseImportReport();
+                    var report = CreateImportReport();
                     report.RecordTable("Authors", 1, 0, 1, 0, 0, "converted to a managed target Author");
                     report.RecordTable("AuthorMetadata", 1, 0, 1, 0, 0, "merged into target Authors metadata");
                     report.RecordTable("Books", 0, 0, 0, 0, 0, "reported as empty");

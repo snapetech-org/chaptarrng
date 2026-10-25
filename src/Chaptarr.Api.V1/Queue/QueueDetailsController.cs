@@ -114,7 +114,7 @@ namespace Chaptarr.Api.V1.Queue
                 if (resource.Book != null)
                 {
                     resource.Book.Id = mapping.SourceId;
-                    resource.Book.LocalBookId = mapping.SourceId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    resource.Book.LocalBookId = mapping.SourceId.ToString(global::System.Globalization.CultureInfo.InvariantCulture);
                     resource.Book.MediaType = null;
                     resource.Book.AudiobookMonitored = null;
                     resource.Book.EbookMonitored = null;

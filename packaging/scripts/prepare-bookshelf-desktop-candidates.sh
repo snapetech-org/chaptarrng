@@ -141,6 +141,8 @@ cp "$repo_root/packaging/legacy/desktop/bookshelfng-supervisor.sh" \
   "$work/output/flatpak/src/bookshelfng-supervisor.sh"
 cp "$repo_root/packaging/legacy/scripts/bookshelfng-journal" \
   "$work/output/flatpak/src/bookshelfng-journal"
+chmod 0755 "$work/output/flatpak/src/bookshelfng-supervisor.sh" \
+  "$work/output/flatpak/src/bookshelfng-journal"
 cp "$repo_root/packaging/legacy/flatpak/com.snapetech.BookshelfNG.desktop" \
   "$work/output/flatpak/src/com.snapetech.BookshelfNG.desktop"
 cp "$repo_root/packaging/legacy/flatpak/com.snapetech.BookshelfNG.metainfo.xml" \

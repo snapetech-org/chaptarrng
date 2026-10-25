@@ -162,17 +162,24 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfMatchCompatibility"), Is.EqualTo("true"));
             Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfNGDatabaseMigrated"), Is.EqualTo("true"));
             Assert.That(ReadConfigValue(sourceConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "ExperienceMode"), Is.EqualTo("simple"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverApiToken"), Is.EqualTo("pg-fixture-token"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverAuth"), Is.EqualTo("Bearer pg-fixture-token"));
             Assert.That(ReadConfigValue(sourceConnectionString, "MetadataServerUrl"), Is.EqualTo("https://bookshelf-metadata.example/catalog"));
             Assert.That(ReadConfigValue(sourceConnectionString, "MetadataSource"), Is.EqualTo("https://bookshelf-metadata.example/catalog"));
-            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 1} AND \"Key\" = 'bookmatchingstrictness';"), Is.EqualTo(1));
-            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 2} AND \"Key\" = 'BookshelfMatchCompatibility';"), Is.EqualTo(1));
-            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 3} AND \"Key\" = 'BookshelfNGDatabaseMigrated';"), Is.EqualTo(1));
-            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 4} AND \"Key\" = 'HardcoverApiToken';"), Is.EqualTo(1));
-            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 5} AND \"Key\" = 'HardcoverEnabled';"), Is.EqualTo(1));
-            Assert.That(ReadScalarInt(sourceConnectionString, $"SELECT COUNT(*) FROM \"Config\" WHERE \"Id\" = {maxSourceConfigId + 6} AND \"Key\" = 'MetadataServerUrl';"), Is.EqualTo(1));
-            Assert.That(ReadScalarLong(sourceConnectionString, "SELECT nextval(pg_get_serial_sequence('\"Config\"', 'Id'));"), Is.GreaterThan(maxSourceConfigId + 6));
+            var mappedConfigIds = new[]
+            {
+                ReadConfigId(sourceConnectionString, "bookmatchingstrictness"),
+                ReadConfigId(sourceConnectionString, "BookshelfMatchCompatibility"),
+                ReadConfigId(sourceConnectionString, "ExperienceMode"),
+                ReadConfigId(sourceConnectionString, "BookshelfNGDatabaseMigrated"),
+                ReadConfigId(sourceConnectionString, "HardcoverApiToken"),
+                ReadConfigId(sourceConnectionString, "HardcoverEnabled"),
+                ReadConfigId(sourceConnectionString, "MetadataServerUrl")
+            };
+            Assert.That(mappedConfigIds, Is.All.GreaterThan(maxSourceConfigId));
+            Assert.That(mappedConfigIds, Is.Unique);
+            Assert.That(ReadScalarLong(sourceConnectionString, "SELECT nextval(pg_get_serial_sequence('\"Config\"', 'Id'));"), Is.GreaterThan(mappedConfigIds.Max()));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Authors\" WHERE \"Id\" = 20 AND \"HardcoverAuthorId\" = 'hc:10';"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Books\" WHERE \"Id\" = 30 AND \"HardcoverBookId\" = 'hc:30';"), Is.EqualTo(1));
             Assert.That(ReadScalarInt(sourceConnectionString, "SELECT COUNT(*) FROM \"Editions\" WHERE \"Id\" = 40 AND \"HardcoverEditionId\" = '40';"), Is.EqualTo(1));
@@ -524,6 +531,16 @@ namespace Chaptarr.Core.Test.Datastore
             command.CommandText = "SELECT \"Value\" FROM \"Config\" WHERE \"Key\" = @key;";
             command.Parameters.AddWithValue("@key", key);
             return command.ExecuteScalar()?.ToString();
+        }
+
+        private static long ReadConfigId(string connectionString, string key)
+        {
+            using var connection = new NpgsqlConnection(connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT \"Id\" FROM \"Config\" WHERE \"Key\" = @key;";
+            command.Parameters.AddWithValue("@key", key);
+            return Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private static void WriteConfigValue(string connectionString, string key, string value)
