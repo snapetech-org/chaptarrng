@@ -211,10 +211,72 @@ test('StartOS candidate documents the package identity and external device-accep
   assert.match(readme, /volume IDs `main`,\s*`books`, and `downloads`/);
   assert.match(readme, /`\/config`, `\/books`, and `\/downloads`/);
   assert.match(readme, /exact ChaptarrNG\s+multi-architecture Hardcover digest/);
-  assert.match(readme, /device install, backup, update, and rollback acceptance still\s+belong to that package's handoff/i);
+  assert.match(readme, /device install, backup, update, and rollback\s+acceptance still\s+belong to that package's handoff/i);
   assert.match(manifest, /packageRepo: 'https:\/\/github\.com\/snapetech\/bookshelfng-startos'/);
   assert.match(manifest, /upstreamRepo: 'https:\/\/github\.com\/snapetech-org\/chaptarrng'/);
   assert.match(manifest, /source: \{ dockerTag: 'ghcr\.io\/snapetech-org\/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' \}/);
+});
+
+test('interactive package migration choices default to No before package mutation', () => {
+  const debianPreinstall = read('packaging/legacy/debian/preinst');
+  const rpmSpec = read('packaging/legacy/rpm/bookshelfng.spec.in');
+  const aurInstall = read('packaging/legacy/aur/bookshelfng-bin/bookshelfng.install');
+  const chocolatey = read('packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in');
+  const desktopSupervisor = read('packaging/legacy/desktop/bookshelfng-supervisor.sh');
+
+  for (const [channel, hook] of [
+    ['Debian', debianPreinstall],
+    ['RPM', rpmSpec],
+    ['AUR', aurInstall],
+  ]) {
+    assert.match(hook, /BOOKSHELFNG_MIGRATION_MODE:-automatic/,
+      `${channel} preserves automatic mode as the unattended default`);
+    assert.match(hook, /ask\)[\s\S]*?\[ ! -r \/dev\/tty \]/,
+      `${channel} fails closed when ask mode has no terminal`);
+    assert.match(hook, /Replace BookshelfNG with ChaptarrNG now\?[\s\S]*?\[y\/N\]/,
+      `${channel} presents the same default-No prompt`);
+    assert.match(hook, /IFS= read -r migration_choice <\/dev\/tty[\s\S]*?y\|Y\|yes\|YES\|Yes[\s\S]*?exit 1/,
+      `${channel} proceeds only for an explicit yes and cancels otherwise`);
+    assert.match(hook, /case "\$migration_mode" in[\s\S]*?ask\)[\s\S]*?(?:snapshot_source_package|snapshot-ready|touch \/var\/lib\/bookshelfng\/\.chaptarrng-bookshelfng-migration-pending)/,
+      `${channel} asks before creating the migration snapshot or pending marker`);
+  }
+
+  assert.match(chocolatey, /function Confirm-BookshelfMigrationChoice[\s\S]*?\[Console\]::IsInputRedirected[\s\S]*?Read-Host[\s\S]*?\[y\/N\][\s\S]*?-notmatch '\^\(\?i:y\|yes\)\$'[\s\S]*?cancelled before staging files or stopping the service/);
+  assert.match(chocolatey, /Confirm-BookshelfMigrationChoice -HasMigrationData \$hasMigrationDataForChoice -Mode \$requestedMigrationMode[\s\S]*?Complete-PriorBookshelfHandoff/,
+    'Chocolatey asks before staging the new application or changing service state');
+
+  assert.match(desktopSupervisor, /zenity --question --default-cancel[\s\S]*?--cancel-label='Not now'/,
+    'AppImage and Flatpak desktop dialogs default to No');
+  assert.match(desktopSupervisor, /printf 'Replace BookshelfNG with ChaptarrNG now\?[\s\S]*?\[y\/N\][\s\S]*?IFS= read -r migration_choice <\/dev\/tty/);
+  assert.match(desktopSupervisor, /case "\$migration_choice" in[\s\S]*?y\|Y\|yes\|YES\|Yes\)[\s\S]*?BookshelfNG conversion deferred[\s\S]*?exit 0/);
+  assert.match(desktopSupervisor, /MigrationMode=ask needs zenity or an interactive terminal/);
+});
+
+test('Linux and Windows VM jobs execute package-specific migration-choice checks', () => {
+  const workflow = read('.github/workflows/build.yml');
+  const buildJob = readWorkflowJob(workflow, 'build');
+
+  assert.match(buildJob, /name: Test candidate BookshelfNG Debian bridge package[\s\S]*?if: matrix\.os == 'ubuntu-latest'/);
+  assert.match(buildJob, /name: Test BookshelfNG AUR migration choice[\s\S]*?if: matrix\.os == 'ubuntu-latest'[\s\S]*?test-bookshelfng-aur-choice\.sh/);
+  assert.match(buildJob, /name: Test candidate BookshelfNG RPM bridge package[\s\S]*?if: matrix\.os == 'ubuntu-latest'[\s\S]*?test-build-bookshelfng-rpm-bridge\.sh/);
+  assert.match(buildJob, /name: Test Chocolatey BookshelfNG migration choice[\s\S]*?if: matrix\.os == 'windows-latest'[\s\S]*?test-chocolatey-migration-choice\.ps1/);
+});
+
+test('noninteractive image and appliance channels defer ask mode without starting ChaptarrNG', () => {
+  const supervisor = read('docker-bookshelf-compat-supervisor.sh');
+  const chart = read('charts/bookshelfng/README.md');
+  const startOsAction = read('packaging/legacy/startos/candidate/startos/actions/configureMigration.ts');
+  const startOsMain = read('packaging/legacy/startos/candidate/startos/main.ts');
+
+  assert.match(supervisor, /automatic\|ask\|manual\|retry/);
+  assert.match(supervisor, /ask\)[\s\S]*?if \[ ! -t 0 \][\s\S]*?return 1/,
+    'container ask mode defers safely when there is no interactive terminal');
+  assert.match(supervisor, /wait_for_operator 'BookshelfNG migration is deferred/);
+  assert.match(chart, /Kubernetes has no\s+interactive terminal for `ask`, so that mode also defers migration/);
+  assert.match(startOsAction, /Automatically migrate BookshelfNG data on startup/);
+  assert.match(startOsAction, /default: true/);
+  assert.match(startOsMain, /BOOKSHELFNG_MIGRATION_MODE: autoMigrate \? 'automatic' : 'manual'/,
+    'StartOS exposes an explicit automatic/manual first-start choice instead of a terminal prompt');
 });
 
 test('StartOS candidate uses the patched SDK 3 dependency contract and documents its OS floor', () => {

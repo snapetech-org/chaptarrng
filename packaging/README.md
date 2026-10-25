@@ -111,6 +111,13 @@ is no apt repository update path; the candidate has not been exercised on a
 real host or published to a GitHub Release or Ubuntu PPA. Keep this channel
 disabled until representative-data rollback and channel acceptance pass.
 
+The Debian Trixie apt regression now also drives the optional prompt through a
+real package-manager transaction. Answering `n` keeps the synthetic `.71`
+BookshelfNG package, config, and data canary in place without creating handoff
+markers. Answering `y` installs the candidate and its retained handoff snapshot;
+the test then downgrades to the legacy fixture. This choice test does not run a
+systemd service or migrate a populated operator database.
+
 The stable release workflow now attaches the legacy `.deb` and checksum only
 after an explicit bridge request and when the migration and both release
 readiness gates are true. Those gates remain closed; this workflow has not
@@ -168,9 +175,9 @@ platform-specific command and rollback notes.
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
 | --- | --- | --- | --- |
-| Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; a gated legacy `.deb` asset and Launchpad source-package publisher preserve the old service and data identity. An isolated dpkg upgrade/downgrade to the candidate and back preserved a modified conffile and data canary | Validate dependency resolution, real systemd startup, database migration/restore, and PPA/direct-download handoff. External PPA credentials, archive, and enabled series have not been validated, and no candidate is published |
-| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `0.9.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and an active systemd service handoff rehearsal | Validate with representative operator data and host-specific service settings before publishing the candidate |
-| COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A local Fedora 44 RPM transaction rehearsal upgraded the published `.71` RPM to a `.977` bridge candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies were bypassed; no live COPR/DNF or real service test is established. |
+| Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; isolated dpkg and Debian Trixie apt ask-mode No/Yes upgrades and downgrade preserved the modified conffile and data canary | Validate real systemd startup, database migration/restore, and PPA/direct-download handoff. External PPA credentials, archive, and enabled series have not been validated, and no candidate is published |
+| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `.977` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, active service handoff, and an ask-mode hook test for Enter/Yes | Validate with representative operator data and host-specific service settings before publishing the candidate |
+| COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A Fedora 44 DNF regression uses a synthetic `.71` package fixture and the current `.977` bridge spec. Ask-mode No cancels before the handoff; Yes preserves config/data and creates the snapshot; downgrade restores the fixture. `systemctl` is mocked, and no live COPR feed, systemd service, or database migration is tested. |
 | Chocolatey | `chaptarrng 0.9.973` is moderator-approved; `.977` is not on the feed and the earlier `.977` bridge push returned HTTP 403. Current source builds a legacy identity bridge that preserves custom service/data paths, previews conversion, handles provider mode, takes PostgreSQL backups, and verifies `/ping`. | Public `bookshelfng 0.4.21.70` remains | Resolve the feed rejection, publish both package updates, and validate populated SQLite/PostgreSQL conversion, rollback, and installed-channel handoff |
 | Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode; fresh installs default to port `8787`, while saved and explicit ports take precedence. | Run the compatibility-default regression checks, then validate all three manifests and old-alias digest routing before enabling the bridge |
 | Helm | A same-name chart and versioned publisher target the existing BookshelfNG OCI identity. Both release-readiness gates, the migration bridge gate, and an explicit bridge opt-in are required. Local build/render and hosted resource-identity checks pass. | No chart is published; the BookshelfNG OCI chart remains unchanged. Existing installs can keep the same chart source after acceptance. | Test a real PVC/GitOps upgrade and rollback before publishing or switching existing installations |
@@ -181,6 +188,8 @@ installs the public BookshelfNG package, upgrades through the ChaptarrNG
 legacy recipe, checks service and data/backup handling, and verifies that
 uninstall preserves data. This does not validate conversion of a populated
 operator database. The candidate BookshelfNG package itself was not published.
+The Windows VM build matrix also runs the Chocolatey ask choice handler with
+No, blank, Yes, and redirected-input cases.
 
 Before a release can publish, the workflow validates AUR private-key
 usability, package-scoped ChaptarrNG and BookshelfNG COPR webhook formats,
@@ -212,16 +221,15 @@ them requires both release-readiness gates, the migration bridge gate, and an
 explicit bridge opt-in.
 
 The current legacy COPR repository metadata contains no package entries for
-Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 transaction test
-installed the published BookshelfNG `.71` RPM, upgraded it to a locally built
-`.977` `bookshelfng` RPM candidate from the current bridge spec, and downgraded
-to `.71`. The test preserved a config override and data canary. A mocked
-`systemctl` verified stop-then-start scriptlet ordering during upgrade; the
-downgrade was performed after an explicit stop and followed by a manual start.
-The RPM transaction used `--nodeps`, did not run a real systemd service, and
-did not migrate a database. This validates the package identity and file
-handling only. It does not validate an install or upgrade through COPR/DNF;
-there is no currently published old-identity package in that repository.
+Fedora 43, 44, 45, or Rawhide x86_64. The Fedora 44 DNF regression builds a
+synthetic BookshelfNG `.71` package fixture and the `.977` candidate from the
+current bridge spec. It answers No and Yes at the package-script prompt, checks
+that No leaves the old package/config/data in place, confirms Yes creates the
+handoff snapshot, and downgrades back to the fixture. A mocked `systemctl`
+checks stop-then-start ordering; DNF resolves the container dependencies. A
+separate earlier transaction rehearsal used the published `.71` RPM and
+`--nodeps`. Neither test runs real systemd or migrates a database. The DNF
+regression does not use COPR, which still has no published old-identity package.
 
 On 2026-10-18, the AUR build script built both `chaptarrng-bin 0.9.977-1`
 and a local `bookshelfng-bin 0.9.977-1` candidate against the public Linux
@@ -260,6 +268,12 @@ opened the restored database. The test container had no network, so
 to let its `network-online.target` complete. This validates synthetic package
 and service lifecycle behavior; representative operator data and host-specific
 settings remain open. The candidate remains unpublished.
+
+The new Linux build-matrix check also runs the AUR pre-upgrade hook with
+`BOOKSHELFNG_MIGRATION_MODE=ask`. A default-No Enter leaves the old app,
+service marker, config, and data canary untouched; Yes saves the source app,
+unit, launcher, and pending marker before the mocked service stop. The pacman
+upgrade rehearsal above covers the package-manager transaction separately.
 
 ## Migration behavior and limits
 

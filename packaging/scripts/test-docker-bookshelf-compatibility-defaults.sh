@@ -2,8 +2,27 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-test_root="$(mktemp -d "${TMPDIR:-/tmp}/chaptarrng-docker-compatibility.XXXXXX")"
-trap 'rm -rf -- "$test_root"' EXIT
+if [[ -n "${TASK_SCRATCH_DIR:-}" ]]; then
+  test_root="$TASK_SCRATCH_DIR"
+  if [[ -e "$test_root" ]]; then
+    echo "Refusing to reuse test scratch path: $test_root" >&2
+    exit 2
+  fi
+  mkdir -p "$(dirname "$test_root")"
+  mkdir "$test_root"
+else
+  test_root="$(mktemp -d "${TMPDIR:-/tmp}/chaptarrng-docker-compatibility.XXXXXX")"
+fi
+cleanup() {
+  result=$?
+  if [[ $result -eq 0 ]]; then
+    rm -rf -- "$test_root"
+  else
+    echo "Docker compatibility test failed; evidence kept at $test_root" >&2
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
 
 defaults="$repo_root/docker-bookshelf-compatibility-defaults.sh"
 
@@ -14,6 +33,72 @@ run_case() {
     printf 'Failed Docker compatibility defaults case: %s\n' "$name" >&2
     exit 1
   fi
+}
+
+check_desktop_ask_choices() {
+  set -euo pipefail
+  local data_dir="$test_root/desktop-ask-data"
+  local app_dir="$test_root/desktop-ask-app"
+  local stub_bin="$test_root/desktop-ask-bin"
+  local supervisor="$repo_root/packaging/legacy/desktop/bookshelfng-supervisor.sh"
+  local database_hash status state_file
+
+  mkdir -p "$data_dir" "$app_dir" "$stub_bin"
+  printf 'synthetic BookshelfNG database\n' > "$data_dir/readarr.db"
+  database_hash="$(sha256sum "$data_dir/readarr.db" | cut -d' ' -f1)"
+  : > "$test_root/desktop-console-calls"
+  cat > "$stub_bin/zenity" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >> "$ZENITY_CALLS"
+if [ "$1" = --question ]; then
+  exit "$ZENITY_QUESTION_STATUS"
+fi
+exit 0
+SH
+  cat > "$app_dir/Chaptarr.Console" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >> "$DESKTOP_CONSOLE_CALLS"
+case "$1" in
+  -preview-bookshelf-migration) exit 1 ;;
+  *) exit 2 ;;
+esac
+SH
+  printf '#!/bin/sh\nexit 0\n' > "$app_dir/Chaptarr"
+  chmod 0755 "$stub_bin/zenity" "$app_dir/Chaptarr.Console" "$app_dir/Chaptarr"
+  export ZENITY_CALLS="$test_root/desktop-zenity-calls"
+  export DESKTOP_CONSOLE_CALLS="$test_root/desktop-console-calls"
+  export PATH="$stub_bin:$PATH"
+  export BOOKSHELFNG_MIGRATION_MODE=ask
+
+  export ZENITY_QUESTION_STATUS=1
+  if sh "$supervisor" "$app_dir/Chaptarr" "$data_dir" > "$test_root/desktop-no.log" 2>&1; then
+    status=0
+  else
+    status=$?
+  fi
+  test "$status" -eq 0
+  grep -Fq -- '--question --default-cancel --ok-label=Replace now --cancel-label=Not now' "$ZENITY_CALLS"
+  test ! -s "$DESKTOP_CONSOLE_CALLS"
+  test "$(sha256sum "$data_dir/readarr.db" | cut -d' ' -f1)" = "$database_hash"
+  state_file="$data_dir/.chaptarrng-bookshelfng-desktop-handoff"
+  test ! -e "$state_file"
+  grep -Fq 'BookshelfNG conversion deferred. The source database was left untouched.' "$test_root/desktop-no.log"
+
+  export ZENITY_QUESTION_STATUS=0
+  if sh "$supervisor" "$app_dir/Chaptarr" "$data_dir" > "$test_root/desktop-yes.log" 2>&1; then
+    status=0
+  else
+    status=$?
+  fi
+  test "$status" -eq 1
+  grep -Fq -- '-preview-bookshelf-migration' "$DESKTOP_CONSOLE_CALLS"
+  if grep -Fq -- '-migrate-bookshelf' "$DESKTOP_CONSOLE_CALLS"; then
+    echo 'The desktop affirmative choice bypassed migration preview.' >&2
+    return 1
+  fi
+  test "$(cat "$state_file")" = intervention-required
+  test "$(sha256sum "$data_dir/readarr.db" | cut -d' ' -f1)" = "$database_hash"
+  grep -Fq 'BookshelfNG migration preflight failed' "$test_root/desktop-yes.log"
 }
 
 docker_stage_body() {
@@ -161,6 +246,38 @@ run_case 'standard ChaptarrNG image defaults remain unchanged' bash -c '
   [[ -z "${Chaptarr__Server__Port:-}" ]]
   [[ -z "${CHAPTARR_DEFAULT_PORT:-}" ]]
 ' _ "$test_root" "$defaults"
+
+run_case 'ask mode without a terminal records deferral and does not start ChaptarrNG' bash -c '
+  set -euo pipefail
+  data_dir="$1/ask-no-terminal"
+  mkdir -p "$data_dir"
+  printf "synthetic BookshelfNG database\n" > "$data_dir/readarr.db"
+  app_started="$1/ask-app-started"
+  app="$1/ask-app"
+  printf "#!/bin/sh\ntouch \"\$APP_STARTED\"\n" > "$app"
+  chmod 0755 "$app"
+  export APP_STARTED="$app_started"
+  export CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+  export CHAPTARR_COMPAT_DATA_DIR="$data_dir"
+  export CHAPTARR_CONFIG_FILE="$data_dir/config.xml"
+  export BOOKSHELFNG_MIGRATION_MODE=ask
+  if timeout --signal=TERM --kill-after=2 1 sh "$2" "$app" > "$1/ask.log" 2>&1; then
+    status=0
+  else
+    status=$?
+  fi
+  case "$status" in 124|143) ;; *) echo "unexpected supervisor exit status: $status" >&2; exit 1 ;; esac
+  deferred="$data_dir/.chaptarrng-bookshelf-handoff/deferred"
+  test -f "$deferred"
+  grep -Fxq manual-review "$deferred"
+  test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/pending"
+  test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/failed"
+  test ! -e "$app_started"
+  grep -Fq "Interactive migration choice requested without a terminal. Deferring migration" "$1/ask.log"
+  grep -Fq "BookshelfNG migration is deferred" "$1/ask.log"
+' _ "$test_root" "$repo_root/docker-bookshelf-compat-supervisor.sh"
+
+run_case 'AppImage and Flatpak default-No choice defers; Yes previews before applying' check_desktop_ask_choices
 
 mkdir -p "$test_root/bin"
 cat > "$test_root/bin/wget" <<'SH'

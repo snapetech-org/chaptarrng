@@ -60,6 +60,30 @@ if (-not [string]::IsNullOrWhiteSpace($packageParameters)) {
   }
 }
 
+function Confirm-BookshelfMigrationChoice {
+  param(
+    [Parameter(Mandatory = $true)] [bool] $HasMigrationData,
+    [Parameter(Mandatory = $true)] [string] $Mode,
+    [bool] $InputIsRedirected = [Console]::IsInputRedirected,
+    [scriptblock] $Prompt = { param([string] $Message) Read-Host $Message }
+  )
+
+  if (-not $HasMigrationData) { return }
+  if ($Mode -eq 'manual') {
+    throw "MigrationMode=manual cancelled this package update before stopping BookshelfNG or changing its files. Use the ChaptarrNG Console migration commands in docs/MIGRATE_FROM_BOOKSHELFNG.md, then rerun the package update."
+  }
+  if ($Mode -eq 'ask') {
+    if ($InputIsRedirected) {
+      throw 'MigrationMode=ask requires an interactive terminal. No files, service settings, or databases were changed; rerun with MigrationMode=automatic or MigrationMode=manual.'
+    }
+
+    $migrationChoice = & $Prompt 'Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically. [y/N]'
+    if ($migrationChoice -notmatch '^(?i:y|yes)$') {
+      throw 'BookshelfNG replacement cancelled before staging files or stopping the service. Run with MigrationMode=manual to review the independent migration steps.'
+    }
+  }
+}
+
 function Get-BookshelfServiceEnvironment {
   param([Parameter(Mandatory = $true)] [string] $Setting)
   $output = & $nssm.Source get BookshelfNG $Setting 2>$null
@@ -556,20 +580,7 @@ if (-not $alreadyMigratedForChoice) {
   $hasMigrationDataForChoice = $hadService -or $sqliteSourceExisted -or $postgresSourceForChoice
 }
 
-if ($hasMigrationDataForChoice -and $requestedMigrationMode -eq 'manual') {
-  throw "MigrationMode=manual cancelled this package update before stopping BookshelfNG or changing its files. Use the ChaptarrNG Console migration commands in docs/MIGRATE_FROM_BOOKSHELFNG.md, then rerun the package update."
-}
-
-if ($hasMigrationDataForChoice -and $requestedMigrationMode -eq 'ask') {
-  if ([Console]::IsInputRedirected) {
-    throw 'MigrationMode=ask requires an interactive terminal. No files, service settings, or databases were changed; rerun with MigrationMode=automatic or MigrationMode=manual.'
-  }
-
-  $migrationChoice = Read-Host 'Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically. [y/N]'
-  if ($migrationChoice -notmatch '^(?i:y|yes)$') {
-    throw 'BookshelfNG replacement cancelled before staging files or stopping the service. Run with MigrationMode=manual to review the independent migration steps.'
-  }
-}
+Confirm-BookshelfMigrationChoice -HasMigrationData $hasMigrationDataForChoice -Mode $requestedMigrationMode
 
 $compatibilityDefaultPort = if ($alreadyMigratedForChoice) { '8789' } else { '8787' }
 if ($alreadyMigratedForChoice) {

@@ -103,6 +103,11 @@ jobs:
       shell: pwsh
       run: ./packaging/scripts/test-chocolatey-publish-gate.ps1
 
+    - name: Test Chocolatey BookshelfNG migration choice
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: ./packaging/scripts/test-chocolatey-migration-choice.ps1
+
     - name: Test hosted runner policy
       if: matrix.os == 'ubuntu-latest'
       run: python3 scripts/test_workflow_runner_policy.py
@@ -112,6 +117,18 @@ jobs:
       env:
         TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-deb-bridge-test
       run: bash packaging/scripts/test-build-bookshelfng-deb-bridge.sh
+
+    - name: Test BookshelfNG AUR migration choice
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-aur-choice-test
+      run: bash packaging/scripts/test-bookshelfng-aur-choice.sh
+
+    - name: Test candidate BookshelfNG RPM bridge package
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-rpm-bridge-test
+      run: bash packaging/scripts/test-build-bookshelfng-rpm-bridge.sh
 
     - name: Test candidate BookshelfNG Launchpad source package
       if: matrix.os == 'ubuntu-latest'
