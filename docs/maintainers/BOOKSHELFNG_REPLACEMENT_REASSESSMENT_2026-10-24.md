@@ -12,6 +12,29 @@ unexecuted provider, representative-data, and installed-channel outcomes. No
 defensible overall completion percentage follows from file counts, test counts,
 or route counts.
 
+## Execution update (2026-10-25)
+
+The exact-head hosted Build for `ebae13a7023892e84dfe2de8d96955fae684b7e6`
+failed its Windows BookshelfNG service-upgrade/rollback test when the documented
+read-only migration preview could not resolve `IMigrationController` in utility
+mode. A local candidate fix registers NLog framework logging there and defers
+`IConfigService` resolution until the health-check command, preventing utility
+composition from opening the source database through normal startup migration.
+The Release Console build passed, the focused composition regression passed,
+and preview/apply/health/restore-preview/rollback passed on disposable expanded
+schema-158 fixtures for explicit Goodreads false, default Goodreads unset, and
+native Hardcover modes. The full Core suite passed 4,901 tests with 28 skipped;
+the PostgreSQL 17 migration/backup smoke passed 15/15. These results are
+recorded in the [migration fixture evidence](BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
+
+This fixes the reproduced explicit-CLI failure, but the hosted failure was on
+the previous commit and the candidate has not yet passed exact-head hosted CI.
+ChaptarrNG remains **not ready for users to cut over**: representative
+operator-data and live-provider acceptance, end-to-end unchanged-client
+fulfillment, installed-channel upgrade/rollback, exact-head cross-platform
+validation, and external update delivery remain open. No release or cutover has
+been authorized.
+
 This document is the current **execution order** for this goal. The
 [retirement record](../BOOKSHELFNG_RETIREMENT.md),
 [workflow crosswalk](../BOOKSHELFNG_WORKFLOW_PARITY.md), and BookshelfNG's

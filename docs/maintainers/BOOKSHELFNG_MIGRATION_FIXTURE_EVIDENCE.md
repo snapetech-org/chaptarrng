@@ -1,5 +1,49 @@
 # BookshelfNG migration fixture evidence
 
+## Explicit utility-mode migration matrix (2026-10-25)
+
+The exact-head Windows installer service round-trip in Build
+[40154279131](https://github.com/snapetech-org/chaptarrng/actions/runs/40154279131)
+failed while invoking the documented read-only preview. Its ChaptarrNG process
+could not resolve `IMigrationController` because the utility host had not
+registered a Microsoft `ILoggerProvider`. The utility router also eagerly
+resolved `IConfigService`, which constructs the main database; registering the
+missing logger alone could therefore have run normal startup migration before
+the explicit preview route. The same DryIoc failure was reproduced locally
+against the disposable schema-158 fixture.
+
+The fix registers NLog-backed framework logging in utility mode and injects
+`Lazy<IConfigService>` into `UtilityModeRouter`, resolving it only for the
+post-migration health-check command. This keeps preview and apply composition
+from touching the target database before the selected utility route runs. A
+composition regression test verifies the config service is not resolved while
+constructing the router.
+
+The source-built Release Console then passed the actual CLI flow against three
+separate expanded schema-158 fixtures: Goodreads with `HARDCOVER=false`, the
+BookshelfNG-default Goodreads mode with both variables unset, and native
+Hardcover with `HARDCOVER=true`. For all three:
+
+- Preview exited successfully and the source database SHA-256 was unchanged.
+- Explicit apply exited successfully, retained a valid schema-158 backup, and
+  produced a schema-124 ChaptarrNG database with `integrity_check=ok` and zero
+  foreign-key violations. Each target contained four authors, nine books,
+  nine editions, and four files.
+- The stored source dialect was `gr` for both Goodreads cases and `hc` for
+  Hardcover; the native Hardcover setting remained enabled only in the
+  Hardcover case.
+- `-check-bookshelf-migration` passed. Restore preview left both the converted
+  database and source backup unchanged. Explicit rollback restored the
+  source-backup bytes exactly and retained the converted ChaptarrNG database
+  separately.
+
+The changed Release build completed with zero warnings and zero errors; the
+focused composition test passed 1/1. The full Core suite passed 4,901 tests with
+28 skipped and none failed. The isolated PostgreSQL 17 migration/backup smoke
+passed all 15 tests. These are local synthetic-data results. They do not prove
+live provider fulfillment, representative operator-data acceptance, full
+installed-channel rollback, or exact-head hosted validation of the fix.
+
 ## Expanded multi-record source-build rehearsal (2026-10-21)
 
 The optional `--expanded-fixture` mode in

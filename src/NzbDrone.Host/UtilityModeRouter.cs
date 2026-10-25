@@ -32,7 +32,7 @@ namespace NzbDrone.Host
         private readonly IRemoteAccessAdapter _remoteAccessAdapter;
         private readonly IAppFolderFactory _appFolderFactory;
         private readonly IConnectionStringFactory _connectionStringFactory;
-        private readonly IConfigService _configService;
+        private readonly Lazy<IConfigService> _configService;
         private readonly IStartupContext _startupContext;
         private readonly Logger _logger;
 
@@ -42,7 +42,7 @@ namespace NzbDrone.Host
                       IRemoteAccessAdapter remoteAccessAdapter,
                       IAppFolderFactory appFolderFactory,
                       IConnectionStringFactory connectionStringFactory,
-                      IConfigService configService,
+                      Lazy<IConfigService> configService,
                       IStartupContext startupContext,
                       Logger logger)
         {
@@ -160,12 +160,12 @@ namespace NzbDrone.Host
                             throw new InvalidDataException("BookshelfNG handoff health check did not find a readable ChaptarrNG database.");
                         }
 
-                        if (!_configService.BookshelfNGDatabaseMigrated)
+                        if (!_configService.Value.BookshelfNGDatabaseMigrated)
                         {
                             throw new InvalidDataException("BookshelfNG handoff health check did not find the persisted migration marker.");
                         }
 
-                        var providerDialect = _configService.BookshelfNGProviderDialect;
+                        var providerDialect = _configService.Value.BookshelfNGProviderDialect;
                         if (!string.Equals(providerDialect, "hc", StringComparison.Ordinal) &&
                             !string.Equals(providerDialect, "gr", StringComparison.Ordinal))
                         {

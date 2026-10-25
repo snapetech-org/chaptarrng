@@ -13,7 +13,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
+using Microsoft.Extensions.Logging;
 using NLog;
+using NLog.Extensions.Logging;
 using Npgsql;
 using NzbDrone.Common.Composition.Extensions;
 using NzbDrone.Common.Disk;
@@ -110,6 +112,12 @@ namespace NzbDrone.Host
                                 })
                                 .ConfigureServices(services =>
                                 {
+                                    services.AddLogging(logging =>
+                                    {
+                                        logging.ClearProviders();
+                                        logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
+                                        logging.AddNLog();
+                                    });
                                     services.Configure<PostgresOptions>(config.GetSection("Chaptarr:Postgres"));
                                     services.Configure<AppOptions>(config.GetSection("Chaptarr:App"));
                                     services.Configure<AuthOptions>(config.GetSection("Chaptarr:Auth"));
