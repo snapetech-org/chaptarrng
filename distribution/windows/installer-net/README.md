@@ -16,10 +16,11 @@ later restore must recreate the removed Readarr service. Service-specific
 virtual accounts such as `NT SERVICE\Readarr` cannot transfer to the differently
 named Chaptarr service and fail closed. PostgreSQL handoff requires `pg_dump`
 and `pg_restore` on `PATH` and an explicitly configured `PostgresUser`.
-Service-only PostgreSQL environment overrides also fail closed because the new
-service cannot inherit them safely. Multiple appdata databases, unsupported
-schemas, and installations without the legacy Windows service fail closed and
-use the documented manual migration procedure instead.
+PostgreSQL settings in the existing service's NSSM environment blocks are
+included in preflight and passed through to the Chaptarr service. A source
+without an explicit database user still fails closed. Multiple appdata
+databases, unsupported schemas, and installations without the legacy Windows
+service fail closed and use the documented manual migration procedure instead.
 
 ## Migration sequence
 
