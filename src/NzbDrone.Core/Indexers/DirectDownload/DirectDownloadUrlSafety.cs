@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
 using NzbDrone.Common.Instrumentation;
@@ -9,19 +11,21 @@ namespace NzbDrone.Core.Indexers.DirectDownload
 {
     public static class DirectDownloadUrlSafety
     {
-        public static Uri NormalizeAndValidate(string rawUrl)
+        private static readonly TimeSpan DefaultHostResolutionTimeout = TimeSpan.FromSeconds(5);
+
+        public static Uri NormalizeAndValidate(string rawUrl, TimeSpan? hostResolutionTimeout = null)
         {
             if (!Uri.TryCreate(rawUrl?.Trim(), UriKind.Absolute, out var uri))
             {
                 throw Unsafe(rawUrl, "Source URL must be an absolute http or https URL.");
             }
 
-            ValidateAbsoluteHttpOrHttpsUri(uri, rawUrl);
+            ValidateAbsoluteHttpOrHttpsUri(uri, rawUrl, hostResolutionTimeout);
 
             return uri.AbsoluteUri.EndsWith("/", StringComparison.Ordinal) ? uri : new Uri(uri.AbsoluteUri + "/");
         }
 
-        public static Uri ValidateAbsoluteHttpOrHttpsUri(Uri uri, string rawUrl = null)
+        public static Uri ValidateAbsoluteHttpOrHttpsUri(Uri uri, string rawUrl = null, TimeSpan? hostResolutionTimeout = null)
         {
             if (uri == null)
             {
@@ -44,15 +48,29 @@ namespace NzbDrone.Core.Indexers.DirectDownload
                 throw Unsafe(rawUrl ?? uri.AbsoluteUri, $"Source target '{CleanseLogMessage.Cleanse(rawUrl ?? uri.AbsoluteUri)}' must not include embedded credentials.");
             }
 
-            EnsureSafeHost(uri, rawUrl ?? uri.AbsoluteUri);
+            EnsureSafeHost(uri, rawUrl ?? uri.AbsoluteUri, hostResolutionTimeout);
             return uri;
         }
 
-        public static void EnsureSafeHost(Uri uri, string rawUrl = null)
+        public static void EnsureSafeHost(Uri uri, string rawUrl = null, TimeSpan? hostResolutionTimeout = null)
+        {
+            EnsureSafeHost(uri, rawUrl, hostResolutionTimeout, Dns.GetHostAddressesAsync);
+        }
+
+        internal static void EnsureSafeHost(
+            Uri uri,
+            string rawUrl,
+            TimeSpan? hostResolutionTimeout,
+            Func<string, CancellationToken, Task<IPAddress[]>> resolveHostAddresses)
         {
             if (uri == null)
             {
                 throw Unsafe(rawUrl, "Source URL is required.");
+            }
+
+            if (resolveHostAddresses == null)
+            {
+                throw new ArgumentNullException(nameof(resolveHostAddresses));
             }
 
             if (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
@@ -70,20 +88,37 @@ namespace NzbDrone.Core.Indexers.DirectDownload
                 return;
             }
 
+            var timeout = hostResolutionTimeout is { } requestedTimeout &&
+                requestedTimeout > TimeSpan.Zero && requestedTimeout < DefaultHostResolutionTimeout
+                    ? requestedTimeout
+                    : DefaultHostResolutionTimeout;
+            using var timeoutSource = new CancellationTokenSource(timeout);
+
+            IPAddress[] resolved;
             try
             {
-                var resolved = Dns.GetHostAddresses(uri.Host);
-                if (resolved.Any(IsUnsafeAddress))
-                {
-                    throw Unsafe(rawUrl ?? uri.AbsoluteUri, $"Source target '{CleanseLogMessage.Cleanse(rawUrl ?? uri.AbsoluteUri)}' is not allowed.");
-                }
+                resolved = resolveHostAddresses(uri.Host, timeoutSource.Token)
+                    .WaitAsync(timeout)
+                    .GetAwaiter()
+                    .GetResult();
             }
-            catch (DirectDownloadProbeException)
+            catch (TimeoutException)
             {
-                throw;
+                timeoutSource.Cancel();
+                throw Unsafe(rawUrl ?? uri.AbsoluteUri, $"Source target '{CleanseLogMessage.Cleanse(rawUrl ?? uri.AbsoluteUri)}' could not be verified before DNS resolution timed out.");
+            }
+            catch (OperationCanceledException)
+            {
+                throw Unsafe(rawUrl ?? uri.AbsoluteUri, $"Source target '{CleanseLogMessage.Cleanse(rawUrl ?? uri.AbsoluteUri)}' could not be verified before DNS resolution timed out.");
             }
             catch
             {
+                throw Unsafe(rawUrl ?? uri.AbsoluteUri, $"Source target '{CleanseLogMessage.Cleanse(rawUrl ?? uri.AbsoluteUri)}' could not be safely resolved.");
+            }
+
+            if (resolved == null || resolved.Length == 0 || resolved.Any(IsUnsafeAddress))
+            {
+                throw Unsafe(rawUrl ?? uri.AbsoluteUri, $"Source target '{CleanseLogMessage.Cleanse(rawUrl ?? uri.AbsoluteUri)}' is not allowed.");
             }
         }
 

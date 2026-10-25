@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
@@ -33,6 +34,7 @@ namespace NzbDrone.Host
         private readonly IAppFolderFactory _appFolderFactory;
         private readonly IConnectionStringFactory _connectionStringFactory;
         private readonly Lazy<IConfigService> _configService;
+        private readonly Lazy<IConfigFileProvider> _configFileProvider;
         private readonly IStartupContext _startupContext;
         private readonly Logger _logger;
 
@@ -43,6 +45,7 @@ namespace NzbDrone.Host
                       IAppFolderFactory appFolderFactory,
                       IConnectionStringFactory connectionStringFactory,
                       Lazy<IConfigService> configService,
+                      Lazy<IConfigFileProvider> configFileProvider,
                       IStartupContext startupContext,
                       Logger logger)
         {
@@ -53,6 +56,7 @@ namespace NzbDrone.Host
             _appFolderFactory = appFolderFactory;
             _connectionStringFactory = connectionStringFactory;
             _configService = configService;
+            _configFileProvider = configFileProvider;
             _startupContext = startupContext;
             _logger = logger;
         }
@@ -76,9 +80,12 @@ namespace NzbDrone.Host
                             _serviceProvider.Install(ServiceProvider.SERVICE_NAME);
                             _serviceProvider.SetPermissions(ServiceProvider.SERVICE_NAME);
 
-                            // Start the service and exit.
-                            // Ensures that there isn't an instance of Chaptarr already running that the service account cannot stop.
-                            _processProvider.SpawnNewProcess("sc.exe", $"start {ServiceProvider.SERVICE_NAME}", null, true);
+                            if (!_startupContext.NoStartService)
+                            {
+                                // Start the service and exit.
+                                // Ensures that there isn't an instance of Chaptarr already running that the service account cannot stop.
+                                _processProvider.SpawnNewProcess("sc.exe", $"start {ServiceProvider.SERVICE_NAME}", null, true);
+                            }
                         }
 
                         break;
@@ -174,21 +181,31 @@ namespace NzbDrone.Host
 
                         if (_startupContext.Args.TryGetValue("bookshelf-health-url", out var healthUrl))
                         {
-                            var timeoutSeconds = 5400;
+                            var timeoutSeconds = 14700;
                             if (_startupContext.Args.TryGetValue("bookshelf-health-timeout-seconds", out var timeoutValue) &&
-                                (!int.TryParse(timeoutValue, out timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 7200))
+                                (!int.TryParse(timeoutValue, out timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 14700))
                             {
-                                throw new InvalidDataException("BookshelfNG HTTP health timeout must be between 1 and 7200 seconds.");
+                                throw new InvalidDataException("BookshelfNG HTTP health timeout must be between 1 and 14700 seconds.");
                             }
 
-                            WaitForBookshelfHttpReady(healthUrl, timeoutSeconds);
+                            WaitForBookshelfHttpReady(
+                                string.Equals(healthUrl, "auto", StringComparison.OrdinalIgnoreCase)
+                                    ? GetBookshelfHttpHealthUrl().ToString()
+                                    : healthUrl,
+                                timeoutSeconds);
                         }
 
                         var journal = new BookshelfMigrationJournal(new AppFolderInfo(_startupContext).AppDataFolder);
-                        journal.RecordOutcome("health", "database-readable");
+                        journal.RecordOutcome(
+                            "health",
+                            _startupContext.Args.ContainsKey("bookshelf-health-url")
+                                ? "database-and-http-readable"
+                                : "database-readable");
                         journal.RecordState("healthy");
 
-                        Console.WriteLine($"BookshelfNG handoff health check passed. The migrated {providerDialect} ChaptarrNG database is readable.");
+                        Console.WriteLine(_startupContext.Args.ContainsKey("bookshelf-health-url")
+                            ? $"BookshelfNG handoff health check passed. The migrated {providerDialect} ChaptarrNG database and local HTTP endpoint are ready."
+                            : $"BookshelfNG handoff health check passed. The migrated {providerDialect} ChaptarrNG database is readable.");
                         break;
                     }
 
@@ -268,6 +285,43 @@ namespace NzbDrone.Host
                         break;
                     }
 
+                case ApplicationModes.PreviewBookshelfPostgresRestore:
+                    {
+                        if (!_startupContext.ConfirmBookshelfServiceStopped)
+                        {
+                            throw new InvalidOperationException("Validating PostgreSQL rollback dumps requires -confirm-bookshelf-service-stopped. Stop every process using these databases first.");
+                        }
+
+                        GetPostgresBookshelfDatabase(DatabaseLineage.BookshelfNG, DatabaseLineage.Chaptarr);
+                        var databases = GetPostgresBackupDatabases();
+                        if (_startupContext.Flags.Contains("bookshelf-postgres-log-cache-only"))
+                        {
+                            databases = databases.Where(database => database.Name != "main").ToArray();
+                        }
+
+                        if (!_startupContext.Args.TryGetValue("bookshelf-postgres-backup", out var backupPath) ||
+                            string.IsNullOrWhiteSpace(backupPath))
+                        {
+                            throw new InvalidOperationException("PostgreSQL restore preview requires -bookshelf-postgres-backup=/path/to/backup-directory.");
+                        }
+
+                        var backup = new BookshelfPostgresExternalBackup(new ExternalToolRunner());
+                        backup.VerifyTools();
+                        backupPath = Path.GetFullPath(backupPath);
+                        var restoreItems = new System.Collections.Generic.List<(string Name, DatabaseConnectionInfo Database, string Path)>();
+                        foreach (var (name, database) in databases)
+                        {
+                            backup.ValidateDatabaseConnection(database.ConnectionString);
+                            backup.EnsureSourceDatabaseIsIdle(database.ConnectionString);
+                            var dumpPath = Path.Combine(backupPath, $"postgres-{name}.dump");
+                            backup.ValidateDump(dumpPath);
+                            restoreItems.Add((name, database, dumpPath));
+                        }
+
+                        Console.WriteLine($"PostgreSQL rollback preview passed. Validated {restoreItems.Count} retained database dump(s); no database was changed.");
+                        break;
+                    }
+
                 case ApplicationModes.BackupBookshelfPostgres:
                     {
                         if (!_startupContext.ConfirmBookshelfServiceStopped)
@@ -284,13 +338,22 @@ namespace NzbDrone.Host
                                 throw new InvalidDataException("BookshelfNG preflight did not find a supported SQLite source database.");
                             }
 
+                            if (_connectionStringFactory.LogDbConnection.DatabaseType != DatabaseType.SQLite ||
+                                _connectionStringFactory.CacheDbConnection.DatabaseType != DatabaseType.SQLite)
+                            {
+                                throw new InvalidDataException("Independent PostgreSQL backup does not support mixing a SQLite main database with PostgreSQL log or cache databases.");
+                            }
+
                             Console.WriteLine("The configured BookshelfNG database is SQLite; an external PostgreSQL backup is not needed.");
                             break;
                         }
 
-                        GetPostgresBookshelfDatabase(DatabaseLineage.BookshelfNG);
+                        var logCacheOnly = _startupContext.Flags.Contains("bookshelf-postgres-log-cache-only");
+                        GetPostgresBookshelfDatabase(logCacheOnly
+                            ? new[] { DatabaseLineage.BookshelfNG, DatabaseLineage.Chaptarr }
+                            : new[] { DatabaseLineage.BookshelfNG });
                         var databases = GetPostgresBackupDatabases();
-                        if (_startupContext.Flags.Contains("bookshelf-postgres-log-cache-only"))
+                        if (logCacheOnly)
                         {
                             databases = databases.Where(database => database.Name != "main").ToArray();
                         }
@@ -366,9 +429,10 @@ namespace NzbDrone.Host
         {
             if (!Uri.TryCreate(healthUrl, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
-                !(uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)))
+                !string.IsNullOrEmpty(uri.UserInfo) ||
+                !(uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase) || IsLocalInterfaceAddress(uri.Host)))
             {
-                throw new InvalidDataException("BookshelfNG handoff health URL must use HTTP or HTTPS on localhost or a loopback address.");
+                throw new InvalidDataException("BookshelfNG handoff health URL must use HTTP or HTTPS on localhost, a loopback address, or an IP address assigned to this machine.");
             }
 
             using var handler = new HttpClientHandler
@@ -376,6 +440,16 @@ namespace NzbDrone.Host
                 AllowAutoRedirect = false,
                 UseProxy = false
             };
+            if (uri.Scheme == Uri.UriSchemeHttps)
+            {
+                // This probe is restricted above to loopback or a local
+                // interface. The operator's own certificate may be
+                // self-signed, so local readiness must not depend on the
+                // host machine trusting that certificate chain.
+                handler.ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            }
+
             using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(Math.Min(3, timeoutSeconds)) };
             var stopwatch = Stopwatch.StartNew();
             while (stopwatch.Elapsed.TotalSeconds < timeoutSeconds)
@@ -402,6 +476,57 @@ namespace NzbDrone.Host
             }
 
             throw new TimeoutException($"ChaptarrNG did not return HTTP 200 from {uri} within {timeoutSeconds} seconds.");
+        }
+
+        private Uri GetBookshelfHttpHealthUrl()
+        {
+            var config = _configFileProvider.Value;
+            var bindAddress = config.BindAddress?.Trim();
+            if (bindAddress is "::" or "[::]")
+            {
+                bindAddress = IPAddress.IPv6Loopback.ToString();
+            }
+            else if (string.IsNullOrWhiteSpace(bindAddress) || bindAddress is "*" or "+" or "0.0.0.0")
+            {
+                bindAddress = IPAddress.Loopback.ToString();
+            }
+            else if (bindAddress.StartsWith("[", StringComparison.Ordinal) && bindAddress.EndsWith("]", StringComparison.Ordinal))
+            {
+                bindAddress = bindAddress.Substring(1, bindAddress.Length - 2);
+            }
+
+            if (!string.Equals(bindAddress, "localhost", StringComparison.OrdinalIgnoreCase) &&
+                !IPAddress.TryParse(bindAddress, out _))
+            {
+                var resolved = Dns.GetHostAddresses(bindAddress);
+                if (resolved.Length == 0 || resolved.Any(address => !IPAddress.IsLoopback(address) && !IsLocalInterfaceAddress(address)))
+                {
+                    throw new InvalidDataException("BookshelfNG handoff cannot use the configured server bind name for a local health check because it does not resolve only to this machine's network interfaces.");
+                }
+
+                bindAddress = resolved[0].ToString();
+            }
+
+            var basePath = config.UrlBase?.Trim('/');
+            var path = string.IsNullOrWhiteSpace(basePath) ? "/ping" : $"/{basePath}/ping";
+            return new UriBuilder(Uri.UriSchemeHttp, bindAddress, config.Port) { Path = path }.Uri;
+        }
+
+        private static bool IsLocalInterfaceAddress(string host)
+        {
+            return IPAddress.TryParse(host, out var address) && IsLocalInterfaceAddress(address);
+        }
+
+        private static bool IsLocalInterfaceAddress(IPAddress address)
+        {
+            if (IPAddress.IsLoopback(address))
+            {
+                return false;
+            }
+
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .SelectMany(networkInterface => networkInterface.GetIPProperties().UnicastAddresses)
+                .Any(unicastAddress => unicastAddress.Address.Equals(address));
         }
 
         private DatabaseConnectionInfo GetPostgresBookshelfDatabase(params DatabaseLineage[] allowedLineages)

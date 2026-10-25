@@ -20,7 +20,8 @@ public static class SqliteDatabaseFingerprint
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
 
         // SQLite may rewrite its disposable -shm index while opening a WAL database read-only.
-        foreach (var name in new[] { "readarr.db", "readarr.db-journal", "readarr.db-wal" })
+        var databaseName = BookshelfDatabaseFiles.ResolveExistingDatabaseNameOrNull(dataDirectory) ?? "readarr.db";
+        foreach (var name in new[] { databaseName, databaseName + "-journal", databaseName + "-wal" })
         {
             fingerprint.AppendData(Encoding.UTF8.GetBytes(name));
             fingerprint.AppendData(new byte[] { 0 });

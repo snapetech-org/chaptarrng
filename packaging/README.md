@@ -1,6 +1,6 @@
 # Native package channels
 
-Status checked 2026-10-24. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
+Status checked 2026-10-25. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 is the latest published release; [main](https://github.com/snapetech-org/chaptarrng/tree/main) includes candidate-only
 BookshelfNG migration and package-bridge tooling. GitHub Release archives are the payload for
 native packages; the standard ChaptarrNG container is built separately from
@@ -8,6 +8,10 @@ the same application source and migration code. Package recipes add service
 and filesystem integration. See the
 [ChaptarrNG v0.9.977 release](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 for the published archives, checksums, and source RPMs.
+
+The current local code pass adds container health/readiness supervision and
+handoff source for more platform candidates. It remains unpublished and has
+not yet received the bulk validation pass.
 
 The old-identity package recipes remain disabled candidates. Do not install a
 bridge package or point ChaptarrNG at BookshelfNG appdata until migration,
@@ -25,6 +29,8 @@ For current BookshelfNG migration and legacy-channel acceptance status, see
 | Arch AUR | `chaptarrng-bin` | `bookshelfng-bin` | `/var/lib/bookshelfng` |
 | Fedora COPR | `slskdn/chaptarrng` | `slskdn/bookshelfng` | `/var/lib/bookshelfng` |
 | Chocolatey | `chaptarrng` | `bookshelfng` | `%ProgramData%\BookshelfNG\data` |
+| macOS standalone | ChaptarrNG `osx-x64` / `osx-arm64` release archive | One-time archive download and launcher update; the old updater cannot discover ChaptarrNG | Existing `-data` directory |
+| FreeBSD standalone | ChaptarrNG `freebsd-x64` release archive | One-time archive download and launcher update; the old updater cannot discover ChaptarrNG | Existing `-data` directory |
 | Docker | `ghcr.io/snapetech-org/chaptarrng` | Legacy image aliases | Existing `/config` mount |
 | AppImage | ChaptarrNG standalone Linux x64 archive | Candidate keeps desktop file ID `com.snapetech.bookshelfng` | `$XDG_DATA_HOME/bookshelfng` |
 | Flatpak | ChaptarrNG standalone Linux x64 archive | Candidate keeps app ID `com.snapetech.BookshelfNG` | Flatpak config path `bookshelfng` |
@@ -150,6 +156,14 @@ close.
 Keep the BookshelfNG installation in service until a replacement channel is
 validated or that platform is explicitly retired.
 
+BookshelfNG's built-in updater cannot discover the first ChaptarrNG release.
+Manual macOS and FreeBSD installs therefore need a one-time download of the
+matching ChaptarrNG archive and a launcher or service path update. Starting
+that archive with the existing `-data` path performs the automatic database
+migration; the importer switches the built-in updater to checksum-verified
+ChaptarrNG GitHub releases for later updates. The migration guide has the
+platform-specific command and rollback notes.
+
 ## Public status
 
 | Channel | ChaptarrNG | BookshelfNG | Remaining check |
@@ -264,29 +278,30 @@ until the full retirement gates close. Populated synthetic migration-22 tests
 cover conversion and rollback; real older-schema operator data remains
 untested. Unknown or newer schemas, PostgreSQL sources, and two populated
 source databases fail closed in the published `.977` build.
-The ChaptarrNG-owned Docker handoff helper is source-only today. The release
-workflow will include it in future Linux standalone archives once publication
-is approved; the public `.977` archives do not contain it. See the
+The ChaptarrNG-owned Docker handoff helper and manual-systemd bootstrap are
+included in Linux x64 and arm64 standalone bundles built from current source.
+The public `.977` archives do not contain these newer handoff paths. See the
 [migration guide](../docs/MIGRATE_FROM_BOOKSHELFNG.md#chaptarrng-owned-docker-handoff-helper)
-for its backup, preview, apply, and rollback behavior.
+for the Docker helper's backup, preview, apply, and rollback behavior, and its
+systemd section for the one-time executable-path transition.
 The separate PostgreSQL candidate is limited to one migration-158 schema. Earlier smoke run 39127070836 on code head 21c41ad5 timed out during application startup before readiness; this was not a confirmed converter assertion failure. PR #131 later merged to `main` on 2026-10-20. Its exact-head Build [39374140961](https://github.com/snapetech-org/chaptarrng/actions/runs/39374140961) passed Linux, macOS, Windows, PostgreSQL migration, release-note, and native-runner receipt checks. Those PostgreSQL checks use synthetic fixtures only; they do not establish PostgreSQL operator-data support, and the candidate remains unpublished.
 The importer keeps records with unresolved formats in both catalogs
 without monitoring, writes a private review file, retains the source backup,
 and supports validated rollback.
 
-Docker Compose, Unraid, and other container users can change the image to
-`ghcr.io/snapetech-org/chaptarrng` and retain `/config`, media/download mounts,
-ports, UID/GID, and environment settings. BookshelfNG stores no primary-provider
-marker alongside bare numeric IDs, so direct migration must preserve
-`HARDCOVER=true` or explicitly set `HARDCOVER=false`; the converter now fails
-closed if neither mode is available. The legacy mutable-image bridge will map
-the old `hardcover`/`main`/`latest` aliases to a Hardcover-enabled compatibility
-image and `softcover` to a Goodreads-mode image. These targets and alias changes
-are source-only, have not been published, and remain gated. The compatibility
-targets use port `8787` for a fresh data directory, preserve an existing
-`config.xml` port, and respect an explicit `Chaptarr__Server__Port` setting.
-Pinned versions and image digests still need an operator change. A repointed tag
-does not change a running container.
+Docker Compose, Unraid, and other container users can keep `/config`,
+media/download mounts, ports, UID/GID, and environment settings. BookshelfNG
+selects native Hardcover identities only when `HARDCOVER=true` and
+`HARDCOVER_NATIVE` is not `false`; an unset or non-true `HARDCOVER` value and
+`HARDCOVER_NATIVE=false` select Goodreads. The ChaptarrNG importer persists
+that effective mode because bare numeric IDs contain no provider marker. The
+legacy mutable-image bridge maps the old `hardcover`/`main`/`latest` aliases to
+a Hardcover-enabled compatibility image and `softcover` to a Goodreads-mode
+image. These targets and alias changes are source-only, unpublished, and
+gated. The compatibility targets use port `8787` for a fresh data directory,
+preserve an existing `config.xml` port, and respect an explicit
+`Chaptarr__Server__Port` setting. Pinned versions and image digests still need
+an operator change. A repointed tag does not change a running container.
 
 The BookshelfNG Windows WPF installer still installs the old application and
 does not hand off its `Readarr` service. ChaptarrNG now contains a source-only
@@ -342,8 +357,8 @@ and its sandbox config path. Both launchers supervise the first startup, check
 the local HTTP endpoint and migrated database, and retain enough state to
 restore the SQLite/PostgreSQL source after a failed or interrupted launch.
 Custom data paths, ports, and URL bases are honored. Their default provider mode
-matches the legacy standalone launcher's Goodreads behavior; operators whose
-source used native Hardcover IDs can set `HARDCOVER=true` before launch. The
+matches the legacy standalone launcher's Goodreads behavior; preserve
+`HARDCOVER=true` when the source used native Hardcover IDs. The
 supervisor restores data automatically; replacing the AppImage or reinstalling
 the prior Flatpak bundle remains the executable rollback step.
 

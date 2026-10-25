@@ -13,6 +13,17 @@ $handoffDirectory = Join-Path $installRoot 'handoff'
 $handoffManifestPath = Join-Path $handoffDirectory 'bookshelfng-migration-handoff.json'
 $recoveryScriptPath = Join-Path $handoffDirectory 'bookshelfng-startup-recovery.ps1'
 $recoveryTaskName = 'ChaptarrNG-BookshelfNG-Migration-Recovery'
+$handoffTimeoutSeconds = 14700
+$handoffTaskTimeoutMinutes = 510
+$configuredHandoffTimeout = [Environment]::GetEnvironmentVariable('CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS', 'Process')
+if (-not [string]::IsNullOrWhiteSpace($configuredHandoffTimeout)) {
+  $parsedHandoffTimeout = 0
+  if (-not [int]::TryParse($configuredHandoffTimeout, [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref] $parsedHandoffTimeout) -or
+      $parsedHandoffTimeout -lt 1 -or $parsedHandoffTimeout -gt 14700) {
+    throw 'CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS must be an integer from 1 to 14700.'
+  }
+  $handoffTimeoutSeconds = $parsedHandoffTimeout
+}
 
 $nssm = Get-Command nssm.exe -ErrorAction Stop
 $packageParameters = ''
@@ -99,6 +110,24 @@ function Get-ServiceDataDirectory {
   return [IO.Path]::GetFullPath((Join-Path $base $path))
 }
 
+function Get-BookshelfSqliteDatabaseNames {
+  param([Parameter(Mandatory = $true)] [string] $DataDirectory)
+  $result = @()
+  foreach ($name in @('readarr.db', 'audioarr.db')) {
+    $path = Join-Path $DataDirectory $name
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+      $file = Get-Item -LiteralPath $path -Force
+      if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "The BookshelfNG database '$name' is a reparse point. Resolve it to a regular file before updating."
+      }
+      if ($file.Length -gt 0) {
+        $result += $name
+      }
+    }
+  }
+  return $result
+}
+
 function Resolve-ProviderMode {
   param([string[]] $Entries)
   if ($requestedProviderMode) { return $requestedProviderMode }
@@ -140,6 +169,72 @@ function Get-EffectiveExtraEnvironment {
     }
   }
   return $result
+}
+
+function Get-ServerOverridesFromParameters {
+  param([string] $Parameters)
+  $names = @{
+    port = 'CHAPTARR__SERVER__PORT'
+    urlbase = 'CHAPTARR__SERVER__URLBASE'
+    bindaddress = 'CHAPTARR__SERVER__BINDADDRESS'
+    sslport = 'CHAPTARR__SERVER__SSLPORT'
+    sslcertpath = 'CHAPTARR__SERVER__SSLCERTPATH'
+    sslcertpassword = 'CHAPTARR__SERVER__SSLCERTPASSWORD'
+  }
+  $result = @{}
+  if ([string]::IsNullOrWhiteSpace($Parameters)) { return $result }
+
+  $pattern = '(?i)(?:^|\s)[/-](?<name>port|urlbase|bindaddress|sslport|sslcertpath|sslcertpassword)(?:=|\s+)(?:"(?<double>[^"]*)"|''(?<single>[^'']*)''|(?<plain>\S+))'
+  foreach ($match in [regex]::Matches($Parameters, $pattern)) {
+    $value = if ($match.Groups['double'].Success) { $match.Groups['double'].Value }
+      elseif ($match.Groups['single'].Success) { $match.Groups['single'].Value }
+      else { $match.Groups['plain'].Value }
+    $name = $match.Groups['name'].Value.ToLowerInvariant()
+    $result[$names[$name]] = $value
+  }
+
+  $enableSsl = [regex]::Match(
+    $Parameters,
+    '(?i)(?:^|\s)[/-]enablessl(?:\s*=\s*(?:"(?<double>true|false)"|''(?<single>true|false)''|(?<plain>true|false))|\s+(?:"(?<double>true|false)"|''(?<single>true|false)''|(?<plain>true|false)))?(?=\s|$)')
+  if ($enableSsl.Success) {
+    $value = if ($enableSsl.Groups['double'].Success) { $enableSsl.Groups['double'].Value }
+      elseif ($enableSsl.Groups['single'].Success) { $enableSsl.Groups['single'].Value }
+      elseif ($enableSsl.Groups['plain'].Success) { $enableSsl.Groups['plain'].Value }
+      else { 'true' }
+    $result['CHAPTARR__SERVER__ENABLESSL'] = $value
+  }
+  return $result
+}
+
+function Get-LocalHealthHost {
+  param([string] $BindAddress)
+  $value = if ($null -eq $BindAddress) { '' } else { $BindAddress.Trim() }
+  if ($value.StartsWith('[') -and $value.EndsWith(']')) { $value = $value.Substring(1, $value.Length - 2) }
+  if ([string]::IsNullOrWhiteSpace($value) -or $value -in @('*', '+', '0.0.0.0')) { return '127.0.0.1' }
+  if ($value -eq '::') { return '[::1]' }
+  if ($value -ieq 'localhost') { return '127.0.0.1' }
+
+  try {
+    $addresses = @([Net.Dns]::GetHostAddresses($value))
+  } catch {
+    throw "The configured BookshelfNG bind address '$value' could not be resolved for a local health check."
+  }
+  if ($addresses.Count -eq 0) { throw "The configured BookshelfNG bind address '$value' did not resolve for a local health check." }
+
+  $localAddresses = New-Object 'System.Collections.Generic.HashSet[System.Net.IPAddress]'
+  foreach ($network in [Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces()) {
+    foreach ($unicast in $network.GetIPProperties().UnicastAddresses) {
+      [void] $localAddresses.Add($unicast.Address)
+    }
+  }
+  foreach ($address in $addresses) {
+    if (-not [Net.IPAddress]::IsLoopback($address) -and -not $localAddresses.Contains($address)) {
+      throw "The configured BookshelfNG bind address '$value' resolves to an address that is not assigned to this machine."
+    }
+  }
+  $selected = $addresses[0]
+  if ($selected.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetworkV6) { return "[$($selected.ToString())]" }
+  return $selected.ToString()
 }
 
 function Invoke-BookshelfUtility {
@@ -200,6 +295,19 @@ function Set-BookshelfServiceEnvironment {
 
 function Test-BookshelfPostgresSource {
   param([string[]] $EnvironmentEntries)
+  foreach ($prefix in @('CHAPTARR', 'READARR', 'AUDIOARR', 'BOOKSHELF')) {
+    $name = "${prefix}__POSTGRES__HOST"
+    $value = Get-EnvironmentValue $EnvironmentEntries $name
+    if ($null -ne $value) { return -not [string]::IsNullOrWhiteSpace($value) }
+  }
+  foreach ($scope in @('Process', 'Machine')) {
+    $variables = [Environment]::GetEnvironmentVariables($scope)
+    foreach ($prefix in @('CHAPTARR', 'READARR', 'AUDIOARR', 'BOOKSHELF')) {
+      $name = "${prefix}__POSTGRES__HOST"
+      if ($variables.Contains($name)) { return -not [string]::IsNullOrWhiteSpace([string] $variables[$name]) }
+    }
+  }
+
   $configPath = Join-Path $dataDir 'config.xml'
   if (Test-Path -LiteralPath $configPath) {
     try {
@@ -211,25 +319,13 @@ function Test-BookshelfPostgresSource {
     }
   }
 
-  foreach ($entry in $EnvironmentEntries) {
-    if ($entry -match '(?i)^(?:CHAPTARR|READARR|AUDIOARR)__POSTGRES__HOST=(.+)$' -and
-        -not [string]::IsNullOrWhiteSpace($Matches[1])) {
-      return $true
-    }
-  }
-  foreach ($name in @('CHAPTARR__POSTGRES__HOST', 'READARR__POSTGRES__HOST', 'AUDIOARR__POSTGRES__HOST')) {
-    if (-not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name, 'Machine')) -or
-        -not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name, 'Process'))) {
-      return $true
-    }
-  }
   return $false
 }
 
 function Wait-BookshelfServiceReady {
-  param([string] $Url)
+  param([string] $Url, [int] $TimeoutSeconds)
   $stopwatch = [Diagnostics.Stopwatch]::StartNew()
-  while ($stopwatch.Elapsed.TotalSeconds -lt 90) {
+  while ($stopwatch.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
     $current = Get-Service -Name 'BookshelfNG' -ErrorAction SilentlyContinue
     if (-not $current -or $current.Status -ne 'Running') {
       throw 'The ChaptarrNG process did not remain running under the BookshelfNG service identity.'
@@ -238,9 +334,9 @@ function Wait-BookshelfServiceReady {
       $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 2 -MaximumRedirection 0
       if ($response.StatusCode -eq 200) { return }
     } catch { }
-    if ($stopwatch.Elapsed.TotalSeconds -lt 90) { Start-Sleep -Seconds 2 }
+    if ($stopwatch.Elapsed.TotalSeconds -lt $TimeoutSeconds) { Start-Sleep -Seconds 2 }
   }
-  throw "ChaptarrNG did not return HTTP 200 from $Url within 90 seconds."
+  throw "ChaptarrNG did not return HTTP 200 from $Url within $TimeoutSeconds seconds."
 }
 
 function Write-BookshelfHandoffManifest {
@@ -318,7 +414,7 @@ function Register-BookshelfRecoveryTask {
     <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
     <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><AllowHardTerminate>true</AllowHardTerminate>
     <StartWhenAvailable>true</StartWhenAvailable><Enabled>true</Enabled><Hidden>true</Hidden>
-    <ExecutionTimeLimit>PT2H</ExecutionTimeLimit><Priority>4</Priority>
+    <ExecutionTimeLimit>PT$($handoffTaskTimeoutMinutes)M</ExecutionTimeLimit><Priority>4</Priority>
   </Settings>
   <Actions Context="System"><Exec><Command>$xmlPowerShell</Command><Arguments>$xmlArguments</Arguments></Exec></Actions>
 </Task>
@@ -405,6 +501,7 @@ $providerMode = $null
 $effectiveEnvironment = @()
 $healthPort = 8789
 $healthUrlBase = ''
+$healthBindAddress = '*'
 
 if ($hadService) {
   $healthPort = 8787
@@ -426,11 +523,24 @@ if ($hadService) {
   $providerMode = Resolve-ProviderMode @()
   $effectiveEnvironment = Get-EffectiveEnvironment @() $providerMode
 }
+$serverOverrides = Get-ServerOverridesFromParameters $oldAppParameters
+foreach ($overrideName in $serverOverrides.Keys) {
+  $effectiveEnvironment = @($effectiveEnvironment | Where-Object {
+    $separator = $_.IndexOf('=')
+    $separator -le 0 -or -not $_.Substring(0, $separator).Equals($overrideName, [StringComparison]::OrdinalIgnoreCase)
+  })
+  $effectiveEnvironment += "$overrideName=$($serverOverrides[$overrideName])"
+}
 
 $dataDir = [IO.Path]::GetFullPath($dataDir)
 $hadApp = Test-Path -LiteralPath $appDir
-$sqliteSourceExisted = Test-Path -LiteralPath (Join-Path $dataDir 'readarr.db')
 $postgresSourceForChoice = Test-BookshelfPostgresSource $serviceEnvironment
+$sqliteSourceNames = if ($postgresSourceForChoice) { @() } else { @(Get-BookshelfSqliteDatabaseNames $dataDir) }
+if ($sqliteSourceNames.Count -gt 1 -and -not $postgresSourceForChoice) {
+  throw 'Both readarr.db and audioarr.db contain BookshelfNG data. Resolve which database is authoritative before updating; neither file was changed.'
+}
+$sqliteSourceName = if ($sqliteSourceNames.Count -gt 0) { $sqliteSourceNames[0] } else { $null }
+$sqliteSourceExisted = $sqliteSourceNames.Count -gt 0
 $alreadyMigratedForChoice = $false
 $choiceConsolePath = if ($oldApplication) { $oldApplication.Trim().Trim('"') } else { '' }
 if ($hadService -and (Test-Path -LiteralPath $choiceConsolePath) -and
@@ -461,8 +571,31 @@ if ($hasMigrationDataForChoice -and $requestedMigrationMode -eq 'ask') {
   }
 }
 
+$compatibilityDefaultPort = if ($alreadyMigratedForChoice) { '8789' } else { '8787' }
+if ($alreadyMigratedForChoice) {
+  $existingDefaultPort = Get-EnvironmentValue $serviceEnvironment 'CHAPTARR_DEFAULT_PORT'
+  if ($null -eq $existingDefaultPort) { $existingDefaultPort = [Environment]::GetEnvironmentVariable('CHAPTARR_DEFAULT_PORT', 'Machine') }
+  if (-not [string]::IsNullOrWhiteSpace($existingDefaultPort)) {
+    if ($existingDefaultPort -notmatch '^\d+$' -or [int] $existingDefaultPort -lt 1 -or [int] $existingDefaultPort -gt 65535) {
+      throw 'The existing ChaptarrNG default port is invalid; the current service was not changed.'
+    }
+    $compatibilityDefaultPort = $existingDefaultPort
+  }
+}
+if ($hadService) {
+  $effectiveEnvironment = @($effectiveEnvironment | Where-Object {
+    $separator = $_.IndexOf('=')
+    $separator -le 0 -or -not $_.Substring(0, $separator).Equals('CHAPTARR_DEFAULT_PORT', [StringComparison]::OrdinalIgnoreCase)
+  })
+  $effectiveEnvironment += "CHAPTARR_DEFAULT_PORT=$compatibilityDefaultPort"
+  $healthPort = [int] $compatibilityDefaultPort
+}
+
 Complete-PriorBookshelfHandoff
-$backupNamesBefore = @(Get-ChildItem -LiteralPath $dataDir -Filter 'readarr.db.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue | ForEach-Object Name)
+$backupNamesBefore = @()
+if ($sqliteSourceName) {
+  $backupNamesBefore = @(Get-ChildItem -LiteralPath $dataDir -Filter "$sqliteSourceName.bookshelfng-backup-*.db" -File -ErrorAction SilentlyContinue | ForEach-Object Name)
+}
 $configPath = Join-Path $dataDir 'config.xml'
 if (Test-Path -LiteralPath $configPath) {
   try {
@@ -471,24 +604,32 @@ if (Test-Path -LiteralPath $configPath) {
     if ($portNode -and $portNode.InnerText -match '^\d+$') { $healthPort = [int] $portNode.InnerText }
     $urlBaseNode = $config.SelectSingleNode("//*[local-name()='UrlBase']")
     if ($urlBaseNode) { $healthUrlBase = $urlBaseNode.InnerText.Trim().Trim('/') }
+    $bindAddressNode = $config.SelectSingleNode("//*[local-name()='BindAddress']")
+    if ($bindAddressNode -and -not [string]::IsNullOrWhiteSpace($bindAddressNode.InnerText)) { $healthBindAddress = $bindAddressNode.InnerText.Trim() }
   } catch {
     throw "The BookshelfNG config could not be read safely: $($_.Exception.Message)"
   }
 }
-foreach ($name in @('CHAPTARR__SERVER__PORT', 'READARR__SERVER__PORT', 'AUDIOARR__SERVER__PORT')) {
+foreach ($name in @('CHAPTARR__SERVER__PORT', 'READARR__SERVER__PORT', 'AUDIOARR__SERVER__PORT', 'BOOKSHELF__SERVER__PORT', 'BOOKSHELF_PORT')) {
   $portValue = Get-EnvironmentValue $effectiveEnvironment $name
   if ($null -eq $portValue) { $portValue = [Environment]::GetEnvironmentVariable($name, 'Machine') }
   if ($null -eq $portValue) { $portValue = [Environment]::GetEnvironmentVariable($name, 'Process') }
   if ($portValue -match '^\d+$') { $healthPort = [int] $portValue; break }
 }
-foreach ($name in @('CHAPTARR__SERVER__URLBASE', 'READARR__SERVER__URLBASE', 'AUDIOARR__SERVER__URLBASE')) {
+foreach ($name in @('CHAPTARR__SERVER__URLBASE', 'READARR__SERVER__URLBASE', 'AUDIOARR__SERVER__URLBASE', 'BOOKSHELF__SERVER__URLBASE', 'BOOKSHELF_URLBASE')) {
   $urlBaseValue = Get-EnvironmentValue $effectiveEnvironment $name
   if ($null -eq $urlBaseValue) { $urlBaseValue = [Environment]::GetEnvironmentVariable($name, 'Machine') }
   if ($null -eq $urlBaseValue) { $urlBaseValue = [Environment]::GetEnvironmentVariable($name, 'Process') }
   if ($null -ne $urlBaseValue) { $healthUrlBase = $urlBaseValue.Trim().Trim('/'); break }
 }
+foreach ($name in @('CHAPTARR__SERVER__BINDADDRESS', 'READARR__SERVER__BINDADDRESS', 'AUDIOARR__SERVER__BINDADDRESS', 'BOOKSHELF__SERVER__BINDADDRESS')) {
+  $bindAddressValue = Get-EnvironmentValue $effectiveEnvironment $name
+  if ($null -eq $bindAddressValue) { $bindAddressValue = [Environment]::GetEnvironmentVariable($name, 'Machine') }
+  if ($null -eq $bindAddressValue) { $bindAddressValue = [Environment]::GetEnvironmentVariable($name, 'Process') }
+  if ($null -ne $bindAddressValue) { $healthBindAddress = $bindAddressValue; break }
+}
 if (-not [string]::IsNullOrWhiteSpace($oldAppParameters)) {
-  $serverArgumentPattern = '(?i)(?:^|\s)[/-](?<name>port|urlbase)(?:=|\s+)(?:"(?<double>[^"]*)"|''(?<single>[^'']*)''|(?<plain>\S+))'
+  $serverArgumentPattern = '(?i)(?:^|\s)[/-](?<name>port|urlbase|bindaddress)(?:=|\s+)(?:"(?<double>[^"]*)"|''(?<single>[^'']*)''|(?<plain>\S+))'
   foreach ($argument in [regex]::Matches($oldAppParameters, $serverArgumentPattern)) {
     $argumentValue = if ($argument.Groups['double'].Success) { $argument.Groups['double'].Value }
       elseif ($argument.Groups['single'].Success) { $argument.Groups['single'].Value }
@@ -497,14 +638,17 @@ if (-not [string]::IsNullOrWhiteSpace($oldAppParameters)) {
       $healthPort = [int] $argumentValue
     } elseif ($argument.Groups['name'].Value -ieq 'urlbase') {
       $healthUrlBase = $argumentValue.Trim().Trim('/')
+    } elseif ($argument.Groups['name'].Value -ieq 'bindaddress') {
+      $healthBindAddress = $argumentValue
     }
   }
 }
 if ($healthPort -lt 1 -or $healthPort -gt 65535) { throw "The BookshelfNG configured port is invalid: $healthPort" }
+$healthHost = Get-LocalHealthHost $healthBindAddress
 $healthUrl = if ([string]::IsNullOrWhiteSpace($healthUrlBase)) {
-  "http://127.0.0.1:$healthPort/ping"
+  "http://${healthHost}:$healthPort/ping"
 } else {
-  "http://127.0.0.1:$healthPort/$healthUrlBase/ping"
+  "http://${healthHost}:$healthPort/$healthUrlBase/ping"
 }
 
 $hasMigrationData = $hadService -or $sqliteSourceExisted
@@ -605,6 +749,7 @@ try {
       ApplicationDirectory = $appDir
       PreviousApplicationDirectory = $backupDir
       DataDirectory = $dataDir
+      HealthTimeoutSeconds = $handoffTimeoutSeconds
       HealthPort = $healthPort
       HealthUrl = $healthUrl
       NssmPath = $nssm.Source
@@ -621,6 +766,7 @@ try {
       SqliteBackupNamesBefore = @($backupNamesBefore)
       PostgresSource = $postgresSource
       PostgresBackupDirectory = $postgresBackupDirectory
+      TargetPostgresBackupDirectory = $null
       BookshelfSource = -not $alreadyMigrated
     }
     Write-BookshelfHandoffManifest $manifest
@@ -648,11 +794,27 @@ try {
     }
   }
 
-  if ($requestedProviderMode) {
-    $effectiveEnvironment = Get-EffectiveEnvironment $serviceEnvironment $providerMode
-    $serviceAppEnvironment = @($oldAppEnvironment | Where-Object { $_ -notmatch '(?i)^HARDCOVER(?:_NATIVE)?=' })
-    $serviceExtraEnvironment = Get-EffectiveExtraEnvironment $oldAppEnvironmentExtra $providerMode
-    Set-BookshelfServiceEnvironment 'AppEnvironment' $serviceAppEnvironment
+  if ($hadService) {
+    if ($requestedProviderMode) {
+      $serviceAppEnvironment = @($oldAppEnvironment | Where-Object { $_ -notmatch '(?i)^HARDCOVER(?:_NATIVE)?=' })
+      $serviceExtraEnvironment = Get-EffectiveExtraEnvironment $oldAppEnvironmentExtra $providerMode
+      Set-BookshelfServiceEnvironment 'AppEnvironment' $serviceAppEnvironment
+    } else {
+      $serviceExtraEnvironment = @($oldAppEnvironmentExtra)
+    }
+
+    foreach ($overrideName in $serverOverrides.Keys) {
+      $serviceExtraEnvironment = @($serviceExtraEnvironment | Where-Object {
+        $separator = $_.IndexOf('=')
+        $separator -le 0 -or -not $_.Substring(0, $separator).Equals($overrideName, [StringComparison]::OrdinalIgnoreCase)
+      })
+      $serviceExtraEnvironment += "$overrideName=$($serverOverrides[$overrideName])"
+    }
+    $serviceExtraEnvironment = @($serviceExtraEnvironment | Where-Object {
+      $separator = $_.IndexOf('=')
+      $separator -le 0 -or -not $_.Substring(0, $separator).Equals('CHAPTARR_DEFAULT_PORT', [StringComparison]::OrdinalIgnoreCase)
+    })
+    $serviceExtraEnvironment += "CHAPTARR_DEFAULT_PORT=$compatibilityDefaultPort"
     Set-BookshelfServiceEnvironment 'AppEnvironmentExtra' $serviceExtraEnvironment
   }
 
@@ -665,7 +827,7 @@ try {
     }
     $service = Get-Service -Name 'BookshelfNG' -ErrorAction Stop
     $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(60))
-    Wait-BookshelfServiceReady $healthUrl
+    Wait-BookshelfServiceReady $healthUrl $handoffTimeoutSeconds
     if ($hasMigrationData) {
       $readinessConsole = Join-Path $appDir 'bin\Chaptarr.Console.exe'
       $readinessExit = Invoke-BookshelfUtility $readinessConsole @(
@@ -732,6 +894,31 @@ try {
       if ($postgresBackupDirectory -and (Test-Path -LiteralPath $postgresBackupDirectory) -and
           (Test-Path -LiteralPath $rollbackConsole)) {
         try {
+          $restorePreviewExit = Invoke-BookshelfUtility $rollbackConsole @(
+            '-preview-bookshelf-postgres-restore',
+            '-confirm-bookshelf-service-stopped',
+            "-bookshelf-postgres-backup=$postgresBackupDirectory",
+            "-data=$dataDir"
+          ) $effectiveEnvironment
+          if ($restorePreviewExit -ne 0) { throw "PostgreSQL rollback dump preview exited with code $restorePreviewExit." }
+
+          $targetPostgresBackupDirectory = Join-Path $postgresBackupDirectory ("target-chaptarr-log-cache-{0}" -f [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'))
+          if (Test-Path -LiteralPath $targetPostgresBackupDirectory) {
+            throw "A ChaptarrNG PostgreSQL log/cache backup path already exists at $targetPostgresBackupDirectory; inspect it before retrying."
+          }
+          New-Item -ItemType Directory -Path $targetPostgresBackupDirectory | Out-Null
+          $targetBackupExit = Invoke-BookshelfUtility $rollbackConsole @(
+            '-backup-bookshelf-postgres',
+            '-confirm-bookshelf-service-stopped',
+            '-bookshelf-postgres-log-cache-only',
+            "-bookshelf-postgres-backup=$targetPostgresBackupDirectory",
+            "-data=$dataDir"
+          ) $effectiveEnvironment
+          if ($targetBackupExit -ne 0) { throw "Current ChaptarrNG PostgreSQL log/cache backup exited with code $targetBackupExit." }
+          if (-not (Get-ChildItem -LiteralPath $targetPostgresBackupDirectory -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+            Remove-Item -LiteralPath $targetPostgresBackupDirectory -Force
+          }
+
           $restoreExit = Invoke-BookshelfUtility $rollbackConsole @(
             '-restore-bookshelf-postgres',
             '-confirm-bookshelf-service-stopped',
@@ -748,13 +935,13 @@ try {
         Write-Warning "PostgreSQL migration may have started, but its independent restore backup or utility is unavailable. Keep the BookshelfNG service stopped; inspect the retained database backup at $postgresBackupDirectory."
       }
     } elseif ($sqliteSourceExisted) {
-      $newDatabaseBackup = Get-ChildItem -LiteralPath $dataDir -Filter 'readarr.db.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue |
+      $newDatabaseBackup = Get-ChildItem -LiteralPath $dataDir -Filter "$sqliteSourceName.bookshelfng-backup-*.db" -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -notin $backupNamesBefore } |
         Sort-Object LastWriteTimeUtc -Descending |
         Select-Object -First 1
       if ($newDatabaseBackup) {
         try {
-          $databasePath = Join-Path $dataDir 'readarr.db'
+          $databasePath = Join-Path $dataDir $sqliteSourceName
           $failedPath = "$databasePath.chaptarr-failed-$([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'))"
           if (Test-Path -LiteralPath $databasePath) { Move-Item -LiteralPath $databasePath -Destination $failedPath }
           foreach ($suffix in @('-wal', '-shm', '-journal')) {
@@ -772,7 +959,8 @@ try {
       }
     } else {
       try {
-        $databasePath = Join-Path $dataDir 'readarr.db'
+        $databaseName = if ($sqliteSourceName) { $sqliteSourceName } else { 'chaptarr.db' }
+        $databasePath = Join-Path $dataDir $databaseName
         $failedPath = "$databasePath.chaptarr-failed-$([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'))"
         if (Test-Path -LiteralPath $databasePath) { Move-Item -LiteralPath $databasePath -Destination $failedPath -ErrorAction Stop }
         foreach ($suffix in @('-wal', '-shm', '-journal')) {

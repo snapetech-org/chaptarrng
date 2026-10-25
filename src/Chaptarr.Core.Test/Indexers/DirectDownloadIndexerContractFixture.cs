@@ -73,7 +73,7 @@ namespace Chaptarr.Core.Test.Indexers
             {
                 Settings = new DirectDownloadSettings
                 {
-                    Urls = "https://primary.example\nhttps://secondary.example",
+                    Urls = "https://203.0.113.30\nhttps://203.0.113.33",
                     EnableSlowFallback = true
                 }
             };
@@ -84,7 +84,7 @@ namespace Chaptarr.Core.Test.Indexers
             Assert.That(provider.Definition.Message.Message, Does.Contain("URL 1: configuration valid"));
             Assert.That(provider.Definition.Message.Message, Does.Contain("URL 2: configuration valid"));
             Assert.That(provider.Definition.Message.Message, Does.Contain("No API key configured"));
-            Assert.That(provider.Definition.Message.Message, Does.Not.Contain("primary.example"));
+            Assert.That(provider.Definition.Message.Message, Does.Not.Contain("203.0.113.30"));
         }
 
         [Test]
@@ -96,7 +96,7 @@ namespace Chaptarr.Core.Test.Indexers
                 {
                     Settings = new DirectDownloadSettings
                     {
-                        Urls = "ftp://invalid.example"
+                        Urls = "ftp://203.0.113.24"
                     }
                 }
             };
@@ -113,11 +113,11 @@ namespace Chaptarr.Core.Test.Indexers
             var transport = new DirectDownloadTestHttp();
             DirectDownloadSourceProbeFixtureSupport.RegisterCatalogSource(
                 transport,
-                "https://primary.example",
+                "https://203.0.113.30",
                 "9780441172719",
                 "Dune",
                 "9780441172719",
-                "https://downloads.primary.example/files/dune.epub");
+                "https://203.0.113.19/files/dune.epub");
             var probeService = new DirectDownloadSourceProbeService(transport.CreateClient(), NLog.LogManager.GetCurrentClassLogger());
             var provider = new DirectDownloadIndexer(null, null, null, null, probeService)
             {
@@ -128,7 +128,7 @@ namespace Chaptarr.Core.Test.Indexers
                     Priority = 7,
                     Settings = new DirectDownloadSettings
                     {
-                        Urls = "https://primary.example",
+                        Urls = "https://203.0.113.30",
                         ApiKey = "real-secret"
                     }
                 }
@@ -158,11 +158,11 @@ namespace Chaptarr.Core.Test.Indexers
             var transport = new DirectDownloadTestHttp();
             DirectDownloadSourceProbeFixtureSupport.RegisterCatalogSource(
                 transport,
-                "https://primary.example",
+                "https://203.0.113.30",
                 "9780441172719",
                 "Pretty Girls",
                 "9780441172719",
-                "https://downloads.primary.example/files/pretty-girls.epub");
+                "https://203.0.113.19/files/pretty-girls.epub");
             var probeService = new DirectDownloadSourceProbeService(transport.CreateClient(), NLog.LogManager.GetCurrentClassLogger());
             var provider = new DirectDownloadIndexer(null, null, null, null, probeService)
             {
@@ -172,7 +172,7 @@ namespace Chaptarr.Core.Test.Indexers
                     Name = "Direct Download Test",
                     Settings = new DirectDownloadSettings
                     {
-                        Urls = "https://primary.example",
+                        Urls = "https://203.0.113.30",
                         ApiKey = "real-secret"
                     }
                 }
@@ -187,7 +187,7 @@ namespace Chaptarr.Core.Test.Indexers
                 BookIsbn = "9780441172719"
             });
 
-            var searchUrl = transport.RequestedUrls.First(url => url.StartsWith("https://primary.example/search", StringComparison.Ordinal));
+            var searchUrl = transport.RequestedUrls.First(url => url.StartsWith("https://203.0.113.30/search", StringComparison.Ordinal));
             Assert.That(searchUrl, Does.Contain("Pretty"));
             Assert.That(searchUrl, Does.Not.Contain("9780441172719"));
         }
@@ -203,7 +203,7 @@ namespace Chaptarr.Core.Test.Indexers
                 {
                     Settings = new DirectDownloadSettings
                     {
-                        Urls = "https://primary.example",
+                        Urls = "https://203.0.113.30",
                         ApiKey = "real-secret"
                     }
                 }
@@ -226,11 +226,11 @@ namespace Chaptarr.Core.Test.Indexers
             var transport = new DirectDownloadTestHttp();
             DirectDownloadSourceProbeFixtureSupport.RegisterCatalogSource(
                 transport,
-                "https://primary.example",
+                "https://203.0.113.30",
                 "9780441172719",
                 "Dune",
                 "9780441172719",
-                "https://downloads.primary.example/files/dune.epub");
+                "https://203.0.113.19/files/dune.epub");
             var probeService = new DirectDownloadSourceProbeService(transport.CreateClient(), NLog.LogManager.GetCurrentClassLogger());
             var provider = new DirectDownloadIndexer(null, null, null, null, probeService)
             {
@@ -238,7 +238,7 @@ namespace Chaptarr.Core.Test.Indexers
                 {
                     Settings = new DirectDownloadSettings
                     {
-                        Urls = "https://primary.example",
+                        Urls = "https://203.0.113.30",
                         ApiKey = "real-secret"
                     }
                 }

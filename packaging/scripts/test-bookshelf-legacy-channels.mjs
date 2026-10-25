@@ -132,7 +132,7 @@ test('catalog Compose handoff keeps the BookshelfNG container and named volumes'
 
   assert.match(compose, /container_name: bookshelfng/);
   assert.match(compose, /CHAPTARRNG_COMPAT_IMAGE:-ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover/);
-  assert.match(compose, /"127\.0\.0\.1:8787:8787\/tcp"/);
+  assert.match(compose, /"127\.0\.0\.1:\$\{BOOKSHELFNG_HOST_PORT:-8787\}:\$\{BOOKSHELFNG_PORT:-8787\}\/tcp"/);
   assert.match(compose, /bookshelfng-config:\/config/);
   assert.match(compose, /bookshelfng-books:\/books/);
   assert.match(compose, /bookshelfng-downloads:\/downloads/);
@@ -146,7 +146,7 @@ test('Co-op Cloud handoff keeps stack volumes and uses the compatibility image',
   assert.match(compose, /bookshelfng_config:\/config/);
   assert.match(compose, /bookshelfng_books:\/books/);
   assert.match(compose, /bookshelfng_downloads:\/downloads/);
-  assert.match(compose, /loadbalancer\.server\.port=8787/);
+  assert.match(compose, /loadbalancer\.server\.port=\$\{BOOKSHELFNG_PORT:-8787\}/);
   assert.match(sample, /^CHAPTARRNG_COMPAT_IMAGE=ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover$/m);
 });
 

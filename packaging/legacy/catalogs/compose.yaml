@@ -3,10 +3,18 @@ services:
     image: ${CHAPTARRNG_COMPAT_IMAGE:-ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover}
     container_name: bookshelfng
     restart: unless-stopped
+    stop_grace_period: 8h30m
     environment:
-      CHAPTARR__SERVER__PORT: "8787"
+      CHAPTARR_BOOKSHELF_COMPATIBILITY: "true"
+      CHAPTARR_DEFAULT_PORT: ${BOOKSHELFNG_PORT:-8787}
+      CHAPTARR_EXPECTED_PORT: ${BOOKSHELFNG_PORT:-8787}
+      BOOKSHELFNG_MIGRATION_MODE: ${BOOKSHELFNG_MIGRATION_MODE:-automatic}
+      # The previous catalog Compose candidate used the Hardcover image.
+      # Set false only when migrating a prior softcover image.
+      HARDCOVER: ${HARDCOVER:-true}
+      HARDCOVER_NATIVE: ${HARDCOVER_NATIVE:-true}
     ports:
-      - "127.0.0.1:8787:8787/tcp"
+      - "127.0.0.1:${BOOKSHELFNG_HOST_PORT:-8787}:${BOOKSHELFNG_PORT:-8787}/tcp"
     volumes:
       - bookshelfng-config:/config
       - bookshelfng-books:/books

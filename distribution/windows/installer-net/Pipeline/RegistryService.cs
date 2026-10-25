@@ -12,6 +12,7 @@ public sealed record UpgradeRecord(
     string? ProviderMode,
     string? PreviousVersion,
     int? BookshelfServiceStartType,
+    bool? BookshelfServiceDelayedAutoStart,
     bool? BookshelfServiceWasRunning,
     string? CurrentVersion,
     string? LastRollbackTime);
@@ -37,6 +38,9 @@ public static class RegistryService
             ProviderMode: key.GetValue("ProviderMode") as string,
             PreviousVersion: key.GetValue("PreviousVersion") as string,
             BookshelfServiceStartType: key.GetValue("BookshelfServiceStartType") is int startType ? startType : null,
+            BookshelfServiceDelayedAutoStart: key.GetValue("BookshelfServiceDelayedAutoStart") is int delayedAutoStart
+                ? delayedAutoStart != 0
+                : null,
             BookshelfServiceWasRunning: key.GetValue("BookshelfServiceWasRunning") is int wasRunning
                 ? wasRunning != 0
                 : null,
@@ -59,6 +63,7 @@ public static class RegistryService
         string providerMode,
         string? previousVersion,
         int bookshelfServiceStartType,
+        bool bookshelfServiceDelayedAutoStart,
         bool bookshelfServiceWasRunning)
     {
         using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
@@ -74,6 +79,7 @@ public static class RegistryService
         key.SetValue("BookshelfServiceAccount", bookshelfServiceAccount);
         key.SetValue("ProviderMode", providerMode);
         key.SetValue("BookshelfServiceStartType", bookshelfServiceStartType, RegistryValueKind.DWord);
+        key.SetValue("BookshelfServiceDelayedAutoStart", bookshelfServiceDelayedAutoStart ? 1 : 0, RegistryValueKind.DWord);
         key.SetValue("BookshelfServiceWasRunning", bookshelfServiceWasRunning ? 1 : 0, RegistryValueKind.DWord);
         if (!string.IsNullOrWhiteSpace(previousVersion))
         {

@@ -54,7 +54,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
                 Uri baseUri;
                 try
                 {
-                    baseUri = DirectDownloadUrlSafety.NormalizeAndValidate(rawUrl);
+                    baseUri = DirectDownloadUrlSafety.NormalizeAndValidate(rawUrl, request.RequestTimeout);
                 }
                 catch (DirectDownloadProbeException ex)
                 {

@@ -447,6 +447,10 @@ jobs:
             tar -tzf "$RUNNER_TEMP/release-assets/$asset" \
               | grep -Fx 'ChaptarrNG/scripts/bookshelfng-to-chaptarrng.sh' >/dev/null
           fi
+          if [[ "$RID" == linux-x64 || "$RID" == linux-arm64 ]]; then
+            tar -tzf "$RUNNER_TEMP/release-assets/$asset" \
+              | grep -Fx 'ChaptarrNG/scripts/bookshelfng-systemd-bootstrap.py' >/dev/null
+          fi
         fi
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")
 

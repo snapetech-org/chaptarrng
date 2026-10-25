@@ -13,6 +13,8 @@ param(
 
     [int] $BookshelfServiceStartType = 0,
 
+    [int] $BookshelfServiceDelayedAutoStart = -1,
+
     [int] $BookshelfServiceWasRunning = -1
 )
 
@@ -24,12 +26,23 @@ $backupReadarrConsole = Join-Path $backupBin 'Readarr.Console.exe'
 $postgresDump = Join-Path $BackupPath 'postgres-main.dump'
 $migrationRecordPath = 'HKLM:\SOFTWARE\ChaptarrNG\BookshelfMigration'
 $migrationRecord = Get-ItemProperty -LiteralPath $migrationRecordPath -ErrorAction SilentlyContinue
+$readarrServiceKeyPath = 'HKLM:\SYSTEM\CurrentControlSet\Services\Readarr'
+$existingReadarrService = Get-ItemProperty -LiteralPath $readarrServiceKeyPath -ErrorAction SilentlyContinue
 $savedStartType = if ($BookshelfServiceStartType -in @(2, 3, 4)) {
     $BookshelfServiceStartType
 } elseif ($null -ne $migrationRecord -and $null -ne $migrationRecord.BookshelfServiceStartType) {
     [int] $migrationRecord.BookshelfServiceStartType
 } else {
     2
+}
+$savedDelayedAutoStart = if ($BookshelfServiceDelayedAutoStart -in @(0, 1)) {
+    $BookshelfServiceDelayedAutoStart -ne 0
+} elseif ($null -ne $migrationRecord -and $null -ne $migrationRecord.BookshelfServiceDelayedAutoStart) {
+    [int] $migrationRecord.BookshelfServiceDelayedAutoStart -ne 0
+} elseif ($null -ne $existingReadarrService -and $null -ne $existingReadarrService.DelayedAutoStart) {
+    [int] $existingReadarrService.DelayedAutoStart -ne 0
+} else {
+    $false
 }
 
 if ([string]::IsNullOrWhiteSpace($BookshelfServiceAccount)) {
@@ -89,8 +102,6 @@ function Read-ServiceAccountPassword {
     }
 }
 
-$readarrServiceKeyPath = 'HKLM:\SYSTEM\CurrentControlSet\Services\Readarr'
-$existingReadarrService = Get-ItemProperty -LiteralPath $readarrServiceKeyPath -ErrorAction SilentlyContinue
 $existingReadarrAccount = if ($existingReadarrService) { [string] $existingReadarrService.ObjectName } else { $null }
 $serviceAccountPassword = $null
 trap {
@@ -196,10 +207,21 @@ $startTypeName = switch ($savedStartType) {
     default { throw "The saved BookshelfNG service start type '$savedStartType' is unsupported." }
 }
 
+$sqliteBackupNames = @(
+    @('readarr.db', 'audioarr.db') | Where-Object {
+        Test-Path -LiteralPath (Join-Path $BackupPath $_) -PathType Leaf
+    }
+)
+$hasPostgresBackup = Test-Path -LiteralPath $postgresDump -PathType Leaf
+if ($sqliteBackupNames.Count -gt 1 -and -not $hasPostgresBackup) {
+    throw "The BookshelfNG rollback backup contains multiple SQLite databases: $BackupPath"
+}
+$hasSqliteBackup = $sqliteBackupNames.Count -eq 1 -and -not $hasPostgresBackup
+$sqliteBackupName = if ($hasSqliteBackup) { $sqliteBackupNames[0] } else { $null }
+
 if (-not (Test-Path -LiteralPath $backupBin -PathType Container) -or
     -not (Test-Path -LiteralPath $backupReadarrConsole -PathType Leaf) -or
-    (-not (Test-Path -LiteralPath (Join-Path $BackupPath 'readarr.db') -PathType Leaf) -and
-     -not (Test-Path -LiteralPath $postgresDump -PathType Leaf))) {
+    (-not $hasSqliteBackup -and -not $hasPostgresBackup)) {
     throw "The BookshelfNG rollback backup is incomplete: $BackupPath"
 }
 if ($RestorePostgresDatabase -and -not (Test-Path -LiteralPath $postgresDump -PathType Leaf)) {
@@ -321,6 +343,24 @@ if ($RestorePostgresDatabase) {
     }
 
     Write-Host 'Restoring the independent PostgreSQL database backups before restoring BookshelfNG binaries...'
+    & $ChaptarrConsolePath '-preview-bookshelf-postgres-restore' "-bookshelf-postgres-backup=$BackupPath" "-data=$DataDirectory" '-confirm-bookshelf-service-stopped'
+    if ($LASTEXITCODE -ne 0) {
+        throw "ChaptarrNG PostgreSQL rollback preflight exited with code $LASTEXITCODE. The database was not changed."
+    }
+
+    $targetPostgresBackupDirectory = Join-Path $BackupPath ("target-chaptarr-log-cache-{0}" -f [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'))
+    if (Test-Path -LiteralPath $targetPostgresBackupDirectory) {
+        throw "A ChaptarrNG PostgreSQL log/cache backup path already exists at $targetPostgresBackupDirectory; inspect it before retrying."
+    }
+    New-Item -ItemType Directory -Path $targetPostgresBackupDirectory | Out-Null
+    & $ChaptarrConsolePath '-backup-bookshelf-postgres' '-bookshelf-postgres-log-cache-only' "-bookshelf-postgres-backup=$targetPostgresBackupDirectory" "-data=$DataDirectory" '-confirm-bookshelf-service-stopped'
+    if ($LASTEXITCODE -ne 0) {
+        throw "ChaptarrNG PostgreSQL log/cache backup exited with code $LASTEXITCODE. The source database was not restored."
+    }
+    if (-not (Get-ChildItem -LiteralPath $targetPostgresBackupDirectory -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+        Remove-Item -LiteralPath $targetPostgresBackupDirectory -Force
+    }
+
     & $ChaptarrConsolePath '-restore-bookshelf-postgres' "-bookshelf-postgres-backup=$BackupPath" "-data=$BackupPath" '-confirm-bookshelf-service-stopped'
     if ($LASTEXITCODE -ne 0) {
         throw "ChaptarrNG PostgreSQL backup restore exited with code $LASTEXITCODE. The dump is preserved at $postgresDump."
@@ -337,9 +377,8 @@ if (-not (Test-Path -LiteralPath $readarrConsole -PathType Leaf)) {
     throw "The restored BookshelfNG executable is missing from $currentBin."
 }
 
-$hasSqliteBackup = Test-Path -LiteralPath (Join-Path $BackupPath 'readarr.db') -PathType Leaf
 $restoreFileNames = if ($hasSqliteBackup) {
-    @('config.xml', 'readarr.db', 'readarr.db-journal', 'readarr.db-wal')
+    @('config.xml', $sqliteBackupName, "$sqliteBackupName-journal", "$sqliteBackupName-wal")
 } else {
     @('config.xml')
 }
@@ -403,6 +442,25 @@ if (-not (Test-Path -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Services\Readar
         }
     }
 }
+
+$savedServiceEnvironmentPath = Join-Path $BackupPath 'bookshelf-service-environment.json'
+if (Test-Path -LiteralPath $savedServiceEnvironmentPath -PathType Leaf) {
+    $savedServiceEnvironment = Get-Content -LiteralPath $savedServiceEnvironmentPath -Raw | ConvertFrom-Json
+    $serviceEnvironmentValues = @(
+        $savedServiceEnvironment.PSObject.Properties |
+            ForEach-Object { '{0}={1}' -f $_.Name, [string] $_.Value }
+    )
+    if ($serviceEnvironmentValues.Count -gt 0) {
+        New-ItemProperty -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Services\Readarr' `
+            -Name Environment -PropertyType MultiString -Value ([string[]] $serviceEnvironmentValues) -Force | Out-Null
+    } else {
+        Remove-ItemProperty -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Services\Readarr' `
+            -Name Environment -ErrorAction SilentlyContinue
+    }
+    Write-Host 'Restored the original BookshelfNG service environment from the restricted migration backup.'
+}
+New-ItemProperty -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Services\Readarr' `
+    -Name DelayedAutoStart -PropertyType DWord -Value ([int] $savedDelayedAutoStart) -Force | Out-Null
 
 $readarrServiceKey = 'HKLM:\SYSTEM\CurrentControlSet\Services\Readarr'
 $serviceKey = Get-ItemProperty -Path $readarrServiceKey -ErrorAction Stop

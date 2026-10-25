@@ -13,7 +13,7 @@ startup. A failed cutover requires reopening the old artifact: the AppImage
 file or Flatpak deployment is not replaced by the data supervisor. These
 channel recovery records also write their result and channel identity into the
 shared migration journal in the data directory. The desktop artifacts remain
-source candidates until Luna completes the installed failure/restart checks.
+source candidates until the bulk failure/restart acceptance is complete.
 
 The Chocolatey `bookshelfng` upgrade also arms a SYSTEM scheduled task when the
 existing service is stopped. On its next start it checks the configured local

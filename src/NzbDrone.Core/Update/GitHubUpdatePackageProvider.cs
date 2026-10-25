@@ -133,7 +133,7 @@ namespace NzbDrone.Core.Update
         private UpdatePackage ConvertToUpdatePackage(GitHubRelease release)
         {
             var version = ParseVersion(release.TagName);
-            var asset = SelectAssetForPlatform(release.Assets);
+            var asset = SelectAssetForPlatform(release, version);
             if (asset == null)
             {
                 _logger.Warn("GitHub release {0} has no compatible assets for the current platform.", release.TagName);
@@ -291,38 +291,50 @@ namespace NzbDrone.Core.Update
             return false;
         }
 
-        private GitHubAsset SelectAssetForPlatform(List<GitHubAsset> assets)
+        private GitHubAsset SelectAssetForPlatform(GitHubRelease release, Version version)
         {
-            if (assets == null || !assets.Any())
+            if (release?.Assets == null || !release.Assets.Any())
             {
                 return null;
             }
 
-            var osName = OsInfo.Os.ToString().ToLowerInvariant();
-            var arch = RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
-
-            // Try to find a matching asset for the current platform
-            var patterns = new[]
+            var platform = OsInfo.Os switch
             {
-                $"{osName}-{arch}",
-                $"{osName}.{arch}",
-                osName,
-                "core" // fallback to .NET Core builds
+                Os.Windows => "win",
+                Os.Linux => "linux",
+                Os.LinuxMusl => "linux-musl",
+                Os.Osx => "osx",
+                Os.Bsd => "freebsd",
+                _ => null
             };
 
-            foreach (var pattern in patterns)
+            var architecture = RuntimeInformation.ProcessArchitecture switch
             {
-                var asset = assets.FirstOrDefault(a =>
-                    a.Name.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0);
+                Architecture.X64 => "x64",
+                Architecture.X86 => "x86",
+                Architecture.Arm64 => "arm64",
+                _ => null
+            };
 
-                if (asset != null)
-                {
-                    return asset;
-                }
+            if (platform.IsNullOrWhiteSpace() || architecture.IsNullOrWhiteSpace())
+            {
+                _logger.Warn("GitHub release {0} has no supported standalone package for OS {1} and architecture {2}.",
+                    release.TagName,
+                    OsInfo.Os,
+                    RuntimeInformation.ProcessArchitecture);
+                return null;
             }
 
-            // Return the first asset as a fallback
-            return assets.FirstOrDefault();
+            var runtimeIdentifier = $"{platform}-{architecture}";
+            var extension = OsInfo.Os == Os.Windows ? ".zip" : ".tar.gz";
+            var expectedName = $"ChaptarrNG-{version}-{runtimeIdentifier}{extension}";
+
+            // Release assets include checksum sidecars and platform-specific
+            // packages. Only select the versioned standalone archive whose RID
+            // exactly matches this process; a first-asset fallback can install
+            // an archive for a different OS or architecture.
+            return release.Assets.FirstOrDefault(asset =>
+                string.Equals(asset.Name, expectedName, StringComparison.OrdinalIgnoreCase));
         }
 
         private Version ParseVersion(string tagName)

@@ -19,7 +19,7 @@ namespace Chaptarr.Core.Test.Indexers
             var transport = new DirectDownloadTestHttp();
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", null);
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", null);
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.EmptyKey));
             Assert.That(result.Message, Does.Contain("No API key"));
@@ -32,7 +32,7 @@ namespace Chaptarr.Core.Test.Indexers
             var transport = new DirectDownloadTestHttp();
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "   ");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "   ");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.EmptyKey));
         }
@@ -46,12 +46,12 @@ namespace Chaptarr.Core.Test.Indexers
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     HttpStatusCode.OK,
-                    "{\"download_url\":\"https://downloads.example/book.epub\"}",
+                    "{\"download_url\":\"https://203.0.113.17/book.epub\"}",
                     "application/json")));
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "real-secret");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "real-secret");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.Valid));
             Assert.That(result.Message, Does.Contain("valid"));
@@ -72,7 +72,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "test-key");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "test-key");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.Valid));
         }
@@ -91,7 +91,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "exhausted-key");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "exhausted-key");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.NoDownloadsRemaining));
             Assert.That(result.Message, Does.Contain("No downloads left"));
@@ -112,7 +112,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "bad-key-1234");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "bad-key-1234");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.InvalidOrExpired));
             Assert.That(result.Message, Does.Not.Contain("bad-key-1234"), "API key must not leak into messages");
@@ -132,7 +132,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "key-that-triggers-challenge");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "key-that-triggers-challenge");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.InvalidOrExpired));
             Assert.That(result.Message, Does.Contain("non-JSON"));
@@ -149,7 +149,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "any-key");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "any-key");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.TransientFailure));
             Assert.That(result.Message, Does.Not.Contain("any-key"), "API key must not leak into transient failure messages");
@@ -169,7 +169,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "wrong-secret");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "wrong-secret");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.InvalidOrExpired));
             Assert.That(result.Message, Does.Contain("invalid key"));
@@ -190,7 +190,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "bad-key-AAAA");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "bad-key-AAAA");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.InvalidOrExpired));
             Assert.That(result.Message, Does.Contain("Invalid secret key").IgnoreCase);
@@ -211,7 +211,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "expired-key-1234");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "expired-key-1234");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.InvalidOrExpired));
             Assert.That(result.Message, Does.Not.Contain("expired-key-1234"), "API key must not leak into messages");
@@ -227,7 +227,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "SUPER-SECRET-KEY-12345");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "SUPER-SECRET-KEY-12345");
 
             Assert.That(transport.RequestedUrls.Single(), Does.Contain("key=SUPER-SECRET-KEY-12345"), "Key must be in URL for API call");
             Assert.That(result.Message, Does.Not.Contain("SUPER-SECRET-KEY-12345"), "Key must not appear in result message");
@@ -247,7 +247,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            await resolver.ValidateApiKeyAsync("https://catalog.example", "test-key");
+            await resolver.ValidateApiKeyAsync("https://203.0.113.12", "test-key");
 
             var probeUrl = transport.RequestedUrls.Single();
             Assert.That(probeUrl, Does.Contain("md5=00000000000000000000000000000000"), "Probe must use an impossible md5 to avoid matching real files");
@@ -260,7 +260,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var scenarios = new (string label, HttpStatusCode status, string body)[]
             {
-                ("Valid", HttpStatusCode.OK, "{\"download_url\":\"https://downloads.example/book.epub\"}"),
+                ("Valid", HttpStatusCode.OK, "{\"download_url\":\"https://203.0.113.17/book.epub\"}"),
                 ("NoDownloadsRemaining", HttpStatusCode.TooManyRequests, "{\"download_url\":null,\"error\":\"No downloads left\"}"),
                 ("InvalidOrExpired_401", HttpStatusCode.Unauthorized, "{\"error\":\"unauthorized\"}"),
                 ("InvalidOrExpired_SecretKey", HttpStatusCode.OK, "{\"download_url\":null,\"error\":\"Invalid secret key\"}"),
@@ -276,7 +276,7 @@ namespace Chaptarr.Core.Test.Indexers
                     request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(request, status, body, contentType)));
 
                 var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
-                var result = await resolver.ValidateApiKeyAsync("https://catalog.example", secretKey);
+                var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", secretKey);
 
                 Assert.That(result.Message, Does.Not.Contain(secretKey), $"API key must not leak in {label} ({result.Outcome}) message");
             }
@@ -295,17 +295,17 @@ namespace Chaptarr.Core.Test.Indexers
                     return Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                         request,
                         HttpStatusCode.OK,
-                        "{\"download_url\":\"https://downloads.example/book.epub\"}",
+                        "{\"download_url\":\"https://203.0.113.17/book.epub\"}",
                         "application/json"));
                 });
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            await resolver.ValidateApiKeyAsync("https://catalog.example", "test-key");
+            await resolver.ValidateApiKeyAsync("https://203.0.113.12", "test-key");
 
             Assert.That(capturedHeaders, Is.Not.Null);
             Assert.That(capturedHeaders["User-Agent"], Does.Contain("Chaptarr"));
-            Assert.That(capturedHeaders["Referer"], Is.EqualTo("https://catalog.example/"));
+            Assert.That(capturedHeaders["Referer"], Is.EqualTo("https://203.0.113.12/"));
         }
 
         [Test]
@@ -314,7 +314,7 @@ namespace Chaptarr.Core.Test.Indexers
             HttpHeader capturedHeaders = null;
             var transport = new DirectDownloadTestHttp();
             transport.AddRoute(
-                url => url == "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                url => url == "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 request =>
                 {
                     capturedHeaders = request.Headers;
@@ -328,13 +328,13 @@ namespace Chaptarr.Core.Test.Indexers
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             await resolver.TryResolveAsync(
-                "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 null,
                 "CatalogPage");
 
             Assert.That(capturedHeaders, Is.Not.Null);
             Assert.That(capturedHeaders["User-Agent"], Does.Contain("Chaptarr"));
-            Assert.That(capturedHeaders["Referer"], Is.EqualTo("https://catalog.example/"));
+            Assert.That(capturedHeaders["Referer"], Is.EqualTo("https://203.0.113.12/"));
         }
 
         [Test]
@@ -349,7 +349,7 @@ namespace Chaptarr.Core.Test.Indexers
                     "{\"download_url\":null,\"error\":\"No downloads left\"}",
                     "application/json")));
             transport.AddRoute(
-                url => url == "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                url => url == "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     HttpStatusCode.OK,
@@ -359,11 +359,11 @@ namespace Chaptarr.Core.Test.Indexers
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
-                "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "test-key",
                 "CatalogPage");
 
-            Assert.That(resolved, Is.EqualTo("https://catalog.example/get/book.epub"), "Should fall back to detail page scraping on 429");
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.12/get/book.epub"), "Should fall back to detail page scraping on 429");
             Assert.That(transport.RequestedUrls.Count(url => url.Contains("fast_download.json")), Is.GreaterThanOrEqualTo(1));
             Assert.That(transport.RequestedUrls.Count(url => url.Contains("fast_download.json")), Is.LessThanOrEqualTo(5), "Should stop rotating domain indices after bounded attempts");
             Assert.That(transport.RequestedUrls.Any(url => url.Contains("/md5/")), Is.True, "Should have scraped detail page");

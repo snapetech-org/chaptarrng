@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -30,6 +31,12 @@ public static class BackupService
             return $"The BookshelfNG data directory does not exist: {dataDirectory}";
         }
 
+        var sourceDirectoryReason = GetReparsePointReason(dataDirectory, "BookshelfNG data directory", isDirectory: true);
+        if (sourceDirectoryReason is not null)
+        {
+            return sourceDirectoryReason;
+        }
+
         var serviceAccount = ServiceLifecycle.GetBookshelfServiceAccount();
         var unsupportedAccount = ServiceAccountPolicy.GetUnsupportedReason(serviceAccount);
         if (unsupportedAccount is not null)
@@ -44,17 +51,49 @@ public static class BackupService
         }
 
         var configPath = Path.Combine(dataDirectory, "config.xml");
-        var databasePath = Path.Combine(dataDirectory, "readarr.db");
         if (!File.Exists(configPath))
         {
             return $"The BookshelfNG config file was not found: {configPath}";
         }
 
+        var configReason = GetReparsePointReason(configPath, "BookshelfNG config.xml", isDirectory: false);
+        if (configReason is not null)
+        {
+            return configReason;
+        }
+
+        var binDirectory = Path.Combine(dataDirectory, "bin");
+        if (!Directory.Exists(binDirectory))
+        {
+            return $"The BookshelfNG binary directory was not found: {binDirectory}";
+        }
+
+        var binReason = GetReparseTreeReason(binDirectory, "BookshelfNG binary directory");
+        if (binReason is not null)
+        {
+            return binReason;
+        }
+
+        var backupsDirectory = Path.Combine(dataDirectory, "Backups");
+        if (Directory.Exists(backupsDirectory))
+        {
+            var backupsReason = GetReparseTreeReason(backupsDirectory, "BookshelfNG Backups directory");
+            if (backupsReason is not null)
+            {
+                return backupsReason;
+            }
+        }
+
         string? postgresHost;
+        var environment = BookshelfServiceEnvironment.GetEffectiveConfigurationEnvironment();
+        var environmentSelectsPostgres = environment.TryGetValue("CHAPTARR__POSTGRES__HOST", out var configuredPostgresHost) &&
+            !string.IsNullOrWhiteSpace(configuredPostgresHost);
         try
         {
             var config = XDocument.Load(configPath);
-            postgresHost = config
+            postgresHost = environment.TryGetValue("CHAPTARR__POSTGRES__HOST", out configuredPostgresHost)
+                ? configuredPostgresHost
+                : config
                 .Descendants()
                 .FirstOrDefault(e => string.Equals(e.Name.LocalName, "PostgresHost", StringComparison.OrdinalIgnoreCase))
                 ?.Value;
@@ -64,23 +103,26 @@ public static class BackupService
             return $"The BookshelfNG config could not be read safely: {ex.Message}";
         }
 
-        var serviceEnvironmentConflict = GetServicePostgresEnvironmentConflict();
-        if (serviceEnvironmentConflict is not null)
+        var postgresSource = !string.IsNullOrWhiteSpace(postgresHost) || environmentSelectsPostgres;
+        try
         {
-            return serviceEnvironmentConflict;
+            BookshelfDatabaseFiles.ValidateLegacyDatabasePaths(dataDirectory);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or InvalidDataException)
+        {
+            return ex.Message;
         }
 
-        var environmentSelectsPostgres = new[]
+        if (!postgresSource)
         {
-            "CHAPTARR__POSTGRES__HOST",
-            "READARR__POSTGRES__HOST",
-            "AUDIOARR__POSTGRES__HOST"
-        }.Any(name => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name)));
-
-        var postgresSource = !string.IsNullOrWhiteSpace(postgresHost) || environmentSelectsPostgres;
-        if (!postgresSource && !File.Exists(databasePath))
-        {
-            return "Neither a BookshelfNG SQLite database nor PostgreSQL configuration was found in this data directory.";
+            try
+            {
+                BookshelfDatabaseFiles.ResolveExistingDatabaseName(dataDirectory);
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or InvalidDataException)
+            {
+                return ex.Message;
+            }
         }
 
         return null;
@@ -88,6 +130,12 @@ public static class BackupService
 
     public static bool IsPostgresSource(string dataDirectory)
     {
+        var environment = BookshelfServiceEnvironment.GetEffectiveConfigurationEnvironment();
+        if (environment.TryGetValue("CHAPTARR__POSTGRES__HOST", out var configuredHost))
+        {
+            return !string.IsNullOrWhiteSpace(configuredHost);
+        }
+
         var configPath = Path.Combine(dataDirectory, "config.xml");
         if (File.Exists(configPath))
         {
@@ -109,38 +157,7 @@ public static class BackupService
             }
         }
 
-        return new[]
-        {
-            "CHAPTARR__POSTGRES__HOST",
-            "READARR__POSTGRES__HOST",
-            "AUDIOARR__POSTGRES__HOST"
-        }.Any(name => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name)));
-    }
-
-    private static string? GetServicePostgresEnvironmentConflict()
-    {
-        foreach (var item in ServiceLifecycle.GetBookshelfServiceEnvironment())
-        {
-            if (!IsPostgresEnvironmentVariable(item.Key))
-            {
-                continue;
-            }
-
-            var installerValue = Environment.GetEnvironmentVariable(item.Key);
-            if (!string.Equals(item.Value, installerValue, StringComparison.Ordinal))
-            {
-                return $"The Readarr service has a service-specific PostgreSQL environment setting ({item.Key}) that the installer process and Chaptarr service cannot safely inherit. Move PostgreSQL settings to config.xml or machine-level environment variables before retrying.";
-            }
-        }
-
-        return null;
-    }
-
-    private static bool IsPostgresEnvironmentVariable(string name)
-    {
-        return name.StartsWith("CHAPTARR__POSTGRES__", StringComparison.OrdinalIgnoreCase) ||
-            name.StartsWith("READARR__POSTGRES__", StringComparison.OrdinalIgnoreCase) ||
-            name.StartsWith("AUDIOARR__POSTGRES__", StringComparison.OrdinalIgnoreCase);
+        return false;
     }
 
     public static async Task<BackupResult> BackupAsync(
@@ -150,6 +167,16 @@ public static class BackupService
         Func<string, Task>? createPostgresDump,
         CancellationToken ct = default)
     {
+        EnsureNoReparsePoint(dataDirectory, "BookshelfNG data directory", isDirectory: true);
+        EnsureNoReparsePoint(Path.Combine(dataDirectory, "config.xml"), "BookshelfNG config.xml", isDirectory: false);
+        BookshelfDatabaseFiles.ValidateLegacyDatabasePaths(dataDirectory);
+        EnsureNoReparseTree(Path.Combine(dataDirectory, "bin"), "BookshelfNG binary directory");
+        var existingBackups = Path.Combine(dataDirectory, "Backups");
+        if (Directory.Exists(existingBackups))
+        {
+            EnsureNoReparseTree(existingBackups, "BookshelfNG Backups directory");
+        }
+
         var backupRoot = GetBackupRoot(dataDirectory);
         Directory.CreateDirectory(backupRoot);
         SecureBackupDirectory(backupRoot);
@@ -162,6 +189,8 @@ public static class BackupService
 
         try
         {
+            SaveBookshelfServiceEnvironment(target, log);
+
             if (postgresSource)
             {
                 CopySqliteSetIfPresent(dataDirectory, target, log);
@@ -213,6 +242,16 @@ public static class BackupService
 
             throw;
         }
+    }
+
+    private static void SaveBookshelfServiceEnvironment(string target, IProgress<LogLine> log)
+    {
+        var path = Path.Combine(target, "bookshelf-service-environment.json");
+        var environment = ServiceLifecycle.GetBookshelfServiceEnvironment()
+            .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase);
+        File.WriteAllText(path, JsonSerializer.Serialize(environment));
+        log.Report(new LogLine(LogStream.Stdout, "[backup] Original Windows service environment retained in the restricted rollback backup."));
     }
 
     private static void SecureBackupDirectory(string backupRoot)
@@ -275,6 +314,8 @@ public static class BackupService
             throw new InvalidOperationException($"The BookshelfNG binary directory was not found: {source}");
         }
 
+        EnsureNoReparseTree(source, "BookshelfNG binary directory");
+
         var fileCount = Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories).Count();
         var sizeBytes = Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories)
             .Sum(f => new FileInfo(f).Length);
@@ -284,7 +325,7 @@ public static class BackupService
         var destination = Path.Combine(target, "bin");
         var exit = await ProcessStreamer.RunAsync(
             "robocopy.exe",
-            new[] { source, destination, "/E", "/COPY:DAT", "/DCOPY:DAT", "/MT:8", "/NFL", "/NDL", "/NC", "/NS", "/NP" },
+            new[] { source, destination, "/E", "/XJ", "/COPY:DAT", "/DCOPY:DAT", "/MT:8", "/NFL", "/NDL", "/NC", "/NS", "/NP" },
             null,
             log,
             ct).ConfigureAwait(false);
@@ -298,8 +339,9 @@ public static class BackupService
 
     private static void CopySqliteSet(string dataDirectory, string target, IProgress<LogLine> log)
     {
-        var names = new[] { "readarr.db", "readarr.db-journal", "readarr.db-wal" };
-        var primary = Path.Combine(dataDirectory, "readarr.db");
+        var databaseName = BookshelfDatabaseFiles.ResolveExistingDatabaseName(dataDirectory);
+        var names = new[] { databaseName, databaseName + "-journal", databaseName + "-wal" };
+        var primary = Path.Combine(dataDirectory, databaseName);
         var dbMb = Math.Round(new FileInfo(primary).Length / 1024.0 / 1024.0);
         log.Report(new LogLine(LogStream.Stdout, $"[backup] Copying SQLite database, WAL, and rollback journal ({dbMb:F0} MB)..."));
 
@@ -315,7 +357,9 @@ public static class BackupService
 
     private static void CopySqliteSetIfPresent(string dataDirectory, string target, IProgress<LogLine> log)
     {
-        var names = new[] { "readarr.db", "readarr.db-journal", "readarr.db-wal" };
+        BookshelfDatabaseFiles.ValidateLegacyDatabasePaths(dataDirectory);
+        var names = BookshelfDatabaseFiles.LegacyDatabaseNames
+            .SelectMany(name => new[] { name, name + "-journal", name + "-wal" });
         foreach (var name in names)
         {
             var source = Path.Combine(dataDirectory, name);
@@ -329,6 +373,7 @@ public static class BackupService
 
     private static void CopySingleFile(string source, string targetDirectory, IProgress<LogLine> log)
     {
+        EnsureNoReparsePoint(source, "BookshelfNG config.xml", isDirectory: false);
         if (!File.Exists(source))
         {
             throw new FileNotFoundException("BookshelfNG config.xml disappeared before the backup completed.", source);
@@ -346,6 +391,7 @@ public static class BackupService
             return;
         }
 
+        EnsureNoReparseTree(source, "BookshelfNG Backups directory");
         log.Report(new LogLine(LogStream.Stdout, "[backup] Copying existing BookshelfNG backups..."));
         CopyDirectoryRecursive(source, Path.Combine(target, "Backups"));
     }
@@ -355,18 +401,98 @@ public static class BackupService
         Directory.CreateDirectory(destination);
         foreach (var file in Directory.EnumerateFiles(source))
         {
+            EnsureNoReparsePoint(file, "BookshelfNG backup file", isDirectory: false);
             File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: false);
         }
 
         foreach (var directory in Directory.EnumerateDirectories(source))
         {
+            EnsureNoReparsePoint(directory, "BookshelfNG backup subdirectory", isDirectory: true);
             CopyDirectoryRecursive(directory, Path.Combine(destination, Path.GetFileName(directory)));
+        }
+    }
+
+    private static string? GetReparsePointReason(string path, string description, bool isDirectory)
+    {
+        try
+        {
+            EnsureNoReparsePoint(path, description, isDirectory);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private static string? GetReparseTreeReason(string root, string description)
+    {
+        try
+        {
+            EnsureNoReparseTree(root, description);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private static void EnsureNoReparseTree(string root, string description)
+    {
+        EnsureNoReparsePoint(root, description, isDirectory: true);
+        var pending = new Stack<string>();
+        pending.Push(root);
+        while (pending.Count > 0)
+        {
+            var directory = pending.Pop();
+            var enumerationOptions = new EnumerationOptions
+            {
+                AttributesToSkip = 0,
+                IgnoreInaccessible = false,
+                RecurseSubdirectories = false
+            };
+            foreach (var entry in Directory.EnumerateFileSystemEntries(directory, "*", enumerationOptions))
+            {
+                var isDirectory = Directory.Exists(entry);
+                EnsureNoReparsePoint(entry, $"{description} entry '{entry}'", isDirectory);
+                if (isDirectory)
+                {
+                    pending.Push(entry);
+                }
+            }
+        }
+    }
+
+    private static void EnsureNoReparsePoint(string path, string description, bool isDirectory)
+    {
+        FileSystemInfo item = isDirectory ? new DirectoryInfo(path) : new FileInfo(path);
+        try
+        {
+            if (item.LinkTarget is not null ||
+                (item.Exists && (item.Attributes & FileAttributes.ReparsePoint) != 0))
+            {
+                throw new InvalidDataException($"The {description} is a symbolic link or reparse point ('{path}'). Resolve it to a regular local path before migrating.");
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            // The caller reports missing required paths separately.
+        }
+        catch (DirectoryNotFoundException)
+        {
+            // The caller reports missing required paths separately.
+        }
+        catch (IOException ex) when (!item.Exists)
+        {
+            throw new InvalidDataException($"The {description} could not be inspected safely ('{path}'): {ex.Message}", ex);
         }
     }
 
     private static void RunIntegrityCheck(string target, IProgress<LogLine> log)
     {
-        var databasePath = Path.Combine(target, "readarr.db");
+        var databaseName = BookshelfDatabaseFiles.ResolveExistingDatabaseName(target);
+        var databasePath = Path.Combine(target, databaseName);
         log.Report(new LogLine(LogStream.Stdout, "[backup] Running SQLite PRAGMA integrity_check on the copy..."));
 
         var connectionString = new SqliteConnectionStringBuilder

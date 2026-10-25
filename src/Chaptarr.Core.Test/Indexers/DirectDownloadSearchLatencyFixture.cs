@@ -19,9 +19,9 @@ namespace Chaptarr.Core.Test.Indexers
         public async Task search_should_cap_catalog_candidates_at_ten()
         {
             var transport = new DirectDownloadTestHttp();
-            RegisterCatalogSourceWithManyResults(transport, "https://catalog.example", 25);
+            RegisterCatalogSourceWithManyResults(transport, "https://203.0.113.12", 25);
             var probeService = new DirectDownloadSourceProbeService(transport.CreateClient(), LogManager.GetCurrentClassLogger());
-            var provider = BuildIndexer(probeService, "https://catalog.example", "test-key");
+            var provider = BuildIndexer(probeService, "https://203.0.113.12", "test-key");
 
             var releases = await provider.Fetch(new BookSearchCriteria
             {
@@ -39,9 +39,9 @@ namespace Chaptarr.Core.Test.Indexers
         public async Task search_should_not_call_detail_page_or_fast_download_api_per_result()
         {
             var transport = new DirectDownloadTestHttp();
-            RegisterCatalogSourceWithManyResults(transport, "https://catalog.example", 5);
+            RegisterCatalogSourceWithManyResults(transport, "https://203.0.113.12", 5);
             var probeService = new DirectDownloadSourceProbeService(transport.CreateClient(), LogManager.GetCurrentClassLogger());
-            var provider = BuildIndexer(probeService, "https://catalog.example", "test-key");
+            var provider = BuildIndexer(probeService, "https://203.0.113.12", "test-key");
 
             await provider.Fetch(new BookSearchCriteria
             {
@@ -64,9 +64,9 @@ namespace Chaptarr.Core.Test.Indexers
         public async Task search_should_use_request_isbn_instead_of_fetching_detail_page()
         {
             var transport = new DirectDownloadTestHttp();
-            RegisterCatalogSourceWithManyResults(transport, "https://catalog.example", 3);
+            RegisterCatalogSourceWithManyResults(transport, "https://203.0.113.12", 3);
             var probeService = new DirectDownloadSourceProbeService(transport.CreateClient(), LogManager.GetCurrentClassLogger());
-            var provider = BuildIndexer(probeService, "https://catalog.example", "test-key");
+            var provider = BuildIndexer(probeService, "https://203.0.113.12", "test-key");
 
             var releases = await provider.Fetch(new BookSearchCriteria
             {
@@ -87,9 +87,9 @@ namespace Chaptarr.Core.Test.Indexers
         public async Task search_should_set_download_url_to_info_uri_for_grab_time_resolution()
         {
             var transport = new DirectDownloadTestHttp();
-            RegisterCatalogSourceWithManyResults(transport, "https://catalog.example", 3);
+            RegisterCatalogSourceWithManyResults(transport, "https://203.0.113.12", 3);
             var probeService = new DirectDownloadSourceProbeService(transport.CreateClient(), LogManager.GetCurrentClassLogger());
-            var provider = BuildIndexer(probeService, "https://catalog.example", "test-key");
+            var provider = BuildIndexer(probeService, "https://203.0.113.12", "test-key");
 
             var releases = await provider.Fetch(new BookSearchCriteria
             {
@@ -111,9 +111,9 @@ namespace Chaptarr.Core.Test.Indexers
         public async Task search_should_cap_mirror_candidates_at_ten()
         {
             var transport = new DirectDownloadTestHttp();
-            RegisterMirrorSourceWithManyResults(transport, "https://mirror.example", 20);
+            RegisterMirrorSourceWithManyResults(transport, "https://203.0.113.25", 20);
             var probeService = new DirectDownloadSourceProbeService(transport.CreateClient(), LogManager.GetCurrentClassLogger());
-            var provider = BuildIndexer(probeService, "https://mirror.example", "test-key");
+            var provider = BuildIndexer(probeService, "https://203.0.113.25", "test-key");
 
             var releases = await provider.Fetch(new BookSearchCriteria
             {
@@ -130,9 +130,9 @@ namespace Chaptarr.Core.Test.Indexers
         public async Task mirror_search_should_not_call_per_result_mirror_pages()
         {
             var transport = new DirectDownloadTestHttp();
-            RegisterMirrorSourceWithManyResults(transport, "https://mirror.example", 5);
+            RegisterMirrorSourceWithManyResults(transport, "https://203.0.113.25", 5);
             var probeService = new DirectDownloadSourceProbeService(transport.CreateClient(), LogManager.GetCurrentClassLogger());
-            var provider = BuildIndexer(probeService, "https://mirror.example", "test-key");
+            var provider = BuildIndexer(probeService, "https://203.0.113.25", "test-key");
 
             await provider.Fetch(new BookSearchCriteria
             {
@@ -158,17 +158,17 @@ namespace Chaptarr.Core.Test.Indexers
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     System.Net.HttpStatusCode.OK,
-                    "{\"download_url\":\"https://downloads.example/book.epub\"}",
+                    "{\"download_url\":\"https://203.0.113.17/book.epub\"}",
                     "application/json")));
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
-                "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "test-api-key",
                 "CatalogPage");
 
-            Assert.That(resolved, Is.EqualTo("https://downloads.example/book.epub"));
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.17/book.epub"));
         }
 
         [Test]
@@ -179,7 +179,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var ex = Assert.ThrowsAsync<NzbDrone.Core.Exceptions.ReleaseDownloadException>(async () =>
                 await resolver.TryResolveAsync(
-                    "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                     null,
                     "CatalogPage"));
 
@@ -191,7 +191,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             transport.AddRoute(
-                url => url == "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                url => url == "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     System.Net.HttpStatusCode.OK,
@@ -201,11 +201,11 @@ namespace Chaptarr.Core.Test.Indexers
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
-                "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 null,
                 "CatalogPage");
 
-            Assert.That(resolved, Is.EqualTo("https://catalog.example/get/harry-potter.epub"));
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.12/get/harry-potter.epub"));
         }
 
         [Test]
@@ -213,21 +213,21 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             transport.AddRoute(
-                url => url == "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                url => url == "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     System.Net.HttpStatusCode.OK,
-                    "<html><body><a href=\"https://files.example/harry-potter.kepub?download=1\">Mirror</a></body></html>",
+                    "<html><body><a href=\"https://203.0.113.22/harry-potter.kepub?download=1\">Mirror</a></body></html>",
                     "text/html; charset=utf-8")));
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
-                "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 null,
                 "CatalogPage");
 
-            Assert.That(resolved, Is.EqualTo("https://files.example/harry-potter.kepub?download=1"));
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.22/harry-potter.kepub?download=1"));
         }
 
         [Test]
@@ -235,7 +235,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             transport.AddRoute(
-                url => url == "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                url => url == "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     System.Net.HttpStatusCode.OK,
@@ -245,11 +245,11 @@ namespace Chaptarr.Core.Test.Indexers
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
-                "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 null,
                 "CatalogPage");
 
-            Assert.That(resolved, Is.EqualTo("https://catalog.example/slow_download/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/0/0"));
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.12/slow_download/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/0/0"));
         }
 
         [Test]
@@ -257,7 +257,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             transport.AddRoute(
-                url => url == "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                url => url == "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     System.Net.HttpStatusCode.OK,
@@ -268,7 +268,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var ex = Assert.ThrowsAsync<NzbDrone.Core.Exceptions.ReleaseDownloadException>(async () =>
                 await resolver.TryResolveAsync(
-                    "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                     null,
                     "CatalogPage"));
 
@@ -281,7 +281,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             transport.AddRoute(
-                url => url == "https://catalog.example/md5/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                url => url == "https://203.0.113.12/md5/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     System.Net.HttpStatusCode.OK,
@@ -292,7 +292,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var ex = Assert.ThrowsAsync<NzbDrone.Core.Exceptions.ReleaseDownloadException>(async () =>
                 await resolver.TryResolveAsync(
-                    "https://catalog.example/md5/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                    "https://203.0.113.12/md5/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                     null,
                     "CatalogPage"));
 
@@ -308,10 +308,10 @@ namespace Chaptarr.Core.Test.Indexers
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     System.Net.HttpStatusCode.OK,
-                    "{\"download_url\":\"https://downloads.example/premium-book.epub\"}",
+                    "{\"download_url\":\"https://203.0.113.17/premium-book.epub\"}",
                     "application/json")));
             transport.AddRoute(
-                url => url == "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                url => url == "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     System.Net.HttpStatusCode.OK,
@@ -321,11 +321,11 @@ namespace Chaptarr.Core.Test.Indexers
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
-                "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "test-api-key",
                 "CatalogPage");
 
-            Assert.That(resolved, Is.EqualTo("https://downloads.example/premium-book.epub"));
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.17/premium-book.epub"));
         }
 
         [Test]
@@ -333,7 +333,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             transport.AddRoute(
-                url => url == "https://mirror.example/mirror1",
+                url => url == "https://203.0.113.25/mirror1",
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request,
                     System.Net.HttpStatusCode.OK,
@@ -343,11 +343,11 @@ namespace Chaptarr.Core.Test.Indexers
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
-                "https://mirror.example/mirror1",
+                "https://203.0.113.25/mirror1",
                 null,
                 "MirrorIndex");
 
-            Assert.That(resolved, Is.EqualTo("https://mirror.example/get/book.epub"));
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.25/get/book.epub"));
         }
 
         [Test]
@@ -357,11 +357,11 @@ namespace Chaptarr.Core.Test.Indexers
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
-                "https://downloads.example/book.epub",
+                "https://203.0.113.17/book.epub",
                 "test-key",
                 "UnknownSource");
 
-            Assert.That(resolved, Is.EqualTo("https://downloads.example/book.epub"));
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.17/book.epub"));
         }
 
         private static DirectDownloadIndexer BuildIndexer(DirectDownloadSourceProbeService probeService, string url, string apiKey)

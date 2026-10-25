@@ -45,7 +45,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var schema = SchemaBuilder.ToSchema(new DirectDownloadSettings
             {
-                Urls = "https://downloads.example.com",
+                Urls = "https://203.0.113.18",
                 ApiKey = "real-secret"
             });
 
@@ -57,18 +57,18 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var settings = new DirectDownloadSettings
             {
-                Urls = "https://downloads.example.com",
+                Urls = "https://203.0.113.18",
                 ApiKey = "real-secret"
             };
 
             SchemaBuilder.ReadFromSchema(new()
             {
-                new Field { Name = "urls", Value = "https://downloads.example.com\nhttps://mirror.example.com" },
+                new Field { Name = "urls", Value = "https://203.0.113.18\nhttps://203.0.113.26" },
                 new Field { Name = "apiKey", Value = "********" }
             }, settings);
 
             Assert.That(settings.ApiKey, Is.EqualTo("real-secret"));
-            Assert.That(settings.Urls, Is.EqualTo("https://downloads.example.com\nhttps://mirror.example.com"));
+            Assert.That(settings.Urls, Is.EqualTo("https://203.0.113.18\nhttps://203.0.113.26"));
         }
 
         [Test]
@@ -76,22 +76,22 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var settings = new DirectDownloadSettings
             {
-                Urls = " https://downloads.example.com/ \r\n\r\nhttps://mirror.example.com\nhttps://downloads.example.com/ ",
+                Urls = " https://203.0.113.18/ \r\n\r\nhttps://203.0.113.26\nhttps://203.0.113.18/ ",
                 EnableSlowFallback = true
             };
 
             var result = settings.Validate();
 
             Assert.That(result.IsValid, Is.True, () => string.Join(" | ", result.Errors.Select(error => error.ErrorMessage)));
-            Assert.That(settings.Urls, Is.EqualTo("https://downloads.example.com\nhttps://mirror.example.com"));
-            Assert.That(settings.BaseUrl, Is.EqualTo("https://downloads.example.com"));
+            Assert.That(settings.Urls, Is.EqualTo("https://203.0.113.18\nhttps://203.0.113.26"));
+            Assert.That(settings.BaseUrl, Is.EqualTo("https://203.0.113.18"));
         }
 
         [TestCase("")]
         [TestCase("   \r\n  ")]
-        [TestCase("https://downloads.example.com\nftp://mirror.example.com")]
-        [TestCase("https://downloads.example.com\nhttps://user:pass@mirror.example.com")]
-        [TestCase("https://downloads.example.com\nnot-a-url")]
+        [TestCase("https://203.0.113.18\nftp://203.0.113.26")]
+        [TestCase("https://203.0.113.18\nhttps://user:pass@203.0.113.26")]
+        [TestCase("https://203.0.113.18\nnot-a-url")]
         public void should_reject_invalid_url_input(string urls)
         {
             var settings = new DirectDownloadSettings
@@ -109,7 +109,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var settings = new DirectDownloadSettings
             {
-                Urls = " https://downloads.example.com/ \nhttps://mirror.example.com ",
+                Urls = " https://203.0.113.18/ \nhttps://203.0.113.26 ",
                 ApiKey = "  "
             };
 
@@ -124,31 +124,31 @@ namespace Chaptarr.Core.Test.Indexers
             Assert.That(json, Does.Not.Contain("apiKey"));
             Assert.That(json, Does.Not.Contain("baseUrl"));
             Assert.That(restored.ApiKey, Is.Null);
-            Assert.That(restored.Urls, Is.EqualTo("https://downloads.example.com\nhttps://mirror.example.com"));
-            Assert.That(restored.BaseUrl, Is.EqualTo("https://downloads.example.com"));
+            Assert.That(restored.Urls, Is.EqualTo("https://203.0.113.18\nhttps://203.0.113.26"));
+            Assert.That(restored.BaseUrl, Is.EqualTo("https://203.0.113.18"));
         }
 
         [Test]
         public void should_load_legacy_array_url_settings_and_preserve_order()
         {
             const string json = """
-                {"urls":["https://primary.example.com/","https://mirror.example.com"],"apiKey":"legacy-key","enableSlowFallback":true}
+                {"urls":["https://203.0.113.31/","https://203.0.113.26"],"apiKey":"legacy-key","enableSlowFallback":true}
                 """;
 
             var restored = STJson.Deserialize<DirectDownloadSettings>(json);
 
-            Assert.That(restored.Urls, Is.EqualTo("https://primary.example.com\nhttps://mirror.example.com"));
-            Assert.That(restored.BaseUrl, Is.EqualTo("https://primary.example.com"));
+            Assert.That(restored.Urls, Is.EqualTo("https://203.0.113.31\nhttps://203.0.113.26"));
+            Assert.That(restored.BaseUrl, Is.EqualTo("https://203.0.113.31"));
             Assert.That(restored.ApiKey, Is.EqualTo("legacy-key"));
             Assert.That(restored.EnableSlowFallback, Is.True);
-            Assert.That(STJson.ToJson(restored), Does.Contain("\"urls\": \"https://primary.example.com\\nhttps://mirror.example.com\""));
+            Assert.That(STJson.ToJson(restored), Does.Contain("\"urls\": \"https://203.0.113.31\\nhttps://203.0.113.26\""));
         }
 
         [Test]
         public void should_reject_non_string_entries_in_legacy_url_arrays()
         {
             const string json = """
-                {"urls":["https://primary.example.com",7]}
+                {"urls":["https://203.0.113.31",7]}
                 """;
 
             Assert.Throws<System.Text.Json.JsonException>(() => STJson.Deserialize<DirectDownloadSettings>(json));
@@ -164,7 +164,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var settings = new DirectDownloadSettings
             {
-                Urls = "https://downloads.example.com",
+                Urls = "https://203.0.113.18",
                 ApiKey = apiKey,
                 EnableSlowFallback = enableSlowFallback
             };
@@ -180,7 +180,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var settings = new DirectDownloadSettings
             {
-                Urls = "https://downloads.example.com",
+                Urls = "https://203.0.113.18",
                 ApiKey = null,
                 EnableSlowFallback = false
             };
@@ -196,7 +196,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var schema = SchemaBuilder.ToSchema(new DirectDownloadSettings
             {
-                Urls = "https://downloads.example.com",
+                Urls = "https://203.0.113.18",
                 ApiKey = "   "
             });
 
@@ -209,13 +209,13 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var settings = new DirectDownloadSettings
             {
-                Urls = "https://downloads.example.com",
+                Urls = "https://203.0.113.18",
                 ApiKey = "real-secret"
             };
 
             SchemaBuilder.ReadFromSchema(new()
             {
-                new Field { Name = "urls", Value = "https://downloads.example.com" },
+                new Field { Name = "urls", Value = "https://203.0.113.18" },
                 new Field { Name = "apiKey", Value = "********" }
             }, settings);
 

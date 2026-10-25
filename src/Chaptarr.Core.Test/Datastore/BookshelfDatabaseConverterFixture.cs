@@ -118,6 +118,7 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(ReadBookAuthorId(_sourcePath), Is.EqualTo(8));
                 Assert.That(DatabaseLineageGuard.Detect(ConnectionStringFor(backupPath), DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
                 Assert.That(ReadBookId(backupPath), Is.EqualTo("fixture-book"));
+                Assert.That(Directory.GetFiles(_directory, Path.GetFileName(_sourcePath) + ".bookshelf-snapshot-*"), Is.Empty);
             });
         }
 

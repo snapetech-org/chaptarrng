@@ -189,7 +189,26 @@ namespace NzbDrone.Core.Configuration
             }
         }
 
-        public int Port => _serverOptions.Port ?? GetValueInt("Port", 8789);
+        public int Port
+        {
+            get
+            {
+                if (_serverOptions.Port.HasValue)
+                {
+                    return _serverOptions.Port.Value;
+                }
+
+                var configuredPort = GetValue("Port", string.Empty, persist: false);
+                if (!string.IsNullOrWhiteSpace(configuredPort))
+                {
+                    return Convert.ToInt32(configuredPort);
+                }
+
+                var defaultPort = ServerConfigurationDefaults.Port;
+                SetValue("Port", defaultPort);
+                return defaultPort;
+            }
+        }
 
         public int SslPort => _serverOptions.SslPort ?? GetValueInt("SslPort", 6868);
 

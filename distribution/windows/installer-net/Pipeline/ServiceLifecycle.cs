@@ -169,8 +169,13 @@ public static class ServiceLifecycle
 
     public static IReadOnlyDictionary<string, string> GetBookshelfServiceEnvironment()
     {
+        return GetServiceEnvironment(BookshelfServiceName);
+    }
+
+    public static IReadOnlyDictionary<string, string> GetServiceEnvironment(string serviceName)
+    {
         using var key = Registry.LocalMachine.OpenSubKey(
-            $@"SYSTEM\CurrentControlSet\Services\{BookshelfServiceName}",
+            $@"SYSTEM\CurrentControlSet\Services\{serviceName}",
             writable: false);
         var values = key?.GetValue("Environment") as string[];
         var environment = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -191,12 +196,98 @@ public static class ServiceLifecycle
         return environment;
     }
 
+    public static void SetServiceEnvironment(string serviceName, IReadOnlyDictionary<string, string> environment)
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(
+            $@"SYSTEM\CurrentControlSet\Services\{serviceName}",
+            writable: true)
+            ?? throw new InvalidOperationException($"The {serviceName} service registry key was not found.");
+
+        var values = new List<string>(environment.Count);
+        foreach (var item in environment)
+        {
+            if (string.IsNullOrWhiteSpace(item.Key) || item.Key.Contains('=') ||
+                item.Key.Contains('\0') || item.Value.Contains('\0'))
+            {
+                throw new InvalidOperationException($"The {serviceName} service environment contains an invalid variable name or value.");
+            }
+
+            values.Add(item.Key + "=" + item.Value);
+        }
+
+        values.Sort(StringComparer.OrdinalIgnoreCase);
+        key.SetValue("Environment", values.ToArray(), RegistryValueKind.MultiString);
+        key.Flush();
+    }
+
+    public static IReadOnlyDictionary<string, string> GetBookshelfServerCommandLineOverrides()
+    {
+        var imagePath = GetImagePath(BookshelfServiceName);
+        var overrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(imagePath))
+        {
+            return overrides;
+        }
+
+        foreach (Match match in Regex.Matches(
+                     imagePath,
+                     @"(?i)(?:^|\s)(?:--?|/)(?<name>port|urlbase|bindaddress|sslport|sslcertpath|sslcertpassword)(?:\s*=\s*|\s+)(?:""(?<quoted>[^""]*)""|(?<bare>[^\s]+))"))
+        {
+            var value = match.Groups["quoted"].Success
+                ? match.Groups["quoted"].Value
+                : match.Groups["bare"].Value;
+            var key = match.Groups["name"].Value.ToUpperInvariant() switch
+            {
+                "PORT" => "CHAPTARR__SERVER__PORT",
+                "URLBASE" => "CHAPTARR__SERVER__URLBASE",
+                "BINDADDRESS" => "CHAPTARR__SERVER__BINDADDRESS",
+                "SSLPORT" => "CHAPTARR__SERVER__SSLPORT",
+                "SSLCERTPATH" => "CHAPTARR__SERVER__SSLCERTPATH",
+                "SSLCERTPASSWORD" => "CHAPTARR__SERVER__SSLCERTPASSWORD",
+                _ => throw new InvalidOperationException("The BookshelfNG service command line contains an unsupported server override.")
+            };
+            overrides[key] = value;
+        }
+
+        var enableSsl = Regex.Match(
+            imagePath,
+            @"(?i)(?:^|\s)(?:--?|/)enablessl(?:\s*=\s*(?:""(?<quoted>true|false)""|(?<value>true|false))|\s+(?:""(?<quoted>true|false)""|(?<value>true|false)))?(?=\s|$)");
+        if (enableSsl.Success)
+        {
+            overrides["CHAPTARR__SERVER__ENABLESSL"] = enableSsl.Groups["quoted"].Success
+                ? enableSsl.Groups["quoted"].Value
+                : enableSsl.Groups["value"].Success
+                    ? enableSsl.Groups["value"].Value
+                    : "true";
+        }
+
+        return overrides;
+    }
+
     public static int GetBookshelfServiceStartType()
     {
         using var key = Registry.LocalMachine.OpenSubKey(
             $@"SYSTEM\CurrentControlSet\Services\{BookshelfServiceName}",
             writable: false);
         return key?.GetValue("Start") is int startType ? startType : 2;
+    }
+
+    public static bool GetBookshelfServiceDelayedAutoStart()
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(
+            $@"SYSTEM\CurrentControlSet\Services\{BookshelfServiceName}",
+            writable: false);
+        return key?.GetValue("DelayedAutoStart") is int delayedAutoStart && delayedAutoStart != 0;
+    }
+
+    public static void SetServiceDelayedAutoStart(string serviceName, bool enabled)
+    {
+        using var key = Registry.LocalMachine.OpenSubKey(
+            $@"SYSTEM\CurrentControlSet\Services\{serviceName}",
+            writable: true)
+            ?? throw new InvalidOperationException($"The {serviceName} service registry key was not found.");
+        key.SetValue("DelayedAutoStart", enabled ? 1 : 0, RegistryValueKind.DWord);
+        key.Flush();
     }
 
     public static string GetBookshelfDataDirectory()
@@ -208,22 +299,60 @@ public static class ServiceLifecycle
         }
         imagePath = Environment.ExpandEnvironmentVariables(imagePath);
 
-        var dataMatch = Regex.Match(
+        var dataMatches = Regex.Matches(
             imagePath,
-            @"(?i)(?:/|-{1,2})data\s*=\s*(?:""(?<quoted>[^""]+)""|(?<bare>[^\s]+))");
-        if (dataMatch.Success)
+            @"(?i)(?:^|\s)(?:--?|/)data(?:\s*=\s*|\s+)(?:""(?<quoted>[^""]*)""|'(?<single>[^']*)'|(?<bare>[^\s]+))");
+        if (dataMatches.Count > 0)
         {
-            var value = dataMatch.Groups["quoted"].Success
-                ? dataMatch.Groups["quoted"].Value
-                : dataMatch.Groups["bare"].Value;
-            value = Environment.ExpandEnvironmentVariables(value);
-            if (!Path.IsPathRooted(value))
+            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Match dataMatch in dataMatches)
             {
-                throw new InvalidOperationException(
-                    $"The BookshelfNG service uses a relative data directory ('{value}'). Set an absolute path before migrating.");
+                var value = dataMatch.Groups["quoted"].Success
+                    ? dataMatch.Groups["quoted"].Value
+                    : dataMatch.Groups["single"].Success
+                        ? dataMatch.Groups["single"].Value
+                        : dataMatch.Groups["bare"].Value;
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    throw new InvalidOperationException("The BookshelfNG service has an empty -data path. Set an absolute path before migrating.");
+                }
+
+                if (LooksLikeBookshelfOption(value))
+                {
+                    throw new InvalidOperationException("The BookshelfNG service has a -data option without a path before another switch. Set an absolute path before migrating.");
+                }
+
+                value = Environment.ExpandEnvironmentVariables(value);
+                if (!Path.IsPathFullyQualified(value))
+                {
+                    throw new InvalidOperationException(
+                        $"The BookshelfNG service uses a relative or incomplete data directory ('{value}'). Set a fully qualified path before migrating.");
+                }
+
+                paths.Add(Path.GetFullPath(value));
             }
 
-            return Path.GetFullPath(value);
+            if (paths.Count != 1)
+            {
+                throw new InvalidOperationException("The BookshelfNG service has conflicting -data paths. Resolve the service command before migrating.");
+            }
+
+            foreach (var path in paths)
+            {
+                return path;
+            }
+
+            throw new InvalidOperationException("The BookshelfNG service data directory could not be resolved safely.");
+        }
+
+        if (Regex.IsMatch(imagePath, @"(?i)(?:^|\s)(?:--?|/)data(?=\s|$)"))
+        {
+            throw new InvalidOperationException("The BookshelfNG service has a -data option without a value. Set an absolute path before migrating.");
+        }
+
+        if (Regex.IsMatch(imagePath, @"(?i)(?:^|\s)(?:--?|/)data\s*="))
+        {
+            throw new InvalidOperationException("The BookshelfNG service has an empty -data path. Set an absolute path before migrating.");
         }
 
         var executable = GetExecutablePath(imagePath);
@@ -242,6 +371,12 @@ public static class ServiceLifecycle
         }
 
         return DefaultBookshelfDataDirectory;
+    }
+
+    private static bool LooksLikeBookshelfOption(string value)
+    {
+        return value.StartsWith("-", StringComparison.Ordinal) ||
+            (value.StartsWith("/", StringComparison.Ordinal) && !value.StartsWith("//", StringComparison.Ordinal));
     }
 
     public static bool IsInstalled(string serviceName)

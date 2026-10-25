@@ -37,6 +37,21 @@ namespace Chaptarr.Core.Test.Update
             };
         }
 
+        [TestCase(false, false, "main", true)]
+        [TestCase(false, false, "custom", false)]
+        [TestCase(true, false, "main", false)]
+        [TestCase(true, true, "custom", true)]
+        public void should_preserve_explicit_update_route_and_default_main_to_github(
+            bool hasExplicitChoice,
+            bool explicitChoice,
+            string branch,
+            bool expected)
+        {
+            Assert.That(
+                UpdatePackageProvider.ShouldUseGitHubUpdateRoute(hasExplicitChoice, explicitChoice, branch),
+                Is.EqualTo(expected));
+        }
+
         [Test]
         public void should_return_enhancements_when_server_has_no_rows()
         {

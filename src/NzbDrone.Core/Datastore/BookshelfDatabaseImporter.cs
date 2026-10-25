@@ -1959,6 +1959,7 @@ namespace NzbDrone.Core.Datastore
             const string bookshelfCompatibilityProfileVersionKey = "bookshelfngcompatibilityprofileversion";
             const string legacyMetadataSourceKey = "metadatasource";
             const string chaptarrMetadataServerUrlKey = "metadataserverurl";
+            const string chaptarrGitHubUpdatesKey = "usegithubupdates";
 
             var configRows = ReadRows(source, "Config").ToList();
             var sourceCount = configRows.Count;
@@ -1979,6 +1980,7 @@ namespace NzbDrone.Core.Datastore
             var bookshelfCompatibilityProfileVersionRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfCompatibilityProfileVersionKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var legacyMetadataSourceRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMetadataSourceKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrMetadataServerUrlRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrMetadataServerUrlKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var chaptarrGitHubUpdatesRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrGitHubUpdatesKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var autoInitializeAuthorPathsRows = configRows
                 .Where(row => string.Equals(GetString(row, "Key"), "AutoInitializeFormatSpecificAuthorPaths", StringComparison.OrdinalIgnoreCase))
                 .ToList();
@@ -2011,6 +2013,11 @@ namespace NzbDrone.Core.Datastore
             if (legacyMetadataSourceRows.Count > 1 || chaptarrMetadataServerUrlRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate metadata-server settings; conversion stopped before promotion.");
+            }
+
+            if (chaptarrGitHubUpdatesRows.Count > 1)
+            {
+                throw new InvalidDataException("BookshelfNG config contains duplicate ChaptarrNG update-source settings; conversion stopped before promotion.");
             }
 
             if (autoInitializeAuthorPathsRows.Count > 1)
@@ -2134,6 +2141,30 @@ namespace NzbDrone.Core.Datastore
             {
                 bookshelfMigrationMarkerRows[0]["Key"] = BookshelfNGMigrationMarkerKey;
                 bookshelfMigrationMarkerRows[0]["Value"] = "true";
+            }
+
+            var updateRouteDisposition = "the updater was routed to checksum-verified ChaptarrNG GitHub releases instead of the BookshelfNG/Readarr update service";
+            if (chaptarrGitHubUpdatesRows.Count == 0)
+            {
+                var githubUpdates = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["Key"] = "UseGitHubUpdates",
+                    ["Value"] = "true"
+                };
+                if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+                {
+                    githubUpdates["Id"] = checked(++nextGeneratedConfigId);
+                }
+                configRows.Add(githubUpdates);
+            }
+            else if (!bool.TryParse(GetString(chaptarrGitHubUpdatesRows[0], "Value"), out var useGitHubUpdates))
+            {
+                throw new InvalidDataException("BookshelfNG config contains an invalid ChaptarrNG update-source setting; conversion stopped before promotion.");
+            }
+            else if (!useGitHubUpdates)
+            {
+                chaptarrGitHubUpdatesRows[0]["Value"] = "true";
+                updateRouteDisposition = "the existing legacy update-source setting was switched to checksum-verified ChaptarrNG GitHub releases";
             }
 
             var nativeHardcoverPrimaryMode = ConfiguredNativeHardcoverPrimaryMode();
@@ -2295,7 +2326,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Config", sourceCount, 0, sourceCount, 0, 0,
-                $"saved configuration is copied with compatible fields; BookshelfNG compatibility profile version 1 records source provider dialect '{sourceProviderDialect}'; a dedicated BookshelfNG migration marker is retained on the ChaptarrNG database; {matchSettingDisposition}; {hardcoverTokenDisposition}; {hardcoverModeDisposition}; {metadataServerUrlDisposition}; {authorPathSettingDisposition}");
+                $"saved configuration is copied with compatible fields; BookshelfNG compatibility profile version 1 records source provider dialect '{sourceProviderDialect}'; a dedicated BookshelfNG migration marker is retained on the ChaptarrNG database; {matchSettingDisposition}; {hardcoverTokenDisposition}; {hardcoverModeDisposition}; {metadataServerUrlDisposition}; {authorPathSettingDisposition}; {updateRouteDisposition}");
         }
 
         private static void UpsertCompatibilityProfileValue(

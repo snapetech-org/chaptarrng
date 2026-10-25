@@ -401,6 +401,24 @@ namespace NzbDrone.Common.Extensions
                 throw new InvalidOperationException("Multiple legacy database files were found. Choose one before starting Chaptarr.");
             }
 
+            var primaryHasRecoveryData = HasNonEmptyDurableSqliteSidecar(primaryPath);
+            if (primaryHasRecoveryData && !File.Exists(primaryPath))
+            {
+                throw new InvalidOperationException(
+                    "The Chaptarr database file is missing but its WAL or rollback journal contains data. Preserve the database and sidecars and resolve recovery before starting Chaptarr.");
+            }
+
+            if (primaryHasRecoveryData && legacyDatabasePaths.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "A Chaptarr database sidecar and a BookshelfNG database both contain data. Preserve all database files and resolve the source before starting Chaptarr.");
+            }
+
+            if (primaryHasRecoveryData)
+            {
+                return primaryPath;
+            }
+
             if (legacyDatabasePaths.Count == 1)
             {
                 return legacyDatabasePaths[0];
@@ -415,13 +433,66 @@ namespace NzbDrone.Common.Extensions
             foreach (var legacyName in new[] { "readarr.db", "audioarr.db" })
             {
                 var legacyPath = Path.Combine(appDataPath, legacyName);
-                if (File.Exists(legacyPath) && new FileInfo(legacyPath).Length > 0)
+                EnsureLegacyDatabasePathsAreRegular(legacyPath, legacyName);
+
+                var databaseExists = File.Exists(legacyPath);
+                var hasDurableSidecar = HasNonEmptyDurableSqliteSidecar(legacyPath);
+                if (hasDurableSidecar && !databaseExists)
+                {
+                    throw new InvalidOperationException(
+                        $"The BookshelfNG database file '{legacyName}' is missing but its WAL or rollback journal contains data. Preserve the database and sidecars and resolve recovery before starting Chaptarr.");
+                }
+
+                if ((databaseExists && new FileInfo(legacyPath).Length > 0) || hasDurableSidecar)
                 {
                     paths.Add(legacyPath);
                 }
             }
 
             return paths;
+        }
+
+        private static void EnsureLegacyDatabasePathsAreRegular(string databasePath, string databaseName)
+        {
+            EnsureRegularFileSystemPath(databasePath, $"BookshelfNG database '{databaseName}'");
+            foreach (var suffix in new[] { "-journal", "-wal", "-shm" })
+            {
+                EnsureRegularFileSystemPath(databasePath + suffix, $"BookshelfNG SQLite sidecar '{databaseName + suffix}'");
+            }
+        }
+
+        private static void EnsureRegularFileSystemPath(string path, string description)
+        {
+            var file = new FileInfo(path);
+            var directory = new DirectoryInfo(path);
+            if (file.LinkTarget is not null || directory.LinkTarget is not null)
+            {
+                throw new InvalidOperationException($"The {description} is a symbolic link. Resolve it to a regular file before starting Chaptarr.");
+            }
+
+            if (Directory.Exists(path))
+            {
+                throw new InvalidOperationException($"The {description} is a directory, not a regular file.");
+            }
+
+            if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+            {
+                throw new InvalidOperationException($"The {description} is a reparse point. Resolve it to a regular file before starting Chaptarr.");
+            }
+        }
+
+        private static bool HasNonEmptyDurableSqliteSidecar(string databasePath)
+        {
+            foreach (var suffix in new[] { "-journal", "-wal" })
+            {
+                var sidecarPath = databasePath + suffix;
+                if (File.Exists(sidecarPath) && new FileInfo(sidecarPath).Length > 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
         public static string GetDatabaseRestore(this IAppFolderInfo appFolderInfo)
         {

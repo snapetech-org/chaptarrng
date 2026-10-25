@@ -1,8 +1,16 @@
 services:
   app:
     image: ${CHAPTARRNG_COMPAT_IMAGE:-ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover}
+    stop_grace_period: 8h30m
     environment:
-      CHAPTARR__SERVER__PORT: "8787"
+      CHAPTARR_BOOKSHELF_COMPATIBILITY: "true"
+      CHAPTARR_DEFAULT_PORT: ${BOOKSHELFNG_PORT:-8787}
+      CHAPTARR_EXPECTED_PORT: ${BOOKSHELFNG_PORT:-8787}
+      BOOKSHELFNG_MIGRATION_MODE: ${BOOKSHELFNG_MIGRATION_MODE:-automatic}
+      # The BookshelfNG Co-op Cloud recipe used the native Hardcover image.
+      # Set false only when migrating a prior softcover image.
+      HARDCOVER: ${HARDCOVER:-true}
+      HARDCOVER_NATIVE: ${HARDCOVER_NATIVE:-true}
     volumes:
       - bookshelfng_config:/config
       - bookshelfng_books:/books
@@ -15,7 +23,7 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=proxy"
-        - "traefik.http.services.${STACK_NAME}.loadbalancer.server.port=8787"
+        - "traefik.http.services.${STACK_NAME}.loadbalancer.server.port=${BOOKSHELFNG_PORT:-8787}"
         - "traefik.http.routers.${STACK_NAME}.rule=Host(`${DOMAIN}`${EXTRA_DOMAINS})"
         - "traefik.http.routers.${STACK_NAME}.entrypoints=web-secure"
         - "traefik.http.routers.${STACK_NAME}.tls.certresolver=${LETS_ENCRYPT_ENV}"

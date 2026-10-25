@@ -5,14 +5,17 @@
 if [ "${CHAPTARR_BOOKSHELF_COMPATIBILITY:-}" = "true" ]; then
     export CHAPTARR_DEFAULT_PORT="${CHAPTARR_DEFAULT_PORT:-8787}"
 
-    if [ -z "${Chaptarr__Server__Port:-${CHAPTARR__SERVER__PORT:-${Readarr__Server__Port:-${READARR__SERVER__PORT:-${Audioarr__Server__Port:-${AUDIOARR__SERVER__PORT:-}}}}}}" ]; then
+    configured_port="${Chaptarr__Server__Port:-${CHAPTARR__SERVER__PORT:-${Readarr__Server__Port:-${READARR__SERVER__PORT:-${Audioarr__Server__Port:-${AUDIOARR__SERVER__PORT:-}}}}}}"
+    if [ -z "$configured_port" ]; then configured_port="${Bookshelf__Server__Port:-${BOOKSHELF__SERVER__PORT:-${BOOKSHELF_PORT:-}}}"; fi
+
+    if [ -z "$configured_port" ]; then
         saved_port=""
         if [ -r "${DATA_DIR}/config.xml" ]; then
             saved_port="$(sed -n 's/.*<Port>\([0-9][0-9]*\)<\/Port>.*/\1/p' "${DATA_DIR}/config.xml" | head -n 1)"
         fi
 
         if [ -z "$saved_port" ]; then
-            export Chaptarr__Server__Port=8787
+            export Chaptarr__Server__Port="$CHAPTARR_DEFAULT_PORT"
         fi
     fi
 fi

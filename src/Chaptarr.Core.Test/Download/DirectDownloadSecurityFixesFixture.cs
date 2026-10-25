@@ -51,7 +51,7 @@ namespace Chaptarr.Core.Test.Download
                     Guid = "../../etc/passwd",
                     Title = "Evil Book",
                     DownloadProtocol = DownloadProtocol.Direct,
-                    DownloadUrl = "https://downloads.example/evil.epub",
+                    DownloadUrl = "https://203.0.113.17/evil.epub",
                     Container = "epub",
                     Size = 100
                 }
@@ -77,7 +77,7 @@ namespace Chaptarr.Core.Test.Download
                     Guid = "..",
                     Title = "Evil Book",
                     DownloadProtocol = DownloadProtocol.Direct,
-                    DownloadUrl = "https://downloads.example/evil.epub",
+                    DownloadUrl = "https://203.0.113.17/evil.epub",
                     Container = "epub",
                     Size = 100
                 }
@@ -102,7 +102,7 @@ namespace Chaptarr.Core.Test.Download
                     Guid = "..\\..\\windows\\system32",
                     Title = "Evil Book",
                     DownloadProtocol = DownloadProtocol.Direct,
-                    DownloadUrl = "https://downloads.example/evil.epub",
+                    DownloadUrl = "https://203.0.113.17/evil.epub",
                     Container = "epub",
                     Size = 100
                 }
@@ -180,7 +180,7 @@ namespace Chaptarr.Core.Test.Download
         [Test]
         public void redact_preserves_url_structure_when_key_is_present()
         {
-            var url = "https://catalog.example/dyn/api/fast_download.json?md5=abc123&key=SUPER-SECRET&path_index=0";
+            var url = "https://203.0.113.12/dyn/api/fast_download.json?md5=abc123&key=SUPER-SECRET&path_index=0";
             var redacted = DirectDownloadGrabUrlResolver.RedactApiKeyFromUrl(url);
 
             Assert.That(redacted, Does.Contain("md5=abc123"));
@@ -199,14 +199,14 @@ namespace Chaptarr.Core.Test.Download
                 request =>
                 {
                     throw new System.Net.WebException(
-                        $"Connection to https://catalog.example/dyn/api/fast_download.json?key=SECRET-KEY-LEAK-TEST failed",
+                        $"Connection to https://203.0.113.12/dyn/api/fast_download.json?key=SECRET-KEY-LEAK-TEST failed",
                         System.Net.WebExceptionStatus.ConnectFailure);
                 });
 
             var resolver = new DirectDownloadGrabUrlResolver(scenario.Transport.CreateClient());
 
             var result = resolver.TryResolveCatalogGrabAsync_ThroughPublicApi(
-                "https://catalog.example/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "https://203.0.113.12/md5/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "SECRET-KEY-LEAK-TEST").GetAwaiter().GetResult();
 
             Assert.That(result.Outcome, Is.EqualTo(GrabResolutionOutcome.Unavailable));

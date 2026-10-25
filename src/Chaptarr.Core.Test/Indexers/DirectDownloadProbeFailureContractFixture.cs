@@ -16,17 +16,17 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             transport.AddRoute(
-                url => url.StartsWith("https://primary.example/search", StringComparison.Ordinal),
+                url => url.StartsWith("https://203.0.113.30/search", StringComparison.Ordinal),
                 request => throw new WebException("primary timeout for key real-secret", WebExceptionStatus.Timeout));
             transport.AddRoute(
-                url => url.StartsWith("https://secondary.example/index.php", StringComparison.Ordinal),
+                url => url.StartsWith("https://203.0.113.33/index.php", StringComparison.Ordinal),
                 request => throw new WebException("secondary timeout for key real-secret", WebExceptionStatus.Timeout));
 
             var subject = new DirectDownloadSourceProbeService(transport.CreateClient(), LogManager.GetCurrentClassLogger());
 
             var exception = Assert.ThrowsAsync<DirectDownloadProbeException>(async () => await subject.ProbeAsync(new DirectDownloadProbeRequest
             {
-                SourceUrls = new[] { "https://primary.example", "https://secondary.example" },
+                SourceUrls = new[] { "https://203.0.113.30", "https://203.0.113.33" },
                 ApiKey = "real-secret",
                 Author = "Frank Herbert",
                 Title = "Dune",
@@ -35,8 +35,8 @@ namespace Chaptarr.Core.Test.Indexers
                 MaxResponseBytes = 4096
             }));
 
-            Assert.That(transport.RequestedUrls.First(), Does.StartWith("https://primary.example/search"));
-            Assert.That(transport.RequestedUrls.Any(url => url.StartsWith("https://secondary.example/index.php", StringComparison.Ordinal)), Is.True);
+            Assert.That(transport.RequestedUrls.First(), Does.StartWith("https://203.0.113.30/search"));
+            Assert.That(transport.RequestedUrls.Any(url => url.StartsWith("https://203.0.113.33/index.php", StringComparison.Ordinal)), Is.True);
             Assert.That(exception.Message, Does.Not.Contain("real-secret"));
         }
     }

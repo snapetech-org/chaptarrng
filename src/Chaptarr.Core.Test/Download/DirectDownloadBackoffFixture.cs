@@ -23,7 +23,7 @@ namespace Chaptarr.Core.Test.Download
             var attemptTimestamps = new System.Collections.Concurrent.ConcurrentBag<DateTime>();
             var attempts = 0;
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/dune.epub",
+                url => url == "https://203.0.113.17/dune.epub",
                 request =>
                 {
                     attemptTimestamps.Add(DateTime.UtcNow);
@@ -37,7 +37,7 @@ namespace Chaptarr.Core.Test.Download
                 });
 
             var client = scenario.BuildClient();
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Completed, timeoutSeconds: 15);
 
@@ -52,7 +52,7 @@ namespace Chaptarr.Core.Test.Download
             using var scenario = new BackoffScenario();
             var attempts = 0;
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/dune.epub",
+                url => url == "https://203.0.113.17/dune.epub",
                 request =>
                 {
                     attempts++;
@@ -63,7 +63,7 @@ namespace Chaptarr.Core.Test.Download
                 });
 
             var client = scenario.BuildClient();
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Failed, timeoutSeconds: 30);
 
@@ -80,7 +80,7 @@ namespace Chaptarr.Core.Test.Download
             using var scenario = new BackoffScenario();
             var attempts = 0;
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/dune.epub",
+                url => url == "https://203.0.113.17/dune.epub",
                 request =>
                 {
                     attempts++;
@@ -96,7 +96,7 @@ namespace Chaptarr.Core.Test.Download
                 });
 
             var client = scenario.BuildClient();
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Completed, timeoutSeconds: 30);
 
@@ -182,7 +182,7 @@ namespace Chaptarr.Core.Test.Download
         {
             using var scenario = new BackoffScenario();
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/dune.epub",
+                url => url == "https://203.0.113.17/dune.epub",
                 request =>
                 {
                     var headers = new HttpHeader();
@@ -192,7 +192,7 @@ namespace Chaptarr.Core.Test.Download
                 });
 
             var client = scenario.BuildClient();
-            var downloadId = client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null).GetAwaiter().GetResult();
+            var downloadId = client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null).GetAwaiter().GetResult();
 
             scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Failed, timeoutSeconds: 30).GetAwaiter().GetResult();
 
@@ -207,7 +207,7 @@ namespace Chaptarr.Core.Test.Download
             using var scenario = new BackoffScenario();
             var attempts = 0;
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/dune.epub",
+                url => url == "https://203.0.113.17/dune.epub",
                 request =>
                 {
                     attempts++;
@@ -218,7 +218,7 @@ namespace Chaptarr.Core.Test.Download
                 });
 
             var client = scenario.BuildClient();
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
 
             await Task.Delay(500);
 
@@ -240,11 +240,11 @@ namespace Chaptarr.Core.Test.Download
         {
             using var scenario = new BackoffScenario();
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/dune.epub",
+                url => url == "https://203.0.113.17/dune.epub",
                 request => throw new WebException("connection refused", WebExceptionStatus.ConnectFailure));
 
             var client = scenario.BuildClient();
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Failed, timeoutSeconds: 15);
 
@@ -259,11 +259,11 @@ namespace Chaptarr.Core.Test.Download
         {
             using var scenario = new BackoffScenario();
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/dune.epub",
+                url => url == "https://203.0.113.17/dune.epub",
                 request => throw new WebException("connection refused", WebExceptionStatus.ConnectFailure));
 
             var client = scenario.BuildClient();
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Failed, timeoutSeconds: 15);
 
@@ -276,10 +276,10 @@ namespace Chaptarr.Core.Test.Download
         public async Task should_mark_empty_file_as_permanent_failure()
         {
             using var scenario = new BackoffScenario();
-            scenario.RegisterBinary("https://downloads.example/empty.epub", "application/epub+zip", "");
+            scenario.RegisterBinary("https://203.0.113.17/empty.epub", "application/epub+zip", "");
 
             var client = scenario.BuildClient();
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/empty.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/empty.epub"), indexer: null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Failed, timeoutSeconds: 10);
 
@@ -292,11 +292,11 @@ namespace Chaptarr.Core.Test.Download
         public async Task should_preserve_durable_url_through_deferred_playwright_retries()
         {
             using var scenario = new BackoffScenario();
-            scenario.BrowserResolver.SlowDownloadUrl = "https://slow.example/backoff-test.epub";
+            scenario.BrowserResolver.SlowDownloadUrl = "https://203.0.113.34/backoff-test.epub";
 
             var attemptCount = 0;
             scenario.Transport.AddRoute(
-                url => url == "https://slow.example/backoff-test.epub",
+                url => url == "https://203.0.113.34/backoff-test.epub",
                 request =>
                 {
                     attemptCount++;
@@ -308,7 +308,7 @@ namespace Chaptarr.Core.Test.Download
                     return scenario.WriteBinaryResponse(request, "application/epub+zip", "backoff-success");
                 });
 
-            var catalogUrl = "https://catalog.example/md5/abc123def456abc123def456abc123de";
+            var catalogUrl = "https://203.0.113.12/md5/abc123def456abc123def456abc123de";
             var stateDir = Path.Combine(scenario.StagingFolder, $"client-42/DEFERRED-BACKOFF");
             Directory.CreateDirectory(stateDir);
             File.WriteAllText(
@@ -335,7 +335,7 @@ namespace Chaptarr.Core.Test.Download
             using var scenario = new BackoffScenario();
             scenario.BrowserResolver.ShouldFail = true;
 
-            var catalogUrl = "https://catalog.example/md5/abc123def456abc123def456abc123de";
+            var catalogUrl = "https://203.0.113.12/md5/abc123def456abc123def456abc123de";
             scenario.RegisterBinary(catalogUrl, "application/epub+zip", "stored-url-fallback-body");
 
             var stateDir = Path.Combine(scenario.StagingFolder, $"client-42/DEFERRED-FALLBACK");
@@ -368,7 +368,7 @@ namespace Chaptarr.Core.Test.Download
                     Book = "Dune",
                     DownloadProtocol = DownloadProtocol.Direct,
                     DownloadUrl = downloadUrl,
-                    InfoUrl = "https://info.example/dune",
+                    InfoUrl = "https://203.0.113.23/dune",
                     Container = "epub",
                     Size = 12
                 }

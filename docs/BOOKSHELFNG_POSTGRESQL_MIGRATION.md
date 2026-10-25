@@ -107,6 +107,12 @@ dotnet /app/Chaptarr.dll -migrate-bookshelf \
 dotnet /app/Chaptarr.dll -preview-bookshelf-restore \
   -bookshelf-backup=bookshelfng_backup_YYYYMMDDHHMMSS_ID -data=/config
 
+dotnet /app/Chaptarr.dll -preview-bookshelf-postgres-restore \
+  -confirm-bookshelf-service-stopped \
+  -bookshelf-postgres-log-cache-only \
+  -bookshelf-postgres-backup=/config/.chaptarrng-bookshelf-handoff/<attempt-id>/postgres-source \
+  -data=/config
+
 dotnet /app/Chaptarr.dll -restore-bookshelf \
   -confirm-bookshelf-service-stopped \
   -bookshelf-backup=bookshelfng_backup_YYYYMMDDHHMMSS_ID -data=/config
@@ -114,8 +120,36 @@ dotnet /app/Chaptarr.dll -restore-bookshelf \
 
 Apply and rollback require the explicit stopped-service confirmation. Save the
 backup schema name printed by apply. A PostgreSQL backup argument is a schema
-name, not a filesystem path. Review files for ambiguous media choices are
-stored beside `readarr.db` in the ChaptarrNG app data directory.
+name, not a filesystem path. The PostgreSQL restore preview validates the
+independent dump files and confirms the databases are idle before a rollback
+restores the primary BookshelfNG schema. Review files for ambiguous media
+choices are stored beside `readarr.db` in the ChaptarrNG app data directory.
+
+For a rollback after ChaptarrNG has been running, validate the retained full
+PostgreSQL dump set first. Back up the current ChaptarrNG log/cache databases
+before restoring the BookshelfNG main schema, then restore the source
+log/cache databases after the main schema rollback. Use separate empty paths
+under the handoff directory so both generations of data remain available:
+
+```sh
+mkdir -m 0700 /config/.chaptarrng-bookshelf-handoff/<attempt-id>/manual-target-postgres-log-cache
+dotnet /app/Chaptarr.dll -preview-bookshelf-postgres-restore \
+  -confirm-bookshelf-service-stopped \
+  -bookshelf-postgres-backup=/config/.chaptarrng-bookshelf-handoff/<attempt-id>/postgres-source \
+  -data=/config
+dotnet /app/Chaptarr.dll -preview-bookshelf-restore \
+  -bookshelf-backup=bookshelfng_backup_<schema> -data=/config
+dotnet /app/Chaptarr.dll -backup-bookshelf-postgres \
+  -confirm-bookshelf-service-stopped -bookshelf-postgres-log-cache-only \
+  -bookshelf-postgres-backup=/config/.chaptarrng-bookshelf-handoff/<attempt-id>/manual-target-postgres-log-cache \
+  -data=/config
+dotnet /app/Chaptarr.dll -restore-bookshelf \
+  -confirm-bookshelf-service-stopped -bookshelf-backup=bookshelfng_backup_<schema> -data=/config
+dotnet /app/Chaptarr.dll -restore-bookshelf-postgres \
+  -confirm-bookshelf-service-stopped -bookshelf-postgres-log-cache-only \
+  -bookshelf-postgres-backup=/config/.chaptarrng-bookshelf-handoff/<attempt-id>/postgres-source \
+  -data=/config
+```
 
 ## Acceptance still required
 

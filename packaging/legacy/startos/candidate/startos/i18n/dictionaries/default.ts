@@ -10,6 +10,12 @@ const dict = {
   // interfaces.ts
   'Web UI': 4,
   'The web interface of BookshelfNG': 5,
+
+  // actions/configureMigration.ts
+  'Configure BookshelfNG migration': 6,
+  'Choose whether the existing library is converted automatically on first startup.': 7,
+  'Automatically migrate BookshelfNG data on startup': 8,
+  'When disabled, ChaptarrNG waits for you to run the documented manual migration.': 9,
 } as const
 
 /**

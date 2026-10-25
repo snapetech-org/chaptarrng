@@ -9,7 +9,10 @@ public static class ServiceCleanupRunner
 {
     private const string ResourceName = "finalize-service-handoff.ps1";
 
-    public static bool ScheduleLegacyServiceCleanup(string dataDirectory, IUiReporter ui)
+    public static bool ScheduleLegacyServiceCleanup(
+        string dataDirectory,
+        bool chaptarrServiceWasRunning,
+        IUiReporter ui)
     {
         string? scriptPath = null;
         try
@@ -36,6 +39,8 @@ public static class ServiceCleanupRunner
             startInfo.ArgumentList.Add(processStartTicks.ToString());
             startInfo.ArgumentList.Add("-DataDirectory");
             startInfo.ArgumentList.Add(Path.GetFullPath(dataDirectory));
+            startInfo.ArgumentList.Add("-ChaptarrServiceWasRunning");
+            startInfo.ArgumentList.Add(chaptarrServiceWasRunning ? "1" : "0");
 
             using var cleanupProcess = Process.Start(startInfo);
             if (cleanupProcess is null)
@@ -43,7 +48,7 @@ public static class ServiceCleanupRunner
                 throw new InvalidOperationException("PowerShell did not start the deferred service cleanup process.");
             }
 
-            ui.Log("[installer] Readarr is disabled and will be removed after this installer closes, once ChaptarrNG is still healthy.");
+            ui.Log("[installer] Readarr is disabled and will be removed after this installer closes, once ChaptarrNG remains in its verified service state.");
             scriptPath = null;
             return true;
         }

@@ -10,7 +10,7 @@ export const manifest = setupManifest({
   marketingUrl: 'https://github.com/snapetech-org/chaptarrng',
   donationUrl: 'https://ko-fi.com/snapetech',
   description: { short, long },
-  volumes: ['main', 'books', 'downloads'],
+  volumes: ['main', 'books', 'downloads', 'startos'],
   images: {
     'bookshelfng': {
       source: { dockerTag: 'ghcr.io/snapetech-org/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' },

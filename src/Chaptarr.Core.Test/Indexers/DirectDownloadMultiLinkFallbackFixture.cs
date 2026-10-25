@@ -21,7 +21,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             var md5 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            var baseUrl = "https://catalog.example";
+            var baseUrl = "https://203.0.113.12";
 
             // Detail page with multiple slow_download links (8 partner servers, as AA serves)
             var detailHtml = $@"<html><body>
@@ -71,7 +71,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             var md5 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            var baseUrl = "https://catalog.example";
+            var baseUrl = "https://203.0.113.12";
 
             // Detail page with both fast and slow download links
             var detailHtml = $@"<html><body>
@@ -122,7 +122,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             var md5 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            var baseUrl = "https://catalog.example";
+            var baseUrl = "https://203.0.113.12";
 
             var detailHtml = $@"<html><body>
                 <a href=""/slow_download/{md5}/0/0"" class=""js-download-link"">Slow #1</a>
@@ -168,7 +168,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             var md5 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            var baseUrl = "https://catalog.example";
+            var baseUrl = "https://203.0.113.12";
 
             transport.AddRoute(
                 url => url.Contains("fast_download.json") && url.Contains("domain_index=0"),
@@ -184,14 +184,14 @@ namespace Chaptarr.Core.Test.Indexers
                 url => url.Contains("fast_download.json") && url.Contains("domain_index=2"),
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request, HttpStatusCode.OK,
-                    "{\"download_url\":\"https://cdn3.example/book.epub\"}", "application/json")));
+                    "{\"download_url\":\"https://203.0.113.16/book.epub\"}", "application/json")));
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
                 $"{baseUrl}/md5/{md5}", "test-key", "CatalogPage");
 
-            Assert.That(resolved, Is.EqualTo("https://cdn3.example/book.epub"),
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.16/book.epub"),
                 "Should try multiple domain indices and use the first that returns a valid URL");
 
             var apiCalls = transport.RequestedUrls.Where(u => u.Contains("fast_download.json")).ToList();
@@ -207,7 +207,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             var md5 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            var baseUrl = "https://catalog.example";
+            var baseUrl = "https://203.0.113.12";
 
             // All domain indices return 429 (quota exhausted per-account, not per-domain)
             transport.AddRoute(
@@ -242,20 +242,20 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             var md5 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            var baseUrl = "https://catalog.example";
+            var baseUrl = "https://203.0.113.12";
 
             transport.AddRoute(
                 url => url.Contains("fast_download.json") && url.Contains("domain_index=0"),
                 request => Task.FromResult(DirectDownloadSourceProbeFixtureSupport.BuildResponse(
                     request, HttpStatusCode.OK,
-                    "{\"download_url\":\"https://cdn1.example/book.epub\"}", "application/json")));
+                    "{\"download_url\":\"https://203.0.113.14/book.epub\"}", "application/json")));
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var resolved = await resolver.TryResolveAsync(
                 $"{baseUrl}/md5/{md5}", "test-key", "CatalogPage");
 
-            Assert.That(resolved, Is.EqualTo("https://cdn1.example/book.epub"));
+            Assert.That(resolved, Is.EqualTo("https://203.0.113.14/book.epub"));
             var apiCalls = transport.RequestedUrls.Where(u => u.Contains("fast_download.json")).ToList();
             Assert.That(apiCalls.Count, Is.EqualTo(1),
                 "Should stop after first successful domain_index");
@@ -276,7 +276,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "exhausted-key");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "exhausted-key");
 
             Assert.That(result.Outcome, Is.EqualTo(ApiKeyValidationOutcome.NoDownloadsRemaining));
             // Message should recommend waiting or using another source
@@ -297,7 +297,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
-            var result = await resolver.ValidateApiKeyAsync("https://catalog.example", "secret-key-12345");
+            var result = await resolver.ValidateApiKeyAsync("https://203.0.113.12", "secret-key-12345");
 
             // Should not leak the API key
             Assert.That(result.Message, Does.Not.Contain("secret-key-12345"));
@@ -312,7 +312,7 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             var md5 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            var baseUrl = "https://catalog.example";
+            var baseUrl = "https://203.0.113.12";
 
             // API returns 429 (quota exhausted)
             transport.AddRoute(

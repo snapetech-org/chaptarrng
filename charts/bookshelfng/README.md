@@ -11,7 +11,7 @@ readiness gates.
 
 The chart name stays `bookshelfng`. With the same Helm release name and
 namespace, it keeps the StatefulSet, Service, PVC, selector labels, service
-account behavior, `/config` mount, and port `8787`. The existing PVC remains
+account behavior, `/config` mount, and default port `8787`. The existing PVC remains
 named `<release>-config` under the default naming rules. Keep the existing
 release name, namespace, and values for an in-place cutover.
 
@@ -21,33 +21,150 @@ Rendering fails closed unless all of these are supplied:
 
 - `bookshelfMigration.confirmed=true`, set after migration and channel checks
   pass for the target deployment;
-- `bookshelfMigration.providerMode=hardcover` or `softcover`, matching the
-  source BookshelfNG provider mode; and
+- `bookshelfMigration.providerMode=hardcover` or `softcover` when the source
+  mode cannot be read from `extraEnv` or the retained `image.tag`; an omitted
+  mode follows the effective old runtime settings: a readable `HARDCOVER`
+  override, `HARDCOVER_NATIVE=false` (which selects Goodreads), then the old
+  image flavor (`hardcover` by default, or `softcover`); and
+- `bookshelfMigration.mode=automatic`, `ask`, `manual`, or `retry`; and
 - `image.digest=sha256:<64 lowercase hexadecimal characters>`, pointing to
-  a validated, provider-compatible ChaptarrNG image. A private image mirror
+  a validated ChaptarrNG multi-architecture image. A private image mirror
   also needs the explicit `image.allowCustomRepository=true` setting.
 
-There is no mutable image tag default. The chart also rejects more than one
-replica while the source SQLite database is migrated. Replica count zero is
-allowed for a deliberate service stop.
+The retained `image.tag` value is used only to identify the predecessor's
+provider flavor during the handoff. The ChaptarrNG image always comes from the
+validated `image.digest`. The chart also rejects more than one replica while
+the source SQLite database is migrated. Replica count zero is allowed for a
+deliberate service stop.
+
+The chart sets `CHAPTARR_BOOKSHELF_COMPATIBILITY=true`, the resolved
+`HARDCOVER` mode, and migration timing in the pod environment. A readable
+`HARDCOVER` value takes precedence over the old chart's retained `image.tag`;
+`HARDCOVER_NATIVE=false` forces Goodreads mode. Otherwise, the chart infers
+the predecessor flavor from the old image tag. The old chart defaults to
+`hardcover`; an old `softcover` tag stays on the Goodreads dialect. When a
+Secret makes the effective mode ambiguous (for example, `HARDCOVER=true` with
+`HARDCOVER_NATIVE` from a Secret), set `providerMode` explicitly. Migration
+timing defaults to `automatic`. The image entrypoint supervises first startup, verifies the local
+health endpoint and database lineage, and restores source data/configuration
+if the handoff fails. Its startup probe allows the migration handoff, and
+liveness keeps a deliberately deferred or failed pod available for operator
+recovery. Readiness requires a cleared handoff marker and the app's `/ping`
+endpoint using the preserved port and URL base. It also verifies that the
+saved app port matches the chart service port, so the pod does not receive
+traffic when the old service mapping would miss it. The supervisor uses an
+internal app-only health check while it confirms database migration. These
+values override duplicates in `extraEnv`; keep other existing entries there
+unchanged.
+
+Set `bookshelfMigration.mode=manual` to update the chart/image while leaving
+the BookshelfNG database untouched and the pod unready. Kubernetes has no
+interactive terminal for `ask`, so that mode also defers migration. After
+reviewing the source, run the Console from the held pod while BookshelfNG is
+stopped, then switch the value to `automatic` and restart the pod:
+
+```sh
+kubectl exec bookshelfng-0 -- dotnet /app/Chaptarr.dll \
+  -preview-bookshelf-migration -data=/config
+kubectl exec bookshelfng-0 -- dotnet /app/Chaptarr.dll \
+  -migrate-bookshelf -confirm-bookshelf-service-stopped -data=/config
+```
+
+The second command changes the database. Keep an independent backup and retain
+the source database backup created by ChaptarrNG.
+
+If a prior first-start attempt rolled back cleanly and left the pod waiting,
+set `bookshelfMigration.mode=retry` only after correcting the cause. The
+supervisor first verifies either a completed migration or a fresh successful
+preview of the restored source; an `intervention-required` state still needs
+manual recovery.
+
+## Roll back after a successful migration
+
+Do not run `helm rollback` directly against a converted database. Helm would
+restore the old image while leaving ChaptarrNG's database in place. The chart
+has an explicit restore Job for this case. For PostgreSQL it first validates
+the retained log/cache dumps and database availability, then previews and
+restores the newest retained BookshelfNG main database, keeps the current
+ChaptarrNG database and log/cache dumps separately, and restores the source
+log/cache dumps. The target PostgreSQL log/cache dumps remain under the
+attempt directory with the Helm revision in their name. The Job is
+fail-closed unless the app is scaled to zero, the operator confirms the action,
+and the database type is explicit.
+
+Before the original cutover, record the Helm revision that still ran
+BookshelfNG. For a rollback, first scale the ChaptarrNG StatefulSet to zero and
+wait for that pod to stop:
+
+```sh
+helm history "$RELEASE_NAME" --namespace "$NAMESPACE"
+helm upgrade "$RELEASE_NAME" "$CHAPTARRNG_CHART" \
+  --version "$CHAPTARRNG_VERSION" \
+  --namespace "$NAMESPACE" \
+  --reuse-values \
+  --set replicaCount=0 \
+  --wait --timeout 5h
+```
+
+Then run the restore Job. For a SQLite source:
+
+```sh
+helm upgrade "$RELEASE_NAME" "$CHAPTARRNG_CHART" \
+  --version "$CHAPTARRNG_VERSION" \
+  --namespace "$NAMESPACE" \
+  --reuse-values \
+  --set replicaCount=0 \
+  --set bookshelfMigration.rollback.enabled=true \
+  --set bookshelfMigration.rollback.confirmed=true \
+  --set bookshelfMigration.rollback.databaseType=sqlite \
+  --wait --wait-for-jobs --timeout 5h
+```
+
+For PostgreSQL, use `databaseType=postgresql` and set
+`bookshelfMigration.rollback.postgresBackupPath` to the verified
+`/config`-relative directory
+`.chaptarrng-bookshelf-handoff/<attempt-id>/postgres-source` containing the
+independent main/log/cache dumps. Keep the existing connection settings in
+`extraEnv` or their referenced Kubernetes Secrets. The Job validates the
+retained log/cache dumps and confirms the databases are idle before restoring
+the main BookshelfNG schema.
+
+Wait for the restore Job to complete successfully before rolling the release
+back to the BookshelfNG revision recorded before cutover:
+
+```sh
+helm rollback "$RELEASE_NAME" "$BOOKSHELFNG_REVISION" \
+  --namespace "$NAMESPACE" --wait --timeout 5h
+```
+
+If the Job fails, leave the StatefulSet stopped and inspect its logs and the
+retained backups before retrying. A successful restore keeps post-migration
+ChaptarrNG writes in a separate backup; the old BookshelfNG service will see
+the pre-cutover source state.
 
 Do not use this candidate against live BookshelfNG data. The published
 ChaptarrNG `v0.9.977` image has known migration limits and is not ready for
-this cutover. The chart does not run migration or validate rollback against
-the target data; complete those checks separately.
+this cutover. The startup supervisor is part of the image, but its behavior
+still needs installed-channel acceptance against the target data before this
+chart can be used for cutover.
 
 ## Future cutover shape
 
 After the release and channel gates close, use the versioned chart published to
 the existing `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` identity. Keep
 the existing release name and namespace.
-First record the release and its values, stop BookshelfNG, take an independent
+First record the release and its values, including the old `image.tag`, stop
+BookshelfNG, take an independent
 backup or storage snapshot, and complete the migration preview and
-rollback rehearsal on a copy. Confirm the source provider mode and obtain the
-matching immutable image digest from release evidence.
+rollback rehearsal on a copy. Preserve any old `HARDCOVER` or
+`HARDCOVER_NATIVE` setting in `extraEnv`; if it was stored outside the chart,
+set `bookshelfMigration.providerMode` to match the effective source mode. With
+no saved mode setting, the old image tag supplies its default (`hardcover`
+unless the installation used `softcover`). Obtain the matching
+immutable image digest from release evidence.
 
 The in-place upgrade will have this form; replace the placeholders with the
-existing release details and the validated provider-specific digest:
+existing release details and the validated image digest:
 
 ```sh
 helm upgrade bookshelfng oci://ghcr.io/snapetech/bookshelfng/bookshelfng \
@@ -57,13 +174,14 @@ helm upgrade bookshelfng oci://ghcr.io/snapetech/bookshelfng/bookshelfng \
   --set-string image.repository=ghcr.io/snapetech-org/chaptarrng \
   --set-string image.digest=sha256:<validated-64-character-digest> \
   --set bookshelfMigration.confirmed=true \
-  --set bookshelfMigration.providerMode=hardcover
+  --set bookshelfMigration.mode=automatic
 ```
 
-Use `softcover` only for a source configured for the Goodreads provider, and
-select the matching image digest. With `--reuse-values`, explicitly override
-both `image.repository` and `image.digest`; older chart values otherwise retain
-the legacy image repository. Review the rendered manifests before applying.
+Set `bookshelfMigration.providerMode` when a Secret or unrecognized image tag
+leaves the source mode ambiguous. The chart sets `HARDCOVER` from the resolved mode, so the
+image digest is the same across both modes. With `--reuse-values`, explicitly override both
+`image.repository` and `image.digest`; older chart values otherwise retain the
+legacy image repository. Review the rendered manifests before applying.
 
 This chart source lives in the ChaptarrNG repository. Its release workflow has
 a publisher for the existing OCI identity, gated by both
@@ -95,4 +213,5 @@ with the same legacy release values, and compares every rendered resource
 after normalizing only the app image and chart-version labels. It covers the
 default release and retained ingress, service-account, persistence, resource,
 node-selection, pod-label, and secret-backed environment settings. It also
-checks that missing operator confirmation, provider mode, or a valid image digest fails.
+checks that missing operator confirmation or a valid image digest fails, and
+that an unreadable Secret-backed provider mode requires an explicit choice.

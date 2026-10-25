@@ -77,6 +77,47 @@ if ! command -v runuser >/dev/null 2>&1; then
 fi
 
 if [ "$restore_database" = true ]; then
+  postgres_backup_dir=
+  if [ -f "$handoff_dir/postgres-backup-ready" ]; then
+    postgres_backup_dir=$(cat "$handoff_dir/postgres-backup-dir" 2>/dev/null || true)
+    case "$postgres_backup_dir" in
+      "$data_dir"/.chaptarrng-bookshelfng-postgres-backup.*) ;;
+      *) fail_safely "the retained PostgreSQL log/cache backup path is invalid." ;;
+    esac
+
+    if [ -s "$postgres_backup_dir/postgres-log.dump" ] || [ -s "$postgres_backup_dir/postgres-cache.dump" ]; then
+      if ! runuser --preserve-environment --user bookshelfng -- \
+        /usr/lib/chaptarrng/bin/Chaptarr /preview-bookshelf-postgres-restore \
+        -confirm-bookshelf-service-stopped \
+        -bookshelf-postgres-log-cache-only \
+        -bookshelf-postgres-backup="$postgres_backup_dir" \
+        -data="$data_dir"; then
+        fail_safely "the retained PostgreSQL log/cache backups could not be validated before rollback."
+      fi
+
+      chaptarr_postgres_backup_dir=$(mktemp -d "$data_dir/.chaptarrng-chaptarr-postgres-log-cache.XXXXXX")
+      chown bookshelfng:bookshelfng "$chaptarr_postgres_backup_dir"
+      chmod 0700 "$chaptarr_postgres_backup_dir"
+      if ! runuser --preserve-environment --user bookshelfng -- \
+        /usr/lib/chaptarrng/bin/Chaptarr /backup-bookshelf-postgres \
+        -confirm-bookshelf-service-stopped \
+        -bookshelf-postgres-log-cache-only \
+        -bookshelf-postgres-backup="$chaptarr_postgres_backup_dir" \
+        -data="$data_dir"; then
+        fail_safely "the current ChaptarrNG PostgreSQL log/cache state could not be preserved before rollback."
+      fi
+
+      if find "$chaptarr_postgres_backup_dir" -type f \
+        \( -name 'postgres-log.dump' -o -name 'postgres-cache.dump' \) -print -quit | grep -q .; then
+        printf '%s\n' "$chaptarr_postgres_backup_dir" > "$handoff_dir/chaptarr-postgres-log-cache-backup-dir"
+        chmod 0600 "$handoff_dir/chaptarr-postgres-log-cache-backup-dir"
+      else
+        rmdir "$chaptarr_postgres_backup_dir"
+        chaptarr_postgres_backup_dir=
+      fi
+    fi
+  fi
+
   if ! runuser --preserve-environment --user bookshelfng -- \
     /usr/lib/chaptarrng/bin/Chaptarr /restore-bookshelf \
     -bookshelf-backup=auto \
@@ -86,38 +127,15 @@ if [ "$restore_database" = true ]; then
   fi
 
   if [ -f "$handoff_dir/postgres-backup-ready" ]; then
-    postgres_backup_dir=$(cat "$handoff_dir/postgres-backup-dir" 2>/dev/null || true)
-    case "$postgres_backup_dir" in
-      "$data_dir"/.chaptarrng-bookshelfng-postgres-backup.*) ;;
-      *) fail_safely "the retained PostgreSQL log/cache backup path is invalid." ;;
-    esac
-
-    chaptarr_postgres_backup_dir=$(mktemp -d "$data_dir/.chaptarrng-chaptarr-postgres-log-cache.XXXXXX")
-    chown bookshelfng:bookshelfng "$chaptarr_postgres_backup_dir"
-    chmod 0700 "$chaptarr_postgres_backup_dir"
-    if ! runuser --preserve-environment --user bookshelfng -- \
-      /usr/lib/chaptarrng/bin/Chaptarr /backup-bookshelf-postgres \
-      -confirm-bookshelf-service-stopped \
-      -bookshelf-postgres-log-cache-only \
-      -bookshelf-postgres-backup="$chaptarr_postgres_backup_dir" \
-      -data="$data_dir"; then
-      fail_safely "the current ChaptarrNG PostgreSQL log/cache state could not be preserved before rollback."
-    fi
-
-    if find "$chaptarr_postgres_backup_dir" -type f -name 'postgres-*.dump' -print -quit | grep -q .; then
-      printf '%s\n' "$chaptarr_postgres_backup_dir" > "$handoff_dir/chaptarr-postgres-log-cache-backup-dir"
-      chmod 0600 "$handoff_dir/chaptarr-postgres-log-cache-backup-dir"
-    else
-      rmdir "$chaptarr_postgres_backup_dir"
-    fi
-
-    if ! runuser --preserve-environment --user bookshelfng -- \
-      /usr/lib/chaptarrng/bin/Chaptarr /restore-bookshelf-postgres \
-      -confirm-bookshelf-service-stopped \
-      -bookshelf-postgres-log-cache-only \
-      -bookshelf-postgres-backup="$postgres_backup_dir" \
-      -data="$data_dir"; then
-      fail_safely "the retained PostgreSQL log/cache databases could not be restored."
+    if [ -s "$postgres_backup_dir/postgres-log.dump" ] || [ -s "$postgres_backup_dir/postgres-cache.dump" ]; then
+      if ! runuser --preserve-environment --user bookshelfng -- \
+        /usr/lib/chaptarrng/bin/Chaptarr /restore-bookshelf-postgres \
+        -confirm-bookshelf-service-stopped \
+        -bookshelf-postgres-log-cache-only \
+        -bookshelf-postgres-backup="$postgres_backup_dir" \
+        -data="$data_dir"; then
+        fail_safely "the retained PostgreSQL log/cache databases could not be restored."
+      fi
     fi
   fi
 fi

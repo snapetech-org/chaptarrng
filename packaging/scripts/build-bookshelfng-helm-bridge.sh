@@ -57,20 +57,23 @@ cat > "$chart_dir/README.md" <<'EOF'
 # BookshelfNG Helm migration bridge
 
 This version retains the BookshelfNG OCI chart name and Kubernetes resource
-identities while pinning the standard ChaptarrNG @VERSION@ image at
+identities while pinning the ChaptarrNG @VERSION@ image at
 @IMAGE_DIGEST@. The existing Helm release name, namespace, PVC, values, and
 service settings must be preserved.
 
 Before upgrading, stop BookshelfNG, take an independent backup or storage
-snapshot, and complete the migration and rollback rehearsal. Set
-`BOOKSHELF_PROVIDER_MODE` to `hardcover` or `softcover` to match the existing
-BookshelfNG database. The converter reads and preserves the provider settings
-stored in that database.
+snapshot, and complete the migration and rollback rehearsal. Keep the old
+`image.tag` and any existing `HARDCOVER` or `HARDCOVER_NATIVE` setting in the
+reused values. The old chart defaults to its native Hardcover image; a
+retained `softcover` tag, readable `HARDCOVER=false`, or
+`HARDCOVER_NATIVE=false` preserves Goodreads mode. If a Secret makes the
+effective mode ambiguous (for example, `HARDCOVER=true` with
+`HARDCOVER_NATIVE` from a Secret), set `bookshelfMigration.providerMode` to
+`hardcover` or `softcover` explicitly.
 
 ```sh
 export RELEASE_NAME=bookshelfng
 export NAMESPACE=your-existing-namespace
-export BOOKSHELF_PROVIDER_MODE=hardcover
 
 helm upgrade "$RELEASE_NAME" oci://ghcr.io/snapetech/bookshelfng/bookshelfng \
   --version @VERSION@ \
@@ -78,14 +81,18 @@ helm upgrade "$RELEASE_NAME" oci://ghcr.io/snapetech/bookshelfng/bookshelfng \
   --reuse-values \
   --set-string image.repository=ghcr.io/snapetech-org/chaptarrng \
   --set-string image.digest=@IMAGE_DIGEST@ \
-  --set bookshelfMigration.confirmed=true \
-  --set bookshelfMigration.providerMode="$BOOKSHELF_PROVIDER_MODE"
+  --set bookshelfMigration.confirmed=true
+# Add --set bookshelfMigration.providerMode=hardcover when the old source
+# used native Hardcover IDs and its mode is not saved in the existing values.
 ```
 
 The published chart is available only after both retirement-readiness gates
 are enabled, the migration bridge gate is enabled, and the bridge is explicitly
 requested. Keep one replica while SQLite is migrated. Review the rendered
 manifest and retain the source backup until the converted instance is accepted.
+The chart enables the image's BookshelfNG handoff supervisor and sets the
+resolved provider mode in the pod environment so failed first-start migration
+restores the original database and configuration.
 
 Pinned or offline chart archives require a manual update.
 EOF

@@ -21,10 +21,10 @@ namespace Chaptarr.Core.Test.Download
         public async Task should_download_to_local_staging_and_report_exact_completed_file_path()
         {
             using var scenario = new DirectDownloadClientScenario();
-            scenario.RegisterBinary("https://downloads.example/dune.epub", "application/epub+zip", "ebook-body");
+            scenario.RegisterBinary("https://203.0.113.17/dune.epub", "application/epub+zip", "ebook-body");
             var client = scenario.BuildClient();
 
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Completed);
 
@@ -41,8 +41,8 @@ namespace Chaptarr.Core.Test.Download
         public async Task should_follow_public_redirects_and_discard_redirect_response_body()
         {
             using var scenario = new DirectDownloadClientScenario();
-            const string sourceUrl = "https://downloads.example/redirect";
-            const string finalUrl = "https://cdn.example/dune.epub";
+            const string sourceUrl = "https://203.0.113.17/redirect";
+            const string finalUrl = "https://203.0.113.13/dune.epub";
             scenario.Transport.AddRoute(
                 url => url == sourceUrl,
                 request => scenario.WriteRedirectResponse(request, finalUrl, "redirect-body"));
@@ -62,7 +62,7 @@ namespace Chaptarr.Core.Test.Download
         public async Task should_block_redirects_to_private_addresses_without_staging_redirect_body()
         {
             using var scenario = new DirectDownloadClientScenario();
-            const string sourceUrl = "https://downloads.example/private-redirect";
+            const string sourceUrl = "https://203.0.113.17/private-redirect";
             scenario.Transport.AddRoute(
                 url => url == sourceUrl,
                 request => scenario.WriteRedirectResponse(request, "http://127.0.0.1/private", "redirect-body"));
@@ -83,7 +83,7 @@ namespace Chaptarr.Core.Test.Download
             using var scenario = new DirectDownloadClientScenario();
             var attempts = 0;
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/dune.epub",
+                url => url == "https://203.0.113.17/dune.epub",
                 request =>
                 {
                     attempts++;
@@ -96,7 +96,7 @@ namespace Chaptarr.Core.Test.Download
                 });
 
             var client = scenario.BuildClient();
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Completed);
 
@@ -115,7 +115,7 @@ namespace Chaptarr.Core.Test.Download
             Directory.CreateDirectory(downloadFolder);
             File.WriteAllText(Path.Combine(downloadFolder, "Frank Herbert - Dune [epub].epub.part"), "partial");
             File.WriteAllText(Path.Combine(downloadFolder, "direct-download-state.json"), scenario.SerializeState(downloadId, DownloadItemStatus.Downloading));
-            scenario.RegisterBinary("https://downloads.example/dune.epub", "application/epub+zip", "fresh-body");
+            scenario.RegisterBinary("https://203.0.113.17/dune.epub", "application/epub+zip", "fresh-body");
 
             var client = scenario.BuildClient();
 
@@ -133,7 +133,7 @@ namespace Chaptarr.Core.Test.Download
             var attempts = 0;
             var recoveryEnabled = false;
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/dune.epub",
+                url => url == "https://203.0.113.17/dune.epub",
                 async request =>
                 {
                     attempts++;
@@ -148,7 +148,7 @@ namespace Chaptarr.Core.Test.Download
                 });
 
             var client = scenario.BuildClient();
-            var downloadId = await client.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var downloadId = await client.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Failed);
 
@@ -162,7 +162,7 @@ namespace Chaptarr.Core.Test.Download
             recoveryEnabled = true;
 
             var secondClient = scenario.BuildClient();
-            var redownloadId = await secondClient.Download(BuildRemoteBook("https://downloads.example/dune.epub"), indexer: null);
+            var redownloadId = await secondClient.Download(BuildRemoteBook("https://203.0.113.17/dune.epub"), indexer: null);
             Assert.That(redownloadId, Is.EqualTo(downloadId));
 
             await scenario.WaitForStatus(secondClient, redownloadId, DownloadItemStatus.Completed);
@@ -178,7 +178,7 @@ namespace Chaptarr.Core.Test.Download
         {
             using var scenario = new DirectDownloadClientScenario();
             var downloadId = "RESOLVED-URL-RESTART";
-            var resolvedUrl = "https://cdn.example/resolved-epub-token-abc123.epub";
+            var resolvedUrl = "https://203.0.113.13/resolved-epub-token-abc123.epub";
             var downloadFolder = Path.Combine(scenario.StagingFolder, $"client-42/{downloadId}");
             Directory.CreateDirectory(downloadFolder);
 
@@ -210,7 +210,7 @@ namespace Chaptarr.Core.Test.Download
             Directory.CreateDirectory(downloadFolder);
             File.WriteAllText(Path.Combine(downloadFolder, "Frank Herbert - Dune [epub].epub.part"), "stale-crupt-data-from-crash");
             File.WriteAllText(Path.Combine(downloadFolder, "direct-download-state.json"), scenario.SerializeState(downloadId, DownloadItemStatus.Downloading));
-            scenario.RegisterBinary("https://downloads.example/dune.epub", "application/epub+zip", "fresh-clean-body");
+            scenario.RegisterBinary("https://203.0.113.17/dune.epub", "application/epub+zip", "fresh-clean-body");
 
             var client = scenario.BuildClient();
 
@@ -228,9 +228,9 @@ namespace Chaptarr.Core.Test.Download
             using var scenario = new DirectDownloadClientScenario();
 
             scenario.Transport.AddRoute(
-                url => url == "https://downloads.example/failing.epub",
+                url => url == "https://203.0.113.17/failing.epub",
                 request => throw new WebException("connection refused", WebExceptionStatus.ConnectFailure));
-            scenario.RegisterBinary("https://downloads.example/succeeding.epub", "application/epub+zip", "succeeding-body");
+            scenario.RegisterBinary("https://203.0.113.17/succeeding.epub", "application/epub+zip", "succeeding-body");
 
             var client = scenario.BuildClient();
 
@@ -243,8 +243,8 @@ namespace Chaptarr.Core.Test.Download
                     Author = "Frank Herbert",
                     Book = "Dune",
                     DownloadProtocol = DownloadProtocol.Direct,
-                    DownloadUrl = "https://downloads.example/failing.epub",
-                    InfoUrl = "https://info.example/dune",
+                    DownloadUrl = "https://203.0.113.17/failing.epub",
+                    InfoUrl = "https://203.0.113.23/dune",
                     Container = "epub",
                     Size = 9
                 }
@@ -258,8 +258,8 @@ namespace Chaptarr.Core.Test.Download
                     Author = "Frank Herbert",
                     Book = "Dune",
                     DownloadProtocol = DownloadProtocol.Direct,
-                    DownloadUrl = "https://downloads.example/succeeding.epub",
-                    InfoUrl = "https://info.example/dune",
+                    DownloadUrl = "https://203.0.113.17/succeeding.epub",
+                    InfoUrl = "https://203.0.113.23/dune",
                     Container = "epub",
                     Size = 9
                 }
@@ -291,7 +291,7 @@ namespace Chaptarr.Core.Test.Download
                     Book = "Dune",
                     DownloadProtocol = DownloadProtocol.Direct,
                     DownloadUrl = downloadUrl,
-                    InfoUrl = "https://info.example/dune",
+                    InfoUrl = "https://203.0.113.23/dune",
                     Container = "epub",
                     Size = 9
                 }
@@ -394,7 +394,7 @@ namespace Chaptarr.Core.Test.Download
 
             public string SerializeState(string downloadId, DownloadItemStatus status)
             {
-                return $"{{\"downloadId\":\"{downloadId}\",\"title\":\"Frank Herbert - Dune [epub]\",\"downloadUrl\":\"https://downloads.example/dune.epub\",\"status\":{(int)status},\"outputFilePath\":\"{Path.Combine(StagingFolder, $"client-42/{downloadId}/Frank Herbert - Dune [epub].epub").Replace("\\", "\\\\")}\",\"partFilePath\":\"{Path.Combine(StagingFolder, $"client-42/{downloadId}/Frank Herbert - Dune [epub].epub.part").Replace("\\", "\\\\")}\",\"createdAtUtc\":\"{DateTime.UtcNow:O}\",\"updatedAtUtc\":\"{DateTime.UtcNow:O}\"}}";
+                return $"{{\"downloadId\":\"{downloadId}\",\"title\":\"Frank Herbert - Dune [epub]\",\"downloadUrl\":\"https://203.0.113.17/dune.epub\",\"status\":{(int)status},\"outputFilePath\":\"{Path.Combine(StagingFolder, $"client-42/{downloadId}/Frank Herbert - Dune [epub].epub").Replace("\\", "\\\\")}\",\"partFilePath\":\"{Path.Combine(StagingFolder, $"client-42/{downloadId}/Frank Herbert - Dune [epub].epub.part").Replace("\\", "\\\\")}\",\"createdAtUtc\":\"{DateTime.UtcNow:O}\",\"updatedAtUtc\":\"{DateTime.UtcNow:O}\"}}";
             }
 
             public void Dispose()

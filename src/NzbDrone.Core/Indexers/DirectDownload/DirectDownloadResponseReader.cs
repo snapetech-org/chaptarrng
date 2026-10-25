@@ -22,7 +22,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
             var currentUri = uri;
             for (var redirectCount = 0; redirectCount <= MaxRedirects; redirectCount++)
             {
-                DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(currentUri, currentUri.AbsoluteUri);
+                DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(currentUri, currentUri.AbsoluteUri, request.RequestTimeout);
 
                 using var buffer = new CappedMemoryStream(request.MaxResponseBytes);
                 var httpRequest = new HttpRequest(currentUri.AbsoluteUri)
@@ -45,7 +45,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
                         }
 
                         currentUri = new Uri(currentUri, location);
-                        DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(currentUri, currentUri.AbsoluteUri);
+                        DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(currentUri, currentUri.AbsoluteUri, request.RequestTimeout);
                         continue;
                     }
 

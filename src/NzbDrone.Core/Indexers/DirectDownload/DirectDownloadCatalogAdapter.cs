@@ -164,7 +164,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
                     throw new DirectDownloadProbeException($"Resolved download URL '{CleanseLogMessage.Cleanse(value)}' is invalid.");
                 }
 
-                return DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(resolvedUri, value).AbsoluteUri;
+                return DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(resolvedUri, value, request.RequestTimeout).AbsoluteUri;
             }
         }
 

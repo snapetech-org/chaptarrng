@@ -47,6 +47,17 @@ assert manifest["persistentDirs"] == ["/config", "/books", "/downloads"]
 PY
 
 grep -Fxq "FROM $image" "$stage/cloudron/Dockerfile"
+test -s "$stage/cloudron/nginx.conf"
+test -s "$stage/cloudron/cloudron-entrypoint.sh"
+test -s "$stage/cloudron/migration-unavailable.html"
+grep -Fq 'COPY nginx.conf /etc/nginx/nginx.conf' "$stage/cloudron/Dockerfile"
+grep -Fq 'COPY migration-unavailable.html /usr/share/nginx/html/bookshelfng-unavailable.html' "$stage/cloudron/Dockerfile"
+grep -Fq 'ENTRYPOINT ["/usr/local/bin/chaptarr-cloudron-entrypoint"]' "$stage/cloudron/Dockerfile"
+grep -Fq 'export CHAPTARR__SERVER__PORT=8788' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'export CHAPTARR__SERVER__BINDADDRESS=127.0.0.1' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'listen 8787;' "$stage/cloudron/nginx.conf"
+grep -Fq 'proxy_pass http://127.0.0.1:8788;' "$stage/cloudron/nginx.conf"
+grep -Fq 'return 200 "healthy\n";' "$stage/cloudron/nginx.conf"
 grep -Fq "This ChaptarrNG image digest is pinned to the release" "$stage/cloudron/Dockerfile"
 if grep -Fq "replace it with the exact published multi-architecture digest" "$stage/cloudron/Dockerfile"; then
   echo "Cloudron Dockerfile retained stale instructions to replace the compatibility tag." >&2
@@ -60,12 +71,16 @@ grep -Fq "${coop_version_prefix}0.9.978" "$stage/coop-cloud/bookshelfng/compose.
 grep -Fxq "CHAPTARRNG_COMPAT_IMAGE=$image" "$stage/coop-cloud/bookshelfng/.env.sample"
 grep -Fq "$compose_default" "$stage/catalogs/compose.yaml"
 grep -Fq "Release multi-architecture image: \`$image\`" "$stage/README.md"
+grep -Fq '`HARDCOVER=false` when migrating a prior softcover image.' "$stage/README.md"
+grep -Fq 'old `image.tag`' "$stage/README.md"
+grep -Fq 'explicit `bookshelfMigration.providerMode`' "$stage/README.md"
+grep -Fq '`BOOKSHELFNG_PORT` and `BOOKSHELFNG_HOST_PORT`' "$stage/README.md"
 
 startos_manifest="$stage/startos/startos/manifest/index.ts"
 startos_version="$stage/startos/startos/versions/current.ts"
 test -s "$stage/startos/package-lock.json"
 grep -Fq "id: 'bookshelfng'" "$startos_manifest"
-grep -Fq "volumes: ['main', 'books', 'downloads']" "$startos_manifest"
+grep -Fq "volumes: ['main', 'books', 'downloads', 'startos']" "$startos_manifest"
 grep -Fq "arch: ['x86_64', 'aarch64']" "$startos_manifest"
 grep -Fq "source: { dockerTag: '$image' }" "$startos_manifest"
 if grep -Fq '__BOOKSHELF_HARDCOVER_DIGEST__' "$startos_manifest"; then
@@ -76,12 +91,12 @@ if grep -Fq 'docker.io/snapetech/bookshelfng:' "$startos_manifest"; then
   echo "StartOS manifest retained the BookshelfNG runtime image." >&2
   exit 1
 fi
-grep -Fq "version: '0.4.21:2'" "$startos_version"
+grep -Fq "version: '0.9.978:1'" "$startos_version"
 grep -Fq "imageId: 'bookshelfng'" "$stage/startos/startos/main.ts"
 grep -Fq "mountpoint: '/config'" "$stage/startos/startos/main.ts"
 grep -Fq "mountpoint: '/books'" "$stage/startos/startos/main.ts"
 grep -Fq "mountpoint: '/downloads'" "$stage/startos/startos/main.ts"
-grep -Fq "exec: { command: ['/init'] }" "$stage/startos/startos/main.ts"
+grep -Fq "command: ['/init']" "$stage/startos/startos/main.ts"
 grep -Fq 'https://github.com/snapetech-org/chaptarrng' "$startos_manifest"
 grep -Fq 'export const uiPort = 8787' "$stage/startos/startos/utils.ts"
 npm --prefix "$stage/startos" ci --ignore-scripts --no-audit --no-fund

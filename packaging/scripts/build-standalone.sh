@@ -97,6 +97,11 @@ if [[ "$rid" == linux-* || "$rid" == osx-* ]]; then
     "$bundle/scripts/bookshelfng-to-chaptarrng.sh"
 fi
 
+if [[ "$rid" == linux-x64 || "$rid" == linux-arm64 ]]; then
+  install -m 0755 scripts/bookshelfng-systemd-bootstrap.py \
+    "$bundle/scripts/bookshelfng-systemd-bootstrap.py"
+fi
+
 asset="ChaptarrNG-${version}-${rid}"
 if [[ "$rid" == win-* ]]; then
   archive="$output/${asset}.zip"

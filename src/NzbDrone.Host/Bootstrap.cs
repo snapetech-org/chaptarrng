@@ -155,7 +155,9 @@ namespace NzbDrone.Host
             var config = GetConfiguration(context);
 
             var bindAddress = config.GetValue<string>($"Chaptarr:Server:{nameof(ServerOptions.BindAddress)}") ?? config.GetValue(nameof(ConfigFileProvider.BindAddress), "*");
-            var port = config.GetValue<int?>($"Chaptarr:Server:{nameof(ServerOptions.Port)}") ?? config.GetValue(nameof(ConfigFileProvider.Port), 8789);
+            var port = config.GetValue<int?>($"Chaptarr:Server:{nameof(ServerOptions.Port)}") ??
+                config.GetValue<int?>(nameof(ConfigFileProvider.Port)) ??
+                ServerConfigurationDefaults.Port;
             var sslPort = config.GetValue<int?>($"Chaptarr:Server:{nameof(ServerOptions.SslPort)}") ?? config.GetValue(nameof(ConfigFileProvider.SslPort), 6868);
             var enableSsl = config.GetValue<bool?>($"Chaptarr:Server:{nameof(ServerOptions.EnableSsl)}") ?? config.GetValue(nameof(ConfigFileProvider.EnableSsl), false);
             var sslCertPath = config.GetValue<string>($"Chaptarr:Server:{nameof(ServerOptions.SslCertPath)}") ?? config.GetValue<string>(nameof(ConfigFileProvider.SslCertPath));
@@ -263,10 +265,12 @@ namespace NzbDrone.Host
             var checkBookshelfMigration = startupContext.CheckBookshelfMigration;
             var restoreBookshelf = startupContext.RestoreBookshelf || startupContext.PreviewBookshelfRestore;
             var postgresBackupMode = startupContext.CheckBookshelfPostgresBackup ||
+                startupContext.PreviewBookshelfPostgresRestore ||
                 startupContext.BackupBookshelfPostgres ||
                 startupContext.RestoreBookshelfPostgres;
             var postgresUtilityCount =
                 (startupContext.CheckBookshelfPostgresBackup ? 1 : 0) +
+                (startupContext.PreviewBookshelfPostgresRestore ? 1 : 0) +
                 (startupContext.BackupBookshelfPostgres ? 1 : 0) +
                 (startupContext.RestoreBookshelfPostgres ? 1 : 0);
             if (postgresUtilityCount > 1 ||
@@ -284,6 +288,11 @@ namespace NzbDrone.Host
             if (startupContext.CheckBookshelfPostgresBackup)
             {
                 return ApplicationModes.CheckBookshelfPostgresBackup;
+            }
+
+            if (startupContext.PreviewBookshelfPostgresRestore)
+            {
+                return ApplicationModes.PreviewBookshelfPostgresRestore;
             }
 
             if (startupContext.BackupBookshelfPostgres)

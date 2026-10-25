@@ -8,6 +8,10 @@ export default {
     3: 'La interfaz web no está lista',
     4: 'Interfaz web',
     5: 'La interfaz web de BookshelfNG',
+    6: 'Configurar la migración de BookshelfNG',
+    7: 'Elige si la biblioteca existente se convierte automáticamente al iniciar por primera vez.',
+    8: 'Migrar automáticamente los datos de BookshelfNG al iniciar',
+    9: 'Si está desactivado, ChaptarrNG esperará a que ejecutes la migración manual documentada.',
   },
   de_DE: {
     0: 'Starte BookshelfNG!',
@@ -16,6 +20,10 @@ export default {
     3: 'Die Weboberfläche ist nicht bereit',
     4: 'Weboberfläche',
     5: 'Die Weboberfläche von BookshelfNG',
+    6: 'BookshelfNG-Migration konfigurieren',
+    7: 'Wähle, ob die vorhandene Bibliothek beim ersten Start automatisch konvertiert wird.',
+    8: 'BookshelfNG-Daten beim Start automatisch migrieren',
+    9: 'Wenn deaktiviert, wartet ChaptarrNG auf die dokumentierte manuelle Migration.',
   },
   pl_PL: {
     0: 'Uruchamianie BookshelfNG!',
@@ -24,6 +32,10 @@ export default {
     3: 'Interfejs webowy nie jest gotowy',
     4: 'Interfejs webowy',
     5: 'Interfejs webowy BookshelfNG',
+    6: 'Konfiguracja migracji BookshelfNG',
+    7: 'Wybierz, czy istniejąca biblioteka zostanie automatycznie przekonwertowana przy pierwszym uruchomieniu.',
+    8: 'Automatycznie migruj dane BookshelfNG przy uruchomieniu',
+    9: 'Po wyłączeniu ChaptarrNG będzie czekać na uruchomienie opisanej migracji ręcznej.',
   },
   fr_FR: {
     0: 'Démarrage de BookshelfNG !',
@@ -32,5 +44,9 @@ export default {
     3: "L'interface web n'est pas prête",
     4: 'Interface web',
     5: "L'interface web de BookshelfNG",
+    6: 'Configurer la migration BookshelfNG',
+    7: 'Choisissez si la bibliothèque existante est convertie automatiquement au premier démarrage.',
+    8: 'Migrer automatiquement les données BookshelfNG au démarrage',
+    9: 'Si cette option est désactivée, ChaptarrNG attendra la migration manuelle documentée.',
   },
 } satisfies Record<string, LangDict>

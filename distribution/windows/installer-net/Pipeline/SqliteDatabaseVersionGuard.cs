@@ -11,7 +11,7 @@ public sealed class SqliteDatabaseVersionGuard : IDisposable
 
     public SqliteDatabaseVersionGuard(string dataDirectory)
     {
-        var databasePath = Path.Combine(dataDirectory, "readarr.db");
+        var databasePath = Path.Combine(dataDirectory, BookshelfDatabaseFiles.ResolveExistingDatabaseName(dataDirectory));
         var connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = databasePath,

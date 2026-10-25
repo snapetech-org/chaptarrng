@@ -50,13 +50,42 @@ PY
 trap cleanup EXIT
 
 stage="$work/bookshelfng-container-platform-candidates"
-mkdir -p "$stage/cloudron" "$stage/coop-cloud/bookshelfng" "$stage/catalogs" "$stage/startos"
+mkdir -p "$stage/cloudron" "$stage/coop-cloud/bookshelfng" "$stage/catalogs" "$stage/startos" "$stage/unraid"
 cp "$repo_root/packaging/legacy/cloudron/Dockerfile" "$stage/cloudron/Dockerfile"
 cp "$repo_root/packaging/legacy/cloudron/CloudronManifest.json" "$stage/cloudron/CloudronManifest.json"
+cp "$repo_root/packaging/legacy/cloudron/nginx.conf" "$stage/cloudron/nginx.conf"
+cp "$repo_root/packaging/legacy/cloudron/migration-unavailable.html" "$stage/cloudron/migration-unavailable.html"
+cp "$repo_root/packaging/legacy/cloudron/cloudron-entrypoint.sh" "$stage/cloudron/cloudron-entrypoint.sh"
 cp "$repo_root/packaging/legacy/coop-cloud/bookshelfng/compose.yml" "$stage/coop-cloud/bookshelfng/compose.yml"
 cp "$repo_root/packaging/legacy/coop-cloud/bookshelfng/.env.sample" "$stage/coop-cloud/bookshelfng/.env.sample"
 cp "$repo_root/packaging/legacy/catalogs/compose.yaml" "$stage/catalogs/compose.yaml"
-cp -a "$repo_root/packaging/legacy/startos/candidate/." "$stage/startos/"
+python3 - "$repo_root/packaging/legacy/startos/candidate" "$stage/startos" <<'PY'
+from pathlib import Path
+import shutil
+import sys
+
+source = Path(sys.argv[1])
+destination = Path(sys.argv[2])
+ignored = {"node_modules", "javascript", ".git", ".startos"}
+for item in source.iterdir():
+    if item.name in ignored or (item.is_file() and item.suffix == ".s9pk"):
+        continue
+    target = destination / item.name
+    if item.is_dir():
+        shutil.copytree(item, target, symlinks=True)
+    else:
+        shutil.copy2(item, target, follow_symlinks=False)
+PY
+cp "$repo_root/packaging/legacy/unraid/bookshelfng.xml" "$stage/unraid/bookshelfng.xml"
+
+python3 - "$stage/startos/icon.png" <<'PY'
+from pathlib import Path
+import sys
+
+icon = Path(sys.argv[1])
+if not icon.is_file() or icon.stat().st_size > 40 * 1024:
+    raise SystemExit("StartOS candidate icon must be present and no larger than 40 KiB.")
+PY
 
 python3 - "$stage/cloudron/CloudronManifest.json" "$VERSION" <<'PY'
 import json
@@ -86,6 +115,14 @@ placeholder = "ghcr.io/snapetech-org/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIG
 if startos_text.count(placeholder) != 1:
     raise SystemExit("StartOS manifest did not contain exactly one image digest placeholder.")
 startos_manifest.write_text(startos_text.replace(placeholder, image), encoding="utf-8")
+
+startos_version_file = root / "startos" / "startos" / "versions" / "current.ts"
+startos_version_text = startos_version_file.read_text(encoding="utf-8")
+old_startos_version = "version: '__CHAPTARRNG_STARTOS_VERSION__'"
+new_startos_version = "version: '" + version + ":1'"
+if startos_version_text.count(old_startos_version) != 1:
+    raise SystemExit("StartOS candidate does not contain exactly one package-version placeholder.")
+startos_version_file.write_text(startos_version_text.replace(old_startos_version, new_startos_version), encoding="utf-8")
 
 legacy_tag = "ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover"
 dockerfile_old = (
@@ -122,26 +159,62 @@ new_version = "coop-cloud.${STACK_NAME}.version=chaptarrng-bookshelf-" + version
 if text.count(old_version) != 1:
     raise SystemExit("Co-op Cloud recipe did not contain exactly one candidate version label.")
 compose_path.write_text(text.replace(old_version, new_version), encoding="utf-8")
+
+unraid_path = root / "unraid" / "bookshelfng.xml"
+unraid_text = unraid_path.read_text(encoding="utf-8")
+unraid_image = "<Repository>" + legacy_tag + "</Repository>"
+if unraid_text.count(unraid_image) != 1:
+    raise SystemExit("Unraid candidate does not preserve the BookshelfNG compatibility image tag.")
+unraid_path.write_text(unraid_text.replace(unraid_image, "<Repository>" + image + "</Repository>"), encoding="utf-8")
 PY
 
-cat > "$stage/README.md" <<EOF
+cat > "$stage/README.md" <<'EOF'
 # BookshelfNG container-platform handoff candidates
 
-ChaptarrNG release: $VERSION
+ChaptarrNG release: @VERSION@
 
-Release multi-architecture image: \`$image\`
+Release multi-architecture image: `@IMAGE@`
 
-This bundle contains the Cloudron app source, the Co-op Cloud recipe, the
-self-hosting Compose candidate, and the StartOS package source. Each points to
-the exact image digest produced by the gated ChaptarrNG release workflow. The
-existing BookshelfNG app, stack, package, container, and volume identities
-remain in place.
+This bundle contains the Cloudron app source, Co-op Cloud recipe, self-hosting
+Compose candidate, Unraid template, and StartOS package source. Container
+platform candidates pin the exact image digest above. The StartOS package
+version is @VERSION@:1 so each ChaptarrNG release advances the existing package
+channel. The existing BookshelfNG app, stack, package, container, and volume
+identities remain in place.
+
+Compose, Co-op Cloud, Cloudron, and Unraid candidates preserve the native
+Hardcover mode used by their existing BookshelfNG image or template. Set
+`HARDCOVER=false` when migrating a prior softcover image. Helm infers the
+provider mode from the old `image.tag` or a readable `HARDCOVER` override; use
+an explicit `bookshelfMigration.providerMode` when the source setting is
+outside the chart values. Every image-backed candidate enables the first-start
+migration and rollback supervisor. StartOS explicitly keeps its existing
+Hardcover-mode source contract. The self-hosted Compose bundle
+accepts separate `BOOKSHELFNG_PORT` and `BOOKSHELFNG_HOST_PORT` values to
+retain a customized internal port and host binding. A container operator can
+set `BOOKSHELFNG_MIGRATION_MODE=retry` after a clean rollback and correction;
+an intervention-required state remains blocked for manual recovery.
 
 These files are handoff candidates for their platform maintainers. They do not
 update external catalogs or establish platform install, backup, or rollback
-acceptance. Keep the current channel installed until that platform's handoff
-has been accepted.
+acceptance. The Unraid XML preserves the existing BookshelfNG CA identity and
+points future template checks to the ChaptarrNG-owned candidate path. The
+external Unraid catalog still needs the template change accepted and delivered.
+Keep the current channel installed until that platform's handoff has been
+accepted.
 EOF
+
+python3 - "$stage/README.md" "$VERSION" "$image" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace("@VERSION@", sys.argv[2]).replace("@IMAGE@", sys.argv[3])
+if "@VERSION@" in text or "@IMAGE@" in text:
+    raise SystemExit("The container-platform candidate README contains an unresolved release placeholder.")
+path.write_text(text, encoding="utf-8")
+PY
 
 mkdir -p -- "$OUTPUT_DIR"
 asset="ChaptarrNG-${VERSION}-bookshelfng-container-platform-candidates.tar.gz"

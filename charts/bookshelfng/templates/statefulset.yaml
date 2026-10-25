@@ -1,9 +1,6 @@
 {{- if ne .Values.bookshelfMigration.confirmed true }}
 {{- fail "bookshelfMigration.confirmed must be true after migration and channel checks are complete" }}
 {{- end }}
-{{- if not (has .Values.bookshelfMigration.providerMode (list "hardcover" "softcover")) }}
-{{- fail "bookshelfMigration.providerMode must explicitly match the BookshelfNG source mode: hardcover or softcover" }}
-{{- end }}
 {{- if and (ne .Values.image.repository "ghcr.io/snapetech-org/chaptarrng") (ne .Values.image.allowCustomRepository true) }}
 {{- fail "image.repository must be the ChaptarrNG image; set image.allowCustomRepository=true only for a verified mirror" }}
 {{- end }}
@@ -38,6 +35,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      terminationGracePeriodSeconds: 30600
       serviceAccountName: {{ if .Values.serviceAccount.create }}{{ default (include "bookshelfng.fullname" .) .Values.serviceAccount.name }}{{ else }}{{ default "default" .Values.serviceAccount.name }}{{ end }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       {{- with .Values.podSecurityContext }}
@@ -50,30 +48,35 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8787
+              containerPort: {{ .Values.service.port }}
               protocol: TCP
           {{- with .Values.containerSecurityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.extraEnv }}
           env:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- include "bookshelfng.containerEnv" . | nindent 12 }}
           startupProbe:
-            tcpSocket:
-              port: http
-            failureThreshold: 60
+            exec:
+              command:
+                - /usr/local/bin/chaptarr-bookshelf-liveness
+            # Keep kubelet from restarting a slow first launch; the supervisor
+            # keeps liveness successful while it is migrating or recovering.
+            failureThreshold: 1470
             periodSeconds: 10
+            timeoutSeconds: 10
           readinessProbe:
-            tcpSocket:
-              port: http
+            exec:
+              command:
+                - /usr/local/bin/chaptarr-healthcheck
             periodSeconds: 10
           livenessProbe:
-            tcpSocket:
-              port: http
+            exec:
+              command:
+                - /usr/local/bin/chaptarr-bookshelf-liveness
             initialDelaySeconds: 60
             periodSeconds: 30
+            timeoutSeconds: 10
           volumeMounts:
             - name: config
               mountPath: /config

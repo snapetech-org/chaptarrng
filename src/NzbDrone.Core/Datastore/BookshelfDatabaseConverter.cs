@@ -41,6 +41,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             var sourcePath = Path.GetFullPath(sourceBuilder.DataSource);
+            EnsureSourceDatabasePaths(sourcePath);
             if (!File.Exists(sourcePath))
             {
                 throw new FileNotFoundException("The BookshelfNG database does not exist.", sourcePath);
@@ -73,12 +74,13 @@ namespace NzbDrone.Core.Datastore
                     BookshelfDatabaseImporter.ValidateSourceBackup(source);
                 }
 
-                reportProgress?.Invoke("preflighted", sourcePath);
                 if (!previewOnly)
                 {
                     var cleanedStages = CleanOrphanedStageFiles(directory, sourcePath);
                     reportOutcome?.Invoke("orphan-stages-cleaned", cleanedStages.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 }
+                EnsureConversionSpace(sourcePath);
+                reportProgress?.Invoke("preflighted", sourcePath);
                 CreateConsistentSnapshot(sourcePath, snapshotPath, sourceBuilder);
                 ValidateDatabase(snapshotPath, expectedLineage: DatabaseLineage.BookshelfNG, checkForeignKeys: true);
                 reportProgress?.Invoke("snapshotted", snapshotPath);
@@ -126,6 +128,8 @@ namespace NzbDrone.Core.Datastore
                 importReport.ThrowIfBlockingIssues();
 
                 // Retain a consistent SQLite backup before touching the source file or its WAL.
+                CheckpointDatabase(snapshotPath, sourceBuilder);
+                DeleteSidecars(snapshotPath);
                 File.Move(snapshotPath, backupPath);
                 backupRetained = true;
 
@@ -189,6 +193,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             var currentPath = Path.GetFullPath(currentBuilder.DataSource);
+            EnsureSourceDatabasePaths(currentPath);
             if (!File.Exists(currentPath))
             {
                 throw new FileNotFoundException("The current ChaptarrNG database does not exist.", currentPath);
@@ -204,6 +209,7 @@ namespace NzbDrone.Core.Datastore
                 sourceBackupPath = Path.GetFullPath(bookshelfBackupPath);
             }
 
+            EnsureSourceDatabasePaths(sourceBackupPath);
             if (!File.Exists(sourceBackupPath))
             {
                 throw new FileNotFoundException("The retained BookshelfNG database backup does not exist.", sourceBackupPath);
@@ -611,6 +617,104 @@ namespace NzbDrone.Core.Datastore
             {
                 File.Delete(databasePath);
             }
+        }
+
+        private static void EnsureSourceDatabasePaths(string sourcePath)
+        {
+            var sourceDirectoryPath = Path.GetDirectoryName(sourcePath);
+            if (string.IsNullOrWhiteSpace(sourceDirectoryPath))
+            {
+                throw new InvalidDataException("The BookshelfNG database directory could not be resolved safely.");
+            }
+
+            var sourceDirectory = new DirectoryInfo(sourceDirectoryPath);
+            if (sourceDirectory.LinkTarget is not null ||
+                (sourceDirectory.Exists && (sourceDirectory.Attributes & FileAttributes.ReparsePoint) != 0))
+            {
+                throw new InvalidDataException($"The BookshelfNG data directory is a symbolic link or reparse point ('{sourceDirectoryPath}'). Resolve it to a regular directory before migrating.");
+            }
+
+            EnsureRegularDatabasePath(sourcePath, "BookshelfNG database", required: true);
+            foreach (var suffix in new[] { "-journal", "-wal", "-shm" })
+            {
+                EnsureRegularDatabasePath(sourcePath + suffix, $"BookshelfNG SQLite sidecar '{suffix}'", required: false);
+            }
+        }
+
+        private static void EnsureRegularDatabasePath(string path, string description, bool required)
+        {
+            var file = new FileInfo(path);
+            var directory = new DirectoryInfo(path);
+            if (file.LinkTarget is not null || directory.LinkTarget is not null)
+            {
+                throw new InvalidDataException($"The {description} is a symbolic link ('{path}'). Resolve it to a regular file before migrating.");
+            }
+
+            var fileExists = File.Exists(path);
+            var directoryExists = Directory.Exists(path);
+            if (!fileExists && !directoryExists)
+            {
+                if (required)
+                {
+                    throw new FileNotFoundException($"The {description} does not exist.", path);
+                }
+
+                return;
+            }
+
+            var attributes = File.GetAttributes(path);
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                throw new InvalidDataException($"The {description} is a reparse point ('{path}'). Resolve it to a regular file before migrating.");
+            }
+
+            if (directoryExists || (attributes & FileAttributes.Directory) != 0)
+            {
+                throw new InvalidDataException($"The {description} is a directory, not a regular file ('{path}').");
+            }
+        }
+
+        private static void EnsureConversionSpace(string sourcePath)
+        {
+            long sourceBytes = 0;
+            foreach (var suffix in new[] { string.Empty, "-wal", "-journal" })
+            {
+                var path = sourcePath + suffix;
+                if (File.Exists(path))
+                {
+                    sourceBytes = checked(sourceBytes + new FileInfo(path).Length);
+                }
+            }
+
+            var requiredBytes = checked(sourceBytes * 4 + 64L * 1024 * 1024);
+            var fullPath = Path.GetFullPath(sourcePath);
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            var mount = DriveInfo.GetDrives()
+                .Where(drive => drive.IsReady && IsPathOnDrive(fullPath, drive.RootDirectory.FullName, comparison))
+                .MaxBy(drive => drive.RootDirectory.FullName.Length);
+            if (mount == null)
+            {
+                throw new IOException("The BookshelfNG database filesystem could not be identified for the conversion space preflight.");
+            }
+
+            var availableBytes = mount.AvailableFreeSpace;
+            if (availableBytes < requiredBytes)
+            {
+                throw new IOException(
+                    $"The BookshelfNG database and SQLite sidecars need approximately {requiredBytes / (1024 * 1024)} MiB of free space for staged conversion; only {availableBytes / (1024 * 1024)} MiB is available. No database was changed.");
+            }
+        }
+
+        private static bool IsPathOnDrive(string path, string driveRoot, StringComparison comparison)
+        {
+            var root = Path.GetFullPath(driveRoot);
+            if (string.Equals(path, root, comparison))
+            {
+                return true;
+            }
+
+            var prefix = Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar;
+            return path.StartsWith(prefix, comparison);
         }
 
         private static int CleanOrphanedStageFiles(string directory, string sourcePath)

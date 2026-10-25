@@ -30,10 +30,10 @@ For local MCP access, see the [SnapeTech MCP integration guide](docs/integration
 
 ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 is the current published release. It includes the migration and rollback
-tools for BookshelfNG SQLite, plus the embedded source migration chain. The
-BookshelfNG helper creates an appdata archive before it runs the tools.
-The source includes a Docker handoff helper; future Linux standalone archives
-will include it after a release is approved.
+tools for BookshelfNG SQLite, plus the embedded source migration chain. Current
+source adds a Docker appdata handoff helper and a guarded manual Linux
+systemd bootstrap. Newly approved Linux x64 and arm64 standalone archives will
+include both; the published `.977` archives do not contain these newer paths.
 ChaptarrNG `v0.9.974` through the published `.977` initializes new-author
 format paths from configured defaults. Current `main` adds the requested
 disabled-by-default switch for this behavior; it also preserves the saved
@@ -486,14 +486,14 @@ The merged retirement source also ports BookshelfNG's native Hardcover
 metadata client and maps a saved `HardcoverAuth` setting to
 `HardcoverApiToken`. It preserves the existing `HARDCOVER_AUTH` and
 `HARDCOVER_API_KEY` environment options and routes Hardcover work, author, and
-edition IDs through the native provider when `HARDCOVER=true`. During migration,
-bare numeric source IDs require an explicit `HARDCOVER=true` or `HARDCOVER=false`
-mode; an unset or invalid value now fails closed instead of guessing Goodreads.
-Keep `HARDCOVER=true` (and do not set `HARDCOVER_NATIVE=false`) in preview and
-migration when the BookshelfNG source used native Hardcover mode. This provider
-and migration handling are source-only and are not in `.977`; the published
-`.977` importer maps bare numeric IDs to Goodreads even if `HARDCOVER=true` is
-present. Exact-head run
+edition IDs through the native provider when the BookshelfNG runtime predicate
+is true: `HARDCOVER=true` and `HARDCOVER_NATIVE` is not `false`. An unset or
+non-true `HARDCOVER` value, or `HARDCOVER_NATIVE=false`, selects Goodreads.
+The importer persists that effective source dialect because bare numeric IDs
+do not identify their provider. Keep both source settings through preview and
+migration. This provider and migration handling are source-only and are not in
+`.977`; the published `.977` importer maps bare numeric IDs to Goodreads even
+if `HARDCOVER=true` is present. Exact-head run
 [39196795646](https://github.com/snapetech-org/chaptarrng/actions/runs/39196795646)
 passed on the earlier PR #131 code snapshot 2c0401fc. An earlier integrated code snapshot
 8b4c6e23 passed platform and PostgreSQL validation in run

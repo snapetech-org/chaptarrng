@@ -64,8 +64,19 @@ namespace NzbDrone.Core.Datastore
             foreach (var legacyName in new[] { "readarr.db", "audioarr.db" })
             {
                 var legacyPath = Path.Combine(directory, legacyName);
-                if (!File.Exists(legacyPath) || new FileInfo(legacyPath).Length == 0)
+                EnsureLegacyDatabasePathsAreRegular(legacyPath, legacyName);
+
+                var legacyDatabaseExists = File.Exists(legacyPath);
+                var hasDurableSidecar = HasNonEmptyDurableSidecar(legacyPath);
+                if (!legacyDatabaseExists || new FileInfo(legacyPath).Length == 0)
                 {
+                    if (hasDurableSidecar)
+                    {
+                        throw new InvalidDataException(
+                            $"A Chaptarr database and a legacy SQLite sidecar for {legacyName} both exist, but the legacy main file is missing or empty. " +
+                            "Startup was stopped so recoverable BookshelfNG data is not silently ignored. Preserve all database files and resolve the legacy database before restarting.");
+                    }
+
                     continue;
                 }
 
@@ -95,6 +106,49 @@ namespace NzbDrone.Core.Datastore
                         "Startup was stopped so the legacy database is not silently ignored. Keep both files unchanged and complete a verified conversion before restarting.");
                 }
             }
+        }
+
+        private static void EnsureLegacyDatabasePathsAreRegular(string databasePath, string databaseName)
+        {
+            EnsureRegularFileSystemPath(databasePath, $"BookshelfNG database '{databaseName}'");
+            foreach (var suffix in new[] { "-journal", "-wal", "-shm" })
+            {
+                EnsureRegularFileSystemPath(databasePath + suffix, $"BookshelfNG SQLite sidecar '{databaseName + suffix}'");
+            }
+        }
+
+        private static void EnsureRegularFileSystemPath(string path, string description)
+        {
+            var file = new FileInfo(path);
+            var directory = new DirectoryInfo(path);
+            if (file.LinkTarget is not null || directory.LinkTarget is not null)
+            {
+                throw new InvalidDataException($"The {description} is a symbolic link. Resolve it to a regular file before starting Chaptarr.");
+            }
+
+            if (Directory.Exists(path))
+            {
+                throw new InvalidDataException($"The {description} is a directory, not a regular file.");
+            }
+
+            if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+            {
+                throw new InvalidDataException($"The {description} is a reparse point. Resolve it to a regular file before starting Chaptarr.");
+            }
+        }
+
+        private static bool HasNonEmptyDurableSidecar(string databasePath)
+        {
+            foreach (var suffix in new[] { "-journal", "-wal" })
+            {
+                var path = databasePath + suffix;
+                if (File.Exists(path) && new FileInfo(path).Length > 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static DatabaseLineage Detect(string connectionString, DatabaseType databaseType)

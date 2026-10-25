@@ -146,6 +146,7 @@ Logo/*
 !src/NzbDrone.Core/Resources/**/*.svg
 !Logo/**/*.png
 !Logo/**/*.svg
+!packaging/legacy/startos/candidate/icon.png
 !Logo/**/*.ico
 
 # Generated docs

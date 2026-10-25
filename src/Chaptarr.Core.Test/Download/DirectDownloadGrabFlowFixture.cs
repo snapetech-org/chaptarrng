@@ -26,7 +26,7 @@ namespace Chaptarr.Core.Test.Download
     [TestFixture]
     public class DirectDownloadGrabFlowFixture
     {
-        private const string CatalogUrl = "https://catalog.example/md5/abc123def456abc123def456abc123de";
+        private const string CatalogUrl = "https://203.0.113.12/md5/abc123def456abc123def456abc123de";
 
         // ── Branch 1: API success → resolved URL stored, FallbackMode=None ──
 
@@ -34,16 +34,16 @@ namespace Chaptarr.Core.Test.Download
         public async Task api_success_stores_resolved_url_and_completes_download()
         {
             using var scenario = new GrabFlowScenario();
-            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://cdn.example/resolved-dune.epub");
-            scenario.RegisterBinary("https://cdn.example/resolved-dune.epub", "application/epub+zip", "api-resolved-body");
+            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://203.0.113.13/resolved-dune.epub");
+            scenario.RegisterBinary("https://203.0.113.13/resolved-dune.epub", "application/epub+zip", "api-resolved-body");
 
             var client = scenario.BuildClient();
             var downloadId = await client.Download(BuildCatalogRemoteBook(), scenario.CreateIndexer(apiKey: "test-key-123"));
 
             var state = scenario.LoadState(downloadId);
-            Assert.That(state.ResolvedUrl, Is.EqualTo("https://cdn.example/resolved-dune.epub"));
+            Assert.That(state.ResolvedUrl, Is.EqualTo("https://203.0.113.13/resolved-dune.epub"));
             Assert.That(state.FallbackMode, Is.EqualTo(DirectDownloadFallbackMode.None));
-            Assert.That(state.DownloadUrl, Is.EqualTo("https://cdn.example/resolved-dune.epub"));
+            Assert.That(state.DownloadUrl, Is.EqualTo("https://203.0.113.13/resolved-dune.epub"));
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Completed);
             Assert.That(File.ReadAllText(scenario.OutputPath(downloadId)), Is.EqualTo("api-resolved-body"));
@@ -56,8 +56,8 @@ namespace Chaptarr.Core.Test.Download
         {
             using var scenario = new GrabFlowScenario();
             scenario.IndexerSettings.EnableSlowFallback = true;
-            scenario.BrowserResolver.SlowDownloadUrl = "https://slow.example/dune-slow.epub";
-            scenario.RegisterBinary("https://slow.example/dune-slow.epub", "application/epub+zip", "browser-resolved-body");
+            scenario.BrowserResolver.SlowDownloadUrl = "https://203.0.113.34/dune-slow.epub";
+            scenario.RegisterBinary("https://203.0.113.34/dune-slow.epub", "application/epub+zip", "browser-resolved-body");
 
             var client = scenario.BuildClient();
             var downloadId = await client.Download(BuildCatalogRemoteBook(), scenario.CreateIndexer(apiKey: null));
@@ -95,7 +95,7 @@ namespace Chaptarr.Core.Test.Download
         public async Task not_applicable_passes_through_original_url_without_fallback()
         {
             using var scenario = new GrabFlowScenario();
-            scenario.RegisterBinary("https://downloads.example/dune.epub", "application/epub+zip", "passthrough-body");
+            scenario.RegisterBinary("https://203.0.113.17/dune.epub", "application/epub+zip", "passthrough-body");
 
             var client = scenario.BuildClient();
             var remoteBook = new RemoteBook
@@ -105,7 +105,7 @@ namespace Chaptarr.Core.Test.Download
                     Guid = "Direct-Grab-NotApplicable",
                     Title = "Frank Herbert - Dune [epub]",
                     DownloadProtocol = DownloadProtocol.Direct,
-                    DownloadUrl = "https://downloads.example/dune.epub",
+                    DownloadUrl = "https://203.0.113.17/dune.epub",
                     Source = "MirrorIndex",
                     Container = "epub",
                     Size = 15
@@ -115,7 +115,7 @@ namespace Chaptarr.Core.Test.Download
 
             var state = scenario.LoadState(downloadId);
             Assert.That(state.FallbackMode, Is.EqualTo(DirectDownloadFallbackMode.None));
-            Assert.That(state.DownloadUrl, Is.EqualTo("https://downloads.example/dune.epub"));
+            Assert.That(state.DownloadUrl, Is.EqualTo("https://203.0.113.17/dune.epub"));
             Assert.That(state.ResolvedUrl, Is.Null);
 
             await scenario.WaitForStatus(client, downloadId, DownloadItemStatus.Completed);
@@ -132,13 +132,13 @@ namespace Chaptarr.Core.Test.Download
             var transientUrls = new ConcurrentBag<string>();
             scenario.BrowserResolver.OnResolve = infoUrl =>
             {
-                var transient = "https://slow.example/ephemeral-" + Guid.NewGuid().ToString("N")[..8] + ".epub";
+                var transient = "https://203.0.113.34/ephemeral-" + Guid.NewGuid().ToString("N")[..8] + ".epub";
                 transientUrls.Add(transient);
                 return transient;
             };
 
             scenario.Transport.AddRoute(
-                url => url.StartsWith("https://slow.example/ephemeral-", StringComparison.OrdinalIgnoreCase),
+                url => url.StartsWith("https://203.0.113.34/ephemeral-", StringComparison.OrdinalIgnoreCase),
                 request => scenario.WriteBinaryResponse(request, "application/epub+zip", "transient-body"));
 
             var client = scenario.BuildClient();
@@ -164,12 +164,12 @@ namespace Chaptarr.Core.Test.Download
             scenario.BrowserResolver.OnResolve = infoUrl =>
             {
                 var count = Interlocked.Increment(ref resolveCount);
-                return $"https://slow.example/retry-{count}.epub";
+                return $"https://203.0.113.34/retry-{count}.epub";
             };
 
             var attemptCount = 0;
             scenario.Transport.AddRoute(
-                url => url.StartsWith("https://slow.example/retry-", StringComparison.OrdinalIgnoreCase),
+                url => url.StartsWith("https://203.0.113.34/retry-", StringComparison.OrdinalIgnoreCase),
                 request =>
                 {
                     var currentAttempt = Interlocked.Increment(ref attemptCount);
@@ -213,8 +213,8 @@ namespace Chaptarr.Core.Test.Download
         public async Task stale_deferred_playwright_state_preserves_mode_across_restart()
         {
             using var scenario = new GrabFlowScenario();
-            scenario.BrowserResolver.SlowDownloadUrl = "https://slow.example/restart-resolved.epub";
-            scenario.RegisterBinary("https://slow.example/restart-resolved.epub", "application/epub+zip", "restart-body");
+            scenario.BrowserResolver.SlowDownloadUrl = "https://203.0.113.34/restart-resolved.epub";
+            scenario.RegisterBinary("https://203.0.113.34/restart-resolved.epub", "application/epub+zip", "restart-body");
 
             var downloadId = "DEFERRED-RESTART-TEST";
             var stateDir = Path.Combine(scenario.StagingFolder, $"client-42/{downloadId}");
@@ -239,9 +239,9 @@ namespace Chaptarr.Core.Test.Download
         public async Task post_grab_download_failure_affects_only_item_status()
         {
             using var scenario = new GrabFlowScenario();
-            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://cdn.example/will-fail.epub");
+            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://203.0.113.13/will-fail.epub");
             scenario.Transport.AddRoute(
-                url => url == "https://cdn.example/will-fail.epub",
+                url => url == "https://203.0.113.13/will-fail.epub",
                 request => throw new WebException("connection refused", WebExceptionStatus.ConnectFailure));
 
             var client = scenario.BuildClient();
@@ -260,7 +260,7 @@ namespace Chaptarr.Core.Test.Download
         public async Task null_grab_resolver_passes_through_original_url()
         {
             using var scenario = new GrabFlowScenario();
-            scenario.RegisterBinary("https://downloads.example/dune.epub", "application/epub+zip", "no-resolver-body");
+            scenario.RegisterBinary("https://203.0.113.17/dune.epub", "application/epub+zip", "no-resolver-body");
 
             var client = scenario.BuildClient(withGrabResolver: false);
             var remoteBook = new RemoteBook
@@ -270,7 +270,7 @@ namespace Chaptarr.Core.Test.Download
                     Guid = "Direct-Grab-NullResolver",
                     Title = "Frank Herbert - Dune [epub]",
                     DownloadProtocol = DownloadProtocol.Direct,
-                    DownloadUrl = "https://downloads.example/dune.epub",
+                    DownloadUrl = "https://203.0.113.17/dune.epub",
                     Container = "epub",
                     Size = 16
                 }
@@ -293,12 +293,12 @@ namespace Chaptarr.Core.Test.Download
             scenario.BrowserResolver.OnResolve = infoUrl =>
             {
                 var count = Interlocked.Increment(ref resolveCount);
-                return $"https://slow.example/interrupt-{count}.epub";
+                return $"https://203.0.113.34/interrupt-{count}.epub";
             };
 
             var attemptCount = 0;
             scenario.Transport.AddRoute(
-                url => url.StartsWith("https://slow.example/interrupt-", StringComparison.OrdinalIgnoreCase),
+                url => url.StartsWith("https://203.0.113.34/interrupt-", StringComparison.OrdinalIgnoreCase),
                 request =>
                 {
                     var currentAttempt = Interlocked.Increment(ref attemptCount);
@@ -337,8 +337,8 @@ namespace Chaptarr.Core.Test.Download
                     return Task.FromResult(new HttpResponse(request, headers, bytes, HttpStatusCode.OK));
                 });
 
-            scenario.BrowserResolver.SlowDownloadUrl = "https://slow.example/api-error-fallback.epub";
-            scenario.RegisterBinary("https://slow.example/api-error-fallback.epub", "application/epub+zip", "api-error-fallback-body");
+            scenario.BrowserResolver.SlowDownloadUrl = "https://203.0.113.34/api-error-fallback.epub";
+            scenario.RegisterBinary("https://203.0.113.34/api-error-fallback.epub", "application/epub+zip", "api-error-fallback-body");
 
             var client = scenario.BuildClient();
             var downloadId = await client.Download(BuildCatalogRemoteBook(), scenario.CreateIndexer(apiKey: "bad-key"));
@@ -369,8 +369,8 @@ namespace Chaptarr.Core.Test.Download
                     return Task.FromResult(new HttpResponse(request, headers, bytes, HttpStatusCode.OK));
                 });
 
-            scenario.BrowserResolver.SlowDownloadUrl = "https://slow.example/malformed-fallback.epub";
-            scenario.RegisterBinary("https://slow.example/malformed-fallback.epub", "application/epub+zip", "malformed-fallback-body");
+            scenario.BrowserResolver.SlowDownloadUrl = "https://203.0.113.34/malformed-fallback.epub";
+            scenario.RegisterBinary("https://203.0.113.34/malformed-fallback.epub", "application/epub+zip", "malformed-fallback-body");
 
             var client = scenario.BuildClient();
             var downloadId = await client.Download(BuildCatalogRemoteBook(), scenario.CreateIndexer(apiKey: "test-key-123"));
@@ -439,8 +439,8 @@ namespace Chaptarr.Core.Test.Download
         public async Task dirty_worktree_with_deferred_playwright_state_recovers_on_restart()
         {
             using var scenario = new GrabFlowScenario();
-            scenario.BrowserResolver.SlowDownloadUrl = "https://slow.example/dirty-recover.epub";
-            scenario.RegisterBinary("https://slow.example/dirty-recover.epub", "application/epub+zip", "recovered-body");
+            scenario.BrowserResolver.SlowDownloadUrl = "https://203.0.113.34/dirty-recover.epub";
+            scenario.RegisterBinary("https://203.0.113.34/dirty-recover.epub", "application/epub+zip", "recovered-body");
 
             var downloadId = "DIRTY-WORKTREE-TEST";
             var stateDir = Path.Combine(scenario.StagingFolder, $"client-42/{downloadId}");
@@ -479,15 +479,15 @@ namespace Chaptarr.Core.Test.Download
 
             // First download will fail permanently.
             scenario.Transport.AddRoute(
-                url => url == "https://cdn.example/will-fail.epub",
+                url => url == "https://203.0.113.13/will-fail.epub",
                 request => throw new WebException("connection refused", WebExceptionStatus.ConnectFailure));
 
-            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://cdn.example/will-fail.epub");
+            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://203.0.113.13/will-fail.epub");
 
             // Second download uses a completely different catalog URL and will succeed.
-            var successCatalogUrl = "https://catalog.example/md5/fff111aaa222bbb333ccc444ddd555ee";
-            scenario.RegisterFastDownloadApi(successCatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://cdn.example/success.epub");
-            scenario.RegisterBinary("https://cdn.example/success.epub", "application/epub+zip", "success-body");
+            var successCatalogUrl = "https://203.0.113.12/md5/fff111aaa222bbb333ccc444ddd555ee";
+            scenario.RegisterFastDownloadApi(successCatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://203.0.113.13/success.epub");
+            scenario.RegisterBinary("https://203.0.113.13/success.epub", "application/epub+zip", "success-body");
 
             var client = scenario.BuildClient();
 
@@ -531,8 +531,8 @@ namespace Chaptarr.Core.Test.Download
         public async Task remove_item_cleans_state_file_and_directory()
         {
             using var scenario = new GrabFlowScenario();
-            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://cdn.example/cleanup-test.epub");
-            scenario.RegisterBinary("https://cdn.example/cleanup-test.epub", "application/epub+zip", "cleanup-body");
+            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://203.0.113.13/cleanup-test.epub");
+            scenario.RegisterBinary("https://203.0.113.13/cleanup-test.epub", "application/epub+zip", "cleanup-body");
 
             var client = scenario.BuildClient();
             var downloadId = await client.Download(BuildCatalogRemoteBook(), scenario.CreateIndexer(apiKey: "test-key-123"));
@@ -567,8 +567,8 @@ namespace Chaptarr.Core.Test.Download
                     return Task.FromResult(new HttpResponse(request, headers, bytes, HttpStatusCode.OK));
                 });
 
-            scenario.BrowserResolver.SlowDownloadUrl = "https://slow.example/empty-json-fallback.epub";
-            scenario.RegisterBinary("https://slow.example/empty-json-fallback.epub", "application/epub+zip", "empty-json-fallback-body");
+            scenario.BrowserResolver.SlowDownloadUrl = "https://203.0.113.34/empty-json-fallback.epub";
+            scenario.RegisterBinary("https://203.0.113.34/empty-json-fallback.epub", "application/epub+zip", "empty-json-fallback-body");
 
             var client = scenario.BuildClient();
             var downloadId = await client.Download(BuildCatalogRemoteBook(), scenario.CreateIndexer(apiKey: "test-key-123"));
@@ -587,8 +587,8 @@ namespace Chaptarr.Core.Test.Download
         public async Task remove_item_without_delete_data_preserves_output_file()
         {
             using var scenario = new GrabFlowScenario();
-            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://cdn.example/preserve-test.epub");
-            scenario.RegisterBinary("https://cdn.example/preserve-test.epub", "application/epub+zip", "preserve-body");
+            scenario.RegisterFastDownloadApi(CatalogUrl, apiKey: "test-key-123", resolvedUrl: "https://203.0.113.13/preserve-test.epub");
+            scenario.RegisterBinary("https://203.0.113.13/preserve-test.epub", "application/epub+zip", "preserve-body");
 
             var client = scenario.BuildClient();
             var downloadId = await client.Download(BuildCatalogRemoteBook(), scenario.CreateIndexer(apiKey: "test-key-123"));
@@ -810,7 +810,7 @@ namespace Chaptarr.Core.Test.Download
             public string SerializeState(string downloadId, DownloadItemStatus status,
                 string downloadUrl = null, DirectDownloadFallbackMode fallbackMode = DirectDownloadFallbackMode.None)
             {
-                var url = downloadUrl ?? "https://downloads.example/dune.epub";
+                var url = downloadUrl ?? "https://203.0.113.17/dune.epub";
                 var outputPath = Path.Combine(StagingFolder, $"client-42/{downloadId}/Frank Herbert - Dune [epub].epub");
                 var partPath = outputPath + ".part";
                 return $"{{\"downloadId\":\"{downloadId}\",\"title\":\"Frank Herbert - Dune [epub]\",\"downloadUrl\":\"{url}\"," +

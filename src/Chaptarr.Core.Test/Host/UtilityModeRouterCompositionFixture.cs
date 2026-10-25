@@ -34,6 +34,7 @@ namespace Chaptarr.Core.Test.Host
             container.RegisterInstance<IRemoteAccessAdapter>(Mock.Of<IRemoteAccessAdapter>());
             container.RegisterInstance<IAppFolderFactory>(Mock.Of<IAppFolderFactory>());
             container.RegisterInstance<IConnectionStringFactory>(Mock.Of<IConnectionStringFactory>());
+            container.RegisterInstance<IConfigFileProvider>(Mock.Of<IConfigFileProvider>());
             container.RegisterInstance<IStartupContext>(new StartupContext("-preview-bookshelf-migration"));
             container.RegisterInstance(LogManager.GetLogger(nameof(UtilityModeRouterCompositionFixture)));
             container.Register<UtilityModeRouter>(Reuse.Singleton);

@@ -49,23 +49,50 @@ if [ -n "$dropin_paths" ]; then
   exit 0
 fi
 
-attempt=0
-while [ "$attempt" -lt 840 ]; do
+health_timeout=${CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS:-14700}
+case "$health_timeout" in
+  ''|*[!0-9]*)
+    write_status intervention-required
+    echo 'CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS must be an integer from 1 to 14700.' >&2
+    exit 1
+    ;;
+esac
+while [ "${health_timeout#0}" != "$health_timeout" ] && [ "${#health_timeout}" -gt 1 ]; do
+  health_timeout=${health_timeout#0}
+done
+if [ "${#health_timeout}" -gt 5 ] || [ "$health_timeout" -lt 1 ] || [ "$health_timeout" -gt 14700 ]; then
+  write_status intervention-required
+  echo 'CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS must be an integer from 1 to 14700.' >&2
+  exit 1
+fi
+deadline=$(( $(date +%s) + health_timeout ))
+health_url=${BOOKSHELFNG_HEALTH_URL:-auto}
+while [ "$(date +%s)" -lt "$deadline" ]; do
   if /usr/lib/chaptarrng/bin/Chaptarr /check-bookshelf-migration -data="$data_dir" >/dev/null 2>&1; then
+    remaining=$(( deadline - $(date +%s) ))
+    if [ "$remaining" -lt 1 ]; then break; fi
+    if ! /usr/lib/chaptarrng/bin/Chaptarr /check-bookshelf-migration \
+      -data="$data_dir" \
+      "-bookshelf-health-url=$health_url" \
+      "-bookshelf-health-timeout-seconds=$remaining"; then
+      write_status intervention-required
+      echo "BookshelfNG conversion did not pass its database and local HTTP health checks within ${health_timeout} seconds. Automatic rollback will restore the retained source database and the prior BookshelfNG package if both are valid." >&2
+      exit 1
+    fi
+
     "$journal" outcome conversion verified
     "$journal" state converted
     "$journal" outcome promotion verified
     "$journal" state promoted
-    "$journal" outcome health database-readable
+    "$journal" outcome health database-and-http-readable
     write_status healthy
     rm -f "$pending_marker"
     exit 0
   fi
 
-  attempt=$((attempt + 1))
-  sleep 1
+  sleep 5
 done
 
 write_status intervention-required
-echo 'BookshelfNG conversion did not produce a readable ChaptarrNG database within 14 minutes. Automatic rollback will restore the retained source database and the prior BookshelfNG package if both are valid.' >&2
+echo "BookshelfNG conversion did not pass its database and local HTTP health checks within ${health_timeout} seconds. Automatic rollback will restore the retained source database and the prior BookshelfNG package if both are valid." >&2
 exit 1

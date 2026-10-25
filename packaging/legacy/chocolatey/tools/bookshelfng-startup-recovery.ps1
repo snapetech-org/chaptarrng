@@ -144,6 +144,35 @@ function Restore-PreviousBookshelf {
           throw 'The PostgreSQL source is not readable and its complete pre-cutover backup is unavailable; the current database was left untouched.'
         }
 
+        $restorePreview = Invoke-BookshelfUtility $console @(
+          '-preview-bookshelf-postgres-restore',
+          '-confirm-bookshelf-service-stopped',
+          "-bookshelf-postgres-backup=$($Manifest.PostgresBackupDirectory)",
+          "-data=$dataDir"
+        ) $environmentEntries
+        if ($restorePreview -ne 0) { throw "The retained PostgreSQL rollback dumps could not be validated (exit $restorePreview)." }
+
+        $targetPostgresBackupDirectory = Join-Path $Manifest.PostgresBackupDirectory ("target-chaptarr-log-cache-{0}" -f [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'))
+        if (Test-Path -LiteralPath $targetPostgresBackupDirectory) {
+          throw "A ChaptarrNG PostgreSQL log/cache backup path already exists at $targetPostgresBackupDirectory; inspect it before retrying."
+        }
+        New-Item -ItemType Directory -Path $targetPostgresBackupDirectory | Out-Null
+        $Manifest.TargetPostgresBackupDirectory = $targetPostgresBackupDirectory
+        Write-Manifest $Manifest
+        $targetBackupExit = Invoke-BookshelfUtility $console @(
+          '-backup-bookshelf-postgres',
+          '-confirm-bookshelf-service-stopped',
+          '-bookshelf-postgres-log-cache-only',
+          "-bookshelf-postgres-backup=$targetPostgresBackupDirectory",
+          "-data=$dataDir"
+        ) $environmentEntries
+        if ($targetBackupExit -ne 0) { throw "The current ChaptarrNG PostgreSQL log/cache data could not be preserved (exit $targetBackupExit)." }
+        if (-not (Get-ChildItem -LiteralPath $targetPostgresBackupDirectory -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+          Remove-Item -LiteralPath $targetPostgresBackupDirectory -Force
+          $Manifest.TargetPostgresBackupDirectory = $null
+          Write-Manifest $Manifest
+        }
+
         $restoreExit = Invoke-BookshelfUtility $console @(
           '-restore-bookshelf-postgres',
           '-confirm-bookshelf-service-stopped',
@@ -153,7 +182,8 @@ function Restore-PreviousBookshelf {
         if ($restoreExit -ne 0) { throw "The retained PostgreSQL source backup could not be restored (exit $restoreExit)." }
       } elseif ($Manifest.SqliteSourceExisted) {
         $oldBackups = @($Manifest.SqliteBackupNamesBefore)
-        $newBackup = Get-ChildItem -LiteralPath $dataDir -Filter 'readarr.db.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue |
+        $newBackup = Get-ChildItem -LiteralPath $dataDir -File -ErrorAction SilentlyContinue |
+          Where-Object { $_.Name -like 'readarr.db.bookshelfng-backup-*.db' -or $_.Name -like 'audioarr.db.bookshelfng-backup-*.db' } |
           Where-Object { $_.Name -notin $oldBackups } |
           Sort-Object LastWriteTimeUtc -Descending |
           Select-Object -First 1
@@ -250,7 +280,15 @@ try {
     exit 0
   }
 
-  $deadline = [DateTime]::UtcNow.AddMinutes(90)
+  $healthTimeoutSeconds = 14700
+  if ($null -ne $manifest.HealthTimeoutSeconds) {
+    $healthTimeoutSeconds = 0
+    if (-not [int]::TryParse([string] $manifest.HealthTimeoutSeconds, [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref] $healthTimeoutSeconds) -or
+        $healthTimeoutSeconds -lt 1 -or $healthTimeoutSeconds -gt 14700) {
+      throw 'The retained Windows migration record has an invalid health timeout.'
+    }
+  }
+  $deadline = [DateTime]::UtcNow.AddSeconds($healthTimeoutSeconds)
   while ([DateTime]::UtcNow -lt $deadline) {
     $service = Get-Service -Name 'BookshelfNG' -ErrorAction SilentlyContinue
     if (-not $service -or $service.Status -eq 'Stopped') {
@@ -288,7 +326,7 @@ try {
     Start-Sleep -Seconds 5
   }
 
-  throw "ChaptarrNG did not validate the migrated database and provider profile within 90 minutes at $($manifest.HealthUrl)."
+  throw "ChaptarrNG did not validate the migrated database and provider profile within $healthTimeoutSeconds seconds at $($manifest.HealthUrl)."
 } catch {
   $manifest = if ($manifest) { $manifest } else { $null }
   if (-not $manifest) {

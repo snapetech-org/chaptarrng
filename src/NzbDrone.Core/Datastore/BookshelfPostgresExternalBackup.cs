@@ -233,9 +233,15 @@ namespace NzbDrone.Core.Datastore
         public void ValidateDump(string backupPath)
         {
             backupPath = Path.GetFullPath(backupPath);
-            if (!File.Exists(backupPath) || new FileInfo(backupPath).Length == 0)
+            var dump = new FileInfo(backupPath);
+            if (!dump.Exists)
             {
-                throw new FileNotFoundException("The independent PostgreSQL migration backup was not found or is empty.", backupPath);
+                throw new FileNotFoundException("The independent PostgreSQL migration backup was not found.", backupPath);
+            }
+
+            if ((dump.Attributes & FileAttributes.ReparsePoint) != 0 || dump.Length == 0)
+            {
+                throw new InvalidDataException("The independent PostgreSQL migration backup must be a non-empty regular file, not a reparse point or empty file: " + backupPath);
             }
 
             Run("pg_restore", new[] { "--list", backupPath }, new Dictionary<string, string>());

@@ -86,7 +86,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
                 if (match.Success)
                 {
                     var resolved = new Uri(mirrorUri, match.Groups["href"].Value).AbsoluteUri;
-                    return DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(new Uri(resolved), resolved).AbsoluteUri;
+                    return DirectDownloadUrlSafety.ValidateAbsoluteHttpOrHttpsUri(new Uri(resolved), resolved, request.RequestTimeout).AbsoluteUri;
                 }
             }
 

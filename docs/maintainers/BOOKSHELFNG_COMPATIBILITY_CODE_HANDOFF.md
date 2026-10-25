@@ -2,10 +2,26 @@
 
 This continuation checkpoint closes the current source-level C4–C6 review
 families and adds the remaining Windows, desktop, and webhook recovery fixes
-before Luna's installed-channel and workflow acceptance.
+along with an explicit Helm rollback job for post-migration recovery. Bulk
+installed-channel and workflow acceptance remains separate.
 
 ## Implemented in this checkpoint
 
+- The BookshelfNG Helm chart now has a confirmed, opt-in restore Job for a
+  rollback after successful conversion. It refuses to render unless the
+  StatefulSet is scaled to zero, the operator confirms the restore, persistent
+  `/config` storage exists, and the source database type is explicit. PostgreSQL
+  rollback validates the retained independent log/cache dumps and database
+  availability before mutation, retains current ChaptarrNG log/cache dumps,
+  restores the main source schema, then restores the BookshelfNG dumps. Its pod
+  does not match the app Service selector. This is
+  source implementation only; installed Helm acceptance remains open.
+- PostgreSQL rollback now has a read-only dump preflight that verifies every
+  selected dump and confirms the target databases are idle before any restore.
+  Helm, Docker, Linux packages, desktop startup, and Windows recovery preserve
+  the current ChaptarrNG PostgreSQL log/cache dumps before restoring the
+  BookshelfNG generation. The main ChaptarrNG database/schema remains in its
+  existing retained rollback copy.
 - The BookshelfNG importer now records a compatibility-profile version and the
   source provider dialect (`hc` or `gr`) in the converted database.
 - Bare numeric source IDs now follow BookshelfNG's actual runtime predicate:
@@ -93,6 +109,12 @@ before Luna's installed-channel and workflow acceptance.
   installer now checks the migrated database lineage and persisted source
   provider dialect after `/ping` before it removes the prior app snapshot. The
   converter milestones use the same data-directory journal on Windows.
+- Windows standalone migration now parses both spaced and equals-form `-data`
+  service arguments, rejects incomplete or conflicting data paths before
+  mutation, and uses the selected path for backup, preview, migration and
+  rollback. Its SQLite backup, source-change guard and rollback support either
+  populated legacy filename (`readarr.db` or `audioarr.db`); ambiguous dual
+  databases and reparse-point sources fail closed.
 - When the BookshelfNG service is stopped at upgrade time, Chocolatey now
   retains the prior app and registers a protected SYSTEM recovery task for the
   next service start. The task verifies the configured local health URL plus
@@ -112,6 +134,15 @@ before Luna's installed-channel and workflow acceptance.
   on failure or launcher exit. Migration refuses to start unless
   `setsid --wait` is available. Reopening the old artifact remains the
   executable rollback.
+- Desktop and Chocolatey automatic handoffs now select the same populated
+  SQLite source filename as the core migration path and search/restore its
+  matching retained snapshots. Their automatic migration paths stop before
+  mutation when both legacy files contain data; desktop also rejects symlinked
+  source files.
+- The StartOS bridge now exposes automatic versus manual first-start migration
+  in a package action. The choice is kept in the package's separately backed-up
+  StartOS volume and passed to the compatibility supervisor at startup; new
+  installs keep automatic migration enabled by default.
 - A stopped Windows Chocolatey upgrade now distinguishes a BookshelfNG source
   database from an already converted ChaptarrNG database. A failed deferred
   target-to-target update restores the prior app and NSSM settings, preserves
@@ -133,20 +164,68 @@ before Luna's installed-channel and workflow acceptance.
   The C4 download, matching/import/filesystem and catalog paths; C5 provider,
   settings/auth and webhook contracts; and C6 request identity and primary UI
   workflows have now had source-level semantic review. Dispositions and
-  fingerprints follow below. This closes code review only; Luna still owns
-  fixture, live-provider, user-workflow and installed-channel acceptance.
+  fingerprints follow below. This closes source review only; fixture,
+  live-provider, user-workflow and installed-channel acceptance remain open.
 
 The Linux default-unit cutover now has automatic database and application
-rollback code. C3/F4 still needs Luna's package-manager failure-path and
-restart acceptance before it can be treated as closed.
+rollback code. C3/F4 still needs package-manager failure-path and restart
+acceptance before it can be treated as closed.
+
+## Container readiness and standalone transition additions
+
+The follow-on code pass tightens container readiness and platform handoff:
+
+- Docker health and Kubernetes readiness require a cleared migration marker
+  as well as a healthy `/ping`. During first-start migration, the supervisor
+  uses the internal app-only health mode before it clears the pending marker;
+  deferred, rolled-back, and intervention-required states stay unready.
+- The shared compatibility image no longer assumes every old deployment
+  routes internal port `8787`. Compose, Cloudron, StartOS, and Helm supply an
+  expected port because those adapters know their service mapping; Unraid can
+  follow its saved config and template port.
+- StartOS runs the marker-aware container health script before reporting ready,
+  and its 245-minute grace covers the bounded migration/startup window.
+  Kubernetes keeps liveness successful during migration and recovery; its
+  startup-probe budget also covers the 245-minute migration window.
+  The total Docker handoff timeout also accepts zero-padded values without
+  shell octal interpretation and rejects values too large to compare safely.
+- Container recovery distinguishes pre-conversion failures from startup
+  failures after conversion may have begun. It retains an untouched source
+  database without requiring a restore backup, and resumed `ask` mode prompts
+  only once.
+- The manual Linux systemd bootstrap verifies that the running service's
+  explicit `-data` directory matches `--data-dir` before stopping the service.
+  Its migration window now matches the shared 245-minute ceiling, and its
+  temporary systemd stop/recovery window is 510 minutes.
+- The Cloudron candidate now places nginx on the preserved port `8787` and
+  binds ChaptarrNG to loopback port `8788`. Its `/ping` route remains a
+  liveness response while the handoff supervisor converts or waits for
+  recovery; normal HTTP, streaming, and WebSocket traffic is proxied to the
+  app. The package entrypoint exits if either nginx or the supervised app
+  exits. This source candidate still needs Cloudron build and installed-channel
+  acceptance.
+- The migration guide now gives the one-time manual archive handoff for
+  standalone macOS and FreeBSD installs. Their old updater cannot discover the
+  first ChaptarrNG release; after migration, the imported updater setting
+  follows checksum-verified ChaptarrNG releases.
+- ChaptarrNG's updater now selects checksum-verified GitHub releases by default
+  for `main` when no `UseGitHubUpdates` choice has been saved. An explicit
+  setting still wins, and package-managed installations retain their package
+  manager route. The BookshelfNG importer persists the GitHub choice during
+  migration; an old BookshelfNG binary still needs a one-time package,
+  installer, or archive handoff because it cannot discover ChaptarrNG releases
+  through the Readarr update service.
+
+These additions are source-only and have not yet received the bulk validation
+pass. They do not change the installed-channel acceptance requirements below.
 
 ## Source comparison completed in this code slice
 
 Source is pinned to BookshelfNG `d42ec2aba1e411f4fb538d4d7201f6930898a91e`.
 The target blob IDs below are the exact file contents in this checkpoint.
 `implemented-equivalent` means a migrated-profile code path now follows the
-observed source contract; Luna still needs to verify the behavior on fixtures
-and installed data.
+observed source contract; bulk acceptance still needs to verify the behavior
+on fixtures and installed data.
 
 | Acceptance ID | Contract reviewed | Source path (source blob) | Target path (target blob) | Disposition |
 | --- | --- | --- | --- | --- |
@@ -215,21 +294,21 @@ crosswalk remains in [BOOKSHELFNG_WORKFLOW_PARITY.md](../BOOKSHELFNG_WORKFLOW_PA
 
 | Acceptance ID | Contract reviewed | Source fingerprints | Target fingerprints | Disposition |
 | --- | --- | --- | --- | --- |
-| C4-31 | Download selection, adoption, ignored-download event, completion and import lifecycle. Migrated author tags select clients as in BookshelfNG; download matching carries the source author/work context. ChaptarrNG additionally snapshots client files, verifies the expected target set and supports detached conversion/retry. | `DownloadService.cs` (`a61b2393ab7730d6307a8d099bcd6b534260f6f6`); `CompletedDownloadService.cs` (`80118ccba67a2f1c31ce7b667e648992c0f3b57e`); `IgnoredDownloadService.cs` (`b9cd799a8bee04508826995dde460367d91c2c45`) | `DownloadService.cs` (`0bd75d9ae29c8747984e0019255fad7d1f8f6218`); `CompletedDownloadService.cs` (`37ad9980081383f8a59982d0abf9b1ae4a489a63`); `IgnoredDownloadService.cs` (`8c812800c9e673b9187e1345b7eb8a06e2090e94`); `TrackedDownloadAlreadyImported.cs` (`7c177df31f042c191d305faa1302dd66cfdbf24e`) | `validation-only` for the legacy successful path and client-selection contract; retry, strict-verification and crash-recovery behavior needs Luna's same-input fault cases. |
+| C4-31 | Download selection, adoption, ignored-download event, completion and import lifecycle. Migrated author tags select clients as in BookshelfNG; download matching carries the source author/work context. ChaptarrNG additionally snapshots client files, verifies the expected target set and supports detached conversion/retry. | `DownloadService.cs` (`a61b2393ab7730d6307a8d099bcd6b534260f6f6`); `CompletedDownloadService.cs` (`80118ccba67a2f1c31ce7b667e648992c0f3b57e`); `IgnoredDownloadService.cs` (`b9cd799a8bee04508826995dde460367d91c2c45`) | `DownloadService.cs` (`0bd75d9ae29c8747984e0019255fad7d1f8f6218`); `CompletedDownloadService.cs` (`37ad9980081383f8a59982d0abf9b1ae4a489a63`); `IgnoredDownloadService.cs` (`8c812800c9e673b9187e1345b7eb8a06e2090e94`); `TrackedDownloadAlreadyImported.cs` (`7c177df31f042c191d305faa1302dd66cfdbf24e`) | `validation-only` for the legacy successful path and client-selection contract; retry, strict-verification and crash-recovery behavior still needs same-input fault cases. |
 | C4-32 | Local candidate scoring, ordered catalog fallback, remote recheck threshold, ties, close-match threshold, same-file rejection and manual/automatic decision split. The migrated path keeps the BookshelfNG score weights and default minimum of 70, 85% remote recheck, fallback order and source candidate order; target identity/ambiguity guards remain active. | `CandidateService.cs` (`2931adfd9453c2fb9a8d06a90b6571101f46da3e`); `IdentificationService.cs` (`8e0377de5447d5b99c1f5cb30da153ff23a2b4aa`); `DistanceCalculator.cs` (`44834d0a0bb0eed4a830cf650b7e8ea2f6c167b7`); `CloseAlbumMatchSpecification.cs` (`d3aaeda9f4db1ff8ed09b019c20adfb45f788272`); `SameFileSpecification.cs` (`32b8e9e8d42342f3b5fda924cba80b8709209840`); `ImportDecisionMaker.cs` (`d1f22d0fdaa93f4e330c6ce48af7156c9e3d710a`) | `FileMatchingService.cs` (`ca7c3ec07050f12f016a560acb4d0aa8fd5aec1d`); `UnmappedCatalogSuggestionHelper.cs` (`61e56d2a082d4065f910f3cf09fbd0d0084c7755`); `BookshelfMatchCompatibilityScorer.cs` (`0458c32b0882293bb130d0257b9231d557f875db`); `BookshelfSameFileCompatibility.cs` (`cbc03dff9818b5916c31e925544fbac82ca2558d`); `SimpleImportDecisionMaker.cs` (`257114b5da9d9361e4b8c91214b0692de891ce8e`); `ImportOrchestratorV2.cs` (`60b6805354fb9418a6ef6ff96764f9c9859ac6de`) | `implemented-equivalent` for migrated scoring, fallback and same-file contracts; provider/fault and representative-file acceptance remains open. |
-| C4-33 | Disk scans, import approval, destination naming, format-root containment, free-space and same-file safety, sidecars and move/copy effects. The mapped target paths preserve normal import outcomes and add staged/contained writes and collision checks. | `DiskScanService.cs` (`ca8327f67e9fe21f0ff4aff7b09837ad759a268c`); `ImportApprovedBooks.cs` (`8fa84834a512aaf5c03778a6b3243675f497c3c5`); `FileNameBuilder.cs` (`1a1d476aa785631fbbb00c821a49380314e3ba5b`); `DownloadedBooksImportService.cs` (`1d259a5de9cc78f4699d0aabe595285e9dd9e90b`) | `DiskScanService.cs` (`6e1664fa9c0d8a2c8bd12fd31789f9d5a92f9141`); `ImportApprovedBooks.cs` (`6da8d5c19ddf328492b17deee83ac1aaef503152`); `FileNameBuilder.cs` (`4323e6a15c09071a531eaa98364d649419551d96`); `DownloadedBooksImportService.cs` (`cfdd658d9514b8b9e8bc168591188f3bee64f3e2`) | `validation-only` for normal filesystem outcomes; real files, mounts, collisions and interruption remain Luna acceptance. |
+| C4-33 | Disk scans, import approval, destination naming, format-root containment, free-space and same-file safety, sidecars and move/copy effects. The mapped target paths preserve normal import outcomes and add staged/contained writes and collision checks. | `DiskScanService.cs` (`ca8327f67e9fe21f0ff4aff7b09837ad759a268c`); `ImportApprovedBooks.cs` (`8fa84834a512aaf5c03778a6b3243675f497c3c5`); `FileNameBuilder.cs` (`1a1d476aa785631fbbb00c821a49380314e3ba5b`); `DownloadedBooksImportService.cs` (`1d259a5de9cc78f4699d0aabe595285e9dd9e90b`) | `DiskScanService.cs` (`6e1664fa9c0d8a2c8bd12fd31789f9d5a92f9141`); `ImportApprovedBooks.cs` (`6da8d5c19ddf328492b17deee83ac1aaef503152`); `FileNameBuilder.cs` (`4323e6a15c09071a531eaa98364d649419551d96`); `DownloadedBooksImportService.cs` (`cfdd658d9514b8b9e8bc168591188f3bee64f3e2`) | `validation-only` for normal filesystem outcomes; real files, mounts, collisions and interruption remain acceptance work. |
 | C4-34 | Catalog refresh, supplemental metadata, field preferences, import-list sync and provider-state commit behavior. Current proxy and sync paths were compared with source behavior and the fallback/order contracts in the workflow crosswalk; no additional source-level code gap was found. | `BookInfoProxy.cs` (`03eedae79255edbc9d0d2a8c630a75cd5f2b3cc7`); `AdditionalBookMetadataProxy.cs` (`024643f01466b68903fe5ed72071da6480930510`); `ImportListSyncService.cs` (`dd3e645ad6357f000a52d5d2144c9f0f4ba2b0a2`) | `BookInfoProxy.cs` (`8543c75cafa7c44a2405d4d6540a9acf8d3c1798`); `AdditionalBookMetadataProxy.cs` (`d51dda2aba0b862539b13d6cc7d28e5eec899227`); `ImportListSyncService.cs` (`b31de2154e00bfd71df4f86d220a170c0767953a`) | `validation-only`; live catalogs, provider rate limits, saved credentials and scheduled sync need acceptance. |
 | C5-02 | Standard webhook and Notifiarr payload identity and settings/auth compatibility. Mapped migrated book events now expose the source BookshelfNG work ID, while native target-only books retain their ChaptarrNG ID. Source/target provider, config-file, API-key and OIDC paths were also reviewed. | `WebhookBase.cs` (`6b4fd963bb438550d29a1e44b6c371adf1d2da5b`); `WebhookBook.cs` (`c94c02a7df7f0d374884d3923a3e3f25dda5948b`); `Notifiarr.cs` (`16df64ac88d6fc94d047611406e64c0e55fc5cfb`); `ConfigFileProvider.cs` (`ea860905319f4f20c2cbde6ffc22947f86df7da0`); `ApiKeyAuthenticationHandler.cs` (`3c01ae35ad7972b98fd8e399b5d03117be9de2df`); `OidcBackchannelHandler.cs` (`61882ba594f4b348ef47a99d713cc4d52e0755bd`) | `WebhookBase.cs` (`a3ca1f53265b6eeeb5992731130937ba139c4cb5`); `WebhookBook.cs` (`681cb52cd11c7bd6f3b15fcffb7c43919facdbd4`); `Notifiarr.cs` (`95785c5a2e00b07b7811868835a77b626f4518ad`); `ConfigFileProvider.cs` (`4509bd5c07582de655727ea978502f80449c0f81`); `ApiKeyAuthenticationHandler.cs` (`1288c0cb501014db888a7684b26015d2a44ff144`); `OidcBackchannelHandlerFactory.cs` (`66ddd2d6bd87343f74e193eab20f78c07e604273`) | `implemented-equivalent` for saved setting aliases and legacy webhook IDs. Private OIDC issuers remain blocked by default and require the documented explicit allow setting; preserve that access-control boundary. |
 | C6-02 | Search/add, bookshelf grouping, unmapped-file retry, security settings and direct/native API request identity. The common client and direct backup fetch retain native IDs; native UI requests carry the native marker, while unchanged `/api/v1` clients use the migration facade. User-task paths are mapped in the workflow crosswalk. | `AddNewItem.js` (`55eb0b44b28aca8603acc91507efed5033e93479`); `Bookshelf.js` (`9e7d0f3535c8cef5bee97c5f122a74812152052d`); `UnmappedFilesTable.js` (`cf4eac2593d3a7b3822dfb7e6b47069db6abce4d`); `SecuritySettings.js` (`2d4cabdeca37c95729b2c0e269abe19516170a9b`); `downloadEncryptedBackup.js` (`45422149336ea5cc8b497656c54e477cdc41a7d8`); `index.ts` (`d3445e4da6cf169cec03aebce945c40e32b26e50`) | `AddNewItem.js` (`cd5fb4f696b7aa80afdc62125272290434ffe0e9`); `Bookshelf.js` (`9c714cb9f065409c724c1b6fb38a163523fe87bc`); `UnmappedFilesTable.js` (`fb4def5075b51d521058b6403632c9457fbc8983`); `SecuritySettings.js` (`430434db67ce1ae8674491d6052c72dd5a190984`); `downloadEncryptedBackup.js` (`d4c574214d191730aaff570e92533cb6fcca691a`); `index.ts` (`2e7987ec9b19fd65f16443a02279b10f851c1bc6`) | `validation-only` for source-level workflow identity and mapped surfaces; loading, editing, mixed-format, mobile/keyboard and migrated-browser acceptance remains open. |
 
 The source-level C4–C6 review queue is closed for these behavior families. The
-remaining work is Luna's acceptance of same-input outcomes, failure/restart
+remaining work is acceptance of same-input outcomes, failure/restart
 behavior, live providers and actual installed channels. One documented
 authentication compatibility boundary remains: private OIDC issuers need
 `BOOKSHELF_OIDC_ALLOW_PRIVATE_ISSUER=true`; the migration does not silently
 weaken the default issuer-target restrictions.
 
-## Luna validation queue
+## Bulk acceptance queue
 
 1. Verify the importer profile in SQLite and PostgreSQL conversions for
    `HARDCOVER` unset, `true`, and `true` with `HARDCOVER_NATIVE=false`. Include
@@ -354,30 +433,33 @@ weaken the default issuer-target restrictions.
 ## Still open after this checkpoint
 
 - Linux package handoff has automatic rollback code for supported default
-  service units. It remains unaccepted until Luna exercises every package
+  service units. It remains unaccepted until the bulk pass exercises every package
   manager's service failure and restart behavior, especially when systemd
   executes `ExecStopPost` after a failed `ExecStartPost`.
 - C4 download, matching/import/filesystem and catalog paths; C5 provider,
   settings/auth and webhook identity; and C6 request identity and primary UI
   workflows now have source-level dispositions above. Same-input decisions,
   provider requests, representative files, form outcomes and recovery paths
-  remain runtime acceptance work for Luna.
+  remain runtime acceptance work.
 - Channel delivery and installed-upgrade acceptance from C7-C8 remain open.
+- The Helm post-migration restore Job is implemented but has not been exercised
+  against an installed release/PVC. The Unraid compatibility template still
+  needs external catalog delivery and installed upgrade/rollback acceptance.
 - Windows Chocolatey deferred-start recovery distinguishes source migration
   rollback from target-to-target update failure; desktop first-launch recovery
   requires and supervises `setsid --wait`. Both coordinate outcomes with the
-  shared migration journal and have no Luna installed-channel acceptance yet.
+  shared migration journal and have no installed-channel acceptance yet.
   Desktop executable rollback still requires reinstalling/reopening the old
   artifact.
-- These code slices have not been built or tested. Luna's results should be
-  tied to the exact commit that contains them; regressions should be fixed
-  before the next code batch.
+- This code handoff has not received bulk build or runtime validation. Record
+  the results against the exact commit that contains it and fix regressions
+  before closing acceptance.
 
 ## Operator experience and migration timing
 
 The UI stores a Simple or Advanced experience choice. Migrated BookshelfNG databases default to Simple; fresh ChaptarrNG installs default to Advanced. Verify the global menu and Settings → UI selector persist across restart, Simple mode exposes the routine library workflow and hides advanced navigation and form controls, and switching back restores the full ChaptarrNG navigation.
 
-Legacy package transitions retain automatic migration for unattended upgrades and accept an explicit `ask` or `manual` choice. Verify a declined or manual package choice stops before service or file mutation, and verify desktop first-launch deferral leaves source data untouched. Luna owns the platform acceptance run; builds and runtime checks are intentionally not performed in this code handoff.
+Legacy package transitions retain automatic migration for unattended upgrades and accept an explicit `ask` or `manual` choice. Verify a declined or manual package choice stops before service or file mutation, and verify desktop first-launch deferral leaves source data untouched during bulk acceptance.
 
 ### Experience-control accessibility acceptance
 

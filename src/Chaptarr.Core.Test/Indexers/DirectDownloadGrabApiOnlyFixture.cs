@@ -13,27 +13,27 @@ namespace Chaptarr.Core.Test.Indexers
     public class DirectDownloadGrabApiOnlyFixture
     {
         private const string Md5 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-        private const string BaseUrl = "https://catalog.example";
+        private const string BaseUrl = "https://203.0.113.12";
         private const string InfoUrl = $"{BaseUrl}/md5/{Md5}";
 
         [Test]
         public async Task grab_api_success_returns_resolved_url()
         {
             var transport = new DirectDownloadTestHttp();
-            RegisterFastDownloadApi(transport, "https://cdn.example/book.epub");
+            RegisterFastDownloadApi(transport, "https://203.0.113.13/book.epub");
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var result = await resolver.TryResolveGrabAsync(InfoUrl, "test-key", "CatalogPage");
 
             Assert.That(result.Outcome, Is.EqualTo(GrabResolutionOutcome.Success));
-            Assert.That(result.ResolvedUrl, Is.EqualTo("https://cdn.example/book.epub"));
+            Assert.That(result.ResolvedUrl, Is.EqualTo("https://203.0.113.13/book.epub"));
         }
 
         [Test]
         public async Task grab_api_success_does_not_scrape_detail_page()
         {
             var transport = new DirectDownloadTestHttp();
-            RegisterFastDownloadApi(transport, "https://cdn.example/book.epub");
+            RegisterFastDownloadApi(transport, "https://203.0.113.13/book.epub");
             RegisterDetailPage(transport, "<a href=\"/get/book.epub\">GET</a>");
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
@@ -47,7 +47,7 @@ namespace Chaptarr.Core.Test.Indexers
         public async Task grab_api_success_does_not_invoke_browser_resolver()
         {
             var transport = new DirectDownloadTestHttp();
-            RegisterFastDownloadApi(transport, "https://cdn.example/book.epub");
+            RegisterFastDownloadApi(transport, "https://203.0.113.13/book.epub");
             var browserResolver = new ThrowingBrowserResolver();
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient(), browserResolver);
 
@@ -181,13 +181,13 @@ namespace Chaptarr.Core.Test.Indexers
             transport.AddRoute(
                 url => url.Contains("fast_download.json") && url.Contains("domain_index=1"),
                 request => Task.FromResult(BuildResponse(request, HttpStatusCode.OK,
-                    "{\"download_url\":\"https://cdn2.example/book.epub\"}", "application/json")));
+                    "{\"download_url\":\"https://203.0.113.15/book.epub\"}", "application/json")));
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var result = await resolver.TryResolveGrabAsync(InfoUrl, "test-key", "CatalogPage");
 
             Assert.That(result.Outcome, Is.EqualTo(GrabResolutionOutcome.Success));
-            Assert.That(result.ResolvedUrl, Is.EqualTo("https://cdn2.example/book.epub"));
+            Assert.That(result.ResolvedUrl, Is.EqualTo("https://203.0.113.15/book.epub"));
             var apiCalls = transport.RequestedUrls.Where(u => u.Contains("fast_download.json")).ToList();
             Assert.That(apiCalls.Count, Is.EqualTo(2),
                 "Should stop after first successful domain_index");
@@ -204,7 +204,7 @@ namespace Chaptarr.Core.Test.Indexers
                 {
                     capturedHeaders = request.Headers;
                     return Task.FromResult(BuildResponse(request, HttpStatusCode.OK,
-                        "{\"download_url\":\"https://cdn.example/book.epub\"}", "application/json"));
+                        "{\"download_url\":\"https://203.0.113.13/book.epub\"}", "application/json"));
                 });
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
@@ -212,7 +212,7 @@ namespace Chaptarr.Core.Test.Indexers
 
             Assert.That(capturedHeaders, Is.Not.Null);
             Assert.That(capturedHeaders["User-Agent"], Does.Contain("Chaptarr"));
-            Assert.That(capturedHeaders["Referer"], Is.EqualTo("https://catalog.example/"));
+            Assert.That(capturedHeaders["Referer"], Is.EqualTo("https://203.0.113.12/"));
         }
 
         [Test]
@@ -316,7 +316,7 @@ namespace Chaptarr.Core.Test.Indexers
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var result = await resolver.TryResolveGrabAsync(
-                "https://catalog.example/some/other/path", "test-key", "CatalogPage");
+                "https://203.0.113.12/some/other/path", "test-key", "CatalogPage");
 
             Assert.That(result.Outcome, Is.EqualTo(GrabResolutionOutcome.Unavailable));
             Assert.That(result.Reason, Does.Contain("identifier"));
@@ -327,16 +327,16 @@ namespace Chaptarr.Core.Test.Indexers
         {
             var transport = new DirectDownloadTestHttp();
             transport.AddRoute(
-                url => url == "https://mirror.example/mirror1",
+                url => url == "https://203.0.113.25/mirror1",
                 request => Task.FromResult(BuildResponse(request, HttpStatusCode.OK,
                     "<a href=\"/get/book.epub\">GET</a>", "text/html; charset=utf-8")));
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var result = await resolver.TryResolveGrabAsync(
-                "https://mirror.example/mirror1", null, "MirrorIndex");
+                "https://203.0.113.25/mirror1", null, "MirrorIndex");
 
             Assert.That(result.Outcome, Is.EqualTo(GrabResolutionOutcome.Success));
-            Assert.That(result.ResolvedUrl, Is.EqualTo("https://mirror.example/get/book.epub"));
+            Assert.That(result.ResolvedUrl, Is.EqualTo("https://203.0.113.25/get/book.epub"));
         }
 
         [Test]
@@ -346,10 +346,10 @@ namespace Chaptarr.Core.Test.Indexers
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var result = await resolver.TryResolveGrabAsync(
-                "https://downloads.example/book.epub", "test-key", "UnknownSource");
+                "https://203.0.113.17/book.epub", "test-key", "UnknownSource");
 
             Assert.That(result.Outcome, Is.EqualTo(GrabResolutionOutcome.NotApplicable));
-            Assert.That(result.ResolvedUrl, Is.EqualTo("https://downloads.example/book.epub"));
+            Assert.That(result.ResolvedUrl, Is.EqualTo("https://203.0.113.17/book.epub"));
         }
 
         [Test]
@@ -444,13 +444,13 @@ namespace Chaptarr.Core.Test.Indexers
             transport.AddRoute(
                 url => url.Contains("fast_download.json") && url.Contains("domain_index=0"),
                 request => Task.FromResult(BuildResponse(request, HttpStatusCode.OK,
-                    "{\"download_url\":\"https://cdn1.example/book.epub\"}", "application/json")));
+                    "{\"download_url\":\"https://203.0.113.14/book.epub\"}", "application/json")));
             var resolver = new DirectDownloadGrabUrlResolver(transport.CreateClient());
 
             var result = await resolver.TryResolveGrabAsync(InfoUrl, "test-key", "CatalogPage");
 
             Assert.That(result.Outcome, Is.EqualTo(GrabResolutionOutcome.Success));
-            Assert.That(result.ResolvedUrl, Is.EqualTo("https://cdn1.example/book.epub"));
+            Assert.That(result.ResolvedUrl, Is.EqualTo("https://203.0.113.14/book.epub"));
         }
 
         private static void RegisterFastDownloadApi(DirectDownloadTestHttp transport, string downloadUrl)

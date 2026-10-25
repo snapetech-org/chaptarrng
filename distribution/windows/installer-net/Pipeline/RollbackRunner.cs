@@ -17,6 +17,7 @@ public static class RollbackRunner
         IProgress<LogLine> log,
         CancellationToken ct = default,
         int? bookshelfServiceStartType = null,
+        bool? bookshelfServiceDelayedAutoStart = null,
         bool? bookshelfServiceWasRunning = null,
         string? chaptarrConsolePath = null,
         bool restorePostgresDatabase = false,
@@ -41,6 +42,11 @@ public static class RollbackRunner
             {
                 arguments.Add("-BookshelfServiceWasRunning");
                 arguments.Add(bookshelfServiceWasRunning.Value ? "1" : "0");
+            }
+            if (bookshelfServiceDelayedAutoStart.HasValue)
+            {
+                arguments.Add("-BookshelfServiceDelayedAutoStart");
+                arguments.Add(bookshelfServiceDelayedAutoStart.Value ? "1" : "0");
             }
             if (!string.IsNullOrWhiteSpace(chaptarrConsolePath))
             {

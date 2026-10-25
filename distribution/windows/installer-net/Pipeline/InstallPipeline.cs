@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.ServiceProcess;
 using System.Security;
 using System.Threading;
@@ -16,7 +18,10 @@ public static class InstallPipeline
 {
     private static readonly TimeSpan StopServiceTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan VerifyRunningTimeout = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan VerifyHealthTimeout = TimeSpan.FromSeconds(45);
+    // First-start migration time scales with the operator's database and may
+    // include a full conversion. Match the 245-minute handoff window used by
+    // the other automatic migration channels.
+    private static readonly TimeSpan VerifyHealthTimeout = TimeSpan.FromMinutes(245);
 
     public static async Task<InstallOutcome> RunUpgradeAsync(
         IUiReporter ui,
@@ -35,6 +40,7 @@ public static class InstallPipeline
         var bookshelfWasRunning = false;
         var postgresDatabaseMutationMayHaveStarted = false;
         int? bookshelfServiceStartType = null;
+        bool? bookshelfServiceDelayedAutoStart = null;
 
         try
         {
@@ -70,6 +76,7 @@ public static class InstallPipeline
             {
                 return Failure("Migration cancelled before the BookshelfNG service was stopped.", null);
             }
+            var migrationEnvironment = BookshelfServiceEnvironment.CreateMigrationOverrides(providerMode.Value);
 
             ui.Log($"[pipeline] BookshelfNG service data directory: {dataDirectory}");
             ui.Log($"[pipeline] Provider identity mode selected: {providerMode.Value}");
@@ -86,7 +93,8 @@ public static class InstallPipeline
                     new[] { "-check-bookshelf-postgres-backup", $"-data={dataDirectory}" },
                     stagingDirectory,
                     log,
-                    ct).ConfigureAwait(false);
+                    ct,
+                    migrationEnvironment).ConfigureAwait(false);
                 if (checkExit != 0)
                 {
                     return Failure($"PostgreSQL backup preflight exited with code {checkExit}. Review the installer log, install pg_dump and pg_restore on PATH, and ensure PostgresUser is explicitly configured.", null);
@@ -111,6 +119,7 @@ public static class InstallPipeline
             }
             bookshelfWasRunning = initialServiceStatus == ServiceControllerStatus.Running;
             bookshelfServiceStartType = ServiceLifecycle.GetBookshelfServiceStartType();
+            bookshelfServiceDelayedAutoStart = ServiceLifecycle.GetBookshelfServiceDelayedAutoStart();
             ui.SetStep("Stopping BookshelfNG...", "The service must be stopped before the database backup and migration.");
             ct.ThrowIfCancellationRequested();
             if (!await ServiceLifecycle.StopAsync(
@@ -136,7 +145,8 @@ public static class InstallPipeline
                     },
                     stagingDirectory,
                     log,
-                    CancellationToken.None).ConfigureAwait(false);
+                    CancellationToken.None,
+                    migrationEnvironment).ConfigureAwait(false);
                 if (idleCheckExit != 0)
                 {
                     throw new InvalidOperationException($"PostgreSQL connection preflight exited with code {idleCheckExit}; the source database was not migrated.");
@@ -167,7 +177,8 @@ public static class InstallPipeline
                             },
                             stagingDirectory,
                             log,
-                            ct).ConfigureAwait(false);
+                            ct,
+                            migrationEnvironment).ConfigureAwait(false);
                         if (backupExit != 0)
                         {
                             throw new InvalidOperationException($"Independent PostgreSQL backup exited with code {backupExit}.");
@@ -183,6 +194,7 @@ public static class InstallPipeline
                 providerMode.Value.ToString(),
                 BackupService.GetPreviousVersion(dataDirectory),
                 bookshelfServiceStartType.Value,
+                bookshelfServiceDelayedAutoStart.Value,
                 bookshelfWasRunning);
             ui.Log($"[pipeline] Verified rollback backup recorded at {backup.Path}");
 
@@ -201,7 +213,6 @@ public static class InstallPipeline
                 extractProgress,
                 ct).ConfigureAwait(false);
             var chaptarrConsole = Path.Combine(stagingDirectory, "Chaptarr.Console.exe");
-            var environment = GetProviderEnvironment(providerMode.Value);
             ui.SetStep("Previewing the migration...", postgresSource
                 ? "Keep every other PostgreSQL client stopped through review and apply. The independent database dump is retained for rollback."
                 : "The SQLite source database is checked for committed changes through operator confirmation.");
@@ -214,7 +225,7 @@ public static class InstallPipeline
                     stagingDirectory,
                     log,
                     ct,
-                    environment).ConfigureAwait(false);
+                    migrationEnvironment).ConfigureAwait(false);
                 if (previewExit != 0)
                 {
                     throw new InvalidOperationException($"The read-only BookshelfNG migration preview exited with code {previewExit}.");
@@ -236,7 +247,8 @@ public static class InstallPipeline
                     },
                     stagingDirectory,
                     log,
-                    CancellationToken.None).ConfigureAwait(false);
+                    CancellationToken.None,
+                    migrationEnvironment).ConfigureAwait(false);
                 if (idleCheckExit != 0)
                 {
                     throw new InvalidOperationException($"PostgreSQL connection preflight exited with code {idleCheckExit}; the source database was not migrated.");
@@ -252,7 +264,7 @@ public static class InstallPipeline
                     stagingDirectory,
                     log,
                     ct,
-                    environment).ConfigureAwait(false);
+                    migrationEnvironment).ConfigureAwait(false);
                 if (previewExit != 0)
                 {
                     throw new InvalidOperationException($"The read-only BookshelfNG migration preview exited with code {previewExit}.");
@@ -287,7 +299,7 @@ public static class InstallPipeline
                 stagingDirectory,
                 log,
                 ct,
-                environment,
+                migrationEnvironment,
                 () => postgresDatabaseMutationMayHaveStarted = postgresSource).ConfigureAwait(false);
             if (applyExit != 0)
             {
@@ -307,7 +319,7 @@ public static class InstallPipeline
             ui.SetStep("Registering the ChaptarrNG service...", "The Readarr data directory is explicitly preserved in the service command.");
             var installExit = await ProcessStreamer.RunAsync(
                 installedConsole,
-                new[] { "/i", $"-data={dataDirectory}", "/nobrowser" },
+                new[] { "/i", $"-data={dataDirectory}", "/nobrowser", "/nostart" },
                 Path.GetDirectoryName(installedConsole),
                 log,
                 ct).ConfigureAwait(false);
@@ -315,6 +327,11 @@ public static class InstallPipeline
             {
                 throw new InvalidOperationException($"Chaptarr.Console.exe service registration exited with code {installExit}.");
             }
+
+            ServiceLifecycle.SetServiceEnvironment(
+                ServiceLifecycle.ChaptarrServiceName,
+                BookshelfServiceEnvironment.CreateTargetServiceEnvironment(providerMode.Value));
+            ui.Log("[pipeline] BookshelfNG service settings and the selected provider mode were applied to ChaptarrNG before startup.");
 
             var installedServiceAccount = ServiceLifecycle.GetServiceAccount(ServiceLifecycle.ChaptarrServiceName);
             if (!ServiceAccountPolicy.AreEquivalent(installedServiceAccount, bookshelfServiceAccount))
@@ -336,6 +353,15 @@ public static class InstallPipeline
                 ui.Log($"[pipeline] ChaptarrNG service identity preserved as '{bookshelfServiceAccount}'.");
             }
 
+            if (!await ServiceLifecycle.SetStartTypeAsync(
+                    ServiceLifecycle.ChaptarrServiceName,
+                    "demand",
+                    log,
+                    ct).ConfigureAwait(false))
+            {
+                throw new InvalidOperationException("The ChaptarrNG service could not be placed in a startable state for its local health check.");
+            }
+
             ui.SetStep("Verifying ChaptarrNG...", "Waiting for the service and local health endpoint.");
             if (!await ServiceLifecycle.StartAsync(
                     ServiceLifecycle.ChaptarrServiceName,
@@ -353,10 +379,45 @@ public static class InstallPipeline
                 throw new InvalidOperationException("The ChaptarrNG service command does not preserve the BookshelfNG data directory.");
             }
 
-            if (!await WaitForHealthAsync(dataDirectory, VerifyHealthTimeout, log, ct).ConfigureAwait(false))
+            if (!await WaitForHealthAsync(
+                    dataDirectory,
+                    installedConsole,
+                    migrationEnvironment,
+                    VerifyHealthTimeout,
+                    log,
+                    ct).ConfigureAwait(false))
             {
-                throw new InvalidOperationException("The ChaptarrNG service is running but did not pass its local /ping health check.");
+                throw new InvalidOperationException("The ChaptarrNG service did not pass its local HTTP and migrated-database health checks.");
             }
+
+            if (!bookshelfWasRunning &&
+                !await ServiceLifecycle.StopAsync(
+                        ServiceLifecycle.ChaptarrServiceName,
+                        log,
+                        StopServiceTimeout,
+                        CancellationToken.None).ConfigureAwait(false))
+            {
+                throw new InvalidOperationException("ChaptarrNG passed health but could not be returned to the stopped state BookshelfNG had before migration.");
+            }
+
+            var targetStartType = bookshelfServiceStartType switch
+            {
+                2 => "auto",
+                3 => "demand",
+                4 => "disabled",
+                _ => throw new InvalidOperationException($"BookshelfNG uses unsupported service start type {bookshelfServiceStartType}.")
+            };
+            if (!await ServiceLifecycle.SetStartTypeAsync(
+                    ServiceLifecycle.ChaptarrServiceName,
+                    targetStartType,
+                    log,
+                    ct).ConfigureAwait(false))
+            {
+                throw new InvalidOperationException("The ChaptarrNG service startup policy could not be matched to BookshelfNG.");
+            }
+            ServiceLifecycle.SetServiceDelayedAutoStart(
+                ServiceLifecycle.ChaptarrServiceName,
+                bookshelfServiceDelayedAutoStart ?? false);
 
             var newVersion = ReadInstalledChaptarrVersion(dataDirectory);
             if (!string.IsNullOrWhiteSpace(newVersion))
@@ -371,7 +432,7 @@ public static class InstallPipeline
                 }
             }
 
-            var serviceCleanupScheduled = ServiceCleanupRunner.ScheduleLegacyServiceCleanup(dataDirectory, ui);
+            var serviceCleanupScheduled = ServiceCleanupRunner.ScheduleLegacyServiceCleanup(dataDirectory, bookshelfWasRunning, ui);
             if (!serviceCleanupScheduled)
             {
                 ui.LogError("[installer] The stopped Readarr service remains disabled so it cannot start beside ChaptarrNG. The installer could not schedule its removal after this window closes; restore remains available.");
@@ -382,7 +443,7 @@ public static class InstallPipeline
             ui.SetProgressPercent(100);
             ui.SetStep(
                 "Migration complete.",
-                $"ChaptarrNG is running with the BookshelfNG data directory. The verified rollback backup is retained at {backup.Path}. " +
+                $"ChaptarrNG is installed with the BookshelfNG data directory and its original service state. The verified rollback backup is retained at {backup.Path}. " +
                 (serviceCleanupScheduled
                     ? "The disabled Readarr service will be removed after this installer closes."
                     : "Readarr remains disabled; use Restore BookshelfNG if you need to revert."));
@@ -390,13 +451,13 @@ public static class InstallPipeline
         }
         catch (OperationCanceledException)
         {
-            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, postgresDatabaseMutationMayHaveStarted, bookshelfServiceAccount, serviceAccountPassword, "Migration cancelled.")
+            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, bookshelfServiceDelayedAutoStart, postgresDatabaseMutationMayHaveStarted, bookshelfServiceAccount, serviceAccountPassword, "Migration cancelled.")
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             ui.LogError($"[pipeline] {ex.GetType().Name}: {ex.Message}");
-            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, postgresDatabaseMutationMayHaveStarted, bookshelfServiceAccount, serviceAccountPassword, ex.Message)
+            return await RestoreAfterFailureAsync(ui, log, dataDirectory, backupPath, previousBinDirectory, stagingDirectory, serviceStopped, bookshelfWasRunning, bookshelfServiceStartType, bookshelfServiceDelayedAutoStart, postgresDatabaseMutationMayHaveStarted, bookshelfServiceAccount, serviceAccountPassword, ex.Message)
                 .ConfigureAwait(false);
         }
         finally
@@ -453,6 +514,7 @@ public static class InstallPipeline
                     log,
                     CancellationToken.None,
                     record.BookshelfServiceStartType,
+                    record.BookshelfServiceDelayedAutoStart,
                     record.BookshelfServiceWasRunning,
                     Path.Combine(record.DataDirectory, "bin", "Chaptarr.Console.exe"),
                     restorePostgresDatabase: File.Exists(Path.Combine(record.BackupPath, "postgres-main.dump")),
@@ -490,6 +552,7 @@ public static class InstallPipeline
         bool serviceStopped,
         bool bookshelfWasRunning,
         int? bookshelfServiceStartType,
+        bool? bookshelfServiceDelayedAutoStart,
         bool restorePostgresDatabase,
         string? bookshelfServiceAccount,
         SecureString? serviceAccountPassword,
@@ -539,6 +602,7 @@ public static class InstallPipeline
                 log,
                 CancellationToken.None,
                 bookshelfServiceStartType,
+                bookshelfServiceDelayedAutoStart,
                 bookshelfWasRunning,
                 ResolveMigrationConsole(dataDirectory, stagingDirectory),
                 restorePostgresDatabase,
@@ -570,26 +634,10 @@ public static class InstallPipeline
         }
     }
 
-    private static System.Collections.Generic.IReadOnlyDictionary<string, string?> GetProviderEnvironment(
-        ProviderIdentityMode mode)
-    {
-        return mode switch
-        {
-            ProviderIdentityMode.NativeHardcover => new System.Collections.Generic.Dictionary<string, string?>
-            {
-                ["HARDCOVER"] = "true",
-                ["HARDCOVER_NATIVE"] = null
-            },
-            _ => new System.Collections.Generic.Dictionary<string, string?>
-            {
-                ["HARDCOVER"] = "false",
-                ["HARDCOVER_NATIVE"] = "false"
-            }
-        };
-    }
-
     private static async Task<bool> WaitForHealthAsync(
         string dataDirectory,
+        string consolePath,
+        IReadOnlyDictionary<string, string?> migrationEnvironment,
         TimeSpan timeout,
         IProgress<LogLine> log,
         CancellationToken ct)
@@ -601,30 +649,34 @@ public static class InstallPipeline
             .FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.OrdinalIgnoreCase))
             ?.Value;
 
-        var enableSsl = bool.TryParse(GetValue("EnableSsl"), out var ssl) && ssl;
-        var portText = GetValue(enableSsl ? "SslPort" : "Port");
-        var port = int.TryParse(portText, out var configuredPort) && configuredPort is > 0 and <= 65535
-            ? configuredPort
-            : enableSsl ? 6868 : 8789;
-        var bindAddress = GetValue("BindAddress");
-        var host = string.IsNullOrWhiteSpace(bindAddress) || bindAddress is "*" or "+" or "0.0.0.0"
-            ? "127.0.0.1"
-            : bindAddress == "::" ? "::1" : bindAddress;
-        var scheme = enableSsl ? "https" : "http";
-        var uriHost = host.Contains(':') && !host.StartsWith("[", StringComparison.Ordinal) ? $"[{host}]" : host;
-        var urlBase = GetValue("UrlBase")?.Trim('/');
-        var pingPath = string.IsNullOrWhiteSpace(urlBase) ? "/ping" : $"/{urlBase}/ping";
-        var uri = new Uri($"{scheme}://{uriHost}:{port}{pingPath}");
-        var loopback = host is "127.0.0.1" or "::1" or "localhost";
-        var handler = new HttpClientHandler();
-        if (enableSsl && loopback)
+        var environment = BookshelfServiceEnvironment.GetEffectiveConfigurationEnvironment(ServiceLifecycle.ChaptarrServiceName);
+        string? GetEnvironmentValue(string name) => environment.TryGetValue("CHAPTARR__SERVER__" + name, out var value)
+            ? value
+            : null;
+
+        var portText = GetEnvironmentValue("PORT") ?? GetValue("Port") ??
+            BookshelfServiceEnvironment.GetEffectiveDefaultPort(ServiceLifecycle.ChaptarrServiceName);
+        var port = int.Parse(BookshelfServiceEnvironment.DefaultBookshelfPort, System.Globalization.CultureInfo.InvariantCulture);
+        if (portText is not null)
         {
-            handler.ServerCertificateCustomValidationCallback =
-                (_, _, _, _) => true;
+            if (!int.TryParse(portText, out var configuredPort) || configuredPort is < 1 or > 65535)
+            {
+                log.Report(new LogLine(LogStream.Stderr, $"[health] The configured ChaptarrNG HTTP port '{portText}' is invalid."));
+                return false;
+            }
+
+            port = configuredPort;
         }
 
+        var bindAddress = GetEnvironmentValue("BINDADDRESS") ?? GetValue("BindAddress");
+        var address = ResolveLocalHealthAddress(bindAddress);
+        var urlBase = (GetEnvironmentValue("URLBASE") ?? GetValue("UrlBase"))?.Trim('/');
+        var pingPath = string.IsNullOrWhiteSpace(urlBase) ? "/ping" : $"/{urlBase}/ping";
+        var uri = new UriBuilder("http", address.ToString(), port, pingPath).Uri;
+        var handler = new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false, UseCookies = false };
+
         using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
-        log.Report(new LogLine(LogStream.Stdout, $"[health] Checking {scheme}://{uriHost}:{port}/ping..."));
+        log.Report(new LogLine(LogStream.Stdout, $"[health] Checking local HTTP endpoint {uri}..."));
         var deadline = DateTime.UtcNow + timeout;
 
         while (DateTime.UtcNow < deadline)
@@ -635,8 +687,21 @@ public static class InstallPipeline
                 using var response = await client.GetAsync(uri, ct).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
-                    log.Report(new LogLine(LogStream.Stdout, "[health] ChaptarrNG /ping returned success."));
-                    return true;
+                    log.Report(new LogLine(LogStream.Stdout, "[health] ChaptarrNG /ping returned success; checking the migrated database and compatibility marker."));
+                    var databaseExit = await ProcessStreamer.RunAsync(
+                        consolePath,
+                        new[] { "-check-bookshelf-migration", $"-data={dataDirectory}" },
+                        Path.GetDirectoryName(consolePath),
+                        log,
+                        ct,
+                        migrationEnvironment).ConfigureAwait(false);
+                    if (databaseExit == 0)
+                    {
+                        log.Report(new LogLine(LogStream.Stdout, "[health] The ChaptarrNG database is readable and the BookshelfNG compatibility profile is present."));
+                        return true;
+                    }
+
+                    log.Report(new LogLine(LogStream.Stderr, $"[health] The migrated-database check exited with code {databaseExit}; waiting for the service database to become ready."));
                 }
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
@@ -649,6 +714,44 @@ public static class InstallPipeline
 
         log.Report(new LogLine(LogStream.Stderr, $"[health] {uri} did not return success within {timeout.TotalSeconds:F0}s."));
         return false;
+    }
+
+    private static IPAddress ResolveLocalHealthAddress(string? bindAddress)
+    {
+        if (bindAddress is not null && bindAddress.StartsWith("[", StringComparison.Ordinal) && bindAddress.EndsWith("]", StringComparison.Ordinal))
+        {
+            bindAddress = bindAddress[1..^1];
+        }
+
+        if (string.IsNullOrWhiteSpace(bindAddress) || bindAddress is "*" or "+" or "0.0.0.0")
+        {
+            return IPAddress.Loopback;
+        }
+
+        if (bindAddress == "::")
+        {
+            return IPAddress.IPv6Loopback;
+        }
+
+        if (string.Equals(bindAddress, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return IPAddress.Loopback;
+        }
+
+        var addresses = IPAddress.TryParse(bindAddress, out var parsed)
+            ? new[] { parsed }
+            : Dns.GetHostAddresses(bindAddress);
+        var localAddresses = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(network => network.OperationalStatus == OperationalStatus.Up)
+            .SelectMany(network => network.GetIPProperties().UnicastAddresses)
+            .Select(unicast => unicast.Address)
+            .ToHashSet();
+        var selected = addresses
+            .Where(address => IPAddress.IsLoopback(address) || localAddresses.Contains(address))
+            .OrderByDescending(IPAddress.IsLoopback)
+            .FirstOrDefault();
+        return selected ?? throw new InvalidOperationException(
+            $"The configured BookshelfNG bind address '{bindAddress}' does not resolve to a local interface; the installer will not probe a remote host.");
     }
 
     private static InstallOutcome Failure(string message, string? backupPath) =>

@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>BookshelfNG</Name>
+  <Repository>ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover</Repository>
+  <Registry>https://ghcr.io/snapetech-org/chaptarrng</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Icon>https://raw.githubusercontent.com/snapetech-org/chaptarrng/main/Logo/512.png</Icon>
+  <WebUI>http://[IP]:[PORT:8787]/</WebUI>
+  <Overview>ChaptarrNG keeps the BookshelfNG Unraid app identity, appdata, media mounts, and port while migrating the existing library on first startup.</Overview>
+  <Description>ChaptarrNG is Snapetech's maintained BookshelfNG replacement. Keep this existing BookshelfNG template, appdata path, and volume mappings when updating. The first compatible startup previews and converts the BookshelfNG database, then checks the migrated database and local health endpoint. If that first startup fails, the compatibility image restores the retained BookshelfNG database and config and stops for operator review. Keep a separate Unraid appdata backup before updating.</Description>
+  <Support>https://github.com/snapetech-org/chaptarrng/issues</Support>
+  <Project>https://github.com/snapetech-org/chaptarrng</Project>
+  <TemplateURL>https://raw.githubusercontent.com/snapetech-org/chaptarrng/main/packaging/legacy/unraid/bookshelfng.xml</TemplateURL>
+  <ReadMe>https://github.com/snapetech-org/chaptarrng/blob/main/docs/MIGRATE_FROM_BOOKSHELFNG.md#unraid</ReadMe>
+  <Category>MediaApp:Books</Category>
+  <ExtraSearchTerms>bookshelfng chaptarrng bookshelf readarr hardcover ebook audiobook seerrng</ExtraSearchTerms>
+  <Changes>BookshelfNG identity-preserving migration candidate. Keep the existing appdata and media paths; first-start conversion is supervised and rolls back on failed health checks.</Changes>
+  <Requires>Docker and the existing BookshelfNG appdata. Back up appdata before updating and keep the prior BookshelfNG image available for recovery.</Requires>
+  <ExtraParams>--restart=unless-stopped --stop-timeout=30600</ExtraParams>
+
+  <Config Name="Web UI Port" Target="8787" Default="8787" Mode="tcp" Description="Web UI Port for the standalone web interface." Type="Port" Display="always" Required="false" Mask="false">8787</Config>
+  <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/bookshelfng" Mode="rw" Description="Persistent BookshelfNG database, settings, and logs." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/bookshelfng</Config>
+  <Config Name="Media" Target="/data" Default="/mnt/user/media" Mode="rw" Description="Ebook and audiobook library root." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/media</Config>
+  <Config Name="Downloads" Target="/download" Default="/mnt/user/downloads" Mode="rw" Description="Downloads shared with the configured download client." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/downloads</Config>
+  <Config Name="BookshelfNG migration and rollback supervisor" Target="CHAPTARR_BOOKSHELF_COMPATIBILITY" Default="true" Mode="" Description="Enable the automatic first-start migration with health checks and rollback." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="BookshelfNG migration timing" Target="BOOKSHELFNG_MIGRATION_MODE" Default="automatic" Mode="" Description="Set automatic to migrate on first start, manual or ask to defer, or retry after a clean rollback and a successful source preview." Type="Variable" Display="advanced" Required="false" Mask="false">automatic</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID for files created by this service." Type="Variable" Display="always" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID for files created by this service." Type="Variable" Display="always" Required="false" Mask="false">100</Config>
+  <Config Name="TZ" Target="TZ" Default="Etc/UTC" Mode="" Description="Time zone used by this service." Type="Variable" Display="always" Required="false" Mask="false">Etc/UTC</Config>
+  <Config Name="HARDCOVER" Target="HARDCOVER" Default="true" Mode="" Description="Preserve the native Hardcover mode used by the prior Unraid template; set false only if the old service used the softcover image." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="HARDCOVER_NATIVE" Target="HARDCOVER_NATIVE" Default="true" Mode="" Description="Preserve native Hardcover provider IDs unless the prior service explicitly set this false." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="HARDCOVER_AUTH" Target="HARDCOVER_AUTH" Default="" Mode="" Description="Personal Hardcover API token. Existing settings and environment values are retained." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+</Container>

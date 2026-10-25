@@ -6,7 +6,11 @@ param(
     [long] $ParentProcessStartTicks,
 
     [Parameter(Mandatory = $true)]
-    [string] $DataDirectory
+    [string] $DataDirectory,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateSet('0', '1')]
+    [string] $ChaptarrServiceWasRunning
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,7 +42,8 @@ try {
     $chaptarrService = Get-Service -Name 'Chaptarr' -ErrorAction SilentlyContinue
     if (-not $chaptarrService) { return }
     try {
-        if ($chaptarrService.Status -ne 'Running') { return }
+        $expectedStatus = if ($ChaptarrServiceWasRunning -eq '1') { 'Running' } else { 'Stopped' }
+        if ($chaptarrService.Status -ne $expectedStatus) { return }
     } finally {
         $chaptarrService.Dispose()
         $chaptarrService = $null

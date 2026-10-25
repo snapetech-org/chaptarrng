@@ -43,7 +43,7 @@ namespace Chaptarr.Core.Test.Download
             {
                 DownloadId = "direct-test-001",
                 Title = "Isaac Asimov - Foundation [epub]",
-                DownloadUrl = "https://downloads.example/foundation.epub",
+                DownloadUrl = "https://203.0.113.17/foundation.epub",
                 Status = DownloadItemStatus.Downloading,
                 OutputFilePath = "/staging/client-1/direct-test-001/Foundation.epub",
                 PartFilePath = "/staging/client-1/direct-test-001/Foundation.epub.part",
@@ -60,7 +60,7 @@ namespace Chaptarr.Core.Test.Download
 
             Assert.That(deserialized.DownloadId, Is.EqualTo("direct-test-001"));
             Assert.That(deserialized.Title, Is.EqualTo("Isaac Asimov - Foundation [epub]"));
-            Assert.That(deserialized.DownloadUrl, Is.EqualTo("https://downloads.example/foundation.epub"));
+            Assert.That(deserialized.DownloadUrl, Is.EqualTo("https://203.0.113.17/foundation.epub"));
             Assert.That(deserialized.Status, Is.EqualTo(DownloadItemStatus.Downloading));
             Assert.That(deserialized.OutputFilePath, Is.EqualTo("/staging/client-1/direct-test-001/Foundation.epub"));
             Assert.That(deserialized.PartFilePath, Is.EqualTo("/staging/client-1/direct-test-001/Foundation.epub.part"));
@@ -129,7 +129,7 @@ namespace Chaptarr.Core.Test.Download
         public void should_deserialize_legacy_json_without_resolved_url_field()
         {
             // Simulates a state file written before ResolvedUrl was added.
-            var json = "{\"downloadId\":\"legacy-001\",\"title\":\"Legacy Book\",\"downloadUrl\":\"https://old.example/book.epub\",\"status\":\"downloading\",\"outputFilePath\":\"/out/book.epub\",\"partFilePath\":\"/out/book.epub.part\",\"totalSize\":500,\"downloadedBytes\":100,\"attemptCount\":1,\"createdAtUtc\":\"2025-01-01T00:00:00Z\",\"updatedAtUtc\":\"2025-01-01T00:01:00Z\"}";
+            var json = "{\"downloadId\":\"legacy-001\",\"title\":\"Legacy Book\",\"downloadUrl\":\"https://203.0.113.29/book.epub\",\"status\":\"downloading\",\"outputFilePath\":\"/out/book.epub\",\"partFilePath\":\"/out/book.epub.part\",\"totalSize\":500,\"downloadedBytes\":100,\"attemptCount\":1,\"createdAtUtc\":\"2025-01-01T00:00:00Z\",\"updatedAtUtc\":\"2025-01-01T00:01:00Z\"}";
 
             var state = Json.Deserialize<DirectDownloadClientState>(json);
 
@@ -147,8 +147,8 @@ namespace Chaptarr.Core.Test.Download
             {
                 DownloadId = "resolved-url-001",
                 Title = "Book With Resolved URL",
-                DownloadUrl = "https://catalog.example/md5/abc123",
-                ResolvedUrl = "https://cdn.example/abc123/book.epub?key=token123",
+                DownloadUrl = "https://203.0.113.12/md5/abc123",
+                ResolvedUrl = "https://203.0.113.13/abc123/book.epub?key=token123",
                 Status = DownloadItemStatus.Downloading,
                 CreatedAtUtc = DateTime.UtcNow,
                 UpdatedAtUtc = DateTime.UtcNow
@@ -157,8 +157,8 @@ namespace Chaptarr.Core.Test.Download
             var json = state.ToJson();
             var deserialized = Json.Deserialize<DirectDownloadClientState>(json);
 
-            Assert.That(deserialized.DownloadUrl, Is.EqualTo("https://catalog.example/md5/abc123"), "Original URL should be preserved");
-            Assert.That(deserialized.ResolvedUrl, Is.EqualTo("https://cdn.example/abc123/book.epub?key=token123"), "API-resolved URL should survive round-trip");
+            Assert.That(deserialized.DownloadUrl, Is.EqualTo("https://203.0.113.12/md5/abc123"), "Original URL should be preserved");
+            Assert.That(deserialized.ResolvedUrl, Is.EqualTo("https://203.0.113.13/abc123/book.epub?key=token123"), "API-resolved URL should survive round-trip");
         }
 
         [Test]
@@ -167,7 +167,7 @@ namespace Chaptarr.Core.Test.Download
             var state = new DirectDownloadClientState
             {
                 DownloadId = "camel-check",
-                ResolvedUrl = "https://cdn.example/file.epub",
+                ResolvedUrl = "https://203.0.113.13/file.epub",
                 Status = DownloadItemStatus.Queued,
                 CreatedAtUtc = DateTime.UtcNow,
                 UpdatedAtUtc = DateTime.UtcNow
@@ -205,7 +205,7 @@ namespace Chaptarr.Core.Test.Download
             {
                 DownloadId = "fallback-001",
                 Title = "Book Needing Browser Fallback",
-                DownloadUrl = "https://catalog.example/md5/def456",
+                DownloadUrl = "https://203.0.113.12/md5/def456",
                 ResolvedUrl = null,
                 FallbackMode = DirectDownloadFallbackMode.DeferredPlaywright,
                 Status = DownloadItemStatus.Downloading,
@@ -259,8 +259,8 @@ namespace Chaptarr.Core.Test.Download
             {
                 DownloadId = "store-integration-001",
                 Title = "Persisted Book",
-                DownloadUrl = "https://info.example/md5/aaa111",
-                ResolvedUrl = "https://cdn.example/aaa111/book.epub",
+                DownloadUrl = "https://203.0.113.23/md5/aaa111",
+                ResolvedUrl = "https://203.0.113.13/aaa111/book.epub",
                 FallbackMode = DirectDownloadFallbackMode.DeferredPlaywright,
                 Status = DownloadItemStatus.Downloading,
                 OutputFilePath = Path.Combine(_tempFolder, "client-1/store-integration-001/Book.epub"),
@@ -278,8 +278,8 @@ namespace Chaptarr.Core.Test.Download
 
             Assert.That(loaded, Is.Not.Null);
             Assert.That(loaded.DownloadId, Is.EqualTo("store-integration-001"));
-            Assert.That(loaded.DownloadUrl, Is.EqualTo("https://info.example/md5/aaa111"));
-            Assert.That(loaded.ResolvedUrl, Is.EqualTo("https://cdn.example/aaa111/book.epub"));
+            Assert.That(loaded.DownloadUrl, Is.EqualTo("https://203.0.113.23/md5/aaa111"));
+            Assert.That(loaded.ResolvedUrl, Is.EqualTo("https://203.0.113.13/aaa111/book.epub"));
             Assert.That(loaded.FallbackMode, Is.EqualTo(DirectDownloadFallbackMode.DeferredPlaywright));
             Assert.That(loaded.TotalSize, Is.EqualTo(2048000));
             Assert.That(loaded.DownloadedBytes, Is.EqualTo(1024000));
@@ -294,7 +294,7 @@ namespace Chaptarr.Core.Test.Download
             Directory.CreateDirectory(stateDir);
             var stateFile = Path.Combine(stateDir, "direct-download-state.json");
 
-            var legacyJson = $"{{\"downloadId\":\"{downloadId}\",\"title\":\"Legacy State\",\"downloadUrl\":\"https://old.example/book.epub\",\"status\":\"completed\",\"outputFilePath\":\"{Path.Combine(stateDir, "Book.epub").Replace("\\", "\\\\")}\",\"totalSize\":4096,\"downloadedBytes\":4096,\"createdAtUtc\":\"2025-03-01T00:00:00Z\",\"updatedAtUtc\":\"2025-03-01T00:01:00Z\"}}";
+            var legacyJson = $"{{\"downloadId\":\"{downloadId}\",\"title\":\"Legacy State\",\"downloadUrl\":\"https://203.0.113.29/book.epub\",\"status\":\"completed\",\"outputFilePath\":\"{Path.Combine(stateDir, "Book.epub").Replace("\\", "\\\\")}\",\"totalSize\":4096,\"downloadedBytes\":4096,\"createdAtUtc\":\"2025-03-01T00:00:00Z\",\"updatedAtUtc\":\"2025-03-01T00:01:00Z\"}}";
             File.WriteAllText(stateFile, legacyJson);
 
             var loaded = _store.Find(_tempFolder, ClientId, downloadId);
@@ -326,8 +326,8 @@ namespace Chaptarr.Core.Test.Download
             {
                 DownloadId = "multi-002",
                 Title = "Has Resolved URL",
-                DownloadUrl = "https://catalog.example/md5/bbb222",
-                ResolvedUrl = "https://cdn.example/bbb222/book.epub",
+                DownloadUrl = "https://203.0.113.12/md5/bbb222",
+                ResolvedUrl = "https://203.0.113.13/bbb222/book.epub",
                 FallbackMode = DirectDownloadFallbackMode.DeferredPlaywright,
                 Status = DownloadItemStatus.Downloading,
                 CreatedAtUtc = DateTime.UtcNow.AddMinutes(1),
@@ -349,7 +349,7 @@ namespace Chaptarr.Core.Test.Download
             Assert.That(loaded1.FallbackMode, Is.EqualTo(DirectDownloadFallbackMode.None));
 
             Assert.That(loaded2.DownloadId, Is.EqualTo("multi-002"));
-            Assert.That(loaded2.ResolvedUrl, Is.EqualTo("https://cdn.example/bbb222/book.epub"));
+            Assert.That(loaded2.ResolvedUrl, Is.EqualTo("https://203.0.113.13/bbb222/book.epub"));
             Assert.That(loaded2.FallbackMode, Is.EqualTo(DirectDownloadFallbackMode.DeferredPlaywright));
         }
 
@@ -360,8 +360,8 @@ namespace Chaptarr.Core.Test.Download
             {
                 DownloadId = "cycle-001",
                 Title = "Cycle Test",
-                DownloadUrl = "https://info.example/md5/ccc333",
-                ResolvedUrl = "https://fast.cdn.example/ccc333/download.epub?token=abc",
+                DownloadUrl = "https://203.0.113.23/md5/ccc333",
+                ResolvedUrl = "https://203.0.113.21/ccc333/download.epub?token=abc",
                 FallbackMode = DirectDownloadFallbackMode.DeferredPlaywright,
                 Status = DownloadItemStatus.Downloading,
                 CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc),
@@ -375,9 +375,9 @@ namespace Chaptarr.Core.Test.Download
             _store.Save(_tempFolder, ClientId, reloaded);
             var final = _store.Find(_tempFolder, ClientId, "cycle-001");
 
-            Assert.That(final.ResolvedUrl, Is.EqualTo("https://fast.cdn.example/ccc333/download.epub?token=abc"));
+            Assert.That(final.ResolvedUrl, Is.EqualTo("https://203.0.113.21/ccc333/download.epub?token=abc"));
             Assert.That(final.FallbackMode, Is.EqualTo(DirectDownloadFallbackMode.DeferredPlaywright));
-            Assert.That(final.DownloadUrl, Is.EqualTo("https://info.example/md5/ccc333"));
+            Assert.That(final.DownloadUrl, Is.EqualTo("https://203.0.113.23/md5/ccc333"));
         }
 
         // ── Interrupted / repeated operation classes ──
@@ -390,7 +390,7 @@ namespace Chaptarr.Core.Test.Download
                 DownloadId = "repeat-save",
                 Title = "Repeated Save",
                 DownloadUrl = "https://example.com/repeat.epub",
-                ResolvedUrl = "https://cdn.example/repeat-resolved.epub",
+                ResolvedUrl = "https://203.0.113.13/repeat-resolved.epub",
                 FallbackMode = DirectDownloadFallbackMode.DeferredPlaywright,
                 Status = DownloadItemStatus.Downloading,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -404,7 +404,7 @@ namespace Chaptarr.Core.Test.Download
                 state = loaded;
             }
 
-            Assert.That(state.ResolvedUrl, Is.EqualTo("https://cdn.example/repeat-resolved.epub"));
+            Assert.That(state.ResolvedUrl, Is.EqualTo("https://203.0.113.13/repeat-resolved.epub"));
             Assert.That(state.FallbackMode, Is.EqualTo(DirectDownloadFallbackMode.DeferredPlaywright));
         }
 
@@ -470,8 +470,8 @@ namespace Chaptarr.Core.Test.Download
             {
                 DownloadId = "overwrite-001",
                 Title = "Overwrite Test",
-                DownloadUrl = "https://info.example/overwrite",
-                ResolvedUrl = "https://old-cdn.example/file.epub",
+                DownloadUrl = "https://203.0.113.23/overwrite",
+                ResolvedUrl = "https://203.0.113.28/file.epub",
                 FallbackMode = DirectDownloadFallbackMode.None,
                 Status = DownloadItemStatus.Downloading,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -481,13 +481,13 @@ namespace Chaptarr.Core.Test.Download
             _store.Save(_tempFolder, ClientId, state);
 
             // Simulate re-resolution with new URL and deferred fallback
-            state.ResolvedUrl = "https://new-cdn.example/file.epub";
+            state.ResolvedUrl = "https://203.0.113.27/file.epub";
             state.FallbackMode = DirectDownloadFallbackMode.DeferredPlaywright;
             _store.Save(_tempFolder, ClientId, state);
 
             var loaded = _store.Find(_tempFolder, ClientId, "overwrite-001");
 
-            Assert.That(loaded.ResolvedUrl, Is.EqualTo("https://new-cdn.example/file.epub"));
+            Assert.That(loaded.ResolvedUrl, Is.EqualTo("https://203.0.113.27/file.epub"));
             Assert.That(loaded.FallbackMode, Is.EqualTo(DirectDownloadFallbackMode.DeferredPlaywright));
         }
 

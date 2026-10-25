@@ -8,6 +8,7 @@ namespace NzbDrone.Common.EnvironmentInfo
         Dictionary<string, string> Args { get; }
         bool Help { get; }
         bool InstallService { get; }
+        bool NoStartService { get; }
         bool UninstallService { get; }
         bool RegisterUrl { get; }
         bool MigrateBookshelf { get; }
@@ -16,6 +17,7 @@ namespace NzbDrone.Common.EnvironmentInfo
         bool RestoreBookshelf { get; }
         bool PreviewBookshelfRestore { get; }
         bool CheckBookshelfPostgresBackup { get; }
+        bool PreviewBookshelfPostgresRestore { get; }
         bool BackupBookshelfPostgres { get; }
         bool RestoreBookshelfPostgres { get; }
         bool ConfirmBookshelfServiceStopped { get; }
@@ -28,6 +30,7 @@ namespace NzbDrone.Common.EnvironmentInfo
         public const string APPDATA = "data";
         public const string NO_BROWSER = "nobrowser";
         internal const string INSTALL_SERVICE = "i";
+        internal const string NO_START_SERVICE = "nostart";
         internal const string UNINSTALL_SERVICE = "u";
         public const string HELP = "?";
         public const string TERMINATE = "terminateexisting";
@@ -41,6 +44,7 @@ namespace NzbDrone.Common.EnvironmentInfo
         public const string RESTORE_BOOKSHELF = "restore-bookshelf";
         public const string PREVIEW_BOOKSHELF_RESTORE = "preview-bookshelf-restore";
         public const string CHECK_BOOKSHELF_POSTGRES_BACKUP = "check-bookshelf-postgres-backup";
+        public const string PREVIEW_BOOKSHELF_POSTGRES_RESTORE = "preview-bookshelf-postgres-restore";
         public const string BACKUP_BOOKSHELF_POSTGRES = "backup-bookshelf-postgres";
         public const string RESTORE_BOOKSHELF_POSTGRES = "restore-bookshelf-postgres";
         public const string CONFIRM_BOOKSHELF_SERVICE_STOPPED = "confirm-bookshelf-service-stopped";
@@ -72,6 +76,7 @@ namespace NzbDrone.Common.EnvironmentInfo
 
         public bool Help => Flags.Contains(HELP);
         public bool InstallService => Flags.Contains(INSTALL_SERVICE);
+        public bool NoStartService => Flags.Contains(NO_START_SERVICE);
         public bool UninstallService => Flags.Contains(UNINSTALL_SERVICE);
         public bool RegisterUrl => Flags.Contains(REGISTER_URL);
         public bool MigrateBookshelf => Flags.Contains(MIGRATE_BOOKSHELF);
@@ -80,6 +85,7 @@ namespace NzbDrone.Common.EnvironmentInfo
         public bool RestoreBookshelf => Flags.Contains(RESTORE_BOOKSHELF);
         public bool PreviewBookshelfRestore => Flags.Contains(PREVIEW_BOOKSHELF_RESTORE);
         public bool CheckBookshelfPostgresBackup => Flags.Contains(CHECK_BOOKSHELF_POSTGRES_BACKUP);
+        public bool PreviewBookshelfPostgresRestore => Flags.Contains(PREVIEW_BOOKSHELF_POSTGRES_RESTORE);
         public bool BackupBookshelfPostgres => Flags.Contains(BACKUP_BOOKSHELF_POSTGRES);
         public bool RestoreBookshelfPostgres => Flags.Contains(RESTORE_BOOKSHELF_POSTGRES);
         public bool ConfirmBookshelfServiceStopped => Flags.Contains(CONFIRM_BOOKSHELF_SERVICE_STOPPED);

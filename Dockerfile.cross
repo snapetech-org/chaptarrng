@@ -90,6 +90,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         php-cli php-mbstring php-xml php-json php-curl php-zip \
         wget \
         gosu \
+        util-linux \
+        iproute2 \
+        postgresql-client \
         sqlite3 libsqlite3-0 \
         libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libdrm2 \
         libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
@@ -130,8 +133,10 @@ RUN set -eux; \
 # Copy our robust entrypoint script
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY docker-bookshelf-compatibility-defaults.sh /docker-bookshelf-compatibility-defaults.sh
+COPY docker-bookshelf-compat-supervisor.sh /usr/local/bin/chaptarr-bookshelf-compat-supervisor
+COPY docker-bookshelf-liveness.sh /usr/local/bin/chaptarr-bookshelf-liveness
 COPY --chmod=0755 docker-startos-init.sh /init
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh /usr/local/bin/chaptarr-bookshelf-compat-supervisor /usr/local/bin/chaptarr-bookshelf-liveness
 COPY docker-healthcheck.sh /usr/local/bin/chaptarr-healthcheck
 RUN chmod +x /usr/local/bin/chaptarr-healthcheck
 
@@ -158,12 +163,20 @@ CMD ["dotnet", "/app/Chaptarr.dll", "-nobrowser", "-data=/config"]
 FROM runtime AS bookshelf-softcover
 EXPOSE 8787
 ENV HARDCOVER=false \
-    CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+    CHAPTARR_BOOKSHELF_COMPATIBILITY=true \
+    CHAPTARR_DEFAULT_PORT=8787 \
+    BOOKSHELFNG_MIGRATION_MODE=automatic
+HEALTHCHECK --interval=30s --timeout=10s --start-period=245m --retries=3 \
+    CMD ["/usr/local/bin/chaptarr-healthcheck"]
 
 FROM runtime AS bookshelf-hardcover
 EXPOSE 8787
 ENV HARDCOVER=true \
-    CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+    CHAPTARR_BOOKSHELF_COMPATIBILITY=true \
+    CHAPTARR_DEFAULT_PORT=8787 \
+    BOOKSHELFNG_MIGRATION_MODE=automatic
+HEALTHCHECK --interval=30s --timeout=10s --start-period=245m --retries=3 \
+    CMD ["/usr/local/bin/chaptarr-healthcheck"]
 
 # Keep the default Docker build target the ordinary ChaptarrNG image.
 FROM runtime AS chaptarrng-standard

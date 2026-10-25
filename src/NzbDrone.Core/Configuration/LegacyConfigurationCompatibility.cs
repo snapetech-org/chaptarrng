@@ -7,7 +7,7 @@ namespace NzbDrone.Core.Configuration
 {
     internal static class LegacyConfigurationCompatibility
     {
-        private static readonly string[] LegacySectionNames = { "Audioarr", "Readarr" };
+        private static readonly string[] LegacySectionNames = { "Bookshelf", "Audioarr", "Readarr" };
 
         public static IConfiguration AddFallbackSections(IConfiguration configuration)
         {
@@ -21,6 +21,9 @@ namespace NzbDrone.Core.Configuration
             {
                 AddSectionFallback(configuration, fallbackValues, legacySection);
             }
+
+            AddRootFallback(configuration, fallbackValues, "BOOKSHELF_PORT", "Chaptarr:Server:Port");
+            AddRootFallback(configuration, fallbackValues, "BOOKSHELF_URLBASE", "Chaptarr:Server:UrlBase");
 
             var missingFallbackValues = fallbackValues
                 .Where(item => configuration[item.Key] == null)
@@ -59,10 +62,24 @@ namespace NzbDrone.Core.Configuration
                 var chaptarrKey = "Chaptarr:" + setting.Key.Substring(legacyPrefix.Length);
                 if (configuration[chaptarrKey] == null)
                 {
-                    // Readarr is processed after Audioarr, so its value takes precedence when
-                    // both legacy application sections contain the same setting.
+                    // Later legacy sections take precedence when an installation retained
+                    // multiple application-prefixed environment values.
                     fallbackValues[chaptarrKey] = setting.Value;
                 }
+            }
+        }
+
+        private static void AddRootFallback(
+            IConfiguration configuration,
+            IDictionary<string, string> fallbackValues,
+            string legacyKey,
+            string chaptarrKey)
+        {
+            if (configuration[chaptarrKey] == null &&
+                !fallbackValues.ContainsKey(chaptarrKey) &&
+                configuration[legacyKey] != null)
+            {
+                fallbackValues[chaptarrKey] = configuration[legacyKey];
             }
         }
     }

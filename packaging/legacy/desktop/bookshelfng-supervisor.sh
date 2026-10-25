@@ -12,6 +12,26 @@ shift 2
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 journal_tool="$script_dir/bookshelfng-journal"
 
+is_option_value() {
+  case "$1" in
+    -*) return 0 ;;
+  esac
+
+  normalized=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+  case "$normalized" in
+    /port|/port=*|/urlbase|/urlbase=*|/bindaddress|/bindaddress=*|/sslport|/sslport=*|\
+    /enablessl|/enablessl=*|/sslcertpath|/sslcertpath=*|/sslcertpassword|/sslcertpassword=*|\
+    /i|/u|/\?|/nobrowser|/nostart|/terminateexisting|/restart|/registerurl|\
+    /nosingleinstancecheck|/exitimmediately|/installservice|/uninstallservice|\
+    /migrate-bookshelf|/preview-bookshelf-migration|/check-bookshelf-migration|\
+    /restore-bookshelf|/preview-bookshelf-restore|/check-bookshelf-postgres-backup|/preview-bookshelf-postgres-restore|\
+    /backup-bookshelf-postgres|/restore-bookshelf-postgres|/confirm-bookshelf-service-stopped)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
 record_journal() {
   BOOKSHELF_DATA_DIR="$data_dir" BOOKSHELF_JOURNAL_PRESERVE_OWNER=true "$journal_tool" "$@"
 }
@@ -20,6 +40,10 @@ custom_data_count=0
 expect_data_value=false
 for argument in "$@"; do
   if [ "$expect_data_value" = true ]; then
+    if [ -z "$argument" ] || is_option_value "$argument"; then
+      echo 'BookshelfNG desktop launcher expected a data directory after -data, not another option.' >&2
+      exit 2
+    fi
     custom_data_count=$((custom_data_count + 1))
     data_dir=$argument
     expect_data_value=false
@@ -27,13 +51,18 @@ for argument in "$@"; do
     continue
   fi
   case "$argument" in
-    -data|--data)
+    -data|--data|/data)
       expect_data_value=true
       custom_data_argument=true
       ;;
-    -data=*|--data=*)
+    -data=*|--data=*|/data=*)
+      selected_data_dir=${argument#*=}
+      if [ -z "$selected_data_dir" ] || [ "${selected_data_dir#-}" != "$selected_data_dir" ]; then
+        echo 'BookshelfNG desktop launcher expected a data directory after -data, not another option.' >&2
+        exit 2
+      fi
       custom_data_count=$((custom_data_count + 1))
-      data_dir=${argument#*=}
+      data_dir=$selected_data_dir
       custom_data_argument=true
       ;;
   esac
@@ -140,6 +169,26 @@ restore_source_database() {
     postgres_backup_dir=$(cat "$metadata_dir/postgres-backup-directory" 2>/dev/null || true)
     if [ -n "$postgres_backup_dir" ] && [ -d "$postgres_backup_dir" ] &&
        find "$postgres_backup_dir" -type f -name 'postgres-main.dump' -print -quit | grep -q .; then
+      "$console" -preview-bookshelf-postgres-restore -confirm-bookshelf-service-stopped \
+        "-bookshelf-postgres-backup=$postgres_backup_dir" "-data=$data_dir" || return $?
+      if find "$postgres_backup_dir" -type f \
+        \( -name 'postgres-log.dump' -o -name 'postgres-cache.dump' \) -print -quit | grep -q .; then
+        target_postgres_backup="$metadata_dir/target-postgres-log-cache"
+        if ! mkdir -m 0700 "$target_postgres_backup"; then
+          echo "Could not create a retained ChaptarrNG PostgreSQL log/cache backup directory: $target_postgres_backup" >&2
+          return 1
+        fi
+        if ! "$console" -backup-bookshelf-postgres -confirm-bookshelf-service-stopped \
+          -bookshelf-postgres-log-cache-only \
+          "-bookshelf-postgres-backup=$target_postgres_backup" "-data=$data_dir"; then
+          echo "Could not preserve the current ChaptarrNG PostgreSQL log/cache data at $target_postgres_backup" >&2
+          return 1
+        fi
+        if ! find "$target_postgres_backup" -type f \
+          \( -name 'postgres-log.dump' -o -name 'postgres-cache.dump' \) -print -quit | grep -q .; then
+          rmdir "$target_postgres_backup"
+        fi
+      fi
       "$console" -restore-bookshelf-postgres -confirm-bookshelf-service-stopped \
         "-bookshelf-postgres-backup=$postgres_backup_dir" "-data=$data_dir"
       return $?
@@ -147,12 +196,12 @@ restore_source_database() {
     return 1
   fi
 
-  sqlite_source="$data_dir/readarr.db"
+  select_sqlite_source
   if [ -f "$sqlite_source" ]; then
     old_backups="$metadata_dir/sqlite-backups-before"
     newest_backup=''
     newest_time=0
-    for backup in "$data_dir"/readarr.db.bookshelfng-backup-*.db; do
+    for backup in "$sqlite_source".bookshelfng-backup-*.db; do
       [ -f "$backup" ] || continue
       if [ -f "$old_backups" ] && grep -F -x -q "$(basename "$backup")" "$old_backups"; then continue; fi
       backup_time=$(stat -c %Y "$backup" 2>/dev/null || stat -f %m "$backup" 2>/dev/null || echo 0)
@@ -171,6 +220,23 @@ restore_source_database() {
   fi
 
   return 1
+}
+
+select_sqlite_source() {
+  if [ -L "$data_dir/readarr.db" ] || [ -L "$data_dir/audioarr.db" ]; then
+    write_state intervention-required
+    echo 'BookshelfNG desktop migration refuses a symlinked SQLite database. Resolve it to a regular file before starting.' >&2
+    exit 1
+  fi
+  if [ -s "$data_dir/readarr.db" ] && [ -s "$data_dir/audioarr.db" ]; then
+    write_state intervention-required
+    echo 'Both readarr.db and audioarr.db contain BookshelfNG data. Resolve which database is authoritative before starting.' >&2
+    exit 1
+  fi
+  sqlite_source="$data_dir/readarr.db"
+  if [ ! -s "$sqlite_source" ] && [ -s "$data_dir/audioarr.db" ]; then
+    sqlite_source="$data_dir/audioarr.db"
+  fi
 }
 
 mkdir -p "$data_dir"
@@ -213,6 +279,7 @@ trap 'exit 143' TERM
 # The source standalone launchers defaulted to Goodreads. Keep that choice for
 # migrated installs unless the operator already configured Hardcover mode.
 export HARDCOVER="${HARDCOVER:-false}"
+export CHAPTARR_DEFAULT_PORT="${CHAPTARR_DEFAULT_PORT:-8787}"
 export CHAPTARR_PACKAGE_UPDATE_MECHANISM="${CHAPTARR_PACKAGE_UPDATE_MECHANISM:-External}"
 
 handoff_state=$(cat "$state_file" 2>/dev/null || true)
@@ -264,17 +331,27 @@ if [ "$resuming" != true ] && "$console" -check-bookshelf-migration "-data=$data
   launch_without_migration "$@"
 fi
 
-sqlite_source="$data_dir/readarr.db"
 postgres_source=false
-if [ -f "$data_dir/config.xml" ] && grep -Eiq '<PostgresHost>[^<[:space:]][^<]*</PostgresHost>' "$data_dir/config.xml"; then
+postgres_environment_override=false
+for name in Chaptarr__Postgres__Host CHAPTARR__POSTGRES__HOST Readarr__Postgres__Host READARR__POSTGRES__HOST Audioarr__Postgres__Host AUDIOARR__POSTGRES__HOST Bookshelf__Postgres__Host BOOKSHELF__POSTGRES__HOST; do
+  if value=$(printenv "$name" 2>/dev/null); then
+    postgres_environment_override=true
+    if [ -n "$value" ]; then postgres_source=true; fi
+    break
+  fi
+done
+if [ "$postgres_environment_override" != true ] && [ -f "$data_dir/config.xml" ] &&
+   grep -Eiq '<PostgresHost>[^<[:space:]][^<]*</PostgresHost>' "$data_dir/config.xml"; then
   postgres_source=true
 fi
-for name in CHAPTARR__POSTGRES__HOST READARR__POSTGRES__HOST AUDIOARR__POSTGRES__HOST; do
-  eval "value=\${$name:-}"
-  if [ -n "$value" ]; then postgres_source=true; fi
-done
 
-if [ "$resuming" != true ] && [ ! -f "$sqlite_source" ] && [ "$postgres_source" != true ]; then
+if [ "$postgres_source" = true ]; then
+  sqlite_source="$data_dir/readarr.db"
+else
+  select_sqlite_source
+fi
+
+if [ "$resuming" != true ] && [ ! -s "$sqlite_source" ] && [ "$postgres_source" != true ]; then
   launch_without_migration "$@"
 fi
 
@@ -343,7 +420,7 @@ if [ "$resuming" != true ]; then
   chmod 0600 "$metadata_dir/postgres-source"
   old_backups="$metadata_dir/sqlite-backups-before"
   : > "$old_backups"
-  for backup in "$data_dir"/readarr.db.bookshelfng-backup-*.db; do
+  for backup in "$sqlite_source".bookshelfng-backup-*.db; do
     [ -f "$backup" ] || continue
     basename "$backup" >> "$old_backups"
   done
@@ -374,32 +451,51 @@ if [ "$resuming" != true ]; then
   write_state starting
 fi
 
-health_port=8787
-url_base=''
-config_path="$data_dir/config.xml"
-if [ -f "$config_path" ]; then
-  saved_port=$(sed -n 's/.*<Port>\([^<]*\)<\/Port>.*/\1/p' "$config_path" | head -n 1 | tr -d '\r\n')
-  case "$saved_port" in ''|*[!0-9]*) ;; *) health_port=$saved_port ;; esac
-  url_base=$(sed -n 's/.*<UrlBase>\([^<]*\)<\/UrlBase>.*/\1/p' "$config_path" | head -n 1 | tr -d '\r\n' | sed 's#^/*##;s#/*$##')
-fi
-for name in CHAPTARR__SERVER__PORT READARR__SERVER__PORT AUDIOARR__SERVER__PORT; do
-  eval "value=\${$name:-}"
-  case "$value" in ''|*[!0-9]*) ;; *) health_port=$value; break ;; esac
-done
-for name in CHAPTARR__SERVER__URLBASE READARR__SERVER__URLBASE AUDIOARR__SERVER__URLBASE; do
-  eval "value=\${$name:-}"
-  if [ -n "$value" ]; then url_base=$(printf '%s' "$value" | sed 's#^/*##;s#/*$##'); break; fi
-done
 expect_server_argument=''
 for argument in "$@"; do
-  if [ -n "$expect_server_argument" ]; then
+  if [ "$expect_server_argument" = enablessl ]; then
+    case "$argument" in
+      true|false|TRUE|FALSE|True|False)
+        export Chaptarr__Server__EnableSsl="$argument"
+        expect_server_argument=''
+        continue
+        ;;
+      -*)
+        export Chaptarr__Server__EnableSsl=true
+        expect_server_argument=''
+        ;;
+      *)
+        export Chaptarr__Server__EnableSsl=true
+        expect_server_argument=''
+        continue
+        ;;
+    esac
+  elif [ -n "$expect_server_argument" ]; then
+    case "$argument" in
+      -*)
+        write_state intervention-required
+        echo "BookshelfNG desktop launcher received $expect_server_argument without a value." >&2
+        exit 1
+        ;;
+    esac
     case "$expect_server_argument" in
       port)
-        case "$argument" in ''|*[!0-9]*) ;; *) health_port=$argument ;; esac
+        case "$argument" in ''|*[!0-9]*) ;; *) export Chaptarr__Server__Port="$argument" ;; esac
         ;;
       urlbase)
-        url_base=$argument
-        url_base=$(printf '%s' "$url_base" | sed 's#^/*##;s#/*$##')
+        export Chaptarr__Server__UrlBase="$argument"
+        ;;
+      bindaddress)
+        export Chaptarr__Server__BindAddress="$argument"
+        ;;
+      sslport)
+        export Chaptarr__Server__SslPort="$argument"
+        ;;
+      sslcertpath)
+        export Chaptarr__Server__SslCertPath="$argument"
+        ;;
+      sslcertpassword)
+        export Chaptarr__Server__SslCertPassword="$argument"
         ;;
     esac
     expect_server_argument=''
@@ -408,27 +504,46 @@ for argument in "$@"; do
   case "$argument" in
     -port|--port) expect_server_argument=port ;;
     -urlbase|--urlbase) expect_server_argument=urlbase ;;
+    -bindaddress|--bindaddress) expect_server_argument=bindaddress ;;
+    -sslport|--sslport) expect_server_argument=sslport ;;
+    -enablessl|--enablessl) expect_server_argument=enablessl ;;
+    -sslcertpath|--sslcertpath) expect_server_argument=sslcertpath ;;
+    -sslcertpassword|--sslcertpassword) expect_server_argument=sslcertpassword ;;
     -port=*|--port=*)
       value=${argument#*=}
-      case "$value" in ''|*[!0-9]*) ;; *) health_port=$value ;; esac
+      case "$value" in ''|*[!0-9]*) ;; *) export Chaptarr__Server__Port="$value" ;; esac
       ;;
     -urlbase=*|--urlbase=*)
-      url_base=${argument#*=}
-      url_base=$(printf '%s' "$url_base" | sed 's#^/*##;s#/*$##')
+      export Chaptarr__Server__UrlBase="${argument#*=}"
+      ;;
+    -bindaddress=*|--bindaddress=*)
+      export Chaptarr__Server__BindAddress="${argument#*=}"
+      ;;
+    -sslport=*|--sslport=*)
+      export Chaptarr__Server__SslPort="${argument#*=}"
+      ;;
+    -enablessl=*|--enablessl=*)
+      export Chaptarr__Server__EnableSsl="${argument#*=}"
+      ;;
+    -sslcertpath=*|--sslcertpath=*)
+      export Chaptarr__Server__SslCertPath="${argument#*=}"
+      ;;
+    -sslcertpassword=*|--sslcertpassword=*)
+      export Chaptarr__Server__SslCertPassword="${argument#*=}"
       ;;
   esac
 done
 if [ -n "$expect_server_argument" ]; then
-  write_state intervention-required
-  echo "BookshelfNG desktop launcher received $expect_server_argument without a value." >&2
-  exit 1
+  if [ "$expect_server_argument" = enablessl ]; then
+    export Chaptarr__Server__EnableSsl=true
+  else
+    write_state intervention-required
+    echo "BookshelfNG desktop launcher received $expect_server_argument without a value." >&2
+    exit 1
+  fi
 fi
-if [ "$health_port" -lt 1 ] || [ "$health_port" -gt 65535 ]; then
-  write_state intervention-required
-  echo "BookshelfNG desktop port is invalid: $health_port" >&2
-  exit 1
-fi
-health_url=${BOOKSHELFNG_HEALTH_URL:-http://127.0.0.1:$health_port${url_base:+/$url_base}/ping}
+health_url=${BOOKSHELFNG_HEALTH_URL:-auto}
+if [ "$health_url" != auto ]; then
 case "$health_url" in
   http://*|https://*) ;;
   *)
@@ -468,9 +583,21 @@ case "$health_authority" in
     exit 1
     ;;
 esac
-timeout_seconds=${BOOKSHELFNG_STARTUP_TIMEOUT_SECONDS:-5400}
-case "$timeout_seconds" in ''|*[!0-9]*) timeout_seconds=5400 ;; esac
-if [ "$timeout_seconds" -lt 1 ] || [ "$timeout_seconds" -gt 7200 ]; then timeout_seconds=5400; fi
+fi
+timeout_seconds=${CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS:-${BOOKSHELFNG_STARTUP_TIMEOUT_SECONDS:-14700}}
+case "$timeout_seconds" in
+  ''|*[!0-9]*)
+    echo 'CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS must be an integer from 1 to 14700.' >&2
+    exit 2
+    ;;
+esac
+while [ "${timeout_seconds#0}" != "$timeout_seconds" ] && [ "${#timeout_seconds}" -gt 1 ]; do
+  timeout_seconds=${timeout_seconds#0}
+done
+if [ "${#timeout_seconds}" -gt 5 ] || [ "$timeout_seconds" -lt 1 ] || [ "$timeout_seconds" -gt 14700 ]; then
+  echo 'CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS must be between 1 and 14700.' >&2
+  exit 2
+fi
 
 app_pid_file="$lock_dir/app.pid"
 if [ "$custom_data_argument" = true ]; then

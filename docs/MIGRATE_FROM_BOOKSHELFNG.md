@@ -1,6 +1,6 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Release status (2026-10-24).** ChaptarrNG `v0.9.977` remains the latest
+> **Release status (2026-10-25).** ChaptarrNG `v0.9.977` remains the latest
 > public release. The current `main` source contains the BookshelfNG migration,
 > compatibility, and packaging work described below, including support for
 > native Hardcover identities and recognized historical SQLite schemas. The
@@ -9,6 +9,10 @@
 > representative-data migration and rollback, live provider and media behavior,
 > and installed-channel handoff are accepted. No release, compatibility bridge,
 > or cutover has been authorized.
+
+> The current local code pass also adds handoff candidates for container
+> platforms and a guarded first-start supervisor. Those changes are not part
+> of the published image and have not yet received the bulk validation pass.
 >
 > SQLite and PostgreSQL migration operate on staged copies and retain the
 > untouched source for rollback. Synthetic conversion and rollback coverage is
@@ -71,10 +75,56 @@ sudo env BOOKSHELFNG_MIGRATION_MODE=ask dnf upgrade bookshelfng
 BOOKSHELFNG_MIGRATION_MODE=ask yay -S bookshelfng-bin
 ```
 
+The Debian, RPM, and AUR systemd bridge gives conversion up to 245 minutes to
+pass its database-readiness check and allows the same bounded window for the
+complete service start, including preflight and PostgreSQL backup. Stop grace
+allows up to 510 minutes for a bounded migration and recovery. Set
+`CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS` in the existing package
+environment file to choose a shorter health window; accepted values are 1 to
+14700 seconds, with 14700 as the default.
+
 The desktop supervisor accepts the same variable. AppImage and Flatpak use a
 GUI confirmation when `zenity` is available; Flatpak can pass it to one
 launch with
 `flatpak run --env=BOOKSHELFNG_MIGRATION_MODE=ask com.snapetech.BookshelfNG`.
+
+Container candidates also accept `BOOKSHELFNG_MIGRATION_MODE`. Their default is
+`automatic`; `manual` leaves the container running without starting the app,
+and `ask` behaves as manual when the platform has no interactive terminal.
+`retry` is an explicit re-attempt after a clean automatic rollback: the
+supervisor requires either a valid completed migration or a fresh successful
+preview of the restored BookshelfNG source. It does not bypass an
+`intervention-required` state.
+Kubernetes uses the supervisor marker for startup/liveness and the app port
+for readiness, so a deferred or failed handoff does not trigger a pod restart
+loop while readiness remains false. Docker health reports readiness only after
+the handoff marker is cleared and `/ping` responds. Docker's startup grace and
+the Kubernetes startup-probe budget allow the 245-minute migration/startup
+window. Compose, Helm, and Unraid stop grace allows 510 minutes for a bounded
+migration and recovery. StartOS uses the same marker-aware health script and
+does not report ready until the migration marker clears and the converted
+database and local `/ping` check pass. A retained failed or
+deferred marker keeps health false for operator recovery. Docker does not
+restart a container solely because its health status is unhealthy. After a
+manual migration, restart with `automatic`; after a clean automatic rollback,
+set `retry` once the cause is corrected. An `intervention-required` state needs
+the documented manual recovery or a return to the prior BookshelfNG image.
+On StartOS, use the **Configure BookshelfNG migration** package action to
+choose automatic or manual first-start migration; automatic is the default,
+and the choice is included in StartOS backups.
+
+BookshelfNG selects native Hardcover identities only when `HARDCOVER=true` and
+`HARDCOVER_NATIVE` is not `false`; an unset or non-true `HARDCOVER` value and
+`HARDCOVER_NATIVE=false` select Goodreads. Preserve both settings from the old
+service when present. The Docker alias bridge, Cloudron, Co-op Cloud, catalog
+Compose, Unraid, and StartOS candidates preserve the native Hardcover defaults
+used by those channels; standalone desktop launchers retain their Goodreads
+default. The Cloudron candidate keeps `/ping` available during supervised
+migration on its existing port while proxying application traffic to the local
+ChaptarrNG process. The Helm bridge infers the old chart's flavor and readable overrides,
+and requires `bookshelfMigration.providerMode` when a Secret or an unrecognized
+image tag leaves the effective mode ambiguous. Never infer provider mode from
+numeric IDs.
 
 ### Migrate with the standalone ChaptarrNG Console
 
@@ -113,8 +163,74 @@ data=/var/lib/bookshelfng
 "$console" -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=$data" || exit 1
 ```
 
-After applying, complete the package transition using the package source
-already configured on that host:
+### One-time bootstrap for a manually installed Linux systemd service
+
+BookshelfNG's old in-app updater only checks the Readarr update service, so it
+cannot discover the first ChaptarrNG release. For a manual Linux systemd
+installation, download the matching `linux-x64` or `linux-arm64` release
+archive and its `.sha256` sidecar from the ChaptarrNG release page. Extract the
+archive, then run its `scripts/bookshelfng-systemd-bootstrap.py` as root while
+the existing BookshelfNG service is running. The bootstrap verifies the
+archive checksum and service executable, captures the service's effective
+environment in memory, previews migration with the same service account,
+retains the prior application and `config.xml`, then installs ChaptarrNG at
+the old executable path. The service's first normal startup performs
+migration; temporary systemd hooks verify HTTP health and database lineage and
+restore the source database, config, and application if the handoff fails or
+is interrupted. The temporary unit override allows up to 245 minutes for
+startup and up to 510 minutes for stop and recovery. PostgreSQL installs also
+retain and restore the source log/cache schemas.
+
+The running service must use an explicit `-data` argument, and it must resolve
+to the same directory passed as `--data-dir`. The bootstrap checks this before
+stopping the service or changing files. `--health-timeout-seconds` accepts
+1–14700 seconds and defaults to 14700; its temporary systemd unit allows an
+additional 180 seconds for service start and up to 30600 seconds for stop and
+rollback recovery.
+
+Example for an installation whose service starts
+`/opt/bookshelfng/Readarr` and uses `/var/lib/bookshelfng`:
+
+```sh
+version=<accepted-chaptarrng-release>
+sudo python3 ./ChaptarrNG/scripts/bookshelfng-systemd-bootstrap.py \
+  --service bookshelfng.service \
+  --install-dir /opt/bookshelfng \
+  --legacy-executable /opt/bookshelfng/Readarr \
+  --data-dir /var/lib/bookshelfng \
+  --archive "$PWD/ChaptarrNG-${version}-linux-x64.tar.gz" \
+  --backup-dir "/var/backups/chaptarrng-bookshelfng-${version}-first-handoff"
+```
+
+Use the exact archive filename and architecture for the host. The backup path
+must be new and absolute, outside both the install and data directories, and
+its existing parent must be root-owned and not writable by group or other
+users. For the example, `/var/backups` is the existing parent; the bootstrap
+creates the versioned child directory. Paths used by the systemd recovery hook
+cannot contain whitespace. Keep an independent appdata backup too.
+The bootstrap supports active systemd services whose executable lives inside
+the stated install directory; package-managed installations should continue
+through their existing package identity instead. After BookshelfNG migration,
+the built-in updater checks checksum-verified ChaptarrNG GitHub releases.
+
+If automatic rollback records `intervention-required`, systemd keeps the
+service blocked and the backup directory retains the source database, config,
+and both application snapshots. After correcting the reported external issue,
+retry the guarded rollback with the retained helper:
+
+```sh
+sudo python3 "/var/backups/chaptarrng-bookshelfng-${version}-first-handoff/bookshelfng-systemd-bootstrap.py" \
+  --recover \
+  --state-file "/var/backups/chaptarrng-bookshelfng-${version}-first-handoff/state.json"
+```
+
+Recovery runs through the original systemd unit so its configured database
+environment stays in effect. It only starts BookshelfNG after the rollback
+state is verified.
+
+For a package-managed install that used the standalone Console migration above,
+complete the package transition using the package source already configured
+on that host:
 
 | Platform | Package transition |
 | --- | --- |
@@ -128,6 +244,36 @@ available. Keep the service stopped until the package transition is complete.
 If preview or apply reports an error, preserve the source database and every
 reported backup for review; do not restart the old service after apply has
 begun.
+
+### One-time handoff for standalone macOS and FreeBSD archives
+
+BookshelfNG's old in-app updater cannot discover ChaptarrNG releases. For a
+manual standalone macOS or FreeBSD install, download the matching ChaptarrNG
+`osx-x64`, `osx-arm64`, or `freebsd-x64` archive and its `.sha256` sidecar.
+Compare the archive's digest with the first field in the sidecar. Use
+`shasum -a 256 ARCHIVE.tar.gz` on macOS or `sha256 ARCHIVE.tar.gz` on FreeBSD.
+Extract ChaptarrNG beside the existing BookshelfNG files. Stop the old process
+before starting the replacement. Use the exact data directory, arguments, and
+service environment from the existing launcher, including any PostgreSQL and
+provider settings. Keep credentials in the existing service environment; do
+not print or paste them. Keep the prior application directory until the first
+ChaptarrNG startup passes its health check.
+
+For example, from the extracted ChaptarrNG directory:
+
+```sh
+./Chaptarr -nobrowser -data="$HOME/.local/share/bookshelfng"
+```
+
+Replace the example data path with the path used by the existing process. A
+full ChaptarrNG startup automatically converts a supported BookshelfNG
+database through the staged migration workflow before normal library startup.
+It retains the source database for rollback. Update any LaunchAgent, rc script,
+or local launcher to point at the new `Chaptarr` executable only after startup
+succeeds; package-managed services should use their package transition
+instead. This first archive download and launcher change is a one-time
+operator action. After the migrated database is accepted, ChaptarrNG's
+built-in updater uses its checksum-verified GitHub release route.
 
 ## Choose the user experience
 
@@ -152,9 +298,10 @@ requires an explicit Goodreads or native Hardcover choice for migration,
 accepts only a versioned ChaptarrNG image or digest, and requires explicit
 stopped-service confirmation before apply or rollback. Native Hardcover
 migration requires a versioned `v0.9.978` or newer image; published `.977`
-does not support that identity conversion. The release workflow is configured
-to include the helper in future Linux standalone archives after a release is
-approved. No new release or cutover is authorized by this source change.
+does not support that identity conversion. The source packaging workflow
+includes the helper in Linux x64 and arm64 standalone archives. The published
+`.977` archives do not contain this newer bootstrap. No new release or cutover
+is authorized by this source change.
 
 The Add New page carries over the BookshelfNG “search as you type” choice when
 you open ChaptarrNG from the same browser origin. If you move to a different
@@ -809,7 +956,7 @@ service start. It waits for the configured local `/ping` URL and the migrated
 database/provider check; on timeout or service exit it restores the source
 database, prior app, original NSSM settings, both environment blocks, and
 startup mode. The service account is preserved by the installer. The deferred
-task and PostgreSQL restore still need Luna's installed-Windows acceptance.
+task and PostgreSQL restore still need installed-Windows acceptance.
 
 This is still source-only migration tooling. The published `v0.9.977` Windows
 binary does not preserve `-data` when registering its service, and the manual
@@ -887,18 +1034,26 @@ ChaptarrNG database and preserves the failed restore candidate for inspection.
 > the BookshelfNG appdata until the retirement gates close.
 
 Stop BookshelfNG and back up the full appdata directory. In **Apps > Previous
-Apps**, apply the updated BookshelfNG template. It points to
-`ghcr.io/snapetech-org/chaptarrng:latest`, the same image used by fresh ChaptarrNG
-installs, while retaining the old `/config`, `/data`, `/download`, port,
+Apps**, apply the updated BookshelfNG template. The current source candidate
+points to `ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover`; the released
+template still points to BookshelfNG until the candidate is accepted. It
+retains the old `/config`, `/data`, `/download`, port,
 PUID/PGID, timezone, and Hardcover settings. Starting the container runs the
 regular ChaptarrNG app and its automatic migration. The old `config.xml` keeps
 the saved app port and URL base.
 
-The candidate template keeps `HARDCOVER=true` and `HARDCOVER_NATIVE=true` for
-the native Hardcover configuration it was built for. Preserve
-`HARDCOVER=false` for a Goodreads-primary source; the migration requires the
-same explicit mode during preview, automatic startup, and apply. The template
-XML and settings-preservation script passed locally, but the actual Community
+The template exposes `BOOKSHELFNG_MIGRATION_MODE`. Leave it as `automatic` for
+first-start conversion. Set it to `manual` to keep the old database untouched
+and the new container unavailable until a Console preview/apply is completed;
+set it back to `automatic` and restart the container to finish startup. `ask`
+defers in Unraid because container startup has no interactive terminal.
+
+The old Unraid template defaults to the native Hardcover image and sets both
+`HARDCOVER=true` and `HARDCOVER_NATIVE=true`; the candidate preserves those
+defaults. Keep both existing values during the update, including
+`HARDCOVER_NATIVE=false` when the prior service used Goodreads-compatible IDs.
+Preview and automatic startup must use the same provider-mode values. The template XML and
+settings-preservation script passed locally, but the actual Community
 Applications update and rollback flow has not been run.
 
 Wait for the container health check, open the existing URL, and inspect
@@ -916,10 +1071,11 @@ database.
 > **Not approved for cutover yet.** Do not change the image or start ChaptarrNG
 > against BookshelfNG appdata until migration and rollback acceptance close.
 
-Change the image to ChaptarrNG and retain the old host paths, container mount
-targets, and port mapping. For a manual cutover, set `HARDCOVER=true` for a
-native Hardcover BookshelfNG source or `HARDCOVER=false` for a Goodreads-primary
-source. The compatibility aliases map `latest`, `main`, `master`, and
+Change the image to ChaptarrNG and retain the old service/container names, host
+paths, mount targets, and port mapping. The Compose candidate defaults to
+`HARDCOVER=false`, matching BookshelfNG's Goodreads behavior when no mode was
+configured. Keep `HARDCOVER=true` for a source that used native Hardcover IDs.
+The compatibility aliases map `latest`, `main`, `master`, and
 `hardcover` to the native Hardcover target, and `softcover` to the Goodreads
 target; release automation verifies each alias against its mode-specific image
 digest. Those images use port `8787` with a fresh data directory. They have not
@@ -930,14 +1086,16 @@ an installation that used the default BookshelfNG port, the shape is:
 
 ```yaml
 services:
-  chaptarrng:
+  bookshelfng:
     image: ghcr.io/snapetech-org/chaptarrng:latest
-    container_name: chaptarrng
+    container_name: bookshelfng
     environment:
       PUID: "99"
       PGID: "100"
       TZ: Etc/UTC
-      HARDCOVER: "true" # use false for a Goodreads-primary BookshelfNG source
+      CHAPTARR_BOOKSHELF_COMPATIBILITY: "true"
+      BOOKSHELFNG_MIGRATION_MODE: automatic
+      HARDCOVER: "false" # keep true only if the old service used native Hardcover IDs
     volumes:
       - /host/path/to/bookshelfng-config:/config
       - /host/path/to/media:/data
@@ -1372,9 +1530,13 @@ identity, but both release-readiness gates, the migration bridge gate, and an
 explicit bridge request are required; the publisher has not run and no chart
 artifact is available during the freeze.
 
-An installed PVC upgrade, GitOps sync, and chart rollback have not been tested,
-so this does not authorize a live cutover. After all migration and channel
-acceptance gates close, Helm users can upgrade from the same
+The chart now includes a fail-closed restore Job for rollback after a healthy
+conversion. It requires a separate scale-to-zero step, explicit database type,
+operator confirmation, and—on PostgreSQL—the retained independent
+log/cache-backup directory. This adds a source recovery path; it has not been
+accepted on an installed cluster. An installed PVC upgrade, GitOps sync, and
+Helm rollback remain unverified, so this does not authorize a live cutover.
+After all migration and channel acceptance gates close, Helm users can upgrade from the same
 `oci://ghcr.io/snapetech/bookshelfng/bookshelfng` source while keeping the
 existing release name, namespace, values, and PVC. Pinned chart archives need a
 manual update. See the chart guide for the command shape; do not use it against
