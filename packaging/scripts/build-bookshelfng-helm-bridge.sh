@@ -113,12 +113,14 @@ for provider_mode in hardcover softcover; do
   helm lint "$chart_dir" \
     --set bookshelfMigration.confirmed=true \
     --set "bookshelfMigration.providerMode=$provider_mode" \
+    --set-string "image.tag=$provider_mode" \
     --set-string "image.digest=$IMAGE_DIGEST"
 
   helm template bookshelfng "$chart_dir" \
     --namespace bookshelf-test \
     --set bookshelfMigration.confirmed=true \
     --set "bookshelfMigration.providerMode=$provider_mode" \
+    --set-string "image.tag=$provider_mode" \
     --set-string "image.digest=$IMAGE_DIGEST" \
     > "$work_dir/rendered-$provider_mode.yaml"
   grep -Fq "image: \"ghcr.io/snapetech-org/chaptarrng@${IMAGE_DIGEST}\"" "$work_dir/rendered-$provider_mode.yaml"

@@ -8,7 +8,6 @@ const inputSpec = InputSpec.of({
   autoMigrate: Value.toggle({
     name: i18n('Automatically migrate BookshelfNG data on startup'),
     description: i18n('When disabled, ChaptarrNG waits for you to run the documented manual migration.'),
-    required: true,
     default: true,
   }),
 })

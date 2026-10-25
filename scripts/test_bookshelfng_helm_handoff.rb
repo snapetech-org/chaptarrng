@@ -62,6 +62,31 @@ def normalize_expected_upgrade_differences(value)
   value
 end
 
+def normalize_bookshelfng_handoff_fields(value)
+  normalize_expected_upgrade_differences(value)
+  return value unless value["kind"] == "StatefulSet"
+
+  pod_spec = value.dig("spec", "template", "spec")
+  return value unless pod_spec.is_a?(Hash)
+
+  pod_spec.delete("terminationGracePeriodSeconds")
+  container = pod_spec.fetch("containers", []).find { |item| item["name"] == "bookshelfng" }
+  return value unless container
+
+  %w[startupProbe readinessProbe livenessProbe].each { |probe| container.delete(probe) }
+  compatibility_environment = %w[
+    CHAPTARR_BOOKSHELF_COMPATIBILITY
+    CHAPTARR_DEFAULT_PORT
+    CHAPTARR_EXPECTED_PORT
+    BOOKSHELFNG_MIGRATION_MODE
+    HARDCOVER
+    HARDCOVER_NATIVE
+  ]
+  container["env"]&.reject! { |entry| compatibility_environment.include?(entry["name"]) }
+  container.delete("env") if container["env"]&.empty?
+  value
+end
+
 def compare_rendered_resources(candidate_objects, legacy_objects, scenario)
   index = lambda do |objects|
     objects.each_with_object({}) do |item, resources|
@@ -78,8 +103,8 @@ def compare_rendered_resources(candidate_objects, legacy_objects, scenario)
 
   candidate.each do |identity, item|
     legacy_item = legacy.fetch(identity)
-    candidate_resource = normalize_expected_upgrade_differences(JSON.parse(JSON.generate(item)))
-    legacy_resource = normalize_expected_upgrade_differences(JSON.parse(JSON.generate(legacy_item)))
+    candidate_resource = normalize_bookshelfng_handoff_fields(JSON.parse(JSON.generate(item)))
+    legacy_resource = normalize_bookshelfng_handoff_fields(JSON.parse(JSON.generate(legacy_item)))
     assert(candidate_resource == legacy_resource,
            "#{scenario}: #{identity[0]}/#{identity[1]} differs from the pinned BookshelfNG chart")
   end
@@ -123,6 +148,20 @@ container = stateful_set.dig("spec", "template", "spec", "containers").find { |i
 assert(!container.nil?, "legacy container name was not preserved")
 assert(container["image"] == "ghcr.io/snapetech-org/chaptarrng@#{DIGEST}", "image is not pinned to the requested digest")
 assert(container.dig("ports", 0, "containerPort") == 8787, "container port changed")
+compatibility_environment = container.fetch("env", []).to_h { |item| [item["name"], item["value"]] }
+assert(compatibility_environment["CHAPTARR_BOOKSHELF_COMPATIBILITY"] == "true", "BookshelfNG compatibility startup is not enabled")
+assert(compatibility_environment["BOOKSHELFNG_MIGRATION_MODE"] == "automatic", "default migration mode changed")
+assert(compatibility_environment["HARDCOVER"] == "true" && compatibility_environment["HARDCOVER_NATIVE"] == "true",
+       "selected BookshelfNG provider mode is not passed to the container")
+assert(container.dig("startupProbe", "exec", "command") == ["/usr/local/bin/chaptarr-bookshelf-liveness"] &&
+       container.dig("startupProbe", "failureThreshold") == 1470,
+       "startup probe no longer waits through bounded migration")
+assert(container.dig("readinessProbe", "exec", "command") == ["/usr/local/bin/chaptarr-healthcheck"],
+       "readiness probe does not check the migrated application health")
+assert(container.dig("livenessProbe", "exec", "command") == ["/usr/local/bin/chaptarr-bookshelf-liveness"],
+       "liveness probe would restart the app during migration or recovery")
+assert(stateful_set.dig("spec", "template", "spec", "terminationGracePeriodSeconds") == 30600,
+       "termination grace period does not cover migration recovery")
 assert(container.dig("volumeMounts", 0, "name") == "config", "config volume mount name changed")
 assert(container.dig("volumeMounts", 0, "mountPath") == "/config", "config mount path changed")
 assert(stateful_set.dig("spec", "template", "spec", "volumes", 0, "persistentVolumeClaim", "claimName") == "bookshelfng-config",
@@ -208,12 +247,16 @@ Dir.mktmpdir("bookshelfng-helm-bridge-build-") do |directory|
     package_args = [
       "--set", "bookshelfMigration.confirmed=true",
       "--set", "bookshelfMigration.providerMode=#{provider_mode}",
+      "--set-string", "image.tag=#{provider_mode}",
       "--set-string", "image.digest=#{DIGEST}"
     ]
     rendered, render_error, render_status = render_chart(package_path, *package_args)
     assert(render_status.success?, "packaged chart failed to render for #{provider_mode}: #{render_error}")
     assert(rendered.include?("image: \"ghcr.io/snapetech-org/chaptarrng@#{DIGEST}\""),
            "packaged chart did not pin the ChaptarrNG image for #{provider_mode}")
+    expected_hardcover = provider_mode == "hardcover" ? "true" : "false"
+    assert(rendered.include?("name: HARDCOVER\n              value: \"#{expected_hardcover}\""),
+           "packaged chart did not preserve the #{provider_mode} source mode")
     assert(rendered.include?("claimName: bookshelfng-config"),
            "packaged chart did not preserve the legacy PVC for #{provider_mode}")
   end
@@ -240,7 +283,7 @@ assert(docker_workflow.include?("inputs.legacy_bridge_enabled && #{legacy_readin
 
 [
   ["missing operator confirmation", ["--set", "bookshelfMigration.providerMode=hardcover", "--set-string", "image.digest=#{DIGEST}"], /confirmed must be true/],
-  ["missing provider mode", ["--set", "bookshelfMigration.confirmed=true", "--set-string", "image.digest=#{DIGEST}"], /providerMode must explicitly match/],
+  ["missing provider mode for unknown predecessor", ["--set", "bookshelfMigration.confirmed=true", "--set-string", "image.tag=unknown", "--set-string", "image.digest=#{DIGEST}"], /providerMode must be explicit because/],
   ["missing image digest", ["--set", "bookshelfMigration.confirmed=true", "--set", "bookshelfMigration.providerMode=hardcover"], /image.digest must be set/],
   ["legacy repository retained by --reuse-values", ["--set", "bookshelfMigration.confirmed=true", "--set", "bookshelfMigration.providerMode=hardcover", "--set", "image.repository=ghcr.io/snapetech/bookshelfng", "--set-string", "image.digest=#{DIGEST}"], /image.repository must be the ChaptarrNG image/],
   ["malformed image digest", ["--set", "bookshelfMigration.confirmed=true", "--set", "bookshelfMigration.providerMode=hardcover", "--set-string", "image.digest=latest"], /image.digest must have the form/],
