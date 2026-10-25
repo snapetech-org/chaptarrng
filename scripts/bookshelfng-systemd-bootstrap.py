@@ -52,6 +52,20 @@ class HandoffError(RuntimeError):
     pass
 
 
+class BookshelfConfigTreeBuilder(ET.TreeBuilder):
+    def __init__(self, *, insert_comments: bool = False) -> None:
+        super().__init__(insert_comments=insert_comments)
+
+    def doctype(self, name: str, pubid: str | None, system: str | None) -> None:
+        raise HandoffError("BookshelfNG config.xml must not contain a document type declaration.")
+
+
+def parse_config_xml(path: pathlib.Path, *, insert_comments: bool = False) -> ET.ElementTree:
+    parser = ET.XMLParser(target=BookshelfConfigTreeBuilder(insert_comments=insert_comments))
+    # DTDs are rejected by BookshelfConfigTreeBuilder.doctype before parsing continues.
+    return ET.parse(path, parser=parser)  # nosemgrep: python.lang.security.use-defused-xml-parse.use-defused-xml-parse
+
+
 def log(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
 
@@ -395,9 +409,8 @@ def persist_target_server_settings(data_dir: pathlib.Path, port: int, argv: list
 
     if config_file.is_file():
         try:
-            parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
-            tree = ET.parse(config_file, parser=parser)
-        except (ET.ParseError, OSError) as exc:
+            tree = parse_config_xml(config_file, insert_comments=True)
+        except (ET.ParseError, OSError, HandoffError) as exc:
             raise HandoffError("BookshelfNG config.xml could not be read while preserving its server settings.") from exc
         root = tree.getroot()
         original_stat = config_file.stat()
@@ -475,8 +488,8 @@ def config_value(config_file: pathlib.Path, key: str) -> str | None:
     if not config_file.is_file() or config_file.is_symlink():
         return None
     try:
-        root = ET.parse(config_file).getroot()
-    except (ET.ParseError, OSError):
+        root = parse_config_xml(config_file).getroot()
+    except (ET.ParseError, OSError, HandoffError):
         return None
     for element in root.iter():
         if element.tag.rsplit("}", 1)[-1].lower() == key.lower() and element.text:
