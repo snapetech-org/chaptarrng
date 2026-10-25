@@ -317,6 +317,29 @@ data, installed rollback, or package-channel acceptance. The uniquely named
 Compose volumes, image, and override were removed after the run. No release,
 bridge, or cutover was performed.
 
+## Current-source migration and SeerrNG smoke (2026-10-24)
+
+The checked-in Compose smoke built the application source now committed as
+ChaptarrNG `364791577626448882daf8eba6320272ce754a7f` and ran against SeerrNG
+`14539294113215ef7dd00f204098e3f53d109e1b`. The schema-158 BookshelfNG
+fixture converted during normal startup, and the retained source backup was
+present. SeerrNG's `ReadarrAPI` read both migrated formats and their files and
+history through the format-specific facades. The test confirmed that the
+legacy `BookSearch` response projects the split audiobook/ebook rows back to
+source ID `30`, while native command inspection returns target IDs `30` and
+`31`. A legacy source ID sent through the scoped ebook facade resolved to the
+ebook target ID `31`. The restricted service-key boundary and synthetic
+pending-import create/poll/cancel lifecycle passed.
+
+The Release Core suite passed with PostgreSQL 17 enabled: 4,914 passed, 14
+skipped, zero failed. The focused PostgreSQL migration/backup smoke passed
+15/15, including normal-startup conversion, older schema snapshots, rollback,
+future-schema rejection, and a real disposable `pg_dump`/`pg_restore` probe.
+The run used synthetic records and placeholder media; successful provider
+acquisition, operator-data acceptance, complete installed-channel rollback,
+and external update delivery remain unverified. No release or cutover was
+performed.
+
 ## Earlier source-build request-lifecycle run (2026-10-19)
 
 The prior checked-in Compose run built ChaptarrNG PR #131 head
