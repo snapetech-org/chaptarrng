@@ -76,7 +76,7 @@ internal static class BookshelfServiceEnvironment
             overrides["CHAPTARR_DEFAULT_PORT"] = configuredDefaultPort;
         }
 
-        ApplyProviderMode(overrides, providerMode);
+        ApplyProviderModeToMigrationEnvironment(overrides, providerMode);
         return overrides;
     }
 
@@ -104,7 +104,7 @@ internal static class BookshelfServiceEnvironment
             target["CHAPTARR_DEFAULT_PORT"] = serviceDefaultPort;
         }
 
-        ApplyProviderMode(target, providerMode);
+        ApplyProviderModeToServiceEnvironment(target, providerMode);
         return target;
     }
 
@@ -232,7 +232,7 @@ internal static class BookshelfServiceEnvironment
         }
     }
 
-    private static void ApplyProviderMode(
+    private static void ApplyProviderModeToMigrationEnvironment(
         IDictionary<string, string?> destination,
         ProviderIdentityMode providerMode)
     {
@@ -248,7 +248,7 @@ internal static class BookshelfServiceEnvironment
         }
     }
 
-    private static void ApplyProviderMode(
+    private static void ApplyProviderModeToServiceEnvironment(
         IDictionary<string, string> destination,
         ProviderIdentityMode providerMode)
     {
