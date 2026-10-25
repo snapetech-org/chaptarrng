@@ -8,6 +8,18 @@ the remaining semantic review, comprehensive tests, refinement and delivery.
 Use that dependency order for the 100% drop-in goal; old path counts are not
 missing-feature counts. This planning update changes no release gate.
 
+**Operator-data SQLite conversion and rollback (2026-10-25, ChaptarrNG
+`3bfb4b15`):** Two private BookshelfNG database snapshots passed preview,
+apply, integrity and foreign-key reconciliation, source-backup comparison, and
+restore. The preview accounted for all rows in 39 imported tables; rollback
+restored all 40 source tables and retained the converted targets separately.
+The full evidence and precise data dispositions are in the
+[migration fixture record](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md#operator-data-sqlite-conversion-and-rollback-2026-10-25).
+This closes the migration/rollback case for these two SQLite snapshots only;
+PostgreSQL, live-provider and unchanged-client workflows, representative media,
+installed-channel acceptance, and external delivery remain open. No release or
+cutover gate changed.
+
 **BookshelfNG edition and unmapped-file migration parity (2026-10-24):** The
 converter now classifies editions using ebook, audiobook, print, narrator, and
 recognized linked-file evidence. It creates format-specific edition rows when

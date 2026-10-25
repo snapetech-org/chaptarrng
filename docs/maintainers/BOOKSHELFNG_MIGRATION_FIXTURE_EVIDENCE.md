@@ -1,5 +1,50 @@
 # BookshelfNG migration fixture evidence
 
+## Operator-data SQLite conversion and rollback (2026-10-25)
+
+ChaptarrNG `3bfb4b15` passed a Release solution build with zero warnings and
+errors, followed by the full Core suite: 4,910 passed, 28 skipped, and none
+failed. The built CLI then previewed, applied, and rolled back two separate
+private SQLite snapshots from active BookshelfNG installations. The live
+services and source databases were not modified.
+
+For each preview, all rows across the 39 imported tables were accounted for:
+
+| Snapshot | Source rows | Transformed | Reset |
+| --- | ---: | ---: | ---: |
+| First SQLite installation | 145,513 | 142,772 | 2,741 |
+| Second SQLite installation | 160,584 | 157,780 | 2,804 |
+
+The first database had six stale `SeriesBookLink` rows pointing to missing
+books; the second had three. Preview counted them as resets, and the converted
+databases retained every valid link while passing SQLite integrity and foreign
+key checks. The first database also had one history event for an unmapped book;
+it remains in history with required `BookId=0`. All History, DownloadHistory,
+and BookFiles IDs were retained in both targets.
+
+The DownloadHistory totals were 3,904 and 4,049. Of these, 3,440 and 3,585
+already had the no-author `AuthorId=0` value in the source snapshots; neither
+database had a positive DownloadHistory author ID missing from Authors. The
+preview now reports these unassociated rows separately from positive IDs that
+cannot be mapped, and apply preserves them with the target-required
+`AuthorId=0` sentinel.
+
+Each retained BookshelfNG backup matched its source snapshot across all 40
+tables. Restore-preview passed; rollback restored the source snapshots across
+all 40 tables and retained the converted ChaptarrNG database separately, with
+all 81 target tables matching their pre-restore contents. Restored source and
+retained target backups passed integrity checks; source foreign-key results
+remained the expected six and three stale links, while both ChaptarrNG backups
+had zero foreign-key errors. The full table and row details remain in private
+task logs; this record contains no source identifiers, titles, credentials, or
+paths.
+
+This closes migration and rollback acceptance for these two SQLite snapshots.
+It does not establish PostgreSQL operator-data acceptance, live-provider
+fulfillment, complete unchanged-client workflows, representative media
+playback, installed-channel update/rollback, external feed delivery, or
+production cutover. Release and migration-bridge gates remain closed.
+
 ## Explicit utility-mode migration matrix (2026-10-25)
 
 The exact-head Windows installer service round-trip in Build

@@ -854,8 +854,10 @@ the promoted ChaptarrNG database must pass a clean foreign-key check.
 
 History for deleted BookshelfNG books or authors remains in the converted
 history tables without a link to a future ChaptarrNG record that might reuse
-the old numeric ID. The preview report counts these unlinked history records;
-the retained source backup keeps their original IDs and relationships.
+the old numeric ID. The native history schema requires `BookId`, so an event
+for an unmapped book uses `BookId=0`; an unmapped nullable author link is
+cleared. The preview report counts these unlinked history records; the retained
+source backup keeps their original IDs and relationships.
 Download-history events without a mapped author remain present with the
 target-required `AuthorId=0` sentinel, and the preview reports their count.
 
