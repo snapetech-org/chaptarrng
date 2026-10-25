@@ -1298,25 +1298,34 @@ namespace NzbDrone.Core.Datastore
         {
             var sourceCount = CountRows(source, "DownloadHistory");
             var targetColumns = GetColumns(target, "DownloadHistory");
-            var unlinkedMissingAuthorRows = 0;
+            long unlinkedAuthorRows = 0;
+            long noSourceAuthorRows = 0;
+            long unmappedPositiveAuthorRows = 0;
             foreach (var row in ReadRows(source, "DownloadHistory"))
             {
                 EnsureAllSourceValuesMapped(row, targetColumns, "DownloadHistory");
                 var values = Intersect(row, targetColumns);
                 values["BookId"] = 0; // BookshelfNG does not store a book ID on these events.
                 var sourceAuthorId = GetNullableInt(row, "AuthorId");
-                if (sourceAuthorId.HasValue && authors.TryGetValue(sourceAuthorId.Value, out var author))
+                if (sourceAuthorId.GetValueOrDefault() > 0 && authors.TryGetValue(sourceAuthorId.Value, out var author))
                 {
                     values["AuthorId"] = author.Id;
                 }
                 else
                 {
                     values["AuthorId"] = 0;
+                    unlinkedAuthorRows++;
                     if (sourceAuthorId.GetValueOrDefault() > 0)
                     {
-                        // Retain history from removed authors without letting their
-                        // old numeric IDs alias a Chaptarr author added later.
-                        unlinkedMissingAuthorRows++;
+                        // Retain history without letting an unmapped source ID
+                        // alias a Chaptarr author added later.
+                        unmappedPositiveAuthorRows++;
+                    }
+                    else
+                    {
+                        // DownloadHistory.AuthorId is required in Chaptarr's schema;
+                        // zero represents events that never had a mapped author.
+                        noSourceAuthorRows++;
                     }
                 }
 
@@ -1325,7 +1334,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("DownloadHistory", sourceCount, 0, sourceCount, 0, 0,
-                $"download events are preserved; source events without a book use the target's non-null BookId=0 sentinel; events from removed authors using AuthorId=0: {unlinkedMissingAuthorRows} (prevents stale source IDs from aliasing future Chaptarr authors)");
+                $"download events are preserved; source events without a book use the target's non-null BookId=0 sentinel; events without a mapped author use required AuthorId=0: {unlinkedAuthorRows} (source rows without a positive author ID: {noSourceAuthorRows}; positive source author IDs without a mapped author: {unmappedPositiveAuthorRows})");
         }
 
         private static void ImportHistory(
@@ -1341,14 +1350,14 @@ namespace NzbDrone.Core.Datastore
             var targetColumns = GetColumns(target, "History");
             var conflictingFileReferences = 0;
             var ambiguousFileReferences = 0;
-            var unlinkedMissingAuthorRows = 0;
-            var unlinkedMissingBookRows = 0;
+            var unlinkedUnmappedAuthorRows = 0;
+            var unlinkedUnmappedBookRows = 0;
             foreach (var row in ReadRows(source, "History"))
             {
                 EnsureAllSourceValuesMapped(row, targetColumns, "History");
                 var sourceAuthorId = GetNullableInt(row, "AuthorId");
                 int? targetAuthorId = null;
-                if (sourceAuthorId.HasValue && authors.TryGetValue(sourceAuthorId.Value, out var author))
+                if (sourceAuthorId.GetValueOrDefault() > 0 && authors.TryGetValue(sourceAuthorId.Value, out var author))
                 {
                     targetAuthorId = author.Id;
                 }
@@ -1356,7 +1365,7 @@ namespace NzbDrone.Core.Datastore
                 {
                     // Keep the historical event, but do not retain a dangling
                     // numeric ID that could later identify an unrelated author.
-                    unlinkedMissingAuthorRows++;
+                    unlinkedUnmappedAuthorRows++;
                 }
 
                 var sourceBookId = GetNullableInt(row, "BookId");
@@ -1379,7 +1388,7 @@ namespace NzbDrone.Core.Datastore
                         // BookshelfNG retains history after a work has been
                         // deleted. Preserve the event without linking it to a
                         // future Chaptarr work that reuses the source ID.
-                        unlinkedMissingBookRows++;
+                        unlinkedUnmappedBookRows++;
                         historyFile = null;
                         historyMediaType = null;
                     }
@@ -1427,7 +1436,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("History", sourceCount, 0, sourceCount, 0, 0,
-                $"history rows and IDs are retained; events with a removed author left unlinked: {unlinkedMissingAuthorRows}; events with a removed book left unlinked: {unlinkedMissingBookRows}; cross-book file references: {conflictingFileReferences}; ambiguous file matches: {ambiguousFileReferences}; inconsistent references remain unlinked, while consistent file-specific events follow their source file to the correct media row and edition");
+                $"history rows and IDs are retained; events with an unmapped positive author ID left unlinked: {unlinkedUnmappedAuthorRows}; events with an unmapped positive book ID left unlinked: {unlinkedUnmappedBookRows}; cross-book file references: {conflictingFileReferences}; ambiguous file matches: {ambiguousFileReferences}; inconsistent references remain unlinked, while consistent file-specific events follow their source file to the correct media row and edition");
         }
 
         private static BookFileMap FindHistoryFile(

@@ -1283,7 +1283,9 @@ namespace Chaptarr.Core.Test.Datastore
                     INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
                     VALUES (97, 'Deleted author history fixture', '2026-01-05', '{}', '{}', 3, 'download-97', 999, 30);
                     INSERT INTO DownloadHistory (Id, EventType, AuthorId, DownloadId, SourceTitle, Date, Data)
-                    VALUES (98, 1, 999, 'download-98', 'Deleted author download fixture', '2026-01-05', '{}');";
+                    VALUES (98, 1, 999, 'download-98', 'Deleted author download fixture', '2026-01-05', '{}');
+                    INSERT INTO DownloadHistory (Id, EventType, AuthorId, DownloadId, SourceTitle, Date, Data)
+                    VALUES (99, 1, 0, 'download-99', 'Unassociated download fixture', '2026-01-05', '{}');";
                 command.ExecuteNonQuery();
             }
 
@@ -1308,9 +1310,9 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(seriesLinkReport.TargetMapping, Does.Contain("missing Books references: 2; missing Series references: 2"));
                 Assert.That(historyReport.SourceRows, Is.EqualTo(4));
                 Assert.That(historyReport.TransformedRows, Is.EqualTo(historyReport.SourceRows));
-                Assert.That(historyReport.TargetMapping, Does.Contain("events with a removed author left unlinked: 1; events with a removed book left unlinked: 1"));
-                Assert.That(downloadHistoryReport.SourceRows, Is.EqualTo(2));
-                Assert.That(downloadHistoryReport.TargetMapping, Does.Contain("events from removed authors using AuthorId=0: 1"));
+                Assert.That(historyReport.TargetMapping, Does.Contain("events with an unmapped positive author ID left unlinked: 1; events with an unmapped positive book ID left unlinked: 1"));
+                Assert.That(downloadHistoryReport.SourceRows, Is.EqualTo(3));
+                Assert.That(downloadHistoryReport.TargetMapping, Does.Contain("events without a mapped author use required AuthorId=0: 2 (source rows without a positive author ID: 1; positive source author IDs without a mapped author: 1)"));
                 Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBeforePreview),
                     "preview must leave the source database byte-identical");
             });
@@ -1340,6 +1342,8 @@ namespace Chaptarr.Core.Test.Datastore
                     "history with a deleted author must retain its valid book link and clear the stale author link");
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM DownloadHistory WHERE Id = 98 AND BookId = 0 AND AuthorId = 0;"), Is.EqualTo(1),
                     "download history from a deleted author must not alias a future Chaptarr author");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM DownloadHistory WHERE Id = 99 AND BookId = 0 AND AuthorId = 0;"), Is.EqualTo(1),
+                    "source events without an author use the target's required no-author sentinel");
                 Assert.That(DatabaseLineageGuard.Detect(ConnectionStringFor(backupPath), DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
                 Assert.That(QueryScalar<string>(backupPath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM SeriesBookLink WHERE Id = 99 AND SeriesId = 70 AND BookId = 999;"), Is.EqualTo(1),
@@ -1349,6 +1353,7 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND AuthorId = 20 AND BookId = 999;"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM History WHERE Id = 97 AND AuthorId = 999 AND BookId = 30;"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM DownloadHistory WHERE Id = 98 AND AuthorId = 999;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM DownloadHistory WHERE Id = 99 AND AuthorId = 0;"), Is.EqualTo(1));
                 Assert.That(QueryRows(backupPath, "PRAGMA foreign_key_check;").Length, Is.EqualTo(4));
             });
 
@@ -1382,6 +1387,7 @@ namespace Chaptarr.Core.Test.Datastore
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND AuthorId = 20 AND BookId = 999;"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 97 AND AuthorId = 999 AND BookId = 30;"), Is.EqualTo(1));
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM DownloadHistory WHERE Id = 98 AND AuthorId = 999;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM DownloadHistory WHERE Id = 99 AND AuthorId = 0;"), Is.EqualTo(1));
                 Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;").Length, Is.EqualTo(4));
                 Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
                 Assert.That(File.Exists(restored.ChaptarrBackupPath), Is.True,

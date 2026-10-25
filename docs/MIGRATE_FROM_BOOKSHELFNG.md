@@ -856,6 +856,8 @@ History for deleted BookshelfNG books or authors remains in the converted
 history tables without a link to a future ChaptarrNG record that might reuse
 the old numeric ID. The preview report counts these unlinked history records;
 the retained source backup keeps their original IDs and relationships.
+Download-history events without a mapped author remain present with the
+target-required `AuthorId=0` sentinel, and the preview reports their count.
 
 ### ChaptarrNG-owned Docker handoff helper
 
