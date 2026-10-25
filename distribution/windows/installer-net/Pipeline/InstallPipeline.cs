@@ -19,10 +19,11 @@ public static class InstallPipeline
 {
     private static readonly TimeSpan StopServiceTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan VerifyRunningTimeout = TimeSpan.FromSeconds(60);
-    // First-start migration time scales with the operator's database and may
-    // include a full conversion. Match the 245-minute handoff window used by
-    // the other automatic migration channels.
-    private static readonly TimeSpan VerifyHealthTimeout = TimeSpan.FromMinutes(245);
+    // Database conversion completes before the target service starts. Once it
+    // reports RUNNING, its local listener should become healthy promptly; a
+    // failed bind must enter rollback instead of leaving a broken target active
+    // for the multi-hour migration window.
+    private static readonly TimeSpan VerifyHealthTimeout = TimeSpan.FromMinutes(5);
 
     public static async Task<InstallOutcome> RunUpgradeAsync(
         IUiReporter ui,

@@ -907,31 +907,34 @@ internal static class WindowsServiceRoundTrip
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Could not start the isolated Windows service migration worker.");
-        var standardOutput = process.StandardOutput.ReadToEndAsync();
-        var standardError = process.StandardError.ReadToEndAsync();
+        process.OutputDataReceived += (_, eventArgs) =>
+        {
+            if (eventArgs.Data is not null)
+            {
+                Console.Out.WriteLine(eventArgs.Data);
+            }
+        };
+        process.ErrorDataReceived += (_, eventArgs) =>
+        {
+            if (eventArgs.Data is not null)
+            {
+                Console.Error.WriteLine(eventArgs.Data);
+            }
+        };
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(20));
         try
         {
             await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+            process.WaitForExit();
         }
         catch (OperationCanceledException)
         {
             try { process.Kill(entireProcessTree: true); } catch { }
             await process.WaitForExitAsync().ConfigureAwait(false);
-            await Task.WhenAll(standardOutput, standardError).ConfigureAwait(false);
+            process.WaitForExit();
             throw new System.TimeoutException("The Windows service migration worker did not finish within twenty minutes.");
-        }
-
-        var output = await standardOutput.ConfigureAwait(false);
-        if (!string.IsNullOrWhiteSpace(output))
-        {
-            Console.Out.Write(output);
-        }
-
-        var error = await standardError.ConfigureAwait(false);
-        if (!string.IsNullOrWhiteSpace(error))
-        {
-            Console.Error.Write(error);
         }
 
         return process.ExitCode;
