@@ -44,6 +44,44 @@ passed all 15 tests. These are local synthetic-data results. They do not prove
 live provider fulfillment, representative operator-data acceptance, full
 installed-channel rollback, or exact-head hosted validation of the fix.
 
+## Exact-head runtime, media, and distribution candidate batch (2026-10-25)
+
+ChaptarrNG commit `bb4fa11989148563d9f36731f8fb2bb1c09b888f` passed a
+source-built migration/API run using the checked-in schema-158 fixture and the
+SeerrNG `ReadarrAPI` adapter at clean source commit
+`8b6c562f874990e487119ac515a206ff506acf73`. The run verified the unchanged
+`/api/v1` entry point, legacy IDs for a split audiobook/ebook work, mapped file
+and history reads, the restricted key's capabilities and denial of admin and
+unrelated commands, and pending-import create/poll/cancel. All records and API
+keys were synthetic; provider-success fulfillment was not exercised.
+
+The Release test assembly from the same ChaptarrNG commit passed all 10 pinned
+real-tool audiobook tests using the checked-in FFmpeg, m4b-tool 0.5.2, and
+MP4v2 test image. Coverage includes Move/Copy import, unprobeable-part and
+conversion-failure fallback, embedded chapter preservation, application restart
+recovery, and recovery after terminating the conversion-host process. Media
+was synthetic; this does not prove recovery after killing the complete
+installed ChaptarrNG host or behavior on representative operator audiobooks.
+
+Candidate delivery contracts also passed locally: 11/11 legacy-channel
+contracts; AppImage/Flatpak staging and artifact orchestration; digest-pinned
+Cloudron, Co-op Cloud, and StartOS candidate builds (including StartOS typecheck
+and bundle); Debian compatibility-package build plus Trixie apt upgrade/downgrade
+and canary preservation; Launchpad source-package build; Docker mode/port
+defaults; release publisher credential validation and redaction; fail-closed
+release gates; GHCR bridge payload and image alias checks; mocked Chocolatey
+identity selection; and Helm handoff rendering. These are candidate-code and
+synthetic package checks, not publication, external-feed acceptance, or
+installed-device update/rollback evidence. Exact-head hosted Build
+[40156061844](https://github.com/snapetech-org/chaptarrng/actions/runs/40156061844)
+was still running when this record was prepared.
+
+ChaptarrNG remains **not ready for user cutover**. Representative operator data,
+successful live-provider request-to-import fulfillment, full unchanged-client
+workflow acceptance, and real installed-channel update/rollback on the
+remaining supported platforms are still open. Release readiness and the legacy
+migration bridge remain disabled.
+
 ## Expanded multi-record source-build rehearsal (2026-10-21)
 
 The optional `--expanded-fixture` mode in
