@@ -39,7 +39,14 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$task_root/evidence"
-docker run --rm -i --user 0:0 \
+docker_proxy_args=()
+for proxy_name in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do
+  if [[ -n "${!proxy_name:-}" ]]; then
+    docker_proxy_args+=(--env "$proxy_name")
+  fi
+done
+
+docker run --rm -i --user 0:0 "${docker_proxy_args[@]}" \
   --mount "type=bind,src=$repo_root,dst=/repo,readonly" \
   --mount "type=bind,src=$task_root,dst=/work" \
   "$test_image" sh -s <<'AUR_TEST'
