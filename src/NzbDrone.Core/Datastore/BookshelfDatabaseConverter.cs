@@ -107,7 +107,7 @@ namespace NzbDrone.Core.Datastore
                 EnsureConversionSpace(sourcePath);
                 reportProgress?.Invoke("preflighted", sourcePath);
                 CreateConsistentSnapshot(sourcePath, snapshotPath, sourceBuilder);
-                ValidateDatabase(snapshotPath, expectedLineage: DatabaseLineage.BookshelfNG, checkForeignKeys: true);
+                ValidateBookshelfSourceDatabase(snapshotPath);
                 reportProgress?.Invoke("snapshotted", snapshotPath);
 
                 // Keep the consistent snapshot as the untouched rollback source. Run
@@ -121,6 +121,7 @@ namespace NzbDrone.Core.Datastore
                     using var migratedSource = OpenConnection(migrationSourcePath, SqliteOpenMode.ReadOnly, sourceBuilder);
                     BookshelfDatabaseImporter.ValidateSourceSchema(migratedSource);
                 }
+                var staleSeriesBookLinks = ValidateBookshelfSourceDatabase(migrationSourcePath);
 
                 var stageConnectionString = BuildConnectionString(sourceBuilder, stagePath, SqliteOpenMode.ReadWriteCreate);
                 migrateNativeTarget(stageConnectionString);
@@ -137,6 +138,7 @@ namespace NzbDrone.Core.Datastore
                     {
                         var sourceTables = GetSourceTableCounts(source);
                         importReport = importRows(source, target, transaction, sourceSchemaVersion);
+                        EnsureStaleSeriesBookLinksAreAccounted(staleSeriesBookLinks, importReport);
                         ValidateImportReport(sourceTables, importReport);
                         transaction.Commit();
                     }
@@ -264,7 +266,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             ValidateDatabase(currentPath, DatabaseLineage.Chaptarr, checkForeignKeys: true);
-            ValidateDatabase(sourceBackupPath, DatabaseLineage.BookshelfNG, checkForeignKeys: true);
+            ValidateBookshelfSourceDatabase(sourceBackupPath);
             ValidateBookshelfBackup(sourceBackupPath, currentBuilder, migrateBookshelfSource);
 
             if (previewOnly)
@@ -284,7 +286,7 @@ namespace NzbDrone.Core.Datastore
                     File.SetUnixFileMode(stagePath, File.GetUnixFileMode(currentPath));
                 }
 
-                ValidateDatabase(stagePath, DatabaseLineage.BookshelfNG, checkForeignKeys: true);
+                ValidateBookshelfSourceDatabase(stagePath);
                 using (var stagedBookshelf = OpenConnection(stagePath, SqliteOpenMode.ReadOnly, currentBuilder))
                 {
                     BookshelfDatabaseImporter.ValidateSourceBackup(stagedBookshelf);
@@ -301,7 +303,7 @@ namespace NzbDrone.Core.Datastore
                 try
                 {
                     File.Move(stagePath, currentPath);
-                    ValidateDatabase(currentPath, DatabaseLineage.BookshelfNG, checkForeignKeys: true);
+                    ValidateBookshelfSourceDatabase(currentPath);
                     using var restoredBookshelf = OpenConnection(currentPath, SqliteOpenMode.ReadOnly, currentBuilder);
                     BookshelfDatabaseImporter.ValidateSourceBackup(restoredBookshelf);
                 }
@@ -578,6 +580,92 @@ namespace NzbDrone.Core.Datastore
             if (DatabaseLineageGuard.Detect(connectionString, DatabaseType.SQLite) != expectedLineage)
             {
                 throw new InvalidDataException($"The database '{Path.GetFileName(path)}' does not have the expected {expectedLineage} lineage.");
+            }
+        }
+
+        private static long ValidateBookshelfSourceDatabase(string path)
+        {
+            ValidateDatabase(path, DatabaseLineage.BookshelfNG, checkForeignKeys: false);
+
+            var connectionString = BuildConnectionString(new SqliteConnectionStringBuilder(), path, SqliteOpenMode.ReadOnly);
+            using var connection = OpenValidationConnection(path, connectionString);
+            var allowedSeriesLinkForeignKeys = GetStaleSeriesBookForeignKeys(connection);
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA foreign_key_check;";
+            using var reader = command.ExecuteReader();
+            var orphanedSeriesBookRowIds = new HashSet<long>();
+            while (reader.Read())
+            {
+                var sourceTable = reader.GetString(0);
+                var parentTable = reader.GetString(2);
+                var foreignKeyId = reader.GetInt32(3);
+                if (string.Equals(sourceTable, "SeriesBookLink", StringComparison.OrdinalIgnoreCase) &&
+                    allowedSeriesLinkForeignKeys.TryGetValue(foreignKeyId, out var expectedParentTable) &&
+                    string.Equals(parentTable, expectedParentTable, StringComparison.OrdinalIgnoreCase))
+                {
+                    // BookshelfNG can retain a junction row after either endpoint
+                    // is removed. The importer resets that unusable relationship
+                    // while keeping the untouched source snapshot for rollback.
+                    if (reader.IsDBNull(1))
+                    {
+                        throw new InvalidDataException(
+                            "SQLite reported a stale BookshelfNG series link without a unique row identity; conversion was stopped before promotion.");
+                    }
+
+                    orphanedSeriesBookRowIds.Add(reader.GetInt64(1));
+
+                    continue;
+                }
+
+                throw new InvalidDataException(
+                    $"SQLite foreign-key check found an unsupported reference in BookshelfNG source database '{Path.GetFileName(path)}': '{sourceTable}' -> '{parentTable}'.");
+            }
+
+            return orphanedSeriesBookRowIds.Count;
+        }
+
+        private static Dictionary<int, string> GetStaleSeriesBookForeignKeys(SqliteConnection connection)
+        {
+            var foreignKeys = new Dictionary<int, List<(string Table, string From, string To)>>();
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA foreign_key_list('SeriesBookLink');";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var id = reader.GetInt32(0);
+                if (!foreignKeys.TryGetValue(id, out var columns))
+                {
+                    columns = new List<(string Table, string From, string To)>();
+                    foreignKeys.Add(id, columns);
+                }
+
+                columns.Add((reader.GetString(2), reader.GetString(3), reader.GetString(4)));
+            }
+
+            return foreignKeys
+                .Where(entry => entry.Value.Count == 1 &&
+                    string.Equals(entry.Value[0].To, "Id", StringComparison.OrdinalIgnoreCase) &&
+                    ((string.Equals(entry.Value[0].Table, "Books", StringComparison.OrdinalIgnoreCase) &&
+                      string.Equals(entry.Value[0].From, "BookId", StringComparison.OrdinalIgnoreCase)) ||
+                     (string.Equals(entry.Value[0].Table, "Series", StringComparison.OrdinalIgnoreCase) &&
+                      string.Equals(entry.Value[0].From, "SeriesId", StringComparison.OrdinalIgnoreCase))))
+                .ToDictionary(entry => entry.Key, entry => entry.Value[0].Table);
+        }
+
+        private static void EnsureStaleSeriesBookLinksAreAccounted(
+            long staleSeriesBookLinks,
+            BookshelfDatabaseImportReport importReport)
+        {
+            if (staleSeriesBookLinks == 0)
+            {
+                return;
+            }
+
+            if (!importReport.Tables.TryGetValue("SeriesBookLink", out var result) ||
+                result.ResetRows < staleSeriesBookLinks)
+            {
+                throw new InvalidDataException(
+                    "BookshelfNG migration did not explicitly account for every stale series link to a missing endpoint; conversion was stopped before promotion.");
             }
         }
 

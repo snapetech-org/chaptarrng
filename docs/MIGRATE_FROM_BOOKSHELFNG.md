@@ -846,6 +846,17 @@ library, root paths, profiles, indexers, download clients, notifications, and
 SeerrNG connection. The explicit stopped-service flag makes the required
 quiescent data directory an operator-confirmed precondition.
 
+For SQLite sources, stale `SeriesBookLink` rows whose BookshelfNG `Books` or
+`Series` endpoint was deleted are listed as reset in the migration accounting
+and omitted from ChaptarrNG. The untouched BookshelfNG backup keeps those rows
+for rollback. Other source foreign-key violations still block conversion, and
+the promoted ChaptarrNG database must pass a clean foreign-key check.
+
+History for deleted BookshelfNG books or authors remains in the converted
+history tables without a link to a future ChaptarrNG record that might reuse
+the old numeric ID. The preview report counts these unlinked history records;
+the retained source backup keeps their original IDs and relationships.
+
 ### ChaptarrNG-owned Docker handoff helper
 
 Run the host helper from a ChaptarrNG source checkout. It is a wrapper around

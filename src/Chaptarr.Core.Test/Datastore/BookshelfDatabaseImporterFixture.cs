@@ -1264,6 +1264,132 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
+        public void should_account_for_stale_series_links_and_preserve_them_for_rollback()
+        {
+            using (var source = new SqliteConnection(_sourceConnectionString))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                command.CommandText = @"
+                    PRAGMA foreign_keys = OFF;
+                    INSERT INTO SeriesBookLink (Id, SeriesId, BookId, Position, IsPrimary, SeriesPosition)
+                    VALUES (99, 70, 999, '9', 0, 9);
+                    INSERT INTO SeriesBookLink (Id, SeriesId, BookId, Position, IsPrimary, SeriesPosition)
+                    VALUES (100, 999, 30, '10', 0, 10);
+                    INSERT INTO SeriesBookLink (Id, SeriesId, BookId, Position, IsPrimary, SeriesPosition)
+                    VALUES (101, 999, 1000, '11', 0, 11);
+                    INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
+                    VALUES (96, 'Deleted work history fixture', '2026-01-05', '{}', '{}', 3, 'download-96', 20, 999);
+                    INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
+                    VALUES (97, 'Deleted author history fixture', '2026-01-05', '{}', '{}', 3, 'download-97', 999, 30);
+                    INSERT INTO DownloadHistory (Id, EventType, AuthorId, DownloadId, SourceTitle, Date, Data)
+                    VALUES (98, 1, 999, 'download-98', 'Deleted author download fixture', '2026-01-05', '{}');";
+                command.ExecuteNonQuery();
+            }
+
+            var sourceBeforePreview = File.ReadAllBytes(_sourcePath);
+            var migrationController = new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null);
+            var preview = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: true);
+            var seriesLinkReport = preview.ImportReport.Tables["SeriesBookLink"];
+            var historyReport = preview.ImportReport.Tables["History"];
+            var downloadHistoryReport = preview.ImportReport.Tables["DownloadHistory"];
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(preview.PreviewOnly, Is.True);
+                Assert.That(seriesLinkReport.SourceRows, Is.EqualTo(4));
+                Assert.That(seriesLinkReport.TransformedRows, Is.EqualTo(1));
+                Assert.That(seriesLinkReport.ResetRows, Is.EqualTo(3));
+                Assert.That(seriesLinkReport.AccountedRows, Is.EqualTo(seriesLinkReport.SourceRows));
+                Assert.That(seriesLinkReport.TargetMapping, Does.Contain("missing Books references: 2; missing Series references: 2"));
+                Assert.That(historyReport.SourceRows, Is.EqualTo(4));
+                Assert.That(historyReport.TransformedRows, Is.EqualTo(historyReport.SourceRows));
+                Assert.That(historyReport.TargetMapping, Does.Contain("events with a removed author left unlinked: 1; events with a removed book left unlinked: 1"));
+                Assert.That(downloadHistoryReport.SourceRows, Is.EqualTo(2));
+                Assert.That(downloadHistoryReport.TargetMapping, Does.Contain("events from removed authors using AuthorId=0: 1"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBeforePreview),
+                    "preview must leave the source database byte-identical");
+            });
+
+            var conversion = migrationController.MigrateBookshelf(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite,
+                previewOnly: false);
+            var backupPath = conversion.BackupPath;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty,
+                    "the promoted Chaptarr database must not carry the dangling source relationship");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM SeriesBookLink WHERE SeriesId = 70 AND BookId IN (30, 31);"), Is.EqualTo(2),
+                    "valid series links must survive conversion");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM SeriesBookLink WHERE BookId = 999;"), Is.Zero,
+                    "a relationship without a source book has no target link");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM SeriesBookLink WHERE SeriesId = 999;"), Is.Zero,
+                    "a relationship without a source series has no target link");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND BookId IS NULL AND AuthorId = 20;"), Is.EqualTo(1),
+                    "history for a deleted book must survive without an unsafe book link");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 97 AND BookId = 30 AND AuthorId IS NULL;"), Is.EqualTo(1),
+                    "history with a deleted author must retain its valid book link and clear the stale author link");
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM DownloadHistory WHERE Id = 98 AND BookId = 0 AND AuthorId = 0;"), Is.EqualTo(1),
+                    "download history from a deleted author must not alias a future Chaptarr author");
+                Assert.That(DatabaseLineageGuard.Detect(ConnectionStringFor(backupPath), DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(QueryScalar<string>(backupPath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM SeriesBookLink WHERE Id = 99 AND SeriesId = 70 AND BookId = 999;"), Is.EqualTo(1),
+                    "the original stale link must remain in the BookshelfNG rollback database");
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM SeriesBookLink WHERE Id = 100 AND SeriesId = 999 AND BookId = 30;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM SeriesBookLink WHERE Id = 101 AND SeriesId = 999 AND BookId = 1000;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND AuthorId = 20 AND BookId = 999;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM History WHERE Id = 97 AND AuthorId = 999 AND BookId = 30;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(backupPath, "SELECT COUNT(*) FROM DownloadHistory WHERE Id = 98 AND AuthorId = 999;"), Is.EqualTo(1));
+                Assert.That(QueryRows(backupPath, "PRAGMA foreign_key_check;").Length, Is.EqualTo(4));
+            });
+
+            var converter = new BookshelfDatabaseConverter();
+            var restorePreview = converter.Restore(
+                _sourceConnectionString,
+                backupPath,
+                previewOnly: true,
+                migrateBookshelfSource: migrationController.MigrateBookshelfSource);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(restorePreview.PreviewOnly, Is.True);
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.Chaptarr),
+                    "restore preview must not replace the converted database");
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;"), Is.Empty);
+            });
+
+            var restored = converter.Restore(
+                _sourceConnectionString,
+                backupPath,
+                migrateBookshelfSource: migrationController.MigrateBookshelfSource);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(restored.PreviewOnly, Is.False);
+                Assert.That(DatabaseLineageGuard.Detect(_sourceConnectionString, DatabaseType.SQLite), Is.EqualTo(DatabaseLineage.BookshelfNG));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM SeriesBookLink WHERE Id = 99 AND SeriesId = 70 AND BookId = 999;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM SeriesBookLink WHERE Id = 100 AND SeriesId = 999 AND BookId = 30;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM SeriesBookLink WHERE Id = 101 AND SeriesId = 999 AND BookId = 1000;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND AuthorId = 20 AND BookId = 999;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 97 AND AuthorId = 999 AND BookId = 30;"), Is.EqualTo(1));
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM DownloadHistory WHERE Id = 98 AND AuthorId = 999;"), Is.EqualTo(1));
+                Assert.That(QueryRows(_sourcePath, "PRAGMA foreign_key_check;").Length, Is.EqualTo(4));
+                Assert.That(QueryScalar<string>(_sourcePath, "PRAGMA integrity_check;"), Is.EqualTo("ok"));
+                Assert.That(File.Exists(restored.ChaptarrBackupPath), Is.True,
+                    "rollback must retain the converted Chaptarr database separately");
+            });
+        }
+
+        [Test]
         public void should_upgrade_an_older_bookshelf_snapshot_and_keep_the_original_schema_for_rollback()
         {
             DowngradeSourceToMigration22();

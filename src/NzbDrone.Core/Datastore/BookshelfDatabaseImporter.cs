@@ -181,7 +181,7 @@ namespace NzbDrone.Core.Datastore
             ImportSeriesLinks(source, target, transaction, books, series, report);
             RebuildAuthorSeries(target, transaction);
             ImportBlocklist(source, target, transaction, authors, books, report);
-            ImportDownloadHistory(source, target, transaction, report);
+            ImportDownloadHistory(source, target, transaction, authors, report);
 
             ImportConfig(source, target, transaction, report, sourceSchemaVersion, sourceApiBasePath);
             CopyTable(source, target, transaction, report, "CustomFilters");
@@ -1177,15 +1177,35 @@ namespace NzbDrone.Core.Datastore
             var sourceCount = CountRows(source, "SeriesBookLink");
             var targetColumns = GetColumns(target, "SeriesBookLink");
             var nextId = Convert.ToInt32(Scalar(source, "SELECT COALESCE(MAX(\"Id\"), 0) + 1 FROM \"SeriesBookLink\";"), CultureInfo.InvariantCulture);
+            long skippedMissingRows = 0;
+            long missingBookReferenceRows = 0;
+            long missingSeriesReferenceRows = 0;
 
             foreach (var row in ReadRows(source, "SeriesBookLink"))
             {
                 EnsureAllSourceValuesMapped(row, targetColumns, "SeriesBookLink", SeriesBookLinkMappedSourceColumns);
                 var sourceBookId = GetInt(row, "BookId");
                 var sourceSeriesId = GetInt(row, "SeriesId");
-                if (!books.TryGetValue(sourceBookId, out var book) || !series.ContainsKey(sourceSeriesId))
+                if (!series.ContainsKey(sourceSeriesId))
                 {
-                    throw new InvalidDataException($"BookshelfNG series link {GetInt(row, "Id")} references a missing book or series.");
+                    missingSeriesReferenceRows++;
+                    skippedMissingRows++;
+                    if (!books.ContainsKey(sourceBookId))
+                    {
+                        missingBookReferenceRows++;
+                    }
+
+                    continue;
+                }
+
+                if (!books.TryGetValue(sourceBookId, out var book))
+                {
+                    // BookshelfNG can leave a stale series link after deleting its
+                    // book or series. The relationship has no target endpoint, so
+                    // account for it as reset while retaining the source backup.
+                    missingBookReferenceRows++;
+                    skippedMissingRows++;
+                    continue;
                 }
 
                 var targets = book.TargetIds.OrderBy(x => x.Key).ToArray();
@@ -1204,8 +1224,8 @@ namespace NzbDrone.Core.Datastore
                 }
             }
 
-            report.RecordTable("SeriesBookLink", sourceCount, 0, sourceCount, 0, 0,
-                "links are rebuilt for each corresponding audiobook and ebook row");
+            report.RecordTable("SeriesBookLink", sourceCount, 0, sourceCount - skippedMissingRows, 0, skippedMissingRows,
+                $"valid links are rebuilt for each corresponding audiobook and ebook row; stale link rows reset: {skippedMissingRows} (missing Books references: {missingBookReferenceRows}; missing Series references: {missingSeriesReferenceRows}; a row missing both endpoints is counted once); the retained BookshelfNG backup preserves the original rows");
         }
 
         private static void RebuildAuthorSeries(DbConnection target, DbTransaction transaction)
@@ -1273,21 +1293,39 @@ namespace NzbDrone.Core.Datastore
             DbConnection source,
             DbConnection target,
             DbTransaction transaction,
+            IReadOnlyDictionary<int, AuthorMap> authors,
             BookshelfDatabaseImportReport report)
         {
             var sourceCount = CountRows(source, "DownloadHistory");
             var targetColumns = GetColumns(target, "DownloadHistory");
+            var unlinkedMissingAuthorRows = 0;
             foreach (var row in ReadRows(source, "DownloadHistory"))
             {
                 EnsureAllSourceValuesMapped(row, targetColumns, "DownloadHistory");
                 var values = Intersect(row, targetColumns);
                 values["BookId"] = 0; // BookshelfNG does not store a book ID on these events.
+                var sourceAuthorId = GetNullableInt(row, "AuthorId");
+                if (sourceAuthorId.HasValue && authors.TryGetValue(sourceAuthorId.Value, out var author))
+                {
+                    values["AuthorId"] = author.Id;
+                }
+                else
+                {
+                    values["AuthorId"] = 0;
+                    if (sourceAuthorId.GetValueOrDefault() > 0)
+                    {
+                        // Retain history from removed authors without letting their
+                        // old numeric IDs alias a Chaptarr author added later.
+                        unlinkedMissingAuthorRows++;
+                    }
+                }
+
                 SetIfPresent(values, "Data", GetValue(row, "Data"));
                 InsertRow(target, transaction, "DownloadHistory", targetColumns, values);
             }
 
             report.RecordTable("DownloadHistory", sourceCount, 0, sourceCount, 0, 0,
-                "download events are preserved; source events without a book use the target's non-null BookId=0 sentinel");
+                $"download events are preserved; source events without a book use the target's non-null BookId=0 sentinel; events from removed authors using AuthorId=0: {unlinkedMissingAuthorRows} (prevents stale source IDs from aliasing future Chaptarr authors)");
         }
 
         private static void ImportHistory(
@@ -1303,17 +1341,26 @@ namespace NzbDrone.Core.Datastore
             var targetColumns = GetColumns(target, "History");
             var conflictingFileReferences = 0;
             var ambiguousFileReferences = 0;
+            var unlinkedMissingAuthorRows = 0;
+            var unlinkedMissingBookRows = 0;
             foreach (var row in ReadRows(source, "History"))
             {
                 EnsureAllSourceValuesMapped(row, targetColumns, "History");
                 var sourceAuthorId = GetNullableInt(row, "AuthorId");
-                if (sourceAuthorId.HasValue && !authors.ContainsKey(sourceAuthorId.Value))
+                int? targetAuthorId = null;
+                if (sourceAuthorId.HasValue && authors.TryGetValue(sourceAuthorId.Value, out var author))
                 {
-                    throw new InvalidDataException($"BookshelfNG history row {GetInt(row, "Id")} references missing author {sourceAuthorId.Value}.");
+                    targetAuthorId = author.Id;
+                }
+                else if (sourceAuthorId.GetValueOrDefault() > 0)
+                {
+                    // Keep the historical event, but do not retain a dangling
+                    // numeric ID that could later identify an unrelated author.
+                    unlinkedMissingAuthorRows++;
                 }
 
                 var sourceBookId = GetNullableInt(row, "BookId");
-                var targetBookId = sourceBookId.GetValueOrDefault();
+                int? targetBookId = null;
                 var historyFile = FindHistoryFile(row, files, out var ambiguousFileMatch);
                 int? historyMediaType = historyFile is { MediaType: >= 0 }
                     ? historyFile.MediaType
@@ -1327,33 +1374,40 @@ namespace NzbDrone.Core.Datastore
                 {
                     if (!books.TryGetValue(sourceBookId.Value, out var book))
                     {
-                        throw new InvalidDataException($"BookshelfNG history row {GetInt(row, "Id")} references missing book {sourceBookId.Value}.");
-                    }
-
-                    // Bookshelf history is book-scoped, so retain its source ID as the
-                    // default target identity. When the event names a specific file,
-                    // follow that file to the correct media-specific target book.
-                    targetBookId = book.TargetIds.TryGetValue(0, out var audiobookId)
-                        ? audiobookId
-                        : book.TargetIds.Values.OrderBy(x => x).First();
-
-                    if (historyFile != null && historyFile.SourceBookId != 0 && historyFile.SourceBookId != sourceBookId.Value)
-                    {
-                        // The source event's book identity and file identity disagree.
-                        // Keep the event attached to its source book and retain its
-                        // original payload, but do not invent a file or edition link.
-                        conflictingFileReferences++;
+                        // BookshelfNG retains history after a work has been
+                        // deleted. Preserve the event without linking it to a
+                        // future Chaptarr work that reuses the source ID.
+                        unlinkedMissingBookRows++;
                         historyFile = null;
                         historyMediaType = null;
                     }
+                    else
+                    {
+                        // Bookshelf history is book-scoped, so retain its source ID as the
+                        // default target identity. When the event names a specific file,
+                        // follow that file to the correct media-specific target book.
+                        targetBookId = book.TargetIds.TryGetValue(0, out var audiobookId)
+                            ? audiobookId
+                            : book.TargetIds.Values.OrderBy(x => x).First();
 
-                    if (historyFile?.TargetBookId > 0)
-                    {
-                        targetBookId = historyFile.TargetBookId;
-                    }
-                    else if (historyMediaType.HasValue && book.TargetIds.TryGetValue(historyMediaType.Value, out var formatSpecificBookId))
-                    {
-                        targetBookId = formatSpecificBookId;
+                        if (historyFile != null && historyFile.SourceBookId != 0 && historyFile.SourceBookId != sourceBookId.Value)
+                        {
+                            // The source event's book identity and file identity disagree.
+                            // Keep the event attached to its source book and retain its
+                            // original payload, but do not invent a file or edition link.
+                            conflictingFileReferences++;
+                            historyFile = null;
+                            historyMediaType = null;
+                        }
+
+                        if (historyFile?.TargetBookId > 0)
+                        {
+                            targetBookId = historyFile.TargetBookId;
+                        }
+                        else if (historyMediaType.HasValue && book.TargetIds.TryGetValue(historyMediaType.Value, out var formatSpecificBookId))
+                        {
+                            targetBookId = formatSpecificBookId;
+                        }
                     }
                 }
                 else if (historyFile?.TargetBookId > 0)
@@ -1364,13 +1418,14 @@ namespace NzbDrone.Core.Datastore
                 }
 
                 var values = Intersect(row, targetColumns);
+                values["AuthorId"] = targetAuthorId;
                 values["BookId"] = targetBookId;
                 SetIfPresent(values, "EditionId", historyFile?.TargetEditionId > 0 ? historyFile.TargetEditionId : null);
                 InsertRow(target, transaction, "History", targetColumns, values);
             }
 
             report.RecordTable("History", sourceCount, 0, sourceCount, 0, 0,
-                $"history rows and IDs are retained; cross-book file references: {conflictingFileReferences}; ambiguous file matches: {ambiguousFileReferences}; inconsistent references remain unlinked, while consistent file-specific events follow their source file to the correct media row and edition");
+                $"history rows and IDs are retained; events with a removed author left unlinked: {unlinkedMissingAuthorRows}; events with a removed book left unlinked: {unlinkedMissingBookRows}; cross-book file references: {conflictingFileReferences}; ambiguous file matches: {ambiguousFileReferences}; inconsistent references remain unlinked, while consistent file-specific events follow their source file to the correct media row and edition");
         }
 
         private static BookFileMap FindHistoryFile(
