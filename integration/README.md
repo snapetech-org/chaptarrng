@@ -140,7 +140,6 @@ export SEERRNG_SOURCE="/path/to/seerrng"
 export SEERRNG_NODE_MODULES="$(realpath "$SEERRNG_SOURCE/node_modules")"
 export CHAPTARR_GLOBAL_API_KEY="$(openssl rand -hex 24)"
 export CHAPTARR_SEERR_API_KEY="$(openssl rand -hex 24)"
-export CHAPTARR_HARDCOVER_MODE=false # true only if the source ran native Hardcover
 
 docker compose -p chaptarrng-seerrng-smoke \
   -f integration/seerrng-smoke.compose.yml \
@@ -155,6 +154,11 @@ docker compose -p chaptarrng-seerrng-smoke \
 
 Use distinct test API keys. The application build requires no private
 image-processing license.
+
+This small checked-in fixture has native Hardcover IDs; its Compose service
+intentionally runs ChaptarrNG with `HARDCOVER=true`. The populated-library
+smoke below accepts `CHAPTARR_HARDCOVER_MODE` from the copied source
+configuration instead.
 
 The lifecycle probe uses synthetic provider IDs that are expected to be
 unavailable. It verifies that the adapter receives a pending ID, can poll it,
