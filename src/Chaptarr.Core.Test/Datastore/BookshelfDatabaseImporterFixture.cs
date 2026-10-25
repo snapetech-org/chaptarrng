@@ -1334,7 +1334,7 @@ namespace Chaptarr.Core.Test.Datastore
                     "a relationship without a source book has no target link");
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM SeriesBookLink WHERE SeriesId = 999;"), Is.Zero,
                     "a relationship without a source series has no target link");
-                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND BookId IS NULL AND AuthorId = 20;"), Is.EqualTo(1),
+                Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 96 AND BookId = 0 AND AuthorId = 20;"), Is.EqualTo(1),
                     "history for a deleted book must survive without an unsafe book link");
                 Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM History WHERE Id = 97 AND BookId = 30 AND AuthorId IS NULL;"), Is.EqualTo(1),
                     "history with a deleted author must retain its valid book link and clear the stale author link");

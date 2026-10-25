@@ -1360,7 +1360,9 @@ namespace NzbDrone.Core.Datastore
                 }
 
                 var sourceBookId = GetNullableInt(row, "BookId");
-                int? targetBookId = null;
+                // History.BookId is required in the native schema. Zero is the
+                // no-book sentinel and cannot alias an imported or new book ID.
+                var targetBookId = 0;
                 var historyFile = FindHistoryFile(row, files, out var ambiguousFileMatch);
                 int? historyMediaType = historyFile is { MediaType: >= 0 }
                     ? historyFile.MediaType
