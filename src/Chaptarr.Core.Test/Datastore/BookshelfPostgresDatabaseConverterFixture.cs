@@ -161,6 +161,13 @@ namespace Chaptarr.Core.Test.Datastore
             Assert.That(ReadConfigValue(sourceConnectionString, "bookmatchingstrictness"), Is.EqualTo("balanced"));
             Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfMatchCompatibility"), Is.EqualTo("true"));
             Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfNGDatabaseMigrated"), Is.EqualTo("true"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfNGCompatibilityProfileVersion"), Is.EqualTo("2"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfNGSourceProduct"), Is.EqualTo("BookshelfNG"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfNGSourceSchemaVersion"), Is.EqualTo("158"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfNGProviderDialect"), Is.EqualTo("hc"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfNGFormatSemantics"), Is.EqualTo("audiobook-ebook-split-v1"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfNGIdentityMapVersion"), Is.EqualTo("1"));
+            Assert.That(ReadConfigValue(sourceConnectionString, "BookshelfNGMigrationOutcome"), Is.EqualTo("converted"));
             Assert.That(ReadConfigValue(sourceConnectionString, "BookImportMinimumMatchPercent"), Is.EqualTo("70"));
             Assert.That(ReadConfigValue(sourceConnectionString, "ExperienceMode"), Is.EqualTo("simple"));
             Assert.That(ReadConfigValue(sourceConnectionString, "HardcoverApiToken"), Is.EqualTo("pg-fixture-token"));

@@ -12,6 +12,11 @@ namespace Chaptarr.Core.Test
         public bool BookshelfMatchCompatibility { get; set; }
         public bool BookshelfNGDatabaseMigrated { get; set; }
         public string BookshelfNGProviderDialect { get; set; } = string.Empty;
+        public BookshelfNGCompatibilityProfile BookshelfNGMigrationProfile { get; set; } = new BookshelfNGCompatibilityProfile
+        {
+            Version = 1,
+            ProviderDialect = "hc"
+        };
         public int MinimumAge { get; set; }
         public int RssSyncInterval { get; set; }
         public bool UsePathAsTagsFallback { get; set; } = true;
@@ -70,6 +75,11 @@ namespace Chaptarr.Core.Test
             if (targetMethod?.Name == "get_BookshelfNGProviderDialect")
             {
                 return BookshelfNGProviderDialect;
+            }
+
+            if (targetMethod?.Name == "get_BookshelfNGMigrationProfile")
+            {
+                return BookshelfNGMigrationProfile;
             }
 
             if (targetMethod?.Name == "get_MinimumAge")

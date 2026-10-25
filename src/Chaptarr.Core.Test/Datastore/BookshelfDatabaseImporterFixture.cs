@@ -33,6 +33,7 @@ namespace Chaptarr.Core.Test.Datastore
         private string _directory;
         private string _sourcePath;
         private string _sourceConnectionString;
+        private string _previousBookshelfUrlBase;
         private string _previousHardcoverMode;
         private string _previousHardcoverNativeMode;
 
@@ -41,8 +42,10 @@ namespace Chaptarr.Core.Test.Datastore
         {
             _previousHardcoverMode = Environment.GetEnvironmentVariable("HARDCOVER");
             _previousHardcoverNativeMode = Environment.GetEnvironmentVariable("HARDCOVER_NATIVE");
+            _previousBookshelfUrlBase = Environment.GetEnvironmentVariable("BOOKSHELF_URLBASE");
             Environment.SetEnvironmentVariable("HARDCOVER", null);
             Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", null);
+            Environment.SetEnvironmentVariable("BOOKSHELF_URLBASE", null);
 
             _directory = Path.Combine(Path.GetTempPath(), $"bookshelf-importer-{Guid.NewGuid().ToString("N").Substring(0, 8)}");
             Directory.CreateDirectory(_directory);
@@ -64,6 +67,7 @@ namespace Chaptarr.Core.Test.Datastore
             if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
             Environment.SetEnvironmentVariable("HARDCOVER", _previousHardcoverMode);
             Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", _previousHardcoverNativeMode);
+            Environment.SetEnvironmentVariable("BOOKSHELF_URLBASE", _previousBookshelfUrlBase);
         }
 
         [Test]
@@ -844,6 +848,29 @@ namespace Chaptarr.Core.Test.Datastore
                 new MigrationContext(MigrationType.Main),
                 DatabaseType.SQLite);
             Assert.That(QueryScalar<int>(_sourcePath, "SELECT COUNT(*) FROM Books;"), Is.EqualTo(2), "a restart must not repeat the conversion");
+        }
+
+        [Test]
+        public void should_persist_the_complete_bookshelf_compatibility_profile()
+        {
+            Environment.SetEnvironmentVariable("BOOKSHELF_URLBASE", "/legacy/books/");
+
+            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                _sourceConnectionString,
+                new MigrationContext(MigrationType.Main),
+                DatabaseType.SQLite);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGCompatibilityProfileVersion';"), Is.EqualTo("2"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGSourceProduct';"), Is.EqualTo("BookshelfNG"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGSourceSchemaVersion';"), Is.EqualTo("158"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGProviderDialect';"), Is.EqualTo("gr"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGApiBasePath';"), Is.EqualTo("/legacy/books"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGFormatSemantics';"), Is.EqualTo("audiobook-ebook-split-v1"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGIdentityMapVersion';"), Is.EqualTo("1"));
+                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGMigrationOutcome';"), Is.EqualTo("converted"));
+            });
         }
 
         [Test]
