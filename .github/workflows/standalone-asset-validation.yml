@@ -3,33 +3,8 @@ name: Validate standalone release assets
 
 on:
   push:
-    branches: [main]
-    paths:
-      - '.github/workflows/standalone-asset-validation.yml'
-      - '.github/workflows/release.yml'
-      - 'packaging/scripts/build-standalone.sh'
-      - 'packaging/scripts/build-extra-platform-runtime-packs.sh'
-      - 'packaging/scripts/copy-dotnet-sdk-reference-packs.sh'
-      - 'packaging/scripts/test-copy-dotnet-sdk-reference-packs.sh'
-      - 'packaging/scripts/install-extra-platform-runtime-packs.sh'
-      - 'packaging/scripts/test-install-extra-platform-runtime-packs.sh'
-      - 'packaging/scripts/create-standalone-nuget-config.py'
-      - 'packaging/scripts/test-create-standalone-nuget-config.sh'
-      - 'packaging/scripts/prepare-writable-dotnet-root.sh'
-      - 'packaging/scripts/test-prepare-writable-dotnet-root.sh'
-      - 'packaging/scripts/check-standalone-rids.py'
-      - 'src/**'
-      - 'frontend/**'
-      - 'package.json'
-      - 'yarn.lock'
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/standalone-asset-validation.yml'
-      - 'packaging/scripts/install-extra-platform-runtime-packs.sh'
-      - 'packaging/scripts/test-install-extra-platform-runtime-packs.sh'
-      - 'packaging/scripts/create-standalone-nuget-config.py'
-      - 'packaging/scripts/test-create-standalone-nuget-config.sh'
+    tags:
+      - '**'
   workflow_dispatch:
 
 permissions:
@@ -37,7 +12,7 @@ permissions:
 
 concurrency:
   group: ng-standalone-asset-validation-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
+  cancel-in-progress: false
 
 jobs:
   verify-runtime-pack-install:
