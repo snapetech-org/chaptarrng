@@ -59,7 +59,7 @@ done
 docker run --rm -i --user 0:0 "${docker_proxy_args[@]}" \
   --mount "type=bind,src=$repo_root,dst=/repo,readonly" \
   --mount "type=bind,src=$task_root,dst=/work" \
-  "$test_image" sh -s <<'FEDORA_TEST'
+  "$test_image" sh -s > "$task_root/evidence/rpm-transaction.log" 2>&1 <<'FEDORA_TEST'
 set -eu
 export DNF_YUM_AUTO_YES=1
 dnf -q install -y expect rpm-build systemd libicu openssl-libs sqlite-libs util-linux zlib \
@@ -148,7 +148,7 @@ touch /run/bookshelfng-rpm-test-active
 export RPM_CANDIDATE="$new_rpm"
 
 if ! expect <<'ASKNO'
-log_user 0
+log_user 1
 log_file -noappend /work/evidence/ask-no.log
 set timeout 180
 set prompt_seen 0
@@ -184,7 +184,7 @@ grep -Fq 'migration-data-canary' /var/lib/bookshelfng/data-canary
 test ! -s /work/evidence/systemctl.log
 
 if ! expect <<'ASKYES'
-log_user 0
+log_user 1
 log_file -noappend /work/evidence/ask-yes.log
 set timeout 180
 set prompt_seen 0
