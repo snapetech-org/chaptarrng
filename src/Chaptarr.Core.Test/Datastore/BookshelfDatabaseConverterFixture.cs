@@ -299,6 +299,52 @@ namespace Chaptarr.Core.Test.Datastore
             });
         }
 
+        [Test]
+        public void should_clean_abandoned_conversion_snapshots_before_retry_without_deleting_retained_backups()
+        {
+            var orphanSnapshot = _sourcePath + ".bookshelf-snapshot-interrupted.db";
+            var orphanStage = _sourcePath + ".chaptarr-stage-interrupted.db";
+            var orphanMigrationCopy = _sourcePath + ".bookshelf-migrate-interrupted.db";
+            var retainedBackup = _sourcePath + ".bookshelfng-backup-retained.db";
+            File.WriteAllText(orphanSnapshot, "incomplete snapshot");
+            File.WriteAllText(orphanSnapshot + "-wal", "incomplete wal");
+            File.WriteAllText(orphanStage, "incomplete target");
+            File.WriteAllText(orphanMigrationCopy, "incomplete migrated source");
+            File.WriteAllText(retainedBackup, "operator rollback backup");
+
+            string cleanedCount = null;
+            var result = new BookshelfDatabaseConverter().Convert(
+                _sourceConnectionString,
+                CreateNativeTarget,
+                (source, target, transaction) =>
+                {
+                    var report = CreateImportReport();
+                    report.RecordTable("AuthorMetadata", 1, 0, 1, 0, 0, "merged into target Authors metadata");
+                    report.RecordTable("Authors", 1, 0, 1, 0, 0, "converted to a managed target Author");
+                    report.RecordTable("Books", 1, 0, 1, 0, 0, "mapped to target Books");
+                    report.RecordTable("Commands", 1, 0, 0, 0, 1, "stale queued commands are reset");
+                    return report;
+                },
+                reportOutcome: (name, value) =>
+                {
+                    if (name == "orphan-stages-cleaned")
+                    {
+                        cleanedCount = value;
+                    }
+                });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.PreviewOnly, Is.False);
+                Assert.That(cleanedCount, Is.EqualTo("3"));
+                Assert.That(File.Exists(orphanSnapshot), Is.False);
+                Assert.That(File.Exists(orphanSnapshot + "-wal"), Is.False);
+                Assert.That(File.Exists(orphanStage), Is.False);
+                Assert.That(File.Exists(orphanMigrationCopy), Is.False);
+                Assert.That(File.Exists(retainedBackup), Is.True);
+            });
+        }
+
         private static void CreateNativeTarget(string connectionString)
         {
             using var target = new SqliteConnection(connectionString);

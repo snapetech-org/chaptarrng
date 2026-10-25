@@ -23,7 +23,7 @@ if (!serviceKey || !globalKey || serviceKey === globalKey) {
 }
 
 const requestWithKey = (path, key, init = {}) =>
-  fetch(`${apiUrl}${path}`, {
+  fetch(/^https?:\/\//i.test(path) ? path : `${apiUrl}${path}`, {
     ...init,
     headers: {
       "X-Api-Key": key,
@@ -95,8 +95,51 @@ assert.equal(legacyBookSearchCommandResponse.status, 200);
 const legacyBookSearchCommand = await legacyBookSearchCommandResponse.json();
 assert.deepEqual(
   legacyBookSearchCommand.body.bookIds,
+  [30],
+  "The legacy command response should project split format records to the original BookshelfNG book ID"
+);
+const nativeBookSearchCommandResponse = await requestWithKey(
+  `/command/${legacyBookSearchId}`,
+  globalKey,
+  { headers: { "X-ChaptarrNG-Client": "native" } }
+);
+assert.equal(nativeBookSearchCommandResponse.status, 200);
+const nativeBookSearchCommand = await nativeBookSearchCommandResponse.json();
+assert.deepEqual(
+  nativeBookSearchCommand.body.bookIds,
   [30, 31],
-  "A legacy BookSearch command should include both migrated format records"
+  "The queued native BookSearch should include both migrated format records"
+);
+const ebookFacade = new URL(apiUrl);
+ebookFacade.pathname = `${ebookFacade.pathname.replace(/\/api\/v\d+\/?$/i, "")}/readarr/${capabilities.providerIdDialect}/ebook/api/v1`;
+ebookFacade.search = "";
+const ebookFacadeUrl = ebookFacade.toString().replace(/\/$/, "");
+const scopedBookSearchResponse = await requestWithKey(
+  `${ebookFacadeUrl}/command`,
+  globalKey,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "BookSearch", bookIds: [30] }),
+  }
+);
+assert.equal(scopedBookSearchResponse.status, 201);
+const scopedBookSearchLocation = scopedBookSearchResponse.headers.get("Location");
+assert.ok(scopedBookSearchLocation, "Scoped BookSearch should return its command URL");
+const scopedBookSearchId = Number(
+  new URL(scopedBookSearchLocation, apiUrl).pathname.split("/").at(-1)
+);
+assert.ok(Number.isSafeInteger(scopedBookSearchId) && scopedBookSearchId > 0);
+const scopedBookSearchCommandResponse = await requestWithKey(
+  `${ebookFacadeUrl}/command/${scopedBookSearchId}`,
+  globalKey
+);
+assert.equal(scopedBookSearchCommandResponse.status, 200);
+const scopedBookSearchCommand = await scopedBookSearchCommandResponse.json();
+assert.deepEqual(
+  scopedBookSearchCommand.body.bookIds,
+  [31],
+  "The ebook facade should resolve the legacy source ID to its ebook target"
 );
 
 const [legacyAudiobook, legacyEbook] = await Promise.all([

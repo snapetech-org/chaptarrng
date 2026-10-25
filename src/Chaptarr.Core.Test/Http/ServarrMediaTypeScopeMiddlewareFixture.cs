@@ -67,6 +67,38 @@ namespace Chaptarr.Core.Test.Http
             Assert.That(sawFacade?.Dialect, Is.EqualTo(dialect));
             Assert.That(sawFacade?.MediaType, Is.EqualTo(expectedMediaType));
             Assert.That(sawFacade?.Prefix, Is.EqualTo(expectedPrefix));
+            Assert.That(sawFacade?.AcceptsBookshelfLegacyBookIds, Is.False);
+        }
+
+        [TestCase(false, false, false)]
+        [TestCase(true, false, true)]
+        [TestCase(true, true, false)]
+        public async Task should_accept_legacy_book_ids_on_scoped_routes_only_for_migrated_non_native_clients(
+            bool migratedBookshelfDatabase,
+            bool nativeClient,
+            bool expectedLegacyBookIdSupport)
+        {
+            ReadarrFacadeContext sawFacade = null;
+            var middleware = new ServarrMediaTypeScopeMiddleware(context =>
+            {
+                sawFacade = context.GetReadarrFacadeContext();
+                return Task.CompletedTask;
+            });
+
+            var context = new DefaultHttpContext();
+            context.Request.Path = "/readarr/hc/ebook/api/v1/book/30";
+            if (nativeClient)
+            {
+                context.Request.Headers["X-ChaptarrNG-Client"] = "native";
+            }
+
+            var config = (ConfigServiceTestProxy)ConfigServiceTestProxy.Create();
+            config.BookshelfNGDatabaseMigrated = migratedBookshelfDatabase;
+
+            await middleware.InvokeAsync(context, (NzbDrone.Core.Configuration.IConfigService)config);
+
+            Assert.That(sawFacade?.IsBookshelfCompatibility, Is.False);
+            Assert.That(sawFacade?.AcceptsBookshelfLegacyBookIds, Is.EqualTo(expectedLegacyBookIdSupport));
         }
 
         [Test]

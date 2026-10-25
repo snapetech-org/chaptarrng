@@ -190,7 +190,7 @@ namespace Chaptarr.Api.V1.Commands
             dynamic command = STJson.Deserialize(body, commandType);
 
             if (_bookshelfLegacyIdentityMapService != null &&
-                HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+                HttpContext?.GetReadarrFacadeContext()?.AcceptsBookshelfLegacyBookIds == true)
             {
                 var facadeMediaType = MediaTypeParameterParser.ParseOptional(HttpContext?.GetReadarrFacadeContext()?.MediaType);
                 command = ResolveLegacyBookCommandIds((Command)command, facadeMediaType);

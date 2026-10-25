@@ -210,6 +210,28 @@ namespace Chaptarr.Core.Test.Commands
         }
 
         [Test]
+        public void scoped_book_search_should_resolve_a_legacy_id_without_projecting_native_command_ids()
+        {
+            var queue = new StubCommandQueue();
+            var identityMap = new StubLegacyIdentityMapService();
+            var facadeContext = new ReadarrFacadeContext(
+                "hc",
+                "ebook",
+                "/readarr/hc/ebook",
+                acceptsBookshelfLegacyBookIds: true);
+            var controller = CreateController(
+                queue,
+                """{"name":"BookSearch","bookIds":[30]}""",
+                identityMap,
+                facadeContext);
+
+            controller.StartCommand(new CommandResource { Name = "BookSearch" });
+
+            Assert.That(((BookSearchCommand)queue.PushedCommand).BookIds, Is.EqualTo(new[] { 61 }));
+            Assert.That(identityMap.LastMediaType, Is.EqualTo(BookMediaType.Ebook));
+        }
+
+        [Test]
         public void refresh_book_command_should_keep_its_contract_and_refresh_both_split_rows()
         {
             var queue = new StubCommandQueue();

@@ -622,6 +622,7 @@ namespace NzbDrone.Core.Datastore
                     var name = Path.GetFileName(path);
                     return name.EndsWith(".db", StringComparison.Ordinal) &&
                            (name.StartsWith(sourceFilePrefix + "chaptarr-stage-", StringComparison.Ordinal) ||
+                            name.StartsWith(sourceFilePrefix + "bookshelf-snapshot-", StringComparison.Ordinal) ||
                             name.StartsWith(sourceFilePrefix + "bookshelf-migrate-", StringComparison.Ordinal));
                 })
                 .ToArray();

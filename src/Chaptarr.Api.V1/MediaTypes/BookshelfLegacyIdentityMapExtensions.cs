@@ -15,7 +15,7 @@ namespace Chaptarr.Api.V1.MediaTypes
             BookMediaType? mediaType = null)
         {
             var ids = bookIds?.Where(id => id > 0).Distinct().ToList() ?? new List<int>();
-            if (context?.GetReadarrFacadeContext()?.IsBookshelfCompatibility != true || identityMapService == null)
+            if (context?.GetReadarrFacadeContext()?.AcceptsBookshelfLegacyBookIds != true || identityMapService == null)
             {
                 return ids;
             }

@@ -297,8 +297,10 @@ The checked-in Compose smoke built ChaptarrNG directly from commit
 `bc580332ab49a7efa87e3d78b680a2a0cf1abbd0`. The schema-158 BookshelfNG
 fixture converted during normal startup. SeerrNG's `ReadarrAPI` verified the
 legacy book identity mapping and format-scoped reads. A legacy `BookSearch`
-command using source book ID `30` returned both migrated IDs (`30` and `31`);
-the adapter then read the audiobook and ebook through their format-specific
+request using source book ID `30` expanded internally to both migrated IDs
+(`30` and `31`); the BookshelfNG-compatible response projected them back to
+source ID `30`, while a native-client inspection exposed both target IDs. The
+adapter then read the audiobook and ebook through their format-specific
 facades, observed each migrated file, and confirmed the ebook history row did
 not leak into audiobook history. The restricted service-key boundary passed,
 and SeerrNG created, polled, and cancelled a synthetic pending import through
