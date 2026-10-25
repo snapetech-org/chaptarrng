@@ -3,22 +3,16 @@ name: Build ChaptarrNG
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-    types: [ opened, edited, reopened, synchronize ]
+    tags:
+      - '**'
   workflow_call: {}
   workflow_dispatch:
 
-# Tests only, never publishes. PRs and merges are both validated automatically, but
-# nothing reaches users until release.yml is run by hand; docker-publish.yml is
-# workflow_call-only, so no run started here can push an image.
-
-# Superseded PR code checks cancel; body-only edits have a separate group.
-# Main builds and release callers keep their own run and are never superseded.
+# Validation runs on tags, reusable workflow calls, or explicit dispatches.
+# Pull requests do not start CI; release.yml controls user-facing publishing.
 concurrency:
   group: build-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read

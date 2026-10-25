@@ -1,7 +1,4 @@
-import os
 import re
-import subprocess
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -44,10 +41,13 @@ def step_block(source: str, name: str) -> str:
 
 
 class WorkflowRunnerPolicyTests(unittest.TestCase):
-    def test_push_trigger_is_main_only(self) -> None:
-        push = event_block(WORKFLOW.read_text(encoding="utf-8"), "push")
-        self.assertRegex(push, r"(?m)^    branches:\s*\[\s*main\s*\]$")
-        self.assertNotIn("**", push)
+    def test_push_trigger_is_tag_only(self) -> None:
+        source = WORKFLOW.read_text(encoding="utf-8")
+        push = event_block(source, "push")
+        self.assertRegex(push, r"(?m)^    tags:\s*$")
+        self.assertIn("**", push)
+        self.assertNotRegex(push, r"(?m)^    branches:")
+        self.assertNotRegex(source, r"(?m)^  pull_request(?:_target)?:")
 
     def test_build_matrix_uses_shared_pool_only_for_trusted_main_linux(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
@@ -96,102 +96,14 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertTrue(all("," not in option for option in buildx_driver_options))
         self.assertIn("NO_PROXY=localhost,127.0.0.1", build)
 
-    def test_pr_body_edits_revalidate_notes_without_restarting_builds(self) -> None:
+    def test_validation_is_manual_or_tagged_without_pr_checks(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
-        pull_request = event_block(source, "pull_request")
-        release_notes = job_block(source, "release-notes")
-        build = job_block(source, "build")
-        migrations = job_block(source, "postgres-migrations")
+        push = event_block(source, "push")
 
-        self.assertRegex(pull_request, r"(?m)^    types:.*\bedited\b")
-        self.assertIn("github.event.changes.body != null", release_notes)
-        self.assertIn("github.event.action != 'edited'", build)
-        self.assertIn("github.event.action != 'edited'", migrations)
-        self.assertIn("group: build-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}", source)
-        self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", source)
-
-    def test_release_note_check_fetches_the_pr_head_after_merge(self) -> None:
-        source = WORKFLOW.read_text(encoding="utf-8")
-        release_notes = job_block(source, "release-notes")
-
-        self.assertIn("PR_NUMBER: ${{ github.event.pull_request.number }}", release_notes)
-        fetch = (
-            'git fetch --no-tags origin "refs/pull/${PR_NUMBER}/head:'
-            'refs/remotes/pull/${PR_NUMBER}/head"'
-        )
-        self.assertIn(fetch, release_notes)
-        self.assertIn('git cat-file -e "${HEAD_SHA}^{commit}"', release_notes)
-        self.assertLess(release_notes.index(fetch), release_notes.index("node scripts/check-release-notes.mjs"))
-
-    def test_retained_pull_ref_fetches_head_without_source_branch(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="chaptarr-pr-ref-") as scratch:
-            root = Path(scratch)
-            remote = root / "remote.git"
-            seed = root / "seed"
-            checkout = root / "checkout"
-            subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
-            subprocess.run(["git", "init", "-b", "main", str(seed)], check=True, capture_output=True)
-            environment = os.environ | {
-                "GIT_AUTHOR_NAME": "Validation Test",
-                "GIT_AUTHOR_EMAIL": "validation@example.invalid",
-                "GIT_COMMITTER_NAME": "Validation Test",
-                "GIT_COMMITTER_EMAIL": "validation@example.invalid",
-            }
-
-            def git(*args: str) -> str:
-                result = subprocess.run(
-                    ["git", "-C", str(seed), *args],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                    env=environment,
-                )
-                return result.stdout.strip()
-
-            (seed / "base.txt").write_text("base\n", encoding="utf-8")
-            git("add", "base.txt")
-            git("commit", "-m", "base")
-            git("remote", "add", "origin", str(remote))
-            git("push", "origin", "main")
-            (seed / "head.txt").write_text("pull request head\n", encoding="utf-8")
-            git("add", "head.txt")
-            git("commit", "-m", "pull request head")
-            head = git("rev-parse", "HEAD")
-            git("push", "origin", "HEAD:refs/heads/pr-branch")
-            subprocess.run(
-                ["git", "--git-dir", str(remote), "update-ref", "refs/pull/75/head", head],
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "--git-dir", str(remote), "update-ref", "-d", "refs/heads/pr-branch"],
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "clone", "--branch", "main", "--single-branch", str(remote), str(checkout)],
-                check=True,
-                capture_output=True,
-            )
-
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(checkout),
-                    "fetch",
-                    "--no-tags",
-                    "origin",
-                    "refs/pull/75/head:refs/remotes/pull/75/head",
-                ],
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "-C", str(checkout), "cat-file", "-e", f"{head}^{{commit}}"],
-                check=True,
-                capture_output=True,
-            )
+        self.assertIn("workflow_dispatch:", source)
+        self.assertRegex(push, r"(?m)^    tags:\s*$")
+        self.assertNotRegex(push, r"(?m)^    branches:")
+        self.assertNotRegex(source, r"(?m)^  pull_request(?:_target)?:")
 
     def test_security_scans_use_the_shared_pool_only_on_trusted_main_runs(self) -> None:
         workflow_dir = WORKFLOW.parent
