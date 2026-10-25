@@ -141,13 +141,24 @@ test('catalog Compose handoff keeps the BookshelfNG container and named volumes'
 test('Co-op Cloud handoff keeps stack volumes and uses the compatibility image', () => {
   const compose = read('packaging/legacy/coop-cloud/bookshelfng/compose.yml');
   const sample = read('packaging/legacy/coop-cloud/bookshelfng/.env.sample');
+  const readme = read('packaging/legacy/coop-cloud/bookshelfng/README.md');
+  const release = read('packaging/legacy/coop-cloud/bookshelfng/release/next');
 
   assert.match(compose, /CHAPTARRNG_COMPAT_IMAGE:-ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover/);
   assert.match(compose, /bookshelfng_config:\/config/);
   assert.match(compose, /bookshelfng_books:\/books/);
   assert.match(compose, /bookshelfng_downloads:\/downloads/);
   assert.match(compose, /loadbalancer\.server\.port=\$\{BOOKSHELFNG_PORT:-8787\}/);
+  assert.match(compose, /backupbot\.backup=true/);
+  assert.match(compose, /start_period: 245m/);
+  assert.match(compose, /order: stop-first/);
+  assert.match(compose, /failure_action: pause/);
+  assert.match(compose, /version=\$\{COOP_CLOUD_RECIPE_VERSION:-0\.1\.0\+__CHAPTARRNG_VERSION__\}/);
   assert.match(sample, /^CHAPTARRNG_COMPAT_IMAGE=ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover$/m);
+  assert.doesNotMatch(sample, /BOOKSHELFNG_HOST_PORT/);
+  assert.match(readme, / backs up all\nthree named volumes/);
+  assert.match(readme, /operator-directed rollback after a successful migration must\nrestore the matching BookshelfNG data backup/);
+  assert.match(release, /Create an independent Co-op Cloud backup before upgrading/);
 });
 
 test('release builds and verifies desktop migration candidates only behind all readiness gates', () => {

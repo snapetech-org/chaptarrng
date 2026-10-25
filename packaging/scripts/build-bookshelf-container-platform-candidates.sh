@@ -56,8 +56,7 @@ cp "$repo_root/packaging/legacy/cloudron/CloudronManifest.json" "$stage/cloudron
 cp "$repo_root/packaging/legacy/cloudron/nginx.conf" "$stage/cloudron/nginx.conf"
 cp "$repo_root/packaging/legacy/cloudron/migration-unavailable.html" "$stage/cloudron/migration-unavailable.html"
 cp "$repo_root/packaging/legacy/cloudron/cloudron-entrypoint.sh" "$stage/cloudron/cloudron-entrypoint.sh"
-cp "$repo_root/packaging/legacy/coop-cloud/bookshelfng/compose.yml" "$stage/coop-cloud/bookshelfng/compose.yml"
-cp "$repo_root/packaging/legacy/coop-cloud/bookshelfng/.env.sample" "$stage/coop-cloud/bookshelfng/.env.sample"
+cp -a "$repo_root/packaging/legacy/coop-cloud/bookshelfng/." "$stage/coop-cloud/bookshelfng/"
 cp "$repo_root/packaging/legacy/catalogs/compose.yaml" "$stage/catalogs/compose.yaml"
 python3 - "$repo_root/packaging/legacy/startos/candidate" "$stage/startos" <<'PY'
 from pathlib import Path
@@ -154,11 +153,10 @@ for path, (old, new) in replacements.items():
 
 compose_path = root / "coop-cloud" / "bookshelfng" / "compose.yml"
 text = compose_path.read_text(encoding="utf-8")
-old_version = "coop-cloud.${STACK_NAME}.version=chaptarrng-bookshelf-candidate"
-new_version = "coop-cloud.${STACK_NAME}.version=chaptarrng-bookshelf-" + version
-if text.count(old_version) != 1:
-    raise SystemExit("Co-op Cloud recipe did not contain exactly one candidate version label.")
-compose_path.write_text(text.replace(old_version, new_version), encoding="utf-8")
+version_placeholder = "__CHAPTARRNG_VERSION__"
+if text.count(version_placeholder) != 1:
+    raise SystemExit("Co-op Cloud recipe did not contain exactly one ChaptarrNG version placeholder.")
+compose_path.write_text(text.replace(version_placeholder, version), encoding="utf-8")
 
 unraid_path = root / "unraid" / "bookshelfng.xml"
 unraid_text = unraid_path.read_text(encoding="utf-8")

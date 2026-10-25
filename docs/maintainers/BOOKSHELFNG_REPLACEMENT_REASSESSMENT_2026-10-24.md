@@ -42,6 +42,17 @@ proxy that keeps the platform health route available while migration runs.
 These additions have not yet had the bulk validation pass and do not close an
 installed-channel or release gate.
 
+The 2026-10-25 platform source review also completed the in-repository Co-op
+Cloud recipe candidate: it preserves the prior stack/service/volume identities,
+backs up the retained volumes, waits through migration health checks, serializes
+Swarm updates, pauses failures instead of automatically starting an old binary
+against potentially converted data, and emits a digest-pinned recipe bundle
+with a valid Co-op Cloud version label. The local container-platform bundle,
+StartOS build, desktop candidates, legacy-channel contracts, Docker migration
+paths, and release/publisher gate batch passed on October 25. These are
+source/candidate checks only; external recipe delivery and installed Swarm
+acceptance remain open.
+
 This document is the current **execution order** for this goal. The
 [retirement record](../BOOKSHELFNG_RETIREMENT.md),
 [workflow crosswalk](../BOOKSHELFNG_WORKFLOW_PARITY.md), and BookshelfNG's
@@ -310,7 +321,7 @@ runtime capability. Revalidate only affected contract families after a fix.
 | AppImage and Flatpak | Wrappers preserve desktop IDs/data paths, supervise HTTP plus database health, persist state, require `setsid --wait`, stop the app process group and restore source data after failure/interruption. Old artifact reinstall remains the rollback step. | Same-path/app-ID update, sandbox permissions, SQLite/PostgreSQL data, spaced/equal `-data`, custom port/URL base, failed/interrupted launch, process-tree cleanup and reopening the prior artifact. |
 | Helm and Unraid | The Helm chart now has an explicit stopped-pod restore Job for rollback after a successful conversion, including the retained PostgreSQL log/cache dumps. The Unraid template preserves the old identity and paths; external catalog delivery remains outside this repository. | Existing release/PVC or CA installation updates normally; no replacement empty volume, new base URL or lost environment. Exercise GitOps reconciliation and rollback on the installed channel. |
 | StartOS | Complete and integrate the existing SDK candidate into the external package repository/feed; finish the `.s9pk` artifact workflow. | Real device update/backup/restore for supported architecture and version, retaining package/volume IDs and `/init`. |
-| Cloudron and Co-op Cloud | Finish source candidates into the actual feed/recipe and update lifecycle, including the common preflight and recovery contract. | Real platform-managed install/update/rollback with persistent volumes and reverse proxy. |
+| Cloudron and Co-op Cloud | In-repository candidates preserve their existing app/stack and data identities and use the shared migration supervisor; Co-op Cloud has explicit backup, health, and single-writer Swarm update behavior. External feed/recipe delivery remains. | Real platform-managed install/update/backup/recovery and rollback with persistent volumes and reverse proxy. |
 | Other catalogs | Inventory actual maintained BookshelfNG entries, then submit identity-preserving changes for supported CasaOS/ZimaOS/Umbrel/TrueNAS/Cosmos/CapRover/Portainer records as applicable. Do not claim a candidate Compose file updates external catalogs. | The real catalog update reaches an existing install and passes the same data/client checks. |
 | Old in-app updater, manual services, pinned/offline copies | Build a one-time migration bootstrap/package plus a maintained future update route; old binaries pointing at Readarr's server cannot discover a new owned endpoint on their own. | Starting from the old artifact, execute the supported one-time update and let migration run automatically; document why zero-action delivery is unavailable for that class. |
 

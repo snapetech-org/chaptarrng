@@ -2,6 +2,12 @@ services:
   app:
     image: ${CHAPTARRNG_COMPAT_IMAGE:-ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover}
     stop_grace_period: 8h30m
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/chaptarr-healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 245m
     environment:
       CHAPTARR_BOOKSHELF_COMPATIBILITY: "true"
       CHAPTARR_DEFAULT_PORT: ${BOOKSHELFNG_PORT:-8787}
@@ -18,16 +24,27 @@ services:
     networks:
       - proxy
     deploy:
+      update_config:
+        parallelism: 1
+        order: stop-first
+        monitor: 260m
+        failure_action: pause
+      rollback_config:
+        parallelism: 1
+        order: stop-first
       restart_policy:
         condition: on-failure
+        delay: 10s
+        max_attempts: 3
       labels:
+        - "backupbot.backup=true"
         - "traefik.enable=true"
         - "traefik.docker.network=proxy"
         - "traefik.http.services.${STACK_NAME}.loadbalancer.server.port=${BOOKSHELFNG_PORT:-8787}"
         - "traefik.http.routers.${STACK_NAME}.rule=Host(`${DOMAIN}`${EXTRA_DOMAINS})"
         - "traefik.http.routers.${STACK_NAME}.entrypoints=web-secure"
         - "traefik.http.routers.${STACK_NAME}.tls.certresolver=${LETS_ENCRYPT_ENV}"
-        - "coop-cloud.${STACK_NAME}.version=chaptarrng-bookshelf-candidate"
+        - "coop-cloud.${STACK_NAME}.version=${COOP_CLOUD_RECIPE_VERSION:-0.1.0+__CHAPTARRNG_VERSION__}"
 
 volumes:
   bookshelfng_config:

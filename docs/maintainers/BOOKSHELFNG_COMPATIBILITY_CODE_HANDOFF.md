@@ -204,6 +204,14 @@ The follow-on code pass tightens container readiness and platform handoff:
   app. The package entrypoint exits if either nginx or the supervised app
   exits. This source candidate still needs Cloudron build and installed-channel
   acceptance.
+- The Co-op Cloud recipe now includes the full candidate payload and release
+  note, the standard `0.1.0+<app-version>` recipe label, backupbot coverage for
+  its retained named volumes, a marker-aware health check sized for migration,
+  and stop-first single-writer updates. Failed Swarm updates pause rather than
+  automatically starting the old BookshelfNG application against a database
+  that may already have migrated. The candidate builder pins its image digest
+  and fills the recipe version; real Swarm update, backup, recovery, and
+  rollback acceptance remain open.
 - The migration guide now gives the one-time manual archive handoff for
   standalone macOS and FreeBSD installs. Their old updater cannot discover the
   first ChaptarrNG release; after migration, the imported updater setting
@@ -216,8 +224,12 @@ The follow-on code pass tightens container readiness and platform handoff:
   installer, or archive handoff because it cannot discover ChaptarrNG releases
   through the Readarr update service.
 
-These additions are source-only and have not yet received the bulk validation
-pass. They do not change the installed-channel acceptance requirements below.
+The 2026-10-25 local candidate batch passed the container-platform bundle build
+and StartOS TypeScript/ncc build, desktop candidate preparation/build, all 11
+legacy-channel contracts, Docker compatibility defaults, the Docker migration
+helper, release-readiness and publisher preflights, and the GHCR dispatch
+contract. These runs validate source and candidate assembly only; hosted
+exact-head and installed-channel acceptance remain open.
 
 ## Source comparison completed in this code slice
 
@@ -445,15 +457,21 @@ weaken the default issuer-target restrictions.
 - The Helm post-migration restore Job is implemented but has not been exercised
   against an installed release/PVC. The Unraid compatibility template still
   needs external catalog delivery and installed upgrade/rollback acceptance.
+- Cloudron and Co-op Cloud have complete in-repository source candidates, but
+  their external package/recipe delivery and installed-channel acceptance are
+  open. Co-op Cloud operators must restore a matching BookshelfNG volume backup
+  before manually starting the old image after a successful conversion.
 - Windows Chocolatey deferred-start recovery distinguishes source migration
   rollback from target-to-target update failure; desktop first-launch recovery
   requires and supervises `setsid --wait`. Both coordinate outcomes with the
   shared migration journal and have no installed-channel acceptance yet.
   Desktop executable rollback still requires reinstalling/reopening the old
   artifact.
-- This code handoff has not received bulk build or runtime validation. Record
-  the results against the exact commit that contains it and fix regressions
-  before closing acceptance.
+- The local candidate batch above has passed, but this handoff still lacks
+  complete application parity, hosted exact-head validation, real provider and
+  populated-data acceptance, external feed delivery, and installed upgrade,
+  recovery, and rollback evidence. The candidate tests do not close those
+  gates.
 
 ## Operator experience and migration timing
 

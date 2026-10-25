@@ -66,9 +66,23 @@ fi
 compose_default_prefix='${CHAPTARRNG_COMPAT_IMAGE:-'
 compose_default="image: $compose_default_prefix$image}"
 grep -Fq "$compose_default" "$stage/coop-cloud/bookshelfng/compose.yml"
-coop_version_prefix='coop-cloud.${STACK_NAME}.version=chaptarrng-bookshelf-'
-grep -Fq "${coop_version_prefix}0.9.978" "$stage/coop-cloud/bookshelfng/compose.yml"
+grep -Fq 'coop-cloud.${STACK_NAME}.version=${COOP_CLOUD_RECIPE_VERSION:-0.1.0+0.9.978}' "$stage/coop-cloud/bookshelfng/compose.yml"
 grep -Fxq "CHAPTARRNG_COMPAT_IMAGE=$image" "$stage/coop-cloud/bookshelfng/.env.sample"
+grep -Fq 'backupbot.backup=true' "$stage/coop-cloud/bookshelfng/compose.yml"
+grep -Fq 'test: ["CMD", "/usr/local/bin/chaptarr-healthcheck"]' "$stage/coop-cloud/bookshelfng/compose.yml"
+grep -Fq 'start_period: 245m' "$stage/coop-cloud/bookshelfng/compose.yml"
+grep -Fq 'order: stop-first' "$stage/coop-cloud/bookshelfng/compose.yml"
+grep -Fq 'failure_action: pause' "$stage/coop-cloud/bookshelfng/compose.yml"
+if grep -Fq '__CHAPTARRNG_VERSION__' "$stage/coop-cloud/bookshelfng/compose.yml"; then
+  echo "Co-op Cloud recipe retained its version placeholder." >&2
+  exit 1
+fi
+test -s "$stage/coop-cloud/bookshelfng/README.md"
+test -s "$stage/coop-cloud/bookshelfng/release/next"
+if grep -Fq 'BOOKSHELFNG_HOST_PORT' "$stage/coop-cloud/bookshelfng/.env.sample"; then
+  echo "Co-op Cloud recipe advertises an unused host-port setting." >&2
+  exit 1
+fi
 grep -Fq "$compose_default" "$stage/catalogs/compose.yaml"
 grep -Fq "Release multi-architecture image: \`$image\`" "$stage/README.md"
 grep -Fq '`HARDCOVER=false` when migrating a prior softcover image.' "$stage/README.md"
