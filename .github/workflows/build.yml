@@ -355,6 +355,20 @@ jobs:
           packaging/scripts/test-build-bookshelf-container-platform-candidates.sh
         bash packaging/scripts/test-build-bookshelf-container-platform-candidates.sh
 
+    - name: Test BookshelfNG StartOS artifact handoff
+      if: runner.os == 'Linux'
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-startos-artifact-test
+      run: |
+        for script in \
+          packaging/scripts/build-bookshelf-container-platform-candidates.sh \
+          packaging/scripts/build-bookshelf-startos-artifacts.sh \
+          packaging/legacy/startos/candidate/build-startos-package.sh \
+          packaging/scripts/test-build-bookshelf-startos-artifacts.sh; do
+          bash -n "$script"
+        done
+        bash packaging/scripts/test-build-bookshelf-startos-artifacts.sh
+
     - name: Test
       env:
         DIRECT_DOWNLOAD_REQUIRE_PLAYWRIGHT: ${{ runner.os == 'Linux' && 'true' || 'false' }}

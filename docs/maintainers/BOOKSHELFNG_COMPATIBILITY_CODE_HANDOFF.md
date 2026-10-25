@@ -236,6 +236,20 @@ helper, release-readiness and publisher preflights, and the GHCR dispatch
 contract. These runs validate source and candidate assembly only; hosted
 exact-head and installed-channel acceptance remain open.
 
+The StartOS artifact handoff now has an in-repository builder at
+`packaging/scripts/build-bookshelf-startos-artifacts.sh`. It consumes the
+release's container-platform bundle and checksum, extracts only its StartOS
+candidate, reuses the signing key already held by the external StartOS
+workspace, and stages both signed architecture packages with checksum files
+and a release manifest. The package key and external `bookshelfng-startos`
+repository remain outside ChaptarrNG. Its focused fixture test passed, and the
+existing bundle test passed with `npm ci`, the StartOS type check, and the ncc
+build. The fixture test uses a placeholder key file and stubbed package tools,
+so it checks the handoff and safety rules but does not verify StartOS SDK
+signatures or produce valid signed packages. Full bulk validation, real package
+generation, device installation, registry submission, backup, update, and
+rollback still require their separate acceptance.
+
 ## Source comparison completed in this code slice
 
 Source is pinned to BookshelfNG `d42ec2aba1e411f4fb538d4d7201f6930898a91e`.

@@ -19,15 +19,16 @@ OUTPUT_DIR=/path/to/new/startos-artifacts ./build-startos-package.sh
 ```
 
 The release handoff bundle supplies a digest-pinned source candidate and a
-StartOS package version derived from the matching ChaptarrNG release. Copy it
-into the configured StartOS packaging workspace and run the script there. It
-checks the workspace's signing-key path without reading or copying the key,
-builds both supported architectures in a temporary package copy, and writes
-the signed `.s9pk` files with SHA-256 sidecars to a new output directory. The
-ChaptarrNG release builder does not hold or use the external package signing
-key. Inspect each generated package, then sideload and test install, backup,
-update, `/ping`, and restore to the prior BookshelfNG image before marketplace
-submission.
+StartOS package version derived from the matching ChaptarrNG release. The
+ChaptarrNG repository's
+`packaging/scripts/build-bookshelf-startos-artifacts.sh` helper verifies that
+bundle and builds both supported architectures inside the configured StartOS
+packaging workspace. It checks the signing-key path without reading or copying
+the key and writes signed `.s9pk` files, SHA-256 sidecars, and a release
+manifest to a new output directory. The ChaptarrNG release builder does not
+hold or use the external package signing key. Inspect each generated package,
+then sideload and test install, backup, update, `/ping`, and restore to the
+prior BookshelfNG image before marketplace submission.
 
 Automatic first-start migration is enabled by default. Use the package's
 **Configure BookshelfNG migration** action to defer conversion for a manual

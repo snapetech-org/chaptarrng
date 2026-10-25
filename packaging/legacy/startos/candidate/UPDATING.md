@@ -8,7 +8,10 @@ builder injects the exact multi-architecture image digest into
 ## Updating the package
 
 - Build from the `startos/` source emitted in the ChaptarrNG
-  `bookshelfng-container-platform-candidates` bundle.
+  `bookshelfng-container-platform-candidates` bundle using
+  `packaging/scripts/build-bookshelf-startos-artifacts.sh` from the ChaptarrNG
+  repository. The helper verifies the bundle checksum and emits both signed
+  architectures with checksums and a release manifest.
 - Keep package ID `bookshelfng`, version ordering, volume IDs, and mount paths.
 - Use only the digest supplied by the ChaptarrNG release workflow; do not
   replace it with a floating tag.

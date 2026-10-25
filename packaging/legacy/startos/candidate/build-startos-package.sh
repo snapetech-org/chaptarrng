@@ -70,12 +70,34 @@ PY
 docker info >/dev/null
 
 work=$(mktemp -d "$workspace/.bookshelfng-startos-package.XXXXXX")
+output_staging=
 cleanup() {
   result=$?
   if [[ $result -eq 0 ]]; then
-    rm -rf -- "$work"
+    if ! python3 - "$workspace" "$work" <<'PY'
+from pathlib import Path
+import os
+import shutil
+import sys
+
+parent = Path(sys.argv[1]).resolve(strict=True)
+path = Path(sys.argv[2])
+if not path.name.startswith(".bookshelfng-startos-package.") or path.is_symlink() or not path.is_dir():
+    raise SystemExit(f"Refusing to clean an unexpected StartOS task path: {path}")
+if path.parent.resolve(strict=True) != parent or path.resolve(strict=True).parent != parent:
+    raise SystemExit(f"Refusing to clean a path outside the StartOS workspace: {path}")
+if path.stat().st_uid != os.getuid():
+    raise SystemExit(f"Refusing to clean a StartOS task path owned by another user: {path}")
+shutil.rmtree(path)
+PY
+    then
+      echo "Could not safely remove StartOS package build scratch; retained at $work" >&2
+    fi
   else
     echo "StartOS package build failed; source and failure evidence kept at $work" >&2
+    if [[ -n "$output_staging" ]]; then
+      echo "Partial StartOS package output kept at $output_staging" >&2
+    fi
   fi
   exit "$result"
 }
@@ -109,15 +131,22 @@ PY
   make
 )
 
-mkdir -p -- "$output_dir"
+output_staging=$(mktemp -d "$output_parent/.bookshelfng-startos-output.XXXXXX")
 for artifact in bookshelfng_x86_64.s9pk bookshelfng_aarch64.s9pk; do
   source="$package_dir/$artifact"
   [[ -s "$source" ]] || {
     echo "StartOS SDK did not create the required package: $artifact" >&2
     exit 1
   }
-  cp -- "$source" "$output_dir/$artifact"
-  (cd "$output_dir" && sha256sum "$artifact" > "$artifact.sha256")
+  cp -- "$source" "$output_staging/$artifact"
+  (cd "$output_staging" && sha256sum "$artifact" > "$artifact.sha256")
 done
+
+mv --no-clobber --no-target-directory -- "$output_staging" "$output_dir"
+if [[ -e "$output_staging" || -L "$output_staging" ]]; then
+  echo "The output directory appeared during package generation; no artifacts were moved: $output_dir" >&2
+  exit 1
+fi
+output_staging=
 
 echo "Built signed x86_64 and aarch64 BookshelfNG-identity StartOS packages in $output_dir"
