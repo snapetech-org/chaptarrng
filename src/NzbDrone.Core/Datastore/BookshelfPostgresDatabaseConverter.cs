@@ -25,7 +25,8 @@ namespace NzbDrone.Core.Datastore
             bool previewOnly = false,
             Action<string> migrateBookshelfSource = null,
             Action<string, string> reportProgress = null,
-            Action<string, string> reportOutcome = null)
+            Action<string, string> reportOutcome = null,
+            string sourceApiBasePath = null)
         {
             if (migrateNativeTarget == null)
             {
@@ -108,7 +109,9 @@ namespace NzbDrone.Core.Datastore
                         snapshot,
                         target,
                         transaction,
-                        mediaMapBasePath);
+                        mediaMapBasePath,
+                        sourceVersion,
+                        sourceApiBasePath);
                     ValidateImportReport(sourceTables, importReport);
                     transaction.Commit();
                 }

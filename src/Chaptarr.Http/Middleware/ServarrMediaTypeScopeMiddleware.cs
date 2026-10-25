@@ -38,14 +38,12 @@ namespace Chaptarr.Http.Middleware
             }
             else if (context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) &&
                      !IsNativeChaptarrRequest(context) &&
-                     configService?.BookshelfNGDatabaseMigrated == true)
+                     HasBookshelfCompatibilityProfile(configService))
             {
                 // A migrated BookshelfNG installation keeps its old API address. On that
                 // address bare numeric IDs retain the provider meaning they had before the
                 // conversion; Chaptarr's own prefixed IDs remain valid as well.
-                var dialect = string.Equals(configService.BookshelfNGProviderDialect, "hc", StringComparison.OrdinalIgnoreCase)
-                    ? "hc"
-                    : "gr";
+                var dialect = configService.BookshelfNGMigrationProfile.ProviderDialect;
                 context.Items[ReadarrFacadeContext.ItemKey] = new ReadarrFacadeContext(
                     dialect,
                     mediaType: null,
@@ -105,6 +103,7 @@ namespace Chaptarr.Http.Middleware
 
             context.Request.Path = remaining;
             var acceptsBookshelfLegacyBookIds = configService?.BookshelfNGDatabaseMigrated == true &&
+                                                configService.BookshelfNGMigrationProfile?.IsCompatible == true &&
                                                 !IsNativeChaptarrRequest(context);
             context.Items[ReadarrFacadeContext.ItemKey] = new ReadarrFacadeContext(
                 dialect ?? "hc",
@@ -122,6 +121,12 @@ namespace Chaptarr.Http.Middleware
             }
 
             return true;
+        }
+
+        private static bool HasBookshelfCompatibilityProfile(IConfigService configService)
+        {
+            return configService?.BookshelfNGDatabaseMigrated == true &&
+                   configService.BookshelfNGMigrationProfile?.IsCompatible == true;
         }
     }
 }

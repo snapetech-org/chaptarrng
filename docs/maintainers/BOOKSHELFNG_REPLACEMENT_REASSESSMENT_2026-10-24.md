@@ -42,6 +42,15 @@ proxy that keeps the platform health route available while migration runs.
 These additions have not yet had the bulk validation pass and do not close an
 installed-channel or release gate.
 
+The source compatibility profile is now version 2. Each converted database
+records its BookshelfNG source schema, effective provider dialect, preserved
+API base path, audiobook/ebook split semantics, identity-map version, and
+conversion outcome. The unchanged API facade and migration health command
+validate the profile before interpreting legacy IDs. Earlier candidate profile
+versions remain readable. This closes the profile's missing source-context
+fields at code level; outcome and upgrade compatibility still require the bulk
+validation campaign.
+
 The 2026-10-25 platform source review also completed the in-repository Co-op
 Cloud recipe candidate: it preserves the prior stack/service/volume identities,
 backs up the retained volumes, waits through migration health checks, serializes
@@ -208,7 +217,7 @@ before repeating the affected validation stages.
 | Order | Work package | Depends on | Current state | Exit condition |
 | ---: | --- | --- | --- | --- |
 | 0 | C0 — Pin baseline and separate review/code/evidence queues | — | Delivered by this assessment | Source pins, reproducible inventory and explicit gap IDs available. |
-| 1 | C1 — Preserve compatibility context and old API address | C0 | Initial code slice implemented, unverified: source profile, source-default provider mode, unchanged API address, native-client marker | Migrated installations persist source semantics and accept old-address legacy requests without client reconfiguration. |
+| 1 | C1 — Preserve compatibility context and old API address | C0 | Version-2 profile now stores source product/schema, provider dialect, API base path, format and identity-map semantics, and conversion outcome; legacy API and health checks consume it. Code is implemented; runtime unverified. | Migrated installations persist source semantics and accept old-address legacy requests without client reconfiguration. |
 | 2 | C2 — Complete legacy resource, mutation and lifecycle behavior | C1 | Code implemented for the listed request, response, command, and identity paths; source review complete for the named F2/F5 contracts; runtime unverified. | Old request/response/identity/monitoring contracts have implemented projections, including split works and pending metadata. |
 | 3 | C3 — Make migration an unattended recoverable transaction | C1/C2 | Linux package handoff and converter journals exist; Windows deferred-start and desktop recovery now write channel outcomes to the shared journal; all unverified | Every promotion boundary is journaled or reconciled; failures retain or restore the correct app/data/service state. |
 | 4 | C4 — Close acquisition, import and file behavior differences | C2 | Source-level semantic review is complete for the listed release/download, matching/import/filesystem, and catalog families; source behavior and target fingerprints/dispositions are recorded in the code handoff. Runtime equivalence remains unverified. | Every in-scope semantic difference has a concrete port or supported equivalence rationale; no unknown acquisition/import behavior remains. |

@@ -605,6 +605,37 @@ namespace NzbDrone.Core.Configuration
             get { return GetValue("BookshelfNGProviderDialect", "gr"); }
         }
 
+        public BookshelfNGCompatibilityProfile BookshelfNGMigrationProfile
+        {
+            get
+            {
+                return new BookshelfNGCompatibilityProfile
+                {
+                    Version = GetBookshelfProfileInteger("BookshelfNGCompatibilityProfileVersion", 0),
+                    SourceProduct = GetValue("BookshelfNGSourceProduct", string.Empty),
+                    SourceSchemaVersion = GetBookshelfProfileInteger("BookshelfNGSourceSchemaVersion", 0),
+                    ProviderDialect = BookshelfNGProviderDialect,
+                    ApiBasePath = GetValue("BookshelfNGApiBasePath", string.Empty),
+                    FormatSemantics = GetValue("BookshelfNGFormatSemantics", string.Empty),
+                    IdentityMapVersion = GetBookshelfProfileInteger("BookshelfNGIdentityMapVersion", 0),
+                    MigrationOutcome = GetValue("BookshelfNGMigrationOutcome", string.Empty)
+                };
+            }
+        }
+
+        private int GetBookshelfProfileInteger(string key, int defaultValue)
+        {
+            var value = GetValue(key, string.Empty);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return defaultValue;
+            }
+
+            return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+                ? parsed
+                : -1;
+        }
+
         public string HardcoverUsername
         {
             get { return GetValue("HardcoverUsername", ""); }

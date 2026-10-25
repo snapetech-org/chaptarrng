@@ -132,7 +132,11 @@ namespace NzbDrone.Host
                                 "Applying a BookshelfNG migration requires -confirm-bookshelf-service-stopped. Stop every process using this data directory first.");
                         }
 
-                        var migrationController = new MigrationController(_logger, new NLogLoggerProvider(), new AppFolderInfo(_startupContext));
+                        var migrationController = new MigrationController(
+                            _logger,
+                            new NLogLoggerProvider(),
+                            new AppFolderInfo(_startupContext),
+                            _configFileProvider.Value);
                         var result = migrationController.MigrateBookshelf(
                             database.ConnectionString,
                             new MigrationContext(MigrationType.Main),
@@ -172,12 +176,12 @@ namespace NzbDrone.Host
                             throw new InvalidDataException("BookshelfNG handoff health check did not find the persisted migration marker.");
                         }
 
-                        var providerDialect = _configService.Value.BookshelfNGProviderDialect;
-                        if (!string.Equals(providerDialect, "hc", StringComparison.Ordinal) &&
-                            !string.Equals(providerDialect, "gr", StringComparison.Ordinal))
+                        var compatibilityProfile = _configService.Value.BookshelfNGMigrationProfile;
+                        if (!compatibilityProfile.IsCompatible)
                         {
-                            throw new InvalidDataException("BookshelfNG handoff health check found an invalid source provider dialect.");
+                            throw new InvalidDataException("BookshelfNG handoff health check found a missing or unsupported compatibility profile.");
                         }
+                        var providerDialect = compatibilityProfile.ProviderDialect;
 
                         if (_startupContext.Args.TryGetValue("bookshelf-health-url", out var healthUrl))
                         {

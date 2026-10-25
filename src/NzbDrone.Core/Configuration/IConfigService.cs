@@ -117,6 +117,7 @@ namespace NzbDrone.Core.Configuration
         bool HardcoverEnabled { get; set; }
         bool BookshelfNGDatabaseMigrated { get; }
         string BookshelfNGProviderDialect { get; }
+        BookshelfNGCompatibilityProfile BookshelfNGMigrationProfile { get; }
         string HardcoverUsername { get; set; }
         string HardcoverUserImageUrl { get; set; }
         string MatchingLogsUploadToken { get; set; }

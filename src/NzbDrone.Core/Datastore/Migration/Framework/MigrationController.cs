@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using NLog;
 using NLog.Extensions.Logging;
 using NzbDrone.Common.EnvironmentInfo;
+using NzbDrone.Core.Configuration;
 using Npgsql;
 
 namespace NzbDrone.Core.Datastore.Migration.Framework
@@ -35,20 +36,30 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
         private readonly Logger _logger;
         private readonly ILoggerProvider _migrationLoggerProvider;
         private readonly IAppFolderInfo _appFolderInfo;
+        private readonly IConfigFileProvider _configFileProvider;
 
         public MigrationController(Logger logger,
                                    ILoggerProvider migrationLoggerProvider)
-            : this(logger, migrationLoggerProvider, null)
+            : this(logger, migrationLoggerProvider, null, null)
         {
         }
 
         public MigrationController(Logger logger,
                                    ILoggerProvider migrationLoggerProvider,
                                    IAppFolderInfo appFolderInfo)
+            : this(logger, migrationLoggerProvider, appFolderInfo, null)
+        {
+        }
+
+        public MigrationController(Logger logger,
+                                   ILoggerProvider migrationLoggerProvider,
+                                   IAppFolderInfo appFolderInfo,
+                                   IConfigFileProvider configFileProvider)
         {
             _logger = logger;
             _migrationLoggerProvider = migrationLoggerProvider;
             _appFolderInfo = appFolderInfo;
+            _configFileProvider = configFileProvider;
         }
 
         public void Migrate(string connectionString, MigrationContext migrationContext, DatabaseType databaseType)
@@ -96,6 +107,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
 
             var effectiveMigrationContext = migrationContext ?? new MigrationContext(MigrationType.Main);
             var journal = previewOnly ? null : new BookshelfMigrationJournal(GetJournalDataDirectory(connectionString, databaseType));
+            var sourceApiBasePath = GetSourceApiBasePath();
             if (databaseType == DatabaseType.PostgreSQL)
             {
                 return new BookshelfPostgresDatabaseConverter().Convert(
@@ -105,18 +117,37 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                     previewOnly,
                     sourceSnapshotConnectionString => MigrateBookshelfSource(sourceSnapshotConnectionString, DatabaseType.PostgreSQL),
                     journal == null ? null : journal.RecordConverterStage,
-                    journal == null ? null : journal.RecordOutcome);
+                    journal == null ? null : journal.RecordOutcome,
+                    sourceApiBasePath);
             }
 
             var sourceDatabasePath = Path.GetFullPath(new SqliteConnectionStringBuilder(connectionString).DataSource);
-            return new BookshelfDatabaseConverter().Convert(
+            return new BookshelfDatabaseConverter().ConvertWithSourceSchema(
                 connectionString,
                 targetConnectionString => MigrateNative(targetConnectionString, effectiveMigrationContext, DatabaseType.SQLite),
-                (source, target, transaction) => BookshelfDatabaseImporter.Import(source, target, transaction, sourceDatabasePath),
+                (source, target, transaction, sourceSchemaVersion) => BookshelfDatabaseImporter.Import(
+                    source,
+                    target,
+                    transaction,
+                    sourceDatabasePath,
+                    sourceSchemaVersion,
+                    sourceApiBasePath),
                 previewOnly,
                 MigrateBookshelfSource,
                 journal == null ? null : journal.RecordConverterStage,
                 journal == null ? null : journal.RecordOutcome);
+        }
+
+        private string GetSourceApiBasePath()
+        {
+            if (_configFileProvider != null)
+            {
+                return BookshelfNGCompatibilityProfile.NormalizeApiBasePath(_configFileProvider.UrlBase);
+            }
+
+            var legacyValue = Environment.GetEnvironmentVariable("BOOKSHELF_URLBASE") ??
+                              Environment.GetEnvironmentVariable("BOOKSHELF__SERVER__URLBASE");
+            return BookshelfNGCompatibilityProfile.NormalizeApiBasePath(legacyValue);
         }
 
         public BookshelfDatabaseRollbackResult RestoreBookshelf(

@@ -22,8 +22,13 @@ installed-channel and workflow acceptance remains separate.
   the current ChaptarrNG PostgreSQL log/cache dumps before restoring the
   BookshelfNG generation. The main ChaptarrNG database/schema remains in its
   existing retained rollback copy.
-- The BookshelfNG importer now records a compatibility-profile version and the
-  source provider dialect (`hc` or `gr`) in the converted database.
+- BookshelfNG conversions now write compatibility-profile version 2 into the
+  target database: source product and original schema version, effective
+  provider dialect (`hc` or `gr`), preserved API base path, audiobook/ebook
+  split semantics, identity-map version, and conversion outcome. The unchanged
+  legacy API facade and migration health command validate this profile before
+  interpreting old IDs. Earlier profile versions remain readable for local
+  candidate databases.
 - Bare numeric source IDs now follow BookshelfNG's actual runtime predicate:
   native Hardcover is selected only when `HARDCOVER=true` and
   `HARDCOVER_NATIVE` is not `false`; an unset `HARDCOVER` therefore means
@@ -234,7 +239,11 @@ exact-head and installed-channel acceptance remain open.
 ## Source comparison completed in this code slice
 
 Source is pinned to BookshelfNG `d42ec2aba1e411f4fb538d4d7201f6930898a91e`.
-The target blob IDs below are the exact file contents in this checkpoint.
+BookshelfNG `main` has since advanced to `05aec3f127d1d2856e8cd4fbd66e07f89ea01ff3`.
+The two intervening commits update the legacy release-bridge workflow/tests and
+maintainer documentation; neither changes application runtime code. The target
+blob IDs below pin the earlier ChaptarrNG source-comparison checkpoint; the
+profile-v2 source update is recorded above.
 `implemented-equivalent` means a migrated-profile code path now follows the
 observed source contract; bulk acceptance still needs to verify the behavior
 on fixtures and installed data.

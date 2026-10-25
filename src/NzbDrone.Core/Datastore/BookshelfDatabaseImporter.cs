@@ -30,7 +30,7 @@ namespace NzbDrone.Core.Datastore
     {
         internal const string BookshelfNGMigrationMarkerKey = "BookshelfNGDatabaseMigrated";
 
-        private const int SupportedSourceMigration = 158;
+        private const int SupportedSourceMigration = BookshelfNGCompatibilityProfile.LatestSupportedSourceSchemaVersion;
         private static readonly IReadOnlyDictionary<string, string> CompatibleIndexerContracts =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -146,11 +146,17 @@ namespace NzbDrone.Core.Datastore
             DbConnection source,
             DbConnection target,
             DbTransaction transaction,
-            string sourceDatabasePath)
+            string sourceDatabasePath,
+            int sourceSchemaVersion,
+            string sourceApiBasePath = null)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             if (target == null) throw new ArgumentNullException(nameof(target));
             if (transaction == null) throw new ArgumentNullException(nameof(transaction));
+            if (sourceSchemaVersion < 1 || sourceSchemaVersion > SupportedSourceMigration)
+            {
+                throw new InvalidDataException($"BookshelfNG source schema version {sourceSchemaVersion} is unsupported; conversion stopped before promotion.");
+            }
 
             ValidateSourceSchema(source);
             var mediaInference = BookshelfMediaTypeInference.Read(source);
@@ -177,7 +183,7 @@ namespace NzbDrone.Core.Datastore
             ImportBlocklist(source, target, transaction, authors, books, report);
             ImportDownloadHistory(source, target, transaction, report);
 
-            ImportConfig(source, target, transaction, report);
+            ImportConfig(source, target, transaction, report, sourceSchemaVersion, sourceApiBasePath);
             CopyTable(source, target, transaction, report, "CustomFilters");
             CopyTable(source, target, transaction, report, "CustomFormats");
             CopyTable(source, target, transaction, report, "DelayProfiles");
@@ -1945,7 +1951,9 @@ namespace NzbDrone.Core.Datastore
             DbConnection source,
             DbConnection target,
             DbTransaction transaction,
-            BookshelfDatabaseImportReport report)
+            BookshelfDatabaseImportReport report,
+            int sourceSchemaVersion,
+            string sourceApiBasePath)
         {
             const string legacyMatchKey = "bookimportminimummatchpercent";
             const string chaptarrStrictnessKey = "bookmatchingstrictness";
@@ -1957,6 +1965,12 @@ namespace NzbDrone.Core.Datastore
             const string chaptarrHardcoverEnabledKey = "hardcoverenabled";
             const string bookshelfProviderDialectKey = "bookshelfngproviderdialect";
             const string bookshelfCompatibilityProfileVersionKey = "bookshelfngcompatibilityprofileversion";
+            const string bookshelfSourceProductKey = "bookshelfngsourceproduct";
+            const string bookshelfSourceSchemaVersionKey = "bookshelfngsourceschemaversion";
+            const string bookshelfApiBasePathKey = "bookshelfngapibasepath";
+            const string bookshelfFormatSemanticsKey = "bookshelfngformatsemantics";
+            const string bookshelfIdentityMapVersionKey = "bookshelfngidentitymapversion";
+            const string bookshelfMigrationOutcomeKey = "bookshelfngmigrationoutcome";
             const string legacyMetadataSourceKey = "metadatasource";
             const string chaptarrMetadataServerUrlKey = "metadataserverurl";
             const string chaptarrGitHubUpdatesKey = "usegithubupdates";
@@ -1978,6 +1992,12 @@ namespace NzbDrone.Core.Datastore
             var chaptarrHardcoverEnabledRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrHardcoverEnabledKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var bookshelfProviderDialectRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfProviderDialectKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var bookshelfCompatibilityProfileVersionRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfCompatibilityProfileVersionKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfSourceProductRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfSourceProductKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfSourceSchemaVersionRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfSourceSchemaVersionKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfApiBasePathRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfApiBasePathKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfFormatSemanticsRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfFormatSemanticsKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfIdentityMapVersionRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfIdentityMapVersionKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfMigrationOutcomeRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfMigrationOutcomeKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var legacyMetadataSourceRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMetadataSourceKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrMetadataServerUrlRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrMetadataServerUrlKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrGitHubUpdatesRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrGitHubUpdatesKey, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -2005,7 +2025,10 @@ namespace NzbDrone.Core.Datastore
                 throw new InvalidDataException("BookshelfNG config contains duplicate Hardcover mode settings; conversion stopped before promotion.");
             }
 
-            if (bookshelfProviderDialectRows.Count > 1 || bookshelfCompatibilityProfileVersionRows.Count > 1)
+            if (bookshelfProviderDialectRows.Count > 1 || bookshelfCompatibilityProfileVersionRows.Count > 1 ||
+                bookshelfSourceProductRows.Count > 1 || bookshelfSourceSchemaVersionRows.Count > 1 ||
+                bookshelfApiBasePathRows.Count > 1 || bookshelfFormatSemanticsRows.Count > 1 ||
+                bookshelfIdentityMapVersionRows.Count > 1 || bookshelfMigrationOutcomeRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate compatibility profile settings; conversion stopped before promotion.");
             }
@@ -2182,7 +2205,55 @@ namespace NzbDrone.Core.Datastore
                 targetColumns,
                 bookshelfCompatibilityProfileVersionRows,
                 "BookshelfNGCompatibilityProfileVersion",
-                "1",
+                BookshelfNGCompatibilityProfile.CurrentVersion.ToString(CultureInfo.InvariantCulture),
+                ref nextGeneratedConfigId,
+                target);
+            UpsertCompatibilityProfileValue(
+                configRows,
+                targetColumns,
+                bookshelfSourceProductRows,
+                "BookshelfNGSourceProduct",
+                "BookshelfNG",
+                ref nextGeneratedConfigId,
+                target);
+            UpsertCompatibilityProfileValue(
+                configRows,
+                targetColumns,
+                bookshelfSourceSchemaVersionRows,
+                "BookshelfNGSourceSchemaVersion",
+                sourceSchemaVersion.ToString(CultureInfo.InvariantCulture),
+                ref nextGeneratedConfigId,
+                target);
+            UpsertCompatibilityProfileValue(
+                configRows,
+                targetColumns,
+                bookshelfApiBasePathRows,
+                "BookshelfNGApiBasePath",
+                BookshelfNGCompatibilityProfile.NormalizeApiBasePath(sourceApiBasePath),
+                ref nextGeneratedConfigId,
+                target);
+            UpsertCompatibilityProfileValue(
+                configRows,
+                targetColumns,
+                bookshelfFormatSemanticsRows,
+                "BookshelfNGFormatSemantics",
+                BookshelfNGCompatibilityProfile.CurrentFormatSemantics,
+                ref nextGeneratedConfigId,
+                target);
+            UpsertCompatibilityProfileValue(
+                configRows,
+                targetColumns,
+                bookshelfIdentityMapVersionRows,
+                "BookshelfNGIdentityMapVersion",
+                BookshelfNGCompatibilityProfile.CurrentIdentityMapVersion.ToString(CultureInfo.InvariantCulture),
+                ref nextGeneratedConfigId,
+                target);
+            UpsertCompatibilityProfileValue(
+                configRows,
+                targetColumns,
+                bookshelfMigrationOutcomeRows,
+                "BookshelfNGMigrationOutcome",
+                "converted",
                 ref nextGeneratedConfigId,
                 target);
 
@@ -2326,7 +2397,7 @@ namespace NzbDrone.Core.Datastore
             }
 
             report.RecordTable("Config", sourceCount, 0, sourceCount, 0, 0,
-                $"saved configuration is copied with compatible fields; BookshelfNG compatibility profile version 1 records source provider dialect '{sourceProviderDialect}'; a dedicated BookshelfNG migration marker is retained on the ChaptarrNG database; {matchSettingDisposition}; {hardcoverTokenDisposition}; {hardcoverModeDisposition}; {metadataServerUrlDisposition}; {authorPathSettingDisposition}; {updateRouteDisposition}");
+                $"saved configuration is copied with compatible fields; BookshelfNG compatibility profile version {BookshelfNGCompatibilityProfile.CurrentVersion} records source schema {sourceSchemaVersion}, provider dialect '{sourceProviderDialect}', API base path, audiobook/ebook format semantics, identity-map version, and conversion outcome; a dedicated BookshelfNG migration marker is retained on the ChaptarrNG database; {matchSettingDisposition}; {hardcoverTokenDisposition}; {hardcoverModeDisposition}; {metadataServerUrlDisposition}; {authorPathSettingDisposition}; {updateRouteDisposition}");
         }
 
         private static void UpsertCompatibilityProfileValue(

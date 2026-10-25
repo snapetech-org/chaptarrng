@@ -22,6 +22,30 @@ namespace NzbDrone.Core.Datastore
             Action<string, string> reportProgress = null,
             Action<string, string> reportOutcome = null)
         {
+            Func<SqliteConnection, SqliteConnection, SqliteTransaction, int, BookshelfDatabaseImportReport> importWithSourceSchema =
+                importRows == null
+                    ? null
+                    : (source, target, transaction, _) => importRows(source, target, transaction);
+
+            return ConvertWithSourceSchema(
+                sourceConnectionString,
+                migrateNativeTarget,
+                importWithSourceSchema,
+                previewOnly,
+                migrateBookshelfSource,
+                reportProgress,
+                reportOutcome);
+        }
+
+        public BookshelfDatabaseConversionResult ConvertWithSourceSchema(
+            string sourceConnectionString,
+            Action<string> migrateNativeTarget,
+            Func<SqliteConnection, SqliteConnection, SqliteTransaction, int, BookshelfDatabaseImportReport> importRows,
+            bool previewOnly = false,
+            Action<string> migrateBookshelfSource = null,
+            Action<string, string> reportProgress = null,
+            Action<string, string> reportOutcome = null)
+        {
             if (migrateNativeTarget == null)
             {
                 throw new ArgumentNullException(nameof(migrateNativeTarget));
@@ -62,6 +86,7 @@ namespace NzbDrone.Core.Datastore
             var promoted = false;
             var backupRetained = false;
             BookshelfDatabaseImportReport importReport = null;
+            var sourceSchemaVersion = 0;
 
             using var conversionLock = AcquireConversionLock(lockPath);
 
@@ -71,7 +96,7 @@ namespace NzbDrone.Core.Datastore
 
                 using (var source = OpenConnection(sourcePath, SqliteOpenMode.ReadOnly, sourceBuilder))
                 {
-                    BookshelfDatabaseImporter.ValidateSourceBackup(source);
+                    sourceSchemaVersion = BookshelfDatabaseImporter.ValidateSourceBackup(source);
                 }
 
                 if (!previewOnly)
@@ -111,7 +136,7 @@ namespace NzbDrone.Core.Datastore
                     using (var transaction = target.BeginTransaction())
                     {
                         var sourceTables = GetSourceTableCounts(source);
-                        importReport = importRows(source, target, transaction);
+                        importReport = importRows(source, target, transaction, sourceSchemaVersion);
                         ValidateImportReport(sourceTables, importReport);
                         transaction.Commit();
                     }
