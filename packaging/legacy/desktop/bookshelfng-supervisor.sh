@@ -198,6 +198,9 @@ restore_source_database() {
         if ! find "$target_postgres_backup" -type f \
           \( -name 'postgres-log.dump' -o -name 'postgres-cache.dump' \) -print -quit | grep -q .; then
           rmdir "$target_postgres_backup"
+        elif [ -x "$journal_tool" ]; then
+          record_journal fingerprint rollback-target-postgres-log-cache "$target_postgres_backup" --refresh
+          record_journal outcome rollback-target-postgres-log-cache retained
         fi
       fi
       run_utility -restore-bookshelf-postgres -confirm-bookshelf-service-stopped \
@@ -456,10 +459,16 @@ if [ "$resuming" != true ]; then
       echo "BookshelfNG PostgreSQL backup failed; migration is blocked. Preserve $postgres_backup_dir for review." >&2
       exit 1
     fi
+    if [ -x "$journal_tool" ]; then
+      record_journal fingerprint source-postgres-backup "$postgres_backup_dir"
+      record_journal outcome external-postgres-backup retained
+    fi
   fi
 
   if [ -x "$journal_tool" ]; then
-    record_journal outcome source-backup retained
+    record_journal fingerprint target-artifact "$app"
+    record_journal fingerprint source-config "$data_dir/config.xml"
+    record_journal outcome source-artifact-fingerprints captured
   fi
 
   write_state starting
