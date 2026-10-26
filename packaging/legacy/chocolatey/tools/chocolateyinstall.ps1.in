@@ -847,8 +847,21 @@ if (Test-Path -LiteralPath $stageDir) {
 
 try {
   New-Item -ItemType Directory -Force -Path $installRoot, $dataDir, (Join-Path $stageDir 'bin') | Out-Null
-  Get-ChocolateyWebFile -PackageName 'bookshelfng' -FileFullPath $archivePath `
-    -Url $archiveUrl -Checksum '__ARCHIVE_SHA256__' -ChecksumType 'sha256'
+  # Private Windows acceptance may supply a local archive; the package's exact SHA-256 remains mandatory.
+  $testArchivePath = [Environment]::GetEnvironmentVariable('CHAPTARRNG_TEST_ARCHIVE_PATH', 'Process')
+  if ([string]::IsNullOrWhiteSpace($testArchivePath)) {
+    Get-ChocolateyWebFile -PackageName 'bookshelfng' -FileFullPath $archivePath `
+      -Url $archiveUrl -Checksum '__ARCHIVE_SHA256__' -ChecksumType 'sha256'
+  } else {
+    if (-not (Test-Path -LiteralPath $testArchivePath -PathType Leaf)) {
+      throw 'The private Windows acceptance archive path does not identify a file.'
+    }
+    $testArchiveHash = (Get-FileHash -LiteralPath $testArchivePath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+    if ($testArchiveHash -ne '__ARCHIVE_SHA256__') {
+      throw 'The private Windows acceptance archive checksum does not match this package candidate.'
+    }
+    Copy-Item -LiteralPath $testArchivePath -Destination $archivePath -Force
+  }
   Expand-Archive -LiteralPath $archivePath -DestinationPath (Join-Path $stageDir 'bin') -Force
   if (-not (Test-Path (Join-Path $stageDir 'bin\Chaptarr.Console.exe')) -or
       -not (Test-Path (Join-Path $stageDir 'bin\UI\index.html'))) {

@@ -7,6 +7,12 @@ on:
       - '**'
   workflow_call: {}
   workflow_dispatch:
+    inputs:
+      windows_chocolatey_only:
+        description: Run only the Windows Chocolatey BookshelfNG migration acceptance
+        required: false
+        type: boolean
+        default: false
 
 # Validation runs on tags, reusable workflow calls, or explicit dispatches.
 # Pull requests do not start CI; release.yml controls user-facing publishing.
@@ -69,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [linux-x64, windows-x64, macos-intel]
+        platform: ${{ inputs.windows_chocolatey_only && fromJSON('["windows-x64"]') || fromJSON('["linux-x64","windows-x64","macos-intel"]') }}
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -460,6 +466,30 @@ jobs:
       if: matrix.platform == 'windows-x64'
       shell: pwsh
       run: ./packaging/scripts/test-windows-service-data-path.ps1 -AppDirectory ./publish/Chaptarr
+
+    - name: Test Chocolatey BookshelfNG .76 to exact candidate handoff
+      if: matrix.platform == 'windows-x64' && github.event_name == 'workflow_dispatch'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        [xml] $buildProperties = Get-Content -LiteralPath 'src/Directory.Build.props' -Raw
+        $assemblyVersion = $buildProperties.SelectSingleNode("//*[local-name()='AssemblyVersion']").InnerText
+        $versionMatch = [regex]::Match($assemblyVersion, '^(?<version>\d+\.\d+\.\d+)\.0$')
+        if (-not $versionMatch.Success) {
+          throw "Could not derive the three-part Chocolatey candidate version from AssemblyVersion $assemblyVersion."
+        }
+        $version = $versionMatch.Groups['version'].Value
+        $appDirectory = (Resolve-Path -LiteralPath './publish/Chaptarr').Path
+        $archiveDirectory = Join-Path $env:RUNNER_TEMP 'chocolatey-bookshelfng-candidate'
+        New-Item -ItemType Directory -Force -Path $archiveDirectory | Out-Null
+        $archive = Join-Path $archiveDirectory "ChaptarrNG-$version-win-x64.zip"
+        if (Test-Path -LiteralPath $archive) { throw "The candidate archive already exists: $archive" }
+        Compress-Archive -Path (Join-Path $appDirectory '*') -DestinationPath $archive -CompressionLevel Optimal
+        ./packaging/scripts/test-chocolatey-bookshelfng-handoff.ps1 -Version $version -ArchivePath $archive
+        Remove-Item -LiteralPath $archive -Force
+        if (-not (Get-ChildItem -LiteralPath $archiveDirectory -Force | Select-Object -First 1)) {
+          Remove-Item -LiteralPath $archiveDirectory -Force
+        }
     
     - name: Upload artifacts
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -470,7 +500,7 @@ jobs:
         if-no-files-found: error
 
   postgres-migrations:
-    if: github.event_name != 'pull_request' || github.event.action != 'edited'
+    if: (github.event_name != 'workflow_dispatch' || inputs.windows_chocolatey_only != true) && (github.event_name != 'pull_request' || github.event.action != 'edited')
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     services:
       postgres:
@@ -595,6 +625,7 @@ jobs:
 
   docker-compatibility-build:
     name: Docker (${{ matrix.target }})
+    if: github.event_name != 'workflow_dispatch' || inputs.windows_chocolatey_only != true
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     env:
       BUILDKIT_EGRESS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}

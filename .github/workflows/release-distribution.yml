@@ -325,6 +325,10 @@ jobs:
       shell: pwsh
       run: ./packaging/scripts/setup-github-cli-windows.ps1
 
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      with:
+        dotnet-version: 10.0.402
+
     - name: Download and verify the release archive
       env:
         GH_TOKEN: ${{ github.token }}
@@ -439,187 +443,12 @@ jobs:
           throw 'Chocolatey uninstall left the application payload behind.'
         }
 
-        # Install the latest approved legacy package. GitHub release tags can
-        # be ahead of Chocolatey's moderation queue, so pinning the app release
-        # here can make this bridge test fail before exercising the upgrade.
-        choco install bookshelfng --source 'https://community.chocolatey.org/api/v2/' --yes --no-progress
-        if ($LASTEXITCODE -ne 0) { throw 'Chocolatey could not install the last published BookshelfNG package for the bridge test.' }
-        $legacyService = Get-Service -Name 'BookshelfNG' -ErrorAction Stop
-        $legacyService.WaitForStatus('Running', [TimeSpan]::FromSeconds(90))
-        $legacyDataDir = Join-Path $env:ProgramData 'BookshelfNG\data'
-        $legacyDb = Join-Path $legacyDataDir 'readarr.db'
-        $legacyReady = $false
-        for ($attempt = 0; $attempt -lt 45; $attempt++) {
-          if ((Test-Path $legacyDb) -and (Get-Item $legacyDb).Length -gt 0) { $legacyReady = $true; break }
-          Start-Sleep -Seconds 2
-        }
-        if (-not $legacyReady) { throw 'The published BookshelfNG package did not create its legacy database.' }
-        $nssm = Get-Command nssm.exe -ErrorAction Stop
-        $legacyService.Stop()
-        $legacyService.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
-        $legacyDataDir = Join-Path (Join-Path $env:ProgramData 'BookshelfNG') 'data with spaces'
-        Move-Item -LiteralPath (Join-Path $env:ProgramData 'BookshelfNG\data') -Destination $legacyDataDir
-        $serviceParameters = "/nobrowser -data=`"$legacyDataDir`""
-        & $nssm.Source set BookshelfNG AppParameters $serviceParameters
-        if ($LASTEXITCODE -ne 0) { throw 'NSSM could not configure the legacy service to use the custom data path.' }
-        Start-Service -Name 'BookshelfNG'
-        $legacyService = Get-Service -Name 'BookshelfNG' -ErrorAction Stop
-        $legacyService.WaitForStatus('Running', [TimeSpan]::FromSeconds(90))
-        $legacyDb = Join-Path $legacyDataDir 'readarr.db'
-        $legacyReady = $false
-        for ($attempt = 0; $attempt -lt 45; $attempt++) {
-          if ((Test-Path $legacyDb) -and (Get-Item $legacyDb).Length -gt 0) { $legacyReady = $true; break }
-          Start-Sleep -Seconds 2
-        }
-        if (-not $legacyReady) { throw 'BookshelfNG did not reopen its database from the custom data path.' }
-        $legacyMarker = Join-Path $legacyDataDir 'chaptarrng-bridge-preserves-data.test'
-        Set-Content -Path $legacyMarker -Value 'preserve' -NoNewline
-        $legacySource = "$legacyPackageDir;https://community.chocolatey.org/api/v2/"
-        function Get-LegacyDatabaseFingerprint {
-          $components = foreach ($name in @('readarr.db', 'readarr.db-wal', 'readarr.db-journal')) {
-            $path = Join-Path $legacyDataDir $name
-            if (-not (Test-Path -LiteralPath $path)) {
-              if ($name -eq 'readarr.db') {
-                throw [System.IO.FileNotFoundException]::new('The BookshelfNG database disappeared during its fingerprint read.', $path)
-              }
-              '{0}:missing' -f $name
-              continue
-            }
-            $item = Get-Item -LiteralPath $path -ErrorAction Stop
-            if ($name -eq 'readarr.db' -and $item.Length -le 0) {
-              throw 'The BookshelfNG database was empty during its fingerprint read.'
-            }
-            $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256 -ErrorAction Stop).Hash
-            '{0}:{1}:{2}' -f $name, $item.Length, $hash
-          }
-          return $components -join '|'
-        }
-        function Get-StableLegacyDatabaseFingerprint {
-          $lastReadError = $null
-          for ($attempt = 0; $attempt -lt 10; $attempt++) {
-            try {
-              $first = Get-LegacyDatabaseFingerprint
-              Start-Sleep -Milliseconds 500
-              $second = Get-LegacyDatabaseFingerprint
-              $lastReadError = $null
-            }
-            catch {
-              $exception = $_.Exception
-              if ($exception -isnot [System.IO.IOException] -and
-                  $exception -isnot [System.UnauthorizedAccessException] -and
-                  $exception -isnot [System.Management.Automation.ItemNotFoundException]) {
-                throw
-              }
-              $lastReadError = $exception
-              Start-Sleep -Milliseconds 500
-              continue
-            }
-            if ($first -eq $second) { return $second }
-          }
-          if ($lastReadError) {
-            throw "BookshelfNG database files could not be read consistently for a stable manual-defer comparison: $($lastReadError.Message)"
-          }
-          throw 'BookshelfNG database files did not settle for a stable manual-defer comparison.'
-        }
-        function Get-NssmBookshelfSetting {
-          param([Parameter(Mandatory = $true)][string]$Name)
-          $value = (& $nssm.Source get BookshelfNG $Name 2>&1 | Out-String).Trim()
-          if ($LASTEXITCODE -ne 0) { throw "NSSM could not read the BookshelfNG $Name setting." }
-          return $value
-        }
-        $legacyMarkerContentBeforeManual = Get-Content -LiteralPath $legacyMarker -Raw -ErrorAction Stop
-        if ($legacyMarkerContentBeforeManual -ne 'preserve') { throw 'The BookshelfNG data canary was not initialized as expected.' }
-        $sourceDatabaseFingerprintBeforeManual = Get-StableLegacyDatabaseFingerprint
-        $legacyServiceBeforeManual = Get-CimInstance -ClassName Win32_Service -Filter "Name='BookshelfNG'" -ErrorAction Stop
-        if (-not $legacyServiceBeforeManual -or $legacyServiceBeforeManual.State -ne 'Running' -or $legacyServiceBeforeManual.ProcessId -le 0) {
-          throw 'BookshelfNG did not have a running service process before the manual-defer transaction.'
-        }
-        $legacyServiceProcessIdBeforeManual = [uint32]$legacyServiceBeforeManual.ProcessId
-        $legacyServiceStartNameBeforeManual = $legacyServiceBeforeManual.StartName
-        $legacyServiceStartModeBeforeManual = $legacyServiceBeforeManual.StartMode
-        $legacyApplicationBeforeManual = Get-NssmBookshelfSetting -Name 'Application'
-        if ([string]::IsNullOrWhiteSpace($legacyApplicationBeforeManual)) {
-          throw 'NSSM could not read the installed BookshelfNG application before the manual-defer transaction.'
-        }
-        $legacyParametersBeforeManual = Get-NssmBookshelfSetting -Name 'AppParameters'
-        $legacyDirectoryBeforeManual = Get-NssmBookshelfSetting -Name 'AppDirectory'
-        $legacyStageDir = Join-Path $env:ProgramData 'BookshelfNG\app.new'
-        $legacyPreviousDir = Join-Path $env:ProgramData 'BookshelfNG\app.previous'
-        $legacyHandoffManifest = Join-Path $env:ProgramData 'BookshelfNG\handoff\bookshelfng-migration-handoff.json'
-        $manualUpgradeOutput = @(& choco upgrade bookshelfng --source "$legacySource" --yes --no-progress --force --params "'/ProviderMode=Goodreads /MigrationMode=manual'" 2>&1)
-        $manualUpgradeExitCode = $LASTEXITCODE
-        if ($manualUpgradeExitCode -eq 0) {
-          throw 'Chocolatey unexpectedly accepted the Manual BookshelfNG update instead of deferring before staging.'
-        }
-        $manualDeferDiagnostic = 'MigrationMode=manual cancelled this package update before stopping BookshelfNG or changing its files.'
-        if (($manualUpgradeOutput -join "`n") -notmatch [regex]::Escape($manualDeferDiagnostic)) {
-          throw "Chocolatey manual mode failed without its expected defer diagnostic (exit code $manualUpgradeExitCode)."
-        }
-        $legacyServiceAfterManual = Get-CimInstance -ClassName Win32_Service -Filter "Name='BookshelfNG'" -ErrorAction Stop
-        if (-not $legacyServiceAfterManual -or $legacyServiceAfterManual.State -ne 'Running') {
-          throw 'Manual defer stopped the installed BookshelfNG service.'
-        }
-        if ([uint32]$legacyServiceAfterManual.ProcessId -ne $legacyServiceProcessIdBeforeManual) {
-          throw 'Manual defer restarted the installed BookshelfNG service process.'
-        }
-        if ($legacyServiceAfterManual.StartName -ne $legacyServiceStartNameBeforeManual -or $legacyServiceAfterManual.StartMode -ne $legacyServiceStartModeBeforeManual) {
-          throw 'Manual defer changed the BookshelfNG service identity or start mode.'
-        }
-        $sourceDatabaseFingerprintAfterManual = Get-StableLegacyDatabaseFingerprint
-        if ($sourceDatabaseFingerprintAfterManual -ne $sourceDatabaseFingerprintBeforeManual) {
-          throw 'Manual defer changed the installed BookshelfNG database, WAL, or rollback journal.'
-        }
-        $legacyApplicationAfterManual = Get-NssmBookshelfSetting -Name 'Application'
-        $legacyParametersAfterManual = Get-NssmBookshelfSetting -Name 'AppParameters'
-        $legacyDirectoryAfterManual = Get-NssmBookshelfSetting -Name 'AppDirectory'
-        if ($legacyApplicationAfterManual -ne $legacyApplicationBeforeManual -or
-          $legacyParametersAfterManual -ne $legacyParametersBeforeManual -or
-          $legacyDirectoryAfterManual -ne $legacyDirectoryBeforeManual) {
-          throw 'Manual defer changed the BookshelfNG service application path.'
-        }
-        $legacyMarkerContentAfterManual = Get-Content -LiteralPath $legacyMarker -Raw -ErrorAction Stop
-        if ($legacyMarkerContentAfterManual -ne $legacyMarkerContentBeforeManual) {
-          throw 'Manual defer changed or removed the BookshelfNG data canary.'
-        }
-        if ((Test-Path $legacyStageDir) -or (Test-Path $legacyPreviousDir) -or (Test-Path $legacyHandoffManifest)) {
-          throw 'Manual defer created staged application, rollback, or migration-handoff files.'
-        }
-        Write-Host 'Manual Chocolatey update deferred before service or application changes; BookshelfNG data and service stayed intact.'
-        choco upgrade bookshelfng --source "$legacySource" --yes --no-progress --force --params "'/ProviderMode=Goodreads'"
-        if ($LASTEXITCODE -ne 0) { throw 'Chocolatey could not upgrade the published BookshelfNG install through the bridge package.' }
-        $nssm = Get-Command nssm.exe -ErrorAction Stop
-        $serviceEnvironment = & $nssm.Source get BookshelfNG AppEnvironmentExtra | Out-String
-        if ($LASTEXITCODE -ne 0 -or $serviceEnvironment -notmatch '(?im)^HARDCOVER=false$') {
-          throw 'The BookshelfNG migration package did not persist the requested Goodreads provider mode for the service.'
-        }
-        $legacyService = Get-Service -Name 'BookshelfNG' -ErrorAction Stop
-        $legacyService.WaitForStatus('Running', [TimeSpan]::FromSeconds(90))
-        if (-not (Test-Path $legacyMarker)) { throw 'The BookshelfNG-to-ChaptarrNG package bridge removed user data.' }
-        $migrationBackup = $null
-        for ($attempt = 0; $attempt -lt 45; $attempt++) {
-          $migrationBackup = Get-ChildItem -LiteralPath $legacyDataDir -Filter 'readarr.db.bookshelfng-backup-*.db' -File |
-            Select-Object -First 1
-          if ($migrationBackup) { break }
-          Start-Sleep -Seconds 2
-        }
-        if (-not $migrationBackup) { throw 'The BookshelfNG-to-ChaptarrNG update did not retain the source database backup.' }
-        $legacyPing = $false
-        for ($attempt = 0; $attempt -lt 45; $attempt++) {
-          try {
-            $response = Invoke-WebRequest -Uri 'http://127.0.0.1:8787/ping' -UseBasicParsing -TimeoutSec 2
-            if ($response.StatusCode -eq 200) { $legacyPing = $true; break }
-          } catch { }
-          Start-Sleep -Seconds 2
-        }
-        if (-not $legacyPing) { throw 'The BookshelfNG service identity did not serve the upgraded ChaptarrNG application.' }
-        choco uninstall bookshelfng --yes --no-progress
-        if ($LASTEXITCODE -ne 0) { throw 'Chocolatey could not uninstall the legacy package after the bridge smoke test.' }
-        if (Get-Service -Name 'BookshelfNG' -ErrorAction SilentlyContinue) {
-          throw 'Chocolatey uninstall left the BookshelfNG service behind.'
-        }
-        if (-not (Test-Path $legacyMarker) -or -not (Test-Path $migrationBackup.FullName)) {
-          throw 'Chocolatey uninstall removed the preserved BookshelfNG migration data or source backup.'
-        }
+        $candidateArchive = Join-Path $env:RUNNER_TEMP ("ChaptarrNG-$($env:VERSION)-win-x64.zip")
+        $candidatePackage = Join-Path $env:RUNNER_TEMP ("bookshelfng-chocolatey\bookshelfng.$($env:VERSION).nupkg")
+        ./packaging/scripts/test-chocolatey-bookshelfng-handoff.ps1 `
+          -Version $env:VERSION `
+          -ArchivePath $candidateArchive `
+          -PackagePath $candidatePackage
 
         $output = Join-Path $env:RUNNER_TEMP 'chaptarrng-chocolatey-output'
         New-Item -ItemType Directory -Force -Path $output | Out-Null
