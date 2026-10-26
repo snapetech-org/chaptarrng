@@ -30,6 +30,11 @@ on:
         required: false
         type: boolean
         default: false
+      channel_contracts_only:
+        description: Run only the private-JIT legacy distribution contract suite
+        required: false
+        type: boolean
+        default: false
       pr_number:
         description: Trusted same-repository owner PR number
         required: false
@@ -100,7 +105,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request_target' &&
       (github.event_name != 'workflow_dispatch' ||
-       (inputs.pr_number == '' && inputs.runner_policy_only != true && inputs.rpm_bridge_only != true)) &&
+       (inputs.pr_number == '' && inputs.runner_policy_only != true && inputs.rpm_bridge_only != true && inputs.channel_contracts_only != true)) &&
       (github.event_name != 'pull_request' || github.event.action != 'edited')
     # Each platform requests private capacity. Missing native JIT routes remain
     # queued until their runner group and workflow access are verified.
@@ -560,10 +565,42 @@ jobs:
         TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-rpm-bridge-${{ github.run_id }}-${{ github.run_attempt }}
       run: bash packaging/scripts/test-build-bookshelfng-rpm-bridge.sh
 
+  channel-contracts:
+    name: Legacy distribution and runner contracts
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.channel_contracts_only == true &&
+      inputs.pr_number == '' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-channel-contracts"]}}', github.run_id)) }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ github.sha }}
+        fetch-depth: 1
+        persist-credentials: false
+
+    - name: Verify exact dispatched source
+      run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 26.12.1
+        package-manager-cache: false
+
+    - name: Test legacy distribution contracts
+      run: node --test packaging/scripts/test-bookshelf-legacy-channels.mjs
+
+    - name: Test private runner policy
+      run: python3 scripts/test_workflow_runner_policy.py
+
   postgres-migrations:
     if: >-
       github.event_name != 'pull_request_target' &&
-      (github.event_name != 'workflow_dispatch' || (inputs.windows_chocolatey_only != true && inputs.rpm_bridge_only != true)) &&
+      (github.event_name != 'workflow_dispatch' || (inputs.windows_chocolatey_only != true && inputs.rpm_bridge_only != true && inputs.channel_contracts_only != true)) &&
       (github.event_name != 'workflow_dispatch' ||
        (inputs.pr_number == '' && inputs.runner_policy_only != true)) &&
       (github.event_name != 'pull_request' || github.event.action != 'edited')
@@ -688,7 +725,7 @@ jobs:
     name: Docker (${{ matrix.target }})
     if: >-
       github.event_name != 'pull_request_target' &&
-      (github.event_name != 'workflow_dispatch' || (inputs.windows_chocolatey_only != true && inputs.rpm_bridge_only != true)) &&
+      (github.event_name != 'workflow_dispatch' || (inputs.windows_chocolatey_only != true && inputs.rpm_bridge_only != true && inputs.channel_contracts_only != true)) &&
       (github.event_name != 'workflow_dispatch' ||
        (inputs.pr_number == '' && inputs.runner_policy_only != true))
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}

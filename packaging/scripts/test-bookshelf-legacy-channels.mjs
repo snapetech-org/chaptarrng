@@ -514,6 +514,14 @@ test('Windows release keeps the private Packer route and verifies its GitHub CLI
   assert.match(rpmAcceptance, /ng-shared-main-jit/);
   assert.match(rpmAcceptance, /gha-\{0\}-rpm-bridge-acceptance/);
   assert.match(rpmAcceptance, /test-build-bookshelfng-rpm-bridge\.sh/);
+  assert.match(buildWorkflow, /channel_contracts_only:[\s\S]*?type: boolean[\s\S]*?default: false/);
+  const channelContracts = readWorkflowJob(buildWorkflow, 'channel-contracts');
+  assert.match(channelContracts, /inputs\.channel_contracts_only == true/);
+  assert.match(channelContracts, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(channelContracts, /ng-shared-main-jit/);
+  assert.match(channelContracts, /gha-\{0\}-channel-contracts/);
+  assert.match(channelContracts, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(channelContracts, /node --test packaging\/scripts\/test-bookshelf-legacy-channels\.mjs/);
   assert.match(build, /Test Chocolatey BookshelfNG \.76 to exact candidate handoff[\s\S]*?github\.event_name == 'workflow_dispatch'[\s\S]*?test-chocolatey-bookshelfng-handoff\.ps1/);
   assert.match(setup, /version = '2\.103\.2'/);
   assert.match(setup, /gh_\$\{version\}_windows_amd64\.zip/);

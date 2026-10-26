@@ -221,6 +221,26 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("inputs.rpm_bridge_only != true", job_block(source, "postgres-migrations"))
         self.assertIn("inputs.rpm_bridge_only != true", job_block(source, "docker-compatibility-build"))
 
+    def test_legacy_channel_contracts_are_an_exact_head_private_jit_dispatch(self) -> None:
+        source = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("channel_contracts_only:", source)
+        self.assertIn("inputs.channel_contracts_only != true", job_block(source, "build"))
+        job = job_block(source, "channel-contracts")
+        for token in (
+            "github.event_name == 'workflow_dispatch'",
+            "inputs.channel_contracts_only == true",
+            "github.ref == 'refs/heads/main'",
+            '"group":"ng-shared-main-jit"',
+            '"gha-{0}-channel-contracts"',
+            "ref: ${{ github.sha }}",
+            'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"',
+            "node --test packaging/scripts/test-bookshelf-legacy-channels.mjs",
+            "python3 scripts/test_workflow_runner_policy.py",
+        ):
+            self.assertIn(token, job)
+        self.assertIn("inputs.channel_contracts_only != true", job_block(source, "postgres-migrations"))
+        self.assertIn("inputs.channel_contracts_only != true", job_block(source, "docker-compatibility-build"))
+
     def test_security_scans_use_private_jit_without_hosted_fallback(self) -> None:
         workflow_dir = WORKFLOW.parent
         self.assertFalse((workflow_dir / "codeql.yml").exists())
