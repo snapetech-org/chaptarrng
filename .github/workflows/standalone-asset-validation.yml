@@ -58,7 +58,7 @@ jobs:
       with:
         name: standalone-validation-ui
         path: _output/UI/**
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   extra-platform-runtimes:
@@ -90,7 +90,7 @@ jobs:
       with:
         name: chaptarrng-platform-runtime-packs
         path: ${{ runner.temp }}/chaptarrng-platform-runtime-packs/**
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   extra-standalone:

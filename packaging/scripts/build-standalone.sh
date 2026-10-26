@@ -132,7 +132,17 @@ fi
 asset="ChaptarrNG-${version}-${rid}"
 if [[ "$rid" == win-* ]]; then
   archive="$output/${asset}.zip"
-  (cd "$bundle" && zip -q -X -r "$archive" .)
+  python3 - "$bundle" "$archive" <<'PY'
+import pathlib
+import sys
+import zipfile
+
+root = pathlib.Path(sys.argv[1])
+archive = pathlib.Path(sys.argv[2])
+with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output_zip:
+    for path in sorted(root.rglob("*")):
+        output_zip.write(path, path.relative_to(root).as_posix())
+PY
 else
   archive="$output/${asset}.tar.gz"
   if [[ "$(uname -s)" == Darwin ]]; then

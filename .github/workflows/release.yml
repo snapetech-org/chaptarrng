@@ -357,7 +357,7 @@ jobs:
       with:
         name: chaptarrng-platform-runtime-packs
         path: ${{ runner.temp }}/chaptarrng-platform-runtime-packs/**
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   standalone-assets:
@@ -440,7 +440,7 @@ jobs:
       with:
         name: chaptarrng-standalone-${{ matrix.rid }}
         path: ${{ runner.temp }}/release-assets/*
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   windows-migration-installer:
@@ -497,7 +497,7 @@ jobs:
       with:
         name: chaptarrng-windows-migration-installer
         path: ${{ runner.temp }}/chaptarrng-windows-migration-asset/*
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   legacy-desktop-candidates:
@@ -576,7 +576,7 @@ jobs:
       with:
         name: chaptarrng-bookshelfng-desktop-candidates
         path: ${{ runner.temp }}/bookshelfng-desktop-candidates/ChaptarrNG-*
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   rpm-source:
@@ -623,7 +623,7 @@ jobs:
         path: |
           ${{ runner.temp }}/rpm-source-output/*.src.rpm
           ${{ runner.temp }}/rpm-source-output/*.src.rpm.sha256
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   publish-release:

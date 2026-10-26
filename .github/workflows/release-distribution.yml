@@ -167,7 +167,7 @@ jobs:
       with:
         name: bookshelfng-ppa-source-${{ matrix.series.codename }}
         path: ${{ runner.temp }}/bookshelfng-ppa/${{ matrix.series.codename }}/
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   publish-legacy-ppa:
@@ -237,7 +237,7 @@ jobs:
         name: chaptarrng-aur-recipes
         path: ${{ runner.temp }}/aur-output/
         include-hidden-files: true
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   publish-aur:
@@ -479,21 +479,45 @@ jobs:
           $components = foreach ($name in @('readarr.db', 'readarr.db-wal', 'readarr.db-journal')) {
             $path = Join-Path $legacyDataDir $name
             if (-not (Test-Path -LiteralPath $path)) {
+              if ($name -eq 'readarr.db') {
+                throw [System.IO.FileNotFoundException]::new('The BookshelfNG database disappeared during its fingerprint read.', $path)
+              }
               '{0}:missing' -f $name
               continue
             }
             $item = Get-Item -LiteralPath $path -ErrorAction Stop
+            if ($name -eq 'readarr.db' -and $item.Length -le 0) {
+              throw 'The BookshelfNG database was empty during its fingerprint read.'
+            }
             $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256 -ErrorAction Stop).Hash
             '{0}:{1}:{2}' -f $name, $item.Length, $hash
           }
           return $components -join '|'
         }
         function Get-StableLegacyDatabaseFingerprint {
+          $lastReadError = $null
           for ($attempt = 0; $attempt -lt 10; $attempt++) {
-            $first = Get-LegacyDatabaseFingerprint
-            Start-Sleep -Milliseconds 500
-            $second = Get-LegacyDatabaseFingerprint
+            try {
+              $first = Get-LegacyDatabaseFingerprint
+              Start-Sleep -Milliseconds 500
+              $second = Get-LegacyDatabaseFingerprint
+              $lastReadError = $null
+            }
+            catch {
+              $exception = $_.Exception
+              if ($exception -isnot [System.IO.IOException] -and
+                  $exception -isnot [System.UnauthorizedAccessException] -and
+                  $exception -isnot [System.Management.Automation.ItemNotFoundException]) {
+                throw
+              }
+              $lastReadError = $exception
+              Start-Sleep -Milliseconds 500
+              continue
+            }
             if ($first -eq $second) { return $second }
+          }
+          if ($lastReadError) {
+            throw "BookshelfNG database files could not be read consistently for a stable manual-defer comparison: $($lastReadError.Message)"
           }
           throw 'BookshelfNG database files did not settle for a stable manual-defer comparison.'
         }
@@ -606,7 +630,7 @@ jobs:
       with:
         name: chaptarrng-chocolatey-packages
         path: ${{ runner.temp }}/chaptarrng-chocolatey-output/*.nupkg
-        retention-days: 1
+        retention-days: 7
         if-no-files-found: error
 
   publish-chocolatey:
