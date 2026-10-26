@@ -27,6 +27,13 @@ health validation fails. Keep an independent Co-op Cloud backup before
 upgrading; an operator-directed rollback after a successful migration must
 restore the matching BookshelfNG data backup before starting the old image.
 
+Swarm has no interactive y/n prompt. To choose No, keep the existing BookshelfNG
+stack and image deployed. If the candidate is deployed with
+`BOOKSHELFNG_MIGRATION_MODE=manual`, it preserves the source database and writes
+a deferred marker, but ChaptarrNG does not serve `/ping` until the operator
+switches to `automatic` and redeploys the stack. The Manual setting is a data
+conversion hold, not a running BookshelfNG fallback.
+
 The recipe defaults to the native Hardcover mode used by the previous Co-op
 Cloud image. Set `HARDCOVER=false` only when the old service used the softcover
 image. The default internal port is `8787`; keep `BOOKSHELFNG_PORT` equal to the
@@ -35,10 +42,19 @@ check reports the mismatch instead of treating the instance as ready. After a
 clean automatic rollback, set `BOOKSHELFNG_MIGRATION_MODE=retry` only after
 correcting the cause. An intervention-required state needs manual recovery.
 
-The recipe has not been accepted into the canonical Co-op Cloud collection.
-The image target is not published. Before deployment, use the generated recipe
-bundle pinned to the exact published digest that passed migration and rollback
-validation. The recipe still requires external maintainer acceptance and a
-real Swarm upgrade, backup, failure-recovery, and rollback rehearsal.
+An isolated Debian 13 / Docker 26.1 Swarm rehearsal upgraded the pinned
+BookshelfNG 0.4.21.71 source image to a local exact-head ChaptarrNG candidate.
+Manual preserved the schema-158 database and `/books`/`/downloads` canaries;
+Automatic migrated to schema 124, passed SQLite integrity checks, retained the
+BookshelfNG database backup, and served `/ping`. An injected unhealthy update
+paused. Restoring the full three-volume snapshot and redeploying the .71 image
+returned healthy BookshelfNG. The `backupbot.backup=true` label and local
+full-volume archive/restore were verified. The test did not run the official
+Backupbot CLI.
+
+The recipe has not been accepted into the canonical Co-op Cloud collection,
+and the image target is not published. Before deployment, use the generated
+recipe bundle pinned to the exact published digest that passed migration and
+rollback validation. External maintainer and Backupbot acceptance remain open.
 
 The external `proxy` network and a reachable Docker Swarm host are required.

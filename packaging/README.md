@@ -89,6 +89,9 @@ offers an automatic/manual setting, while Unraid, Co-op Cloud, and Compose
 recipes expose the migration mode as an environment setting. Cloudron has no
 terminal prompt: the administrator holds or applies the app update and can set
 `BOOKSHELFNG_MIGRATION_MODE=manual` before updating to defer conversion.
+For Co-op Cloud, choosing No means leaving the BookshelfNG stack deployed.
+Applying the candidate in Manual mode preserves the source database but leaves
+the replacement app unavailable until Automatic is selected and redeployed.
 
 The Debian candidate recipe and local package builder are in
 `packaging/legacy/debian/` and
@@ -198,11 +201,11 @@ checks.
 | Cloudron | No ChaptarrNG package update is published. | Local exact-head Cloudron-image wrapper passed manual defer and automatic conversion. It has no terminal prompt; an administrator controls the app update and can set `BOOKSHELFNG_MIGRATION_MODE=manual` before updating. | Install/update/backup/restore on an actual Cloudron platform and feed acceptance remain open. |
 | StartOS | No candidate package is published. | StartOS 0.4.0.3 x86_64 VM updated the same `bookshelfng` package ID from test `.4.21:1` to synthetic `.9.979:1`; Manual deferred without changing the schema-158 database; Automatic migrated, kept a source backup and volume canaries, passed SQLite checks, and served `/ping`. | Official signed package, aarch64 runtime, external package repository, and package-manager rollback remain untested. |
 | Unraid | No replacement template is published. | XML/settings and draft PR contracts passed; no Community Applications install, update, or rollback was available. The template update flow has no y/n prompt. | Installed Unraid acceptance and an operator-controlled defer/retry handoff remain open. |
-| Co-op Cloud | No replacement recipe is published. | Recipe generation and source checks passed; no installed Docker Swarm update, backup, or rollback was available. The recipe exposes a manual/automatic setting rather than a y/n prompt. | Installed Swarm acceptance and backup/rollback remain open. |
+| Co-op Cloud | No replacement recipe is published. | Isolated Debian 13 / Docker 26.1 Swarm upgraded the pinned BookshelfNG .71 source image to the local exact-head .978 candidate. The same `bookshelfng_app` service and all three volume names remained in place. Manual preserved the schema-158 database byte-for-byte and its media canaries; Automatic migrated to schema 124, passed integrity checks, retained a source backup, and served `/ping`. A deliberately unhealthy update paused; restoring the three-volume snapshot and redeploying the .71 image returned healthy BookshelfNG. The `backupbot.backup=true` label and full-volume archive/restore were verified. | Canonical recipe review, published digest, and the official Backupbot CLI remain untested. The channel uses an operator setting rather than an interactive y/n; choosing No means holding the old stack. |
 | External self-hosting catalogs | No replacements are published. | Local Compose contract only; CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other catalog entries have not been updated or accepted. There is no common y/n contract. | Each catalog needs its own identity, volume, update, defer, and recovery acceptance. |
 | macOS standalone | No BookshelfNG-owned remote update route can redirect these installs. | Hosted run [40270599787](https://github.com/snapetech-org/chaptarrng/actions/runs/40270599787) passed No, headless Manual, Yes, health, source backup, and forced rollback on x64 and arm64 against checksum-pinned BookshelfNG .71 predecessors. No release assets were uploaded. | One-time manual bootstrap and launcher/service path switch remain operator actions. |
 | FreeBSD standalone | No BookshelfNG-owned remote update route can redirect these installs. | FreeBSD 15.1 installed BookshelfNG .71 to the exact local .978 archive. Terminal No/Yes, health, retained source backup, and forced-failure rollback passed. | One-time manual launcher/service switch remains an operator action; publication is gated. |
-| Windows standalone installer | No BookshelfNG-owned remote update route can redirect this install. | Chocolatey acceptance does not cover the separate Windows migration installer; its candidate was built but not installed and accepted. | Install and accept the standalone installer separately; keep publication gated. |
+| Windows standalone installer | No BookshelfNG-owned remote update route can redirect this install. | Hosted run [40218131519](https://github.com/snapetech-org/chaptarrng/actions/runs/40218131519) installed the pinned BookshelfNG service, forced installer rollback, completed the standalone service handoff, and exercised explicit restore. A new No-at-preview round-trip is in the Windows smoke and awaits its hosted run. | Validate the new No choice on Windows; keep publication gated. |
 
 Core release validation passed on Linux, macOS, Windows, and PostgreSQL. An
 earlier Chocolatey package smoke covered install/uninstall with an empty
@@ -376,10 +379,12 @@ still require acceptance.
 
 ChaptarrNG carries local AppImage, Flatpak, Cloudron, Co-op Cloud, self-hosting
 catalog, and StartOS candidates. AppImage and Flatpak passed local migration
-and rollback rehearsal; Cloudron passed a local image-wrapper rehearsal; and
-StartOS passed a test-package x86_64 VM update. These candidates remain
-unpublished. Cloudron platform acceptance, Co-op Cloud and catalog platform
-updates, and Unraid installation are open. The StartOS candidate uses SDK 3.1.0
+and rollback rehearsal; Cloudron passed a local image-wrapper rehearsal; the
+Co-op Cloud candidate passed an isolated Swarm update, defer, failure-pause, and
+volume restore rehearsal; and StartOS passed a test-package x86_64 VM update.
+These candidates remain unpublished. Cloudron platform acceptance, canonical
+Co-op Cloud recipe/Backupbot acceptance, catalog platform updates, and Unraid
+installation are open. The StartOS candidate uses SDK 3.1.0
 and requires StartOS 0.4.0.2 or newer. The external `bookshelfng-startos`
 package repository has not been modified; official signing, aarch64, and
 package-manager rollback remain open. See the
@@ -422,8 +427,8 @@ passed 4,607 tests with 0 failures and 19 skips. These checks do not establish
 an update from a published ChaptarrNG candidate or acceptance with operator
 data. Representative-data acceptance remains open. The Cloudron image wrapper
 is not an installed Cloudron platform update. Cloudron package metadata, the
-canonical Co-op Cloud recipe review, and catalog-specific update and rollback
-flows have not been accepted. Keep each old installation in service
+canonical Co-op Cloud recipe and Backupbot acceptance, and catalog-specific
+update and rollback flows have not been accepted. Keep each old installation in service
 until that channel has passed its acceptance checks or has an explicit
 retirement decision. The StartOS package candidate and external repository boundary are documented in
 [`legacy/startos/README.md`](legacy/startos/README.md).

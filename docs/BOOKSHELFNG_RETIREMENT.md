@@ -1259,11 +1259,12 @@ acceptance.
 No/Yes, continuity, health, source-backup, and rollback results are in the
 [channel acceptance matrix](maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
 Installed local acceptance now includes Debian, Fedora, AUR, Chocolatey,
-Docker, Helm, AppImage, Flatpak, and FreeBSD standalone archives. The matrix
-tracks macOS, the Windows standalone migration installer, actual Cloudron,
-StartOS, Unraid, Co-op Cloud, and external-catalog installs as open, and keeps
-publisher/feed delivery separate. No candidate was published; this update does
-not close the release gate.
+Docker, Helm, AppImage, Flatpak, FreeBSD standalone archives, and Co-op Cloud
+Swarm. The matrix tracks the Windows standalone No-choice hosted rerun, actual
+Cloudron, StartOS aarch64 and package-manager rollback, Unraid, canonical
+Co-op Cloud recipe/Backupbot acceptance, and external-catalog installs as
+open, and keeps publisher/feed delivery separate. No candidate was published;
+this update does not close the release gate.
 
 | Channel | Published ChaptarrNG state | BookshelfNG handoff state |
 | --- | --- | --- |
@@ -1278,7 +1279,7 @@ not close the release gate.
 | AppImage | ChaptarrNG Linux x64 standalone archives are available. | Source-only launcher candidate keeps desktop ID `com.snapetech.bookshelfng`, `$XDG_DATA_HOME/bookshelfng`, and launches `Chaptarr` with the legacy data path. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper. The rebuilt local `.978` AppImage passed a same-path update, path-preservation, and rollback rehearsal from the checksum-verified public `.71` package using a synthetic schema-158 fixture. Representative-data and live-channel acceptance remain open. |
 | Flatpak | ChaptarrNG Linux x64 standalone archives are available. | Source-only manifest keeps app ID `com.snapetech.BookshelfNG`, desktop launcher, and sandbox config path `bookshelfng`; updates use Flatpak. The current public `.977` archive predates native Hardcover identity handling and is rejected by the candidate staging helper. The rebuilt local `.978` bundle passed an in-place app-ID update, path-preservation, and rollback rehearsal from the checksum-verified public `.71` bundle using a synthetic schema-158 fixture. Representative-data and live-channel acceptance remain open. |
 | Cloudron | No ChaptarrNG package update is published. | The local exact-head Cloudron image wrapper preserves app ID `tech.snapetech.bookshelfng`, `/config`, `/books`, `/downloads`, port `8787`, and `/ping`. Manual defer and automatic conversion passed through its proxy; an explicit `CMD` fix ensures its replacement entrypoint starts ChaptarrNG. Actual platform install/update/backup/restore and feed acceptance remain open. |
-| Co-op Cloud | No ChaptarrNG recipe is accepted upstream. | Source-only recipe candidate preserves the `bookshelfng` stack volumes, mount paths, Traefik port, and candidate image variable. Maintainer acceptance, real Swarm update, backup, and rollback are open. |
+| Co-op Cloud | No ChaptarrNG recipe is accepted upstream. | An isolated Debian 13 / Docker 26.1 Swarm upgraded the pinned BookshelfNG .71 source image to the local exact-head .978 candidate. Manual kept the schema-158 database unchanged; Automatic migrated, retained its source backup and media canaries, passed SQLite checks, and served `/ping`. A forced unhealthy update paused; restoring the three-volume snapshot and redeploying .71 returned healthy BookshelfNG. The `backupbot.backup=true` label and full-volume archive/restore passed; the official Backupbot CLI and canonical maintainer acceptance remain open. |
 | Self-hosting catalogs | ChaptarrNG has a manual Compose candidate. | The candidate preserves the `bookshelfng` container and volume identities. CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other catalog records live in external repositories and have not been updated or accepted. |
 | Other historical channels | ChaptarrNG publishes its standard release artifacts. | PPA, BookshelfNG's in-app updater, pinned/offline installs, and manually managed services still need an approved update path or explicit retirement decision. |
 

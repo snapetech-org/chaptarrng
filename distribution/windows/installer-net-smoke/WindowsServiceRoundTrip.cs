@@ -229,6 +229,40 @@ internal static class WindowsServiceRoundTrip
             var sourceDatabase = Path.Combine(dataDirectory, "readarr.db");
             AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "BookshelfNG source startup");
             AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "BookshelfNG source data");
+
+            Console.WriteLine("[smoke] Declining the explicit migration preview to exercise the No choice...");
+            var declinedUpgrade = await InstallPipeline.RunUpgradeAsync(
+                new SmokeUiReporter(approveMigration: false)).ConfigureAwait(false);
+            if (declinedUpgrade.Success ||
+                string.IsNullOrWhiteSpace(declinedUpgrade.BackupPath) ||
+                string.IsNullOrWhiteSpace(declinedUpgrade.ErrorMessage) ||
+                !declinedUpgrade.ErrorMessage.Contains("cancelled", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrWhiteSpace(RegistryService.Read()?.LastRollbackTime))
+            {
+                throw new InvalidOperationException(
+                    "Declining the BookshelfNG migration preview did not restore the original installation.");
+            }
+
+            if (ServiceLifecycle.IsInstalled(ServiceLifecycle.ChaptarrServiceName))
+            {
+                throw new InvalidOperationException("Declining the migration preview unexpectedly installed a Chaptarr service.");
+            }
+
+            await WaitForServiceAsync(
+                ServiceLifecycle.BookshelfServiceName,
+                ServiceControllerStatus.Running,
+                TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+            await WaitForHealthAsync(dataDirectory, TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+            AssertServicePath(ServiceLifecycle.BookshelfServiceName, dataDirectory);
+            AssertServiceAccount(ServiceLifecycle.BookshelfServiceName, "declined migration preview");
+            AssertServiceStartType(ServiceLifecycle.BookshelfServiceName, expected: 2, "declined migration preview");
+            AssertLineage(sourceDatabase, DatabaseLineageKind.BookshelfNG, "declined migration preview");
+            AssertRowCount(sourceDatabase, FixtureTable.Books, expectedAtLeast: 1, "BookshelfNG data after No");
+            AssertRowCount(sourceDatabase, FixtureTable.BookFiles, expectedAtLeast: 2, "BookshelfNG files after No");
+            AssertDatabaseIntegrity(sourceDatabase, "BookshelfNG database after No");
+            AssertBookshelfWasRunningAtUpgrade(expected: true, "declined migration preview");
+            Console.WriteLine("PASS: No restored and restarted BookshelfNG with its original service and schema intact.");
+
             Console.WriteLine("[smoke] Injecting an HTTP port conflict to exercise automatic installer rollback...");
             using (var blocker = new TcpListener(IPAddress.Loopback, GetConfiguredHttpPort(dataDirectory)))
             using (var releaseCancellation = new CancellationTokenSource())
@@ -1143,6 +1177,13 @@ internal static class WindowsServiceRoundTrip
 
     private sealed class SmokeUiReporter : IUiReporter
     {
+        private readonly bool _approveMigration;
+
+        public SmokeUiReporter(bool approveMigration = true)
+        {
+            _approveMigration = approveMigration;
+        }
+
         public void SetStep(string step, string detail = "") =>
             Console.WriteLine($"[installer] {step}{(string.IsNullOrWhiteSpace(detail) ? "" : " " + detail)}");
 
@@ -1151,7 +1192,7 @@ internal static class WindowsServiceRoundTrip
         public ProviderIdentityMode? ChooseProviderIdentityMode() => ProviderIdentityMode.NativeHardcover;
         public System.Security.SecureString? RequestServiceAccountPassword(string serviceAccount) =>
             throw new InvalidOperationException($"The smoke test unexpectedly requested a password for '{serviceAccount}'.");
-        public bool ConfirmMigrationApply(ProviderIdentityMode mode, string backupPath) => true;
+        public bool ConfirmMigrationApply(ProviderIdentityMode mode, string backupPath) => _approveMigration;
         public void Log(LogLine line) => Console.WriteLine($"[{line.Stream}] {line.Text}");
         public void Log(string line) => Console.WriteLine(line);
         public void LogError(string line) => Console.Error.WriteLine(line);
