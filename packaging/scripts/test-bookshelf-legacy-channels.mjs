@@ -369,6 +369,16 @@ test('Linux and Windows VM jobs execute package-specific migration-choice checks
   assert.match(read('packaging/scripts/test-bookshelfng-aur-choice.sh'), /ask-headless\.log[\s\S]*?No terminal is available/);
 });
 
+test('AUR choice acceptance uses a pinned offline container and a real host PTY', () => {
+  const aurTest = read('packaging/scripts/test-bookshelfng-aur-choice.sh');
+
+  assert.match(aurTest, /test_image="fedora:44@sha256:[a-f0-9]{64}"/);
+  assert.match(aurTest, /"--network", "none"/);
+  assert.match(aurTest, /pty\.openpty\(\)/);
+  assert.match(aurTest, /prompt_count != 2/);
+  assert.doesNotMatch(aurTest, /dnf -q install -y expect/);
+});
+
 test('noninteractive image and appliance channels defer ask mode without starting ChaptarrNG', () => {
   const supervisor = read('docker-bookshelf-compat-supervisor.sh');
   const entrypoint = read('docker-entrypoint.sh');

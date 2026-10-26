@@ -39,19 +39,8 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$task_root/evidence"
-docker_proxy_args=()
-for proxy_name in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do
-  if [[ -n "${!proxy_name:-}" ]]; then
-    docker_proxy_args+=(--env "$proxy_name")
-  fi
-done
-
-docker run --rm -i --user 0:0 "${docker_proxy_args[@]}" \
-  --mount "type=bind,src=$repo_root,dst=/repo,readonly" \
-  --mount "type=bind,src=$task_root,dst=/work" \
-  "$test_image" sh -s <<'AUR_TEST'
+container_test=$(cat <<'AUR_TEST'
 set -eu
-dnf -q install -y expect > /work/evidence/fedora-dependencies.log 2>&1
 
 cat > /usr/bin/systemctl <<'SYSTEMCTL'
 #!/bin/sh
@@ -82,22 +71,8 @@ printf '# operator-override=true\n' >> /etc/bookshelfng/bookshelfng.env
 printf 'migration-data-canary\n' > /var/lib/bookshelfng/data-canary
 touch /run/bookshelfng-aur-choice-test-active
 
-expect <<'ASKNO' > /work/evidence/ask-no.log 2>&1
-log_user 1
-set timeout 30
-set prompt_seen 0
-spawn env BOOKSHELFNG_MIGRATION_MODE=ask bash -c ". /repo/packaging/legacy/aur/bookshelfng-bin/bookshelfng.install; pre_upgrade"
-expect {
-  -re {Replace BookshelfNG with ChaptarrNG now\?.*\[y/N\] } { set prompt_seen 1; send -- "\r" }
-  timeout { exit 98 }
-  eof { exit 99 }
-}
-expect eof
-set result [wait]
-if {!$prompt_seen || [lindex $result 3] != 0} { exit 96 }
-ASKNO
-
-grep -Fq '[y/N]' /work/evidence/ask-no.log
+env BOOKSHELFNG_MIGRATION_MODE=ask bash -c ". /repo/packaging/legacy/aur/bookshelfng-bin/bookshelfng.install; pre_upgrade" \
+  > /work/evidence/ask-no.log 2>&1
 grep -Fq 'pacman will finish the package update' /work/evidence/ask-no.log
 test -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-deferred
 test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
@@ -162,22 +137,8 @@ test -e /run/bookshelfng-aur-choice-test-active
 
 # A later explicit Yes consumes the deferred marker and schedules normal
 # conversion during the next package transaction.
-expect <<'ASKYES' > /work/evidence/ask-yes.log 2>&1
-log_user 1
-set timeout 30
-set prompt_seen 0
-spawn env BOOKSHELFNG_MIGRATION_MODE=ask bash -c ". /repo/packaging/legacy/aur/bookshelfng-bin/bookshelfng.install; pre_upgrade"
-expect {
-  -re {Replace BookshelfNG with ChaptarrNG now\?.*\[y/N\] } { set prompt_seen 1; send -- "y\r" }
-  timeout { exit 98 }
-  eof { exit 99 }
-}
-expect eof
-set result [wait]
-if {!$prompt_seen || [lindex $result 3] != 0} { exit 96 }
-ASKYES
-
-grep -Fq '[y/N]' /work/evidence/ask-yes.log
+env BOOKSHELFNG_MIGRATION_MODE=ask bash -c ". /repo/packaging/legacy/aur/bookshelfng-bin/bookshelfng.install; pre_upgrade" \
+  > /work/evidence/ask-yes.log 2>&1
 test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-deferred
 test -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
 test -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff/snapshot-ready
@@ -190,5 +151,71 @@ grep -Fq 'migration-data-canary' /var/lib/bookshelfng/data-canary
 
 echo 'AUR package hook safely defers No across payload replacement, restores BookshelfNG, and retries on later Yes.'
 AUR_TEST
+)
+
+AUR_TEST_SCRIPT="$container_test" python3 - "$test_image" "$repo_root" "$task_root" <<'PTY_DRIVER'
+import os
+import pty
+import select
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+image, repo_root, task_root = sys.argv[1:]
+container_script = os.environ["AUR_TEST_SCRIPT"]
+transcript_path = Path(task_root) / "evidence" / "pty-session.log"
+prompt = b"Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically. [y/N] "
+command = [
+    "docker", "run", "--rm", "--interactive", "--tty", "--network", "none", "--user", "0:0",
+    "--mount", f"type=bind,src={repo_root},dst=/repo,readonly",
+    "--mount", f"type=bind,src={task_root},dst=/work",
+    image, "bash", "-c", container_script,
+]
+master, slave = pty.openpty()
+proc = subprocess.Popen(command, stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+os.close(slave)
+transcript = bytearray()
+prompt_count = 0
+search_offset = 0
+deadline = time.monotonic() + 180
+try:
+    with transcript_path.open("wb") as evidence:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                proc.kill()
+                raise RuntimeError("Timed out waiting for the AUR migration choice container")
+            readable, _, _ = select.select([master], [], [], min(remaining, 0.2))
+            if readable:
+                try:
+                    chunk = os.read(master, 4096)
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                evidence.write(chunk)
+                evidence.flush()
+                transcript.extend(chunk)
+                while True:
+                    position = transcript.find(prompt, search_offset)
+                    if position < 0:
+                        break
+                    if prompt_count >= 2:
+                        raise RuntimeError("The AUR migration test emitted an unexpected extra prompt")
+                    os.write(master, b"\r" if prompt_count == 0 else b"y\r")
+                    prompt_count += 1
+                    search_offset = position + len(prompt)
+            if proc.poll() is not None and not readable:
+                break
+    result = proc.wait(timeout=5)
+finally:
+    os.close(master)
+if result != 0:
+    raise SystemExit(result)
+if prompt_count != 2:
+    raise SystemExit(f"Expected the AUR test to show two No/Yes prompts; observed {prompt_count}")
+print("AUR migration choice container passed its No, headless defer, and later Yes retry checks.")
+PTY_DRIVER
 
 echo 'BookshelfNG AUR migration choice passed.'
