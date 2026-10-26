@@ -473,13 +473,52 @@ jobs:
         }
         if (-not $legacyReady) { throw 'BookshelfNG did not reopen its database from the custom data path.' }
         $legacyMarker = Join-Path $legacyDataDir 'chaptarrng-bridge-preserves-data.test'
-        Set-Content -Path $legacyMarker -Value 'preserve'
+        Set-Content -Path $legacyMarker -Value 'preserve' -NoNewline
         $legacySource = "$legacyPackageDir;https://community.chocolatey.org/api/v2/"
-        $sourceDatabaseHashBeforeManual = (Get-FileHash -LiteralPath $legacyDb -Algorithm SHA256).Hash
-        $legacyApplicationBeforeManual = (& $nssm.Source get BookshelfNG Application | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($legacyApplicationBeforeManual)) {
+        function Get-LegacyDatabaseFingerprint {
+          $components = foreach ($name in @('readarr.db', 'readarr.db-wal', 'readarr.db-journal')) {
+            $path = Join-Path $legacyDataDir $name
+            if (-not (Test-Path -LiteralPath $path)) {
+              '{0}:missing' -f $name
+              continue
+            }
+            $item = Get-Item -LiteralPath $path -ErrorAction Stop
+            $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256 -ErrorAction Stop).Hash
+            '{0}:{1}:{2}' -f $name, $item.Length, $hash
+          }
+          return $components -join '|'
+        }
+        function Get-StableLegacyDatabaseFingerprint {
+          for ($attempt = 0; $attempt -lt 10; $attempt++) {
+            $first = Get-LegacyDatabaseFingerprint
+            Start-Sleep -Milliseconds 500
+            $second = Get-LegacyDatabaseFingerprint
+            if ($first -eq $second) { return $second }
+          }
+          throw 'BookshelfNG database files did not settle for a stable manual-defer comparison.'
+        }
+        function Get-NssmBookshelfSetting {
+          param([Parameter(Mandatory = $true)][string]$Name)
+          $value = (& $nssm.Source get BookshelfNG $Name 2>&1 | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw "NSSM could not read the BookshelfNG $Name setting." }
+          return $value
+        }
+        $legacyMarkerContentBeforeManual = Get-Content -LiteralPath $legacyMarker -Raw -ErrorAction Stop
+        if ($legacyMarkerContentBeforeManual -ne 'preserve') { throw 'The BookshelfNG data canary was not initialized as expected.' }
+        $sourceDatabaseFingerprintBeforeManual = Get-StableLegacyDatabaseFingerprint
+        $legacyServiceBeforeManual = Get-CimInstance -ClassName Win32_Service -Filter "Name='BookshelfNG'" -ErrorAction Stop
+        if (-not $legacyServiceBeforeManual -or $legacyServiceBeforeManual.State -ne 'Running' -or $legacyServiceBeforeManual.ProcessId -le 0) {
+          throw 'BookshelfNG did not have a running service process before the manual-defer transaction.'
+        }
+        $legacyServiceProcessIdBeforeManual = [uint32]$legacyServiceBeforeManual.ProcessId
+        $legacyServiceStartNameBeforeManual = $legacyServiceBeforeManual.StartName
+        $legacyServiceStartModeBeforeManual = $legacyServiceBeforeManual.StartMode
+        $legacyApplicationBeforeManual = Get-NssmBookshelfSetting -Name 'Application'
+        if ([string]::IsNullOrWhiteSpace($legacyApplicationBeforeManual)) {
           throw 'NSSM could not read the installed BookshelfNG application before the manual-defer transaction.'
         }
+        $legacyParametersBeforeManual = Get-NssmBookshelfSetting -Name 'AppParameters'
+        $legacyDirectoryBeforeManual = Get-NssmBookshelfSetting -Name 'AppDirectory'
         $legacyStageDir = Join-Path $env:ProgramData 'BookshelfNG\app.new'
         $legacyPreviousDir = Join-Path $env:ProgramData 'BookshelfNG\app.previous'
         $legacyHandoffManifest = Join-Path $env:ProgramData 'BookshelfNG\handoff\bookshelfng-migration-handoff.json'
@@ -492,17 +531,32 @@ jobs:
         if (($manualUpgradeOutput -join "`n") -notmatch [regex]::Escape($manualDeferDiagnostic)) {
           throw "Chocolatey manual mode failed without its expected defer diagnostic (exit code $manualUpgradeExitCode)."
         }
-        $legacyService = Get-Service -Name 'BookshelfNG' -ErrorAction Stop
-        if ($legacyService.Status -ne 'Running') { throw 'Manual defer stopped the installed BookshelfNG service.' }
-        $sourceDatabaseHashAfterManual = (Get-FileHash -LiteralPath $legacyDb -Algorithm SHA256).Hash
-        if ($sourceDatabaseHashAfterManual -ne $sourceDatabaseHashBeforeManual) {
-          throw 'Manual defer changed the installed BookshelfNG database.'
+        $legacyServiceAfterManual = Get-CimInstance -ClassName Win32_Service -Filter "Name='BookshelfNG'" -ErrorAction Stop
+        if (-not $legacyServiceAfterManual -or $legacyServiceAfterManual.State -ne 'Running') {
+          throw 'Manual defer stopped the installed BookshelfNG service.'
         }
-        $legacyApplicationAfterManual = (& $nssm.Source get BookshelfNG Application | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0 -or $legacyApplicationAfterManual -ne $legacyApplicationBeforeManual) {
+        if ([uint32]$legacyServiceAfterManual.ProcessId -ne $legacyServiceProcessIdBeforeManual) {
+          throw 'Manual defer restarted the installed BookshelfNG service process.'
+        }
+        if ($legacyServiceAfterManual.StartName -ne $legacyServiceStartNameBeforeManual -or $legacyServiceAfterManual.StartMode -ne $legacyServiceStartModeBeforeManual) {
+          throw 'Manual defer changed the BookshelfNG service identity or start mode.'
+        }
+        $sourceDatabaseFingerprintAfterManual = Get-StableLegacyDatabaseFingerprint
+        if ($sourceDatabaseFingerprintAfterManual -ne $sourceDatabaseFingerprintBeforeManual) {
+          throw 'Manual defer changed the installed BookshelfNG database, WAL, or rollback journal.'
+        }
+        $legacyApplicationAfterManual = Get-NssmBookshelfSetting -Name 'Application'
+        $legacyParametersAfterManual = Get-NssmBookshelfSetting -Name 'AppParameters'
+        $legacyDirectoryAfterManual = Get-NssmBookshelfSetting -Name 'AppDirectory'
+        if ($legacyApplicationAfterManual -ne $legacyApplicationBeforeManual -or
+          $legacyParametersAfterManual -ne $legacyParametersBeforeManual -or
+          $legacyDirectoryAfterManual -ne $legacyDirectoryBeforeManual) {
           throw 'Manual defer changed the BookshelfNG service application path.'
         }
-        if (-not (Test-Path $legacyMarker)) { throw 'Manual defer removed the BookshelfNG data canary.' }
+        $legacyMarkerContentAfterManual = Get-Content -LiteralPath $legacyMarker -Raw -ErrorAction Stop
+        if ($legacyMarkerContentAfterManual -ne $legacyMarkerContentBeforeManual) {
+          throw 'Manual defer changed or removed the BookshelfNG data canary.'
+        }
         if ((Test-Path $legacyStageDir) -or (Test-Path $legacyPreviousDir) -or (Test-Path $legacyHandoffManifest)) {
           throw 'Manual defer created staged application, rollback, or migration-handoff files.'
         }
