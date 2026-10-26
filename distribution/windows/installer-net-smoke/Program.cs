@@ -154,7 +154,8 @@ int? RunBookshelfAcceptanceCommand(string[] arguments)
         "--seed-bookshelfng",
         "--bookshelf-data-canary",
         "--verify-bookshelfng-source",
-        "--verify-bookshelfng-migration"
+        "--verify-bookshelfng-migration",
+        "--verify-chaptarr-database"
     };
     var command = commands.FirstOrDefault(arguments.Contains);
     if (command is null)
@@ -180,9 +181,17 @@ int? RunBookshelfAcceptanceCommand(string[] arguments)
                 break;
             case "--bookshelf-data-canary":
             {
-                var candidateDatabase = Path.Combine(targetDirectory, "chaptarr.db");
-                var sourceDatabase = Path.Combine(targetDirectory, "readarr.db");
-                Console.WriteLine(GetBookshelfDataCanary(File.Exists(candidateDatabase) ? candidateDatabase : sourceDatabase));
+                var nativeDatabase = FindNativeChaptarrDatabase(targetDirectory);
+                var sourceDatabase = new[] { "readarr.db", "audioarr.db" }
+                    .Select(name => Path.Combine(targetDirectory, name))
+                    .FirstOrDefault(File.Exists);
+                var databasePath = nativeDatabase ?? sourceDatabase;
+                if (databasePath is null)
+                {
+                    throw new FileNotFoundException("No BookshelfNG or ChaptarrNG SQLite database was found.", targetDirectory);
+                }
+
+                Console.WriteLine(GetBookshelfDataCanary(databasePath));
                 break;
             }
             case "--verify-bookshelfng-source":
@@ -192,6 +201,10 @@ int? RunBookshelfAcceptanceCommand(string[] arguments)
             case "--verify-bookshelfng-migration":
                 VerifyBookshelfMigration(targetDirectory);
                 Console.WriteLine("PASS: converted BookshelfNG fixture records, SQLite integrity, foreign keys, and retained source backup verified.");
+                break;
+            case "--verify-chaptarr-database":
+                VerifyChaptarrDatabase(targetDirectory);
+                Console.WriteLine("PASS: retained ChaptarrNG database canaries, lineage, SQLite integrity, and foreign keys verified.");
                 break;
         }
 
@@ -293,45 +306,115 @@ void VerifyBookshelfSource(string targetDirectory)
 
 void VerifyBookshelfMigration(string targetDirectory)
 {
-    var targetPath = Path.Combine(targetDirectory, "chaptarr.db");
-    if (!File.Exists(targetPath))
-    {
-        throw new FileNotFoundException("The ChaptarrNG target database was not created.", targetPath);
-    }
+    var targetPath = FindNativeChaptarrDatabase(targetDirectory)
+        ?? throw new FileNotFoundException("No native ChaptarrNG target database was found after migration.", targetDirectory);
+    VerifyChaptarrDatabase(targetPath);
 
     var expected = GetExpectedFixtureCanary(Path.Combine(targetDirectory, "migration-acceptance-library").Replace('\\', '/'));
-    var actual = GetBookshelfDataCanary(targetPath);
-    if (!string.Equals(actual, expected, StringComparison.Ordinal))
-    {
-        throw new InvalidOperationException("The migrated ChaptarrNG database did not preserve the seeded BookshelfNG author, book, edition, file, and setting canaries.");
-    }
-
-    using (var connection = new SqliteConnection(CreateConnectionString(targetPath, SqliteOpenMode.ReadOnly)))
-    {
-        connection.Open();
-        if (QueryScalar<string>(connection, "PRAGMA integrity_check;") != "ok")
-        {
-            throw new InvalidDataException("The converted ChaptarrNG database failed SQLite integrity_check.");
-        }
-
-        if (QueryScalar<long>(connection, "SELECT COUNT(*) FROM pragma_foreign_key_check;") != 0)
-        {
-            throw new InvalidDataException("The converted ChaptarrNG database contains foreign-key violations.");
-        }
-    }
-
-    var backups = Directory.GetFiles(targetDirectory, "readarr.db.bookshelfng-backup-*.db");
+    var backups = Directory.GetFiles(targetDirectory, "*.bookshelfng-backup-*.db")
+        .OrderByDescending(File.GetLastWriteTimeUtc)
+        .ToArray();
     if (backups.Length == 0)
     {
         throw new FileNotFoundException("No retained BookshelfNG source database backup was found.", targetDirectory);
     }
 
-    using var backup = new SqliteConnection(CreateConnectionString(backups[0], SqliteOpenMode.ReadOnly));
+    var backupPath = backups.FirstOrDefault(path =>
+        string.Equals(GetBookshelfDataCanary(path), expected, StringComparison.Ordinal));
+    if (backupPath is null)
+    {
+        throw new InvalidDataException("No retained BookshelfNG source backup preserved the seeded fixture canaries.");
+    }
+
+    using var backup = new SqliteConnection(CreateConnectionString(backupPath, SqliteOpenMode.ReadOnly));
     backup.Open();
+    if (QueryScalar<string>(backup, "PRAGMA integrity_check;") != "ok")
+    {
+        throw new InvalidDataException("The retained BookshelfNG source backup failed SQLite integrity_check.");
+    }
+
+    if (QueryScalar<long>(backup, "SELECT COUNT(*) FROM pragma_foreign_key_check;") != 0)
+    {
+        throw new InvalidDataException("The retained BookshelfNG source backup contains foreign-key violations.");
+    }
+
+    if (QueryScalar<long>(backup, "SELECT MAX(Version) FROM VersionInfo;") != 158)
+    {
+        throw new InvalidDataException("The retained BookshelfNG source backup is not at schema version 158.");
+    }
+
     if (QueryScalar<string>(backup, "SELECT Title FROM Books WHERE Id = 30;") != "Fixture Book")
     {
         throw new InvalidDataException("The retained BookshelfNG source backup did not preserve its fixture book.");
     }
+}
+
+void VerifyChaptarrDatabase(string databasePath)
+{
+    if (!File.Exists(databasePath))
+    {
+        throw new FileNotFoundException("The retained ChaptarrNG database was not found.", databasePath);
+    }
+
+    using var connection = new SqliteConnection(CreateConnectionString(databasePath, SqliteOpenMode.ReadOnly));
+    connection.Open();
+    if (!HasNativeChaptarrLineage(connection))
+    {
+        throw new InvalidDataException("The retained database does not use the native ChaptarrNG schema.");
+    }
+
+    var databaseDirectory = Path.GetDirectoryName(Path.GetFullPath(databasePath))!;
+    var expected = GetExpectedFixtureCanary(Path.Combine(databaseDirectory, "migration-acceptance-library").Replace('\\', '/'));
+    if (!string.Equals(GetBookshelfDataCanary(databasePath), expected, StringComparison.Ordinal))
+    {
+        throw new InvalidDataException("The retained ChaptarrNG database did not preserve the migrated fixture canaries.");
+    }
+
+    if (QueryScalar<string>(connection, "PRAGMA integrity_check;") != "ok")
+    {
+        throw new InvalidDataException("The retained ChaptarrNG database failed SQLite integrity_check.");
+    }
+
+    if (QueryScalar<long>(connection, "SELECT COUNT(*) FROM pragma_foreign_key_check;") != 0)
+    {
+        throw new InvalidDataException("The retained ChaptarrNG database contains foreign-key violations.");
+    }
+}
+
+string? FindNativeChaptarrDatabase(string targetDirectory)
+{
+    foreach (var name in new[] { "chaptarr.db", "readarr.db", "audioarr.db" })
+    {
+        var databasePath = Path.Combine(targetDirectory, name);
+        if (!File.Exists(databasePath) || new FileInfo(databasePath).Length == 0)
+        {
+            continue;
+        }
+
+        using var connection = new SqliteConnection(CreateConnectionString(databasePath, SqliteOpenMode.ReadOnly));
+        connection.Open();
+        if (HasNativeChaptarrLineage(connection))
+        {
+            return databasePath;
+        }
+    }
+
+    return null;
+}
+
+bool HasNativeChaptarrLineage(SqliteConnection connection)
+{
+    using var command = connection.CreateCommand();
+    command.CommandText = "PRAGMA table_info(\"Authors\");";
+    using var reader = command.ExecuteReader();
+    var columns = new HashSet<string>(StringComparer.Ordinal);
+    while (reader.Read())
+    {
+        columns.Add(reader.GetString(reader.GetOrdinal("name")));
+    }
+
+    // Keep this lineage check aligned with DatabaseLineageGuard.Detect in Core.
+    return columns.Contains("AudiobookRootFolderPath") && columns.Contains("EbookRootFolderPath");
 }
 
 string GetBookshelfDataCanary(string databasePath)

@@ -232,7 +232,10 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(installer, /CHAPTARRNG_TEST_FAIL_HANDOFF/);
   assert.match(handoff, /after-migration-health/);
   assert.match(handoff, /--verify-bookshelfng-source/);
-  assert.match(handoff, /chaptarr\.db\.chaptarr-failed-/);
+  assert.match(handoff, /readarr\.db\.chaptarr-failed-/);
+  assert.match(handoff, /--verify-chaptarr-database/);
+  assert.match(smoke, /FindNativeChaptarrDatabase/);
+  assert.match(smoke, /HasNativeChaptarrLineage/);
   assert.match(smoke, /VerifyBookshelfSource/);
   assert.doesNotMatch(installer, /<BootTrigger>/);
   assert.match(recovery, /'AppEnvironment' @\(\$Manifest\.OldAppEnvironment\)/);

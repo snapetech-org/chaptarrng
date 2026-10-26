@@ -321,11 +321,12 @@ try {
   if ((Get-MigrationCanary) -ne $canaryBeforeManual) {
     throw 'The injected migration failure did not restore the schema-158 BookshelfNG canary.'
   }
-  $failedTargetDatabase = Get-ChildItem -LiteralPath $legacyDataDirectory -Filter 'chaptarr.db.chaptarr-failed-*' -File -ErrorAction SilentlyContinue |
+  $failedTargetDatabase = Get-ChildItem -LiteralPath $legacyDataDirectory -Filter 'readarr.db.chaptarr-failed-*' -File -ErrorAction SilentlyContinue |
     Select-Object -First 1
   if (-not $failedTargetDatabase) {
     throw 'The injected migration rollback did not retain the failed ChaptarrNG target database for diagnosis.'
   }
+  Invoke-MigrationFixture @('--verify-chaptarr-database', $failedTargetDatabase.FullName) | Out-Null
   if ((Test-Path -LiteralPath $stageDirectory) -or (Test-Path -LiteralPath $previousDirectory) -or (Test-Path -LiteralPath $handoffManifest)) {
     throw 'The injected migration rollback left staging, rollback-app, or deferred-handoff state behind.'
   }
@@ -379,7 +380,7 @@ try {
   if ((Get-MigrationCanary) -ne $canaryBeforeManual) {
     throw 'The ChaptarrNG candidate changed the migrated author, book, edition, file, path, or setting canary after startup.'
   }
-  $retainedBackup = Get-ChildItem -LiteralPath $legacyDataDirectory -Filter 'readarr.db.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue |
+  $retainedBackup = Get-ChildItem -LiteralPath $legacyDataDirectory -Filter '*.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue |
     Select-Object -First 1
   if (-not $retainedBackup) { throw 'The automatic Chocolatey handoff did not retain a BookshelfNG source database backup.' }
 
@@ -387,7 +388,7 @@ try {
   if ($uninstallResult.ExitCode -ne 0) { throw "Chocolatey could not remove the upgraded package: $($uninstallResult.Output -join "`n")" }
   if (Get-Service -Name 'BookshelfNG' -ErrorAction SilentlyContinue) { throw 'Chocolatey uninstall left the BookshelfNG service registered.' }
   if (Test-Path -LiteralPath (Join-Path $bookshelfRoot 'app')) { throw 'Chocolatey uninstall left the candidate application payload behind.' }
-  if (-not (Test-Path -LiteralPath $retainedBackup.FullName) -or -not (Test-Path -LiteralPath (Join-Path $legacyDataDirectory 'chaptarr.db'))) {
+  if (-not (Test-Path -LiteralPath $retainedBackup.FullName)) {
     throw 'Chocolatey uninstall removed the migrated database or retained BookshelfNG source backup.'
   }
   Invoke-MigrationFixture @('--verify-bookshelfng-migration', $legacyDataDirectory) | Out-Null
