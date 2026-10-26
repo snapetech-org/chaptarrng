@@ -142,6 +142,18 @@ printf '# config-canary\n' >> /etc/bookshelfng/bookshelfng.env
 mkdir -p /var/lib/bookshelfng
 printf 'migration-data-canary\n' > /var/lib/bookshelfng/data-canary
 
+if env BOOKSHELFNG_MIGRATION_MODE=ask /tmp/bookshelfng-apt-get-interactive install -qq -y \
+    --no-install-recommends /packages/out/bookshelfng_0.9.977-1_amd64.deb \
+    < /dev/null > /evidence/bookshelfng-ask-headless.log 2>&1; then
+  echo 'Debian ask mode unexpectedly accepted a package upgrade without a controlling terminal.' >&2
+  exit 1
+fi
+grep -Fq 'no terminal is available' /evidence/bookshelfng-ask-headless.log
+! grep -Fq '[y/N]' /evidence/bookshelfng-ask-headless.log
+test "$(dpkg-query -W -f='${Version}' bookshelfng)" = 0.4.21.71-1
+test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff
+
 if ! expect <<'ASKNO'
 log_user 1
 log_file -noappend /evidence/bookshelfng-ask-no.log

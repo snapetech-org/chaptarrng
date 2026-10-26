@@ -20,6 +20,15 @@ they return an actionable migration/recovery page until the app is ready. If
 either nginx or the supervised application exits, the package entrypoint stops
 the other process and exits so Cloudron can recover the container.
 
+Cloudron does not provide an interactive terminal prompt during an app update.
+The update itself is the administrator's yes/no choice. To defer database
+conversion while updating the package, set the app environment to
+`BOOKSHELFNG_MIGRATION_MODE=manual` before applying the update; after reviewing
+the Cloudron backup and migration plan, set it to `automatic` and restart the
+app to accept conversion. Cloudron custom environment values override the
+image defaults. The proxy keeps `/ping` healthy while manual mode waits, and
+shows the migration instructions on normal app requests.
+
 The candidate manifest and Dockerfile are not published. The Dockerfile uses
 the source-only `bookshelf-hardcover` image target; before a Cloudron update is
 accepted, pin the exact published multi-architecture digest and run install,

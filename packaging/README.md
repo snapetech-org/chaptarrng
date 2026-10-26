@@ -1,6 +1,6 @@
 # Native package channels
 
-Status checked 2026-10-25. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
+Status checked 2026-10-26. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 is the latest published release; [main](https://github.com/snapetech-org/chaptarrng/tree/main) includes candidate-only
 BookshelfNG migration and package-bridge tooling. GitHub Release archives are the payload for
 native packages; the standard ChaptarrNG container is built separately from
@@ -71,16 +71,23 @@ package switches the application files.
 The transition package keeps unattended updates automatic by default. To ask
 before any service stop or application staging, use
 `choco upgrade bookshelfng --yes --params "'/MigrationMode=ask'"`; answering
-No cancels the update and leaves BookshelfNG in place. Use
-`/MigrationMode=manual` to cancel without prompting and follow the standalone
-Console migration steps in
+No cancels the Chocolatey update and leaves BookshelfNG in place. Use
+`/MigrationMode=manual` to defer conversion without prompting and follow the
+standalone Console migration steps in
 [`docs/MIGRATE_FROM_BOOKSHELFNG.md`](../docs/MIGRATE_FROM_BOOKSHELFNG.md).
-Debian, RPM, and AUR hooks accept the same `automatic`, `ask`, and `manual`
-choices through `BOOKSHELFNG_MIGRATION_MODE`. AppImage and Flatpak launchers
-also honor that variable on first migration launch. An interactive prompt
-requires a terminal except when `zenity` is available for the desktop dialog.
-Desktop choices defer data conversion at launch; they do not undo an AppImage
-download or Flatpak deployment.
+Debian and RPM pre-install hooks also cancel their package transaction on No.
+Pacman cannot cancel an active transaction from a package scriptlet: the AUR
+hook records the deferral, restores the BookshelfNG application/unit/launcher
+after the package payload phase, and asks again on the next package transaction.
+AppImage and Flatpak ask on first migration launch; their desktop entries open
+a terminal, and No defers data conversion without undoing a downloaded or
+deployed application. Docker shows the same choice when run with an attached
+TTY; headless Docker/Compose and Kubernetes have no terminal, so ask mode
+defers startup until the operator chooses automatic mode and restarts. StartOS
+offers an automatic/manual setting, while Unraid, Co-op Cloud, and Compose
+recipes expose the migration mode as an environment setting. Cloudron has no
+terminal prompt: the administrator holds or applies the app update and can set
+`BOOKSHELFNG_MIGRATION_MODE=manual` before updating to defer conversion.
 
 The Debian candidate recipe and local package builder are in
 `packaging/legacy/debian/` and
@@ -173,23 +180,33 @@ platform-specific command and rollback notes.
 
 ## Public status
 
-| Channel | ChaptarrNG | BookshelfNG | Remaining check |
-| --- | --- | --- | --- |
-| Debian / Ubuntu | No ChaptarrNG `.deb` is published | The final BookshelfNG `.deb` is `0.4.21.71`; isolated dpkg and Debian Trixie apt ask-mode No/Yes upgrades and downgrade preserved the modified conffile and data canary | Validate real systemd startup, database migration/restore, and PPA/direct-download handoff. External PPA credentials, archive, and enabled series have not been validated, and no candidate is published |
-| AUR | `chaptarrng-bin 0.9.977-1` is published | `bookshelfng-bin 0.4.21.71-1` remains public; a local `.977` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, active service handoff, and an ask-mode hook test for Enter/Yes | Validate with representative operator data and host-specific service settings before publishing the candidate |
-| COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64 | Legacy trigger skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64 | A Fedora 44 DNF regression uses a synthetic `.71` package fixture and the current `.977` bridge spec. Ask-mode No cancels before the handoff; Yes preserves config/data and creates the snapshot; downgrade restores the fixture. `systemctl` is mocked, and no live COPR feed, systemd service, or database migration is tested. |
-| Chocolatey | `chaptarrng 0.9.973` is moderator-approved; `.977` is not on the feed and the earlier `.977` bridge push returned HTTP 403. Current source builds a legacy identity bridge that preserves custom service/data paths, previews conversion, handles provider mode, takes PostgreSQL backups, and verifies `/ping`. | Public `bookshelfng 0.4.21.70` remains | Resolve the feed rejection, publish both package updates, and validate populated SQLite/PostgreSQL conversion, rollback, and installed-channel handoff |
-| Docker | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same multi-architecture digest | Mutable BookshelfNG aliases unchanged. Candidate compatibility targets map `latest`, `main`, and `hardcover` to native Hardcover mode and `softcover` to Goodreads mode; fresh installs default to port `8787`, while saved and explicit ports take precedence. | Run the compatibility-default regression checks, then validate all three manifests and old-alias digest routing before enabling the bridge |
-| Helm | A same-name chart and versioned publisher target the existing BookshelfNG OCI identity. Both release-readiness gates, the migration bridge gate, and an explicit bridge opt-in are required. Local build/render and hosted resource-identity checks pass. | No chart is published; the BookshelfNG OCI chart remains unchanged. Existing installs can keep the same chart source after acceptance. | Test a real PVC/GitOps upgrade and rollback before publishing or switching existing installations |
+Channel-level installed acceptance for the local 0.9.978 candidate is recorded
+in the [2026-10-26 matrix](../docs/maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
+It distinguishes an installed predecessor upgrade from source-only or feed-only
+checks.
 
-Core release validation passed on Linux, macOS, Windows, and PostgreSQL. The
-Windows Chocolatey build and package-transition smoke also passed: it
-installs the public BookshelfNG package, upgrades through the ChaptarrNG
-legacy recipe, checks service and data/backup handling, and verifies that
-uninstall preserves data. This does not validate conversion of a populated
-operator database. The candidate BookshelfNG package itself was not published.
-The Windows VM build matrix also runs the Chocolatey ask choice handler with
-No, blank, Yes, and redirected-input cases.
+| Channel | Published state | Local installed acceptance | Open blocker |
+| --- | --- | --- | --- |
+| Debian / Ubuntu | No ChaptarrNG bridge .deb or PPA package is published; the final BookshelfNG .deb is 0.4.21.71. | Debian 13 installed .71 to local .978. Ask No cancelled before staging; Yes converted and started the service; source backup, health, and rollback passed. | PPA source upload, credentials, series, and feed upgrade are untested. |
+| AUR | ChaptarrNG 0.9.977-1 is public; BookshelfNG 0.4.21.71-1 remains the predecessor. | Arch systemd installed .71 to local .978. Pacman No deferred/restored BookshelfNG; a later transaction Yes converted and passed health and restore checks. | Publish and verify the exact accepted AUR candidate; representative operator data remains open. |
+| Fedora / COPR | ChaptarrNG .977 builds exist; the BookshelfNG COPR repository has no package entries for Fedora 43, 44, 45, or Rawhide. | Fedora 44 with SELinux enforcing installed .71 to local .978. DNF No cancelled before staging; Yes migrated, started, and passed health/rollback checks. | The live BookshelfNG COPR feed has no predecessor to upgrade and no candidate is published there. |
+| Chocolatey | Public BookshelfNG 0.4.21.70 remains; the previous bridge push was rejected. | Windows Server 2025 upgraded the public .70 package to a local .978 bridge. No cancelled before service/file staging; Yes passed checksum, migration, service identity, database, source-backup, and /ping checks. | Resolve feed rejection and publish only after release gates; PostgreSQL-specific installed acceptance remains open. |
+| AppImage / Flatpak | ChaptarrNG archives exist; the BookshelfNG-identity bridge candidates are unpublished. | Same-identity .71 to local .978 migration, data-path preservation, health, and rollback passed with synthetic schema-158 databases. No defers conversion. | Publish signed/accepted artifacts and repeat with representative operator data. |
+| Docker / GHCR | Standard .977 images are public; mutable BookshelfNG aliases remain unchanged. | Exact-head image passed interactive TTY No/Yes, headless Ask/defer, automatic conversion, `/ping`, migration health, source backup, and injected-failure rollback. | External image/alias delivery remains gated and unpublished; pinned tags still need operator pull/recreate. |
+| Helm / OCI | No BookshelfNG-identity replacement chart is published. | Kind installed upgrade from main-v0.4.21.71 passed ask No/defer, Yes, health, and explicit source restore. | Publish the exact accepted chart/image and exercise the external OCI/GitOps delivery path. |
+| Cloudron | No ChaptarrNG package update is published. | Local exact-head Cloudron-image wrapper passed manual defer and automatic conversion. It has no terminal prompt; an administrator controls the app update and can set `BOOKSHELFNG_MIGRATION_MODE=manual` before updating. | Install/update/backup/restore on an actual Cloudron platform and feed acceptance remain open. |
+| StartOS, Unraid, Co-op Cloud, external catalogs | Candidate source or draft handoffs exist; no accepted replacement feeds are published. | Source/contract checks only; no installed device or service update/rollback acceptance. These platforms do not provide a common y/n prompt; StartOS exposes a setting and the container recipes expose a mode variable. | Signed StartOS package/device, Unraid Community Applications, Swarm update, and external catalog acceptance are still required. |
+| macOS standalone | No BookshelfNG-owned remote update route can redirect these installs. | Shared standalone launcher contract passed. A manually dispatched hosted workflow now builds and tests x64 and arm64 archives against checksum-pinned BookshelfNG .71 predecessors; the run is pending and does not publish assets. | One-time manual bootstrap and installed macOS acceptance remain open until both hosted jobs pass. |
+| FreeBSD standalone | No BookshelfNG-owned remote update route can redirect these installs. | FreeBSD 15.1 installed BookshelfNG .71 to the exact local .978 archive. Terminal No/Yes, health, retained source backup, and forced-failure rollback passed. | One-time manual launcher/service switch remains an operator action; publication is gated. |
+| Windows standalone installer | No BookshelfNG-owned remote update route can redirect this install. | Chocolatey acceptance does not cover the separate Windows migration installer; its candidate was built but not installed and accepted. | Install and accept the standalone installer separately; keep publication gated. |
+
+Core release validation passed on Linux, macOS, Windows, and PostgreSQL. An
+earlier Chocolatey package smoke covered install/uninstall with an empty
+database; the installed Windows Server 2025 acceptance above supersedes that
+smoke and verifies populated synthetic conversion, service/data continuity,
+retained source backup, and the optional No/Yes handoff. The local bridge
+package remains unpublished. The Windows VM build matrix also runs the
+Chocolatey ask choice handler with No, blank, Yes, and redirected-input cases.
 
 Before a release can publish, the workflow validates AUR private-key
 usability, package-scoped ChaptarrNG and BookshelfNG COPR webhook formats,

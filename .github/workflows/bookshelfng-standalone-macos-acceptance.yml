@@ -1,0 +1,81 @@
+# ng-runner-policy: hosted-first-v1
+name: BookshelfNG standalone macOS handoff acceptance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bookshelfng-standalone-macos-acceptance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  installed-handoff:
+    name: BookshelfNG .71 to current ${{ matrix.rid }} archive
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - rid: osx-x64
+          runner: macos-15-intel
+          predecessor_sha256: d4450af8991742b1e5bcb794b9ecb7f59b4d57e99b9a82dfc56cb437112955de
+        - rid: osx-arm64
+          runner: macos-15
+          predecessor_sha256: 50dfa8f20611afd3ff23615a964c33d39f0c026297240a334ad12c61c11d0298
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 26.12.1
+        package-manager-cache: false
+
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      with:
+        dotnet-version: 10.0.402
+
+    - name: Build frontend
+      run: |
+        npm install --global yarn@1.22.22
+        yarn install --frozen-lockfile
+        yarn build
+
+    - name: Build the current macOS standalone candidate
+      run: |
+        version="$(node -p 'require("./package.json").version')"
+        bash packaging/scripts/build-standalone.sh "$version" "${{ matrix.rid }}" "$RUNNER_TEMP/release-assets"
+
+    - name: Download and verify the public BookshelfNG predecessor
+      env:
+        PREDECESSOR_SHA256: ${{ matrix.predecessor_sha256 }}
+      run: |
+        set -euo pipefail
+        name='BookshelfNG-main-v0.4.21.71-${{ matrix.rid }}.tar.gz'
+        url="https://github.com/snapetech-org/bookshelfng/releases/download/main-v0.4.21.71/$name"
+        archive="$RUNNER_TEMP/$name"
+        curl --fail --location --retry 3 --retry-all-errors "$url" --output "$archive"
+        curl --fail --location --retry 3 --retry-all-errors "$url.sha256" --output "$archive.sha256"
+        (cd "$RUNNER_TEMP" && shasum -a 256 --check "$name.sha256")
+        printf '%s  %s\n' "$PREDECESSOR_SHA256" "$archive" | shasum -a 256 --check -
+        printf 'BOOKSHELFNG_PREDECESSOR_ARCHIVE=%s\n' "$archive" >> "$GITHUB_ENV"
+
+    - name: Verify the exact candidate archive
+      run: |
+        set -euo pipefail
+        archive="$RUNNER_TEMP/release-assets/ChaptarrNG-$(node -p 'require("./package.json").version')-${{ matrix.rid }}.tar.gz"
+        (cd "$(dirname "$archive")" && shasum -a 256 --check "$(basename "$archive").sha256")
+        printf 'CHAPTARRNG_CANDIDATE_ARCHIVE=%s\n' "$archive" >> "$GITHUB_ENV"
+
+    - name: Accept No, headless Manual, Yes, health, source backup, and failed-start rollback
+      env:
+        TMPDIR: ${{ runner.temp }}/bookshelfng-standalone-handoff-acceptance
+      run: |
+        mkdir -p "$TMPDIR"
+        python3 packaging/scripts/test-bookshelf-standalone-handoff.py \
+          "$BOOKSHELFNG_PREDECESSOR_ARCHIVE" "$CHAPTARRNG_CANDIDATE_ARCHIVE"

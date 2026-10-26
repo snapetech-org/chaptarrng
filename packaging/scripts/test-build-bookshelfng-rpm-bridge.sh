@@ -45,6 +45,17 @@ exit 0
 PAYLOAD
 chmod 0755 "$task_root/payload/ChaptarrNG/Chaptarr"
 printf 'synthetic archive license\n' > "$task_root/payload/ChaptarrNG/LICENSE"
+cat > "$task_root/payload/ChaptarrNG/playwright.ps1" <<'PWSH'
+#!/usr/bin/env pwsh
+exit 0
+PWSH
+mkdir -p "$task_root/payload/ChaptarrNG/.playwright/node/linux-x64"
+cat > "$task_root/payload/ChaptarrNG/.playwright/node/linux-x64/node" <<'NODE'
+#!/usr/bin/env node
+exit 0
+NODE
+chmod 0755 "$task_root/payload/ChaptarrNG/playwright.ps1" \
+  "$task_root/payload/ChaptarrNG/.playwright/node/linux-x64/node"
 tar -czf "$task_root/ChaptarrNG-0.9.977-linux-x64.tar.gz" \
   -C "$task_root/payload" ChaptarrNG
 
@@ -62,7 +73,7 @@ docker run --rm -i --user 0:0 "${docker_proxy_args[@]}" \
   "$test_image" sh -s > "$task_root/evidence/rpm-transaction.log" 2>&1 <<'FEDORA_TEST'
 set -eu
 export DNF_YUM_AUTO_YES=1
-dnf -q install -y expect rpm-build systemd libicu openssl-libs sqlite-libs util-linux zlib \
+dnf -q install -y expect rpm-build systemd libicu openssl-libs python3 sqlite-libs util-linux zlib \
   > /work/evidence/fedora-dependencies.log 2>&1
 
 top=/work/rpmbuild
@@ -79,7 +90,8 @@ cp /repo/packaging/legacy/rpm/bookshelfng.env \
   /repo/packaging/legacy/scripts/bookshelfng-cleanup \
   /repo/packaging/legacy/scripts/bookshelfng-rollback \
   /repo/packaging/legacy/scripts/bookshelfng-prepare \
-  /repo/packaging/legacy/scripts/bookshelfng-journal "$top/SOURCES/"
+  /repo/packaging/legacy/scripts/bookshelfng-journal \
+  /repo/packaging/legacy/scripts/bookshelfng-finalize "$top/SOURCES/"
 sed 's/__VERSION__/0.9.977/g' /repo/packaging/legacy/rpm/bookshelfng.spec.in \
   > "$top/SPECS/bookshelfng.spec"
 
@@ -89,6 +101,24 @@ cat > /work/old-payload/Readarr <<'OLDAPP'
 exit 0
 OLDAPP
 chmod 0755 /work/old-payload/Readarr
+cat > /work/old-payload/bookshelfng.service <<'OLDUNIT'
+[Unit]
+Description=BookshelfNG personal book library manager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bookshelfng
+Group=bookshelfng
+EnvironmentFile=-/etc/bookshelfng/bookshelfng.env
+ExecStart=/usr/lib/bookshelfng/Readarr -nobrowser -data=/var/lib/bookshelfng
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+OLDUNIT
 cat > "$top/SPECS/bookshelfng-old.spec" <<'OLDSPEC'
 Name: bookshelfng
 Version: 0.4.21.71
@@ -103,7 +133,7 @@ Synthetic package fixture for the ChaptarrNG migration bridge transaction.
 %install
 install -D -m 0755 /work/old-payload/Readarr %{buildroot}/usr/lib/bookshelfng/Readarr
 install -D -m 0600 /repo/packaging/legacy/rpm/bookshelfng.env %{buildroot}/etc/bookshelfng/bookshelfng.env
-install -D -m 0644 /repo/packaging/legacy/rpm/bookshelfng.service %{buildroot}/usr/lib/systemd/system/bookshelfng.service
+install -D -m 0644 /work/old-payload/bookshelfng.service %{buildroot}/usr/lib/systemd/system/bookshelfng.service
 install -d %{buildroot}/usr/bin
 ln -s ../lib/bookshelfng/Readarr %{buildroot}/usr/bin/bookshelfng
 
@@ -120,6 +150,10 @@ old_rpm="$top/RPMS/x86_64/bookshelfng-0.4.21.71-1.x86_64.rpm"
 new_rpm=$(find "$top/RPMS/x86_64" -maxdepth 1 -name 'bookshelfng-0.9.977-1*.rpm' -print -quit)
 test -s "$old_rpm"
 test -s "$new_rpm"
+if rpm -qp --requires "$new_rpm" | grep -FxE '/usr/bin/(node|pwsh)'; then
+  echo 'RPM auto-generated a dependency on an optional Playwright runtime helper.' >&2
+  exit 1
+fi
 
 mv /usr/bin/systemctl /usr/bin/systemctl.rpm-bridge-test-real
 cat > /usr/bin/systemctl <<'SYSTEMCTL'
@@ -128,11 +162,14 @@ printf '%s\n' "$*" >> /work/evidence/systemctl.log
 case "$1" in
   is-active) test -f /run/bookshelfng-rpm-test-active ;;
   stop) rm -f /run/bookshelfng-rpm-test-active ;;
-  start) touch /run/bookshelfng-rpm-test-active ;;
+  start)
+    /usr/lib/chaptarrng/handoff/bookshelfng-begin
+    touch /run/bookshelfng-rpm-test-active
+    ;;
   show)
     case "$2" in
       --property=FragmentPath) printf '%s\n' /usr/lib/systemd/system/bookshelfng.service ;;
-      --property=DropInPaths) printf '\n' ;;
+      --property=DropInPaths) printf '%s\n' "${RPM_TEST_DROPIN_PATHS:-}" ;;
     esac
     ;;
   *) exit 0 ;;
@@ -145,7 +182,21 @@ printf '# operator-override=true\n' >> /etc/bookshelfng/bookshelfng.env
 mkdir -p /var/lib/bookshelfng
 printf 'migration-data-canary\n' > /var/lib/bookshelfng/data-canary
 touch /run/bookshelfng-rpm-test-active
+export RPM_TEST_DROPIN_PATHS=/usr/lib/systemd/system/service.d/10-timeout-abort.conf
 export RPM_CANDIDATE="$new_rpm"
+
+if env BOOKSHELFNG_MIGRATION_MODE=ask dnf -q install -y "$RPM_CANDIDATE" \
+    </dev/null > /work/evidence/ask-headless.log 2>&1; then
+  echo 'RPM ask mode unexpectedly accepted a package upgrade without a controlling terminal.' >&2
+  exit 1
+fi
+grep -Fq 'no terminal is available' /work/evidence/ask-headless.log
+! grep -Fq '[y/N]' /work/evidence/ask-headless.log
+test "$(rpm -q --qf '%{VERSION}-%{RELEASE}' bookshelfng)" = 0.4.21.71-1
+test -x /usr/lib/bookshelfng/Readarr
+test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff
+test -f /run/bookshelfng-rpm-test-active
 
 if ! expect <<'ASKNO'
 log_user 1
@@ -179,6 +230,7 @@ test -x /usr/lib/bookshelfng/Readarr
 test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
 test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff
 test -f /run/bookshelfng-rpm-test-active
+test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff-status
 grep -Fq '# operator-override=true' /etc/bookshelfng/bookshelfng.env
 grep -Fq 'migration-data-canary' /var/lib/bookshelfng/data-canary
 test ! -s /work/evidence/systemctl.log
@@ -205,17 +257,56 @@ then
   exit 1
 fi
 
+{
+  printf 'package='; rpm -q bookshelfng 2>&1 || true
+  printf 'pending='; test -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending && echo yes || echo no
+  printf 'status='; cat /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff-status 2>&1 || true
+  printf 'handoff='; test -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff && echo present || echo absent
+  printf 'package-active-marker='; test -e /run/bookshelfng-package-was-active && echo yes || echo no
+  printf 'systemctl calls:\n'; cat /work/evidence/systemctl.log
+} > /work/evidence/post-yes-state.log 2>&1
+
 grep -Fq '[y/N]' /work/evidence/ask-no.log
 grep -Fq 'replacement cancelled' /work/evidence/ask-no.log
 grep -Fq '[y/N]' /work/evidence/ask-yes.log
 test "$(rpm -q --qf '%{VERSION}' bookshelfng)" = 0.9.977
 test -x /usr/lib/chaptarrng/bin/Chaptarr
-test -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff/snapshot-ready
-test -x /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff/source-app/Readarr
-test -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+test "$(cat /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff-status)" = healthy
+test ! -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+test ! -e /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff
+test -x /usr/lib/chaptarrng/handoff/bookshelfng-finalize
 test -f /run/bookshelfng-rpm-test-active
+test ! -e /run/bookshelfng-package-was-active
 grep -Fq '# operator-override=true' /etc/bookshelfng/bookshelfng.env
 grep -Fq 'migration-data-canary' /var/lib/bookshelfng/data-canary
+grep -Fq 'Environment=CHAPTARR_BOOKSHELF_HANDOFF_HEALTH_MODE=database-listener' /usr/lib/systemd/system/bookshelfng.service
+grep -Fq 'BookshelfNG handoff database and local HTTP checks passed in the RPM transaction.' /work/evidence/ask-yes.log
+
+mkdir -p /work/evidence/proc-net
+printf '1\n' > /work/evidence/selinux-enforce
+printf '  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n   0: 00000000:2253 00000000:0000 0A 00000000:00000000 00:00000000 00000000 1000 0 1234\n' > /work/evidence/proc-net/tcp
+printf '  sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n' > /work/evidence/proc-net/tcp6
+touch /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+printf 'starting\n' > /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff-status
+touch /run/bookshelfng-package-was-active
+CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS=2 \
+CHAPTARR_BOOKSHELF_HANDOFF_HEALTH_MODE=database-listener \
+CHAPTARR_BOOKSHELF_SELINUX_ENFORCE_FILE=/work/evidence/selinux-enforce \
+CHAPTARR_BOOKSHELF_PROC_NET_TCP_FILE=/work/evidence/proc-net/tcp \
+CHAPTARR_BOOKSHELF_PROC_NET_TCP6_FILE=/work/evidence/proc-net/tcp6 \
+/usr/lib/chaptarrng/handoff/bookshelfng-healthcheck > /work/evidence/selinux-package-healthcheck.log
+test "$(cat /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff-status)" = starting
+test -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+rm -f /run/bookshelfng-package-was-active
+CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS=2 \
+CHAPTARR_BOOKSHELF_HANDOFF_HEALTH_MODE=database-listener \
+CHAPTARR_BOOKSHELF_SELINUX_ENFORCE_FILE=/work/evidence/selinux-enforce \
+CHAPTARR_BOOKSHELF_PROC_NET_TCP_FILE=/work/evidence/proc-net/tcp \
+CHAPTARR_BOOKSHELF_PROC_NET_TCP6_FILE=/work/evidence/proc-net/tcp6 \
+/usr/lib/chaptarrng/handoff/bookshelfng-healthcheck > /work/evidence/selinux-manual-healthcheck.log
+test "$(cat /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff-status)" = healthy
+test ! -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+grep -Fq database-and-listener-readable /var/lib/bookshelfng/.chaptarrng-bookshelfng-journal/outcomes/health
 
 stop_line=$(grep -n '^stop ' /work/evidence/systemctl.log | head -1 | cut -d: -f1)
 start_line=$(grep -n '^start ' /work/evidence/systemctl.log | head -1 | cut -d: -f1)
@@ -224,9 +315,50 @@ test -n "$stop_line" && test -n "$start_line" && test "$stop_line" -lt "$start_l
 rpm -Uvh --nodeps --oldpackage "$old_rpm"
 test "$(rpm -q --qf '%{VERSION}-%{RELEASE}' bookshelfng)" = 0.4.21.71-1
 test -x /usr/lib/bookshelfng/Readarr
+grep -Fq 'ExecStart=/usr/lib/bookshelfng/Readarr' /usr/lib/systemd/system/bookshelfng.service
 grep -Fq '# operator-override=true' /etc/bookshelfng/bookshelfng.env
 grep -Fq 'migration-data-canary' /var/lib/bookshelfng/data-canary
-echo 'Fedora 44 RPM ask-mode No/Yes, active-service handoff, and downgrade checks passed; systemd was mocked.'
+
+touch /run/bookshelfng-rpm-test-active
+export RPM_TEST_DROPIN_PATHS=/etc/systemd/system/bookshelfng.service.d/operator.conf
+if ! expect <<'ASKYES_CUSTOM_DROPIN'
+log_user 1
+log_file -noappend /work/evidence/ask-yes-custom-dropin.log
+set timeout 180
+set prompt_seen 0
+spawn env BOOKSHELFNG_MIGRATION_MODE=ask dnf -q install -y $::env(RPM_CANDIDATE)
+expect {
+  -re {Replace BookshelfNG with ChaptarrNG now\?.*\[y/N\] } { set prompt_seen 1; send -- "y\r" }
+  timeout { exit 98 }
+  eof { exit 99 }
+}
+expect eof
+set result [wait]
+if {!$prompt_seen || [lindex $result 3] != 0} { exit 96 }
+exit 0
+ASKYES_CUSTOM_DROPIN
+then
+  echo 'RPM ask mode did not defer safely for a unit-specific systemd drop-in.' >&2
+  cat /work/evidence/ask-yes-custom-dropin.log >&2 || true
+  exit 1
+fi
+
+grep -Fq '[y/N]' /work/evidence/ask-yes-custom-dropin.log
+test "$(rpm -q --qf '%{VERSION}' bookshelfng)" = 0.9.977
+test -x /usr/lib/bookshelfng/Readarr
+grep -Fq 'ExecStart=/usr/lib/bookshelfng/Readarr' /usr/lib/systemd/system/bookshelfng.service
+test "$(cat /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff-status)" = operator-review-required
+test -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
+test -f /run/bookshelfng-rpm-test-active
+grep -Fq '# operator-override=true' /etc/bookshelfng/bookshelfng.env
+grep -Fq 'migration-data-canary' /var/lib/bookshelfng/data-canary
+
+rpm -Uvh --nodeps --oldpackage "$old_rpm"
+test "$(rpm -q --qf '%{VERSION}-%{RELEASE}' bookshelfng)" = 0.4.21.71-1
+test -x /usr/lib/bookshelfng/Readarr
+grep -Fq '# operator-override=true' /etc/bookshelfng/bookshelfng.env
+grep -Fq 'migration-data-canary' /var/lib/bookshelfng/data-canary
+echo 'Fedora 44 RPM ask No/Yes, post-transaction HTTP finalization, SELinux listener fallback, distro drop-in, unit-specific deferral, and downgrade passed; systemd was mocked.'
 FEDORA_TEST
 
 echo 'BookshelfNG RPM bridge prompt transaction passed in Fedora 44.'

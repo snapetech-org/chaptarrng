@@ -72,13 +72,21 @@ if [ "$expect_data_value" = true ] || [ "$custom_data_count" -gt 1 ] || [ -z "$d
   exit 2
 fi
 console="$(dirname "$app")/Chaptarr.Console"
+if [ ! -x "$console" ]; then
+  # Standalone release archives name the .NET apphost Chaptarr and route
+  # utility modes through that same executable. Windows package layouts keep
+  # a separate Chaptarr.Console entry point.
+  console="$app"
+fi
+run_utility() {
+  "$console" -exitimmediately "$@"
+}
 state_file="$data_dir/.chaptarrng-bookshelfng-desktop-handoff"
 metadata_dir="$data_dir/.chaptarrng-bookshelfng-desktop-handoff-data"
 lock_dir="$data_dir/.chaptarrng-bookshelfng-desktop.lock"
 app_pid=''
 app_launcher_pid=''
 app_process_group=''
-health_pid=''
 healthy=false
 resuming=false
 
@@ -103,6 +111,10 @@ record_channel() {
     record_journal outcome channel desktop
     record_journal outcome desktop-launcher "${BOOKSHELFNG_DESKTOP_CHANNEL:-unknown}"
   fi
+}
+
+has_controlling_tty() {
+  [ -t 0 ] && ( : </dev/tty >/dev/tty ) 2>/dev/null
 }
 
 process_is_running() {
@@ -143,7 +155,6 @@ lock_owner_is_running() {
 }
 
 cleanup() {
-  if [ -n "$health_pid" ] && process_is_running "$health_pid"; then kill -TERM "$health_pid" 2>/dev/null || true; fi
   terminate_app_tree
   rm -rf "$lock_dir"
   rm -f "$state_file.tmp-$$"
@@ -159,7 +170,7 @@ launch_without_migration() {
 }
 
 restore_source_database() {
-  if "$console" -preview-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
+  if run_utility -preview-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
     # The atomic converter left the BookshelfNG source database untouched.
     return 0
   fi
@@ -169,7 +180,7 @@ restore_source_database() {
     postgres_backup_dir=$(cat "$metadata_dir/postgres-backup-directory" 2>/dev/null || true)
     if [ -n "$postgres_backup_dir" ] && [ -d "$postgres_backup_dir" ] &&
        find "$postgres_backup_dir" -type f -name 'postgres-main.dump' -print -quit | grep -q .; then
-      "$console" -preview-bookshelf-postgres-restore -confirm-bookshelf-service-stopped \
+      run_utility -preview-bookshelf-postgres-restore -confirm-bookshelf-service-stopped \
         "-bookshelf-postgres-backup=$postgres_backup_dir" "-data=$data_dir" || return $?
       if find "$postgres_backup_dir" -type f \
         \( -name 'postgres-log.dump' -o -name 'postgres-cache.dump' \) -print -quit | grep -q .; then
@@ -178,7 +189,7 @@ restore_source_database() {
           echo "Could not create a retained ChaptarrNG PostgreSQL log/cache backup directory: $target_postgres_backup" >&2
           return 1
         fi
-        if ! "$console" -backup-bookshelf-postgres -confirm-bookshelf-service-stopped \
+        if ! run_utility -backup-bookshelf-postgres -confirm-bookshelf-service-stopped \
           -bookshelf-postgres-log-cache-only \
           "-bookshelf-postgres-backup=$target_postgres_backup" "-data=$data_dir"; then
           echo "Could not preserve the current ChaptarrNG PostgreSQL log/cache data at $target_postgres_backup" >&2
@@ -189,7 +200,7 @@ restore_source_database() {
           rmdir "$target_postgres_backup"
         fi
       fi
-      "$console" -restore-bookshelf-postgres -confirm-bookshelf-service-stopped \
+      run_utility -restore-bookshelf-postgres -confirm-bookshelf-service-stopped \
         "-bookshelf-postgres-backup=$postgres_backup_dir" "-data=$data_dir"
       return $?
     fi
@@ -213,7 +224,7 @@ restore_source_database() {
     done
 
     if [ -n "$newest_backup" ]; then
-      "$console" -restore-bookshelf -confirm-bookshelf-service-stopped \
+      run_utility -restore-bookshelf -confirm-bookshelf-service-stopped \
         "-bookshelf-backup=$newest_backup" "-data=$data_dir"
       return $?
     fi
@@ -299,7 +310,7 @@ case "$handoff_state" in
     if [ -x "$journal_tool" ]; then record_journal state detected; fi
     ;;
   healthy)
-    if "$console" -check-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
+    if run_utility -check-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
       launch_without_migration "$@"
     fi
     write_state intervention-required
@@ -307,7 +318,7 @@ case "$handoff_state" in
     exit 1
     ;;
   starting)
-    if "$console" -check-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
+    if run_utility -check-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
       resuming=true
     elif restore_source_database; then
       write_state rolled-back
@@ -327,7 +338,7 @@ case "$handoff_state" in
     ;;
 esac
 
-if [ "$resuming" != true ] && "$console" -check-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
+if [ "$resuming" != true ] && run_utility -check-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
   launch_without_migration "$@"
 fi
 
@@ -366,12 +377,22 @@ if [ "$resuming" != true ]; then
       fi
       printf '%s\n' 'BookshelfNG conversion was deferred; its source database was not changed.' \
         'Extract the ChaptarrNG package, stop BookshelfNG, then run:' >&2
-      printf '  "%s" -preview-bookshelf-migration "-data=%s"\n' "$console" "$data_dir" >&2
-      printf '  "%s" -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=%s"\n' "$console" "$data_dir" >&2
+      printf '  "%s" -preview-bookshelf-migration "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
+      printf '  "%s" -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
       exit 0
       ;;
     ask)
-      if command -v zenity >/dev/null 2>&1; then
+      # A terminal launch should keep the choice in the terminal even when
+      # the desktop session also provides zenity. Desktop launches normally
+      # have no controlling terminal and continue to use the graphical prompt.
+      if has_controlling_tty; then
+        printf 'Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically. [y/N] ' >/dev/tty
+        IFS= read -r migration_choice </dev/tty || migration_choice=
+        case "$migration_choice" in
+          y|Y|yes|YES|Yes) ;;
+          *) echo 'BookshelfNG conversion deferred. The source database was left untouched.' >&2; exit 0 ;;
+        esac
+      elif command -v zenity >/dev/null 2>&1; then
         if ! zenity --question --default-cancel --ok-label='Replace now' --cancel-label='Not now' --title='ChaptarrNG migration' \
           --text='Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically and its source retained for rollback.'; then
           zenity --info --title='Migration deferred' \
@@ -379,13 +400,6 @@ if [ "$resuming" != true ]; then
           echo 'BookshelfNG conversion deferred. The source database was left untouched.' >&2
           exit 0
         fi
-      elif [ -r /dev/tty ]; then
-        printf 'Replace BookshelfNG with ChaptarrNG now? A still-legacy database will be migrated automatically. [y/N] ' >/dev/tty
-        IFS= read -r migration_choice </dev/tty || migration_choice=
-        case "$migration_choice" in
-          y|Y|yes|YES|Yes) ;;
-          *) echo 'BookshelfNG conversion deferred. The source database was left untouched.' >&2; exit 0 ;;
-        esac
       else
         echo 'MigrationMode=ask needs zenity or an interactive terminal. The source database was left untouched.' >&2
         exit 1
@@ -398,13 +412,13 @@ if [ "$resuming" != true ]; then
   esac
 fi
 
-if ! command -v setsid >/dev/null 2>&1 || ! setsid --help 2>&1 | grep -q -- '--wait'; then
-  echo 'BookshelfNG desktop migration requires util-linux setsid with --wait so failed startup can stop the complete application process tree.' >&2
-  exit 1
+isolated_app_process=false
+if command -v setsid >/dev/null 2>&1 && setsid --help 2>&1 | grep -q -- '--wait'; then
+  isolated_app_process=true
 fi
 
 if [ "$resuming" != true ]; then
-  if ! "$console" -preview-bookshelf-migration "-data=$data_dir"; then
+  if ! run_utility -preview-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
     write_state intervention-required
     echo 'BookshelfNG migration preflight failed. The source database was not changed; inspect the ChaptarrNG migration journal before retrying.' >&2
     exit 1
@@ -431,12 +445,12 @@ if [ "$resuming" != true ]; then
     chmod 0700 "$postgres_backup_dir"
     printf '%s\n' "$postgres_backup_dir" > "$metadata_dir/postgres-backup-directory"
     chmod 0600 "$metadata_dir/postgres-backup-directory"
-    if ! "$console" -check-bookshelf-postgres-backup -confirm-bookshelf-service-stopped "-data=$data_dir"; then
+    if ! run_utility -check-bookshelf-postgres-backup -confirm-bookshelf-service-stopped "-data=$data_dir"; then
       write_state intervention-required
       echo 'BookshelfNG PostgreSQL backup preflight failed. The source database was not changed.' >&2
       exit 1
     fi
-    if ! "$console" -backup-bookshelf-postgres -confirm-bookshelf-service-stopped \
+    if ! run_utility -backup-bookshelf-postgres -confirm-bookshelf-service-stopped \
         "-bookshelf-postgres-backup=$postgres_backup_dir" "-data=$data_dir"; then
       write_state intervention-required
       echo "BookshelfNG PostgreSQL backup failed; migration is blocked. Preserve $postgres_backup_dir for review." >&2
@@ -600,54 +614,60 @@ if [ "${#timeout_seconds}" -gt 5 ] || [ "$timeout_seconds" -lt 1 ] || [ "$timeou
 fi
 
 app_pid_file="$lock_dir/app.pid"
-if [ "$custom_data_argument" = true ]; then
-  setsid --wait sh -c 'printf "%s\n" "$$" > "$1"; shift; exec "$@"' bookshelfng-app "$app_pid_file" "$app" -nobrowser "$@" &
-else
-  setsid --wait sh -c 'printf "%s\n" "$$" > "$1"; shift; exec "$@"' bookshelfng-app "$app_pid_file" "$app" -nobrowser "-data=$data_dir" "$@" &
-fi
-app_launcher_pid=$!
-app_start_deadline=$(( $(date +%s) + 10 ))
-while [ ! -s "$app_pid_file" ] && [ "$(date +%s)" -lt "$app_start_deadline" ]; do
-  if ! process_is_running "$app_launcher_pid"; then break; fi
-  sleep 0.1
-done
-app_pid=$(cat "$app_pid_file" 2>/dev/null || true)
-case "$app_pid" in ''|*[!0-9]*) app_pid='' ;; esac
-if [ -n "$app_pid" ]; then
-  observed_group=$(ps -o pgid= -p "$app_pid" 2>/dev/null | tr -d '[:space:]' || true)
-  if [ "$observed_group" = "$app_pid" ]; then
-    app_process_group=$observed_group
+if [ "$isolated_app_process" = true ]; then
+  if [ "$custom_data_argument" = true ]; then
+    setsid --wait sh -c 'printf "%s\n" "$$" > "$1"; shift; exec "$@"' bookshelfng-app "$app_pid_file" "$app" -nobrowser "$@" &
   else
-    echo 'The desktop application did not enter its isolated process group; stopping before the migration health check.' >&2
-    terminate_app_tree
-    wait "$app_launcher_pid" 2>/dev/null || true
-    exit 1
+    setsid --wait sh -c 'printf "%s\n" "$$" > "$1"; shift; exec "$@"' bookshelfng-app "$app_pid_file" "$app" -nobrowser "-data=$data_dir" "$@" &
+  fi
+  app_launcher_pid=$!
+  app_start_deadline=$(( $(date +%s) + 10 ))
+  while [ ! -s "$app_pid_file" ] && [ "$(date +%s)" -lt "$app_start_deadline" ]; do
+    if ! process_is_running "$app_launcher_pid"; then break; fi
+    sleep 0.1
+  done
+  app_pid=$(cat "$app_pid_file" 2>/dev/null || true)
+  case "$app_pid" in ''|*[!0-9]*) app_pid='' ;; esac
+else
+  if [ "$custom_data_argument" = true ]; then
+    "$app" -nobrowser "$@" &
+  else
+    "$app" -nobrowser "-data=$data_dir" "$@" &
+  fi
+  app_launcher_pid=$!
+  app_pid=$app_launcher_pid
+fi
+if [ -n "$app_pid" ] && process_is_running "$app_pid"; then
+  if [ "$isolated_app_process" = true ]; then
+    observed_group=$(ps -o pgid= -p "$app_pid" 2>/dev/null | tr -d '[:space:]' || true)
+    if [ "$observed_group" = "$app_pid" ]; then
+      app_process_group=$observed_group
+    else
+      echo 'The desktop application did not enter its isolated process group; stopping before the migration health check.' >&2
+      terminate_app_tree
+      wait "$app_launcher_pid" 2>/dev/null || true
+      exit 1
+    fi
   fi
 else
   echo 'The desktop application did not start; no migration health check was run.' >&2
   wait "$app_launcher_pid" 2>/dev/null || true
   exit 1
 fi
-"$console" -check-bookshelf-migration "-data=$data_dir" \
-  "-bookshelf-health-url=$health_url" \
-  "-bookshelf-health-timeout-seconds=$timeout_seconds" >/dev/null 2>&1 &
-health_pid=$!
-
+health_deadline=$(( $(date +%s) + timeout_seconds ))
 while :; do
   if ! process_is_running "$app_pid"; then
-    echo 'ChaptarrNG exited before both the database and local HTTP health checks passed.' >&2
     break
   fi
 
-  if ! process_is_running "$health_pid"; then
-    if wait "$health_pid"; then
-      healthy=true
-    else
-      echo "ChaptarrNG did not pass the database and local HTTP health checks within $timeout_seconds seconds." >&2
-    fi
+  if run_utility -check-bookshelf-migration "-data=$data_dir" \
+      "-bookshelf-health-url=$health_url" \
+      -bookshelf-health-timeout-seconds=1 >/dev/null 2>&1; then
+    if process_is_running "$app_pid"; then healthy=true; fi
     break
   fi
 
+  if [ "$(date +%s)" -ge "$health_deadline" ]; then break; fi
   sleep 1
 done
 
@@ -658,9 +678,17 @@ if [ "$healthy" = true ]; then
   exit $?
 fi
 
-if process_is_running "$health_pid"; then kill -TERM "$health_pid" 2>/dev/null || true; fi
+if process_is_running "$app_pid"; then
+  if [ "$(date +%s)" -ge "$health_deadline" ]; then
+    echo "ChaptarrNG did not pass the database and local HTTP health checks within $timeout_seconds seconds." >&2
+  else
+    echo 'ChaptarrNG exited before both the database and local HTTP health checks passed.' >&2
+  fi
+else
+  echo 'ChaptarrNG exited before both the database and local HTTP health checks passed.' >&2
+fi
+
 terminate_app_tree
-wait "$health_pid" 2>/dev/null || true
 wait "$app_launcher_pid" 2>/dev/null || true
 
 if restore_source_database; then

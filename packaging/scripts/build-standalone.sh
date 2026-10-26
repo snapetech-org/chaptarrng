@@ -66,6 +66,14 @@ if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
   )
 fi
 
+# The Windows targeting pack metadata shipped with .NET 10.0.402 also lists
+# FreeBSD as a WindowsDesktop runtime identifier, but no WindowsDesktop
+# runtime pack exists for FreeBSD. This server uses the portable console
+# project, so avoid restoring that unrelated framework pack for this RID.
+if [[ "$rid" == freebsd-x64 ]]; then
+  restore_sources+=("-p:EnableWindowsTargeting=false")
+fi
+
 dotnet publish src/NzbDrone.Console/Chaptarr.Console.csproj \
   --configuration Release \
   --framework net10.0 \
@@ -95,6 +103,17 @@ if [[ "$rid" == linux-* || "$rid" == osx-* ]]; then
   mkdir -p "$bundle/scripts"
   install -m 0755 scripts/bookshelfng-to-chaptarrng.sh \
     "$bundle/scripts/bookshelfng-to-chaptarrng.sh"
+fi
+
+if [[ "$rid" == osx-* || "$rid" == freebsd-x64 ]]; then
+  handoff_dir="$bundle/scripts/bookshelfng-handoff"
+  mkdir -p "$handoff_dir"
+  install -m 0755 scripts/bookshelfng-standalone-launch.sh \
+    "$bundle/scripts/bookshelfng-standalone-launch.sh"
+  install -m 0755 packaging/legacy/desktop/bookshelfng-supervisor.sh \
+    "$handoff_dir/bookshelfng-supervisor.sh"
+  install -m 0755 packaging/legacy/scripts/bookshelfng-journal \
+    "$handoff_dir/bookshelfng-journal"
 fi
 
 if [[ "$rid" == linux-x64 || "$rid" == linux-arm64 ]]; then

@@ -1,18 +1,23 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Release status (2026-10-25).** ChaptarrNG `v0.9.977` remains the latest
-> public release. The current `main` source contains the BookshelfNG migration,
-> compatibility, and packaging work described below, including support for
-> native Hardcover identities and recognized historical SQLite schemas. The
-> published `.977` build does not include those later changes. Current source
-> remains unpublished; BookshelfNG stays in service until exact-head validation,
-> representative-data migration and rollback, live provider and media behavior,
-> and installed-channel handoff are accepted. No release, compatibility bridge,
-> or cutover has been authorized.
+> **Release status (2026-10-26).** ChaptarrNG `v0.9.977` remains the latest
+> public release. Local 0.9.978 candidates have passed installed handoff
+> acceptance on Debian, Fedora, Arch, Windows Chocolatey, AppImage, Flatpak,
+> Helm, and Docker. Docker offers y/n with an attached TTY; headless Docker
+> and Helm defer Ask mode. The Cloudron image wrapper passed local
+> manual/automatic runtime checks, but platform update and restore acceptance
+> remains open. FreeBSD standalone archives passed installed No/Yes and rollback
+> acceptance in a FreeBSD 15.1 VM. These candidates remain unpublished; StartOS,
+> Co-op Cloud, Unraid, external catalogs, the standalone Windows installer,
+> macOS, and the Cloudron platform still need platform-specific acceptance. Representative operator-data
+> and provider acceptance remain open, and no release, bridge publication, or
+> cutover has been authorized. See the
+> [channel acceptance matrix](maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
 
-> The current local code pass also adds handoff candidates for container
-> platforms and a guarded first-start supervisor. Those changes are not part
-> of the published image and have not yet received the bulk validation pass.
+> Local Docker and Helm acceptance exercises passed, including deferred Ask,
+> automatic handoff, health checks, and recovery. They do not publish an
+> image/chart or establish acceptance of external catalogs and appliance
+> platforms.
 >
 > SQLite and PostgreSQL migration operate on staged copies and retain the
 > untouched source for rollback. Synthetic conversion and rollback coverage is
@@ -34,20 +39,22 @@ incomplete.
 
 ## Choose the migration timing
 
-Legacy package updates keep automatic migration as the unattended default. To
-choose before a package transition, set `MigrationMode=ask` for Chocolatey or
+Legacy package updates keep automatic migration as the unattended default.
+To choose before conversion, set `MigrationMode=ask` for Chocolatey or
 `BOOKSHELFNG_MIGRATION_MODE=ask` for Debian, RPM, or AUR. The prompt defaults
-to **No**. Declining cancels the package transition before it stops the
-service, stages new application files, or changes the database. Use
-`MigrationMode=manual` or `BOOKSHELFNG_MIGRATION_MODE=manual` to cancel a
-package transition without prompting and follow the standalone migration steps
-below.
+to **No**. Chocolatey, dpkg, and RPM can cancel their package transaction
+before service or application staging. Pacman cannot cancel a transaction from
+a scriptlet: on No, the AUR hook lets the transaction complete, restores the
+saved BookshelfNG application/unit/launcher, leaves the database unchanged, and
+defers conversion to the next package transaction. Use `manual` to defer
+conversion without prompting; whether that cancels package installation depends
+on the package manager.
 
 | Choice | What happens |
 | --- | --- |
 | Automatic | Package transitions convert BookshelfNG data automatically; this remains the unattended default. Desktop launchers convert at first launch. |
-| Ask | Package prompts default to No and cancel before package or data changes. Desktop No defers conversion and exits the new launcher with the source database unchanged. |
-| Manual | Cancels package transitions before mutation. Desktop launchers skip conversion. Use the standalone Console to preview and apply when ready. |
+| Ask | Prompts default to No. Chocolatey/dpkg/RPM cancel before staging. Pacman completes the package transaction, restores the prior BookshelfNG runtime, and retries the choice on a later transaction. Desktop and container No defer conversion without undoing deployment. |
+| Manual | Defers conversion without prompting. Chocolatey/dpkg/RPM cancel the package transaction; the AUR transaction completes and restores BookshelfNG. Desktop launchers skip conversion. Use the standalone Console to preview and apply when ready. |
 
 AppImage and Flatpak read `BOOKSHELFNG_MIGRATION_MODE` at first launch of the
 new artifact. There, **No** or `manual` skips startup conversion and leaves
@@ -65,9 +72,11 @@ choco upgrade bookshelfng --yes --params "'/MigrationMode=manual'"
 ```
 
 For Debian, RPM, and AUR package hooks, the environment variable accepts
-`automatic`, `ask`, or `manual`. `ask` requires a terminal; a package
-transaction without one stops safely and asks you to select `automatic` or
-`manual` explicitly. For example:
+`automatic`, `ask`, or `manual`. Debian and RPM require a terminal for
+`ask` and cancel before staging when none is available. Pacman has no
+transaction-cancel hook: without a terminal it completes the package
+transaction, restores BookshelfNG, and defers conversion. Set `automatic` or
+`manual` explicitly for noninteractive runs. For example:
 
 ```sh
 sudo env BOOKSHELFNG_MIGRATION_MODE=ask apt-get upgrade bookshelfng
@@ -121,7 +130,12 @@ Compose, Unraid, and StartOS candidates preserve the native Hardcover defaults
 used by those channels; standalone desktop launchers retain their Goodreads
 default. The Cloudron candidate keeps `/ping` available during supervised
 migration on its existing port while proxying application traffic to the local
-ChaptarrNG process. The Helm bridge infers the old chart's flavor and readable overrides,
+ChaptarrNG process. It has no terminal prompt: the administrator holds or
+applies the app update, or sets `BOOKSHELFNG_MIGRATION_MODE=manual` before
+updating and switches to `automatic` when accepting conversion. The local
+image-wrapper manual/automatic rehearsal passed; Cloudron platform update,
+backup, and restore acceptance remains open. The Helm bridge infers the old
+chart's flavor and readable overrides,
 and requires `bookshelfMigration.providerMode` when a Secret or an unrecognized
 image tag leaves the effective mode ambiguous. Never infer provider mode from
 numeric IDs.
@@ -253,27 +267,34 @@ manual standalone macOS or FreeBSD install, download the matching ChaptarrNG
 Compare the archive's digest with the first field in the sidecar. Use
 `shasum -a 256 ARCHIVE.tar.gz` on macOS or `sha256 ARCHIVE.tar.gz` on FreeBSD.
 Extract ChaptarrNG beside the existing BookshelfNG files. Stop the old process
-before starting the replacement. Use the exact data directory, arguments, and
-service environment from the existing launcher, including any PostgreSQL and
-provider settings. Keep credentials in the existing service environment; do
-not print or paste them. Keep the prior application directory until the first
-ChaptarrNG startup passes its health check.
+before starting the replacement. Use the bundled
+`scripts/bookshelfng-standalone-launch.sh` for the first start; running
+`Chaptarr` directly skips the optional handoff prompt. The launcher defaults
+to Ask when a terminal is available and Manual when it is not. Answer No to
+leave the predecessor data unchanged; restart BookshelfNG if you stopped its
+service before the handoff. Answer Yes to stage migration and start the
+replacement. You can also set `BOOKSHELFNG_MIGRATION_MODE=ask`, `manual`, or
+`automatic` explicitly. Use the exact data directory, arguments, and service
+environment from the existing launcher, including any PostgreSQL and provider
+settings. Keep credentials in the existing service environment; do not print
+or paste them. Keep the prior application directory until the first ChaptarrNG
+startup passes its health check.
 
 For example, from the extracted ChaptarrNG directory:
 
 ```sh
-./Chaptarr -nobrowser -data="$HOME/.local/share/bookshelfng"
+./scripts/bookshelfng-standalone-launch.sh "$HOME/.local/share/bookshelfng" -nobrowser
 ```
 
-Replace the example data path with the path used by the existing process. A
-full ChaptarrNG startup automatically converts a supported BookshelfNG
-database through the staged migration workflow before normal library startup.
-It retains the source database for rollback. Update any LaunchAgent, rc script,
-or local launcher to point at the new `Chaptarr` executable only after startup
-succeeds; package-managed services should use their package transition
-instead. This first archive download and launcher change is a one-time
-operator action. After the migrated database is accepted, ChaptarrNG's
-built-in updater uses its checksum-verified GitHub release route.
+Replace the example data path with the path used by the existing process. On
+Yes, the supervisor runs the staged migration, retains the source database,
+checks startup health, and restores the source on a failed handoff. It does not
+rewrite a LaunchAgent, rc script, or local launcher; update those to point at
+the new `Chaptarr` executable only after startup succeeds. Package-managed
+services should use their package transition instead. This first archive
+download and launcher change is a one-time operator action. After the migrated
+database is accepted, ChaptarrNG's built-in updater uses its checksum-verified
+GitHub release route.
 
 ## Choose the user experience
 

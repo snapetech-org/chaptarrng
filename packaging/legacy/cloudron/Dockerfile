@@ -33,4 +33,7 @@ EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=10s --start-period=245m --retries=3 \
     CMD wget --no-proxy --quiet --output-document=/dev/null http://127.0.0.1:8787/ping
 
+# Replacing ENTRYPOINT clears the base image's inherited application CMD.
+# Pass the Chaptarr command explicitly so the supervisor actually starts it.
+CMD ["dotnet", "/app/Chaptarr.dll", "-nobrowser", "-data=/config"]
 ENTRYPOINT ["/usr/local/bin/chaptarr-cloudron-entrypoint"]

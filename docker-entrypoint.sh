@@ -153,6 +153,23 @@ safe_chown() {
     fi
 }
 
+safe_chown_tree() {
+    local path="$1"
+    local uid="$2"
+    local gid="$3"
+
+    if [ -L "$path" ] || [ ! -d "$path" ]; then
+        return 0
+    fi
+
+    # These private, app-owned directories can survive a rollback through a
+    # legacy image that recursively changes /config ownership. Do not follow
+    # links or cross mounted filesystems while restoring ownership.
+    if ! find -P "$path" -xdev ! -type l -exec chown "$uid:$gid" {} +; then
+        echo "Warning: Could not restore ownership beneath $path" >&2
+    fi
+}
+
 validate_compatibility_paths() {
     if [ "${CHAPTARR_BOOKSHELF_COMPATIBILITY:-}" != "true" ]; then
         return 0
@@ -230,9 +247,16 @@ if [ "$EUID" -eq 0 ]; then
         
         # Only fix ownership of key files/directories that Chaptarr creates
         for item in \
-            "$DATA_DIR" "$DATA_DIR"/config.xml "$DATA_DIR"/*.db "$DATA_DIR"/*.db-* \
+            "$DATA_DIR" "$DATA_DIR"/config.xml "$DATA_DIR"/*.db "$DATA_DIR"/*.db-* "$DATA_DIR"/*.pid \
             "$DATA_DIR"/logs "$DATA_DIR"/MediaCover "$DATA_DIR"/Backups; do
             safe_chown "$item" "$PUID" "$PGID"
+        done
+
+        for item in \
+            "$DATA_DIR"/.chaptarrng-bookshelf-handoff \
+            "$DATA_DIR"/.chaptarrng-bookshelfng-journal \
+            "$DATA_DIR"/asp; do
+            safe_chown_tree "$item" "$PUID" "$PGID"
         done
         
         # Don't recursively chown everything - that's too aggressive

@@ -64,6 +64,17 @@ The builder creates a `.tar.gz` or `.zip` archive and a `.sha256` sidecar in
 the requested output directory. Its temporary bundle is created with
 `mktemp` under `${TMPDIR:-/tmp}` and removed by an exit trap.
 
+macOS and FreeBSD archives include
+`scripts/bookshelfng-standalone-launch.sh` and the shared handoff supervisor.
+Use that launcher with the existing BookshelfNG data directory for an optional
+terminal `[y/N]` choice; it defaults to Manual when no terminal is attached.
+The supervisor stages the migration, retains the source for rollback, checks
+startup health, and restores the source if the handoff fails. The launcher does
+not change the old service or local launcher path; switch it after the new
+service passes health. On FreeBSD, install the `sqlite3` runtime package. The
+launcher links the bundle's SQLite dependency to the installed library and
+selects a compatible installed OpenSSL ABI when needed.
+
 ## Publication gate
 
 The runtime matrix and build workflows are source-only until the release and

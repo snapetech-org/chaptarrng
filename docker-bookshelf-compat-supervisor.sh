@@ -22,6 +22,7 @@ pending_marker="$handoff_root/pending"
 failed_marker="$handoff_root/failed"
 deferred_marker="$handoff_root/deferred"
 app_pid=
+operator_wait_pid=
 app_status=0
 handoff_deadline_epoch=
 migration_approved=false
@@ -33,8 +34,16 @@ utility() {
         echo 'The BookshelfNG handoff reached its configured deadline.' >&2
         return 124
     }
-    timeout --signal=TERM --kill-after=30 "$remaining" \
-        dotnet /app/Chaptarr.dll "$command" "$@" "-data=$data_dir"
+    if [ -t 0 ]; then
+        # GNU timeout normally creates a separate process group. With an
+        # attached Docker TTY, that group cannot read the terminal and gets
+        # stopped before the operator can answer the migration prompt.
+        timeout --foreground --signal=TERM --kill-after=30 "$remaining" \
+            dotnet /app/Chaptarr.dll "$command" "$@" "-data=$data_dir" -exitimmediately
+    else
+        timeout --signal=TERM --kill-after=30 "$remaining" \
+            dotnet /app/Chaptarr.dll "$command" "$@" "-data=$data_dir" -exitimmediately
+    fi
 }
 
 remaining_handoff_seconds() {
@@ -451,20 +460,30 @@ restore_original_config() {
 
 stop_app() {
     [ -n "$app_pid" ] || return 0
-    kill -TERM -- "-$app_pid" 2>/dev/null || true
+    # The container's /bin/sh is dash; its kill builtin rejects `--` here.
+    # app_pid comes from $!, so the negative numeric operand is safe.
+    kill -TERM -"$app_pid" 2>/dev/null || true
     waited=0
-    while kill -0 -- "-$app_pid" 2>/dev/null && [ "$waited" -lt 30 ]; do
+    while kill -0 -"$app_pid" 2>/dev/null && [ "$waited" -lt 30 ]; do
         sleep 1
         waited=$((waited + 1))
     done
-    if kill -0 -- "-$app_pid" 2>/dev/null; then
-        kill -KILL -- "-$app_pid" 2>/dev/null || true
+    if kill -0 -"$app_pid" 2>/dev/null; then
+        kill -KILL -"$app_pid" 2>/dev/null || true
     fi
     wait "$app_pid" 2>/dev/null || true
     app_pid=
 }
 
+stop_operator_wait() {
+    [ -n "$operator_wait_pid" ] || return 0
+    kill -TERM "$operator_wait_pid" 2>/dev/null || true
+    wait "$operator_wait_pid" 2>/dev/null || true
+    operator_wait_pid=
+}
+
 handle_container_stop() {
+    stop_operator_wait
     stop_app
     if [ -f "$pending_marker" ] && [ ! -L "$pending_marker" ]; then
         attempt_id=$(cat "$pending_marker" 2>/dev/null || true)
@@ -490,7 +509,10 @@ wait_for_operator() {
     message=${1:-'ChaptarrNG is not serving this installation after the BookshelfNG handoff attempt. Replace the image with the prior BookshelfNG image or complete the documented recovery before retrying.'}
     echo "$message" >&2
     while :; do
-        sleep 3600
+        sleep 3600 &
+        operator_wait_pid=$!
+        wait "$operator_wait_pid" || true
+        operator_wait_pid=
     done
 }
 

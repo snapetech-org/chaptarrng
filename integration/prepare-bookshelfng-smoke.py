@@ -80,8 +80,6 @@ def seed_expanded_fixture(connection: sqlite3.Connection) -> None:
         VALUES
             (81, 71, 31, '1', 1, 1),
             (82, 71, 32, '2', 1, 2);
-        INSERT INTO Users (Id, Identifier, Username, Password)
-        VALUES (113, '00000000-0000-0000-0000-000000000021', 'expanded-fixture-user', 'synthetic-password-hash');
         INSERT INTO History (Id, SourceTitle, Date, Quality, Data, EventType, DownloadId, AuthorId, BookId)
         VALUES
             (94, 'variant-one.m4b', '2026-02-06', '{}', '{"FileId":"52","ImportedPath":"/library/Expanded Author/Audiobooks/variant-one.m4b"}', 3, 'download-94', 21, 31),
@@ -113,6 +111,7 @@ with sqlite3.connect(DATABASE) as connection:
     books = connection.execute("SELECT COUNT(*) FROM Books").fetchone()[0]
     editions = connection.execute("SELECT COUNT(*) FROM Editions").fetchone()[0]
     book_files = connection.execute("SELECT COUNT(*) FROM BookFiles").fetchone()[0]
+    users = connection.execute("SELECT COUNT(*) FROM Users").fetchone()[0]
     integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
 
 require(version == 158, f"Expected BookshelfNG schema 158, found {version}.")
@@ -121,6 +120,7 @@ require(
     (authors, books, editions, book_files) == expected_rows,
     "The populated migration fixture does not match its expected author, book, edition, and file rows.",
 )
+require(users == 1, f"Expected one legacy BookshelfNG user in the migration fixture, found {users}.")
 require(integrity == "ok", "The seeded BookshelfNG source failed SQLite integrity_check.")
 
 # Give the migrated file rows corresponding disposable files so ChaptarrNG sees

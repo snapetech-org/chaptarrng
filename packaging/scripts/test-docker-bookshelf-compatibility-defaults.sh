@@ -128,6 +128,81 @@ check_compatibility_provider_modes() {
   fi
 }
 
+check_deferred_container_stops_promptly() {
+  local data_dir="$test_root/deferred-stop-data"
+  local app="$test_root/deferred-stop-app"
+  local supervisor_pid process_group watchdog_pid status
+
+  mkdir -p "$data_dir"
+  printf 'synthetic BookshelfNG database\n' > "$data_dir/readarr.db"
+  printf '#!/bin/sh\nexit 0\n' > "$app"
+  chmod 0755 "$app"
+
+  export CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+  export CHAPTARR_COMPAT_DATA_DIR="$data_dir"
+  export CHAPTARR_CONFIG_FILE="$data_dir/config.xml"
+  export BOOKSHELFNG_MIGRATION_MODE=ask
+
+  setsid sh "$repo_root/docker-bookshelf-compat-supervisor.sh" "$app" \
+    > "$test_root/deferred-stop.log" 2>&1 &
+  supervisor_pid=$!
+  process_group="$(ps -o pgid= -p "$supervisor_pid" | tr -d '[:space:]')"
+  test -n "$process_group"
+
+  (
+    sleep 5
+    kill -KILL -- "-$process_group" 2>/dev/null || true
+  ) &
+  watchdog_pid=$!
+
+  for _ in {1..50}; do
+    if grep -Fq 'BookshelfNG migration is deferred' "$test_root/deferred-stop.log"; then
+      break
+    fi
+    if ! kill -0 "$supervisor_pid" 2>/dev/null; then
+      wait "$supervisor_pid" || true
+      cat "$test_root/deferred-stop.log" >&2
+      kill "$watchdog_pid" 2>/dev/null || true
+      wait "$watchdog_pid" 2>/dev/null || true
+      return 1
+    fi
+    sleep 0.1
+  done
+
+  grep -Fq 'BookshelfNG migration is deferred' "$test_root/deferred-stop.log"
+  kill -TERM "$supervisor_pid"
+  if wait "$supervisor_pid"; then
+    status=0
+  else
+    status=$?
+  fi
+  kill "$watchdog_pid" 2>/dev/null || true
+  wait "$watchdog_pid" 2>/dev/null || true
+
+  if [[ "$status" -ne 143 ]]; then
+    echo "Deferred supervisor did not stop promptly on SIGTERM (exit $status)." >&2
+    cat "$test_root/deferred-stop.log" >&2
+    return 1
+  fi
+  test "$(cat "$data_dir/.chaptarrng-bookshelf-handoff/deferred")" = manual-review
+  test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/pending"
+  test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/failed"
+}
+
+check_container_handoff_ownership_and_signal_contract() {
+  grep -Fq 'find -P "$path" -xdev ! -type l -exec chown "$uid:$gid" {} +' "$repo_root/docker-entrypoint.sh"
+  grep -Fq '"$DATA_DIR"/.chaptarrng-bookshelf-handoff' "$repo_root/docker-entrypoint.sh"
+  grep -Fq '"$DATA_DIR"/.chaptarrng-bookshelfng-journal' "$repo_root/docker-entrypoint.sh"
+  grep -Fq '"$DATA_DIR"/asp' "$repo_root/docker-entrypoint.sh"
+  grep -Fq '"$DATA_DIR"/*.pid' "$repo_root/docker-entrypoint.sh"
+  grep -Fq 'kill -TERM -"$app_pid"' "$repo_root/docker-bookshelf-compat-supervisor.sh"
+  grep -Fq 'kill -KILL -"$app_pid"' "$repo_root/docker-bookshelf-compat-supervisor.sh"
+  if grep -Fq 'kill -TERM -- "-$app_pid"' "$repo_root/docker-bookshelf-compat-supervisor.sh"; then
+    echo 'The /bin/sh compatibility supervisor still uses unsupported dash kill syntax.' >&2
+    return 1
+  fi
+}
+
 run_case 'production image keeps the StartOS /init command' bash -c '
   set -euo pipefail
   grep -Fq "COPY --chmod=0755 docker-startos-init.sh /init" "$1"
@@ -276,6 +351,9 @@ run_case 'ask mode without a terminal records deferral and does not start Chapta
   grep -Fq "Interactive migration choice requested without a terminal. Deferring migration" "$1/ask.log"
   grep -Fq "BookshelfNG migration is deferred" "$1/ask.log"
 ' _ "$test_root" "$repo_root/docker-bookshelf-compat-supervisor.sh"
+
+run_case 'deferred container supervisor handles SIGTERM promptly for Kubernetes restarts' check_deferred_container_stops_promptly
+run_case 'handoff metadata ownership and process-group signals support the runtime shell' check_container_handoff_ownership_and_signal_contract
 
 run_case 'AppImage and Flatpak default-No choice defers; Yes previews before applying' check_desktop_ask_choices
 

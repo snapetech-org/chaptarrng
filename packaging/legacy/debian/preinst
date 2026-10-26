@@ -9,6 +9,10 @@ data_dir="$root/var/lib/bookshelfng"
 pending_marker="$data_dir/.chaptarrng-bookshelfng-migration-pending"
 handoff_dir="$data_dir/.chaptarrng-bookshelfng-handoff"
 
+has_controlling_tty() {
+  [ -t 0 ] && ( : </dev/tty >/dev/tty ) 2>/dev/null
+}
+
 snapshot_source_package() {
   if [ -f "$handoff_dir/snapshot-ready" ]; then
     return
@@ -47,7 +51,7 @@ if [ "$1" = install ] || [ "$1" = upgrade ]; then
         exit 1
         ;;
       ask)
-        if [ ! -r /dev/tty ]; then
+        if ! has_controlling_tty; then
           echo 'Interactive migration choice requested but no terminal is available. Set BOOKSHELFNG_MIGRATION_MODE=automatic or manual.' >&2
           exit 1
         fi

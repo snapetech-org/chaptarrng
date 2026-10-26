@@ -73,6 +73,27 @@ kubectl exec bookshelfng-0 -- dotnet /app/Chaptarr.dll \
 The second command changes the database. Keep an independent backup and retain
 the source database backup created by ChaptarrNG.
 
+To complete an `ask` or `manual` handoff through automatic startup, update the
+candidate release without Helm's `--wait` option, then restart its held pod.
+The pod is intentionally unready while the source database is deferred, so a
+wait-enabled upgrade would block before the restart can happen:
+
+```sh
+helm upgrade "$RELEASE_NAME" "$CHAPTARRNG_CHART" \
+  --version "$CHAPTARRNG_VERSION" \
+  --namespace "$NAMESPACE" \
+  --reuse-values \
+  --set bookshelfMigration.mode=automatic
+kubectl delete pod "${RELEASE_NAME}-0" --namespace "$NAMESPACE" --wait
+kubectl rollout status "statefulset/${RELEASE_NAME}" \
+  --namespace "$NAMESPACE" --timeout=5h
+```
+
+The compatibility supervisor handles the pod's termination signal and leaves
+the source database unchanged until the restarted pod starts the accepted
+automatic migration. Wait for the new pod to become Ready before sending it
+traffic.
+
 If a prior first-start attempt rolled back cleanly and left the pod waiting,
 set `bookshelfMigration.mode=retry` only after correcting the cause. The
 supervisor first verifies either a completed migration or a fresh successful

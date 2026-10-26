@@ -708,7 +708,9 @@ namespace NzbDrone.Core.Datastore
                 Pooling = false
             };
 
-            return builder.ConnectionString;
+            return mode == SqliteOpenMode.ReadOnly
+                ? DatabaseLineageGuard.CreateSafeReadOnlyConnectionString(builder.ConnectionString)
+                : builder.ConnectionString;
         }
 
         private static void DeleteSidecars(string databasePath)

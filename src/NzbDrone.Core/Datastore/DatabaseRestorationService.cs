@@ -31,12 +31,12 @@ namespace NzbDrone.Core.Datastore
 
         public void Validate(string path)
         {
-            var connectionString = new SqliteConnectionStringBuilder
+            var connectionString = DatabaseLineageGuard.CreateSafeReadOnlyConnectionString(new SqliteConnectionStringBuilder
             {
                 DataSource = path,
                 Mode = SqliteOpenMode.ReadOnly,
                 Pooling = false
-            }.ToString();
+            }.ToString());
 
             using var connection = new SqliteConnection(connectionString);
             connection.Open();

@@ -281,8 +281,12 @@ function Invoke-BookshelfUtility {
       [Environment]::SetEnvironmentVariable($name, $entry.Substring($separator + 1), 'Process')
     }
 
-    & $Executable @Arguments
-    return $LASTEXITCODE
+    $utilityOutput = & $Executable @Arguments -exitimmediately 2>&1
+    $exitCode = $LASTEXITCODE
+    foreach ($line in $utilityOutput) {
+      Write-Host $line
+    }
+    return $exitCode
   } finally {
     foreach ($name in $originalNames.Keys) {
       [Environment]::SetEnvironmentVariable($name, $originalValues[$name], 'Process')

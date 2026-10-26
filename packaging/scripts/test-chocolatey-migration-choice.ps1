@@ -10,6 +10,22 @@ if (-not $functionMatch.Success) {
 }
 . ([scriptblock]::Create($functionMatch.Value))
 
+$parseTokens = $null
+$parseErrors = $null
+$installAst = [System.Management.Automation.Language.Parser]::ParseInput($template, [ref] $parseTokens, [ref] $parseErrors)
+if ($parseErrors.Count -gt 0) {
+  throw 'The Chocolatey install template contains PowerShell parse errors.'
+}
+$utilityFunction = $installAst.Find({
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+      $node.Name -eq 'Invoke-BookshelfUtility'
+  }, $true)
+if (-not $utilityFunction) {
+  throw 'Could not find Invoke-BookshelfUtility in the Chocolatey install template.'
+}
+. ([scriptblock]::Create($utilityFunction.Extent.Text))
+
 function Assert-Condition {
   param([bool] $Condition, [string] $Message)
   if (-not $Condition) { throw $Message }
@@ -99,4 +115,22 @@ try {
 }
 Assert-Condition ($script:PromptCalls -eq 0) 'Manual mode prompted for an automatic package transition.'
 
-Write-Host 'Chocolatey migration choice tests passed: No/empty cancel, explicit yes proceeds, and noninteractive/manual modes fail closed.'
+$temporaryDirectory = Join-Path ([IO.Path]::GetTempPath()) ("bookshelfng-chocolatey-utility-{0}" -f [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
+try {
+  $fakeUtility = Join-Path $temporaryDirectory 'fake-utility.cmd'
+  @(
+    '@echo off',
+    'if /I not "%2"=="-exitimmediately" exit /b 99',
+    'echo Utility output must not replace the exit code',
+    'exit /b 7'
+  ) | Set-Content -LiteralPath $fakeUtility -Encoding ascii
+
+  $utilityResult = @(Invoke-BookshelfUtility -Executable $fakeUtility -Arguments @('fixture-argument') -EnvironmentEntries @())
+  Assert-Condition ($utilityResult.Count -eq 1) 'Utility stdout leaked into the returned exit-code value.'
+  Assert-Condition ([int] $utilityResult[0] -eq 7) 'Utility did not preserve its process exit code.'
+} finally {
+  Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host 'Chocolatey migration tests passed: No/empty cancel, explicit yes proceeds, utility output preserves exit codes, and failures exit without waiting for Enter.'

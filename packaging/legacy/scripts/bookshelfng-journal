@@ -37,7 +37,7 @@ case "$action" in
   state)
     state=${2:-}
     case "$state" in
-      detected|preflighted|snapshotted|converted|promoted|healthy|rolled-back|intervention-required) ;;
+      detected|deferred|preflighted|snapshotted|converted|promoted|healthy|rolled-back|intervention-required) ;;
       *) fail "invalid state '$state'" ;;
     esac
     now=$(date -u '+%Y-%m-%dT%H:%M:%SZ')

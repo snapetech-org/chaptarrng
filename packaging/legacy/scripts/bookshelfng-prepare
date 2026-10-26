@@ -17,9 +17,9 @@ if [ ! -f "$pending_marker" ]; then
   exit 0
 fi
 
-if [ "$("$journal" get-state)" = unknown ]; then
-  "$journal" state detected
-fi
+case "$("$journal" get-state)" in
+  unknown|deferred) "$journal" state detected ;;
+esac
 
 if [ -f "$handoff_dir/snapshot-ready" ]; then
   "$journal" fingerprint source-app "$handoff_dir/source-app"
@@ -43,10 +43,16 @@ fi
 
 fragment_path=$(systemctl show --property=FragmentPath --value bookshelfng.service 2>/dev/null || true)
 dropin_paths=$(systemctl show --property=DropInPaths --value bookshelfng.service 2>/dev/null || true)
+has_unit_specific_dropins=false
+for dropin_path in $dropin_paths; do
+  case "$dropin_path" in
+    */bookshelfng.service.d/*) has_unit_specific_dropins=true ;;
+  esac
+done
 restore_unit=false
 case "$fragment_path" in
   /lib/systemd/system/bookshelfng.service|/usr/lib/systemd/system/bookshelfng.service)
-    if [ -z "$dropin_paths" ]; then
+    if [ "$has_unit_specific_dropins" = false ]; then
       exit 0
     fi
     restore_unit=true

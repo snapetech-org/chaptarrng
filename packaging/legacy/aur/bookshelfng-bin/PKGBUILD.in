@@ -1,6 +1,6 @@
 pkgname=bookshelfng-bin
 pkgver=__VERSION__
-pkgrel=1
+pkgrel=2
 pkgdesc='BookshelfNG package identity carrying the standard ChaptarrNG application'
 arch=('x86_64')
 options=('!debug')

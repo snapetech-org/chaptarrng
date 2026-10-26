@@ -137,8 +137,9 @@ namespace NzbDrone.Core.Datastore
             }
         }
 
-        private static bool HasNonEmptyDurableSidecar(string databasePath)
+        internal static bool HasNonEmptyDurableSidecar(string databasePath)
         {
+            databasePath = GetFileSystemPath(databasePath);
             foreach (var suffix in new[] { "-journal", "-wal" })
             {
                 var path = databasePath + suffix;
@@ -149,6 +150,37 @@ namespace NzbDrone.Core.Datastore
             }
 
             return false;
+        }
+
+        private static string GetFileSystemPath(string dataSource)
+        {
+            if (Uri.TryCreate(dataSource, UriKind.Absolute, out var uri) && uri.IsFile)
+            {
+                return uri.LocalPath;
+            }
+
+            return dataSource;
+        }
+
+        private static string GetFileUriWithoutImmutable(string dataSource)
+        {
+            if (!Uri.TryCreate(dataSource, UriKind.Absolute, out var uri) || !uri.IsFile)
+            {
+                return dataSource;
+            }
+
+            var uriBuilder = new UriBuilder(uri);
+            var query = new List<string>();
+            foreach (var parameter in uriBuilder.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!parameter.StartsWith("immutable=", StringComparison.OrdinalIgnoreCase))
+                {
+                    query.Add(parameter);
+                }
+            }
+
+            uriBuilder.Query = string.Join("&", query);
+            return query.Count == 0 ? uri.LocalPath : uriBuilder.Uri.AbsoluteUri;
         }
 
         public static DatabaseLineage Detect(string connectionString, DatabaseType databaseType)
@@ -270,14 +302,13 @@ namespace NzbDrone.Core.Datastore
                     return null;
                 }
 
-                if (!File.Exists(builder.DataSource))
+                if (!File.Exists(GetFileSystemPath(builder.DataSource)))
                 {
                     return null;
                 }
 
-                builder.Mode = SqliteOpenMode.ReadOnly;
-                builder.Pooling = false;
-                var connection = new SqliteConnection(builder.ToString());
+                var originalConnectionString = builder.ConnectionString;
+                var connection = new SqliteConnection(CreateSafeReadOnlyConnectionString(originalConnectionString));
                 try
                 {
                     connection.Open();
@@ -291,7 +322,7 @@ namespace NzbDrone.Core.Datastore
                     // last writer closes. Some SQLite builds cannot open that file read-only
                     // even when the directory is writable. Retry without Create semantics,
                     // then make the metadata probe query-only before issuing any query.
-                    var queryOnlyBuilder = new SqliteConnectionStringBuilder(builder.ConnectionString)
+                    var queryOnlyBuilder = new SqliteConnectionStringBuilder(originalConnectionString)
                     {
                         Mode = SqliteOpenMode.ReadWrite,
                         Pooling = false
@@ -329,6 +360,64 @@ namespace NzbDrone.Core.Datastore
                 postgres.Dispose();
                 throw;
             }
+        }
+
+        internal static string GetImmutableFileUri(string dataSource)
+        {
+            UriBuilder uriBuilder;
+            if (Uri.TryCreate(dataSource, UriKind.Absolute, out var uri) && uri.IsFile)
+            {
+                uriBuilder = new UriBuilder(uri);
+            }
+            else
+            {
+                uriBuilder = new UriBuilder(Uri.UriSchemeFile, string.Empty)
+                {
+                    Path = Path.GetFullPath(dataSource)
+                };
+            }
+
+            var query = new List<string>();
+            foreach (var parameter in uriBuilder.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!parameter.StartsWith("immutable=", StringComparison.OrdinalIgnoreCase))
+                {
+                    query.Add(parameter);
+                }
+            }
+
+            query.Add("immutable=1");
+            uriBuilder.Query = string.Join("&", query);
+            return uriBuilder.Uri.AbsoluteUri;
+        }
+
+        internal static string CreateSafeReadOnlyConnectionString(string connectionString)
+        {
+            var builder = new SqliteConnectionStringBuilder(connectionString);
+            if (builder.Mode == SqliteOpenMode.Memory || string.Equals(builder.DataSource, ":memory:", StringComparison.OrdinalIgnoreCase))
+            {
+                return connectionString;
+            }
+
+            if (HasNonEmptyDurableSidecar(builder.DataSource))
+            {
+                // A URI created for an earlier quiescent probe can be reused after
+                // SQLite has started a WAL transaction. Drop immutable so the read
+                // sees committed sidecar data instead of a stale main-file snapshot.
+                builder.DataSource = GetFileUriWithoutImmutable(builder.DataSource);
+            }
+            else
+            {
+                // With no hot journal or WAL frames, SQLite can inspect the database
+                // without opening the transient WAL-index shared-memory file. This keeps
+                // read-only probes compatible with SELinux domains that cannot mmap the
+                // generic var_lib_t label used by legacy package data directories.
+                builder.DataSource = GetImmutableFileUri(builder.DataSource);
+            }
+
+            builder.Mode = SqliteOpenMode.ReadOnly;
+            builder.Pooling = false;
+            return builder.ToString();
         }
 
     }

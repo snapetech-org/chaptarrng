@@ -38,7 +38,7 @@ resultdir="$(cd "$resultdir" && pwd -P)"
 for required_file in \
   bookshelfng.spec \
   "ChaptarrNG-${version}-linux-x64.tar.gz" \
-  bookshelfng.service bookshelfng.sysusers bookshelfng.tmpfiles bookshelfng.env chaptarrng.package_info bookshelfng-healthcheck bookshelfng-journal; do
+  bookshelfng.service bookshelfng.sysusers bookshelfng.tmpfiles bookshelfng.env chaptarrng.package_info bookshelfng-healthcheck bookshelfng-journal bookshelfng-finalize; do
   if [[ ! -f "${resultdir}/${required_file}" ]]; then
     echo "The COPR source RPM is missing ${required_file}." >&2
     exit 1

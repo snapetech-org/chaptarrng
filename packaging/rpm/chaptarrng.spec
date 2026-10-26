@@ -2,8 +2,9 @@
 %{!?_unitdir:%global _unitdir /usr/lib/systemd/system}
 # This self-contained release has no separate debuginfo sources.
 %global debug_package %{nil}
-# .NET's optional LTTng trace provider is not required at runtime.
-%global __requires_exclude ^liblttng-ust[.]so[.]0
+# .NET's optional LTTng trace provider is not required at runtime. The archive
+# also ships Playwright's Node runtime; playwright.ps1 is Windows-only.
+%global __requires_exclude ^(liblttng-ust[.]so[.]0.*|/usr/bin/(node|pwsh))$
 
 Name:           chaptarrng
 Version:        __VERSION__

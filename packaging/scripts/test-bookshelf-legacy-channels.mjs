@@ -62,6 +62,53 @@ test('AppImage keeps its desktop identity, BookshelfNG data directory, and Chapt
   assert.match(appRun, /Replace this AppImage with a newer compatible build/);
 });
 
+test('macOS and FreeBSD standalone archives include the optional, recoverable BookshelfNG handoff', () => {
+  const builder = read('packaging/scripts/build-standalone.sh');
+  const launcher = read('scripts/bookshelfng-standalone-launch.sh');
+  const supervisor = read('packaging/legacy/desktop/bookshelfng-supervisor.sh');
+  const migrationGuide = read('docs/MIGRATE_FROM_BOOKSHELFNG.md');
+
+  assert.ok(builder.includes('if [[ "$rid" == osx-* || "$rid" == freebsd-x64 ]]'));
+  assert.match(builder, /bookshelfng-standalone-launch\.sh/);
+  assert.match(builder, /bookshelfng-supervisor\.sh/);
+  assert.match(launcher, /has_controlling_tty\(\) \{\s*\[ -t 0 \] && \( : <\/dev\/tty >\/dev\/tty \)/);
+  assert.match(launcher, /if has_controlling_tty; then[\s\S]*?BOOKSHELFNG_MIGRATION_MODE=ask[\s\S]*?BOOKSHELFNG_MIGRATION_MODE=manual/);
+  assert.match(launcher, /uname -s[\s\S]*FreeBSD[\s\S]*DOTNET_OPENSSL_VERSION_OVERRIDE:-[\s\S]*libssl\.so\.17[\s\S]*DOTNET_OPENSSL_VERSION_OVERRIDE=17[\s\S]*libssl\.so\.35[\s\S]*DOTNET_OPENSSL_VERSION_OVERRIDE=35/,
+    'FreeBSD selects an installed OpenSSL ABI when the operator did not set an override');
+  assert.match(launcher, /libsqlite3\.so\.0[\s\S]*sqlite_library=\$candidate/);
+  assert.match(launcher, /ln -s "\$sqlite_library" "\$bundle_dir\/libe_sqlite3\.so"/);
+  assert.match(launcher, /Install the sqlite3 package/,
+    'FreeBSD tells operators how to restore the SQLite runtime prerequisite');
+  assert.match(launcher, /standalone-archive/);
+  assert.match(migrationGuide, /bookshelfng-standalone-launch\.sh/);
+  assert.match(migrationGuide, /running[\s\S]*Chaptarr[\s\S]*directly skips the optional handoff prompt/);
+  assert.ok(supervisor.includes('if [ ! -x "$console" ]; then'));
+  assert.match(supervisor, /console="\$app"/);
+  assert.match(supervisor, /isolated_app_process=false/);
+  assert.match(supervisor, /setsid --wait/);
+  assert.ok(
+    supervisor.indexOf('if has_controlling_tty; then') < supervisor.indexOf('elif command -v zenity'),
+    'interactive terminal launches receive the y/N prompt even when a desktop session has zenity installed',
+  );
+  assert.match(supervisor, /has_controlling_tty\(\) \{\s*\[ -t 0 \] && \( : <\/dev\/tty >\/dev\/tty \)/,
+    'a permission-only /dev/tty check does not classify a headless package process as interactive');
+  assert.match(supervisor, /-restore-bookshelf/);
+  assert.match(supervisor, /-bookshelf-health-url=/);
+});
+
+test('macOS installed handoff acceptance is manually dispatched and publication-free', () => {
+  const workflow = read('.github/workflows/bookshelfng-standalone-macos-acceptance.yml');
+
+  assert.match(workflow, /^  workflow_dispatch:$/m);
+  assert.match(workflow, /rid: osx-x64[\s\S]*?runner: macos-15-intel[\s\S]*?rid: osx-arm64[\s\S]*?runner: macos-15/);
+  assert.match(workflow, /build-standalone\.sh "\$version" "\$\{\{ matrix\.rid \}\}"/);
+  assert.match(workflow, /BookshelfNG-main-v0\.4\.21\.71-\$\{\{ matrix\.rid \}\}\.tar\.gz/);
+  assert.match(workflow, /d4450af8991742b1e5bcb794b9ecb7f59b4d57e99b9a82dfc56cb437112955de/);
+  assert.match(workflow, /50dfa8f20611afd3ff23615a964c33d39f0c026297240a334ad12c61c11d0298/);
+  assert.match(workflow, /test-bookshelf-standalone-handoff\.py/);
+  assert.doesNotMatch(workflow, /upload-artifact|gh release (create|upload)|docker push/);
+});
+
 test('Flatpak keeps the installed app ID and BookshelfNG sandbox data directory', () => {
   const manifest = read('packaging/legacy/flatpak/com.snapetech.BookshelfNG.yml');
   const desktop = read('packaging/legacy/flatpak/com.snapetech.BookshelfNG.desktop');
@@ -115,15 +162,34 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(recovery, /ChaptarrNG database was preserved/);
 });
 
+test('Windows standalone migration installer is opt-in and Close defers handoff', () => {
+  const xaml = read('distribution/windows/installer-net/MainWindow.xaml');
+  const code = read('distribution/windows/installer-net/MainWindow.xaml.cs');
+  const loadHandler = code.slice(code.indexOf('private async void OnLoaded'), code.indexOf('private async Task RunRestoreAsync'));
+  const installHandler = code.slice(code.indexOf('private async void InstallButton_Click'), code.indexOf('private async void RestoreButton_Click'));
+
+  assert.match(xaml, /x:Name="InstallButton"[\s\S]*Content="Migrate BookshelfNG"[\s\S]*Click="InstallButton_Click"/);
+  assert.match(xaml, /x:Name="CloseButton"[\s\S]*Content="Close"[\s\S]*Click="CloseButton_Click"/);
+  assert.doesNotMatch(loadHandler, /RunUpgradeAsync/, 'opening the installer does not start migration');
+  assert.match(installHandler, /InstallPipeline\.RunUpgradeAsync/);
+  assert.match(code, /private void CloseButton_Click\(object sender, RoutedEventArgs e\) => Close\(\);/);
+});
+
 test('Cloudron candidate preserves application ID, health endpoint, port, and mounts', () => {
   const manifest = JSON.parse(read('packaging/legacy/cloudron/CloudronManifest.json'));
   const dockerfile = read('packaging/legacy/cloudron/Dockerfile');
+  const entrypoint = read('packaging/legacy/cloudron/cloudron-entrypoint.sh');
 
   assert.equal(manifest.id, 'tech.snapetech.bookshelfng');
   assert.equal(manifest.httpPort, 8787);
   assert.equal(manifest.healthCheckPath, '/ping');
   assert.deepEqual(manifest.persistentDirs, ['/config', '/books', '/downloads']);
   assert.match(dockerfile, /^FROM ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover$/m);
+  assert.match(dockerfile, /^CMD \["dotnet", "\/app\/Chaptarr\.dll", "-nobrowser", "-data=\/config"\]$/m,
+    'the Cloudron wrapper restores the app command cleared by its replacement ENTRYPOINT');
+  assert.match(dockerfile, /BOOKSHELFNG_MIGRATION_MODE=automatic/);
+  assert.doesNotMatch(entrypoint, /BOOKSHELFNG_MIGRATION_MODE=/,
+    'Cloudron app environment overrides can select manual mode before migration');
   assert.doesNotMatch(dockerfile, /docker\.io\/snapetech\/bookshelfng/);
 });
 
@@ -217,21 +283,25 @@ test('StartOS candidate documents the package identity and external device-accep
   assert.match(manifest, /source: \{ dockerTag: 'ghcr\.io\/snapetech-org\/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' \}/);
 });
 
-test('interactive package migration choices default to No before package mutation', () => {
+test('interactive package migration choices default to No before conversion', () => {
   const debianPreinstall = read('packaging/legacy/debian/preinst');
   const rpmSpec = read('packaging/legacy/rpm/bookshelfng.spec.in');
   const aurInstall = read('packaging/legacy/aur/bookshelfng-bin/bookshelfng.install');
   const chocolatey = read('packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in');
   const desktopSupervisor = read('packaging/legacy/desktop/bookshelfng-supervisor.sh');
 
+  assert.match(debianPreinstall, /has_controlling_tty\(\) \{\s*\[ -t 0 \] && \( : <\/dev\/tty >\/dev\/tty \)/,
+    'Debian requires a TTY on stdin so dpkg pseudo-terminals cannot make headless apt prompt');
+  assert.match(rpmSpec, /bookshelfng_has_controlling_tty\(\) \{\s*\( : <\/dev\/tty >\/dev\/tty \)/,
+    'RPM uses its controlling terminal because Fedora redirects scriptlet stdin even for interactive installs');
+
   for (const [channel, hook] of [
     ['Debian', debianPreinstall],
     ['RPM', rpmSpec],
-    ['AUR', aurInstall],
   ]) {
     assert.match(hook, /BOOKSHELFNG_MIGRATION_MODE:-automatic/,
       `${channel} preserves automatic mode as the unattended default`);
-    assert.match(hook, /ask\)[\s\S]*?\[ ! -r \/dev\/tty \]/,
+    assert.match(hook, /has_controlling_tty\(\)[\s\S]*?ask\)[\s\S]*?if ! [a-z_]*has_controlling_tty; then[\s\S]*?no terminal/,
       `${channel} fails closed when ask mode has no terminal`);
     assert.match(hook, /Replace BookshelfNG with ChaptarrNG now\?[\s\S]*?\[y\/N\]/,
       `${channel} presents the same default-No prompt`);
@@ -241,15 +311,34 @@ test('interactive package migration choices default to No before package mutatio
       `${channel} asks before creating the migration snapshot or pending marker`);
   }
 
+  assert.match(aurInstall, /BOOKSHELFNG_MIGRATION_MODE:-automatic/);
+  assert.match(aurInstall, /_bookshelfng_has_controlling_tty\(\) \{\s*\[ -t 0 \] && \( : <\/dev\/tty >\/dev\/tty \)[\s\S]*?ask\)[\s\S]*?if ! _bookshelfng_has_controlling_tty; then[\s\S]*?Replace BookshelfNG with ChaptarrNG now\?[\s\S]*?\[y\/N\]/,
+    'AUR presents a default-No prompt and detects when pacman has no terminal');
+  assert.match(aurInstall, /_deferred_marker=\/var\/lib\/bookshelfng\/\.chaptarrng-bookshelfng-migration-deferred[\s\S]*?install -Dm600 \/dev\/null "\$_deferred_marker"[\s\S]*?_restore_deferred_handoff[\s\S]*?cp -a "\$_handoff_dir\/source-app" "\$_source_dir"[\s\S]*?systemctl start "\$_service"/,
+    'AUR records No and restores the saved BookshelfNG runtime after the pacman payload phase');
+  assert.match(aurInstall, /if \[\[ -e "\$_deferred_marker" \]\]; then[\s\S]*?_restore_deferred_handoff/,
+    'AUR retries the migration choice on a later package transaction');
+  assert.doesNotMatch(aurInstall, /replacement cancelled[\s\S]*?exit 1/,
+    'AUR does not rely on scriptlet failure to cancel pacman');
+
   assert.match(chocolatey, /function Confirm-BookshelfMigrationChoice[\s\S]*?\[Console\]::IsInputRedirected[\s\S]*?Read-Host[\s\S]*?\[y\/N\][\s\S]*?-notmatch '\^\(\?i:y\|yes\)\$'[\s\S]*?cancelled before staging files or stopping the service/);
   assert.match(chocolatey, /Confirm-BookshelfMigrationChoice -HasMigrationData \$hasMigrationDataForChoice -Mode \$requestedMigrationMode[\s\S]*?Complete-PriorBookshelfHandoff/,
     'Chocolatey asks before staging the new application or changing service state');
+
+  assert.match(chocolatey, /& \$Executable @Arguments -exitimmediately 2>&1[\s\S]*?\$exitCode = \$LASTEXITCODE[\s\S]*?Write-Host \$line[\s\S]*?return \$exitCode/,
+    'Chocolatey utility calls exit without prompting and keep stdout out of the returned exit code');
+  assert.match(read('src/NzbDrone.Console/ConsoleApp.cs'), /if \(exitCode != ExitCodes\.Normal && startupArgs\?\.ExitImmediately != true\)/,
+    'explicit exit-immediately mode suppresses all interactive failure waits');
 
   assert.match(desktopSupervisor, /zenity --question --default-cancel[\s\S]*?--cancel-label='Not now'/,
     'AppImage and Flatpak desktop dialogs default to No');
   assert.match(desktopSupervisor, /printf 'Replace BookshelfNG with ChaptarrNG now\?[\s\S]*?\[y\/N\][\s\S]*?IFS= read -r migration_choice <\/dev\/tty/);
   assert.match(desktopSupervisor, /case "\$migration_choice" in[\s\S]*?y\|Y\|yes\|YES\|Yes\)[\s\S]*?BookshelfNG conversion deferred[\s\S]*?exit 0/);
   assert.match(desktopSupervisor, /MigrationMode=ask needs zenity or an interactive terminal/);
+  assert.match(desktopSupervisor, /run_utility\(\) \{\s*"\$console" -exitimmediately/,
+    'standalone utility failures never wait for terminal input during rollback');
+  assert.match(desktopSupervisor, /health_deadline=\$\(\([\s\S]*?timeout_seconds[\s\S]*?run_utility -check-bookshelf-migration[\s\S]*?-bookshelf-health-timeout-seconds=1[\s\S]*?health_deadline/,
+    'standalone health checks retry while migration and service startup complete');
 });
 
 test('Linux and Windows VM jobs execute package-specific migration-choice checks', () => {
@@ -260,10 +349,14 @@ test('Linux and Windows VM jobs execute package-specific migration-choice checks
   assert.match(buildJob, /name: Test BookshelfNG AUR migration choice[\s\S]*?if: matrix\.os == 'ubuntu-latest'[\s\S]*?test-bookshelfng-aur-choice\.sh/);
   assert.match(buildJob, /name: Test candidate BookshelfNG RPM bridge package[\s\S]*?if: matrix\.os == 'ubuntu-latest'[\s\S]*?test-build-bookshelfng-rpm-bridge\.sh/);
   assert.match(buildJob, /name: Test Chocolatey BookshelfNG migration choice[\s\S]*?if: matrix\.os == 'windows-latest'[\s\S]*?test-chocolatey-migration-choice\.ps1/);
+  assert.match(read('packaging/scripts/test-build-bookshelfng-deb-bridge.sh'), /bookshelfng-ask-headless\.log[\s\S]*?no terminal is available/);
+  assert.match(read('packaging/scripts/test-build-bookshelfng-rpm-bridge.sh'), /ask-headless\.log[\s\S]*?no terminal is available/);
+  assert.match(read('packaging/scripts/test-bookshelfng-aur-choice.sh'), /ask-headless\.log[\s\S]*?No terminal is available/);
 });
 
 test('noninteractive image and appliance channels defer ask mode without starting ChaptarrNG', () => {
   const supervisor = read('docker-bookshelf-compat-supervisor.sh');
+  const entrypoint = read('docker-entrypoint.sh');
   const chart = read('charts/bookshelfng/README.md');
   const startOsAction = read('packaging/legacy/startos/candidate/startos/actions/configureMigration.ts');
   const startOsMain = read('packaging/legacy/startos/candidate/startos/main.ts');
@@ -271,8 +364,23 @@ test('noninteractive image and appliance channels defer ask mode without startin
   assert.match(supervisor, /automatic\|ask\|manual\|retry/);
   assert.match(supervisor, /ask\)[\s\S]*?if \[ ! -t 0 \][\s\S]*?return 1/,
     'container ask mode defers safely when there is no interactive terminal');
+  assert.match(supervisor, /if \[ -t 0 \]; then[\s\S]*?timeout --foreground --signal=TERM --kill-after=30/,
+    'interactive TTY migration utilities remain in the foreground terminal process group');
+  assert.match(supervisor, /dotnet \/app\/Chaptarr\.dll "\$command" "\$@" "-data=\$data_dir" -exitimmediately/,
+    'container utilities never block on an interactive failure prompt before the migration choice');
   assert.match(supervisor, /wait_for_operator 'BookshelfNG migration is deferred/);
+  assert.match(supervisor, /kill -TERM -"\$app_pid"/);
+  assert.match(supervisor, /kill -KILL -"\$app_pid"/);
+  assert.doesNotMatch(supervisor, /kill -TERM -- "-\$app_pid"/,
+    'process-group signals stay compatible with the runtime /bin/sh builtins');
+  assert.match(entrypoint, /find -P "\$path" -xdev ! -type l -exec chown "\$uid:\$gid"/);
+  assert.match(entrypoint, /"\$DATA_DIR"\/\.chaptarrng-bookshelf-handoff/);
+  assert.match(entrypoint, /"\$DATA_DIR"\/\.chaptarrng-bookshelfng-journal/);
+  assert.match(entrypoint, /"\$DATA_DIR"\/asp/);
+  assert.match(entrypoint, /"\$DATA_DIR"\/\*\.pid/);
   assert.match(chart, /Kubernetes has no\s+interactive terminal for `ask`, so that mode also defers migration/);
+  assert.match(chart, /without Helm's `--wait` option[\s\S]*?kubectl delete pod/,
+    'the unready deferred StatefulSet has a documented automatic restart sequence');
   assert.match(startOsAction, /Automatically migrate BookshelfNG data on startup/);
   assert.match(startOsAction, /default: true/);
   assert.match(startOsMain, /BOOKSHELFNG_MIGRATION_MODE: autoMigrate \? 'automatic' : 'manual'/,
