@@ -379,14 +379,48 @@ function Write-BookshelfHandoffManifest {
   if ($LASTEXITCODE -ne 0) { throw 'Could not protect the Windows migration recovery record.' }
 }
 
+function Get-BookshelfJournalFingerprint {
+  param([string] $Path)
+
+  if (Test-Path -LiteralPath $Path -PathType Leaf) {
+    return 'sha256:' + (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+  }
+  if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return 'missing' }
+
+  $root = (Get-Item -LiteralPath $Path -Force).FullName.TrimEnd([char[]]@('\', '/'))
+  $entries = @(
+    Get-ChildItem -LiteralPath $root -File -Recurse -Force |
+      Sort-Object FullName |
+      ForEach-Object {
+        $relative = $_.FullName.Substring($root.Length).TrimStart([char[]]@('\', '/')).Replace('\', '/')
+        $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        "$relative`0$hash"
+      }
+  )
+  $algorithm = [Security.Cryptography.SHA256]::Create()
+  try {
+    $bytes = [Text.Encoding]::UTF8.GetBytes(($entries -join "`n"))
+    return 'sha256:' + [BitConverter]::ToString($algorithm.ComputeHash($bytes)).Replace('-', '').ToLowerInvariant()
+  } finally {
+    $algorithm.Dispose()
+  }
+}
+
 function Write-SharedMigrationJournal {
-  param([string] $State, [string] $OutcomeName, [string] $OutcomeValue)
+  param(
+    [string] $State,
+    [string] $OutcomeName,
+    [string] $OutcomeValue,
+    [string] $FingerprintName,
+    [string] $FingerprintPath
+  )
 
   try {
     $journalDirectory = Join-Path $dataDir '.chaptarrng-bookshelfng-journal'
     $statesDirectory = Join-Path $journalDirectory 'states'
     $outcomesDirectory = Join-Path $journalDirectory 'outcomes'
-    New-Item -ItemType Directory -Force -Path $statesDirectory, $outcomesDirectory | Out-Null
+    $fingerprintsDirectory = Join-Path $journalDirectory 'fingerprints'
+    New-Item -ItemType Directory -Force -Path $statesDirectory, $outcomesDirectory, $fingerprintsDirectory | Out-Null
     $utf8 = [Text.UTF8Encoding]::new($false)
 
     if (-not [string]::IsNullOrWhiteSpace($State)) {
@@ -410,6 +444,25 @@ function Write-SharedMigrationJournal {
       $targetPath = Join-Path $outcomesDirectory $OutcomeName
       $temporaryPath = "$targetPath.tmp-$([Guid]::NewGuid().ToString('N'))"
       [IO.File]::WriteAllText($temporaryPath, "$OutcomeValue`n", $utf8)
+      Move-Item -LiteralPath $temporaryPath -Destination $targetPath -Force
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($FingerprintName)) {
+      if ($FingerprintName -notmatch '^[A-Za-z0-9_.-]+$' -or [string]::IsNullOrWhiteSpace($FingerprintPath)) {
+        throw 'Invalid shared BookshelfNG journal fingerprint.'
+      }
+
+      if (Test-Path -LiteralPath $FingerprintPath -PathType Leaf) {
+        $fingerprint = Get-BookshelfJournalFingerprint $FingerprintPath
+      } elseif (Test-Path -LiteralPath $FingerprintPath -PathType Container) {
+        $fingerprint = Get-BookshelfJournalFingerprint $FingerprintPath
+      } else {
+        $fingerprint = 'missing'
+      }
+
+      $targetPath = Join-Path $fingerprintsDirectory $FingerprintName
+      $temporaryPath = "$targetPath.tmp-$([Guid]::NewGuid().ToString('N'))"
+      [IO.File]::WriteAllText($temporaryPath, "$fingerprint`n", $utf8)
       Move-Item -LiteralPath $temporaryPath -Destination $targetPath -Force
     }
   } catch {
@@ -736,6 +789,7 @@ try {
     if ($backupExit -ne 0) {
       throw "Independent PostgreSQL backup failed with exit code $backupExit. The BookshelfNG database was not migrated."
     }
+    Write-SharedMigrationJournal -FingerprintName 'source-postgres-backup' -FingerprintPath $postgresBackupDirectory
   }
 
   if ($hasMigrationData -and -not $alreadyMigrated) {
@@ -749,6 +803,13 @@ try {
       }
       throw "BookshelfNG migration preview failed with exit code $previewExit. The original service and database were preserved."
     }
+
+    Write-SharedMigrationJournal -State 'preflighted' -OutcomeName 'channel' -OutcomeValue 'chocolatey'
+    if ($choiceConsolePath -and (Test-Path -LiteralPath $choiceConsolePath -PathType Leaf)) {
+      Write-SharedMigrationJournal -FingerprintName 'source-application' -FingerprintPath $choiceConsolePath
+    }
+    Write-SharedMigrationJournal -FingerprintName 'source-config' -FingerprintPath (Join-Path $dataDir 'config.xml')
+    Write-SharedMigrationJournal -FingerprintName 'target-artifact' -FingerprintPath (Join-Path $stageDir 'bin\Chaptarr.Console.exe')
   }
 
   if ($hadService -and $hasMigrationData -and -not $wasRunning) {
@@ -930,8 +991,12 @@ try {
             "-data=$dataDir"
           ) $effectiveEnvironment
           if ($targetBackupExit -ne 0) { throw "Current ChaptarrNG PostgreSQL log/cache backup exited with code $targetBackupExit." }
-          if (-not (Get-ChildItem -LiteralPath $targetPostgresBackupDirectory -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+          $targetPostgresBackupFiles = @(Get-ChildItem -LiteralPath $targetPostgresBackupDirectory -File -ErrorAction SilentlyContinue)
+          if ($targetPostgresBackupFiles.Count -eq 0) {
             Remove-Item -LiteralPath $targetPostgresBackupDirectory -Force
+          } else {
+            Write-SharedMigrationJournal -FingerprintName 'rollback-target-postgres-log-cache' -FingerprintPath $targetPostgresBackupDirectory
+            Write-SharedMigrationJournal -OutcomeName 'rollback-target-postgres-log-cache' -OutcomeValue 'retained'
           }
 
           $restoreExit = Invoke-BookshelfUtility $rollbackConsole @(

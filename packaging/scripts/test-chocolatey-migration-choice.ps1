@@ -25,10 +25,67 @@ if (-not $utilityFunction) {
   throw 'Could not find Invoke-BookshelfUtility in the Chocolatey install template.'
 }
 . ([scriptblock]::Create($utilityFunction.Extent.Text))
+$journalFingerprintFunction = $installAst.Find({
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+      $node.Name -eq 'Get-BookshelfJournalFingerprint'
+  }, $true)
+if (-not $journalFingerprintFunction) {
+  throw 'Could not find Get-BookshelfJournalFingerprint in the Chocolatey install template.'
+}
+. ([scriptblock]::Create($journalFingerprintFunction.Extent.Text))
+$journalWriterFunction = $installAst.Find({
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+      $node.Name -eq 'Write-SharedMigrationJournal'
+  }, $true)
+if (-not $journalWriterFunction) {
+  throw 'Could not find Write-SharedMigrationJournal in the Chocolatey install template.'
+}
+. ([scriptblock]::Create($journalWriterFunction.Extent.Text))
 
 function Assert-Condition {
   param([bool] $Condition, [string] $Message)
   if (-not $Condition) { throw $Message }
+}
+
+$journalTestDirectory = Join-Path ([IO.Path]::GetTempPath()) ("bookshelfng-journal-fingerprint-{0}" -f [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $journalTestDirectory | Out-Null
+$journalTestSucceeded = $false
+try {
+  $script:dataDir = Join-Path $journalTestDirectory 'data'
+  $postgresBackupDirectory = Join-Path $journalTestDirectory 'postgres-backup'
+  New-Item -ItemType Directory -Path $postgresBackupDirectory | Out-Null
+  $mainDump = Join-Path $postgresBackupDirectory 'postgres-main.dump'
+  [IO.File]::WriteAllText($mainDump, 'bookshelf-postgres-main-fixture')
+
+  $singleFileFingerprint = Get-BookshelfJournalFingerprint $mainDump
+  $expectedFileFingerprint = 'sha256:' + (Get-FileHash -LiteralPath $mainDump -Algorithm SHA256).Hash.ToLowerInvariant()
+  Assert-Condition ($singleFileFingerprint -eq $expectedFileFingerprint) 'Journal file fingerprint did not match SHA-256.'
+
+  $backupFingerprint = Get-BookshelfJournalFingerprint $postgresBackupDirectory
+  Assert-Condition ($backupFingerprint -match '^sha256:[a-f0-9]{64}$') 'PostgreSQL backup directory did not produce a SHA-256 fingerprint.'
+  Assert-Condition ((Get-BookshelfJournalFingerprint $postgresBackupDirectory) -eq $backupFingerprint) `
+    'An unchanged PostgreSQL backup directory produced a different fingerprint.'
+
+  [IO.File]::WriteAllText((Join-Path $postgresBackupDirectory 'postgres-log.dump'), 'bookshelf-postgres-log-fixture')
+  $updatedBackupFingerprint = Get-BookshelfJournalFingerprint $postgresBackupDirectory
+  Assert-Condition ($updatedBackupFingerprint -ne $backupFingerprint) 'Adding a PostgreSQL dump did not change its directory fingerprint.'
+
+  Write-SharedMigrationJournal -FingerprintName 'source-postgres-backup' -FingerprintPath $postgresBackupDirectory
+  $recordedFingerprint = (Get-Content -LiteralPath (Join-Path $script:dataDir '.chaptarrng-bookshelfng-journal/fingerprints/source-postgres-backup') -Raw).Trim()
+  Assert-Condition ($recordedFingerprint -eq $updatedBackupFingerprint) 'The shared journal did not record the PostgreSQL backup directory fingerprint.'
+
+  Write-SharedMigrationJournal -FingerprintName 'missing-postgres-backup' -FingerprintPath (Join-Path $journalTestDirectory 'missing-backup')
+  $missingFingerprint = (Get-Content -LiteralPath (Join-Path $script:dataDir '.chaptarrng-bookshelfng-journal/fingerprints/missing-postgres-backup') -Raw).Trim()
+  Assert-Condition ($missingFingerprint -eq 'missing') 'The shared journal did not mark a missing backup as missing.'
+  $journalTestSucceeded = $true
+} finally {
+  if ($journalTestSucceeded) {
+    Remove-Item -LiteralPath $journalTestDirectory -Recurse -Force -ErrorAction SilentlyContinue
+  } else {
+    Write-Warning "Journal fingerprint test failed; preserving evidence at $journalTestDirectory"
+  }
 }
 
 $script:PromptCalls = 0
@@ -146,4 +203,4 @@ try {
   Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Write-Host 'Chocolatey migration tests passed: No/empty cancel, explicit yes proceeds, utility output preserves exit codes, and failures exit without waiting for Enter.'
+Write-Host 'Chocolatey migration tests passed: No/empty cancel, explicit yes proceeds, journal file/directory fingerprints, utility output preserves exit codes, and failures exit without waiting for Enter.'
