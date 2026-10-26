@@ -133,6 +133,7 @@ test('Flatpak keeps the installed app ID and BookshelfNG sandbox data directory'
 test('Chocolatey deferred service upgrades retain both NSSM environments and recover after startup failure', () => {
   const installer = read('packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in');
   const recovery = read('packaging/legacy/chocolatey/tools/bookshelfng-startup-recovery.ps1');
+  const choiceTest = read('packaging/scripts/test-chocolatey-migration-choice.ps1');
 
   assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironment'/);
   assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironmentExtra'/);
@@ -160,6 +161,8 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(recovery, /PreviousApplicationDirectory/);
   assert.match(recovery, /if \(\$bookshelfSource\)/);
   assert.match(recovery, /ChaptarrNG database was preserved/);
+  assert.match(choiceTest, /\$global:LASTEXITCODE = 0/,
+    'the test resets its intentionally nonzero utility result before the PowerShell runner exits');
 });
 
 test('Windows standalone migration installer is opt-in and Close defers handoff', () => {

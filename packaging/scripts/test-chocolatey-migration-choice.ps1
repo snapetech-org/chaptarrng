@@ -118,17 +118,30 @@ Assert-Condition ($script:PromptCalls -eq 0) 'Manual mode prompted for an automa
 $temporaryDirectory = Join-Path ([IO.Path]::GetTempPath()) ("bookshelfng-chocolatey-utility-{0}" -f [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
 try {
-  $fakeUtility = Join-Path $temporaryDirectory 'fake-utility.cmd'
-  @(
-    '@echo off',
-    'if /I not "%2"=="-exitimmediately" exit /b 99',
-    'echo Utility output must not replace the exit code',
-    'exit /b 7'
-  ) | Set-Content -LiteralPath $fakeUtility -Encoding ascii
+  if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+    $fakeUtility = Join-Path $temporaryDirectory 'fake-utility.cmd'
+    @(
+      '@echo off',
+      'if /I not "%2"=="-exitimmediately" exit /b 99',
+      'echo Utility output must not replace the exit code',
+      'exit /b 7'
+    ) | Set-Content -LiteralPath $fakeUtility -Encoding ascii
+  } else {
+    $fakeUtility = Join-Path $temporaryDirectory 'fake-utility.sh'
+    @(
+      '#!/bin/sh',
+      '[ "$2" = "-exitimmediately" ] || exit 99',
+      'echo Utility output must not replace the exit code',
+      'exit 7'
+    ) | Set-Content -LiteralPath $fakeUtility -Encoding ascii
+    & chmod +x $fakeUtility
+    if ($LASTEXITCODE -ne 0) { throw 'Could not make the fake utility executable.' }
+  }
 
   $utilityResult = @(Invoke-BookshelfUtility -Executable $fakeUtility -Arguments @('fixture-argument') -EnvironmentEntries @())
   Assert-Condition ($utilityResult.Count -eq 1) 'Utility stdout leaked into the returned exit-code value.'
   Assert-Condition ([int] $utilityResult[0] -eq 7) 'Utility did not preserve its process exit code.'
+  $global:LASTEXITCODE = 0
 } finally {
   Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force -ErrorAction SilentlyContinue
 }
