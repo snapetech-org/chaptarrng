@@ -242,15 +242,15 @@ jobs:
         sbom: true
         provenance: mode=max
 
-    - name: Install Skopeo for optional Docker Hub mirroring
+    - name: Verify Skopeo was installed by the private JIT broker
       if: steps.docker-tags.outputs.has_tags == 'true' && steps.dockerhub-credentials.outputs.configured == 'true'
       shell: bash
       run: |
         set -euo pipefail
-        if ! command -v skopeo >/dev/null 2>&1; then
-          sudo apt-get update
-          sudo apt-get install -y skopeo
-        fi
+        command -v skopeo >/dev/null 2>&1 || {
+          echo 'Skopeo must be installed by the private JIT broker before this job starts.' >&2
+          exit 1
+        }
 
     - name: Publish provider-mode compatibility aliases and verify image digests
       id: legacy-image-aliases

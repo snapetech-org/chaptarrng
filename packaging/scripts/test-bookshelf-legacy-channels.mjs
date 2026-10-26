@@ -90,6 +90,21 @@ test('release workflow job extraction accepts Windows CRLF checkouts', () => {
   assert.match(readWorkflowJob(workflow, 'legacy-desktop-candidates'), /needs: \[release, standalone-assets\]/);
 });
 
+test('Windows Chocolatey release downloads private assets through the authenticated GitHub API', () => {
+  const workflow = read('.github/workflows/release-distribution.yml');
+  const job = readWorkflowJob(workflow, 'build-chocolatey');
+
+  assert.match(job, /api\.github\.com\/repos\/\$env:GITHUB_REPOSITORY\/releases\/tags/);
+  assert.match(job, /Authorization = \"Bearer \$env:GH_TOKEN\"/);
+  assert.match(job, /\$apiUri = \[System\.Uri\]\$assets\[0\]\.url/);
+  assert.match(job, /Accept = 'application\/octet-stream'/);
+  assert.match(job, /Invoke-WebRequest -Uri \$apiUri\.AbsoluteUri -Headers \$assetHeaders -OutFile \$destination/);
+  assert.match(job, /\$release\.draft -or \$release\.prerelease/);
+  assert.match(job, /Get-FileHash .* -Algorithm SHA256/);
+  assert.doesNotMatch(job, /gh release download/);
+  assert.doesNotMatch(job, /Invoke-WebRequest -Uri \$downloadUri\.AbsoluteUri -OutFile/);
+});
+
 test('AppImage keeps its desktop identity, BookshelfNG data directory, and Chaptarr launcher', () => {
   const appRun = read('packaging/legacy/appimage/AppRun');
   const desktop = read('packaging/legacy/appimage/com.snapetech.bookshelfng.desktop');

@@ -538,13 +538,8 @@ jobs:
       run: |
         set -euo pipefail
         if [[ ! -x /usr/lib/postgresql/16/bin/pg_dump || ! -x /usr/lib/postgresql/16/bin/pg_restore ]]; then
-          proxy="${https_proxy:-${HTTPS_PROXY:-${http_proxy:-${HTTP_PROXY:-}}}}"
-          apt_options=()
-          if [[ -n "$proxy" ]]; then
-            apt_options+=(-o "Acquire::http::Proxy=$proxy" -o "Acquire::https::Proxy=$proxy")
-          fi
-          sudo apt-get "${apt_options[@]}" update
-          sudo apt-get "${apt_options[@]}" install -y postgresql-client-16
+          echo 'PostgreSQL 16 client binaries must be installed by the private JIT broker before this job starts.' >&2
+          exit 1
         fi
         # Match the service's major version. A newer pg_dump emits settings
         # (such as transaction_timeout) that PostgreSQL 16 cannot restore.

@@ -73,7 +73,25 @@ docker run --rm -i --user 0:0 "${docker_proxy_args[@]}" \
   "$test_image" sh -s > "$task_root/evidence/rpm-transaction.log" 2>&1 <<'FEDORA_TEST'
 set -eu
 export DNF_YUM_AUTO_YES=1
-dnf -q install -y expect rpm-build systemd libicu openssl-libs python3 sqlite-libs util-linux zlib \
+cat > /etc/yum.repos.d/fedora.repo <<'FEDORA_REPOS'
+[fedora]
+name=Fedora 44 - x86_64
+baseurl=https://dl.fedoraproject.org/pub/fedora/linux/releases/44/Everything/$basearch/os/
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-44-primary
+skip_if_unavailable=0
+
+[updates]
+name=Fedora 44 - x86_64 - Updates
+baseurl=https://dl.fedoraproject.org/pub/fedora/linux/updates/44/Everything/$basearch/
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-44-primary
+skip_if_unavailable=0
+FEDORA_REPOS
+dnf -q --disablerepo='*' --enablerepo=fedora --enablerepo=updates install -y \
+  expect rpm-build systemd libicu openssl-libs python3 sqlite-libs util-linux zlib \
   > /work/evidence/fedora-dependencies.log 2>&1
 
 top=/work/rpmbuild

@@ -525,12 +525,16 @@ jobs:
         name: chaptarrng-standalone-linux-x64
         path: ${{ runner.temp }}/linux-x64
 
-    - name: Install desktop candidate build tools
+    - name: Verify desktop candidate tools were installed by the private JIT broker
       if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
       run: |
         set -euo pipefail
-        sudo apt-get update
-        sudo apt-get install --yes --no-install-recommends flatpak flatpak-builder curl
+        for tool in flatpak flatpak-builder curl; do
+          command -v "$tool" >/dev/null 2>&1 || {
+            echo "$tool must be installed by the private JIT broker before this job starts." >&2
+            exit 1
+          }
+        done
         flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
         flatpak install --user --noninteractive --assumeyes flathub \
           org.freedesktop.Platform//26.08 \
@@ -602,10 +606,13 @@ jobs:
         name: chaptarrng-standalone-linux-x64
         path: ${{ runner.temp }}/linux-x64
 
-    - name: Install RPM tools
+    - name: Verify RPM tools were installed by the private JIT broker
       run: |
-        sudo apt-get update
-        sudo apt-get install --yes --no-install-recommends rpm
+        set -euo pipefail
+        command -v rpmbuild >/dev/null 2>&1 || {
+          echo 'RPM tools must be installed by the private JIT broker before this job starts.' >&2
+          exit 1
+        }
 
     - name: Build both package identities from the same ChaptarrNG release asset
       env:
