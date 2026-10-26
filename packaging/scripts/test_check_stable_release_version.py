@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import io
+import json
 import unittest
 from unittest.mock import patch
 
 from check_stable_release_version import (
     fetch_published_releases,
     latest_stable_release,
-    parse_stable_version,
+    parse_version,
     release_is_newer,
 )
 
@@ -36,21 +37,38 @@ class StableReleaseVersionTests(unittest.TestCase):
         for version in ("0.9", "01.2.3", "1.2.3-rc.1", "v1.2.3"):
             with self.subTest(version=version):
                 with self.assertRaises(ValueError):
-                    parse_stable_version(version)
+                    parse_version(version)
 
     def test_rejects_invalid_release_tags_for_comparison(self):
         with self.assertRaises(ValueError):
             release_is_newer("1.2.4", "nightly")
 
-    @patch("check_stable_release_version.urllib.request.urlopen")
-    def test_fetch_uses_authenticated_github_releases_api(self, urlopen):
-        urlopen.return_value = io.BytesIO(b"[]")
+    @patch("check_stable_release_version.urllib.request.build_opener")
+    def test_fetch_uses_authenticated_github_releases_api(self, build_opener):
+        opener = build_opener.return_value
+        opener.open.return_value = io.BytesIO(b"[]")
 
         self.assertEqual(fetch_published_releases("owner/repo", "test-token"), [])
 
-        request = urlopen.call_args.args[0]
-        self.assertEqual(request.full_url, "https://api.github.com/repos/owner/repo/releases?per_page=100")
+        request = opener.open.call_args.args[0]
+        self.assertEqual(request.full_url, "https://api.github.com/repos/owner/repo/releases?per_page=100&page=1")
         self.assertEqual(request.get_header("Authorization"), "Bearer test-token")
+
+    @patch("check_stable_release_version.urllib.request.build_opener")
+    def test_fetches_all_release_pages(self, build_opener):
+        opener = build_opener.return_value
+        opener.open.side_effect = [
+            io.BytesIO(json.dumps([{}] * 100).encode("utf-8")),
+            io.BytesIO(b"[]"),
+        ]
+
+        self.assertEqual(len(fetch_published_releases("owner/repo", "test-token")), 100)
+
+        urls = [call.args[0].full_url for call in opener.open.call_args_list]
+        self.assertEqual(urls, [
+            "https://api.github.com/repos/owner/repo/releases?per_page=100&page=1",
+            "https://api.github.com/repos/owner/repo/releases?per_page=100&page=2",
+        ])
 
     def test_rejects_invalid_repository_and_missing_token(self):
         with self.assertRaises(ValueError):
