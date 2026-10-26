@@ -297,8 +297,8 @@ test('StartOS candidate documents installed test acceptance and remaining releas
   assert.match(readme, /volume IDs `main`,\s*`books`, and `downloads`/);
   assert.match(readme, /`\/config`, `\/books`, and `\/downloads`/);
   assert.match(readme, /exact ChaptarrNG\s+multi-architecture Hardcover digest/);
-  assert.match(readme, /x86_64 test-package update passed in a local\s+StartOS VM/i);
-  assert.match(readme, /official signed package, aarch64 runtime, external-repository\s+delivery, and package-manager rollback remain/i);
+  assert.match(readme, /Synthetic x86_64 and aarch64 test-package updates\s+passed in local StartOS VMs/i);
+  assert.match(readme, /official signed package, update from the public `\.71` StartOS package,\s+external\s+repository delivery, or package-manager rollback/i);
   assert.match(manifest, /packageRepo: 'https:\/\/github\.com\/snapetech\/bookshelfng-startos'/);
   assert.match(manifest, /upstreamRepo: 'https:\/\/github\.com\/snapetech-org\/chaptarrng'/);
   assert.match(manifest, /source: \{ dockerTag: 'ghcr\.io\/snapetech-org\/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' \}/);
