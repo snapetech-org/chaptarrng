@@ -70,7 +70,10 @@ case "$action" in
     if [ -f "$resolved_path" ]; then
       value=$(sha256sum -- "$resolved_path" | awk '{ print "sha256:" $1 }')
     elif [ -d "$resolved_path" ]; then
-      value=$(find "$resolved_path" -type f -print0 | sort -z | xargs -0 -r sha256sum | sha256sum | awk '{ print "sha256:" $1 }')
+      value=$(
+        cd -- "$resolved_path"
+        find . -type f -print0 | sort -z | xargs -0 -r sha256sum | sha256sum | awk '{ print "sha256:" $1 }'
+      )
     else
       value=missing
     fi

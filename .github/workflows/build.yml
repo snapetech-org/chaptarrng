@@ -108,6 +108,12 @@ jobs:
       shell: pwsh
       run: ./packaging/scripts/test-chocolatey-migration-choice.ps1
 
+    - name: Test BookshelfNG migration journal fingerprints and desktop PostgreSQL handoff
+      if: matrix.os == 'ubuntu-latest'
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}
+      run: bash packaging/scripts/test-bookshelfng-journal-fingerprint.sh
+
     - name: Test hosted runner policy
       if: matrix.os == 'ubuntu-latest'
       run: python3 scripts/test_workflow_runner_policy.py
