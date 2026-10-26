@@ -36,8 +36,10 @@ COPY package.json yarn.lock ./
 # The pinned braces resolution is a local package and must exist before Yarn resolves it.
 COPY patches/braces ./patches/braces
 
-# Use BuildKit cache mount so tarballs stay on host between builds
-RUN --mount=type=cache,target=/root/.cache/yarn \
+# Yarn 1 otherwise selects /usr/local/share/.cache/yarn in this copied toolchain.
+# Keep its actual cache on the mount and serialize writers during parallel builds.
+ENV YARN_CACHE_FOLDER=/root/.cache/yarn
+RUN --mount=type=cache,target=/root/.cache/yarn,sharing=locked \
     yarn install --frozen-lockfile
 
 ###### build stage ######
@@ -181,3 +183,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=245m --retries=3 \
 # Keep the default Docker build target the ordinary ChaptarrNG image.
 FROM runtime AS chaptarrng-standard
 EXPOSE 8789
+
