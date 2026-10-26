@@ -53,6 +53,7 @@ class SystemdBootstrapPromptTests(unittest.TestCase):
                     mock.patch.object(BOOTSTRAP.os, "geteuid", return_value=0),
                     mock.patch.object(BOOTSTRAP, "validate_service_name", return_value="bookshelfng.service"),
                     mock.patch.object(BOOTSTRAP, "acquire_service_handoff_lock") as acquire_lock,
+                    mock.patch.object(BOOTSTRAP, "install_mode_locked") as install_locked,
                     mock.patch.object(BOOTSTRAP.sys, "stdin", TerminalInput(response)),
                     mock.patch.object(BOOTSTRAP.sys, "stderr", output),
                 ):
@@ -63,6 +64,7 @@ class SystemdBootstrapPromptTests(unittest.TestCase):
 
                 self.assertEqual(result, 0)
                 acquire_lock.assert_not_called()
+                install_locked.assert_not_called()
                 self.assertIn("installation and data remain unchanged", output.getvalue())
 
     def test_ask_fails_closed_without_a_terminal(self) -> None:

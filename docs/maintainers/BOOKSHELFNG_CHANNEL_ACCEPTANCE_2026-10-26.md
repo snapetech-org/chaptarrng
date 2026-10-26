@@ -409,3 +409,7 @@ gates cannot be enabled from the current configuration.
 - Representative operator data and production provider/API workflows are outside this channel-package campaign.
 
 Do not mark the global channel gate complete or publish these candidates until the blocked delivery and platform checks above are closed or the supported-channel scope is explicitly changed.
+
+## Private JIT RPM failure diagnosis — 2026-10-26 14:47 UTC
+
+Read-only inspection of the failed Linux x64 job in [run 40313259957](https://github.com/snapetech-org/chaptarrng/actions/runs/40313259957) confirmed that the runner was in the private `ng-shared-main-jit` group. The job reached the Fedora RPM bridge harness but failed before `rpmbuild` or the package transaction: `dnf install` could not fetch Fedora 44 updates metadata because the configured proxy returned HTTP 403 for the Fedora metalink. The Debian bridge and AUR choice steps had already passed in that job. This is a blocked dependency-source setup, not evidence of an RPM handoff regression or pass. A qualifying rerun needs an approved Fedora mirror or dependency cache reachable from private JIT; do not bypass the configured egress policy. The run remains incomplete and was not retried.
