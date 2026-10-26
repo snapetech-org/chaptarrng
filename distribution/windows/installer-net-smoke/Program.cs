@@ -288,6 +288,19 @@ void VerifyBookshelfSource(string targetDirectory)
 
     using var connection = new SqliteConnection(CreateConnectionString(sourcePath, SqliteOpenMode.ReadOnly));
     connection.Open();
+    if (HasNativeChaptarrLineage(connection))
+    {
+        throw new InvalidDataException("The BookshelfNG source database was converted to native ChaptarrNG lineage.");
+    }
+
+    foreach (var targetName in new[] { "chaptarr.db", "audioarr.db" })
+    {
+        if (File.Exists(Path.Combine(targetDirectory, targetName)))
+        {
+            throw new InvalidDataException($"A separate ChaptarrNG target database appeared before BookshelfNG migration was accepted: {targetName}.");
+        }
+    }
+
     if (QueryScalar<string>(connection, "PRAGMA integrity_check;") != "ok")
     {
         throw new InvalidDataException("The restored BookshelfNG source failed SQLite integrity_check.");

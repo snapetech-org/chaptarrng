@@ -232,6 +232,16 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   const choiceTest = read('packaging/scripts/test-chocolatey-migration-choice.ps1');
   const handoff = read('packaging/scripts/test-chocolatey-bookshelfng-handoff.ps1');
   const smoke = read('distribution/windows/installer-net-smoke/Program.cs');
+  const sourceVerifierStart = smoke.indexOf('void VerifyBookshelfSource(');
+  const migrationVerifierStart = smoke.indexOf('void VerifyBookshelfMigration(', sourceVerifierStart);
+  assert.ok(sourceVerifierStart >= 0 && migrationVerifierStart > sourceVerifierStart,
+    'BookshelfNG source verifier could not be isolated for contract checks');
+  const sourceVerifier = smoke.slice(sourceVerifierStart, migrationVerifierStart);
+  const manualAcceptanceStart = handoff.indexOf('$manualResult = Invoke-Chocolatey');
+  const manualAutomaticStart = handoff.indexOf('$env:CHAPTARRNG_TEST_ARCHIVE_PATH = $ArchivePath', manualAcceptanceStart);
+  assert.ok(manualAcceptanceStart >= 0 && manualAutomaticStart > manualAcceptanceStart,
+    'Chocolatey manual-defer acceptance block could not be isolated');
+  const manualAcceptance = handoff.slice(manualAcceptanceStart, manualAutomaticStart);
 
   assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironment'/);
   assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironmentExtra'/);
@@ -247,6 +257,14 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(installer, /CHAPTARRNG_TEST_FAIL_HANDOFF/);
   assert.match(handoff, /after-migration-health/);
   assert.match(handoff, /--verify-bookshelfng-source/);
+  assert.match(manualAcceptance, /Invoke-MigrationFixture @\('--verify-bookshelfng-source', \$legacyDataDirectory\)/,
+    'Chocolatey manual defer must verify the original BookshelfNG database, not only a canary that may prefer a native target');
+  assert.match(manualAcceptance, /sourceBackupsAfterManual/,
+    'Chocolatey manual defer must not create migration backups before acceptance');
+  assert.match(sourceVerifier, /HasNativeChaptarrLineage/,
+    'BookshelfNG source verification must reject an in-place native ChaptarrNG conversion');
+  assert.match(sourceVerifier, /chaptarr\.db/);
+  assert.match(sourceVerifier, /audioarr\.db/);
   assert.match(handoff, /readarr\.db\.chaptarr-failed-/);
   assert.match(handoff, /failedTargetDatabase\.Name -match/);
   assert.match(handoff, /\\d\{8\}T\\d\{9\}Z/);

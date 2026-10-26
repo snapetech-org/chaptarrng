@@ -273,8 +273,13 @@ try {
   if ((Get-FileHash -LiteralPath $applicationBeforeManual -Algorithm SHA256).Hash -ne $applicationHashBeforeManual) {
     throw 'Manual defer changed the installed BookshelfNG executable.'
   }
+  Invoke-MigrationFixture @('--verify-bookshelfng-source', $legacyDataDirectory) | Out-Null
   if ((Get-MigrationCanary) -ne $canaryBeforeManual -or -not (Test-Path -LiteralPath $legacyDatabase -PathType Leaf)) {
     throw 'Manual defer changed the seeded BookshelfNG records or removed readarr.db.'
+  }
+  $sourceBackupsAfterManual = @(Get-ChildItem -LiteralPath $legacyDataDirectory -Filter '*.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue)
+  if ($sourceBackupsAfterManual.Count -gt 0) {
+    throw 'Manual defer created a BookshelfNG source backup before migration was accepted.'
   }
   if ((Test-Path -LiteralPath $stageDirectory) -or (Test-Path -LiteralPath $previousDirectory) -or (Test-Path -LiteralPath $handoffManifest)) {
     throw 'Manual defer created staged application, rollback, or migration-handoff files.'
