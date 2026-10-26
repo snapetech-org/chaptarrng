@@ -65,11 +65,12 @@ grep -Fq 'proxy_pass http://127.0.0.1:8788;' "$stage/cloudron/nginx.conf"
 grep -Fq 'return 200 "healthy\n";' "$stage/cloudron/nginx.conf"
 grep -Fq 'client_body_temp_path /run/chaptarr-nginx/client_body;' "$stage/cloudron/nginx.conf"
 grep -Fq 'proxy_temp_path /run/chaptarr-nginx/proxy_temp;' "$stage/cloudron/nginx.conf"
-grep -Fq 'mkdir -p \' "$stage/cloudron/cloudron-entrypoint.sh"
-grep -Fq 'chmod 1777 \' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'mkdir -p' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'chmod 1777' "$stage/cloudron/cloudron-entrypoint.sh"
 grep -Fq 'export PUID=0' "$stage/cloudron/cloudron-entrypoint.sh"
 grep -Fq 'export PGID=0' "$stage/cloudron/cloudron-entrypoint.sh"
-grep -Fq 'if [[ "${1:-}" == /bin/sh || "${1:-}" == sh ]]; then' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq '/usr/local/bin/chaptarr-cloudron-backup|/usr/local/bin/chaptarr-cloudron-restore)' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq '/bin/sh|sh|/bin/bash|bash)' "$stage/cloudron/cloudron-entrypoint.sh"
 grep -Fq 'exec "$@"' "$stage/cloudron/cloudron-entrypoint.sh"
 grep -Fq 'COPY cloudron-backup.sh /usr/local/bin/chaptarr-cloudron-backup' "$stage/cloudron/Dockerfile"
 grep -Fq 'COPY cloudron-restore.sh /usr/local/bin/chaptarr-cloudron-restore' "$stage/cloudron/Dockerfile"
@@ -87,10 +88,10 @@ if grep -Fq "replace it with the exact published multi-architecture digest" "$st
   echo "Cloudron Dockerfile retained stale instructions to replace the compatibility tag." >&2
   exit 1
 fi
-compose_default_prefix='${CHAPTARRNG_COMPAT_IMAGE:-'
+compose_default_prefix="\${CHAPTARRNG_COMPAT_IMAGE:-"
 compose_default="image: $compose_default_prefix$image}"
 grep -Fq "$compose_default" "$stage/coop-cloud/bookshelfng/compose.yml"
-grep -Fq 'coop-cloud.${STACK_NAME}.version=${COOP_CLOUD_RECIPE_VERSION:-0.1.0+0.9.978}' "$stage/coop-cloud/bookshelfng/compose.yml"
+grep -Fq "coop-cloud.\${STACK_NAME}.version=\${COOP_CLOUD_RECIPE_VERSION:-0.1.0+0.9.978}" "$stage/coop-cloud/bookshelfng/compose.yml"
 grep -Fxq "CHAPTARRNG_COMPAT_IMAGE=$image" "$stage/coop-cloud/bookshelfng/.env.sample"
 grep -Fq 'backupbot.backup=true' "$stage/coop-cloud/bookshelfng/compose.yml"
 grep -Fq 'test: ["CMD", "/usr/local/bin/chaptarr-healthcheck"]' "$stage/coop-cloud/bookshelfng/compose.yml"
@@ -109,10 +110,10 @@ if grep -Fq 'BOOKSHELFNG_HOST_PORT' "$stage/coop-cloud/bookshelfng/.env.sample";
 fi
 grep -Fq "$compose_default" "$stage/catalogs/compose.yaml"
 grep -Fq "Release multi-architecture image: \`$image\`" "$stage/README.md"
-grep -Fq '`HARDCOVER=false` when migrating a prior softcover image.' "$stage/README.md"
-grep -Fq 'old `image.tag`' "$stage/README.md"
-grep -Fq 'explicit `bookshelfMigration.providerMode`' "$stage/README.md"
-grep -Fq '`BOOKSHELFNG_PORT` and `BOOKSHELFNG_HOST_PORT`' "$stage/README.md"
+grep -Fq "\`HARDCOVER=false\` when migrating a prior softcover image." "$stage/README.md"
+grep -Fq "old \`image.tag\`" "$stage/README.md"
+grep -Fq "explicit \`bookshelfMigration.providerMode\`" "$stage/README.md"
+grep -Fq "\`BOOKSHELFNG_PORT\` and \`BOOKSHELFNG_HOST_PORT\`" "$stage/README.md"
 
 startos_manifest="$stage/startos/startos/manifest/index.ts"
 startos_version="$stage/startos/startos/versions/current.ts"

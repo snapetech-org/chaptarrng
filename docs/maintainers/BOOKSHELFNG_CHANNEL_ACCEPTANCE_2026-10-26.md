@@ -83,10 +83,11 @@ sequence while preserving later evidence files.
 The legacy `.4.21` pre-update Cloudron backup did not contain `/config`,
 `/books`, or `/downloads`: that package had no backup hooks. The new hooks only
 protect backups created after `.4.23` is installed. Full task evidence,
-including the backup ID and archive/database checks, is recorded in
-`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/cloudron-installed-platform-acceptance.md`.
-The VM image and registry were local QA infrastructure; no candidate or feed
-was published.
+including the backup ID and archive/database checks, is in the
+[Cloudron platform test record](CLOUDRON_PLATFORM_ACCEPTANCE_2026-10-26.md).
+Supporting VM logs and snapshots are retained under
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/`. The VM image and
+registry were local QA infrastructure; no candidate or feed was published.
 
 ## FreeBSD standalone installed acceptance
 

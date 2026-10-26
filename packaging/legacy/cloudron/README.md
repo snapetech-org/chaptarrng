@@ -68,8 +68,9 @@ ChaptarrNG process.
 
 The VM used a local test registry and a local exact-head ChaptarrNG image. This
 is installed platform evidence, not a published Cloudron package or feed
-acceptance. The tested candidate and full task evidence are recorded in the
-[channel acceptance matrix](../../../docs/maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
+acceptance. Results are recorded in the
+[channel acceptance matrix](../../../docs/maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md)
+and the [detailed Cloudron platform report](../../../docs/maintainers/CLOUDRON_PLATFORM_ACCEPTANCE_2026-10-26.md).
 
 Cloudron package source historically lives in the BookshelfNG repository. This
 ChaptarrNG-owned candidate records the package contract and supplies a safe
