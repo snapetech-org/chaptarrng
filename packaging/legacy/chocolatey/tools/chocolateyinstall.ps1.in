@@ -139,17 +139,54 @@ function Get-BookshelfSqliteDatabaseNames {
   $result = @()
   foreach ($name in @('readarr.db', 'audioarr.db')) {
     $path = Join-Path $DataDirectory $name
+    $hasDurableSidecar = $false
     if (Test-Path -LiteralPath $path -PathType Leaf) {
       $file = Get-Item -LiteralPath $path -Force
       if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
         throw "The BookshelfNG database '$name' is a reparse point. Resolve it to a regular file before updating."
       }
-      if ($file.Length -gt 0) {
-        $result += $name
+    } elseif (Test-Path -LiteralPath $path) {
+      throw "The BookshelfNG database '$name' is not a regular file. Resolve it before updating."
+    }
+
+    foreach ($suffix in @('-journal', '-wal', '-shm')) {
+      $sidecarPath = "$path$suffix"
+      if (Test-Path -LiteralPath $sidecarPath) {
+        $sidecar = Get-Item -LiteralPath $sidecarPath -Force
+        if (($sidecar.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or $sidecar.PSIsContainer) {
+          throw "The BookshelfNG SQLite sidecar '$name$suffix' is not a regular file. Resolve it before updating."
+        }
+        if ($suffix -ne '-shm' -and $sidecar.Length -gt 0) { $hasDurableSidecar = $true }
       }
+    }
+
+    if ((Test-Path -LiteralPath $path -PathType Leaf) -and ((Get-Item -LiteralPath $path -Force).Length -gt 0 -or $hasDurableSidecar)) {
+      $result += $name
+    } elseif ($hasDurableSidecar) {
+      # Include the source in the preview path so the converter reports a
+      # recoverable main-file/WAL inconsistency without discarding either side.
+      $result += $name
     }
   }
   return $result
+}
+
+function Test-HasPopulatedSqliteDatabaseFamily {
+  param([Parameter(Mandatory = $true)] [string] $DatabasePath)
+  if ((Test-Path -LiteralPath $DatabasePath -PathType Leaf) -and
+      (Get-Item -LiteralPath $DatabasePath -Force).Length -gt 0) {
+    return $true
+  }
+
+  foreach ($suffix in @('-journal', '-wal')) {
+    $sidecarPath = "$DatabasePath$suffix"
+    if ((Test-Path -LiteralPath $sidecarPath -PathType Leaf) -and
+        (Get-Item -LiteralPath $sidecarPath -Force).Length -gt 0) {
+      return $true
+    }
+  }
+
+  return $false
 }
 
 function Resolve-ProviderMode {
@@ -625,6 +662,8 @@ $postgresBackupDirectory = $null
 $migrationDatabaseMutationMayHaveStarted = $false
 $deferredRecoveryArmed = $false
 $alreadyMigrated = $false
+$mergeSqliteSources = $false
+$rollbackSqliteDatabaseName = $null
 $providerMode = $null
 $effectiveEnvironment = @()
 $healthPort = 8789
@@ -687,10 +726,12 @@ if ($sqliteSourceNames.Count -gt 1 -and -not $postgresSourceForChoice) {
     $preMergedNativeDatabase = $true
     $sqliteSourceNames = @()
   } else {
-    throw 'Both readarr.db and audioarr.db contain BookshelfNG data. Run the explicit ChaptarrNG multi-database migration first; neither file was changed.'
+    $mergeSqliteSources = $true
+    $rollbackSqliteDatabaseName = 'chaptarr.db'
   }
 }
 $sqliteSourceName = if ($sqliteSourceNames.Count -gt 0) { $sqliteSourceNames[0] } else { $null }
+$rollbackSqliteDatabaseName = if ($rollbackSqliteDatabaseName) { $rollbackSqliteDatabaseName } else { $sqliteSourceName }
 $sqliteSourceExisted = $sqliteSourceNames.Count -gt 0 -or $preMergedNativeDatabase
 $alreadyMigratedForChoice = $preMergedNativeDatabase
 $choiceConsolePath = if ($oldApplication) { $oldApplication.Trim().Trim('"') } else { '' }
@@ -734,7 +775,9 @@ if ($hadService) {
 
 Complete-PriorBookshelfHandoff
 $backupNamesBefore = @()
-if ($sqliteSourceName) {
+if ($mergeSqliteSources) {
+  $backupNamesBefore = @(Get-ChildItem -LiteralPath $dataDir -Filter 'chaptarr.db.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue | ForEach-Object Name)
+} elseif ($sqliteSourceName) {
   $backupNamesBefore = @(Get-ChildItem -LiteralPath $dataDir -Filter "$sqliteSourceName.bookshelfng-backup-*.db" -File -ErrorAction SilentlyContinue | ForEach-Object Name)
 }
 $configPath = Join-Path $dataDir 'config.xml'
@@ -866,10 +909,12 @@ try {
   }
 
   if ($hasMigrationData -and -not $alreadyMigrated) {
-    $previewExit = Invoke-BookshelfUtility $previewConsole @(
+    $previewArguments = @(
       '-preview-bookshelf-migration',
       "-data=$dataDir"
-    ) $effectiveEnvironment
+    )
+    if ($mergeSqliteSources) { $previewArguments += '-merge-bookshelf-databases' }
+    $previewExit = Invoke-BookshelfUtility $previewConsole $previewArguments $effectiveEnvironment
     if ($previewExit -ne 0) {
       if (-not $providerMode) {
         throw "BookshelfNG migration preview failed with exit code $previewExit. If the source uses bare numeric provider IDs, rerun with the Chocolatey package parameter /ProviderMode=Goodreads or /ProviderMode=Hardcover. The original service and database were preserved."
@@ -913,6 +958,7 @@ try {
       OldStart = $oldStart
       SqliteSourceExisted = $sqliteSourceExisted
       SqliteBackupNamesBefore = @($backupNamesBefore)
+      MergeSqliteSources = $mergeSqliteSources
       PostgresSource = $postgresSource
       PostgresBackupDirectory = $postgresBackupDirectory
       TargetPostgresBackupDirectory = $null
@@ -1088,23 +1134,54 @@ try {
         Write-Warning "PostgreSQL migration may have started, but its independent restore backup or utility is unavailable. Keep the BookshelfNG service stopped; inspect the retained database backup at $postgresBackupDirectory."
       }
     } elseif ($sqliteSourceExisted) {
-      $newDatabaseBackup = Get-ChildItem -LiteralPath $dataDir -Filter "$sqliteSourceName.bookshelfng-backup-*.db" -File -ErrorAction SilentlyContinue |
+      $backupPrefix = if ($rollbackSqliteDatabaseName) { "$rollbackSqliteDatabaseName.bookshelfng-backup-*.db" } else { 'readarr.db.bookshelfng-backup-*.db' }
+      $newDatabaseBackup = Get-ChildItem -LiteralPath $dataDir -Filter $backupPrefix -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -notin $backupNamesBefore } |
         Sort-Object LastWriteTimeUtc -Descending |
         Select-Object -First 1
       if ($newDatabaseBackup) {
         try {
-          $databasePath = Join-Path $dataDir $sqliteSourceName
-          $failedPath = "$databasePath.chaptarr-failed-$([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'))"
-          if (Test-Path -LiteralPath $databasePath) { Move-Item -LiteralPath $databasePath -Destination $failedPath }
-          foreach ($suffix in @('-wal', '-shm', '-journal')) {
-            $sidecar = "$databasePath$suffix"
-            if (Test-Path -LiteralPath $sidecar) { Move-Item -LiteralPath $sidecar -Destination "$failedPath$suffix" }
+          if ($mergeSqliteSources) {
+            $databasePath = Join-Path $dataDir 'chaptarr.db'
+            if (Test-HasPopulatedSqliteDatabaseFamily $databasePath) {
+              $rollbackConsole = Join-Path $appDir 'bin\Chaptarr.Console.exe'
+              if (-not (Test-Path -LiteralPath $rollbackConsole)) { $rollbackConsole = $previewConsole }
+              $restoreExit = Invoke-BookshelfUtility $rollbackConsole @(
+                '-restore-bookshelf',
+                '-confirm-bookshelf-service-stopped',
+                "-bookshelf-backup=$($newDatabaseBackup.FullName)",
+                "-data=$dataDir"
+              ) $effectiveEnvironment
+              if ($restoreExit -ne 0) { throw "Merged BookshelfNG rollback exited with code $restoreExit." }
+              Write-Host 'The original readarr.db and audioarr.db sources remain in place for the prior BookshelfNG service.'
+            } else {
+              Write-Host 'The merge did not promote a ChaptarrNG database; both original BookshelfNG sources remain available for rollback.'
+            }
+          } else {
+            $databaseName = if ($rollbackSqliteDatabaseName) { $rollbackSqliteDatabaseName } else { 'readarr.db' }
+            $databasePath = Join-Path $dataDir $databaseName
+            $failedPath = "$databasePath.chaptarr-failed-$([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'))"
+            if (Test-Path -LiteralPath $databasePath) { Move-Item -LiteralPath $databasePath -Destination $failedPath }
+            foreach ($suffix in @('-wal', '-shm', '-journal')) {
+              $sidecar = "$databasePath$suffix"
+              if (Test-Path -LiteralPath $sidecar) { Move-Item -LiteralPath $sidecar -Destination "$failedPath$suffix" }
+            }
+            Copy-Item -LiteralPath $newDatabaseBackup.FullName -Destination $databasePath
           }
-          Copy-Item -LiteralPath $newDatabaseBackup.FullName -Destination $databasePath
         } catch {
           $databaseRollbackSafe = $false
           Write-Warning "Could not restore the SQLite BookshelfNG database. Keep the BookshelfNG service stopped; the source backup remains at $($newDatabaseBackup.FullName). $($_.Exception.Message)"
+        }
+      } elseif ($mergeSqliteSources) {
+        $sourcePreviewArguments = @('-preview-bookshelf-migration', "-data=$dataDir", '-merge-bookshelf-databases')
+        $sourcePreviewExit = Invoke-BookshelfUtility $previewConsole $sourcePreviewArguments $effectiveEnvironment
+        if ($sourcePreviewExit -eq 0) {
+          Write-Host 'The dual BookshelfNG source databases still pass a read-only merge preview; no source restore was needed.'
+        } elseif (-not (Test-HasPopulatedSqliteDatabaseFamily (Join-Path $dataDir 'chaptarr.db'))) {
+          Write-Host 'The dual source merge was not promoted. The original BookshelfNG databases are unchanged and can be used by the previous service.'
+        } else {
+          $databaseRollbackSafe = $false
+          Write-Warning 'The dual BookshelfNG sources no longer pass preview and no merged-source rollback snapshot was found. Keep the service stopped and inspect all retained database files.'
         }
       } else {
         $databaseRollbackSafe = $false

@@ -339,18 +339,20 @@ public static class BackupService
 
     private static void CopySqliteSet(string dataDirectory, string target, IProgress<LogLine> log)
     {
-        var databaseName = BookshelfDatabaseFiles.ResolveExistingDatabaseName(dataDirectory);
-        var names = new[] { databaseName, databaseName + "-journal", databaseName + "-wal" };
-        var primary = Path.Combine(dataDirectory, databaseName);
-        var dbMb = Math.Round(new FileInfo(primary).Length / 1024.0 / 1024.0);
-        log.Report(new LogLine(LogStream.Stdout, $"[backup] Copying SQLite database, WAL, and rollback journal ({dbMb:F0} MB)..."));
-
-        foreach (var name in names)
+        foreach (var databaseName in BookshelfDatabaseFiles.GetPopulatedDatabaseNames(dataDirectory))
         {
-            var source = Path.Combine(dataDirectory, name);
-            if (File.Exists(source))
+            var names = new[] { databaseName, databaseName + "-journal", databaseName + "-wal" };
+            var primary = Path.Combine(dataDirectory, databaseName);
+            var dbMb = Math.Round(new FileInfo(primary).Length / 1024.0 / 1024.0);
+            log.Report(new LogLine(LogStream.Stdout, $"[backup] Copying {databaseName} SQLite database, WAL, and rollback journal ({dbMb:F0} MB)..."));
+
+            foreach (var name in names)
             {
-                File.Copy(source, Path.Combine(target, name), overwrite: false);
+                var source = Path.Combine(dataDirectory, name);
+                if (File.Exists(source))
+                {
+                    File.Copy(source, Path.Combine(target, name), overwrite: false);
+                }
             }
         }
     }
@@ -491,44 +493,52 @@ public static class BackupService
 
     private static void RunIntegrityCheck(string target, IProgress<LogLine> log)
     {
-        var databaseName = BookshelfDatabaseFiles.ResolveExistingDatabaseName(target);
-        var databasePath = Path.Combine(target, databaseName);
-        log.Report(new LogLine(LogStream.Stdout, "[backup] Running SQLite PRAGMA integrity_check on the copy..."));
-
-        var connectionString = new SqliteConnectionStringBuilder
+        var databaseNames = BookshelfDatabaseFiles.GetPopulatedDatabaseNames(target);
+        if (databaseNames.Count == 0)
         {
-            DataSource = databasePath,
-            Mode = SqliteOpenMode.ReadOnly,
-            Cache = SqliteCacheMode.Private
-        }.ToString();
-
-        try
-        {
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA integrity_check;";
-            using var reader = command.ExecuteReader();
-
-            var rows = new List<string>();
-            while (reader.Read())
-            {
-                rows.Add(reader.GetString(0));
-            }
-
-            if (rows.Count == 1 && string.Equals(rows[0], "ok", StringComparison.OrdinalIgnoreCase))
-            {
-                log.Report(new LogLine(LogStream.Stdout, "[backup] integrity_check: ok"));
-                return;
-            }
-
-            var result = rows.Count == 0 ? "(no output)" : string.Join("; ", rows);
-            log.Report(new LogLine(LogStream.Stderr, $"[backup] integrity_check failed: {result}"));
-            throw new InvalidOperationException($"SQLite integrity_check failed on the backup copy: {result}");
+            throw new InvalidDataException("The SQLite backup contains no populated BookshelfNG databases.");
         }
-        catch (SqliteException ex)
+
+        foreach (var databaseName in databaseNames)
         {
-            throw new InvalidOperationException($"SQLite integrity check error: {ex.Message}", ex);
+            var databasePath = Path.Combine(target, databaseName);
+            log.Report(new LogLine(LogStream.Stdout, $"[backup] Running SQLite PRAGMA integrity_check on {databaseName}..."));
+
+            var connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = databasePath,
+                Mode = SqliteOpenMode.ReadOnly,
+                Cache = SqliteCacheMode.Private
+            }.ToString();
+
+            try
+            {
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "PRAGMA integrity_check;";
+                using var reader = command.ExecuteReader();
+
+                var rows = new List<string>();
+                while (reader.Read())
+                {
+                    rows.Add(reader.GetString(0));
+                }
+
+                if (rows.Count == 1 && string.Equals(rows[0], "ok", StringComparison.OrdinalIgnoreCase))
+                {
+                    log.Report(new LogLine(LogStream.Stdout, $"[backup] {databaseName} integrity_check: ok"));
+                    continue;
+                }
+
+                var result = rows.Count == 0 ? "(no output)" : string.Join("; ", rows);
+                log.Report(new LogLine(LogStream.Stderr, $"[backup] {databaseName} integrity_check failed: {result}"));
+                throw new InvalidOperationException($"SQLite integrity_check failed on {databaseName} in the backup copy: {result}");
+            }
+            catch (SqliteException ex)
+            {
+                throw new InvalidOperationException($"SQLite integrity check error for {databaseName}: {ex.Message}", ex);
+            }
         }
     }
 }

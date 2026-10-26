@@ -212,6 +212,24 @@ function Wait-ServiceStopped {
   return $false
 }
 
+function Test-HasPopulatedSqliteDatabaseFamily {
+  param([Parameter(Mandatory = $true)] [string] $DatabasePath)
+  if ((Test-Path -LiteralPath $DatabasePath -PathType Leaf) -and
+      (Get-Item -LiteralPath $DatabasePath -Force).Length -gt 0) {
+    return $true
+  }
+
+  foreach ($suffix in @('-journal', '-wal')) {
+    $sidecarPath = "$DatabasePath$suffix"
+    if ((Test-Path -LiteralPath $sidecarPath -PathType Leaf) -and
+        (Get-Item -LiteralPath $sidecarPath -Force).Length -gt 0) {
+      return $true
+    }
+  }
+
+  return $false
+}
+
 function Restore-PreviousBookshelf {
   param([object] $Manifest)
 
@@ -230,10 +248,14 @@ function Restore-PreviousBookshelf {
   }
 
   if ($bookshelfSource) {
-    $sourceStillReadable = Invoke-BookshelfUtility $console @(
+    $previewArguments = @(
       '-preview-bookshelf-migration',
       "-data=$dataDir"
-    ) $environmentEntries
+    )
+    if (($Manifest.PSObject.Properties.Name -contains 'MergeSqliteSources') -and $Manifest.MergeSqliteSources) {
+      $previewArguments += '-merge-bookshelf-databases'
+    }
+    $sourceStillReadable = Invoke-BookshelfUtility $console $previewArguments $environmentEntries
 
     if ($sourceStillReadable -ne 0) {
       if ($Manifest.PostgresSource) {
@@ -284,23 +306,36 @@ function Restore-PreviousBookshelf {
         ) $environmentEntries
         if ($restoreExit -ne 0) { throw "The retained PostgreSQL source backup could not be restored (exit $restoreExit)." }
       } elseif ($Manifest.SqliteSourceExisted) {
+        $isMerge = ($Manifest.PSObject.Properties.Name -contains 'MergeSqliteSources') -and $Manifest.MergeSqliteSources
+        $nativeDatabasePath = Join-Path $dataDir 'chaptarr.db'
+        $nativeTargetExists = Test-HasPopulatedSqliteDatabaseFamily $nativeDatabasePath
         $oldBackups = @($Manifest.SqliteBackupNamesBefore)
+        $backupPatterns = @('readarr.db.bookshelfng-backup-*.db', 'audioarr.db.bookshelfng-backup-*.db')
+        if ($isMerge) {
+          $backupPatterns += 'chaptarr.db.bookshelfng-backup-*.db'
+        }
         $newBackup = Get-ChildItem -LiteralPath $dataDir -File -ErrorAction SilentlyContinue |
-          Where-Object { $_.Name -like 'readarr.db.bookshelfng-backup-*.db' -or $_.Name -like 'audioarr.db.bookshelfng-backup-*.db' } |
+          Where-Object { $name = $_.Name; @($backupPatterns | Where-Object { $name -like $_ }).Count -gt 0 } |
           Where-Object { $_.Name -notin $oldBackups } |
           Sort-Object LastWriteTimeUtc -Descending |
           Select-Object -First 1
-        if (-not $newBackup) {
-          throw 'No new BookshelfNG SQLite source snapshot is available; the current database was left untouched.'
-        }
 
-        $restoreExit = Invoke-BookshelfUtility $console @(
-          '-restore-bookshelf',
-          '-confirm-bookshelf-service-stopped',
-          "-bookshelf-backup=$($newBackup.FullName)",
-          "-data=$dataDir"
-        ) $environmentEntries
-        if ($restoreExit -ne 0) { throw "The retained SQLite source backup could not be restored (exit $restoreExit)." }
+        if ($isMerge -and -not $nativeTargetExists) {
+          # Before promotion, the merge works only on private snapshots. The
+          # original two databases are still the previous service's live data.
+        } else {
+          if (-not $newBackup) {
+            throw 'No new BookshelfNG SQLite source snapshot is available; the current database was left untouched.'
+          }
+
+          $restoreExit = Invoke-BookshelfUtility $console @(
+            '-restore-bookshelf',
+            '-confirm-bookshelf-service-stopped',
+            "-bookshelf-backup=$($newBackup.FullName)",
+            "-data=$dataDir"
+          ) $environmentEntries
+          if ($restoreExit -ne 0) { throw "The retained SQLite source backup could not be restored (exit $restoreExit)." }
+        }
       }
     }
   }

@@ -387,7 +387,8 @@ namespace NzbDrone.Common.Extensions
             // before DbFactory's restore/recovery path and can prevent recovery of
             // a damaged database. The migration lineage guard checks for sibling
             // legacy databases after restore and before any migration is applied.
-            if (File.Exists(primaryPath) && new FileInfo(primaryPath).Length > 0)
+            var primaryHasData = File.Exists(primaryPath) && new FileInfo(primaryPath).Length > 0;
+            if (primaryHasData && !appFolderInfo.MergeBookshelfDatabases)
             {
                 return primaryPath;
             }
@@ -396,6 +397,9 @@ namespace NzbDrone.Common.Extensions
             // discovering an existing BookshelfNG/Readarr database. Keep this
             // check file-only; schema validation belongs after database recovery.
             var legacyDatabasePaths = GetLegacyDatabasePaths(appDataPath);
+            var hasBookshelfDatabasePair =
+                legacyDatabasePaths.Any(path => string.Equals(Path.GetFileName(path), "readarr.db", StringComparison.OrdinalIgnoreCase)) &&
+                legacyDatabasePaths.Any(path => string.Equals(Path.GetFileName(path), "audioarr.db", StringComparison.OrdinalIgnoreCase));
             var primaryHasRecoveryData = HasNonEmptyDurableSqliteSidecar(primaryPath);
             if (primaryHasRecoveryData && !File.Exists(primaryPath))
             {
@@ -409,16 +413,33 @@ namespace NzbDrone.Common.Extensions
                     "A Chaptarr database sidecar and a BookshelfNG database both contain data. Preserve all database files and resolve the source before starting Chaptarr.");
             }
 
+            if (primaryHasData)
+            {
+                if (appFolderInfo.MergeBookshelfDatabases && hasBookshelfDatabasePair)
+                {
+                    // Let explicit preview/apply inspect both legacy sources even
+                    // when a prior launch left a SQLite target. The converter will
+                    // fail closed unless that target is only an empty placeholder.
+                    return Path.Combine(appDataPath, "readarr.db");
+                }
+
+                return primaryPath;
+            }
+
             if (legacyDatabasePaths.Count > 1)
             {
-                if (!primaryHasRecoveryData && appFolderInfo.MergeBookshelfDatabases &&
-                    legacyDatabasePaths.Any(path => string.Equals(Path.GetFileName(path), "readarr.db", StringComparison.OrdinalIgnoreCase)) &&
-                    legacyDatabasePaths.Any(path => string.Equals(Path.GetFileName(path), "audioarr.db", StringComparison.OrdinalIgnoreCase)))
+                if (!primaryHasRecoveryData && hasBookshelfDatabasePair)
                 {
-                    // The merge command is a deliberately explicit utility mode.
-                    // Keep readarr.db as the primary identity source and let the
-                    // converter validate/merge audioarr.db into a staged copy.
-                    return Path.Combine(appDataPath, "readarr.db");
+                    if (appFolderInfo.MergeBookshelfDatabases)
+                    {
+                        // The explicit preview/apply utility starts from the stable
+                        // BookshelfNG identity database. Normal startup instead keeps
+                        // the native target path so MigrationController can stage and
+                        // validate both legacy sources before promoting it.
+                        return Path.Combine(appDataPath, "readarr.db");
+                    }
+
+                    return primaryPath;
                 }
 
                 throw new InvalidOperationException("Multiple legacy database files were found. Choose one before starting Chaptarr.");

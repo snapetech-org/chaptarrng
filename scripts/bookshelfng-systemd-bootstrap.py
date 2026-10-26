@@ -336,6 +336,7 @@ def parse_option(arguments: list[str], name: str, *, bare_boolean: bool = False)
         "sslcertpath", "sslcertpassword", "i", "u", "?", "nobrowser", "nostart",
         "installservice", "uninstallservice", "terminateexisting", "restart", "registerurl",
         "nosingleinstancecheck", "exitimmediately", "migrate-bookshelf", "preview-bookshelf-migration",
+        "merge-bookshelf-databases",
         "check-bookshelf-migration", "restore-bookshelf", "preview-bookshelf-restore",
         "check-bookshelf-postgres-backup", "preview-bookshelf-postgres-restore",
         "backup-bookshelf-postgres", "restore-bookshelf-postgres",
@@ -586,6 +587,43 @@ def postgres_source(data_dir: pathlib.Path, environment: dict[str, str]) -> bool
         if values:
             return bool(values[-1].strip())
     return bool(config_value(data_dir / "config.xml", "PostgresHost"))
+
+
+def sqlite_database_has_data(data_dir: pathlib.Path, database_name: str) -> bool:
+    database = data_dir / database_name
+    if database.is_symlink():
+        raise HandoffError(f"The BookshelfNG database {database_name} is a symbolic link.")
+    if database.exists() and not database.is_file():
+        raise HandoffError(f"The BookshelfNG database {database_name} is not a regular file.")
+
+    has_durable_sidecar = False
+    for suffix in ("-journal", "-wal", "-shm"):
+        sidecar = pathlib.Path(str(database) + suffix)
+        if sidecar.is_symlink():
+            raise HandoffError(f"The BookshelfNG SQLite sidecar {database_name + suffix} is a symbolic link.")
+        if sidecar.exists() and not sidecar.is_file():
+            raise HandoffError(f"The BookshelfNG SQLite sidecar {database_name + suffix} is not a regular file.")
+        if suffix != "-shm" and sidecar.is_file() and sidecar.stat().st_size > 0:
+            has_durable_sidecar = True
+
+    if not database.exists():
+        if has_durable_sidecar:
+            raise HandoffError(f"The BookshelfNG database {database_name} is missing but its WAL or journal contains data.")
+        return False
+
+    return database.stat().st_size > 0 or has_durable_sidecar
+
+
+def has_dual_populated_sqlite_sources(data_dir: pathlib.Path) -> bool:
+    return sqlite_database_has_data(data_dir, "readarr.db") and sqlite_database_has_data(data_dir, "audioarr.db")
+
+
+def migration_preview_arguments(state: dict) -> list[str]:
+    arguments = ["-preview-bookshelf-migration"]
+    if state.get("mergeSqliteSources"):
+        arguments.append("-merge-bookshelf-databases")
+    arguments.append(f"-data={state['dataDir']}")
+    return arguments
 
 
 def service_identity_from_state(state: dict) -> tuple[int, int, list[int]]:
@@ -910,20 +948,28 @@ def rollback_handoff(state: dict, reason: str) -> bool:
                 raise HandoffError("The retained BookshelfNG database backup could not be restored.")
             restore_postgres_side_schemas(state)
         else:
-            preview = console_action(state, "-preview-bookshelf-migration", timeout=MAX_HEALTH_TIMEOUT)
+            preview = run_as_service(
+                [str(target_console(state)), *migration_preview_arguments(state)],
+                state,
+                timeout=MAX_HEALTH_TIMEOUT,
+            )
             if preview.returncode != 0:
-                preview_postgres_side_schemas(state)
-                preserve_postgres_side_schemas(state)
-                result = console_action(
-                    state,
-                    "-restore-bookshelf",
-                    "-confirm-bookshelf-service-stopped",
-                    "-bookshelf-backup=auto",
-                    timeout=MAX_HEALTH_TIMEOUT,
-                )
-                if result.returncode != 0:
-                    raise HandoffError("The source database is not readable and the retained BookshelfNG backup could not be restored.")
-                restore_postgres_side_schemas(state)
+                native_path = pathlib.Path(state["dataDir"])
+                if state.get("mergeSqliteSources") and not sqlite_database_has_data(native_path, "chaptarr.db"):
+                    log("The dual BookshelfNG sources remain intact; the failed merge never promoted a ChaptarrNG target.")
+                else:
+                    preview_postgres_side_schemas(state)
+                    preserve_postgres_side_schemas(state)
+                    result = console_action(
+                        state,
+                        "-restore-bookshelf",
+                        "-confirm-bookshelf-service-stopped",
+                        "-bookshelf-backup=auto",
+                        timeout=MAX_HEALTH_TIMEOUT,
+                    )
+                    if result.returncode != 0:
+                        raise HandoffError("The source database is not readable and the retained BookshelfNG backup could not be restored.")
+                    restore_postgres_side_schemas(state)
         restore_config(state)
         restore_application(state)
         temporary_original_value = state.get("temporaryOriginalPath")
@@ -1170,6 +1216,8 @@ def install_mode_locked(args: argparse.Namespace, service: str) -> int:
     validate_service_data_directory(data_dir, argv)
     dynamic_user, service_gid, groups, username, group_name = resolve_service_identity(service)
     port, url_base, health_host = app_settings(data_dir, environment, argv)
+    source_is_postgres = postgres_source(data_dir, environment)
+    merge_sqlite_sources = not source_is_postgres and has_dual_populated_sqlite_sources(data_dir)
     version, archive_bytes, archive_sha256 = verify_release_archive(archive)
     archive_size = archive.stat().st_size
     service_copy_bytes = sum(path.stat().st_size for path in install_dir.rglob("*") if path.is_file() and not path.is_symlink())
@@ -1228,6 +1276,8 @@ def install_mode_locked(args: argparse.Namespace, service: str) -> int:
         "urlBase": url_base,
         "healthHost": health_host,
         "healthTimeoutSeconds": args.health_timeout_seconds,
+        "postgresSource": source_is_postgres,
+        "mergeSqliteSources": merge_sqlite_sources,
         "helperPath": str(helper_path),
         "stateFile": str(state_path),
         "postgresBackupDir": str(postgres_backup_dir),
@@ -1265,7 +1315,7 @@ def install_mode_locked(args: argparse.Namespace, service: str) -> int:
             raise HandoffError("BookshelfNG is still running; no files or database were changed.")
 
         preview = run_as_service(
-            [str(staged_console), "-preview-bookshelf-migration", f"-data={data_dir}"],
+            [str(staged_console), *migration_preview_arguments(state)],
             state,
             timeout=MAX_HEALTH_TIMEOUT,
         )
@@ -1287,7 +1337,7 @@ def install_mode_locked(args: argparse.Namespace, service: str) -> int:
         copytree_preserving_ownership(install_dir, previous_app)
         os.chmod(previous_app, 0o700)
 
-        if postgres_source(data_dir, environment):
+        if source_is_postgres:
             postgres_backup_dir.mkdir(mode=0o700)
             os.chown(postgres_backup_dir, dynamic_user, service_gid)
             preflight_result = run_as_service(

@@ -70,6 +70,11 @@ kubectl exec bookshelfng-0 -- dotnet /app/Chaptarr.dll \
   -migrate-bookshelf -confirm-bookshelf-service-stopped -data=/config
 ```
 
+If both `readarr.db` and `audioarr.db` contain data, add
+`-merge-bookshelf-databases` to both commands. Automatic startup previews and
+applies this merge itself; incompatible identities or settings keep both
+source databases intact and the pod unready for operator review.
+
 The second command changes the database. Keep an independent backup and retain
 the source database backup created by ChaptarrNG.
 

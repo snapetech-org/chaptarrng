@@ -187,13 +187,14 @@ The BookshelfNG Windows WPF installer still installs BookshelfNG. ChaptarrNG
 `main` contains an unpublished transactional WPF handoff installer. It keeps
 the existing `Readarr` data directory, asks for provider mode, retains a
 verified backup, previews before apply, then switches to the `Chaptarr`
-service and checks local health. It supports one SQLite database under the
-standard `NT AUTHORITY\LocalService` account and fails closed on custom
-service accounts, PostgreSQL, or multiple databases. A read-only SQLite
-`PRAGMA data_version` guard stays open through preview review and rejects any
-committed source change before apply. Raw database, WAL, and rollback-journal
-fingerprints remain diagnostics because SQLite may change WAL bytes without a
-committed database update; the rebuildable `-shm` index is ignored.
+service and checks local health. It supports one PostgreSQL source or both
+SQLite databases under the standard `NT AUTHORITY\LocalService` account and
+fails closed on custom service accounts or unsupported PostgreSQL settings. A
+read-only SQLite `PRAGMA data_version` guard stays open for each source through
+preview review and rejects committed changes before apply. Raw database, WAL,
+and rollback-journal fingerprints remain diagnostics because SQLite may change
+WAL bytes without a committed database update; the rebuildable `-shm` index is
+ignored.
 
 The Windows handoff candidate added by merged ChaptarrNG PR #131 uses the
 actual installer to preserve the BookshelfNG service identity, data directory,
@@ -317,10 +318,12 @@ only. Do not apply a conversion or start ChaptarrNG against BookshelfNG's
 appdata: normal ChaptarrNG startup automatically converts a supported source
 database. Keep BookshelfNG in service.
 
-The migration handles one source database per appdata directory. It stops if
-both `readarr.db` and `audioarr.db` are populated, rather than choosing or
-merging them. Migrate independent BookshelfNG installations separately. To
-combine their tracked media into one library, use BookshelfNG's
+Current ChaptarrNG source stages and validates a merge when both
+`readarr.db` and `audioarr.db` contain data; it preserves both originals and
+stops before promotion if their records or settings conflict. The published
+`v0.9.977` converter does not include this newer dual-database behavior. Keep
+independently operated BookshelfNG installations separate. To combine their
+tracked media into one library, use BookshelfNG's
 [two-instance consolidation runbook](https://github.com/snapetech-org/bookshelfng/blob/main/README.md#one-instance-for-ebooks-and-audiobooks)
 first; database history, profiles, monitoring, and settings are not merged.
 

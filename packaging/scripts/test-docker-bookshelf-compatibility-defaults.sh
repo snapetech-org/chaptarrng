@@ -199,10 +199,17 @@ check_multiple_container_sources_require_explicit_merge() {
   mkdir -p "$data_dir" "$stub_bin"
   printf 'readarr fixture\n' > "$data_dir/readarr.db"
   printf 'audioarr fixture\n' > "$data_dir/audioarr.db"
-  printf '#!/bin/sh\nexit 1\n' > "$stub_bin/dotnet"
+  readarr_hash="$(sha256sum "$data_dir/readarr.db" | cut -d' ' -f1)"
+  audioarr_hash="$(sha256sum "$data_dir/audioarr.db" | cut -d' ' -f1)"
+  cat > "$stub_bin/dotnet" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >> "$DOTNET_CALLS"
+exit 1
+SH
   printf '#!/bin/sh\ntouch "$APP_STARTED"\n' > "$app"
   chmod 0755 "$stub_bin/dotnet" "$app"
   export PATH="$stub_bin:$PATH"
+  export DOTNET_CALLS="$test_root/multiple-source-dotnet.log"
   export APP_STARTED="$app_started"
   export CHAPTARR_BOOKSHELF_COMPATIBILITY=true
   export CHAPTARR_COMPAT_DATA_DIR="$data_dir"
@@ -216,12 +223,17 @@ check_multiple_container_sources_require_explicit_merge() {
     status=$?
   fi
   case "$status" in 124|143) ;; *) echo "unexpected dual-source supervisor exit status: $status" >&2; return 1 ;; esac
-  grep -Fq 'Automatic startup will not select one and discard the other.' "$test_root/multiple-source.log"
-  grep -Fq -- '-preview-bookshelf-migration -merge-bookshelf-databases' "$test_root/multiple-source.log"
-  grep -Fq -- '-migrate-bookshelf -merge-bookshelf-databases -confirm-bookshelf-service-stopped' "$test_root/multiple-source.log"
+  grep -Fq -- '-preview-bookshelf-migration -merge-bookshelf-databases' "$DOTNET_CALLS"
+  grep -Fq 'migration preview failed before conversion' "$test_root/multiple-source.log"
+  if grep -Fq -- '-migrate-bookshelf' "$DOTNET_CALLS"; then
+    echo 'The failed preview incorrectly continued into migration.' >&2
+    return 1
+  fi
+  test "$(sha256sum "$data_dir/readarr.db" | cut -d' ' -f1)" = "$readarr_hash"
+  test "$(sha256sum "$data_dir/audioarr.db" | cut -d' ' -f1)" = "$audioarr_hash"
   test ! -e "$app_started"
   test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/pending"
-  test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/failed"
+  test "$(cat "$data_dir/.chaptarrng-bookshelf-handoff/failed")" = rolled-back
 }
 
 check_orphaned_container_wal_waits_for_recovery() {
@@ -481,7 +493,7 @@ run_case 'ask mode without a terminal records deferral and does not start Chapta
 ' _ "$test_root" "$repo_root/docker-bookshelf-compat-supervisor.sh"
 
 run_case 'deferred container supervisor handles SIGTERM promptly for Kubernetes restarts' check_deferred_container_stops_promptly
-run_case 'container refuses to auto-select between populated legacy databases' check_multiple_container_sources_require_explicit_merge
+run_case 'container validates a dual-database merge before startup' check_multiple_container_sources_require_explicit_merge
 run_case 'container preserves orphaned SQLite WAL data for recovery' check_orphaned_container_wal_waits_for_recovery
 run_case 'shared-volume container waits safely for its lock while liveness stays healthy' check_shared_volume_lock_waits_with_liveness
 run_case 'handoff metadata ownership and process-group signals support the runtime shell' check_container_handoff_ownership_and_signal_contract

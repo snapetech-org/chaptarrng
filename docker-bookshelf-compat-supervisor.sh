@@ -26,6 +26,7 @@ operator_wait_pid=
 app_status=0
 handoff_deadline_epoch=
 migration_approved=false
+merge_bookshelf_databases=false
 lock_wait_marker=/tmp/chaptarr-bookshelf-lock-waiting
 
 acquire_supervisor_lock() {
@@ -109,6 +110,7 @@ has_postgres_source() {
             if [ -n "$host" ]; then
                 return 0
             fi
+            return 1
         fi
     done
 
@@ -197,13 +199,22 @@ has_bookshelf_source_candidate() {
 }
 
 has_multiple_populated_sqlite_sources() {
-    [ -s "$data_dir/readarr.db" ] && [ -s "$data_dir/audioarr.db" ]
+    ! has_postgres_source &&
+        sqlite_database_has_data "$data_dir/readarr.db" &&
+        sqlite_database_has_data "$data_dir/audioarr.db"
 }
 
-print_multi_database_merge_commands() {
-    printf '%s\n' 'Stop all BookshelfNG processes that use this app-data directory, then run:' >&2
-    printf '  dotnet /app/Chaptarr.dll -preview-bookshelf-migration -merge-bookshelf-databases "-data=%s" -exitimmediately\n' "$data_dir" >&2
-    printf '  dotnet /app/Chaptarr.dll -migrate-bookshelf -merge-bookshelf-databases -confirm-bookshelf-service-stopped "-data=%s" -exitimmediately\n' "$data_dir" >&2
+sqlite_database_has_data() {
+    database=$1
+    [ -s "$database" ] || [ -s "$database-wal" ] || [ -s "$database-journal" ]
+}
+
+preview_bookshelf_migration() {
+    if [ "$merge_bookshelf_databases" = true ]; then
+        utility -preview-bookshelf-migration -merge-bookshelf-databases
+    else
+        utility -preview-bookshelf-migration
+    fi
 }
 
 validate_source_paths() {
@@ -344,7 +355,7 @@ prepare_attempt() {
                 echo 'The operator selected retry and the database already has a valid completed BookshelfNG migration.'
                 return 2
             fi
-            if utility -preview-bookshelf-migration; then
+            if preview_bookshelf_migration; then
                 rm -f "$failed_marker"
                 echo 'The operator selected retry and the restored BookshelfNG source passed migration preview.'
             else
@@ -406,9 +417,10 @@ prepare_attempt() {
     fi
 
     if has_multiple_populated_sqlite_sources; then
-        echo 'Both readarr.db and audioarr.db contain data. Automatic startup will not select one and discard the other.' >&2
-        print_multi_database_merge_commands
-        return 6
+        # Preview the same conflict-failing merge that normal ChaptarrNG startup
+        # will apply. The originals remain untouched; unresolved identities or
+        # settings keep the handoff blocked before the app is launched.
+        merge_bookshelf_databases=true
     fi
 
     if [ -f "$deferred_marker" ]; then
@@ -478,7 +490,7 @@ prepare_attempt() {
     chmod 0600 "$attempt_dir"/config.xml* 2>/dev/null || true
 
     write_marker "$pending_marker" "$attempt_id" || return 1
-    if ! utility -preview-bookshelf-migration; then
+    if ! preview_bookshelf_migration; then
         echo 'BookshelfNG migration preview failed before conversion. The source database remains untouched; the container will wait for recovery or an image rollback.' >&2
         rollback_failed_handoff 'migration preview failed before conversion was started' false || true
         return 4
@@ -600,7 +612,9 @@ rollback_failed_handoff() {
     if [ "$database_may_have_changed" = true ]; then
         if database_is_migrated; then
             database_restore_needed=true
-        elif utility -preview-bookshelf-migration; then
+        elif [ "$merge_bookshelf_databases" = true ] && ! sqlite_database_has_data "$data_dir/chaptarr.db"; then
+            echo 'The dual BookshelfNG source databases remain intact and no ChaptarrNG target was promoted.'
+        elif preview_bookshelf_migration; then
             echo 'The BookshelfNG source still passes migration preview; leaving the source database untouched.'
         else
             database_restore_needed=true
@@ -635,7 +649,11 @@ rollback_failed_handoff() {
     if [ "$rollback_ok" = true ]; then
         write_marker "$failed_marker" 'rolled-back' || return 1
         rm -f "$pending_marker" || return 1
-        echo 'BookshelfNG data was restored. The app remains stopped to prevent an automatic migration retry; replace the image with BookshelfNG or inspect the retained backup before retrying.' >&2
+        if [ "$database_restore_needed" = true ]; then
+            echo 'BookshelfNG data was restored. The app remains stopped to prevent an automatic migration retry; replace the image with BookshelfNG or inspect the retained backup before retrying.' >&2
+        else
+            echo 'The original BookshelfNG source databases remain intact. The app remains stopped; resolve the migration issue, then retry or restore the prior image.' >&2
+        fi
         return 0
     fi
 
@@ -646,6 +664,9 @@ rollback_failed_handoff() {
 }
 
 validate_source_paths || wait_for_operator 'BookshelfNG migration found an unsafe linked or non-regular source path. The source has not been migrated; resolve the path and restart.'
+if has_multiple_populated_sqlite_sources; then
+    merge_bookshelf_databases=true
+fi
 acquire_supervisor_lock || wait_for_operator 'BookshelfNG compatibility startup could not lock the app-data directory. Stop other instances and resolve the handoff state before restarting.'
 
 prepare_status=0
@@ -657,7 +678,6 @@ case "$prepare_status" in
     3) exec "$@" ;;
     4) wait_for_operator ;;
     5) wait_for_operator 'BookshelfNG migration is deferred by BOOKSHELFNG_MIGRATION_MODE. Run the documented preview/apply workflow, or change the mode to automatic and restart this container.' ;;
-    6) wait_for_operator 'Both BookshelfNG SQLite databases contain data. No database was changed. Review the printed commands and merge conflict rules, run preview and apply, then restart the container.' ;;
     *) exit 1 ;;
 esac
 

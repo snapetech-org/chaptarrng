@@ -12,32 +12,28 @@ public static class BookshelfDatabaseFiles
     public static string ResolveExistingDatabaseName(string dataDirectory)
     {
         var populated = GetPopulatedDatabaseNames(dataDirectory);
-        if (populated.Length > 1)
-        {
-            throw new InvalidDataException(
-                "Both readarr.db and audioarr.db contain data in the BookshelfNG directory. Resolve the database choice before migrating.");
-        }
-
-        if (populated.Length == 0)
+        if (populated.Count == 0)
         {
             throw new FileNotFoundException(
                 "No populated BookshelfNG SQLite database (readarr.db or audioarr.db) was found.",
                 Path.Combine(dataDirectory, "readarr.db"));
         }
 
+        // readarr.db is the stable primary identity source for the automatic
+        // dual-database merge. Both databases are backed up and watched by the
+        // installer; this name only selects the source-facing app-data path.
         return populated[0];
     }
 
     public static string? ResolveExistingDatabaseNameOrNull(string dataDirectory)
     {
         var populated = GetPopulatedDatabaseNames(dataDirectory);
-        if (populated.Length > 1)
-        {
-            throw new InvalidDataException(
-                "Both readarr.db and audioarr.db contain data in the BookshelfNG directory. Resolve the database choice before migrating.");
-        }
+        return populated.FirstOrDefault();
+    }
 
-        return populated.SingleOrDefault();
+    public static IReadOnlyList<string> GetPopulatedDatabaseNames(string dataDirectory)
+    {
+        return Array.AsReadOnly(FindPopulatedDatabaseNames(dataDirectory));
     }
 
     public static void ValidateLegacyDatabasePaths(string dataDirectory)
@@ -45,7 +41,7 @@ public static class BookshelfDatabaseFiles
         _ = GetPopulatedDatabaseNames(dataDirectory);
     }
 
-    private static string[] GetPopulatedDatabaseNames(string dataDirectory)
+    private static string[] FindPopulatedDatabaseNames(string dataDirectory)
     {
         return LegacyDatabaseNames
             .Where(name =>

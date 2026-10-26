@@ -11,9 +11,9 @@ using Newtonsoft.Json.Linq;
 namespace NzbDrone.Core.Datastore
 {
     /// <summary>
-    /// Merges two BookshelfNG SQLite databases only in the explicitly selected
-    /// migration utility mode. Original databases are never modified. Conflicting
-    /// IDs and unique settings stop before a native database is promoted.
+    /// Merges two BookshelfNG SQLite databases for normal automatic startup or
+    /// the explicit preview/apply utility. Original databases are never modified.
+    /// Conflicting IDs and unique settings stop before a native database is promoted.
     /// </summary>
     public sealed class BookshelfMultiDatabaseConverter
     {
@@ -54,10 +54,9 @@ namespace NzbDrone.Core.Datastore
 
             EnsureRegularDatabaseFamily(readarrPath, ReadarrDatabaseName);
             EnsureRegularDatabaseFamily(audioarrPath, AudioarrDatabaseName);
-            if (!File.Exists(readarrPath) || new FileInfo(readarrPath).Length == 0 ||
-                !File.Exists(audioarrPath) || new FileInfo(audioarrPath).Length == 0)
+            if (!HasRecoverableSqliteData(readarrPath) || !HasRecoverableSqliteData(audioarrPath))
             {
-                throw new InvalidDataException("The multi-database merge requires non-empty readarr.db and audioarr.db files. No database was changed.");
+                throw new InvalidDataException("The multi-database merge requires both regular BookshelfNG database files to contain recoverable SQLite data. No database was changed.");
             }
 
             if (DatabaseLineageGuard.Detect(ConnectionString(readarrPath), DatabaseType.SQLite) != DatabaseLineage.BookshelfNG ||
@@ -71,6 +70,7 @@ namespace NzbDrone.Core.Datastore
 
             var readarrFingerprint = BookshelfMergeReceipt.FingerprintDatabaseFamily(readarrPath);
             var audioarrFingerprint = BookshelfMergeReceipt.FingerprintDatabaseFamily(audioarrPath);
+            var mediaMapFingerprints = CaptureMediaMapFingerprints(appDataFolder, readarrPath, audioarrPath);
             var lockPath = Path.Combine(appDataFolder, "bookshelfng-multi-database-merge.lock");
             using var conversionLock = AcquireLock(lockPath);
             using var primaryConversionLock = AcquireLock(readarrPath + ".bookshelfng-conversion.lock");
@@ -93,6 +93,7 @@ namespace NzbDrone.Core.Datastore
                 CreateConsistentSnapshot(readarrPath, primarySnapshotPath);
                 CreateConsistentSnapshot(audioarrPath, secondarySnapshotPath);
                 EnsureSourcesUnchanged(readarrPath, audioarrPath, readarrFingerprint, audioarrFingerprint);
+                EnsureMediaMapsUnchanged(mediaMapFingerprints);
 
                 MigrateSourceCopy(primarySnapshotPath, migrateBookshelfSource);
                 MigrateSourceCopy(secondarySnapshotPath, migrateBookshelfSource);
@@ -115,6 +116,7 @@ namespace NzbDrone.Core.Datastore
                     reportOutcome);
 
                 EnsureSourcesUnchanged(readarrPath, audioarrPath, readarrFingerprint, audioarrFingerprint);
+                EnsureMediaMapsUnchanged(mediaMapFingerprints);
                 PreserveMediaReview(workDirectory, appDataFolder, reportOutcome);
                 if (previewOnly)
                 {
@@ -124,6 +126,7 @@ namespace NzbDrone.Core.Datastore
 
                 conversion.ImportReport.ThrowIfBlockingIssues();
                 EnsureSourcesUnchanged(readarrPath, audioarrPath, readarrFingerprint, audioarrFingerprint);
+                EnsureMediaMapsUnchanged(mediaMapFingerprints);
                 EnsureTargetPath(nativePath, allowEmptyPlaceholder: true);
 
                 var timestamp = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ", System.Globalization.CultureInfo.InvariantCulture);
@@ -143,6 +146,7 @@ namespace NzbDrone.Core.Datastore
                 }
 
                 EnsureSourcesUnchanged(readarrPath, audioarrPath, readarrFingerprint, audioarrFingerprint);
+                EnsureMediaMapsUnchanged(mediaMapFingerprints);
                 RestrictFile(mergedSourcePath);
                 File.Move(mergedSourcePath, nativePath);
                 try
@@ -575,6 +579,36 @@ namespace NzbDrone.Core.Datastore
             File.WriteAllText(mergedMapPath, merged.ToString(Formatting.Indented), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }
 
+        private static IReadOnlyDictionary<string, string> CaptureMediaMapFingerprints(string appDataFolder, string readarrPath, string audioarrPath)
+        {
+            var paths = new[]
+            {
+                readarrPath + ".bookshelf-media-map.json",
+                audioarrPath + ".bookshelf-media-map.json",
+                Path.Combine(appDataFolder, MergeMediaMapName)
+            };
+            var fingerprints = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var path in paths)
+            {
+                EnsureRegularFile(path, Path.GetFileName(path));
+                fingerprints[path] = BookshelfMigrationJournal.ComputeFingerprint(path);
+            }
+
+            return fingerprints;
+        }
+
+        private static void EnsureMediaMapsUnchanged(IReadOnlyDictionary<string, string> fingerprints)
+        {
+            foreach (var item in fingerprints)
+            {
+                if (!string.Equals(BookshelfMigrationJournal.ComputeFingerprint(item.Key), item.Value, StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException(
+                        $"BookshelfNG media-map input '{Path.GetFileName(item.Key)}' changed during the merge. Preserve both databases and media-map files before retrying.");
+                }
+            }
+        }
+
         private static void PreserveMediaReview(string workDirectory, string appDataFolder, Action<string, string> reportOutcome)
         {
             var review = Path.Combine(workDirectory, "merged-bookshelf.db.bookshelf-media-review.json");
@@ -635,6 +669,22 @@ namespace NzbDrone.Core.Datastore
             {
                 EnsureRegularFile(path + suffix, name + suffix);
             }
+        }
+
+        private static bool HasRecoverableSqliteData(string databasePath)
+        {
+            if (!File.Exists(databasePath))
+            {
+                return false;
+            }
+
+            if (new FileInfo(databasePath).Length > 0)
+            {
+                return true;
+            }
+
+            return new[] { "-journal", "-wal" }
+                .Any(suffix => File.Exists(databasePath + suffix) && new FileInfo(databasePath + suffix).Length > 0);
         }
 
         private static void EnsureRegularFile(string path, string description)

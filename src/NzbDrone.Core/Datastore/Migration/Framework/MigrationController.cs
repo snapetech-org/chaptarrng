@@ -67,6 +67,44 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
         public void Migrate(string connectionString, MigrationContext migrationContext, DatabaseType databaseType)
         {
             if (migrationContext.MigrationType == MigrationType.Main &&
+                databaseType == DatabaseType.SQLite &&
+                !migrationContext.DesiredVersion.HasValue &&
+                HasBothPopulatedBookshelfSources())
+            {
+                var targetLineage = DatabaseLineageGuard.Detect(connectionString, DatabaseType.SQLite);
+                if (targetLineage == DatabaseLineage.BookshelfNG)
+                {
+                    throw new InvalidDataException(
+                        "A BookshelfNG database already exists at the ChaptarrNG database path beside both readarr.db and audioarr.db. No database was changed; preserve all three files and resolve the source before restarting.");
+                }
+
+                if (targetLineage == DatabaseLineage.Empty)
+                {
+                    var primarySourcePath = Path.Combine(_appFolderInfo.AppDataFolder, "readarr.db");
+                    var primarySourceConnectionString = new SqliteConnectionStringBuilder
+                    {
+                        DataSource = primarySourcePath,
+                        Mode = SqliteOpenMode.ReadWrite,
+                        Pooling = false
+                    }.ConnectionString;
+
+                    _logger.Info("Both BookshelfNG SQLite databases contain data. Validating and merging them into the new ChaptarrNG database before normal startup.");
+                    var merge = MigrateBookshelf(
+                        primarySourceConnectionString,
+                        migrationContext,
+                        databaseType,
+                        previewOnly: false,
+                        mergeMultipleSqliteSources: true);
+                    _logger.Info("BookshelfNG multi-database migration completed. Both original databases remain in place; merged-source rollback backup retained at {0}", merge.BackupPath);
+                    return;
+                }
+
+                // A native target with a validated merge receipt is handled by
+                // the normal lineage guard below. Unsupported targets also
+                // continue there and remain fail-closed.
+            }
+
+            if (migrationContext.MigrationType == MigrationType.Main &&
                 (databaseType is DatabaseType.SQLite or DatabaseType.PostgreSQL) &&
                 DatabaseLineageGuard.Detect(connectionString, databaseType) == DatabaseLineage.BookshelfNG)
             {
@@ -88,6 +126,34 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             }
 
             MigrateNative(connectionString, migrationContext, databaseType);
+        }
+
+        private bool HasBothPopulatedBookshelfSources()
+        {
+            if (string.IsNullOrWhiteSpace(_appFolderInfo?.AppDataFolder))
+            {
+                return false;
+            }
+
+            var readarrPath = Path.Combine(_appFolderInfo.AppDataFolder, "readarr.db");
+            var audioarrPath = Path.Combine(_appFolderInfo.AppDataFolder, "audioarr.db");
+            return HasSqliteSourceData(readarrPath) && HasSqliteSourceData(audioarrPath);
+        }
+
+        private static bool HasSqliteSourceData(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return false;
+            }
+
+            if (new FileInfo(path).Length > 0)
+            {
+                return true;
+            }
+
+            return new[] { "-journal", "-wal" }
+                .Any(suffix => File.Exists(path + suffix) && new FileInfo(path + suffix).Length > 0);
         }
 
         public BookshelfDatabaseConversionResult MigrateBookshelf(

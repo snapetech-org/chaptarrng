@@ -1123,11 +1123,16 @@ nor synthetic fixtures establish behavior on real older-schema operator data
 or every historical release. Schema 159 is rejected without changing the
 source. PostgreSQL source databases and merging two populated BookshelfNG
 databases from one appdata directory remain unsupported by published
-ChaptarrNG releases. ChaptarrNG refuses multiple non-empty legacy candidates
-instead of guessing or merging. Independently operated BookshelfNG instances
-can be migrated one at a time with separate appdata directories; co-located
-databases need their ownership and settings resolved before separate copies can
-be migrated. Current `main` also supports PostgreSQL source conversion and
+ChaptarrNG releases. The current unpublished worktree now includes a
+transactional `readarr.db` + `audioarr.db` merge path for normal startup and
+explicit preview/apply. It preserves the `readarr.db` identity source and both
+original files, and stops before target promotion on conflicting identities,
+settings, or unique references. This code pass has not had its bulk validation
+run, so it does not change the published-release limitation. Independently
+operated BookshelfNG instances can be migrated one at a time with separate
+appdata directories; co-located databases with merge conflicts still need
+their ownership and settings resolved before migration. Current `main` also
+supports PostgreSQL source conversion and
 upgrades supported older source schemas on a disposable snapshot. Local
 PostgreSQL 17 fixtures cover versions 1, 13, 22, 33, and 158; these are
 synthetic and do not establish operator-data acceptance. See the

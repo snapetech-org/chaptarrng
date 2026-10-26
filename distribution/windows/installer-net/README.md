@@ -18,9 +18,11 @@ named Chaptarr service and fail closed. PostgreSQL handoff requires `pg_dump`
 and `pg_restore` on `PATH` and an explicitly configured `PostgresUser`.
 PostgreSQL settings in the existing service's NSSM environment blocks are
 included in preflight and passed through to the Chaptarr service. A source
-without an explicit database user still fails closed. Multiple appdata
-databases, unsupported schemas, and installations without the legacy Windows
-service fail closed and use the documented manual migration procedure instead.
+without an explicit database user still fails closed. If both BookshelfNG
+SQLite databases are populated, the installer backs up and validates each,
+previews the conflict-failing merge, and applies both only after operator
+confirmation. Unsupported schemas and installations without the legacy Windows
+service fail closed.
 
 ## Migration sequence
 
@@ -33,10 +35,10 @@ The installer requires administrator privileges and performs this sequence:
 3. For PostgreSQL, check for the required client tools and an explicit database
    user before stopping the service. Stop BookshelfNG, then require that no
    other client sessions remain on the selected main, log, and cache databases.
-4. Copy the original `bin`, config, any coexisting SQLite files, and existing
-   user backups into a timestamped sibling backup directory. SQLite installs
-   copy the database, WAL, and journal and run `PRAGMA integrity_check` on the
-   copy. PostgreSQL installs use `pg_dump` to create and `pg_restore --list` to
+4. Copy the original `bin`, config, every populated SQLite source and its WAL
+   and journal, and existing user backups into a timestamped sibling backup
+   directory. SQLite installs run `PRAGMA integrity_check` on each copied
+   database. PostgreSQL installs use `pg_dump` to create and `pg_restore --list` to
    verify custom-format dumps for each unique main, log, and cache database.
    Each dump contains that database's active application schema. Rollback
    prevalidates the complete dump set and restores every database atomically

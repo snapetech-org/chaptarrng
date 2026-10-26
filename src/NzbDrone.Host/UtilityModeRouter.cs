@@ -267,11 +267,15 @@ namespace NzbDrone.Host
                             previewOnly);
                         Console.WriteLine(previewOnly
                             ? $"BookshelfNG rollback preview passed. The current ChaptarrNG database and source backup were not changed: {result.BookshelfBackupPath}"
-                            : $"BookshelfNG database restored from: {result.BookshelfBackupPath}");
+                            : result.OriginalSourcesRetained
+                                ? "The original readarr.db and audioarr.db sources remain in place. The ChaptarrNG target was moved aside for a safe BookshelfNG rollback."
+                                : $"BookshelfNG database restored from: {result.BookshelfBackupPath}");
                         if (!previewOnly)
                         {
                             Console.WriteLine($"The previous ChaptarrNG database, including post-migration writes, is retained at: {result.ChaptarrBackupPath}");
-                            Console.WriteLine("Start only BookshelfNG against this restored database. Do not start ChaptarrNG until you intentionally convert again.");
+                            Console.WriteLine(result.OriginalSourcesRetained
+                                ? "Start BookshelfNG against its original databases. ChaptarrNG can merge their latest contents again when you next choose to upgrade."
+                                : "Start only BookshelfNG against this restored database. Do not start ChaptarrNG until you intentionally convert again.");
                         }
 
                         break;

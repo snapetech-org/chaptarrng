@@ -55,6 +55,11 @@ start-cli package attach bookshelfng -- sh -lc \
   'HARDCOVER=true HARDCOVER_NATIVE=true dotnet /app/Chaptarr.dll -migrate-bookshelf -confirm-bookshelf-service-stopped -data=/config'
 ```
 
+If both `readarr.db` and `audioarr.db` contain data, add
+`-merge-bookshelf-databases` to both commands. Automatic startup selects the
+same validated merge path; conflicting identities or settings leave the
+original databases intact and the package held for review.
+
 The apply command retains a schema-158 source backup under `/config`. Then use
 the package action to select Automatic and restart `bookshelfng`. The candidate
 starts from the converted database and serves `/ping`. Do not start the

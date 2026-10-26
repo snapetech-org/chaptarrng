@@ -72,6 +72,7 @@ public static class InstallPipeline
             }
             bookshelfServiceAccount = ServiceLifecycle.GetBookshelfServiceAccount();
             var postgresSource = BackupService.IsPostgresSource(dataDirectory);
+            var mergeSqliteSources = !postgresSource && BookshelfDatabaseFiles.GetPopulatedDatabaseNames(dataDirectory).Count > 1;
 
             var providerMode = ui.ChooseProviderIdentityMode();
             if (!providerMode.HasValue)
@@ -157,7 +158,7 @@ public static class InstallPipeline
 
             ui.SetStep("Backing up BookshelfNG...", postgresSource
                 ? "The original binaries, config, independent PostgreSQL dump, and existing backups are retained."
-                : "The original binaries, config, SQLite database, and existing backups are retained.");
+                : "The original binaries, config, every populated SQLite database, and existing backups are retained.");
             var migrationConsole = stagingDirectory is null
                 ? null
                 : Path.Combine(stagingDirectory, "Chaptarr.Console.exe");
@@ -260,9 +261,14 @@ public static class InstallPipeline
             {
                 sourceFingerprint = SqliteDatabaseFingerprint.Capture(dataDirectory);
                 using var sourceVersionGuard = new SqliteDatabaseVersionGuard(dataDirectory);
+                var previewArguments = new List<string> { "-preview-bookshelf-migration", $"-data={dataDirectory}" };
+                if (mergeSqliteSources)
+                {
+                    previewArguments.Add("-merge-bookshelf-databases");
+                }
                 var previewExit = await ProcessStreamer.RunAsync(
                     chaptarrConsole,
-                    new[] { "-preview-bookshelf-migration", $"-data={dataDirectory}" },
+                    previewArguments,
                     stagingDirectory,
                     log,
                     ct,
@@ -290,14 +296,19 @@ public static class InstallPipeline
             }
 
             ui.SetStep("Applying BookshelfNG data migration...", "This modifies the database after the separate, verified backup.");
+            var applyArguments = new List<string>
+            {
+                "-migrate-bookshelf",
+                "-confirm-bookshelf-service-stopped",
+                $"-data={dataDirectory}"
+            };
+            if (mergeSqliteSources)
+            {
+                applyArguments.Add("-merge-bookshelf-databases");
+            }
             var applyExit = await ProcessStreamer.RunAsync(
                 chaptarrConsole,
-                new[]
-                {
-                    "-migrate-bookshelf",
-                    "-confirm-bookshelf-service-stopped",
-                    $"-data={dataDirectory}"
-                },
+                applyArguments,
                 stagingDirectory,
                 log,
                 ct,

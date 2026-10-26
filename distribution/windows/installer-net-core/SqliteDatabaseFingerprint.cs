@@ -20,24 +20,28 @@ public static class SqliteDatabaseFingerprint
         var files = new Dictionary<string, string>(StringComparer.Ordinal);
 
         // SQLite may rewrite its disposable -shm index while opening a WAL database read-only.
-        var databaseName = BookshelfDatabaseFiles.ResolveExistingDatabaseNameOrNull(dataDirectory) ?? "readarr.db";
-        foreach (var name in new[] { databaseName, databaseName + "-journal", databaseName + "-wal" })
+        // Fingerprint both possible source databases, including absent names, so a
+        // second populated source appearing during the upgrade invalidates the snapshot.
+        foreach (var databaseName in BookshelfDatabaseFiles.LegacyDatabaseNames)
         {
-            fingerprint.AppendData(Encoding.UTF8.GetBytes(name));
-            fingerprint.AppendData(new byte[] { 0 });
-            var path = Path.Combine(dataDirectory, name);
-            if (!File.Exists(path))
+            foreach (var name in new[] { databaseName, databaseName + "-journal", databaseName + "-wal" })
             {
+                fingerprint.AppendData(Encoding.UTF8.GetBytes(name));
                 fingerprint.AppendData(new byte[] { 0 });
-                files[name] = "<missing>";
-                continue;
-            }
+                var path = Path.Combine(dataDirectory, name);
+                if (!File.Exists(path))
+                {
+                    fingerprint.AppendData(new byte[] { 0 });
+                    files[name] = "<missing>";
+                    continue;
+                }
 
-            using var stream = File.OpenRead(path);
-            fingerprint.AppendData(new byte[] { 1 });
-            var fileHash = SHA256.HashData(stream);
-            fingerprint.AppendData(fileHash);
-            files[name] = Convert.ToHexString(fileHash);
+                using var stream = File.OpenRead(path);
+                fingerprint.AppendData(new byte[] { 1 });
+                var fileHash = SHA256.HashData(stream);
+                fingerprint.AppendData(fileHash);
+                files[name] = Convert.ToHexString(fileHash);
+            }
         }
 
         return new Snapshot(Convert.ToHexString(fingerprint.GetHashAndReset()), files);

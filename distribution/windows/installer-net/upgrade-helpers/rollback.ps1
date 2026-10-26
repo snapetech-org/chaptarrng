@@ -213,11 +213,9 @@ $sqliteBackupNames = @(
     }
 )
 $hasPostgresBackup = Test-Path -LiteralPath $postgresDump -PathType Leaf
-if ($sqliteBackupNames.Count -gt 1 -and -not $hasPostgresBackup) {
-    throw "The BookshelfNG rollback backup contains multiple SQLite databases: $BackupPath"
-}
-$hasSqliteBackup = $sqliteBackupNames.Count -eq 1 -and -not $hasPostgresBackup
-$sqliteBackupName = if ($hasSqliteBackup) { $sqliteBackupNames[0] } else { $null }
+$hasSqliteBackup = $sqliteBackupNames.Count -gt 0
+$hasMergedSqliteBackup = -not $hasPostgresBackup -and
+    $sqliteBackupNames -contains 'readarr.db' -and $sqliteBackupNames -contains 'audioarr.db'
 
 if (-not (Test-Path -LiteralPath $backupBin -PathType Container) -or
     -not (Test-Path -LiteralPath $backupReadarrConsole -PathType Leaf) -or
@@ -368,6 +366,30 @@ if ($RestorePostgresDatabase) {
 }
 
 $currentBin = Join-Path $DataDirectory 'bin'
+if ($hasMergedSqliteBackup) {
+    $mergeReceipt = Join-Path $DataDirectory 'bookshelfng-merge.receipt'
+    $nativeDatabase = Join-Path $DataDirectory 'chaptarr.db'
+    if ((Test-Path -LiteralPath $mergeReceipt -PathType Leaf) -and
+        (Test-Path -LiteralPath $nativeDatabase -PathType Leaf) -and
+        (Get-Item -LiteralPath $nativeDatabase -Force).Length -gt 0) {
+        if ([string]::IsNullOrWhiteSpace($ChaptarrConsolePath) -or
+            -not (Test-Path -LiteralPath $ChaptarrConsolePath -PathType Leaf)) {
+            throw 'A merged ChaptarrNG database is present, but its migration utility is unavailable to retire the target safely.'
+        }
+
+        Write-Host 'Retiring the merged ChaptarrNG target while keeping both original BookshelfNG databases available...'
+        & $ChaptarrConsolePath '-check-bookshelf-migration' "-data=$DataDirectory" '-exitimmediately'
+        if ($LASTEXITCODE -ne 0) {
+            throw 'The merged ChaptarrNG target or its source fingerprint receipt failed validation; the BookshelfNG databases were not restored over it.'
+        }
+
+        & $ChaptarrConsolePath '-restore-bookshelf' '-bookshelf-backup=auto' '-confirm-bookshelf-service-stopped' "-data=$DataDirectory" '-exitimmediately'
+        if ($LASTEXITCODE -ne 0) {
+            throw "The merged ChaptarrNG target could not be retired safely (exit $LASTEXITCODE)."
+        }
+    }
+}
+
 if (Test-Path -LiteralPath $currentBin) {
     Remove-Item -LiteralPath $currentBin -Recurse -Force
 }
@@ -378,7 +400,11 @@ if (-not (Test-Path -LiteralPath $readarrConsole -PathType Leaf)) {
 }
 
 $restoreFileNames = if ($hasSqliteBackup) {
-    @('config.xml', $sqliteBackupName, "$sqliteBackupName-journal", "$sqliteBackupName-wal")
+    $names = @('config.xml')
+    foreach ($databaseName in $sqliteBackupNames) {
+        $names += @($databaseName, "$databaseName-journal", "$databaseName-wal")
+    }
+    $names
 } else {
     @('config.xml')
 }

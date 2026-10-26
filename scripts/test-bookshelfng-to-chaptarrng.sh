@@ -143,6 +143,10 @@ grep -Fxq -- '-confirm-bookshelf-service-stopped' "$DOCKER_ARGS_FILE"
 grep -Fxq -- 'HARDCOVER=true' "$DOCKER_ARGS_FILE"
 grep -Fxq -- 'HARDCOVER_NATIVE=true' "$DOCKER_ARGS_FILE"
 
+# The fake Docker command records arguments but does not run the migration.
+# Model the target database that a successful apply creates before rollback.
+printf 'converted target fixture\n' > "$data_dir/chaptarr.db"
+
 printf 'rollback fixture\n' > "$data_dir/readarr.db.bookshelfng-backup-test.db"
 "$tool" rollback-preview --data-dir "$data_dir" --backup-dir "$backup_dir" --image "$image" \
   --bookshelf-backup 'readarr.db.bookshelfng-backup-test.db'

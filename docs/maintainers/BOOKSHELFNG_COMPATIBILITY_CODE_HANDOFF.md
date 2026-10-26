@@ -2,24 +2,33 @@
 
 ## 2026-10-26 dual-database merge and validation checkpoint
 
-An explicit `-merge-bookshelf-databases` migration mode now stages both
-populated SQLite sources, applies the bundled BookshelfNG migration chain to
-working copies, and merges only stable identities. Different rows with the same
-identity, conflicting values for a setting, or another unique-key/reference
-conflict stop before native promotion. `readarr.db` is the deterministic primary
-identity source; source IDs are not silently remapped. Both original databases
+Normal ChaptarrNG startup and the explicit `-merge-bookshelf-databases` utility
+now stage both populated SQLite sources, apply the bundled BookshelfNG
+migration chain to working copies, and merge only stable identities. Different
+rows with the same identity, conflicting values for a setting, or another
+unique-key/reference conflict stop before native promotion. `readarr.db` is the
+deterministic primary identity source; source IDs are not silently remapped. Both original databases
 remain untouched, while a validated native `chaptarr.db`, a retained merged
 BookshelfNG rollback snapshot, and a durable source/target fingerprint receipt
 are produced on apply. Startup accepts retained legacy siblings only when that
 receipt validates.
 
-The Docker handoff helper and migration guide expose the opt-in, and source
+The platform supervisors and Windows installers now run a read-only dual-source
+preview before first launch or apply. Normal startup automatically merges when
+both sources are compatible; conflicting source IDs, settings, or unique
+references stop before promotion and leave both originals intact. The explicit
+utility remains available for operators who choose manual migration. Source
 media maps can be combined or replaced with a reviewed combined map. The merge
-is intentionally conservative: conflicting source IDs, settings, or unique
-references stop before promotion. It does not rewrite provider identities or
-claim to consolidate two independently configured libraries. The code was
-compiled in the Release solution and covered by the full Core suite; detailed
-installed-channel results and remaining delivery gates are recorded in
+rechecks every input media-map fingerprint before promotion, so a concurrent
+map edit aborts without changing either source. Empty main files with durable
+WAL/journal data are recognized as recovery-bearing; a missing main file with
+durable sidecar data fails closed. Explicit preview can still reach both
+sources when a prior launch left a native target file, after which target
+validation rejects any non-empty target. The CLI rollback gate accepts a
+recoverable native database family with a WAL or rollback journal. The merge
+does not rewrite provider identities or claim to consolidate two independently
+configured libraries. This code pass has not yet had its bulk validation run;
+detailed installed-channel results and remaining delivery gates are recorded in
 [the October 26 channel acceptance report](BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
 
 The merge now holds the normal conversion locks for both legacy files and uses
@@ -27,15 +36,31 @@ a SQLite online backup when cloning migrated working copies, so WAL-committed
 pages are not lost by a main-file copy. A matching `prepared` receipt is
 reconciled to `complete` at native startup; Chocolatey lets its read-only
 handoff check perform that validation after a crash between database promotion
-and receipt finalization. The desktop launcher no longer leaves a permanent
-intervention marker when both files are found; it prints the exact explicit
-preview/apply commands and waits for that operator-selected migration.
+and receipt finalization. Rollback moves the merged ChaptarrNG target aside
+instead of putting its stale source snapshot back at `chaptarr.db`; BookshelfNG
+continues from the two untouched source files, and a later ChaptarrNG attempt
+merges their current contents. Dual-database rollback stops if either original
+source file has been removed; restore it from the independent appdata backup
+first. A nonempty BookshelfNG database at `chaptarr.db` beside both legacy
+files now fails closed instead of being converted as if it were the only
+source. The desktop launcher now previews both sources and
+lets the ChaptarrNG startup path apply the same conflict-failing merge under
+health supervision. A conflict keeps the previous application and both source
+databases available for manual resolution.
+
+The manual systemd bootstrap now detects the same dual-source layout and passes
+the merge option to its service-account preview before replacing the old
+application. The Docker handoff helper accepts the merge option for preview
+and apply, and permits rollback against the existing ChaptarrNG target while
+both retained BookshelfNG source files remain beside it. Helm and StartOS
+manual command guides document the flag; automatic container startup uses the
+same merge path without requiring a manual command.
 
 Docker compatibility startup now holds an app-data-scoped `flock` for the
 supervisor lifetime, preventing two containers sharing one volume from racing
 through the handoff or opening the same database concurrently. If both legacy
-databases are populated, the supervisor leaves them untouched and reports the
-explicit merge commands instead of trying to migrate only `readarr.db`. It also
+databases are populated, the supervisor previews the merge and starts ChaptarrNG
+only when the combined conversion is safe. It also
 stops with recovery guidance when a non-empty SQLite WAL or rollback journal
 exists without its non-empty main database, instead of treating that directory
 as a fresh install. A replica waiting for the lock keeps liveness healthy while
@@ -181,11 +206,11 @@ installed-channel and workflow acceptance remains separate.
 - Windows standalone migration now parses both spaced and equals-form `-data`
   service arguments, rejects incomplete or conflicting data paths before
   mutation, and uses the selected path for backup, preview, migration and
-  rollback. Its SQLite backup, source-change guard and rollback support either
-  populated legacy filename (`readarr.db` or `audioarr.db`). Its default path
-  still fails closed for ambiguous dual databases; the explicit multi-database
-  utility stages both sources, rejects identity/configuration conflicts, and
-  retains both originals. Reparse-point sources fail closed.
+  rollback. Its SQLite backup, source-change guard and rollback support both
+  populated legacy databases, including their WAL and journal files. It previews
+  and applies the explicit merge after operator confirmation; identity or
+  configuration conflicts stop before promotion. Reparse-point sources fail
+  closed.
 - When the BookshelfNG service is stopped at upgrade time, Chocolatey now
   retains the prior app and registers a protected SYSTEM recovery task for the
   next service start. The task verifies the configured local health URL plus
@@ -205,11 +230,10 @@ installed-channel and workflow acceptance remains separate.
   on failure or launcher exit. Migration refuses to start unless
   `setsid --wait` is available. Reopening the old artifact remains the
   executable rollback.
-- Desktop and Chocolatey automatic handoffs now select the same populated
-  SQLite source filename as the core migration path and search/restore its
-  matching retained snapshots. Their automatic migration paths stop before
-  mutation when both legacy files contain data; desktop also rejects symlinked
-  source files.
+- Desktop and Chocolatey automatic handoffs now detect both populated SQLite
+  sources, pass the merge flag to a read-only preflight, and restore from the
+  merged-source snapshot if target health fails. Conflicting data stops before
+  promotion; desktop also rejects symlinked source files.
 - The StartOS bridge now exposes automatic versus manual first-start migration
   in a package action. The choice is kept in the package's separately backed-up
   StartOS volume and passed to the compatibility supervisor at startup; new

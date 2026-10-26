@@ -81,6 +81,14 @@ fi
 run_utility() {
   "$console" -exitimmediately "$@"
 }
+merge_sqlite_sources=false
+preview_migration() {
+  if [ "$merge_sqlite_sources" = true ]; then
+    run_utility -preview-bookshelf-migration -merge-bookshelf-databases "-data=$data_dir"
+  else
+    run_utility -preview-bookshelf-migration "-data=$data_dir"
+  fi
+}
 state_file="$data_dir/.chaptarrng-bookshelfng-desktop-handoff"
 metadata_dir="$data_dir/.chaptarrng-bookshelfng-desktop-handoff-data"
 lock_dir="$data_dir/.chaptarrng-bookshelfng-desktop.lock"
@@ -170,11 +178,6 @@ launch_without_migration() {
 }
 
 restore_source_database() {
-  if run_utility -preview-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
-    # The atomic converter left the BookshelfNG source database untouched.
-    return 0
-  fi
-
   postgres_source=$(cat "$metadata_dir/postgres-source" 2>/dev/null || echo false)
   if [ "$postgres_source" = true ]; then
     postgres_backup_dir=$(cat "$metadata_dir/postgres-backup-directory" 2>/dev/null || true)
@@ -211,11 +214,27 @@ restore_source_database() {
   fi
 
   select_sqlite_source
-  if [ -f "$sqlite_source" ]; then
+  if preview_migration >/dev/null 2>&1; then
+    # The atomic converter left both BookshelfNG source databases untouched.
+    return 0
+  fi
+
+  if [ "$merge_sqlite_sources" = true ] && ! sqlite_database_has_data "$data_dir/chaptarr.db"; then
+    # A failed merge preview or pre-promotion attempt did not replace either
+    # original source. Keep them available to BookshelfNG and allow the
+    # operator to resolve the merge before trying ChaptarrNG again.
+    return 0
+  fi
+
+  rollback_source="$sqlite_source"
+  if [ "$merge_sqlite_sources" = true ]; then
+    rollback_source="$data_dir/chaptarr.db"
+  fi
+  if [ -f "$rollback_source" ]; then
     old_backups="$metadata_dir/sqlite-backups-before"
     newest_backup=''
     newest_time=0
-    for backup in "$sqlite_source".bookshelfng-backup-*.db; do
+    for backup in "$rollback_source".bookshelfng-backup-*.db; do
       [ -f "$backup" ] || continue
       if [ -f "$old_backups" ] && grep -F -x -q "$(basename "$backup")" "$old_backups"; then continue; fi
       backup_time=$(stat -c %Y "$backup" 2>/dev/null || stat -f %m "$backup" 2>/dev/null || echo 0)
@@ -237,21 +256,35 @@ restore_source_database() {
 }
 
 select_sqlite_source() {
-  if [ -L "$data_dir/readarr.db" ] || [ -L "$data_dir/audioarr.db" ]; then
-    write_state intervention-required
-    echo 'BookshelfNG desktop migration refuses a symlinked SQLite database. Resolve it to a regular file before starting.' >&2
-    exit 1
-  fi
-  if [ -s "$data_dir/readarr.db" ] && [ -s "$data_dir/audioarr.db" ]; then
-    echo 'Both readarr.db and audioarr.db contain BookshelfNG data. Stop BookshelfNG and run the explicit merge preview and apply before launching ChaptarrNG:' >&2
-    printf '  "%s" -preview-bookshelf-migration -merge-bookshelf-databases "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
-    printf '  "%s" -migrate-bookshelf -merge-bookshelf-databases -confirm-bookshelf-service-stopped "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
-    exit 1
+  for database in readarr.db audioarr.db; do
+    for suffix in '' -journal -wal -shm; do
+      source_path="$data_dir/$database$suffix"
+      if [ -L "$source_path" ] || { [ -e "$source_path" ] && [ ! -f "$source_path" ]; }; then
+        write_state intervention-required
+        echo "BookshelfNG desktop migration requires regular SQLite source files: $source_path" >&2
+        exit 1
+      fi
+    done
+    if [ ! -e "$data_dir/$database" ] && { [ -s "$data_dir/$database-wal" ] || [ -s "$data_dir/$database-journal" ]; }; then
+      write_state intervention-required
+      echo "BookshelfNG desktop migration found recovery data without its main database: $database. Preserve the database family and recover it before starting either application." >&2
+      exit 1
+    fi
+  done
+  if sqlite_database_has_data "$data_dir/readarr.db" && sqlite_database_has_data "$data_dir/audioarr.db"; then
+    merge_sqlite_sources=true
+    sqlite_source="$data_dir/readarr.db"
+    return
   fi
   sqlite_source="$data_dir/readarr.db"
-  if [ ! -s "$sqlite_source" ] && [ -s "$data_dir/audioarr.db" ]; then
+  if ! sqlite_database_has_data "$sqlite_source" && sqlite_database_has_data "$data_dir/audioarr.db"; then
     sqlite_source="$data_dir/audioarr.db"
   fi
+}
+
+sqlite_database_has_data() {
+  database=$1
+  [ -s "$database" ] || [ -s "$database-wal" ] || [ -s "$database-journal" ]
 }
 
 mkdir -p "$data_dir"
@@ -366,7 +399,7 @@ else
   select_sqlite_source
 fi
 
-if [ "$resuming" != true ] && [ ! -s "$sqlite_source" ] && [ "$postgres_source" != true ]; then
+if [ "$resuming" != true ] && ! sqlite_database_has_data "$sqlite_source" && [ "$postgres_source" != true ]; then
   launch_without_migration "$@"
 fi
 
@@ -381,8 +414,13 @@ if [ "$resuming" != true ]; then
       fi
       printf '%s\n' 'BookshelfNG conversion was deferred; its source database was not changed.' \
         'Extract the ChaptarrNG package, stop BookshelfNG, then run:' >&2
-      printf '  "%s" -preview-bookshelf-migration "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
-      printf '  "%s" -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
+      if [ "$merge_sqlite_sources" = true ]; then
+        printf '  "%s" -preview-bookshelf-migration -merge-bookshelf-databases "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
+        printf '  "%s" -migrate-bookshelf -merge-bookshelf-databases -confirm-bookshelf-service-stopped "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
+      else
+        printf '  "%s" -preview-bookshelf-migration "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
+        printf '  "%s" -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
+      fi
       exit 0
       ;;
     ask)
@@ -422,7 +460,7 @@ if command -v setsid >/dev/null 2>&1 && setsid --help 2>&1 | grep -q -- '--wait'
 fi
 
 if [ "$resuming" != true ]; then
-  if ! run_utility -preview-bookshelf-migration "-data=$data_dir" >/dev/null 2>&1; then
+  if ! preview_migration >/dev/null 2>&1; then
     write_state intervention-required
     echo 'BookshelfNG migration preflight failed. The source database was not changed; inspect the ChaptarrNG migration journal before retrying.' >&2
     exit 1
@@ -438,7 +476,11 @@ if [ "$resuming" != true ]; then
   chmod 0600 "$metadata_dir/postgres-source"
   old_backups="$metadata_dir/sqlite-backups-before"
   : > "$old_backups"
-  for backup in "$sqlite_source".bookshelfng-backup-*.db; do
+  rollback_source="$sqlite_source"
+  if [ "$merge_sqlite_sources" = true ]; then
+    rollback_source="$data_dir/chaptarr.db"
+  fi
+  for backup in "$rollback_source".bookshelfng-backup-*.db; do
     [ -f "$backup" ] || continue
     basename "$backup" >> "$old_backups"
   done

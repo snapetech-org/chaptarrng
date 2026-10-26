@@ -20,6 +20,9 @@ tag v0.9.978 or newer; digest references cannot be checked for that capability.
 The optional merge flag enables an explicit SQLite merge when both
 readarr.db and audioarr.db are populated; conflicting identities or settings
 stop the conversion before either original database is changed.
+Rollback actions use the current chaptarr.db and its retained source receipt;
+they do not need the merge option. Dual-database rollback requires both
+original BookshelfNG files to remain present and unchanged.
 USAGE
 }
 
@@ -158,31 +161,66 @@ for database_name in readarr.db audioarr.db; do
     [[ ! -e "$database_path" || -f "$database_path" ]] ||
       fail "BookshelfNG database paths must be regular files: $database_name$suffix"
   done
+  if [[ ! -e "$data_dir/$database_name" && ( -s "$data_dir/$database_name-wal" || -s "$data_dir/$database_name-journal" ) ]]; then
+    fail "BookshelfNG database $database_name is missing but its WAL or rollback journal contains data; preserve the database family and resolve recovery first"
+  fi
 done
+
+if [[ "$action" == rollback-preview || "$action" == rollback ]]; then
+  for suffix in '' -journal -wal -shm; do
+    database_path="$data_dir/chaptarr.db$suffix"
+    [[ ! -L "$database_path" ]] ||
+      fail "ChaptarrNG database paths must not be symbolic links: chaptarr.db$suffix"
+    [[ ! -e "$database_path" || -f "$database_path" ]] ||
+      fail "ChaptarrNG database paths must be regular files: chaptarr.db$suffix"
+  done
+fi
+
+sqlite_database_has_data() {
+  local database="$1"
+  [[ -s "$database" || -s "$database-wal" || -s "$database-journal" ]]
+}
 
 readarr_populated=false
 audioarr_populated=false
-if [[ -f "$data_dir/readarr.db" && ! -L "$data_dir/readarr.db" && -s "$data_dir/readarr.db" ]]; then
-  readarr_populated=true
-fi
-if [[ -f "$data_dir/audioarr.db" && ! -L "$data_dir/audioarr.db" && -s "$data_dir/audioarr.db" ]]; then
-  audioarr_populated=true
-fi
+if sqlite_database_has_data "$data_dir/readarr.db"; then readarr_populated=true; fi
+if sqlite_database_has_data "$data_dir/audioarr.db"; then audioarr_populated=true; fi
 
-if [[ "$readarr_populated" == true && "$audioarr_populated" == true && "$merge_bookshelf_databases" != true && "$action" != snapshot ]]; then
-  fail 'both BookshelfNG databases contain data; use --merge-bookshelf-databases to opt into the explicit, conflict-failing merge'
-fi
-if [[ "$merge_bookshelf_databases" == true && ( "$readarr_populated" != true || "$audioarr_populated" != true ) ]]; then
-  fail '--merge-bookshelf-databases requires non-empty regular readarr.db and audioarr.db files'
-fi
-
-if [[ "$readarr_populated" == true ]]; then
-  source_database="$data_dir/readarr.db"
-elif [[ "$audioarr_populated" == true ]]; then
-  source_database="$data_dir/audioarr.db"
-else
-  fail 'data directory must contain a non-empty regular readarr.db or audioarr.db file'
-fi
+case "$action" in
+  preview|apply)
+    if [[ "$readarr_populated" == true && "$audioarr_populated" == true && "$merge_bookshelf_databases" != true ]]; then
+      fail 'both BookshelfNG databases contain data; use --merge-bookshelf-databases to opt into the explicit, conflict-failing merge'
+    fi
+    if [[ "$merge_bookshelf_databases" == true && ( "$readarr_populated" != true || "$audioarr_populated" != true || ! -f "$data_dir/readarr.db" || ! -f "$data_dir/audioarr.db" ) ]]; then
+      fail '--merge-bookshelf-databases requires regular readarr.db and audioarr.db files with recoverable data'
+    fi
+    if [[ "$readarr_populated" == true ]]; then
+      source_database="$data_dir/readarr.db"
+    elif [[ "$audioarr_populated" == true ]]; then
+      source_database="$data_dir/audioarr.db"
+    else
+      fail 'data directory must contain a populated readarr.db or audioarr.db SQLite database'
+    fi
+    ;;
+  rollback-preview|rollback)
+    source_database="$data_dir/chaptarr.db"
+    [[ -f "$source_database" && ! -L "$source_database" ]] ||
+      fail 'rollback requires a regular chaptarr.db target in the data directory'
+    sqlite_database_has_data "$source_database" ||
+      fail 'rollback requires recoverable data in chaptarr.db or its WAL/rollback journal'
+    ;;
+  snapshot)
+    if [[ "$readarr_populated" == true ]]; then
+      source_database="$data_dir/readarr.db"
+    elif [[ "$audioarr_populated" == true ]]; then
+      source_database="$data_dir/audioarr.db"
+    elif [[ -f "$data_dir/chaptarr.db" && ! -L "$data_dir/chaptarr.db" && -s "$data_dir/chaptarr.db" ]]; then
+      source_database="$data_dir/chaptarr.db"
+    else
+      source_database="$data_dir"
+    fi
+    ;;
+esac
 
 [[ -n "$backup_dir" ]] || fail '--backup-dir is required so you can choose a separate backup location'
 backup_dir="$(resolve_directory_path "$backup_dir")" ||

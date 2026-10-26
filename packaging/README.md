@@ -200,7 +200,7 @@ checks.
 | Helm / OCI | No BookshelfNG-identity replacement chart is published. | Kind installed upgrade from main-v0.4.21.71 passed ask No/defer, Yes, health, and explicit source restore. | Publish the exact accepted chart/image and exercise the external OCI/GitOps delivery path. |
 | Cloudron | No ChaptarrNG package update is published. | Cloudron 10.1.6 installed `.4.21` to local candidate `.4.23`; Manual defer, native backup/restore, Automatic migration, and source-database plus old-package rollback passed. The administrator controls the app update and can set `BOOKSHELFNG_MIGRATION_MODE=manual` first. | Local platform acceptance passed. Feed/catalog publication remains open. The old `.4.21` pre-update backup excludes persistent directories because that package has no hooks. |
 | StartOS | No candidate package is published. | StartOS 0.4.0.3 x86_64 and aarch64 VMs passed test-key SDK3 package updates. ARM64 tested Manual defer, Console preview/apply, Automatic migration, and an injected health failure that restored schema 158 and left ChaptarrNG stopped. Database integrity, foreign keys, and `/books` plus `/downloads` canaries passed. | Official signed package, public `.71` predecessor update, external package repository, and package-manager rollback remain untested. |
-| Unraid | No replacement template is published. | XML/settings and draft PR contracts passed; no Community Applications install, update, or rollback was available. The template update flow has no y/n prompt. | Installed Unraid acceptance and an operator-controlled defer/retry handoff remain open. |
+| Unraid | No replacement template is published. | The local legacy-template Docker rehearsal passed Manual defer, Automatic migration, `/ping`, retained source data, settings and media canaries, and forced rollback/recovery against BookshelfNG `.71` and the local `.978` candidate. The template update flow has no y/n prompt. | Community Applications review and an Unraid-host update/rollback test remain open. |
 | Co-op Cloud | No replacement recipe is published. | Isolated Debian 13 / Docker 26.1 Swarm upgraded the pinned BookshelfNG .71 source image to the local exact-head .978 candidate. The same `bookshelfng_app` service and all three volume names remained in place. Manual preserved the schema-158 database byte-for-byte and its media canaries; Automatic migrated to schema 124, passed integrity checks, retained a source backup, and served `/ping`. A deliberately unhealthy update paused; restoring the three-volume snapshot and redeploying the .71 image returned healthy BookshelfNG. The official Backupbot II 2.4.0 CLI backed up and restored a schema-158 fixture and all three same-name volumes using the recipe label; SQLite integrity, byte-exact database recovery, and volume canaries passed. Abra 0.13.0-beta deployed an isolated recipe with the same service/volume identities, created and listed a snapshot, then restored the corrupted schema-158 database and all three canaries through `abra app restore`. | Canonical recipe review, published digest, and maintainer acceptance remain open. The channel uses an operator setting; choosing No means holding the old stack. |
 | External self-hosting catalogs | No replacements are published. | Local Compose contract only; CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other catalog entries have not been updated or accepted. There is no common y/n contract. | Each catalog needs its own identity, volume, update, defer, and recovery acceptance. |
 | macOS standalone | No BookshelfNG-owned remote update route can redirect these installs. | Hosted run [40270599787](https://github.com/snapetech-org/chaptarrng/actions/runs/40270599787) passed No, headless Manual, Yes, health, source backup, and forced rollback on x64 and arm64 against checksum-pinned BookshelfNG .71 predecessors. No release assets were uploaded. | One-time manual bootstrap and launcher/service path switch remain operator actions. |
@@ -347,12 +347,12 @@ WPF migration-installer candidate in `distribution/windows/installer-net`.
 The release workflow builds it from the exact Windows release payload and
 attaches it only when the migration-bridge and both release-readiness gates
 are enabled; no installer asset is currently published. It supports one
-SQLite or PostgreSQL database, asks for provider mode, creates a verified
-retained backup, previews before apply, then switches to the `Chaptarr`
+PostgreSQL source or both SQLite databases, asks for provider mode, creates a
+verified retained backup, previews before apply, then switches to the `Chaptarr`
 service and checks the saved data path and health endpoint. It requires the
-standard `NT AUTHORITY\LocalService` account; multiple-database installs are
-rejected. Native Windows PostgreSQL rollback, representative data, and channel
-acceptance remain open, so it is not approved for operator use. See the
+standard `NT AUTHORITY\LocalService` account. Native Windows PostgreSQL
+rollback, representative data, and channel acceptance remain open, so it is
+not approved for operator use. See the
 [Windows migration procedure](../docs/MIGRATE_FROM_BOOKSHELFNG.md#windows-standalone-service-migration).
 
 BookshelfNG's in-app updater still checks its existing upstream update service,
@@ -388,7 +388,7 @@ test-package VM updates on x86_64 and aarch64, including manual defer,
 automatic migration, and automatic source rollback on ARM64. These candidates
 remain unpublished. Cloudron feed/catalog publication, canonical Co-op Cloud
 recipe review and maintainer acceptance, catalog platform updates, and Unraid
-installation are open. The StartOS candidate uses SDK 3.1.0
+Community Applications/host acceptance are open. The StartOS candidate uses SDK 3.1.0
 and requires StartOS 0.4.0.2 or newer. The external `bookshelfng-startos`
 package repository has not been modified; official signing, update from the
 public `.71` package, and package-manager rollback remain open. See the

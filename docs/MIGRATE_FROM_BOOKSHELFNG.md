@@ -105,13 +105,13 @@ and `ask` behaves as manual when the platform has no interactive terminal.
 supervisor requires either a valid completed migration or a fresh successful
 preview of the restored BookshelfNG source. It does not bypass an
 `intervention-required` state.
-When a container has both populated `readarr.db` and `audioarr.db`, its
-supervisor does not guess which library to migrate. It keeps the container
-unready and prints the preview/apply commands for the explicit
-`-merge-bookshelf-databases` route. Review that merge's conflict rules, stop
-every process using the data directory, run both commands, then restart the
-container. The merge stops before promotion when source identities or settings
-conflict.
+When both `readarr.db` and `audioarr.db` contain data, automatic startup stages
+and validates a merge of both libraries before promoting `chaptarr.db`. The
+original databases remain unchanged and are fingerprinted for rollback.
+Conflicting identities, settings, or references stop the upgrade before
+promotion and leave the service unready. In manual migration mode, use the
+explicit `-merge-bookshelf-databases` preview/apply commands below after
+stopping every process that uses the directory.
 Kubernetes uses the supervisor marker for startup/liveness and the app port
 for readiness, so a deferred or failed handoff does not trigger a pod restart
 loop while readiness remains false. Docker health reports readiness only after
@@ -187,6 +187,11 @@ data=/var/lib/bookshelfng
 "$console" -migrate-bookshelf -confirm-bookshelf-service-stopped "-data=$data" || exit 1
 ```
 
+For an app-data directory with both populated `readarr.db` and `audioarr.db`,
+add `-merge-bookshelf-databases` to the preview and apply commands. The
+merge preserves both original databases and stops before promotion if record
+identities or settings conflict.
+
 ### One-time bootstrap for a manually installed Linux systemd service
 
 BookshelfNG's old in-app updater only checks the Readarr update service, so it
@@ -196,8 +201,9 @@ archive and its `.sha256` sidecar from the ChaptarrNG release page. Extract the
 archive, then run its `scripts/bookshelfng-systemd-bootstrap.py` as root while
 the existing BookshelfNG service is running. The bootstrap verifies the
 archive checksum and service executable, captures the service's effective
-environment in memory, previews migration with the same service account,
-retains the prior application and `config.xml`, then installs ChaptarrNG at
+environment in memory, detects a dual-database SQLite source, and previews its
+merge with the same service account. It retains the prior application and
+`config.xml`, then installs ChaptarrNG at
 the old executable path. The service's first normal startup performs
 migration; temporary systemd hooks verify HTTP health and database lineage and
 restore the source database, config, and application if the handoff fails or
@@ -321,18 +327,22 @@ control continues to show or hide advanced fields in Advanced mode.
 
 The ChaptarrNG source also includes
 [`scripts/bookshelfng-to-chaptarrng.sh`](../scripts/bookshelfng-to-chaptarrng.sh),
-a host-side helper for Docker installations. Each action first creates a
-mode-`0600` archive of the full appdata directory in a separate backup
+a SQLite-only host helper for Docker installations. Each action first creates
+a mode-`0600` archive of the full appdata directory in a separate backup
 directory. The helper supports `snapshot`, migration `preview` and `apply`,
-and restore `preview` and `rollback`. It rejects ambiguous legacy databases,
-requires an explicit Goodreads or native Hardcover choice for migration,
-accepts only a versioned ChaptarrNG image or digest, and requires explicit
-stopped-service confirmation before apply or rollback. Native Hardcover
-migration requires a versioned `v0.9.978` or newer image; published `.977`
-does not support that identity conversion. The source packaging workflow
-includes the helper in Linux x64 and arm64 standalone archives. The published
-`.977` archives do not contain this newer bootstrap. No new release or cutover
-is authorized by this source change.
+and restore `preview` and `rollback`. When both `readarr.db` and `audioarr.db`
+contain data, migration requires the explicit `--merge-bookshelf-databases`
+option; conflicting identities or settings stop before either original is
+changed. Rollback uses `chaptarr.db` and its retained merge receipt, so the
+option is not needed while both originals remain in place. PostgreSQL users
+should use a channel handoff that creates and verifies the independent database
+dump; this SQLite helper does not create one. Migration requires an explicit
+Goodreads or native Hardcover choice and accepts only a versioned ChaptarrNG
+image or digest. Native Hardcover migration requires a versioned `v0.9.978` or
+newer image; published `.977` does not support that identity conversion. The
+source packaging workflow includes the helper in Linux x64 and arm64
+standalone archives. The published `.977` archives do not contain this newer
+bootstrap. No new release or cutover is authorized by this source change.
 
 The Add New page carries over the BookshelfNG “search as you type” choice when
 you open ChaptarrNG from the same browser origin. If you move to a different
@@ -347,9 +357,10 @@ Interactive search checks the selected torrent client for a matching info hash.
 If it finds one, ChaptarrNG offers to adopt that existing item into its tracked
 queue without starting a second download. Confirm the match before adopting it.
 
-Migration still selects one supported database per appdata directory by
-default. If both `readarr.db` and `audioarr.db` are populated, use the explicit
-SQLite merge utility after stopping every process that uses the directory:
+If both `readarr.db` and `audioarr.db` are populated, normal ChaptarrNG startup
+validates and merges them automatically. Operators who selected manual
+migration can run the explicit SQLite merge utility after stopping every
+process that uses the directory:
 
 ```sh
 Chaptarr -preview-bookshelf-migration -merge-bookshelf-databases -data=/path/to/appdata
@@ -369,11 +380,16 @@ pending releases, and schedules follow the normal migration reset behavior
 and remain available in the retained source files. The original `readarr.db`
 and `audioarr.db` files are retained unchanged beside the new `chaptarr.db`; a
 receipt fingerprints both retained database families so ChaptarrNG refuses
-startup if either is edited after the merge. An operator may remove a retained
-source file after deciding it is no longer needed for rollback. The merged
-BookshelfNG snapshot is retained under `chaptarr.db.bookshelfng-backup-*` and
-is accepted by the normal rollback command; rollback marks the merge receipt
-as rolled back.
+startup if either is edited after the merge. Keep both original source files
+until rollback is no longer needed; dual-database rollback requires both to
+remain present and unchanged. If either is removed, restore it from the
+independent appdata backup before rolling back. The merged BookshelfNG snapshot
+is retained under `chaptarr.db.bookshelfng-backup-*` and is accepted by the
+normal rollback command. For this dual-database case,
+rollback moves the ChaptarrNG target aside and leaves both original source
+databases in place, so BookshelfNG can resume and a later ChaptarrNG upgrade
+can merge their latest contents. The displaced ChaptarrNG database remains
+available as a separate rollback artifact.
 
 If ambiguous media-format choices are present in both databases, their
 `*.bookshelf-media-map.json` sidecars are combined when their choices do not
@@ -810,6 +826,11 @@ docker run --rm \
   dotnet /app/Chaptarr.dll -preview-bookshelf-migration -data=/config
 ```
 
+If both BookshelfNG SQLite databases contain data, add
+`-merge-bookshelf-databases` before `-data=/config` in both the preview and
+apply commands below. The native app-data supervisors select this merge
+automatically; this flag selects it for an explicit utility run.
+
 These values are shown for a native Hardcover source. Use `HARDCOVER=false`
 for a Goodreads-primary source, and preserve the source's `HARDCOVER_NATIVE`
 value if it was explicitly set. Preview, apply, and automatic startup must use
@@ -988,8 +1009,8 @@ ChaptarrNG has a WPF migration installer at
 `distribution/windows/installer-net`. The release workflow builds a
 versioned installer from the exact Windows release payload and attaches it
 only when the migration-bridge and both release-readiness gates are enabled;
-no such asset is currently published. The installer supports one SQLite or
-PostgreSQL database and preserves the existing BookshelfNG service identity
+no such asset is currently published. The installer supports one PostgreSQL
+source or both BookshelfNG SQLite databases and preserves the existing service identity
 for built-in accounts, local or domain users, and group Managed Service
 Accounts. It securely prompts for a password when Windows requires one;
 Readarr-specific virtual service accounts are rejected because Windows binds
@@ -997,10 +1018,10 @@ them to the Readarr service name. It requires a provider identity choice, makes
 and verifies a full rollback backup, previews before apply, and checks the
 migrated database and
 ChaptarrNG's local health. A read-only SQLite `PRAGMA data_version` guard
-remains active through preview
-review and blocks committed changes from another connection immediately before
-apply. WAL representation changes are diagnostic and do not count as committed
-database changes.
+remains active for every populated SQLite source through preview review and
+blocks committed changes from another connection immediately before apply. WAL
+representation changes are diagnostic and do not count as committed database
+changes.
 
 The service handoff keeps the existing `Readarr` registration until ChaptarrNG
 has passed its health check. After the verified backup, the installer records
@@ -1034,9 +1055,8 @@ handoff. The SQLite Windows installed-service route has since passed the
 exact-head service round-trip recorded below. The PostgreSQL rollback code
 requires `pg_dump` and `pg_restore`, an explicit database user, and no
 service-only PostgreSQL environment overrides; its Windows end-to-end
-installed rollback remains unvalidated. Multiple databases, unsupported
-schemas, and representative operator-data rollback are not covered by this
-installer. Do not change the
+installed rollback remains unvalidated. Unsupported schemas and representative
+operator-data rollback are not covered by this installer. Do not change the
 service or apply the migration during the release freeze. Keep BookshelfNG
 available until the installer and all retirement acceptance gates have
 passed.

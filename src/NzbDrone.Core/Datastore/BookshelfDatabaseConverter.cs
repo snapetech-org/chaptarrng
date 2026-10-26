@@ -260,6 +260,28 @@ namespace NzbDrone.Core.Datastore
             var lockPath = currentPath + ".bookshelfng-conversion.lock";
             using var conversionLock = AcquireConversionLock(lockPath);
 
+            var mergedLegacySources = string.Equals(
+                Path.GetFileName(currentPath),
+                "chaptarr.db",
+                pathComparison)
+                ? BookshelfMergeReceipt.ValidateForNativeDatabase(currentPath)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var restoringMergedSources =
+                mergedLegacySources.Contains("readarr.db") &&
+                mergedLegacySources.Contains("audioarr.db");
+
+            if (restoringMergedSources)
+            {
+                var appDataFolder = Path.GetDirectoryName(currentPath) ??
+                    throw new InvalidDataException("Dual-database rollback could not resolve the app-data directory. No database was changed.");
+                if (!File.Exists(Path.Combine(appDataFolder, "readarr.db")) ||
+                    !File.Exists(Path.Combine(appDataFolder, "audioarr.db")))
+                {
+                    throw new InvalidDataException(
+                        "Dual-database rollback requires both original BookshelfNG databases to remain in appdata. No database was changed; restore the missing source from the independent appdata backup or keep using ChaptarrNG.");
+                }
+            }
+
             if (DatabaseLineageGuard.Detect(currentConnectionString, DatabaseType.SQLite) != DatabaseLineage.Chaptarr)
             {
                 throw new InvalidDataException("The current database is not a ChaptarrNG database. No database was changed.");
@@ -275,8 +297,29 @@ namespace NzbDrone.Core.Datastore
             }
 
             var suffix = Guid.NewGuid().ToString("N").Substring(0, 8);
-            var stagePath = currentPath + ".bookshelf-restore-stage-" + suffix + ".db";
             var chaptarrBackupPath = currentPath + ".chaptarrng-backup-" + DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ") + "-" + suffix + ".db";
+
+            if (restoringMergedSources)
+            {
+                // The two original BookshelfNG databases remain the rollback
+                // source of truth. Restoring their merged snapshot into
+                // chaptarr.db would hide later BookshelfNG writes when an
+                // operator retries the upgrade, because normal startup prefers
+                // an existing chaptarr.db. Retire the Chaptarr target instead;
+                // the next Chaptarr startup will merge the current originals.
+                BookshelfMergeReceipt.ValidateForNativeDatabase(currentPath);
+                CheckpointDatabase(currentPath, currentBuilder);
+                SqliteConnection.ClearAllPools();
+                DeleteSidecars(currentPath);
+                File.Move(currentPath, chaptarrBackupPath);
+                return new BookshelfDatabaseRollbackResult(
+                    sourceBackupPath,
+                    chaptarrBackupPath,
+                    previewOnly: false,
+                    originalSourcesRetained: true);
+            }
+
+            var stagePath = currentPath + ".bookshelf-restore-stage-" + suffix + ".db";
             var failedRestorePath = currentPath + ".bookshelf-restore-failed-" + suffix + ".db";
             try
             {
@@ -874,16 +917,22 @@ namespace NzbDrone.Core.Datastore
 
     public sealed class BookshelfDatabaseRollbackResult
     {
-        public BookshelfDatabaseRollbackResult(string bookshelfBackupPath, string chaptarrBackupPath, bool previewOnly)
+        public BookshelfDatabaseRollbackResult(
+            string bookshelfBackupPath,
+            string chaptarrBackupPath,
+            bool previewOnly,
+            bool originalSourcesRetained = false)
         {
             BookshelfBackupPath = bookshelfBackupPath ?? throw new ArgumentNullException(nameof(bookshelfBackupPath));
             ChaptarrBackupPath = chaptarrBackupPath;
             PreviewOnly = previewOnly;
+            OriginalSourcesRetained = originalSourcesRetained;
         }
 
         public string BookshelfBackupPath { get; }
         public string ChaptarrBackupPath { get; }
         public bool PreviewOnly { get; }
+        public bool OriginalSourcesRetained { get; }
     }
 
     /// <summary>
