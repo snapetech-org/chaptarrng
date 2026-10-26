@@ -82,12 +82,13 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        public void should_reject_multiple_legacy_database_files_as_ambiguous()
+        public void should_select_native_target_for_the_known_dual_source_pair()
         {
             CreateBookshelfDatabase(Path.Combine(_directory, "readarr.db"));
             CreateChaptarrDatabase(Path.Combine(_directory, "audioarr.db"));
 
-            Assert.Throws<InvalidOperationException>(() => ResolveDatabasePath());
+            Assert.That(ResolveDatabasePath(), Is.EqualTo(_primaryPath));
+            Assert.That(File.Exists(_primaryPath), Is.False, "path selection must not create the native target before migration validation");
         }
 
         [Test]
