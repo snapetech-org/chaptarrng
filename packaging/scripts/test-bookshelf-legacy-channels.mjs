@@ -121,10 +121,14 @@ test('macOS installed handoff acceptance is manually dispatched and publication-
   assert.doesNotMatch(workflow, /upload-artifact|gh release (create|upload)|docker push/);
 });
 
-test('Helm handoff workflow installs a pinned Ruby runtime for its resource contract test', () => {
+test('Helm handoff workflow runs Ruby in a pinned writable container on private JIT', () => {
   const workflow = read('.github/workflows/helm-handoff.yml');
 
-  assert.match(workflow, /ruby\/setup-ruby@[a-f0-9]{40}\s+# v\d+\.\d+\.\d+[\s\S]*?ruby-version: "3\.4"/);
+  assert.doesNotMatch(workflow, /ruby\/setup-ruby/);
+  assert.match(workflow, /ruby:3\.4-bookworm@sha256:fb621bafe125c450672c77ab13e7378f10f472eb0d0ee81dc63c656a660008ba/);
+  assert.match(workflow, /--volume "\$GITHUB_WORKSPACE:\$GITHUB_WORKSPACE:ro"/);
+  assert.match(workflow, /--volume "\$helm_binary:\/usr\/local\/bin\/helm:ro"/);
+  assert.match(workflow, /apt-get install -y --no-install-recommends python3 && ruby scripts\/test_bookshelfng_helm_handoff\.rb/);
 });
 
 test('Flatpak keeps the installed app ID and BookshelfNG sandbox data directory', () => {

@@ -48,10 +48,6 @@ jobs:
         with:
           version: v3.20.0
 
-      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
-        with:
-          ruby-version: "3.4"
-
       - name: Lint compatibility chart
         run: >-
           helm lint charts/bookshelfng
@@ -62,5 +58,15 @@ jobs:
       - name: Verify stable resources and fail-closed inputs
         env:
           BOOKSHELFNG_REFERENCE_CHART: ${{ github.workspace }}/bookshelfng-reference/charts/bookshelfng
-        run: ruby scripts/test_bookshelfng_helm_handoff.rb
+        run: |
+          helm_binary="$(readlink -f "$(command -v helm)")"
+          test -x "$helm_binary"
+
+          docker run --rm --platform linux/amd64 \
+            --volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE:ro" \
+            --volume "$helm_binary:/usr/local/bin/helm:ro" \
+            --workdir "$GITHUB_WORKSPACE" \
+            --env "BOOKSHELFNG_REFERENCE_CHART=$BOOKSHELFNG_REFERENCE_CHART" \
+            ruby:3.4-bookworm@sha256:fb621bafe125c450672c77ab13e7378f10f472eb0d0ee81dc63c656a660008ba \
+            bash -ec 'apt-get update && apt-get install -y --no-install-recommends python3 && ruby scripts/test_bookshelfng_helm_handoff.rb'
 
