@@ -45,26 +45,29 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         source = WORKFLOW.read_text(encoding="utf-8")
         push = event_block(source, "push")
         self.assertRegex(push, r"(?m)^    tags:\s*$")
-        self.assertIn("**", push)
+        self.assertIn("'v*.*.*'", push)
         self.assertNotRegex(push, r"(?m)^    branches:")
-        self.assertNotRegex(source, r"(?m)^  pull_request(?:_target)?:")
+        target = event_block(source, "pull_request_target")
+        self.assertIn("branches: [main]", target)
+        self.assertIn("types: [opened, reopened, synchronize, ready_for_review]", target)
+        self.assertNotRegex(source, r"(?m)^  pull_request:")
 
     def test_build_matrix_requests_private_capacity_for_each_platform(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         build = job_block(source, "build")
         runner_match = re.search(r"(?m)^    runs-on: (?P<runner>[^\n]+)$", build)
         self.assertIsNotNone(runner_match)
-        runner = runner_match.group("runner")
+        runner = runner_match.group("runner").replace("\\", "")
         self.assertIn("matrix.platform == 'windows-x64'", runner)
         self.assertIn("matrix.platform == 'macos-intel'", runner)
         self.assertIn('"group":"ng-shared-main-jit"', runner)
         self.assertIn('"ng-shared-main-chaptarrng"', runner)
         self.assertIn('"ng-main-run-{0}"', runner)
         self.assertIn("github.run_id", runner)
-        self.assertIn(
-            "matrix.platform == 'windows-x64' && fromJSON('[\"self-hosted\",\"Windows\",\"X64\",\"packer-windows\"]')",
-            runner,
-        )
+        self.assertIn('"group":"packer-windows"', runner)
+        self.assertIn('"on-demand"', runner)
+        self.assertIn('"ChaptarrNG"', runner)
+        self.assertIn('"gha-{0}-{1}-build"', runner)
         self.assertNotRegex(runner, r"ubuntu-latest|windows-latest|macos-[0-9]")
         self.assertNotIn("|| matrix.os", runner)
         self.assertNotIn("TRUSTED_MAIN_RUNNERS_ENABLED", source)
@@ -98,18 +101,22 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
                     )
 
     def test_windows_release_jobs_use_the_private_packer_route(self) -> None:
-        expected = "[self-hosted, Windows, X64, packer-windows]"
         windows_release_jobs = (
-            ("release.yml", "windows-migration-installer"),
-            ("release-distribution.yml", "build-chocolatey"),
-            ("release-distribution.yml", "publish-chocolatey"),
+            ("release.yml", "windows-migration-installer", "windows-migration-installer"),
+            ("release-distribution.yml", "build-chocolatey", "build-chocolatey"),
+            ("release-distribution.yml", "publish-chocolatey", "publish-chocolatey"),
         )
-        for workflow_name, job_name in windows_release_jobs:
+        for workflow_name, job_name, label_suffix in windows_release_jobs:
             source = (WORKFLOW.parent / workflow_name).read_text(encoding="utf-8")
             job = job_block(source, job_name)
             runner_match = re.search(r"(?m)^    runs-on: (?P<runner>[^\n]+)$", job)
             self.assertIsNotNone(runner_match, f"{workflow_name}:{job_name}")
-            self.assertEqual(runner_match.group("runner"), expected)
+            runner = runner_match.group("runner").replace("\\", "")
+            self.assertIn('"group":"packer-windows"', runner)
+            self.assertIn('"on-demand"', runner)
+            self.assertIn('"ChaptarrNG"', runner)
+            self.assertIn(f'"gha-{{0}}-{label_suffix}"', runner)
+            self.assertNotRegex(runner, r"windows-latest|ubuntu-latest|macos-[0-9]")
 
         for workflow_name in ("build.yml", "release.yml", "release-distribution.yml"):
             source = (WORKFLOW.parent / workflow_name).read_text(encoding="utf-8")
@@ -141,30 +148,61 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertTrue(all("," not in option for option in buildx_driver_options))
         self.assertIn("NO_PROXY=localhost,127.0.0.1", build)
 
-    def test_validation_is_manual_or_tagged_without_pr_checks(self) -> None:
+    def test_owner_pr_trigger_dispatches_only_metadata_to_private_validation(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         push = event_block(source, "push")
 
         self.assertIn("workflow_dispatch:", source)
         self.assertRegex(push, r"(?m)^    tags:\s*$")
+        self.assertIn("'v*.*.*'", push)
         self.assertNotRegex(push, r"(?m)^    branches:")
-        self.assertNotRegex(source, r"(?m)^  pull_request(?:_target)?:")
+        self.assertNotRegex(source, r"(?m)^  pull_request:")
+
+        dispatcher = job_block(source, "dispatch-owner-pr")
+        for token in (
+            "github.event_name == 'pull_request_target'",
+            "github.actor == 'snapetech'",
+            "github.event.pull_request.user.login == 'snapetech'",
+            "github.event.pull_request.head.repo.full_name == github.repository",
+            "github.event.pull_request.head.repo.id == github.repository_id",
+            "github.event.pull_request.base.ref == 'main'",
+            "actions: write",
+            "contents: none",
+            '"ref": "main"',
+        ):
+            self.assertIn(token, dispatcher)
+        self.assertNotIn("actions/checkout", dispatcher)
+        self.assertNotIn("secrets.", dispatcher)
+
+        policy = job_block(source, "private-runner-policy")
+        self.assertIn("github.ref == 'refs/heads/main'", policy)
+        self.assertIn("gha-{0}-private-runner-policy", policy)
+
+        validation = job_block(source, "owner-pr-validation")
+        self.assertIn("github.actor == 'github-actions[bot]'", validation)
+        self.assertIn("ref: ${{ inputs.pr_sha }}", validation)
+        self.assertIn("persist-credentials: false", validation)
+        self.assertIn("node scripts/check-release-notes.mjs", validation)
+
+        reporter = job_block(source, "report-owner-pr-check")
+        self.assertIn("checks: write", reporter)
+        self.assertIn("name: Report trusted owner PR validation", reporter)
+        self.assertIn('"name": "ChaptarrNG owner PR validation"', reporter)
 
     def test_security_scans_use_private_jit_without_hosted_fallback(self) -> None:
         workflow_dir = WORKFLOW.parent
-        for workflow_name, job_name in (
-            ("codeql.yml", "analyze"),
-            ("semgrep-community.yml", "semgrep"),
-        ):
-            source = (workflow_dir / workflow_name).read_text(encoding="utf-8")
-            job = job_block(source, job_name)
-            runner_match = re.search(r"(?m)^    runs-on: (?P<runner>[^\n]+)$", job)
-            self.assertIsNotNone(runner_match, workflow_name)
-            runner = runner_match.group("runner")
-            self.assertIn('"group":"ng-shared-main-jit"', runner)
-            self.assertIn('"self-hosted"', runner)
-            self.assertIn('"ng-main-run-{0}"', runner)
-            self.assertNotIn("ubuntu-latest", runner)
+        self.assertFalse((workflow_dir / "codeql.yml").exists())
+        self.assertTrue((workflow_dir / "codeql.yml.disabled").is_file())
+        workflow_name = "semgrep-community.yml"
+        source = (workflow_dir / workflow_name).read_text(encoding="utf-8")
+        job = job_block(source, "semgrep")
+        runner_match = re.search(r"(?m)^    runs-on: (?P<runner>[^\n]+)$", job)
+        self.assertIsNotNone(runner_match, workflow_name)
+        runner = runner_match.group("runner").replace("\\", "")
+        self.assertIn('"group":"ng-shared-main-jit"', runner)
+        self.assertIn('"self-hosted"', runner)
+        self.assertIn('"ng-main-run-{0}"', runner)
+        self.assertNotIn("ubuntu-latest", runner)
         semgrep = (workflow_dir / "semgrep-community.yml").read_text(encoding="utf-8")
         self.assertIn("docker info", semgrep)
         self.assertIn("docker run", semgrep)
@@ -183,9 +221,14 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         source = WORKFLOW.read_text(encoding="utf-8")
         migrations = job_block(source, "postgres-migrations")
         self.assertIn("image: postgres:16", migrations)
-        self.assertIn("postgresql-client-16", migrations)
+        self.assertIn(
+            "PostgreSQL 16 client binaries must be installed by the private JIT broker",
+            migrations,
+        )
+        self.assertIn('postgres:16 "$tool" "$@"', migrations)
         self.assertIn("/usr/lib/postgresql/16/bin", migrations)
         self.assertIn("GITHUB_PATH", migrations)
+        self.assertNotIn("apt-get", migrations)
 
     def test_frontend_build_runs_after_tests_and_before_publish(self) -> None:
         build = job_block(WORKFLOW.read_text(encoding="utf-8"), "build")

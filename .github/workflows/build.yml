@@ -1,8 +1,14 @@
 # ng-runner-policy: private-jit-required-v1
 # packer-windows-jit-v1
 name: Build ChaptarrNG
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number != '' &&
+      format('owner-pr:{0}:{1}:{2}', inputs.pr_number, inputs.pr_sha, inputs.target_run_id) || github.workflow }}
 
 on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
   push:
     tags:
       - 'v*.*.*'
@@ -14,9 +20,26 @@ on:
         required: false
         type: boolean
         default: false
+      runner_policy_only:
+        description: Run only the private runner policy regression on Linux JIT
+        required: false
+        type: boolean
+        default: false
+      pr_number:
+        description: Trusted same-repository owner PR number
+        required: false
+        type: string
+      pr_sha:
+        description: Exact owner PR head SHA
+        required: false
+        type: string
+      target_run_id:
+        description: Metadata-only pull_request_target run ID
+        required: false
+        type: string
 
-# Validation runs on tags, reusable workflow calls, or explicit dispatches.
-# Pull requests do not start CI; release.yml controls user-facing publishing.
+# Build validation runs on tags, reusable workflow calls, or explicit dispatches.
+# Trusted owner PRs use the metadata-only route below for release-note checks.
 concurrency:
   group: build-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}
   cancel-in-progress: false
@@ -69,7 +92,11 @@ jobs:
           --head "$HEAD_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
 
   build:
-    if: github.event_name != 'pull_request' || github.event.action != 'edited'
+    if: >-
+      github.event_name != 'pull_request_target' &&
+      (github.event_name != 'workflow_dispatch' ||
+       (inputs.pr_number == '' && inputs.runner_policy_only != true)) &&
+      (github.event_name != 'pull_request' || github.event.action != 'edited')
     # Each platform requests private capacity. Missing native JIT routes remain
     # queued until their runner group and workflow access are verified.
     runs-on: ${{ matrix.platform == 'windows-x64' && fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-{1}-build"]}}', github.run_id, strategy.job-index)) || matrix.platform == 'macos-intel' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","X64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
@@ -503,7 +530,12 @@ jobs:
         if-no-files-found: error
 
   postgres-migrations:
-    if: (github.event_name != 'workflow_dispatch' || inputs.windows_chocolatey_only != true) && (github.event_name != 'pull_request' || github.event.action != 'edited')
+    if: >-
+      github.event_name != 'pull_request_target' &&
+      (github.event_name != 'workflow_dispatch' || inputs.windows_chocolatey_only != true) &&
+      (github.event_name != 'workflow_dispatch' ||
+       (inputs.pr_number == '' && inputs.runner_policy_only != true)) &&
+      (github.event_name != 'pull_request' || github.event.action != 'edited')
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     services:
       postgres:
@@ -623,7 +655,11 @@ jobs:
 
   docker-compatibility-build:
     name: Docker (${{ matrix.target }})
-    if: github.event_name != 'workflow_dispatch' || inputs.windows_chocolatey_only != true
+    if: >-
+      github.event_name != 'pull_request_target' &&
+      (github.event_name != 'workflow_dispatch' || inputs.windows_chocolatey_only != true) &&
+      (github.event_name != 'workflow_dispatch' ||
+       (inputs.pr_number == '' && inputs.runner_policy_only != true))
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     env:
       BUILDKIT_EGRESS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
@@ -680,4 +716,257 @@ jobs:
           no_proxy=localhost,127.0.0.1
         cache-from: type=gha,scope=bookshelfng-${{ matrix.cache-scope }}
         cache-to: type=gha,scope=bookshelfng-${{ matrix.cache-scope }},mode=max
+
+  private-runner-policy:
+    name: Private runner policy
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.runner_policy_only == true &&
+      inputs.pr_number == '' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-private-runner-policy"]}}', github.run_id)) }}
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: main
+        persist-credentials: false
+    - name: Test private runner policy
+      run: python3 scripts/test_workflow_runner_policy.py
+
+  dispatch-owner-pr:
+    name: Dispatch trusted owner PR validation
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.actor == 'snapetech' &&
+      github.event.pull_request.user.login == 'snapetech' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.repo.id == github.repository_id &&
+      github.event.pull_request.base.ref == 'main'
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-owner-pr-dispatcher"]}}', github.run_id)) }}
+    permissions:
+      actions: write
+      contents: none
+    steps:
+    - name: Dispatch PR-head validation from main
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_SHA: ${{ github.event.pull_request.head.sha }}
+        TARGET_RUN_ID: ${{ github.run_id }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: |
+        python3 - <<'PY'
+        import json, os, re
+        from urllib.request import Request, urlopen
+
+        expected = "snapetech-org/chaptarrng"
+        repository = os.environ["GITHUB_REPOSITORY"]
+        number = os.environ["PR_NUMBER"]
+        sha = os.environ["PR_SHA"].lower()
+        target = os.environ["TARGET_RUN_ID"]
+        token = os.environ["GH_TOKEN"]
+        if (
+            repository.lower() != expected
+            or not re.fullmatch(r"[1-9][0-9]*", number)
+            or not re.fullmatch(r"[0-9a-f]{40}", sha)
+            or not re.fullmatch(r"[1-9][0-9]*", target)
+        ):
+            raise SystemExit("invalid PR claim")
+
+        payload = json.dumps({
+            "ref": "main",
+            "inputs": {
+                "pr_number": number,
+                "pr_sha": sha,
+                "target_run_id": target,
+            },
+        }).encode()
+        request = Request(
+            "https://api.github.com/repos/snapetech-org/chaptarrng/actions/workflows/build.yml/dispatches",
+            data=payload,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+            method="POST",
+        )
+        with urlopen(request, timeout=20) as response:
+            if response.status != 204:
+                raise SystemExit(f"dispatch HTTP {response.status}")
+        PY
+
+  owner-pr-validation:
+    name: owner-pr-validation
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (github.actor == 'snapetech' || github.actor == 'github-actions[bot]') &&
+      inputs.pr_number != '' &&
+      inputs.pr_sha != '' &&
+      inputs.target_run_id != '' &&
+      inputs.runner_policy_only != true &&
+      github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-owner-pr-validation"]}}', github.run_id)) }}
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ inputs.pr_sha }}
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Resolve current trusted PR metadata
+      id: pr
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+        PR_SHA: ${{ inputs.pr_sha }}
+        TARGET_RUN_ID: ${{ inputs.target_run_id }}
+        REPOSITORY: ${{ github.repository }}
+      run: |
+        python3 - <<'PY'
+        import json, os, re
+        from pathlib import Path
+        from urllib.request import Request, urlopen
+
+        repo = os.environ["REPOSITORY"]
+        number = os.environ["PR_NUMBER"]
+        expected = os.environ["PR_SHA"].lower()
+        target_run_id = os.environ["TARGET_RUN_ID"]
+        if (
+            repo.lower() != "snapetech-org/chaptarrng"
+            or not re.fullmatch(r"[1-9][0-9]*", number)
+            or not re.fullmatch(r"[0-9a-f]{40}", expected)
+            or not re.fullmatch(r"[1-9][0-9]*", target_run_id)
+        ):
+            raise SystemExit("invalid trusted PR claim")
+
+        request = Request(
+            f"https://api.github.com/repos/{repo}/pulls/{number}",
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+        with urlopen(request, timeout=20) as response:
+            pr = json.load(response)
+
+        base = pr.get("base") or {}
+        head = pr.get("head") or {}
+        base_repo = base.get("repo") or {}
+        head_repo = head.get("repo") or {}
+        sha = (head.get("sha") or "").lower()
+        if (
+            pr.get("state") != "open"
+            or (pr.get("user") or {}).get("login", "").lower() != "snapetech"
+            or base.get("ref") != "main"
+            or sha != expected
+            or (base_repo.get("full_name") or "").lower() != repo.lower()
+            or (head_repo.get("full_name") or "").lower() != repo.lower()
+            or base_repo.get("id") != head_repo.get("id")
+        ):
+            raise SystemExit("PR changed or is not trusted")
+        base_sha = (base.get("sha") or "").lower()
+        if not re.fullmatch(r"[0-9a-f]{40}", base_sha):
+            raise SystemExit("invalid PR base")
+
+        body_file = Path(os.environ["RUNNER_TEMP"]) / "owner-pr-body.md"
+        body_file.write_text(pr.get("body") or "", encoding="utf-8")
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+            output.write(f"base_sha={base_sha}\n")
+            output.write(f"body_file={body_file}\n")
+        PY
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+      with:
+        node-version: 26.12.1
+        package-manager-cache: false
+    - name: Validate release-note contract
+      env:
+        BASE_SHA: ${{ steps.pr.outputs.base_sha }}
+        HEAD_SHA: ${{ inputs.pr_sha }}
+        BODY_FILE: ${{ steps.pr.outputs.body_file }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+      run: |
+        set -euo pipefail
+        git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/pull/$PR_NUMBER/head"
+        git cat-file -e "$HEAD_SHA^{commit}"
+        node --test scripts/release-notes.test.mjs
+        node scripts/check-release-notes.mjs --base "$BASE_SHA" --head "$HEAD_SHA" --pr-body "$BODY_FILE" --summary-file "$GITHUB_STEP_SUMMARY"
+        node scripts/preview-release-notes.mjs --base "$BASE_SHA" --head "$HEAD_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  report-owner-pr-check:
+    name: Report trusted owner PR validation
+    needs: [owner-pr-validation]
+    if: >-
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      (github.actor == 'snapetech' || github.actor == 'github-actions[bot]') &&
+      inputs.pr_number != '' &&
+      inputs.pr_sha != '' &&
+      inputs.target_run_id != '' &&
+      inputs.runner_policy_only != true &&
+      github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-owner-pr-reporter"]}}', github.run_id)) }}
+    permissions:
+      checks: write
+      contents: none
+    steps:
+    - name: Attach validation result to the PR head
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+        PR_SHA: ${{ inputs.pr_sha }}
+        VALIDATION_RUN_ID: ${{ github.run_id }}
+        VALIDATION_RESULTS: '{"owner-pr-validation":"${{ needs.owner-pr-validation.result }}"}'
+      run: |
+        python3 - <<'PY'
+        import json, os, re
+        from urllib.request import Request, urlopen
+
+        number = os.environ["PR_NUMBER"]
+        sha = os.environ["PR_SHA"].lower()
+        results = json.loads(os.environ["VALIDATION_RESULTS"])
+        if (
+            not re.fullmatch(r"[1-9][0-9]*", number)
+            or not re.fullmatch(r"[0-9a-f]{40}", sha)
+            or not results
+        ):
+            raise SystemExit("invalid PR check claim")
+
+        conclusion = "success" if all(value == "success" for value in results.values()) else "failure"
+        summary = "Main-pinned, no-secret owner PR validation:\n"
+        summary += "\n".join(f"- {name}: {value}" for name, value in results.items())
+        run_id = os.environ["VALIDATION_RUN_ID"]
+        payload = json.dumps({
+            "name": "ChaptarrNG owner PR validation",
+            "head_sha": sha,
+            "external_id": run_id,
+            "status": "completed",
+            "conclusion": conclusion,
+            "details_url": f"https://github.com/snapetech-org/chaptarrng/actions/runs/{run_id}",
+            "output": {
+                "title": f"Owner PR validation {conclusion}",
+                "summary": summary,
+            },
+        }).encode()
+        request = Request(
+            "https://api.github.com/repos/snapetech-org/chaptarrng/check-runs",
+            data=payload,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                "Content-Type": "application/json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+            method="POST",
+        )
+        with urlopen(request, timeout=20) as response:
+            if response.status not in {201, 202}:
+                raise SystemExit(f"check HTTP {response.status}")
+        PY
 
