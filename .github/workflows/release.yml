@@ -340,6 +340,8 @@ jobs:
       run: bash packaging/scripts/verify-release-source-sha.sh
 
     - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      env:
+        DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
       with:
         dotnet-version: |
           10.0.110
@@ -349,7 +351,7 @@ jobs:
     - name: Build pinned extra-platform runtime packs
       env:
         DOTNETVERSION: 10.0.403
-        DOTNET_ROOT: /usr/share/dotnet
+        DOTNET_ROOT: ${{ runner.temp }}/dotnet
         PLATFORM_RUNTIME_WORK_DIR: ${{ runner.temp }}/chaptarrng-platform-runtime-work
         PLATFORM_RUNTIME_PACKS_OUTPUT: ${{ runner.temp }}/chaptarrng-platform-runtime-packs
       run: bash packaging/scripts/build-extra-platform-runtime-packs.sh
@@ -396,6 +398,8 @@ jobs:
 
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      env:
+        DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
       with:
         dotnet-version: 10.0.403
 
@@ -408,7 +412,7 @@ jobs:
     - name: Build standalone application archive
       env:
         CUSTOM_RUNTIME_PACKS_DIR: ${{ runner.temp }}/platform-runtime-packs/packages
-        DOTNET_ROOT: /usr/share/dotnet
+        DOTNET_ROOT: ${{ runner.temp }}/dotnet
         DOTNETVERSION: 10.0.403
         VERSION: ${{ needs.release.outputs.version }}
         RID: ${{ matrix.rid }}
@@ -463,6 +467,8 @@ jobs:
       run: bash packaging/scripts/verify-release-source-sha.sh
 
     - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      env:
+        DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
       with:
         dotnet-version: 10.0.403
 
