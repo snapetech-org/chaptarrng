@@ -295,7 +295,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
-        dotnet-version: 10.0.402
+        dotnet-version: 10.0.403
 
     - name: Cache NuGet packages
       # Manual release dispatch can select a branch; do not let those builds write shared cache entries.
@@ -531,7 +531,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
-        dotnet-version: 10.0.402
+        dotnet-version: 10.0.403
 
     - name: Install PostgreSQL client
       shell: bash
