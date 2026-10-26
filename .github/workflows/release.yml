@@ -61,8 +61,10 @@ jobs:
     needs: preflight
     uses: ./.github/workflows/build.yml
     permissions:
-      actions: read
+      actions: write
+      checks: write
       contents: read
+      pull-requests: read
 
   release:
     needs: validate

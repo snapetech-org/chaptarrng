@@ -189,6 +189,16 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("name: Report trusted owner PR validation", reporter)
         self.assertIn('"name": "ChaptarrNG owner PR validation"', reporter)
 
+        release = (WORKFLOW.parent / "release.yml").read_text(encoding="utf-8")
+        release_validation = job_block(release, "validate")
+        for permission in (
+            "actions: write",
+            "checks: write",
+            "contents: read",
+            "pull-requests: read",
+        ):
+            self.assertIn(permission, release_validation)
+
     def test_security_scans_use_private_jit_without_hosted_fallback(self) -> None:
         workflow_dir = WORKFLOW.parent
         self.assertFalse((workflow_dir / "codeql.yml").exists())
