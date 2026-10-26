@@ -249,15 +249,28 @@ def wait_for_exit(process, master: int, log, timeout: int = 45) -> bytearray:
 
 def stop_candidate(process, master: int, log) -> None:
     if process.poll() is None:
-        process.send_signal(signal.SIGTERM)
         try:
-            process.wait(timeout=25)
+            # The candidate owns this PTY as its controlling terminal. Send
+            # the same interrupt a user would send from its terminal first,
+            # so the app can stop its listener and release its handoff lock.
+            os.write(master, b"\x03")
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            process.wait(timeout=10)
+                os.killpg(process.pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    process.kill()
+                process.wait(timeout=10)
     if process in RUNNING:
         RUNNING.remove(process)
     os.close(master)
