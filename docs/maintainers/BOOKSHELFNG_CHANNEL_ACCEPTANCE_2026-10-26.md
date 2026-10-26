@@ -12,7 +12,7 @@ This is **not 100% release-channel acceptance**. No replacement artifact was pub
 | --- | --- | --- | --- | --- |
 | Debian / APT | Yes | Pre-install hook exits before staging; apt/dpkg cancels the candidate transaction and leaves the predecessor active. | Installs the same-name candidate, migrates during service startup, keeps the source backup, and supports tested rollback. | Installed Debian 13 VM, public BookshelfNG 0.4.21.71 to local 0.9.978; No, Yes, health, data, and rollback passed. |
 | Fedora / DNF / RPM | Yes | RPM pre-install hook exits before staging; DNF cancels the transaction and leaves the predecessor active. Detached ask mode fails closed before staging. | Installs the same-name candidate, migrates under the service environment, checks HTTP/database health, and keeps the source backup. | Fedora 44 VM with SELinux enforcing, BookshelfNG 0.4.21.71 to local 0.9.978; interactive No/Yes, headless rejection, service health, data, and rollback passed. RPM scriptlets read the controlling terminal because DNF redirects scriptlet stdin even during terminal-backed installs. |
-| Linux x64 standalone / systemd | No package prompt; the operator runs the bootstrap explicitly. | This test did not exercise a separate defer choice. A failed handoff invokes rollback and restores the predecessor. | The bootstrap stages the checksum-verified archive, migrates the existing service data, switches the service executable, checks health, and retains rollback files. | Debian 12 systemd VM: public BookshelfNG 0.4.21.71 to local 0.9.978; schema 158 to 124, settings and canaries preserved, integrity and foreign keys passed, and post-migration forced rollback restored healthy BookshelfNG. Candidate SHA-256 14d30e6e65cd17e3e030a28d8368a0b3fb135268673d2e91dd25dc2e0efbd843. |
+| Linux x64 standalone / systemd | Yes; the one-time bootstrap now asks `[y/N]` before acquiring its handoff lock. | No, blank, or EOF returns before the lock, service stop, or file writes. Noninteractive Ask fails closed; unattended replacement requires `--migration-mode automatic`. | Yes stages the checksum-verified archive, migrates the existing service data, switches the executable, checks health, and retains rollback files. | Historical Debian 12 VM acceptance passed migration, health, data, and forced rollback before this prompt was added. The new No/Yes prompt regression is in the Linux JIT Build job but has not run; the installed VM handoff must be replayed on approved private JIT. |
 | Arch / AUR / pacman | Yes | pacman cannot cancel a transaction from a package scriptlet. The package transaction completes, then the hook restores the saved BookshelfNG app, unit, and launcher, leaves the database untouched, and records a deferred marker. The next package transaction asks again. | The next accepted transaction installs the ChaptarrNG runtime, converts the database, retains the BookshelfNG source backup, and starts the existing service. | Arch systemd VM: 0.4.21.71 to 0.9.978-2 with No, then 0.9.978-3 with Yes; schema 158 to 124, health and restore checks passed. |
 | Windows / Chocolatey | Yes | Chocolatey cancels before the service is stopped or application files are staged; 0.4.21.70 remains installed and running. | Upgrades the bookshelfng identity and replaces the executable while retaining the NSSM service name, LocalSystem identity, data directory, service arguments, and source database backup. | Windows Server 2025 VM: public 0.4.21.70 to local 0.9.978; No and Yes passed. Chocolatey exited 0 for Yes; /ping and migration health check passed. |
 | AppImage | Yes in its terminal-backed launcher | Defers database conversion; it does not undo a downloaded or replaced AppImage. The user can retry later. | Converts on launch, retains the source database, and supports restore. | The desktop entry sets `Terminal=true`. Local same-identity .71 to .978 rehearsal passed with synthetic schema-158 data, custom paths, health, and rollback. No is a data deferral. The candidate is unsigned and unpublished. |
@@ -27,6 +27,35 @@ This is **not 100% release-channel acceptance**. No replacement artifact was pub
 | macOS standalone installs | No BookshelfNG-owned update channel to redirect; the bundled launcher asks when run in a terminal. | Answer No or set `BOOKSHELFNG_MIGRATION_MODE=manual`; keep the prior app and service path. | Answer Yes or set `automatic`; the wrapper stages migration, starts ChaptarrNG, and checks health. The operator switches the launcher/service after acceptance. | Hosted run [40270599787](https://github.com/snapetech-org/chaptarrng/actions/runs/40270599787) passed on macOS x64 and arm64 against checksum-pinned public .71 predecessors: No, headless Manual, Yes, health, source backup, and forced rollback. It publishes no assets and validates the handoff runtime; the one-time app/service path switch remains manual. |
 | FreeBSD standalone installs | No BookshelfNG-owned update channel to redirect; the bundled launcher asks when run in a terminal. | Answer No; the candidate exits without changing predecessor config/data. Restart BookshelfNG if it was stopped for the handoff. | Answer Yes; migration completes, ChaptarrNG starts, and health passes. The operator switches the launcher/service after acceptance. | FreeBSD 15.1 VM: installed BookshelfNG 0.4.21.71 to the exact local 0.9.978 archive; No, Yes, health, source backup, and forced-failure rollback passed. |
 | Windows standalone migration installer | Yes, through its explicit Migrate BookshelfNG action and the migration preview's Yes/No confirmation; closing the window defers | Close without selecting Migrate, or answer No at preview; BookshelfNG remains installed. | Select Migrate, review the preview, then answer Yes to run backup, conversion, service handoff, and health checks. | Hosted Windows run [40218131519](https://github.com/snapetech-org/chaptarrng/actions/runs/40218131519) installed the checksum-pinned .71 service, forced automatic rollback, completed the real installer handoff, and exercised explicit restore. The installer source is unchanged since that run. Hosted Windows run [40274632625](https://github.com/snapetech-org/chaptarrng/actions/runs/40274632625) completed the No-at-preview service round-trip; No kept BookshelfNG installed, Yes completed the upgrade, and injected-failure rollback, explicit restore, service cleanup, and selected-data-directory checks passed. Chocolatey remains a separate channel. |
+
+## Standalone release artifact coverage
+
+These runtime identifiers are separate release payloads even when they share a
+package channel. An installed handoff for one RID does not establish that the
+other runtime payloads launch or migrate correctly. The Windows migration
+installer is a separate x64 artifact.
+
+Four of the ten release RIDs have installed handoff behavior evidence
+(`linux-x64`, `osx-x64`, `osx-arm64`, and `freebsd-x64`); none has the required
+current private-JIT replay. Six RIDs have no installed BookshelfNG handoff
+record. The Windows migration-installer evidence is tracked separately from
+the `win-x64` archive.
+
+| Release RID / artifact | Existing handoff evidence | Remaining acceptance |
+| --- | --- | --- |
+| `linux-x64` | Local 0.9.978 archive installed over public BookshelfNG .71 on Debian 12; migration, health, data preservation, and forced rollback passed before the new prompt. | The new `[y/N]` choice regression is added to the Linux JIT Build job; it is not yet run. Replay No/Yes plus installed rollback on approved private JIT. |
+| `linux-arm64` | StartOS aarch64 test-package handoff passed; it wraps a different StartOS package/runtime. | No installed handoff with the standalone `linux-arm64` release archive is recorded. |
+| `linux-musl-x64` | Release payload validation only. | No installed BookshelfNG handoff is recorded. |
+| `linux-musl-arm64` | Release payload validation only. | No installed BookshelfNG handoff is recorded. |
+| `linux-x86` | Release payload validation only. | No installed BookshelfNG handoff is recorded. |
+| `osx-x64` | Historical hosted handoff run built and checksum-verified the exact candidate archive, then passed No, Manual defer, Yes, health, source backup, and rollback. | Replay the exact-archive workflow on approved private JIT. |
+| `osx-arm64` | Historical hosted handoff run built and checksum-verified the exact candidate archive, then passed No, Manual defer, Yes, health, source backup, and rollback. | Replay the exact-archive workflow on approved private JIT. |
+| `win-x64` | Historical hosted migration-installer Yes/No, service handoff, health, and rollback acceptance passed. | Private Windows JIT replay; validate the standalone archive separately from the migration installer. |
+| `win-x86` | Release payload validation only. | No installed BookshelfNG handoff is recorded. |
+| `freebsd-x64` | Local exact 0.9.978 archive installed over public BookshelfNG .71 on FreeBSD 15.1; No, Yes, health, and rollback passed. | Replay on approved private JIT. |
+
+The public/private JIT route must also be checked before any of these
+historical VM or hosted results count toward final campaign acceptance.
 
 ## Windows Chocolatey evidence
 
@@ -322,9 +351,57 @@ jobs to `windows-latest`, Linux JIT, or another runner. Keep them queued until
 the original runner group/labels and broker/workflow access are restored and
 the private Windows canary has passed.
 
+At the 2026-10-26 14:08 UTC follow-up, runner group ID 11 still selected only
+`snapetech-org/packer`; no runner carried `packer-windows`, and ChaptarrNG was
+not selected. The API showed zero busy registrations, but BookshelfNG CodeQL
+run `40332133668` still had three jobs queued. ChaptarrNG Release preflight
+`40334519893` and Helm handoff `40334519631` were queued at main commit
+`440a5644`. The C0 slot owner had not confirmed the drain, so the shared pool
+and these runs were left untouched. The Release run is a potential publication
+path for version `0.9.978` (latest published stable tag: `v0.9.977`); preserve
+it and do not dispatch a duplicate or push a new head until its readiness and
+side effects are reviewed.
+
+The current organization-wide directive requires every build, test, security
+scan, package build, and release workflow across all 65 organization
+repositories to use approved private JIT capacity, with no hosted fallback.
+The VM and hosted run records above remain behavioral evidence, but they must
+be replayed through the approved private route before this campaign can be
+called complete under the current execution policy.
+
+At 2026-10-26 14:14 UTC the runner API still showed no Windows or public-fork
+run-scoped registration, while the ChaptarrNG Windows and fork workflow edits
+were local and untested. The Release preflight and Helm handoff remained
+queued, and the C0 slot-owner clearance was still missing. No new CI or
+publication run was started.
+
+At 14:22 UTC, the live GitHub API showed that `ng-shared-main-jit` group ID 10
+now selects all 65 organization repositories, including ChaptarrNG. No busy
+runner registration or online ChaptarrNG Linux, Windows Packer, or public-fork
+JIT runner was present in the runner API snapshot. Runner group ID 11 still
+selects only `snapetech-org/packer`, so ChaptarrNG remains excluded from the
+Windows route; group ID 5 selects seven repositories, including ChaptarrNG,
+but has no registered fork runner. BookshelfNG CodeQL run `40332133668` still
+has its Python, JavaScript/TypeScript, and Actions jobs queued. ChaptarrNG
+Release preflight `40334519893` and Helm handoff `40334519631` remain queued at
+main SHA `440a5644`. The older route-candidate run `40313259957` remains
+incomplete: Docker and PostgreSQL jobs succeeded, Linux x64 failed, and Intel
+macOS plus Windows x64 remain queued. This snapshot was read-only; the C0
+handoff is still unconfirmed, and no queue, runner group, broker, or host was
+changed.
+
 - Debian/PPA and Fedora/COPR publisher paths remain closed; direct VM package acceptance does not prove a PPA or COPR feed upgrade. The public BookshelfNG COPR repository had no packages for the tested Fedora series.
 - The Chocolatey feed rejection is unresolved. The local package passed, but no public package was pushed.
 - The AUR update candidate is local and unpublished.
+
+At 2026-10-26 14:32 UTC, the read-only GitHub Actions configuration check
+returned no repository variables. The release workflows require
+`CHAPTARRNG_MIGRATION_BRIDGE_ENABLED`, `CHAPTARRNG_RELEASE_READY`, and
+`BOOKSHELFNG_RELEASE_READY`; the Launchpad publisher additionally requires
+`LAUNCHPAD_PPA`, `LAUNCHPAD_SERIES`, and the `GPG_PRIVATE_KEY` secret. None of
+those were configured in the observed repository state, so legacy publication
+gates cannot be enabled from the current configuration.
+
 - Docker alias/image delivery, Helm OCI chart delivery, AppImage/Flatpak publication, and external catalog updates remain gated.
 - StartOS passed synthetic x86_64 and aarch64 VM handoffs, including Manual, Automatic, health, and automatic source rollback. Its official signed package, public `.71` predecessor update, external repository, and package-manager rollback remain open. Cloudron's local installed platform path passed, but candidate/feed publication remains open and the `.4.21` pre-update backup excludes persistent directories. Co-op Cloud passed local Swarm update, defer, failure-pause, full-volume restore, official Backupbot II CLI backup/restore, and Abra CLI backup/restore orchestration; canonical recipe review, published digest, and maintainer acceptance remain open. Unraid and external catalog platform handoffs still need their own update and rollback tests.
 - The Windows standalone installer passed hosted Yes, No-at-preview defer, injected-failure rollback, explicit restore, service cleanup, and selected-data-directory checks. The old BookshelfNG updater cannot be redirected from this repository.

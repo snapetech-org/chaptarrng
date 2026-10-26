@@ -27,9 +27,14 @@ sources when a prior launch left a native target file, after which target
 validation rejects any non-empty target. The CLI rollback gate accepts a
 recoverable native database family with a WAL or rollback journal. The merge
 does not rewrite provider identities or claim to consolidate two independently
-configured libraries. This code pass has not yet had its bulk validation run;
-detailed installed-channel results and remaining delivery gates are recorded in
-[the October 26 channel acceptance report](BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
+configured libraries. A local bulk pass on `kspld0` built the Release solution
+with zero errors and one transient shared-output copy retry, passed 4,920 Core
+tests with 28 skipped, and passed the BookshelfNG shell and Docker handoff
+checks. These are local diagnostic results; the current organization policy
+requires approved private JIT execution, so exact-head JIT validation remains
+outstanding. PostgreSQL, browser-backed, live-provider, and installed-channel
+evidence is still open. Detailed channel results and remaining delivery gates
+are recorded in [the October 26 channel acceptance report](BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
 
 The merge now holds the normal conversion locks for both legacy files and uses
 a SQLite online backup when cloning migrated working copies, so WAL-committed
