@@ -20,6 +20,11 @@ on:
         required: false
         type: boolean
         default: false
+      rpm_bridge_only:
+        description: Run only the Fedora 44 RPM BookshelfNG migration acceptance
+        required: false
+        type: boolean
+        default: false
       runner_policy_only:
         description: Run only the private runner policy regression on Linux JIT
         required: false
@@ -95,7 +100,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request_target' &&
       (github.event_name != 'workflow_dispatch' ||
-       (inputs.pr_number == '' && inputs.runner_policy_only != true)) &&
+       (inputs.pr_number == '' && inputs.runner_policy_only != true && inputs.rpm_bridge_only != true)) &&
       (github.event_name != 'pull_request' || github.event.action != 'edited')
     # Each platform requests private capacity. Missing native JIT routes remain
     # queued until their runner group and workflow access are verified.
@@ -529,10 +534,36 @@ jobs:
         retention-days: 7
         if-no-files-found: error
 
+  rpm-bridge-acceptance:
+    name: Fedora 44 BookshelfNG RPM No/Yes and rollback
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.rpm_bridge_only == true &&
+      inputs.pr_number == '' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-rpm-bridge-acceptance"]}}', github.run_id)) }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ github.sha }}
+        fetch-depth: 1
+        persist-credentials: false
+
+    - name: Verify exact dispatched source
+      run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+    - name: Run Fedora 44 RPM migration handoff
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-rpm-bridge-${{ github.run_id }}-${{ github.run_attempt }}
+      run: bash packaging/scripts/test-build-bookshelfng-rpm-bridge.sh
+
   postgres-migrations:
     if: >-
       github.event_name != 'pull_request_target' &&
-      (github.event_name != 'workflow_dispatch' || inputs.windows_chocolatey_only != true) &&
+      (github.event_name != 'workflow_dispatch' || (inputs.windows_chocolatey_only != true && inputs.rpm_bridge_only != true)) &&
       (github.event_name != 'workflow_dispatch' ||
        (inputs.pr_number == '' && inputs.runner_policy_only != true)) &&
       (github.event_name != 'pull_request' || github.event.action != 'edited')
@@ -657,7 +688,7 @@ jobs:
     name: Docker (${{ matrix.target }})
     if: >-
       github.event_name != 'pull_request_target' &&
-      (github.event_name != 'workflow_dispatch' || inputs.windows_chocolatey_only != true) &&
+      (github.event_name != 'workflow_dispatch' || (inputs.windows_chocolatey_only != true && inputs.rpm_bridge_only != true)) &&
       (github.event_name != 'workflow_dispatch' ||
        (inputs.pr_number == '' && inputs.runner_policy_only != true))
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}

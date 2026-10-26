@@ -199,6 +199,28 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         ):
             self.assertIn(permission, release_validation)
 
+    def test_fedora_rpm_acceptance_is_an_exact_head_private_jit_dispatch(self) -> None:
+        source = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("rpm_bridge_only:", source)
+        self.assertIn("inputs.rpm_bridge_only != true", job_block(source, "build"))
+
+        rpm_job = job_block(source, "rpm-bridge-acceptance")
+        for token in (
+            "github.event_name == 'workflow_dispatch'",
+            "inputs.rpm_bridge_only == true",
+            "github.ref == 'refs/heads/main'",
+            '"group":"ng-shared-main-jit"',
+            '"gha-{0}-rpm-bridge-acceptance"',
+            "ref: ${{ github.sha }}",
+            'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"',
+            "TASK_SCRATCH_DIR",
+            "packaging/scripts/test-build-bookshelfng-rpm-bridge.sh",
+        ):
+            self.assertIn(token, rpm_job)
+
+        self.assertIn("inputs.rpm_bridge_only != true", job_block(source, "postgres-migrations"))
+        self.assertIn("inputs.rpm_bridge_only != true", job_block(source, "docker-compatibility-build"))
+
     def test_security_scans_use_private_jit_without_hosted_fallback(self) -> None:
         workflow_dir = WORKFLOW.parent
         self.assertFalse((workflow_dir / "codeql.yml").exists())

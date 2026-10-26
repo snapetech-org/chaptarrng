@@ -490,6 +490,12 @@ test('Windows release keeps the private Packer route and verifies its GitHub CLI
   assert.match(build, /inputs\.windows_chocolatey_only[\s\S]*?fromJSON\('\["windows-x64"\]'\)/);
   assert.match(buildWorkflow, /postgres-migrations:[\s\S]*?inputs\.windows_chocolatey_only/);
   assert.match(buildWorkflow, /docker-compatibility-build:[\s\S]*?inputs\.windows_chocolatey_only/);
+  assert.match(buildWorkflow, /rpm_bridge_only:[\s\S]*?type: boolean[\s\S]*?default: false/);
+  const rpmAcceptance = readWorkflowJob(buildWorkflow, 'rpm-bridge-acceptance');
+  assert.match(rpmAcceptance, /inputs\.rpm_bridge_only == true/);
+  assert.match(rpmAcceptance, /ng-shared-main-jit/);
+  assert.match(rpmAcceptance, /gha-\{0\}-rpm-bridge-acceptance/);
+  assert.match(rpmAcceptance, /test-build-bookshelfng-rpm-bridge\.sh/);
   assert.match(build, /Test Chocolatey BookshelfNG \.76 to exact candidate handoff[\s\S]*?github\.event_name == 'workflow_dispatch'[\s\S]*?test-chocolatey-bookshelfng-handoff\.ps1/);
   assert.match(setup, /version = '2\.103\.2'/);
   assert.match(setup, /gh_\$\{version\}_windows_amd64\.zip/);
