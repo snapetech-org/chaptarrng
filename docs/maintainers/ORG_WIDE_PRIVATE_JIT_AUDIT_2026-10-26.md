@@ -323,3 +323,11 @@ ChaptarrNG branch `codex/channel-acceptance-20261026` is now at `01048fdbc2cc7e8
 ### Correction: Packer PR #20 validation target
 
 Earlier wording inferred the target from run `40385069191`'s `head_sha` and incorrectly described it as not targeting PR #20. The workflow dispatch title is `owner-pr:20:91f1ab3cbe56ca99dbfd8d98406a45a0b46c6e9d:40383172380`, and the `Validate Packer project` job checks out `inputs.pr_sha`; the run's `e53d977b` SHA pins the workflow source on `main`. Run `40385069191` is therefore configured to validate PR #20's exact head, but the job remains queued and has not checked out or tested that code.
+
+## Queue and transient-idle recheck — 2026-10-26 19:57 UTC
+
+At 19:57:14 UTC, a direct host/runner check briefly found zero active guest units and zero busy GitHub runners. That snapshot did not persist: the broker scan at 19:57:25 reported zero active jobs and 12 eligible, then automatically dispatched ConvertNG `40383549554/121785794992`, Eekwip `40387167718/121798397423`, and TorrentNG `40369774127/121737075830` between 19:57:31 and 19:57:34. By 19:57:54, three guest units were active across kspld0 and kspls0, with one online busy runner; no Windows runner was online. Treat the earlier zero-count sample as transient, not an idle-drain gate. Preserve all three jobs and the broker.
+
+Packer PR #20's exact-head validation [40385069191](https://github.com/snapetech-org/packer/actions/runs/40385069191) remains queued and has not started. Current Packer `main` is `235068e61f984d40a9cb33fda276ba563e500fa0`; push run [40390605605](https://github.com/snapetech-org/packer/actions/runs/40390605605) is queued on that SHA. Run [40390771499](https://github.com/snapetech-org/packer/actions/runs/40390771499) also uses the main workflow source but its owner-PR run name targets PR #18 at `52de89cb`, not PR #20. No C0/slot-owner response is visible in Packer PR #9 or #20.
+
+ChaptarrNG Windows run [40383424925](https://github.com/snapetech-org/chaptarrng/actions/runs/40383424925) remains queued at old SHA `d59c3709f67dcebd94dfd4ca01288dd90d55899a`; the current documentation branch head `d56286ca0e7c325068dfef911100f3fa87c16b89` has no workflow run. The Windows group still has no runner and does not allow this workflow. No runner-group change, broker restart, manual dispatch, retry, cancellation, or hosted run occurred.
