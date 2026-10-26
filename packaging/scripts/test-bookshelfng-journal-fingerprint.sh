@@ -33,9 +33,11 @@ backup_dir="$scratch/postgres-backup"
 journal_dir="$scratch/data/.chaptarrng-bookshelfng-journal/fingerprints"
 mkdir -m 0700 "$backup_dir"
 printf '%s' 'main-dump-fixture' > "$backup_dir/postgres-main.dump"
+mkdir -m 0700 "$backup_dir/nested directory"
+printf '%s' 'newline-path-fixture' > "$backup_dir/nested directory/$(printf 'line\nbreak.dump')"
 
 journal() {
-  BOOKSHELF_DATA_DIR="$scratch/data" \
+  BOOKSHELF_DATA_DIR="${BOOKSHELF_DATA_DIR:-$scratch/data}" \
     BOOKSHELF_JOURNAL_PRESERVE_OWNER=true \
     "$repo_root/packaging/legacy/scripts/bookshelfng-journal" "$@"
 }
@@ -47,7 +49,7 @@ first_fingerprint=$(cat "$fingerprint_file")
 
 relocated_backup_dir="$scratch/relocated-backup"
 mkdir -m 0700 "$relocated_backup_dir"
-cp "$backup_dir/postgres-main.dump" "$relocated_backup_dir/postgres-main.dump"
+cp -R "$backup_dir/." "$relocated_backup_dir/"
 journal fingerprint relocated-postgres-backup "$relocated_backup_dir"
 [[ "$(cat "$journal_dir/relocated-postgres-backup")" = "$first_fingerprint" ]]
 
@@ -146,8 +148,8 @@ postgres_backup_dir=$(find "$data_dir" -mindepth 1 -maxdepth 1 -type d -name '.c
 journal_dir="$data_dir/.chaptarrng-bookshelfng-journal"
 recorded_fingerprint=$(cat "$journal_dir/fingerprints/source-postgres-backup")
 expected_fingerprint=$(
-  cd "$postgres_backup_dir"
-  find . -type f -print0 | sort -z | xargs -0 -r sha256sum | sha256sum | awk '{ print "sha256:" $1 }'
+  BOOKSHELF_DATA_DIR="$data_dir" journal fingerprint expected-desktop-postgres-backup "$postgres_backup_dir" --refresh
+  cat "$journal_dir/fingerprints/expected-desktop-postgres-backup"
 )
 [[ -n "$postgres_backup_dir" && -s "$postgres_backup_dir/postgres-main.dump" && -s "$postgres_backup_dir/postgres-log.dump" ]]
 [[ "$recorded_fingerprint" = "$expected_fingerprint" ]]
