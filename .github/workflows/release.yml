@@ -24,6 +24,8 @@ jobs:
         ref: main
         persist-credentials: false
 
+    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
+
     - name: Detect a new stable version
       id: release-request
       shell: bash
@@ -104,6 +106,8 @@ jobs:
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
 
     - name: Setup Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -318,6 +322,7 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
       - name: Create scoped bridge-repository token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         id: app-token
@@ -654,6 +659,8 @@ jobs:
       with:
         ref: main
         persist-credentials: false
+
+    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
 
     - name: Verify checked-out release source
       env:

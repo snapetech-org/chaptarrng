@@ -5,7 +5,6 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-
 function read(relativePath) {
   return normalizeLineEndings(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
 }
@@ -121,14 +120,14 @@ test('macOS installed handoff acceptance is manually dispatched and publication-
   assert.doesNotMatch(workflow, /upload-artifact|gh release (create|upload)|docker push/);
 });
 
-test('Helm handoff workflow runs Ruby in a pinned writable container on private JIT', () => {
+test('Helm handoff workflow runs its pinned Ruby contract on private JIT without requiring Docker', () => {
   const workflow = read('.github/workflows/helm-handoff.yml');
 
-  assert.doesNotMatch(workflow, /ruby\/setup-ruby/);
-  assert.match(workflow, /ruby:3\.4-bookworm@sha256:fb621bafe125c450672c77ab13e7378f10f472eb0d0ee81dc63c656a660008ba/);
-  assert.match(workflow, /--volume "\$GITHUB_WORKSPACE:\$GITHUB_WORKSPACE:ro"/);
-  assert.match(workflow, /--volume "\$helm_binary:\/usr\/local\/bin\/helm:ro"/);
-  assert.match(workflow, /apt-get install -y --no-install-recommends python3 && ruby scripts\/test_bookshelfng_helm_handoff\.rb/);
+  assert.match(workflow, /ruby\/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b/);
+  assert.match(workflow, /ruby-version: "3\.4"/);
+  assert.match(workflow, /BOOKSHELFNG_REFERENCE_CHART: \$\{\{ github\.workspace \}\}\/bookshelfng-reference\/charts\/bookshelfng/);
+  assert.match(workflow, /run: ruby scripts\/test_bookshelfng_helm_handoff\.rb/);
+  assert.doesNotMatch(workflow, /docker run|ruby:3\.4-bookworm/);
 });
 
 test('Flatpak keeps the installed app ID and BookshelfNG sandbox data directory', () => {
@@ -293,6 +292,42 @@ test('release pins Cloudron and Compose candidates to the built compatibility im
   assert.ok(publishJob.includes('tar -tzf "$RUNNER_TEMP/release-assets/$container_candidates"'));
 });
 
+test('Linux release jobs install the checksum-pinned GitHub CLI on private JIT before using it', () => {
+  const action = 'uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e';
+  const release = read('.github/workflows/release.yml');
+  const distribution = read('.github/workflows/release-distribution.yml');
+
+  for (const name of ['preflight', 'release', 'dispatch-legacy-ghcr', 'publish-release']) {
+    const job = readWorkflowJob(release, name);
+    assert.match(job, /ng-shared-main-jit/);
+    assert.ok(job.includes(action), `${name} installs the pinned GitHub CLI on its private runner`);
+    assert.ok(job.indexOf(action) < job.search(/gh release|dispatch-ghcr-release-bridge\.sh/),
+      `${name} installs the CLI before the first use`);
+  }
+
+  for (const name of ['release-target', 'build-legacy-ppa', 'build-aur']) {
+    const job = readWorkflowJob(distribution, name);
+    assert.match(job, /ng-shared-main-jit/);
+    assert.ok(job.includes(action), `${name} installs the pinned GitHub CLI on its private runner`);
+    assert.ok(job.indexOf(action) < job.search(/gh release/), `${name} installs the CLI before release operations`);
+  }
+});
+
+test('Windows release keeps the private Packer route and verifies its GitHub CLI archive', () => {
+  const workflow = read('.github/workflows/release-distribution.yml');
+  const job = readWorkflowJob(workflow, 'build-chocolatey');
+  const setup = read('packaging/scripts/setup-github-cli-windows.ps1');
+
+  assert.match(job, /runs-on: \[self-hosted, Windows, X64, packer-windows\]/);
+  assert.ok(job.includes('setup-github-cli-windows.ps1'));
+  assert.ok(job.indexOf('setup-github-cli-windows.ps1') < job.indexOf('gh release download'));
+  assert.match(setup, /version = '2\.103\.2'/);
+  assert.match(setup, /gh_\$\{version\}_windows_amd64\.zip/);
+  assert.match(setup, /fef9fcdd8fdabd0501ab8b3d99eac976f504ab55d01bef9e8ef428a5d900ddda/);
+  assert.match(setup, /Get-FileHash -LiteralPath \$archivePath -Algorithm SHA256/);
+  assert.match(setup, /Expand-Archive -LiteralPath \$archivePath/);
+});
+
 test('StartOS candidate documents installed test acceptance and remaining release gates', () => {
   const readme = read('packaging/legacy/startos/README.md');
   const manifest = read('packaging/legacy/startos/candidate/startos/manifest/index.ts');
@@ -304,7 +339,7 @@ test('StartOS candidate documents installed test acceptance and remaining releas
   assert.match(readme, /exact ChaptarrNG\s+multi-architecture Hardcover digest/);
   assert.match(readme, /Synthetic x86_64 and aarch64 test-package updates\s+passed in local StartOS VMs/i);
   assert.match(readme, /official signed package, update from the public `\.71` StartOS package,\s+external\s+repository delivery, or package-manager rollback/i);
-  assert.match(manifest, /packageRepo: 'https:\/\/github\.com\/snapetech\/bookshelfng-startos'/);
+  assert.match(manifest, /packageRepo: 'https:\/\/github\.com\/snapetech(?:-org)?\/bookshelfng-startos'/);
   assert.match(manifest, /upstreamRepo: 'https:\/\/github\.com\/snapetech-org\/chaptarrng'/);
   assert.match(manifest, /source: \{ dockerTag: 'ghcr\.io\/snapetech-org\/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' \}/);
 });

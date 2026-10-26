@@ -57,6 +57,8 @@ jobs:
         ref: main
         persist-credentials: false
 
+    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
+
     - name: Require retirement release readiness
       env:
         CHAPTARRNG_RELEASE_READY: ${{ vars.CHAPTARRNG_RELEASE_READY }}
@@ -133,6 +135,8 @@ jobs:
         ref: ${{ inputs.tag }}
         persist-credentials: false
 
+    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
+
     - name: Install Debian source packaging tools
       run: |
         sudo apt-get update
@@ -202,6 +206,8 @@ jobs:
       with:
         ref: ${{ inputs.tag }}
         persist-credentials: false
+
+    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
 
     - name: Download and verify the release archive
       env:
@@ -314,6 +320,10 @@ jobs:
       with:
         ref: ${{ github.sha }}
         persist-credentials: false
+
+    - name: Install checksum-pinned GitHub CLI when the Packer image lacks it
+      shell: pwsh
+      run: ./packaging/scripts/setup-github-cli-windows.ps1
 
     - name: Download and verify the release archive
       env:
