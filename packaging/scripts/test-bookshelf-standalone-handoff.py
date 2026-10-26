@@ -247,30 +247,90 @@ def wait_for_exit(process, master: int, log, timeout: int = 45) -> bytearray:
     raise RuntimeError("Standalone launcher did not exit after the No choice or forced rollback")
 
 
+def child_process_ids(root_pid: int) -> list[int]:
+    result = subprocess.run(
+        ["ps", "-A", "-o", "pid=", "-o", "ppid="],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    parents: dict[int, list[int]] = {}
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) != 2:
+            continue
+        try:
+            child_pid, parent_pid = (int(field) for field in fields)
+        except ValueError:
+            continue
+        parents.setdefault(parent_pid, []).append(child_pid)
+
+    descendants: list[int] = []
+    frontier = [root_pid]
+    while frontier:
+        parent_pid = frontier.pop()
+        for child_pid in parents.get(parent_pid, []):
+            descendants.append(child_pid)
+            frontier.append(child_pid)
+    return descendants
+
+
+def pid_is_running(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 def stop_candidate(process, master: int, log) -> None:
+    descendants = set(child_process_ids(process.pid))
     if process.poll() is None:
         try:
-            # The candidate owns this PTY as its controlling terminal. Send
-            # the same interrupt a user would send from its terminal first,
-            # so the app can stop its listener and release its handoff lock.
+            # The launcher owns this PTY. Let its normal Ctrl+C handler stop
+            # the candidate first, as it does when a user closes the console.
             os.write(master, b"\x03")
         except OSError:
             pass
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
+            pass
+
+    # macOS has no setsid --wait, so the app remains a child in the launcher's
+    # process tree. Signal those exact child PIDs rather than relying on
+    # killpg, which can return EPERM for a controlling-terminal process group.
+    descendants.update(child_process_ids(process.pid))
+    for pid in reversed(sorted(descendants)):
+        if pid_is_running(pid):
             try:
-                os.killpg(process.pid, signal.SIGTERM)
+                os.kill(pid, signal.SIGTERM)
             except (ProcessLookupError, PermissionError):
-                process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except (ProcessLookupError, PermissionError):
-                    process.kill()
-                process.wait(timeout=10)
+                pass
+    if process.poll() is None:
+        process.terminate()
+
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        descendants.update(child_process_ids(process.pid))
+        if not any(pid_is_running(pid) for pid in descendants) and process.poll() is not None:
+            break
+        time.sleep(0.1)
+
+    descendants.update(child_process_ids(process.pid))
+    remaining = [pid for pid in descendants if pid_is_running(pid)]
+    for pid in reversed(sorted(remaining)):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+    if process.poll() is None:
+        process.kill()
+    process.wait(timeout=10)
+    remaining = [pid for pid in descendants if pid_is_running(pid)]
+    require(not remaining, f"Candidate child processes remained after cleanup: {remaining}")
     if process in RUNNING:
         RUNNING.remove(process)
     os.close(master)

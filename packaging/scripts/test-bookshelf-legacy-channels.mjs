@@ -67,6 +67,7 @@ test('macOS and FreeBSD standalone archives include the optional, recoverable Bo
   const launcher = read('scripts/bookshelfng-standalone-launch.sh');
   const supervisor = read('packaging/legacy/desktop/bookshelfng-supervisor.sh');
   const migrationGuide = read('docs/MIGRATE_FROM_BOOKSHELFNG.md');
+  const handoffTest = read('packaging/scripts/test-bookshelf-standalone-handoff.py');
 
   assert.match(builder, /publish_standalone_project\(\)[\s\S]*?if \[\[ "\$rid" == linux-x86 \|\| "\$rid" == freebsd-x64 \]\][\s\S]*?dotnet publish "\$@" "\$\{restore_sources\[@\]\}"/,
     'macOS Bash can publish standalone RIDs without expanding an empty array under nounset');
@@ -100,6 +101,8 @@ test('macOS and FreeBSD standalone archives include the optional, recoverable Bo
     'a permission-only /dev/tty check does not classify a headless package process as interactive');
   assert.match(supervisor, /-restore-bookshelf/);
   assert.match(supervisor, /-bookshelf-health-url=/);
+  assert.match(handoffTest, /def child_process_ids\([\s\S]*?def stop_candidate\([\s\S]*?os\.kill\(pid, signal\.SIGTERM\)/,
+    'standalone acceptance cleanup stops app descendants directly on platforms without setsid --wait');
 });
 
 test('macOS installed handoff acceptance is manually dispatched and publication-free', () => {
