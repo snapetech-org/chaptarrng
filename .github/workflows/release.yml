@@ -1,3 +1,4 @@
+# packer-windows-jit-v1
 name: Release
 
 # A version bump merged to the maintained stable main branch starts a release.
@@ -446,7 +447,7 @@ jobs:
   windows-migration-installer:
     name: Build BookshelfNG Windows migration installer
     needs: [release, standalone-assets]
-    runs-on: [self-hosted, Windows, X64, packer-windows]
+    runs-on: ${{ fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-windows-migration-installer"]}}', github.run_id)) }}
     permissions:
       contents: read
     steps:

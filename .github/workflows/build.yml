@@ -1,10 +1,11 @@
 # ng-runner-policy: private-jit-required-v1
+# packer-windows-jit-v1
 name: Build ChaptarrNG
 
 on:
   push:
     tags:
-      - '**'
+      - 'v*.*.*'
   workflow_call: {}
   workflow_dispatch:
 
@@ -65,7 +66,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
     # Each platform requests private capacity. Missing native JIT routes remain
     # queued until their runner group and workflow access are verified.
-    runs-on: ${{ matrix.platform == 'windows-x64' && fromJSON('["self-hosted","Windows","X64","packer-windows"]') || matrix.platform == 'macos-intel' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","X64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    runs-on: ${{ matrix.platform == 'windows-x64' && fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-{1}-build"]}}', github.run_id, strategy.job-index)) || matrix.platform == 'macos-intel' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","X64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     strategy:
       fail-fast: false
       matrix:
