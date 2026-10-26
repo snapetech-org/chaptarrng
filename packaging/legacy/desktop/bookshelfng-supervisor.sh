@@ -243,8 +243,9 @@ select_sqlite_source() {
     exit 1
   fi
   if [ -s "$data_dir/readarr.db" ] && [ -s "$data_dir/audioarr.db" ]; then
-    write_state intervention-required
-    echo 'Both readarr.db and audioarr.db contain BookshelfNG data. Resolve which database is authoritative before starting.' >&2
+    echo 'Both readarr.db and audioarr.db contain BookshelfNG data. Stop BookshelfNG and run the explicit merge preview and apply before launching ChaptarrNG:' >&2
+    printf '  "%s" -preview-bookshelf-migration -merge-bookshelf-databases "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
+    printf '  "%s" -migrate-bookshelf -merge-bookshelf-databases -confirm-bookshelf-service-stopped "-data=%s" -exitimmediately\n' "$console" "$data_dir" >&2
     exit 1
   fi
   sqlite_source="$data_dir/readarr.db"

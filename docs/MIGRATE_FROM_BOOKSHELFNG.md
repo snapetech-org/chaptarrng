@@ -105,6 +105,13 @@ and `ask` behaves as manual when the platform has no interactive terminal.
 supervisor requires either a valid completed migration or a fresh successful
 preview of the restored BookshelfNG source. It does not bypass an
 `intervention-required` state.
+When a container has both populated `readarr.db` and `audioarr.db`, its
+supervisor does not guess which library to migrate. It keeps the container
+unready and prints the preview/apply commands for the explicit
+`-merge-bookshelf-databases` route. Review that merge's conflict rules, stop
+every process using the data directory, run both commands, then restart the
+container. The merge stops before promotion when source identities or settings
+conflict.
 Kubernetes uses the supervisor marker for startup/liveness and the app port
 for readiness, so a deferred or failed handoff does not trigger a pod restart
 loop while readiness remains false. Docker health reports readiness only after
@@ -340,23 +347,46 @@ Interactive search checks the selected torrent client for a matching info hash.
 If it finds one, ChaptarrNG offers to adopt that existing item into its tracked
 queue without starting a second download. Confirm the match before adopting it.
 
-Migration selects one supported database per appdata directory. If both
-`readarr.db` and `audioarr.db` are non-empty in the same directory, the current
-source resolver stops with an ambiguity error; migration does not merge them
-or pick one silently. Keep independently operated installations in separate
-appdata directories and migrate each one separately. The published BookshelfNG `.71`
-helper may print a zero-byte `readarr.db` beside a populated `audioarr.db`;
-ChaptarrNG
-`.977` independently resolves the sole populated legacy database. BookshelfNG
-PR #154 fixed the helper's candidate selection on source `main`, after `.71`;
-that fix is not in the published helper. If both files belong to
-data stored together, preserve the original directory and resolve database
-ownership and shared settings before making separate working copies.
-If you want one combined library, consolidate tracked media into the
-BookshelfNG instance you are keeping with the
-[two-instance consolidation runbook](https://github.com/snapetech-org/bookshelfng/blob/main/README.md#one-instance-for-ebooks-and-audiobooks),
-verify that library, and then migrate that instance. The runbook does not merge
-database histories, profiles, monitoring, or settings.
+Migration still selects one supported database per appdata directory by
+default. If both `readarr.db` and `audioarr.db` are populated, use the explicit
+SQLite merge utility after stopping every process that uses the directory:
+
+```sh
+Chaptarr -preview-bookshelf-migration -merge-bookshelf-databases -data=/path/to/appdata
+Chaptarr -migrate-bookshelf -merge-bookshelf-databases -confirm-bookshelf-service-stopped -data=/path/to/appdata
+```
+
+The source helper accepts the same opt-in as
+`bookshelfng-to-chaptarrng.sh preview|apply ... --merge-bookshelf-databases`.
+Preview and apply make consistent working copies, run the bundled source
+migrations on those copies, and merge only records whose identities remain
+unambiguous. Reused primary IDs with different row contents, different values
+for the same configuration key, and other unique-key/reference conflicts stop
+the operation before `chaptarr.db` is promoted. Library and provider IDs are
+not silently rewritten; the internal `Config.Id` key may be reassigned after
+settings are reconciled by key and value. Transient commands, health state,
+pending releases, and schedules follow the normal migration reset behavior
+and remain available in the retained source files. The original `readarr.db`
+and `audioarr.db` files are retained unchanged beside the new `chaptarr.db`; a
+receipt fingerprints both retained database families so ChaptarrNG refuses
+startup if either is edited after the merge. An operator may remove a retained
+source file after deciding it is no longer needed for rollback. The merged
+BookshelfNG snapshot is retained under `chaptarr.db.bookshelfng-backup-*` and
+is accepted by the normal rollback command; rollback marks the merge receipt
+as rolled back.
+
+If ambiguous media-format choices are present in both databases, their
+`*.bookshelf-media-map.json` sidecars are combined when their choices do not
+conflict. A reviewed combined map can instead be supplied as
+`bookshelfng-merge-media-map.json`; merge preview writes a separate
+`bookshelfng-merge-media-review-*.json` report. Keep independently operated
+installations in separate appdata directories and migrate each one separately.
+The published BookshelfNG `.71` helper may print a zero-byte `readarr.db` beside
+a populated `audioarr.db`; ChaptarrNG resolves the sole populated file without
+requiring this merge option. The BookshelfNG two-instance consolidation
+runbook remains the recommended path when the databases have conflicting IDs
+or settings; it consolidates media, not database histories, profiles,
+monitoring, or settings.
 
 The published `v0.9.977` converter supports BookshelfNG migration-158 SQLite
 databases and bundles the BookshelfNG source migration chain. It upgrades a

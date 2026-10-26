@@ -1,5 +1,69 @@
 # BookshelfNG compatibility code handoff
 
+## 2026-10-26 dual-database merge and validation checkpoint
+
+An explicit `-merge-bookshelf-databases` migration mode now stages both
+populated SQLite sources, applies the bundled BookshelfNG migration chain to
+working copies, and merges only stable identities. Different rows with the same
+identity, conflicting values for a setting, or another unique-key/reference
+conflict stop before native promotion. `readarr.db` is the deterministic primary
+identity source; source IDs are not silently remapped. Both original databases
+remain untouched, while a validated native `chaptarr.db`, a retained merged
+BookshelfNG rollback snapshot, and a durable source/target fingerprint receipt
+are produced on apply. Startup accepts retained legacy siblings only when that
+receipt validates.
+
+The Docker handoff helper and migration guide expose the opt-in, and source
+media maps can be combined or replaced with a reviewed combined map. The merge
+is intentionally conservative: conflicting source IDs, settings, or unique
+references stop before promotion. It does not rewrite provider identities or
+claim to consolidate two independently configured libraries. The code was
+compiled in the Release solution and covered by the full Core suite; detailed
+installed-channel results and remaining delivery gates are recorded in
+[the October 26 channel acceptance report](BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
+
+The merge now holds the normal conversion locks for both legacy files and uses
+a SQLite online backup when cloning migrated working copies, so WAL-committed
+pages are not lost by a main-file copy. A matching `prepared` receipt is
+reconciled to `complete` at native startup; Chocolatey lets its read-only
+handoff check perform that validation after a crash between database promotion
+and receipt finalization. The desktop launcher no longer leaves a permanent
+intervention marker when both files are found; it prints the exact explicit
+preview/apply commands and waits for that operator-selected migration.
+
+Docker compatibility startup now holds an app-data-scoped `flock` for the
+supervisor lifetime, preventing two containers sharing one volume from racing
+through the handoff or opening the same database concurrently. If both legacy
+databases are populated, the supervisor leaves them untouched and reports the
+explicit merge commands instead of trying to migrate only `readarr.db`. It also
+stops with recovery guidance when a non-empty SQLite WAL or rollback journal
+exists without its non-empty main database, instead of treating that directory
+as a fresh install. A replica waiting for the lock keeps liveness healthy while
+its own app readiness remains false.
+
+## 2026-10-26 code-only journal hardening
+
+The shared migration journal now stores a fingerprint for the consistent
+SQLite source snapshot, the staged ChaptarrNG database, the target executable,
+and the source `config.xml`, without storing their paths or contents. Directory
+fingerprints use sorted relative paths and file hashes so relocating a retained
+backup does not change its value. Application, Linux, and Windows journal
+writers reject symbolic links and reparse points and check file stability while
+hashing. Promotion records that the source backup was retained. Rollback records
+the source and displaced-target artifact names and, for SQLite, their
+fingerprints. PostgreSQL records its source engine and converter-owned schema
+milestones. Linux package hooks, Windows Chocolatey, and the desktop supervisor
+fingerprint independent PostgreSQL source dumps and retained target log/cache
+backups. Chocolatey also fingerprints the prior executable and candidate
+artifact.
+
+The Release solution compiled with zero warnings or errors, and the full Core
+suite passed 4,919 tests with 28 skipped. Linux package, Windows Chocolatey,
+desktop, Docker, Helm, StartOS, Cloudron, Co-op Cloud, and standalone handoff
+evidence is summarized in the channel acceptance report. These results do not
+establish representative operator-data, live-provider, external-feed, or
+production cutover acceptance.
+
 This continuation checkpoint closes the current source-level C4–C6 review
 families and adds the remaining Windows, desktop, and webhook recovery fixes
 along with an explicit Helm rollback job for post-migration recovery. Bulk
@@ -118,8 +182,10 @@ installed-channel and workflow acceptance remains separate.
   service arguments, rejects incomplete or conflicting data paths before
   mutation, and uses the selected path for backup, preview, migration and
   rollback. Its SQLite backup, source-change guard and rollback support either
-  populated legacy filename (`readarr.db` or `audioarr.db`); ambiguous dual
-  databases and reparse-point sources fail closed.
+  populated legacy filename (`readarr.db` or `audioarr.db`). Its default path
+  still fails closed for ambiguous dual databases; the explicit multi-database
+  utility stages both sources, rejects identity/configuration conflicts, and
+  retains both originals. Reparse-point sources fail closed.
 - When the BookshelfNG service is stopped at upgrade time, Chocolatey now
   retains the prior app and registers a protected SYSTEM recovery task for the
   next service start. The task verifies the configured local health URL plus
@@ -467,34 +533,25 @@ weaken the default issuer-target restrictions.
 
 ## Still open after this checkpoint
 
-- Linux package handoff has automatic rollback code for supported default
-  service units. It remains unaccepted until the bulk pass exercises every package
-  manager's service failure and restart behavior, especially when systemd
-  executes `ExecStopPost` after a failed `ExecStartPost`.
-- C4 download, matching/import/filesystem and catalog paths; C5 provider,
-  settings/auth and webhook identity; and C6 request identity and primary UI
-  workflows now have source-level dispositions above. Same-input decisions,
-  provider requests, representative files, form outcomes and recovery paths
-  remain runtime acceptance work.
-- Channel delivery and installed-upgrade acceptance from C7-C8 remain open.
-- The Helm post-migration restore Job is implemented but has not been exercised
-  against an installed release/PVC. The Unraid compatibility template still
-  needs external catalog delivery and installed upgrade/rollback acceptance.
-- Cloudron and Co-op Cloud have complete in-repository source candidates, but
-  their external package/recipe delivery and installed-channel acceptance are
-  open. Co-op Cloud operators must restore a matching BookshelfNG volume backup
-  before manually starting the old image after a successful conversion.
-- Windows Chocolatey deferred-start recovery distinguishes source migration
-  rollback from target-to-target update failure; desktop first-launch recovery
-  requires and supervises `setsid --wait`. Both coordinate outcomes with the
-  shared migration journal and have no installed-channel acceptance yet.
-  Desktop executable rollback still requires reinstalling/reopening the old
-  artifact.
-- The local candidate batch above has passed, but this handoff still lacks
-  complete application parity, hosted exact-head validation, real provider and
-  populated-data acceptance, external feed delivery, and installed upgrade,
-  recovery, and rollback evidence. The candidate tests do not close those
-  gates.
+- C4–C6 source comparisons and the C1–C3 migration implementation are present;
+  the remaining application evidence is same-input differential behavior,
+  representative operator data, live providers/media, full SeerrNG acquisition,
+  and restart/recovery after real user writes.
+- The local installed-candidate campaign is recorded in
+  [the channel acceptance report](BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
+  It covers Debian, Fedora, Arch, Chocolatey, standalone, Docker, Helm,
+  Cloudron, StartOS, Unraid-template, and Co-op Cloud rehearsals. Several are
+  local or synthetic and do not prove external publication or actual operator
+  feed/device acceptance.
+- External delivery remains open for Debian/PPA, Fedora/COPR, Chocolatey, AUR,
+  Docker aliases, Helm OCI, AppImage/Flatpak, StartOS, Cloudron, Unraid, and the
+  canonical Co-op Cloud recipe. The old in-app BookshelfNG updater cannot be
+  redirected from this repository; macOS and FreeBSD standalone installs need
+  the documented one-time artifact/path handoff.
+- Representative operator data, live provider and production API workflows,
+  exact-head hosted checks, and explicit production cutover acceptance remain
+  separate gates. Passing local builds or candidate handoffs does not close
+  them.
 
 ## Operator experience and migration timing
 

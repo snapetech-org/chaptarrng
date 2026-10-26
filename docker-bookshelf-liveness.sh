@@ -2,6 +2,12 @@
 set -eu
 
 if [ "${CHAPTARR_BOOKSHELF_COMPATIBILITY:-}" = "true" ]; then
+    if [ -e /tmp/chaptarr-bookshelf-lock-waiting ] || [ -L /tmp/chaptarr-bookshelf-lock-waiting ]; then
+        # A second replica sharing the app-data volume waits for the lock before
+        # touching the database. Keep it alive while readiness remains false.
+        exit 0
+    fi
+
     data_dir=${CHAPTARR_COMPAT_DATA_DIR:-}
     if [ -z "$data_dir" ] && [ -r /tmp/chaptarr-health-paths ]; then
         IFS= read -r data_dir < /tmp/chaptarr-health-paths || true

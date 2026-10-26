@@ -262,6 +262,10 @@ namespace NzbDrone.Host
             }
 
             var migrateBookshelf = startupContext.MigrateBookshelf || startupContext.PreviewBookshelfMigration;
+            if (startupContext.MergeBookshelfDatabases && !migrateBookshelf)
+            {
+                throw new InvalidOperationException("-merge-bookshelf-databases must be used with -migrate-bookshelf or -preview-bookshelf-migration.");
+            }
             var checkBookshelfMigration = startupContext.CheckBookshelfMigration;
             var restoreBookshelf = startupContext.RestoreBookshelf || startupContext.PreviewBookshelfRestore;
             var postgresBackupMode = startupContext.CheckBookshelfPostgresBackup ||

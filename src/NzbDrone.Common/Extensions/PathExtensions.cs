@@ -396,11 +396,6 @@ namespace NzbDrone.Common.Extensions
             // discovering an existing BookshelfNG/Readarr database. Keep this
             // check file-only; schema validation belongs after database recovery.
             var legacyDatabasePaths = GetLegacyDatabasePaths(appDataPath);
-            if (legacyDatabasePaths.Count > 1)
-            {
-                throw new InvalidOperationException("Multiple legacy database files were found. Choose one before starting Chaptarr.");
-            }
-
             var primaryHasRecoveryData = HasNonEmptyDurableSqliteSidecar(primaryPath);
             if (primaryHasRecoveryData && !File.Exists(primaryPath))
             {
@@ -412,6 +407,21 @@ namespace NzbDrone.Common.Extensions
             {
                 throw new InvalidOperationException(
                     "A Chaptarr database sidecar and a BookshelfNG database both contain data. Preserve all database files and resolve the source before starting Chaptarr.");
+            }
+
+            if (legacyDatabasePaths.Count > 1)
+            {
+                if (!primaryHasRecoveryData && appFolderInfo.MergeBookshelfDatabases &&
+                    legacyDatabasePaths.Any(path => string.Equals(Path.GetFileName(path), "readarr.db", StringComparison.OrdinalIgnoreCase)) &&
+                    legacyDatabasePaths.Any(path => string.Equals(Path.GetFileName(path), "audioarr.db", StringComparison.OrdinalIgnoreCase)))
+                {
+                    // The merge command is a deliberately explicit utility mode.
+                    // Keep readarr.db as the primary identity source and let the
+                    // converter validate/merge audioarr.db into a staged copy.
+                    return Path.Combine(appDataPath, "readarr.db");
+                }
+
+                throw new InvalidOperationException("Multiple legacy database files were found. Choose one before starting Chaptarr.");
             }
 
             if (primaryHasRecoveryData)

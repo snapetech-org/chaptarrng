@@ -5,8 +5,8 @@ usage() {
   cat <<'USAGE'
 Usage:
   bookshelfng-to-chaptarrng.sh snapshot --data-dir PATH --backup-dir PATH
-  bookshelfng-to-chaptarrng.sh preview  --data-dir PATH --backup-dir PATH --image IMAGE --provider-mode goodreads|native-hardcover
-  bookshelfng-to-chaptarrng.sh apply   --data-dir PATH --backup-dir PATH --image IMAGE --confirm-stopped --provider-mode goodreads|native-hardcover
+  bookshelfng-to-chaptarrng.sh preview  --data-dir PATH --backup-dir PATH --image IMAGE --provider-mode goodreads|native-hardcover [--merge-bookshelf-databases]
+  bookshelfng-to-chaptarrng.sh apply   --data-dir PATH --backup-dir PATH --image IMAGE --confirm-stopped --provider-mode goodreads|native-hardcover [--merge-bookshelf-databases]
   bookshelfng-to-chaptarrng.sh rollback-preview --data-dir PATH --backup-dir PATH --image IMAGE --bookshelf-backup FILE
   bookshelfng-to-chaptarrng.sh rollback --data-dir PATH --backup-dir PATH --image IMAGE --bookshelf-backup FILE --confirm-stopped
 
@@ -17,6 +17,9 @@ an explicit provider mode. The mode is passed only to the temporary ChaptarrNG
 migration container; configure the same mode in the permanent replacement
 container after migration. Native Hardcover mode requires a versioned ChaptarrNG
 tag v0.9.978 or newer; digest references cannot be checked for that capability.
+The optional merge flag enables an explicit SQLite merge when both
+readarr.db and audioarr.db are populated; conflicting identities or settings
+stop the conversion before either original database is changed.
 USAGE
 }
 
@@ -95,6 +98,7 @@ bookshelf_backup=""
 confirm_stopped=false
 provider_mode=""
 provider_mode_set=false
+merge_bookshelf_databases=false
 
 while (($#)); do
   case "$1" in
@@ -128,6 +132,10 @@ while (($#)); do
       confirm_stopped=true
       shift
       ;;
+    --merge-bookshelf-databases)
+      merge_bookshelf_databases=true
+      shift
+      ;;
     -h|--help|help)
       usage
       exit 0
@@ -142,9 +150,15 @@ done
 data_dir="$(cd -- "$data_dir" && pwd -P)"
 [[ "$data_dir" != / ]] || fail 'refusing to archive the filesystem root'
 
-if [[ -s "$data_dir/readarr.db" && -s "$data_dir/audioarr.db" ]]; then
-  fail 'both BookshelfNG databases contain data; this tool will not merge two libraries'
-fi
+for database_name in readarr.db audioarr.db; do
+  for suffix in '' -journal -wal -shm; do
+    database_path="$data_dir/$database_name$suffix"
+    [[ ! -L "$database_path" ]] ||
+      fail "BookshelfNG database paths must not be symbolic links: $database_name$suffix"
+    [[ ! -e "$database_path" || -f "$database_path" ]] ||
+      fail "BookshelfNG database paths must be regular files: $database_name$suffix"
+  done
+done
 
 readarr_populated=false
 audioarr_populated=false
@@ -153,6 +167,13 @@ if [[ -f "$data_dir/readarr.db" && ! -L "$data_dir/readarr.db" && -s "$data_dir/
 fi
 if [[ -f "$data_dir/audioarr.db" && ! -L "$data_dir/audioarr.db" && -s "$data_dir/audioarr.db" ]]; then
   audioarr_populated=true
+fi
+
+if [[ "$readarr_populated" == true && "$audioarr_populated" == true && "$merge_bookshelf_databases" != true && "$action" != snapshot ]]; then
+  fail 'both BookshelfNG databases contain data; use --merge-bookshelf-databases to opt into the explicit, conflict-failing merge'
+fi
+if [[ "$merge_bookshelf_databases" == true && ( "$readarr_populated" != true || "$audioarr_populated" != true ) ]]; then
+  fail '--merge-bookshelf-databases requires non-empty regular readarr.db and audioarr.db files'
 fi
 
 if [[ "$readarr_populated" == true ]]; then
@@ -169,6 +190,10 @@ backup_dir="$(resolve_directory_path "$backup_dir")" ||
 case "$backup_dir/" in
   "$data_dir/"*) fail '--backup-dir must be outside the BookshelfNG data directory' ;;
 esac
+
+if [[ "$merge_bookshelf_databases" == true && "$action" != preview && "$action" != apply ]]; then
+  fail '--merge-bookshelf-databases applies only to preview and apply'
+fi
 mkdir -p -- "$backup_dir"
 backup_dir="$(cd -- "$backup_dir" && pwd -P)"
 case "$backup_dir/" in
@@ -245,6 +270,9 @@ if [[ "$action" == preview || "$action" == apply ]]; then
   fi
 fi
 container_args+=(-v "$data_dir:/config" "$image" dotnet /app/Chaptarr.dll)
+if [[ "$merge_bookshelf_databases" == true ]]; then
+  container_args+=(-merge-bookshelf-databases)
+fi
 case "$action" in
   preview)
     container_args+=(-preview-bookshelf-migration -data=/config)

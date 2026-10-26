@@ -2,9 +2,9 @@
 
 ## Result
 
-The local 0.9.978 candidate passed installed handoff acceptance on Debian, Fedora, Arch, Windows Chocolatey, FreeBSD standalone, Docker, Helm, AppImage, Flatpak, and Co-op Cloud Swarm paths described below. The shared standalone launcher also passed a Linux runtime harness covering No, headless Manual, Yes, health, source backup, and forced rollback. Cloudron 10.1.6 passed an installed `.4.21` to `.4.23` package update, Manual defer, native backup/restore, Automatic migration, and the source-database plus old-package rollback path. StartOS passed x86_64 and aarch64 test-package updates covering Manual defer, automatic migration, health checks, and automatic source rollback; these remain synthetic, test-key rehearsals. The optional choice is presented at the package prompt, a terminal-backed desktop or standalone launch, or an explicit platform setting, depending on the channel. pacman uses a deferred two-transaction handoff because pacman scriptlets cannot cancel an active transaction.
+The local 0.9.978 candidate passed installed handoff acceptance on Debian, Fedora, Arch, Windows Chocolatey, FreeBSD standalone, Docker, Helm, AppImage, Flatpak, and Co-op Cloud Swarm paths described below. The shared standalone launcher also passed a Linux runtime harness covering No, headless Manual, Yes, health, source backup, and forced rollback. Cloudron 10.1.6 passed an installed `.4.21` to `.4.23` package update, Manual defer, native backup/restore, Automatic migration, and the source-database plus old-package rollback path. StartOS passed x86_64 and aarch64 test-package updates covering Manual defer, automatic migration, health checks, and automatic source rollback; these remain synthetic, test-key rehearsals. A local Unraid-template Docker rehearsal passed manual defer, automatic migration, health, and forced rollback; it does not count as Community Applications or host acceptance. The optional choice is presented at the package prompt, a terminal-backed desktop or standalone launch, or an explicit platform setting, depending on the channel. pacman uses a deferred two-transaction handoff because pacman scriptlets cannot cancel an active transaction.
 
-This is **not 100% release-channel acceptance**. No replacement artifact was published, and several package feeds contain no BookshelfNG predecessor. StartOS still needs the official signed package, external repository delivery, and package-manager rollback acceptance. Cloudron feed/catalog publication, Unraid, canonical Co-op Cloud recipe acceptance, and external catalog installations remain open. The old Cloudron `.4.21` package also cannot back up its persistent directories; that legacy backup gap is covered only after the new package with backup hooks is installed. Release gates remain closed.
+This is **not 100% release-channel acceptance**. No replacement artifact was published, and several package feeds contain no BookshelfNG predecessor. StartOS still needs the official signed package, external repository delivery, and package-manager rollback acceptance. Cloudron feed/catalog publication, Unraid Community Applications/host update and rollback acceptance, canonical Co-op Cloud recipe acceptance, and external catalog installations remain open. The old Cloudron `.4.21` package also cannot back up its persistent directories; that legacy backup gap is covered only after the new package with backup hooks is installed. Release gates remain closed.
 
 ## Choice behavior
 
@@ -19,7 +19,7 @@ This is **not 100% release-channel acceptance**. No replacement artifact was pub
 | Helm / Kubernetes | No interactive terminal in the pod | Ask mode defers conversion and keeps the old data in place; operator action and a pod restart are required to retry. | The candidate pod converts, starts, and passes the configured health check; a rollback Job restores the source database. | Kind installed upgrade from the existing BookshelfNG chart tag main-v0.4.21.71 passed No/defer, Yes, and explicit rollback. Candidate chart and image are not published. |
 | Docker / Compose | Yes with an attached TTY; no in headless/Compose startup | TTY `n` defers conversion. Headless Ask writes a deferred marker, leaves the database and config byte-identical, and does not serve app `/ping`; the new container waits for operator action. | TTY `y` or a restart in automatic mode converts on first start, checks migration and app health, retains the source backup, and serves the existing endpoint. | Exact-head local candidate image passed interactive TTY No/Yes, headless Ask/defer, automatic handoff, `/ping`, migration check, and injected health-failure rollback. Image aliases and external pull/recreate delivery remain unpublished. |
 | StartOS | No y/n prompt; package configuration uses an automatic/manual choice | Set Manual through the package action and start the candidate; conversion is deferred, the app remains unavailable, and the schema-158 source stays unchanged. Run the documented Console preview/apply, then switch back to Automatic and restart. | Set Automatic and start the candidate; the replacement previews, converts, retains its source backup, passes database checks, and serves `/ping`. A failed health check restores the source database and leaves ChaptarrNG stopped. | StartOS 0.4.0.3 x86_64 and aarch64 VMs passed test-key SDK3 package updates. ARM64 used synthetic predecessor `.4.21:3` to candidate `.9.979:1`; Manual defer, Console preview/apply, Automatic conversion, and injected health-failure rollback all passed with `/books` and `/downloads` canaries. The predecessor fixture wraps the pinned BookshelfNG Readarr 0.4.21.37 ARM64 image with a direct service command because its s6 `/init` requires PID 1. Official signed `.s9pk`, public `.71` package, external repository, and package-manager rollback remain unaccepted. |
-| Unraid | No y/n prompt in the template update flow | Set migration mode to Manual in the template before applying the image update; conversion is deferred until Automatic is selected and the container is restarted. | Set Automatic and restart; the image performs migration on startup. | XML/settings contract and draft PR checks passed; no Unraid Community Applications installation or rollback test was available. |
+| Unraid | No y/n prompt in the template update flow | Set migration mode to Manual in the template before applying the image update; conversion is deferred until Automatic is selected and the container is restarted. | Set Automatic and restart; the image performs migration on startup. | Local Docker rehearsal against BookshelfNG 0.4.21.71 and a local ChaptarrNG 0.9.978 image passed manual defer, migration, `/ping`, retained source data, settings and media canaries, and forced rollback/recovery using the legacy template's mount and environment contract. This was not run in Unraid Community Applications or on an Unraid host; image publication remains open. |
 | Cloudron | No terminal prompt; the administrator can hold the app update or set manual/automatic mode | Set `BOOKSHELFNG_MIGRATION_MODE=manual` before applying the package update; the proxy keeps `/ping` healthy and shows recovery instructions while the database remains unchanged. | Apply the update with automatic mode to convert on startup; Cloudron custom app environment can override the image default. | Cloudron 10.1.6 installed `.4.21` to `.4.23`; Manual defer, native backup/restore, Automatic migration, and source-database plus old-package rollback passed. The `.4.21` pre-update backup does not include persistent directories; `.4.23` adds backup/restore hooks. Feed/catalog publication remains open. |
 | Co-op Cloud | No interactive y/n in Swarm. To choose No, keep the BookshelfNG stack deployed. Deploying the candidate with `manual` defers conversion but the new service does not serve `/ping` until the operator switches to Automatic and redeploys. | A Manual candidate update keeps the schema-158 database byte-identical and records `deferred`; the app endpoint is unavailable while held. | Redeploy the same stack in Automatic mode; the compatibility image converts, validates, retains a source backup, and serves `/ping`. | Isolated Debian 13 / Docker 26.1 Swarm upgraded the pinned BookshelfNG .71 source image to the exact-head .978 candidate. `bookshelfng_app` and all three volume names stayed stable. Manual preserved the database SHA-256 `f126ce2ae615dd6e898a446a2b122bc90ae9d10ea9a9ab2090cf0ca90830a1a1`, schema 158, and media canaries. Automatic reached schema 124, passed SQLite checks, kept the source backup and canaries, and served `/ping`. An injected unhealthy update paused as configured; restoring the three-volume snapshot and redeploying .71 returned healthy BookshelfNG at schema 158. The official Backupbot II 2.4.0 image (`sha256:870277cdba4b91ad6771184a7e208ba29151b951e39c68b4a3fd6f8d35252feb`) backed up those same volume identities using the recipe label. Its restore recovered a corrupted schema-158 database byte-for-byte, passed SQLite checks, restored all three volume canaries, and left the service mounts unchanged. Abra 0.13.0-beta deployed an isolated recipe with the same service and volume identities, created and listed the snapshot, then restored the corrupted database byte-for-byte and restored all three canaries after the app was scaled to zero. The app restarted with unchanged mounts. Canonical recipe acceptance remains open. |
 | Self-hosting catalogs | No common y/n contract | Depends on each catalog's UI and image replacement behavior. | Compose candidate preserves the bookshelfng service and volume identities. | Local Compose contract only; CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other external listings were not updated or accepted. |
@@ -196,7 +196,119 @@ canaries, preserved service mounts, and restarted the app. The test recipe and
 helper are retained in
 `/var/tmp/chaptarrng-channel-acceptance-20261026/vms/coop-cloud-abra/`.
 
+## Current-worktree revalidation — 2026-10-26 follow-up
+
+This is code-level evidence for the modified worktree at `d43a005`; it does not
+replace the installed-package evidence above, which used an earlier `.978`
+candidate. No package was rebuilt and installed from the current diff across
+the platform VMs.
+
+The focused .NET migration/database set passed 299 tests, with 11 PostgreSQL
+cases skipped because their external database service is unavailable. The
+BookshelfNG migration-journal fixture passed 4/4 cases. I added
+`BookshelfMultiDatabaseConverterFixture` and verified 3/3 cases: populated
+identical databases merge without duplication and retain both originals,
+preview changes neither source, and a conflicting setting blocks promotion.
+Those tests found and fixed a rejected journal-count format; the focused build
+also found and fixed two C# compile errors in the current migration changes.
+
+The legacy-channel contract suite passed 19/19, the private runner policy test
+passed 10/10, all 17 workflow YAML files parsed, and `git diff --check` passed.
+The full core suite and a final combined migration rerun were stopped after
+10 minutes and 5.5 minutes respectively without a test summary; neither result
+is counted as a pass or failure. Logs are retained at
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/` with the
+`dotnet-bookshelf-*-20261026-followup.log`,
+`dotnet-bookshelf-*-20261026-incomplete.log`,
+`dotnet-core-full-20261026-incomplete.log`,
+`node-channel-contract-20261026-followup.log`,
+`workflow-runner-policy-20261026-followup.log`,
+`workflow-yaml-20261026-followup.log`, and
+`diffcheck-20261026-followup.log` names. The interrupted importer fixture at
+`/var/tmp/chaptarrng-channel-acceptance-20261026/tmp/bookshelf-importer-7c37a74f/`
+was retained for diagnosis.
+
+The private-only workflow edits remain local and unpushed. No CI or canary was
+started. These local checks do not close the signed-package, feed/catalog,
+Unraid, canonical Co-op Cloud, external catalog, or private JIT rollout gates.
+
 ## Remaining release blockers
+
+### PostgreSQL source migration integration check
+
+The current local workspace's full BookshelfNG PostgreSQL-focused suite passed
+29/29 tests against an isolated PostgreSQL 17.4 server. It covered source
+conversion and rollback, database selection, lineage checks, and external dump
+backup/validation using the host's PostgreSQL 18.6 client tools. The fixtures
+left no reserved test databases or migration schemas behind. Logs and container
+provenance are retained in
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/postgresql-source-migration-20261026/`.
+This is populated database integration evidence, not an installed package or
+deployment upgrade; it does not close any channel handoff gate.
+
+### Shared journal portability follow-up
+
+A follow-up fingerprint-journal change exposed a portability regression: the
+intermediate implementation required Bash, GNU `stat`, and `sha256sum`, which
+are absent from the FreeBSD base used by the standalone archive. The journal is
+now POSIX `/bin/sh` and selects the platform's native metadata and SHA-256
+commands. The Linux fingerprint/desktop-supervisor regression passed, and a
+FreeBSD 15.1-RELEASE-p6 guest passed source-directory fingerprinting, relocation
+stability with a nested newline-containing filename, content-change refresh,
+and symbolic-link rejection. Logs are retained in
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/freebsd-journal-portability-0b0c38c8/`.
+The AUR choice container, Debian Trixie bridge package/upgrade/downgrade, Fedora
+44 RPM bridge transaction, 19-case legacy-channel contract suite, 9-case
+runner-policy suite, and 98 focused database importer, multi-database
+converter, and migration-journal tests also passed against the current
+workspace.
+
+The FreeBSD 0.9.978 x64 standalone archive was rebuilt with the portable
+journal and tested in a FreeBSD 15.1-RELEASE-p6 guest. Its SHA-256 is
+`36585cde8193bfa4641552fda72b368f7c63536196cec4c2a8fbaa2bd387ab77`; the
+bundled journal passed the same fingerprint, relocation, refresh, symlink, and
+state checks. This closes the exact-archive journal portability check. It
+does not rerun the full app handoff against this rebuilt archive, and the exact
+candidate archive check on macOS remains open. Evidence is retained in
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/freebsd-standalone-portability-20261026/`.
+
+### Unraid template Docker rehearsal
+
+A local Docker rehearsal evaluated the legacy template contract against the
+BookshelfNG 0.4.21.71 source image and a local ChaptarrNG 0.9.978 image. The
+synthetic fixture's `/library` paths were mapped to the template's `/data`
+mount, with four media files created at the database's `BookFiles.Path`
+entries. Manual mode deferred without changing the source database or config.
+Automatic mode migrated schema 158 to 124, passed `/ping` and SQLite
+integrity/foreign-key checks, reported no missing media watch paths, preserved
+the config settings and all four media files plus `/data`/`/download` canaries,
+and retained a backup whose schema and rows matched all 39 source tables. A
+forced health failure restored all source tables and rows plus the config byte
+for byte, preserved the media files, then the BookshelfNG image returned
+healthy at `/ping`. The target database contained 4 authors, 9
+format-specific books, 9 editions, and 4 book files.
+
+This tests the local image/container handoff and the settings/mount contract;
+it does not test the Unraid Community Applications UI, an Unraid host update,
+published image delivery, or an official package rollback. Those remain open.
+Image IDs, the reproducible harness, checksums, and filtered milestones are in
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/unraid-template-docker-d43a005/`.
+
+### Private Windows runner handoff
+
+The Windows package and installer acceptance evidence above includes successful
+hosted Windows runs. ChaptarrNG's local build, migration-installer, and
+Chocolatey workflow jobs now target the historically approved private route
+`[self-hosted, Windows, X64, packer-windows]`. The organization currently has no
+online Windows registration carrying that label, so the private route and its
+release jobs are still unverified. Keep those jobs queued until the
+Packer/runner-policy owner restores the existing runner group/labels and
+broker/workflow access and passes a Windows canary after C0 clearance. The
+hosted VM results establish package behavior; they do not establish private
+runner acceptance. Restore the approved route in place; do not move Windows
+jobs to `windows-latest`, Linux JIT, or another runner. Keep them queued until
+the original runner group/labels, broker/workflow access, and canary are
+verified.
 
 - Debian/PPA and Fedora/COPR publisher paths remain closed; direct VM package acceptance does not prove a PPA or COPR feed upgrade. The public BookshelfNG COPR repository had no packages for the tested Fedora series.
 - The Chocolatey feed rejection is unresolved. The local package passed, but no public package was pushed.

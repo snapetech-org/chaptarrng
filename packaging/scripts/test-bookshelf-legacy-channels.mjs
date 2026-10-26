@@ -111,7 +111,8 @@ test('macOS installed handoff acceptance is manually dispatched and publication-
   const workflow = read('.github/workflows/bookshelfng-standalone-macos-acceptance.yml');
 
   assert.match(workflow, /^  workflow_dispatch:$/m);
-  assert.match(workflow, /rid: osx-x64[\s\S]*?runner: macos-15-intel[\s\S]*?rid: osx-arm64[\s\S]*?runner: macos-15/);
+  assert.match(workflow, /rid: osx-x64[\s\S]*?architecture: X64[\s\S]*?rid: osx-arm64[\s\S]*?architecture: ARM64/);
+  assert.match(workflow, /group":"ng-shared-main-jit"[\s\S]*?"macOS","X64"[\s\S]*?"macOS","ARM64"/);
   assert.match(workflow, /build-standalone\.sh "\$version" "\$\{\{ matrix\.rid \}\}"/);
   assert.match(workflow, /BookshelfNG-main-v0\.4\.21\.71-\$\{\{ matrix\.rid \}\}\.tar\.gz/);
   assert.match(workflow, /d4450af8991742b1e5bcb794b9ecb7f59b4d57e99b9a82dfc56cb437112955de/);
@@ -366,10 +367,10 @@ test('Linux and Windows VM jobs execute package-specific migration-choice checks
   const workflow = read('.github/workflows/build.yml');
   const buildJob = readWorkflowJob(workflow, 'build');
 
-  assert.match(buildJob, /name: Test candidate BookshelfNG Debian bridge package[\s\S]*?if: matrix\.os == 'ubuntu-latest'/);
-  assert.match(buildJob, /name: Test BookshelfNG AUR migration choice[\s\S]*?if: matrix\.os == 'ubuntu-latest'[\s\S]*?test-bookshelfng-aur-choice\.sh/);
-  assert.match(buildJob, /name: Test candidate BookshelfNG RPM bridge package[\s\S]*?if: matrix\.os == 'ubuntu-latest'[\s\S]*?test-build-bookshelfng-rpm-bridge\.sh/);
-  assert.match(buildJob, /name: Test Chocolatey BookshelfNG migration choice[\s\S]*?if: matrix\.os == 'windows-latest'[\s\S]*?test-chocolatey-migration-choice\.ps1/);
+  assert.match(buildJob, /name: Test candidate BookshelfNG Debian bridge package[\s\S]*?if: matrix\.platform == 'linux-x64'/);
+  assert.match(buildJob, /name: Test BookshelfNG AUR migration choice[\s\S]*?if: matrix\.platform == 'linux-x64'[\s\S]*?test-bookshelfng-aur-choice\.sh/);
+  assert.match(buildJob, /name: Test candidate BookshelfNG RPM bridge package[\s\S]*?if: matrix\.platform == 'linux-x64'[\s\S]*?test-build-bookshelfng-rpm-bridge\.sh/);
+  assert.match(buildJob, /name: Test Chocolatey BookshelfNG migration choice[\s\S]*?if: matrix\.platform == 'windows-x64'[\s\S]*?test-chocolatey-migration-choice\.ps1/);
   assert.match(read('packaging/scripts/test-build-bookshelfng-deb-bridge.sh'), /bookshelfng-ask-headless\.log[\s\S]*?no terminal is available/);
   assert.match(read('packaging/scripts/test-build-bookshelfng-rpm-bridge.sh'), /ask-headless\.log[\s\S]*?no terminal is available/);
   assert.match(read('packaging/scripts/test-bookshelfng-aur-choice.sh'), /ask-headless\.log[\s\S]*?No terminal is available/);

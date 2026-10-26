@@ -26,6 +26,45 @@ operator_wait_pid=
 app_status=0
 handoff_deadline_epoch=
 migration_approved=false
+lock_wait_marker=/tmp/chaptarr-bookshelf-lock-waiting
+
+acquire_supervisor_lock() {
+    if [ -L "$handoff_root" ] || { [ -e "$handoff_root" ] && [ ! -d "$handoff_root" ]; }; then
+        echo 'BookshelfNG compatibility startup requires a real handoff state directory.' >&2
+        return 1
+    fi
+
+    mkdir -p "$handoff_root" || return 1
+    chmod 0700 "$handoff_root" || return 1
+
+    lock_path="$handoff_root/supervisor.lock"
+    if [ -L "$lock_path" ] || { [ -e "$lock_path" ] && [ ! -f "$lock_path" ]; }; then
+        echo 'BookshelfNG compatibility startup refuses an unsafe supervisor lock path.' >&2
+        return 1
+    fi
+    if ! command -v flock >/dev/null 2>&1; then
+        echo 'BookshelfNG compatibility startup requires flock to protect shared app-data during migration.' >&2
+        return 1
+    fi
+    if [ -L "$lock_wait_marker" ] || { [ -e "$lock_wait_marker" ] && [ ! -f "$lock_wait_marker" ]; }; then
+        echo 'BookshelfNG compatibility startup refuses an unsafe lock-wait marker path.' >&2
+        return 1
+    fi
+    rm -f "$lock_wait_marker"
+
+    (umask 077; : >> "$lock_path") || return 1
+    chmod 0600 "$lock_path" || return 1
+    exec 9<> "$lock_path" || return 1
+    if ! flock -n 9; then
+        echo 'Another ChaptarrNG BookshelfNG compatibility process is using this app-data directory; waiting for it to exit before opening the database.' >&2
+        (umask 077; set -C; : > "$lock_wait_marker") || return 1
+        if ! flock 9; then
+            rm -f "$lock_wait_marker"
+            return 1
+        fi
+        rm -f "$lock_wait_marker"
+    fi
+}
 
 utility() {
     command=$1
@@ -67,8 +106,9 @@ has_postgres_source() {
     for name in Chaptarr__Postgres__Host CHAPTARR__POSTGRES__HOST Readarr__Postgres__Host READARR__POSTGRES__HOST Audioarr__Postgres__Host AUDIOARR__POSTGRES__HOST Bookshelf__Postgres__Host BOOKSHELF__POSTGRES__HOST; do
         if printenv "$name" >/dev/null 2>&1; then
             host=$(printenv "$name")
-            [ -n "$host" ] && return 0
-            return 1
+            if [ -n "$host" ]; then
+                return 0
+            fi
         fi
     done
 
@@ -143,6 +183,9 @@ has_bookshelf_source_candidate() {
 
         if [ -f "$database" ] && [ -s "$database" ]; then
             local_found=true
+        elif [ -s "$database-wal" ] || [ -s "$database-journal" ]; then
+            echo "BookshelfNG SQLite recovery data exists without a non-empty main database: $database. Preserve the database family and recover it before starting either application." >&2
+            return 2
         fi
     done
 
@@ -151,6 +194,16 @@ has_bookshelf_source_candidate() {
     fi
 
     return 1
+}
+
+has_multiple_populated_sqlite_sources() {
+    [ -s "$data_dir/readarr.db" ] && [ -s "$data_dir/audioarr.db" ]
+}
+
+print_multi_database_merge_commands() {
+    printf '%s\n' 'Stop all BookshelfNG processes that use this app-data directory, then run:' >&2
+    printf '  dotnet /app/Chaptarr.dll -preview-bookshelf-migration -merge-bookshelf-databases "-data=%s" -exitimmediately\n' "$data_dir" >&2
+    printf '  dotnet /app/Chaptarr.dll -migrate-bookshelf -merge-bookshelf-databases -confirm-bookshelf-service-stopped "-data=%s" -exitimmediately\n' "$data_dir" >&2
 }
 
 validate_source_paths() {
@@ -350,6 +403,12 @@ prepare_attempt() {
     if database_is_migrated; then
         rm -f "$deferred_marker"
         return 2
+    fi
+
+    if has_multiple_populated_sqlite_sources; then
+        echo 'Both readarr.db and audioarr.db contain data. Automatic startup will not select one and discard the other.' >&2
+        print_multi_database_merge_commands
+        return 6
     fi
 
     if [ -f "$deferred_marker" ]; then
@@ -587,6 +646,7 @@ rollback_failed_handoff() {
 }
 
 validate_source_paths || wait_for_operator 'BookshelfNG migration found an unsafe linked or non-regular source path. The source has not been migrated; resolve the path and restart.'
+acquire_supervisor_lock || wait_for_operator 'BookshelfNG compatibility startup could not lock the app-data directory. Stop other instances and resolve the handoff state before restarting.'
 
 prepare_status=0
 prepare_attempt || prepare_status=$?
@@ -597,6 +657,7 @@ case "$prepare_status" in
     3) exec "$@" ;;
     4) wait_for_operator ;;
     5) wait_for_operator 'BookshelfNG migration is deferred by BOOKSHELFNG_MIGRATION_MODE. Run the documented preview/apply workflow, or change the mode to automatic and restart this container.' ;;
+    6) wait_for_operator 'Both BookshelfNG SQLite databases contain data. No database was changed. Review the printed commands and merge conflict rules, run preview and apply, then restart the container.' ;;
     *) exit 1 ;;
 esac
 

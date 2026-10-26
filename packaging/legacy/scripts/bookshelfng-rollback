@@ -109,6 +109,8 @@ if [ "$restore_database" = true ]; then
 
       if find "$chaptarr_postgres_backup_dir" -type f \
         \( -name 'postgres-log.dump' -o -name 'postgres-cache.dump' \) -print -quit | grep -q .; then
+        "$journal" fingerprint rollback-target-postgres-log-cache "$chaptarr_postgres_backup_dir" --refresh
+        "$journal" outcome rollback-target-postgres-log-cache retained
         printf '%s\n' "$chaptarr_postgres_backup_dir" > "$handoff_dir/chaptarr-postgres-log-cache-backup-dir"
         chmod 0600 "$handoff_dir/chaptarr-postgres-log-cache-backup-dir"
       else

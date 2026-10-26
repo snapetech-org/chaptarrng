@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using FluentMigrator.Runner;
 using FluentMigrator.Runner.Conventions;
@@ -28,7 +29,8 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             string connectionString,
             MigrationContext migrationContext,
             DatabaseType databaseType,
-            bool previewOnly);
+            bool previewOnly,
+            bool mergeMultipleSqliteSources = false);
     }
 
     public class MigrationController : IMigrationController
@@ -92,7 +94,8 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             string connectionString,
             MigrationContext migrationContext,
             DatabaseType databaseType,
-            bool previewOnly)
+            bool previewOnly,
+            bool mergeMultipleSqliteSources = false)
         {
             if (databaseType is not (DatabaseType.SQLite or DatabaseType.PostgreSQL) ||
                 DatabaseLineageGuard.Detect(connectionString, databaseType) != DatabaseLineage.BookshelfNG)
@@ -108,8 +111,34 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             var effectiveMigrationContext = migrationContext ?? new MigrationContext(MigrationType.Main);
             var journal = previewOnly ? null : new BookshelfMigrationJournal(GetJournalDataDirectory(connectionString, databaseType));
             var sourceApiBasePath = GetSourceApiBasePath();
+            journal?.RecordOutcome("source-engine", databaseType == DatabaseType.SQLite ? "sqlite" : "postgresql");
+            if (journal != null)
+            {
+                var configPath = Path.Combine(GetJournalDataDirectory(connectionString, databaseType), "config.xml");
+                var executablePath = Assembly.GetEntryAssembly()?.Location;
+                if (string.IsNullOrWhiteSpace(executablePath))
+                {
+                    executablePath = Environment.ProcessPath;
+                }
+
+                if (File.Exists(configPath) && (File.GetAttributes(configPath) & FileAttributes.ReparsePoint) == 0)
+                {
+                    journal.RecordFingerprint("source-config", configPath);
+                }
+
+                if (!string.IsNullOrWhiteSpace(executablePath) && File.Exists(executablePath))
+                {
+                    journal.RecordFingerprint("target-executable", executablePath);
+                }
+            }
+
             if (databaseType == DatabaseType.PostgreSQL)
             {
+                if (mergeMultipleSqliteSources)
+                {
+                    throw new InvalidOperationException("The BookshelfNG multi-database merge applies only to SQLite app-data databases.");
+                }
+
                 return new BookshelfPostgresDatabaseConverter().Convert(
                     connectionString,
                     targetConnectionString => MigrateNative(targetConnectionString, effectiveMigrationContext, DatabaseType.PostgreSQL),
@@ -122,6 +151,30 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
             }
 
             var sourceDatabasePath = Path.GetFullPath(new SqliteConnectionStringBuilder(connectionString).DataSource);
+            if (mergeMultipleSqliteSources)
+            {
+                if (_appFolderInfo == null || string.IsNullOrWhiteSpace(_appFolderInfo.AppDataFolder))
+                {
+                    throw new InvalidOperationException("The BookshelfNG multi-database merge requires an application data directory.");
+                }
+
+                return new BookshelfMultiDatabaseConverter().Convert(
+                    sourceDatabasePath,
+                    _appFolderInfo.AppDataFolder,
+                    targetConnectionString => MigrateNative(targetConnectionString, effectiveMigrationContext, DatabaseType.SQLite),
+                    (source, target, transaction, sourceSchemaVersion, mediaMapBasePath) => BookshelfDatabaseImporter.Import(
+                        source,
+                        target,
+                        transaction,
+                        mediaMapBasePath,
+                        sourceSchemaVersion,
+                        sourceApiBasePath),
+                    previewOnly,
+                    MigrateBookshelfSource,
+                    journal == null ? null : journal.RecordConverterStage,
+                    journal == null ? null : journal.RecordOutcome);
+            }
+
             return new BookshelfDatabaseConverter().ConvertWithSourceSchema(
                 connectionString,
                 targetConnectionString => MigrateNative(targetConnectionString, effectiveMigrationContext, DatabaseType.SQLite),
@@ -166,7 +219,7 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 var result = new BookshelfPostgresDatabaseConverter().Restore(currentConnectionString, bookshelfBackup, previewOnly);
                 if (!previewOnly)
                 {
-                    RecordRollbackInJournal(currentConnectionString, databaseType);
+                    RecordRollbackInJournal(currentConnectionString, databaseType, result);
                 }
 
                 return result;
@@ -179,18 +232,48 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 MigrateBookshelfSource);
             if (!previewOnly)
             {
-                RecordRollbackInJournal(currentConnectionString, databaseType);
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(_appFolderInfo?.AppDataFolder))
+                    {
+                        BookshelfMergeReceipt.MarkRolledBack(_appFolderInfo.AppDataFolder);
+                    }
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
+                {
+                    _logger.Warn(exception, "The BookshelfNG merge receipt could not be marked rolled back; the SQLite restore itself completed.");
+                }
+
+                RecordRollbackInJournal(currentConnectionString, databaseType, sqliteResult);
             }
 
             return sqliteResult;
         }
 
-        private void RecordRollbackInJournal(string connectionString, DatabaseType databaseType)
+        private void RecordRollbackInJournal(
+            string connectionString,
+            DatabaseType databaseType,
+            BookshelfDatabaseRollbackResult result)
         {
             try
             {
                 var journal = new BookshelfMigrationJournal(GetJournalDataDirectory(connectionString, databaseType));
                 journal.RecordOutcome("rollback", "restored-source");
+                journal.RecordOutcome("rollback-source-artifact", SanitizeJournalToken(Path.GetFileName(result.BookshelfBackupPath)));
+                journal.RecordOutcome("rollback-displaced-target", SanitizeJournalToken(Path.GetFileName(result.ChaptarrBackupPath)));
+                if (databaseType == DatabaseType.SQLite)
+                {
+                    if (File.Exists(result.BookshelfBackupPath))
+                    {
+                        journal.RecordFingerprint("rollback-source-fingerprint", result.BookshelfBackupPath);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(result.ChaptarrBackupPath) && File.Exists(result.ChaptarrBackupPath))
+                    {
+                        journal.RecordFingerprint("rollback-displaced-target-fingerprint", result.ChaptarrBackupPath);
+                    }
+                }
+
                 journal.RecordState("rolled-back");
             }
             catch
@@ -198,6 +281,18 @@ namespace NzbDrone.Core.Datastore.Migration.Framework
                 // Restoring the validated database has already completed. The
                 // package-level rollback hook records its own completion state.
             }
+        }
+
+        private static string SanitizeJournalToken(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "none";
+            }
+
+            var sanitized = new string(value.Select(character =>
+                char.IsLetterOrDigit(character) || character is '.' or '_' or '-' or ':' ? character : '_').ToArray());
+            return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
         }
 
         private string GetJournalDataDirectory(string connectionString, DatabaseType databaseType)

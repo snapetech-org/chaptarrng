@@ -61,8 +61,14 @@ namespace NzbDrone.Core.Datastore
             }
 
             var directory = Path.GetDirectoryName(nativePath);
+            var mergedLegacySources = BookshelfMergeReceipt.ValidateForNativeDatabase(nativePath);
             foreach (var legacyName in new[] { "readarr.db", "audioarr.db" })
             {
+                if (mergedLegacySources.Contains(legacyName))
+                {
+                    continue;
+                }
+
                 var legacyPath = Path.Combine(directory, legacyName);
                 EnsureLegacyDatabasePathsAreRegular(legacyPath, legacyName);
 

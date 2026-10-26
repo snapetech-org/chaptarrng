@@ -382,24 +382,68 @@ function Write-BookshelfHandoffManifest {
 function Get-BookshelfJournalFingerprint {
   param([string] $Path)
 
-  if (Test-Path -LiteralPath $Path -PathType Leaf) {
-    return 'sha256:' + (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+  try {
+    $rootItem = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+  } catch [System.Management.Automation.ItemNotFoundException] {
+    return 'missing'
+  } catch [System.IO.FileNotFoundException] {
+    return 'missing'
+  } catch [System.IO.DirectoryNotFoundException] {
+    return 'missing'
   }
-  if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return 'missing' }
 
-  $root = (Get-Item -LiteralPath $Path -Force).FullName.TrimEnd([char[]]@('\', '/'))
-  $entries = @(
-    Get-ChildItem -LiteralPath $root -File -Recurse -Force |
-      Sort-Object FullName |
-      ForEach-Object {
-        $relative = $_.FullName.Substring($root.Length).TrimStart([char[]]@('\', '/')).Replace('\', '/')
-        $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        "$relative`0$hash"
-      }
-  )
+  if (($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw "Migration fingerprint '$Path' cannot follow a symbolic link or reparse point."
+  }
+
+  if (-not $rootItem.PSIsContainer) {
+    $before = Get-Item -LiteralPath $rootItem.FullName -Force -ErrorAction Stop
+    if (($before.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "Migration fingerprint '$Path' changed to a symbolic link or reparse point."
+    }
+    $hash = (Get-FileHash -LiteralPath $rootItem.FullName -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+    $after = Get-Item -LiteralPath $rootItem.FullName -Force -ErrorAction Stop
+    if (($after.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        $after.Length -ne $before.Length -or
+        $after.LastWriteTimeUtc -ne $before.LastWriteTimeUtc) {
+      throw "Migration fingerprint '$Path' changed while it was being recorded."
+    }
+    return 'sha256:' + $hash
+  }
+
+  $root = $rootItem.FullName
+  $allItems = @(Get-ChildItem -LiteralPath $root -Force -Recurse -ErrorAction Stop)
+  $relativePaths = [Collections.Generic.List[string]]::new()
+  foreach ($item in $allItems) {
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "Migration fingerprint '$Path' contains a symbolic link or reparse point."
+    }
+    if (-not $item.PSIsContainer) {
+      $relativePaths.Add([IO.Path]::GetRelativePath($root, $item.FullName).Replace('\', '/'))
+    }
+  }
+  $relativePathArray = $relativePaths.ToArray()
+  [Array]::Sort($relativePathArray, [StringComparer]::Ordinal)
+  $entries = [Collections.Generic.List[string]]::new()
+  foreach ($relativePath in $relativePathArray) {
+    $filePath = Join-Path $root $relativePath.Replace('/', [IO.Path]::DirectorySeparatorChar)
+    $before = Get-Item -LiteralPath $filePath -Force -ErrorAction Stop
+    if (($before.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "Migration fingerprint '$Path' contains a symbolic link or reparse point."
+    }
+    $hash = (Get-FileHash -LiteralPath $filePath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+    $after = Get-Item -LiteralPath $filePath -Force -ErrorAction Stop
+    if (($after.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        $after.Length -ne $before.Length -or
+        $after.LastWriteTimeUtc -ne $before.LastWriteTimeUtc) {
+      throw "Migration fingerprint '$filePath' changed while it was being recorded."
+    }
+    $entries.Add([string]::Concat($relativePath, [char]0, $hash))
+  }
+
   $algorithm = [Security.Cryptography.SHA256]::Create()
   try {
-    $bytes = [Text.Encoding]::UTF8.GetBytes(($entries -join "`n"))
+    $bytes = [Text.Encoding]::UTF8.GetBytes(($entries -join [char]10))
     return 'sha256:' + [BitConverter]::ToString($algorithm.ComputeHash($bytes)).Replace('-', '').ToLowerInvariant()
   } finally {
     $algorithm.Dispose()
@@ -420,7 +464,16 @@ function Write-SharedMigrationJournal {
     $statesDirectory = Join-Path $journalDirectory 'states'
     $outcomesDirectory = Join-Path $journalDirectory 'outcomes'
     $fingerprintsDirectory = Join-Path $journalDirectory 'fingerprints'
-    New-Item -ItemType Directory -Force -Path $statesDirectory, $outcomesDirectory, $fingerprintsDirectory | Out-Null
+    foreach ($directoryPath in @($journalDirectory, $statesDirectory, $outcomesDirectory, $fingerprintsDirectory)) {
+      if (-not (Test-Path -LiteralPath $directoryPath -PathType Container)) {
+        New-Item -ItemType Directory -Force -Path $directoryPath | Out-Null
+      }
+      $directoryItem = Get-Item -LiteralPath $directoryPath -Force -ErrorAction Stop
+      if (-not $directoryItem.PSIsContainer -or
+          ($directoryItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "Shared BookshelfNG journal path '$directoryPath' must be a regular directory."
+      }
+    }
     $utf8 = [Text.UTF8Encoding]::new($false)
 
     if (-not [string]::IsNullOrWhiteSpace($State)) {
@@ -452,13 +505,7 @@ function Write-SharedMigrationJournal {
         throw 'Invalid shared BookshelfNG journal fingerprint.'
       }
 
-      if (Test-Path -LiteralPath $FingerprintPath -PathType Leaf) {
-        $fingerprint = Get-BookshelfJournalFingerprint $FingerprintPath
-      } elseif (Test-Path -LiteralPath $FingerprintPath -PathType Container) {
-        $fingerprint = Get-BookshelfJournalFingerprint $FingerprintPath
-      } else {
-        $fingerprint = 'missing'
-      }
+      $fingerprint = Get-BookshelfJournalFingerprint $FingerprintPath
 
       $targetPath = Join-Path $fingerprintsDirectory $FingerprintName
       $temporaryPath = "$targetPath.tmp-$([Guid]::NewGuid().ToString('N'))"
@@ -617,12 +664,35 @@ $dataDir = [IO.Path]::GetFullPath($dataDir)
 $hadApp = Test-Path -LiteralPath $appDir
 $postgresSourceForChoice = Test-BookshelfPostgresSource $serviceEnvironment
 $sqliteSourceNames = if ($postgresSourceForChoice) { @() } else { @(Get-BookshelfSqliteDatabaseNames $dataDir) }
+$preMergedNativeDatabase = $false
 if ($sqliteSourceNames.Count -gt 1 -and -not $postgresSourceForChoice) {
-  throw 'Both readarr.db and audioarr.db contain BookshelfNG data. Resolve which database is authoritative before updating; neither file was changed.'
+  $nativeDatabase = Join-Path $dataDir 'chaptarr.db'
+  $mergeReceipt = Join-Path $dataDir 'bookshelfng-merge.receipt'
+  $nativeIsRegular = (Test-Path -LiteralPath $nativeDatabase -PathType Leaf) -and
+    ((Get-Item -LiteralPath $nativeDatabase -Force).Length -gt 0) -and
+    (((Get-Item -LiteralPath $nativeDatabase -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0)
+  $receiptIsRegular = (Test-Path -LiteralPath $mergeReceipt -PathType Leaf) -and
+    (((Get-Item -LiteralPath $mergeReceipt -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0)
+  $receiptIsUsable = $false
+  if ($receiptIsRegular) {
+    $receiptLines = @(Get-Content -LiteralPath $mergeReceipt -TotalCount 2)
+    $receiptIsUsable = $receiptLines.Count -ge 2 -and
+      $receiptLines[0] -eq 'bookshelfng-merge-v1' -and
+      $receiptLines[1] -in @('state=prepared', 'state=complete')
+  }
+  if ($nativeIsRegular -and $receiptIsUsable) {
+    # The installed ChaptarrNG startup/health utility verifies both source and
+    # target fingerprints and promotes a matching prepared receipt. Do not run
+    # the legacy single-database choice against an explicit merge.
+    $preMergedNativeDatabase = $true
+    $sqliteSourceNames = @()
+  } else {
+    throw 'Both readarr.db and audioarr.db contain BookshelfNG data. Run the explicit ChaptarrNG multi-database migration first; neither file was changed.'
+  }
 }
 $sqliteSourceName = if ($sqliteSourceNames.Count -gt 0) { $sqliteSourceNames[0] } else { $null }
-$sqliteSourceExisted = $sqliteSourceNames.Count -gt 0
-$alreadyMigratedForChoice = $false
+$sqliteSourceExisted = $sqliteSourceNames.Count -gt 0 -or $preMergedNativeDatabase
+$alreadyMigratedForChoice = $preMergedNativeDatabase
 $choiceConsolePath = if ($oldApplication) { $oldApplication.Trim().Trim('"') } else { '' }
 if ($hadService -and (Test-Path -LiteralPath $choiceConsolePath) -and
     [IO.Path]::GetFileName($choiceConsolePath) -match '(?i)^Chaptarr(?:\.Console)?\.exe$') {
@@ -631,6 +701,9 @@ if ($hadService -and (Test-Path -LiteralPath $choiceConsolePath) -and
     "-data=$dataDir"
   ) $effectiveEnvironment
   $alreadyMigratedForChoice = $migrationStateExit -eq 0
+  if ($preMergedNativeDatabase -and -not $alreadyMigratedForChoice) {
+    throw 'The multi-database merge receipt failed ChaptarrNG validation. Preserve all source and target database files before updating.'
+  }
 }
 $hasMigrationDataForChoice = $false
 if (-not $alreadyMigratedForChoice) {

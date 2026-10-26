@@ -141,11 +141,20 @@ namespace NzbDrone.Host
                             database.ConnectionString,
                             new MigrationContext(MigrationType.Main),
                             database.DatabaseType,
-                            previewOnly);
+                            previewOnly,
+                            _startupContext.MergeBookshelfDatabases);
 
                         Console.WriteLine(previewOnly
                             ? "BookshelfNG migration preview passed. The source database was not changed."
                             : $"BookshelfNG migration completed. Backup retained at: {result.BackupPath}");
+                        if (_startupContext.MergeBookshelfDatabases && previewOnly)
+                        {
+                            Console.WriteLine("Both original SQLite databases were read-only; the staged merged database was discarded after preview.");
+                        }
+                        else if (_startupContext.MergeBookshelfDatabases)
+                        {
+                            Console.WriteLine("Both original SQLite databases were retained. The merged ChaptarrNG database is at chaptarr.db.");
+                        }
                         Console.WriteLine("Source rows by table: source | preserved | transformed | rebuilt | reset");
                         foreach (var table in result.ImportReport.Tables.OrderBy(item => item.Key, StringComparer.Ordinal))
                         {
@@ -170,6 +179,8 @@ namespace NzbDrone.Host
                         {
                             throw new InvalidDataException("BookshelfNG handoff health check did not find a readable ChaptarrNG database.");
                         }
+
+                        DatabaseLineageGuard.Validate(database.ConnectionString, database.DatabaseType);
 
                         if (!_configService.Value.BookshelfNGDatabaseMigrated)
                         {

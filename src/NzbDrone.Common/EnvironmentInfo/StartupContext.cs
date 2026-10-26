@@ -13,6 +13,7 @@ namespace NzbDrone.Common.EnvironmentInfo
         bool RegisterUrl { get; }
         bool MigrateBookshelf { get; }
         bool PreviewBookshelfMigration { get; }
+        bool MergeBookshelfDatabases => false;
         bool CheckBookshelfMigration { get; }
         bool RestoreBookshelf { get; }
         bool PreviewBookshelfRestore { get; }
@@ -40,6 +41,7 @@ namespace NzbDrone.Common.EnvironmentInfo
         public const string EXIT_IMMEDIATELY = "exitimmediately";
         public const string MIGRATE_BOOKSHELF = "migrate-bookshelf";
         public const string PREVIEW_BOOKSHELF_MIGRATION = "preview-bookshelf-migration";
+        public const string MERGE_BOOKSHELF_DATABASES = "merge-bookshelf-databases";
         public const string CHECK_BOOKSHELF_MIGRATION = "check-bookshelf-migration";
         public const string RESTORE_BOOKSHELF = "restore-bookshelf";
         public const string PREVIEW_BOOKSHELF_RESTORE = "preview-bookshelf-restore";
@@ -81,6 +83,7 @@ namespace NzbDrone.Common.EnvironmentInfo
         public bool RegisterUrl => Flags.Contains(REGISTER_URL);
         public bool MigrateBookshelf => Flags.Contains(MIGRATE_BOOKSHELF);
         public bool PreviewBookshelfMigration => Flags.Contains(PREVIEW_BOOKSHELF_MIGRATION);
+        public bool MergeBookshelfDatabases => Flags.Contains(MERGE_BOOKSHELF_DATABASES);
         public bool CheckBookshelfMigration => Flags.Contains(CHECK_BOOKSHELF_MIGRATION);
         public bool RestoreBookshelf => Flags.Contains(RESTORE_BOOKSHELF);
         public bool PreviewBookshelfRestore => Flags.Contains(PREVIEW_BOOKSHELF_RESTORE);

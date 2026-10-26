@@ -85,6 +85,8 @@ if ! runuser --preserve-environment --user bookshelfng -- \
 fi
 
 if find "$postgres_backup_dir" -type f -name 'postgres-*.dump' -print -quit | grep -q .; then
+  "$journal" fingerprint source-postgres-backup "$postgres_backup_dir"
+  "$journal" outcome external-postgres-backup retained
   printf '%s\n' "$postgres_backup_dir" > "$handoff_dir/postgres-backup-dir"
   chmod 0600 "$handoff_dir/postgres-backup-dir"
   touch "$handoff_dir/postgres-backup-ready"

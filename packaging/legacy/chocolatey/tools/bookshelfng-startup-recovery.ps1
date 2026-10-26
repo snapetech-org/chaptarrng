@@ -12,14 +12,102 @@ function Write-Manifest {
   Move-Item -LiteralPath $temporaryPath -Destination $ManifestPath -Force
 }
 
+function Get-BookshelfJournalFingerprint {
+  param([string] $Path)
+
+  try {
+    $rootItem = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+  } catch [System.Management.Automation.ItemNotFoundException] {
+    return 'missing'
+  } catch [System.IO.FileNotFoundException] {
+    return 'missing'
+  } catch [System.IO.DirectoryNotFoundException] {
+    return 'missing'
+  }
+
+  if (($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw "Migration fingerprint '$Path' cannot follow a symbolic link or reparse point."
+  }
+
+  if (-not $rootItem.PSIsContainer) {
+    $before = Get-Item -LiteralPath $rootItem.FullName -Force -ErrorAction Stop
+    if (($before.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "Migration fingerprint '$Path' changed to a symbolic link or reparse point."
+    }
+    $hash = (Get-FileHash -LiteralPath $rootItem.FullName -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+    $after = Get-Item -LiteralPath $rootItem.FullName -Force -ErrorAction Stop
+    if (($after.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        $after.Length -ne $before.Length -or
+        $after.LastWriteTimeUtc -ne $before.LastWriteTimeUtc) {
+      throw "Migration fingerprint '$Path' changed while it was being recorded."
+    }
+    return 'sha256:' + $hash
+  }
+
+  $root = $rootItem.FullName
+  $allItems = @(Get-ChildItem -LiteralPath $root -Force -Recurse -ErrorAction Stop)
+  $relativePaths = [Collections.Generic.List[string]]::new()
+  foreach ($item in $allItems) {
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "Migration fingerprint '$Path' contains a symbolic link or reparse point."
+    }
+    if (-not $item.PSIsContainer) {
+      $relativePaths.Add([IO.Path]::GetRelativePath($root, $item.FullName).Replace('\', '/'))
+    }
+  }
+  $relativePathArray = $relativePaths.ToArray()
+  [Array]::Sort($relativePathArray, [StringComparer]::Ordinal)
+  $entries = [Collections.Generic.List[string]]::new()
+  foreach ($relativePath in $relativePathArray) {
+    $filePath = Join-Path $root $relativePath.Replace('/', [IO.Path]::DirectorySeparatorChar)
+    $before = Get-Item -LiteralPath $filePath -Force -ErrorAction Stop
+    if (($before.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "Migration fingerprint '$Path' contains a symbolic link or reparse point."
+    }
+    $hash = (Get-FileHash -LiteralPath $filePath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+    $after = Get-Item -LiteralPath $filePath -Force -ErrorAction Stop
+    if (($after.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        $after.Length -ne $before.Length -or
+        $after.LastWriteTimeUtc -ne $before.LastWriteTimeUtc) {
+      throw "Migration fingerprint '$filePath' changed while it was being recorded."
+    }
+    $entries.Add([string]::Concat($relativePath, [char]0, $hash))
+  }
+
+  $algorithm = [Security.Cryptography.SHA256]::Create()
+  try {
+    $bytes = [Text.Encoding]::UTF8.GetBytes(($entries -join [char]10))
+    return 'sha256:' + [BitConverter]::ToString($algorithm.ComputeHash($bytes)).Replace('-', '').ToLowerInvariant()
+  } finally {
+    $algorithm.Dispose()
+  }
+}
+
 function Write-SharedMigrationJournal {
-  param([string] $DataDirectory, [string] $State, [string] $OutcomeName, [string] $OutcomeValue)
+  param(
+    [string] $DataDirectory,
+    [string] $State,
+    [string] $OutcomeName,
+    [string] $OutcomeValue,
+    [string] $FingerprintName,
+    [string] $FingerprintPath
+  )
 
   try {
     $journalDirectory = Join-Path $DataDirectory '.chaptarrng-bookshelfng-journal'
     $statesDirectory = Join-Path $journalDirectory 'states'
     $outcomesDirectory = Join-Path $journalDirectory 'outcomes'
-    New-Item -ItemType Directory -Force -Path $statesDirectory, $outcomesDirectory | Out-Null
+    $fingerprintsDirectory = Join-Path $journalDirectory 'fingerprints'
+    foreach ($directoryPath in @($journalDirectory, $statesDirectory, $outcomesDirectory, $fingerprintsDirectory)) {
+      if (-not (Test-Path -LiteralPath $directoryPath -PathType Container)) {
+        New-Item -ItemType Directory -Force -Path $directoryPath | Out-Null
+      }
+      $directoryItem = Get-Item -LiteralPath $directoryPath -Force -ErrorAction Stop
+      if (-not $directoryItem.PSIsContainer -or
+          ($directoryItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "Shared BookshelfNG journal path '$directoryPath' must be a regular directory."
+      }
+    }
     $utf8 = [Text.UTF8Encoding]::new($false)
 
     if (-not [string]::IsNullOrWhiteSpace($State)) {
@@ -47,6 +135,17 @@ function Write-SharedMigrationJournal {
       $targetPath = Join-Path $outcomesDirectory $OutcomeName
       $temporaryPath = "$targetPath.tmp-$([Guid]::NewGuid().ToString('N'))"
       [IO.File]::WriteAllText($temporaryPath, "$OutcomeValue`n", $utf8)
+      Move-Item -LiteralPath $temporaryPath -Destination $targetPath -Force
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($FingerprintName)) {
+      if ($FingerprintName -notmatch '^[A-Za-z0-9_.-]+$' -or [string]::IsNullOrWhiteSpace($FingerprintPath)) {
+        throw 'Invalid shared BookshelfNG journal fingerprint.'
+      }
+      $fingerprint = Get-BookshelfJournalFingerprint $FingerprintPath
+      $targetPath = Join-Path $fingerprintsDirectory $FingerprintName
+      $temporaryPath = "$targetPath.tmp-$([Guid]::NewGuid().ToString('N'))"
+      [IO.File]::WriteAllText($temporaryPath, [string]::Concat($fingerprint, [char]10), $utf8)
       Move-Item -LiteralPath $temporaryPath -Destination $targetPath -Force
     }
   } catch {
@@ -167,10 +266,14 @@ function Restore-PreviousBookshelf {
           "-data=$dataDir"
         ) $environmentEntries
         if ($targetBackupExit -ne 0) { throw "The current ChaptarrNG PostgreSQL log/cache data could not be preserved (exit $targetBackupExit)." }
-        if (-not (Get-ChildItem -LiteralPath $targetPostgresBackupDirectory -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+        $targetPostgresBackupFiles = @(Get-ChildItem -LiteralPath $targetPostgresBackupDirectory -File -ErrorAction Stop)
+        if ($targetPostgresBackupFiles.Count -eq 0) {
           Remove-Item -LiteralPath $targetPostgresBackupDirectory -Force
           $Manifest.TargetPostgresBackupDirectory = $null
           Write-Manifest $Manifest
+        } else {
+          Write-SharedMigrationJournal -DataDirectory $dataDir -FingerprintName 'rollback-target-postgres-log-cache' -FingerprintPath $targetPostgresBackupDirectory
+          Write-SharedMigrationJournal -DataDirectory $dataDir -OutcomeName 'rollback-target-postgres-log-cache' -OutcomeValue 'retained'
         }
 
         $restoreExit = Invoke-BookshelfUtility $console @(

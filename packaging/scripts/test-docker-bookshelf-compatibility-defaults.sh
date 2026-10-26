@@ -189,6 +189,134 @@ check_deferred_container_stops_promptly() {
   test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/failed"
 }
 
+check_multiple_container_sources_require_explicit_merge() {
+  local data_dir="$test_root/multiple-source-data"
+  local stub_bin="$test_root/multiple-source-bin"
+  local app_started="$test_root/multiple-source-app-started"
+  local app="$test_root/multiple-source-app"
+  local status
+
+  mkdir -p "$data_dir" "$stub_bin"
+  printf 'readarr fixture\n' > "$data_dir/readarr.db"
+  printf 'audioarr fixture\n' > "$data_dir/audioarr.db"
+  printf '#!/bin/sh\nexit 1\n' > "$stub_bin/dotnet"
+  printf '#!/bin/sh\ntouch "$APP_STARTED"\n' > "$app"
+  chmod 0755 "$stub_bin/dotnet" "$app"
+  export PATH="$stub_bin:$PATH"
+  export APP_STARTED="$app_started"
+  export CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+  export CHAPTARR_COMPAT_DATA_DIR="$data_dir"
+  export CHAPTARR_CONFIG_FILE="$data_dir/config.xml"
+  export BOOKSHELFNG_MIGRATION_MODE=automatic
+
+  if timeout --signal=TERM --kill-after=2 2 sh "$repo_root/docker-bookshelf-compat-supervisor.sh" "$app" \
+    > "$test_root/multiple-source.log" 2>&1; then
+    status=0
+  else
+    status=$?
+  fi
+  case "$status" in 124|143) ;; *) echo "unexpected dual-source supervisor exit status: $status" >&2; return 1 ;; esac
+  grep -Fq 'Automatic startup will not select one and discard the other.' "$test_root/multiple-source.log"
+  grep -Fq -- '-preview-bookshelf-migration -merge-bookshelf-databases' "$test_root/multiple-source.log"
+  grep -Fq -- '-migrate-bookshelf -merge-bookshelf-databases -confirm-bookshelf-service-stopped' "$test_root/multiple-source.log"
+  test ! -e "$app_started"
+  test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/pending"
+  test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/failed"
+}
+
+check_orphaned_container_wal_waits_for_recovery() {
+  local data_dir="$test_root/orphaned-wal-data"
+  local stub_bin="$test_root/orphaned-wal-bin"
+  local app_started="$test_root/orphaned-wal-app-started"
+  local app="$test_root/orphaned-wal-app"
+  local status
+
+  mkdir -p "$data_dir" "$stub_bin"
+  : > "$data_dir/readarr.db"
+  printf 'uncheckpointed fixture\n' > "$data_dir/readarr.db-wal"
+  printf '#!/bin/sh\nexit 1\n' > "$stub_bin/dotnet"
+  printf '#!/bin/sh\ntouch "$APP_STARTED"\n' > "$app"
+  chmod 0755 "$stub_bin/dotnet" "$app"
+  export PATH="$stub_bin:$PATH"
+  export APP_STARTED="$app_started"
+  export CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+  export CHAPTARR_COMPAT_DATA_DIR="$data_dir"
+  export CHAPTARR_CONFIG_FILE="$data_dir/config.xml"
+  export BOOKSHELFNG_MIGRATION_MODE=automatic
+
+  if timeout --signal=TERM --kill-after=2 2 sh "$repo_root/docker-bookshelf-compat-supervisor.sh" "$app" \
+    > "$test_root/orphaned-wal.log" 2>&1; then
+    status=0
+  else
+    status=$?
+  fi
+  case "$status" in 124|143) ;; *) echo "unexpected orphaned-WAL supervisor exit status: $status" >&2; return 1 ;; esac
+  grep -Fq 'recovery data exists without a non-empty main database' "$test_root/orphaned-wal.log"
+  test ! -e "$app_started"
+  test ! -e "$data_dir/.chaptarrng-bookshelf-handoff/pending"
+}
+
+check_shared_volume_lock_waits_with_liveness() {
+  local data_dir="$test_root/shared-lock-data"
+  local handoff_root="$data_dir/.chaptarrng-bookshelf-handoff"
+  local lock_path="$handoff_root/supervisor.lock"
+  local stub_bin="$test_root/shared-lock-bin"
+  local app_started="$test_root/shared-lock-app-started"
+  local app="$test_root/shared-lock-app"
+  local supervisor_pid lock_fd
+
+  if [[ -e /tmp/chaptarr-bookshelf-lock-waiting || -L /tmp/chaptarr-bookshelf-lock-waiting ]]; then
+    echo 'The container lock-wait marker already exists; refusing to reuse it.' >&2
+    return 1
+  fi
+
+  mkdir -p "$handoff_root" "$stub_bin"
+  printf 'native fixture\n' > "$data_dir/chaptarr.db"
+  printf '#!/bin/sh\nexit 0\n' > "$stub_bin/dotnet"
+  printf '#!/bin/sh\ntouch "$APP_STARTED"\n' > "$app"
+  chmod 0755 "$stub_bin/dotnet" "$app"
+  exec {lock_fd}> "$lock_path"
+  flock -n "$lock_fd"
+  export PATH="$stub_bin:$PATH"
+  export APP_STARTED="$app_started"
+  export CHAPTARR_BOOKSHELF_COMPATIBILITY=true
+  export CHAPTARR_COMPAT_DATA_DIR="$data_dir"
+  export CHAPTARR_CONFIG_FILE="$data_dir/config.xml"
+  export CHAPTARR_EXPECTED_PORT=1
+
+  sh "$repo_root/docker-bookshelf-compat-supervisor.sh" "$app" > "$test_root/shared-lock.log" 2>&1 &
+  supervisor_pid=$!
+  for _ in {1..50}; do
+    [[ -e /tmp/chaptarr-bookshelf-lock-waiting ]] && break
+    sleep 0.1
+  done
+  if [[ ! -e /tmp/chaptarr-bookshelf-lock-waiting ]]; then
+    kill "$supervisor_pid" 2>/dev/null || true
+    wait "$supervisor_pid" 2>/dev/null || true
+    flock -u "$lock_fd"
+    exec {lock_fd}>&-
+    echo 'The supervisor did not publish its lock-wait marker.' >&2
+    return 1
+  fi
+
+  CHAPTARR_BOOKSHELF_COMPATIBILITY=true sh "$repo_root/docker-bookshelf-liveness.sh"
+  if CHAPTARR_BOOKSHELF_COMPATIBILITY=true CHAPTARR_COMPAT_DATA_DIR="$data_dir" \
+    CHAPTARR_EXPECTED_PORT=1 sh "$repo_root/docker-healthcheck.sh" >/dev/null 2>&1; then
+    kill "$supervisor_pid" 2>/dev/null || true
+    wait "$supervisor_pid" 2>/dev/null || true
+    flock -u "$lock_fd"
+    exec {lock_fd}>&-
+    echo 'A lock-waiting replica incorrectly reported ready.' >&2
+    return 1
+  fi
+
+  flock -u "$lock_fd"
+  exec {lock_fd}>&-
+  wait "$supervisor_pid"
+  test -e "$app_started"
+  test ! -e /tmp/chaptarr-bookshelf-lock-waiting
+}
+
 check_container_handoff_ownership_and_signal_contract() {
   grep -Fq 'find -P "$path" -xdev ! -type l -exec chown "$uid:$gid" {} +' "$repo_root/docker-entrypoint.sh"
   grep -Fq '"$DATA_DIR"/.chaptarrng-bookshelf-handoff' "$repo_root/docker-entrypoint.sh"
@@ -353,6 +481,9 @@ run_case 'ask mode without a terminal records deferral and does not start Chapta
 ' _ "$test_root" "$repo_root/docker-bookshelf-compat-supervisor.sh"
 
 run_case 'deferred container supervisor handles SIGTERM promptly for Kubernetes restarts' check_deferred_container_stops_promptly
+run_case 'container refuses to auto-select between populated legacy databases' check_multiple_container_sources_require_explicit_merge
+run_case 'container preserves orphaned SQLite WAL data for recovery' check_orphaned_container_wal_waits_for_recovery
+run_case 'shared-volume container waits safely for its lock while liveness stays healthy' check_shared_volume_lock_waits_with_liveness
 run_case 'handoff metadata ownership and process-group signals support the runtime shell' check_container_handoff_ownership_and_signal_contract
 
 run_case 'AppImage and Flatpak default-No choice defers; Yes previews before applying' check_desktop_ask_choices

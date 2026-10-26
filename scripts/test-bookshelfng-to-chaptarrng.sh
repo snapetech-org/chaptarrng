@@ -95,11 +95,11 @@ dual_backup_dir="$workdir/two database backup"
 mkdir -p "$dual_data_dir" "$dual_backup_dir"
 printf 'readarr database\n' > "$dual_data_dir/readarr.db"
 printf 'audio database\n' > "$dual_data_dir/audioarr.db"
-if "$tool" snapshot --data-dir "$dual_data_dir" --backup-dir "$dual_backup_dir" 2>/dev/null; then
-  echo 'two populated legacy databases should have been rejected' >&2
-  exit 1
-fi
-[[ -z "$(find "$dual_backup_dir" -maxdepth 1 -type f -print -quit)" ]]
+dual_snapshot_output="$("$tool" snapshot --data-dir "$dual_data_dir" --backup-dir "$dual_backup_dir")"
+dual_archive="$(sed -n 's/^Appdata archive: //p' <<< "$dual_snapshot_output")"
+[[ -n "$dual_archive" ]]
+tar -tzf "$dual_archive" | grep -Fxq 'two populated databases/readarr.db'
+tar -tzf "$dual_archive" | grep -Fxq 'two populated databases/audioarr.db'
 
 symlink_data_dir="$workdir/symlink candidate"
 symlink_backup_dir="$workdir/symlink backup"
