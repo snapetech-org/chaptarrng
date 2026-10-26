@@ -20,7 +20,6 @@ case "$rid" in
   *) echo "Unsupported release runtime identifier: $rid" >&2; exit 2 ;;
 esac
 
-restore_sources=()
 if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
   runtime_packs="${CUSTOM_RUNTIME_PACKS_DIR:?CUSTOM_RUNTIME_PACKS_DIR is required for $rid}"
   [[ -d "$runtime_packs" ]] || {
@@ -74,24 +73,33 @@ if [[ "$rid" == freebsd-x64 ]]; then
   restore_sources+=("-p:EnableWindowsTargeting=false")
 fi
 
-dotnet publish src/NzbDrone.Console/Chaptarr.Console.csproj \
+publish_standalone_project() {
+  # Bash 3.2 (the system Bash on supported macOS runners) treats expansion of
+  # an empty array as an unset variable under nounset. Only expand this array
+  # for the RIDs that populate it.
+  if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
+    dotnet publish "$@" "${restore_sources[@]}"
+  else
+    dotnet publish "$@"
+  fi
+}
+
+publish_standalone_project src/NzbDrone.Console/Chaptarr.Console.csproj \
   --configuration Release \
   --framework net10.0 \
   --runtime "$rid" \
   --self-contained true \
   -p:UseAppHost=true \
   --verbosity minimal \
-  "${restore_sources[@]}" \
   --output "$bundle"
 
-dotnet publish src/NzbDrone.Update/Chaptarr.Update.csproj \
+publish_standalone_project src/NzbDrone.Update/Chaptarr.Update.csproj \
   --configuration Release \
   --framework net10.0 \
   --runtime "$rid" \
   --self-contained true \
   -p:UseAppHost=true \
   --verbosity minimal \
-  "${restore_sources[@]}" \
   --output "$bundle/Chaptarr.Update"
 
 mkdir -p "$bundle/UI"
@@ -127,8 +135,20 @@ if [[ "$rid" == win-* ]]; then
   (cd "$bundle" && zip -q -X -r "$archive" .)
 else
   archive="$output/${asset}.tar.gz"
-  tar --sort=name --mtime='UTC 2020-01-01' --owner=0 --group=0 --numeric-owner \
-    --format=gnu -czf "$archive" -C "$work" ChaptarrNG
+  if [[ "$(uname -s)" == Darwin ]]; then
+    # macOS ships BSD tar, which does not support the GNU reproducibility flags.
+    tar -czf "$archive" -C "$work" ChaptarrNG
+  else
+    tar --sort=name --mtime='UTC 2020-01-01' --owner=0 --group=0 --numeric-owner \
+      --format=gnu -czf "$archive" -C "$work" ChaptarrNG
+  fi
 fi
-(cd "$output" && sha256sum "$(basename "$archive")" > "$(basename "$archive").sha256")
+if command -v sha256sum >/dev/null 2>&1; then
+  (cd "$output" && sha256sum "$(basename "$archive")" > "$(basename "$archive").sha256")
+elif command -v shasum >/dev/null 2>&1; then
+  (cd "$output" && shasum -a 256 "$(basename "$archive")" > "$(basename "$archive").sha256")
+else
+  echo "No SHA-256 checksum utility is installed." >&2
+  exit 2
+fi
 echo "Built ${archive}"

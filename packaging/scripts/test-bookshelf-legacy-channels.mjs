@@ -68,6 +68,12 @@ test('macOS and FreeBSD standalone archives include the optional, recoverable Bo
   const supervisor = read('packaging/legacy/desktop/bookshelfng-supervisor.sh');
   const migrationGuide = read('docs/MIGRATE_FROM_BOOKSHELFNG.md');
 
+  assert.match(builder, /publish_standalone_project\(\)[\s\S]*?if \[\[ "\$rid" == linux-x86 \|\| "\$rid" == freebsd-x64 \]\][\s\S]*?dotnet publish "\$@" "\$\{restore_sources\[@\]\}"/,
+    'macOS Bash can publish standalone RIDs without expanding an empty array under nounset');
+  assert.match(builder, /if \[\[ "\$\(uname -s\)" == Darwin \]\][\s\S]*?tar -czf/,
+    'macOS uses its supported BSD tar options');
+  assert.match(builder, /elif command -v shasum[\s\S]*?shasum -a 256/,
+    'macOS creates the candidate checksum with its system utility');
   assert.ok(builder.includes('if [[ "$rid" == osx-* || "$rid" == freebsd-x64 ]]'));
   assert.match(builder, /bookshelfng-standalone-launch\.sh/);
   assert.match(builder, /bookshelfng-supervisor\.sh/);
@@ -107,6 +113,12 @@ test('macOS installed handoff acceptance is manually dispatched and publication-
   assert.match(workflow, /50dfa8f20611afd3ff23615a964c33d39f0c026297240a334ad12c61c11d0298/);
   assert.match(workflow, /test-bookshelf-standalone-handoff\.py/);
   assert.doesNotMatch(workflow, /upload-artifact|gh release (create|upload)|docker push/);
+});
+
+test('Helm handoff workflow installs a pinned Ruby runtime for its resource contract test', () => {
+  const workflow = read('.github/workflows/helm-handoff.yml');
+
+  assert.match(workflow, /ruby\/setup-ruby@[a-f0-9]{40}\s+# v\d+\.\d+\.\d+[\s\S]*?ruby-version: "3\.4"/);
 });
 
 test('Flatpak keeps the installed app ID and BookshelfNG sandbox data directory', () => {
