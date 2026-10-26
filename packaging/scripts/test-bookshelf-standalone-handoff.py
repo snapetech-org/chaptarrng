@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
+import http.client
 import json
 import os
 import pty
@@ -18,14 +19,11 @@ import tarfile
 import tempfile
 import termios
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path, PurePosixPath
 
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parent
-PING_URL = "http://127.0.0.1:18787/ping"
 RUNNING: list[subprocess.Popen[bytes]] = []
 
 
@@ -49,9 +47,24 @@ def extract_archive(archive: Path, destination: Path) -> Path:
         members = bundle.getmembers()
         for member in members:
             path = PurePosixPath(member.name)
-            require(not path.is_absolute() and ".." not in path.parts,
+            require(not path.is_absolute() and ".." not in path.parts and "\0" not in member.name,
                     f"Archive contains an unsafe path: {member.name}")
-        bundle.extractall(destination)
+            if not path.parts:
+                require(member.isdir(), f"Archive contains an invalid root entry: {member.name}")
+                continue
+
+            target = destination.joinpath(*path.parts)
+            if member.isdir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+
+            require(member.isfile(), f"Archive contains an unsupported entry type: {member.name}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            source = bundle.extractfile(member)
+            require(source is not None, f"Archive file has no content: {member.name}")
+            with source, target.open("xb") as output:
+                shutil.copyfileobj(source, output)
+            target.chmod(member.mode & 0o777)
     return destination
 
 
@@ -80,12 +93,16 @@ def create_source_data(data_dir: Path) -> None:
 
 
 def http_ready() -> bool:
+    connection = http.client.HTTPConnection("127.0.0.1", 18787, timeout=1)
     try:
-        with urllib.request.urlopen(PING_URL, timeout=1) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-            return response.status == 200 and payload.get("status") == "OK"
-    except (OSError, ValueError, urllib.error.URLError):
+        connection.request("GET", "/ping")
+        response = connection.getresponse()
+        payload = json.loads(response.read().decode("utf-8"))
+        return response.status == 200 and payload.get("status") == "OK"
+    except (OSError, ValueError, http.client.HTTPException):
         return False
+    finally:
+        connection.close()
 
 
 def wait_http(process: subprocess.Popen[bytes], timeout: int, label: str) -> None:
@@ -455,7 +472,7 @@ def main() -> int:
         launcher = candidate_root / "ChaptarrNG/scripts/bookshelfng-standalone-launch.sh"
         require(launcher.is_file() and os.access(launcher, os.X_OK),
                 "Candidate archive does not contain an executable standalone handoff launcher")
-        require(http_ready() is False, f"The acceptance port is already in use: {PING_URL}")
+        require(http_ready() is False, "The acceptance port 127.0.0.1:18787 is already in use")
         base_env = os.environ.copy()
         base_env.pop("BOOKSHELFNG_MIGRATION_MODE", None)
 
