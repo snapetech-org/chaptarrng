@@ -198,7 +198,7 @@ test('macOS installed handoff acceptance is manually dispatched and publication-
 test('Helm handoff workflow runs its pinned Ruby contract on private JIT without requiring Docker', () => {
   const workflow = read('.github/workflows/helm-handoff.yml');
 
-  assert.match(workflow, /ruby\/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b/);
+  assert.match(workflow, /Prepare writable Ruby tool cache[\s\S]*?sudo install -d .*\/opt\/hostedtoolcache[\s\S]*?test -w \/opt\/hostedtoolcache[\s\S]*?ruby\/setup-ruby@824c0e29fdfc7d689c191c27acc969d2d04b7dd8/);
   assert.match(workflow, /ruby-version: "3\.4"/);
   assert.match(workflow, /BOOKSHELFNG_REFERENCE_CHART: \$\{\{ github\.workspace \}\}\/bookshelfng-reference\/charts\/bookshelfng/);
   assert.match(workflow, /run: ruby scripts\/test_bookshelfng_helm_handoff\.rb/);
