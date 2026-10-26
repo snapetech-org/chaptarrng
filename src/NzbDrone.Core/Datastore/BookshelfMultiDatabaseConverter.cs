@@ -411,8 +411,9 @@ namespace NzbDrone.Core.Datastore
         {
             using var command = primary.CreateCommand();
             command.Transaction = transaction;
+            // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table and column identifiers come from the validated source schema and Quote escapes them; row values are bound parameters.
             command.CommandText = $"INSERT INTO {Quote(table)} (" + string.Join(",", columns.Select(column => Quote(column.Name))) + ") VALUES (" +
-                string.Join(",", columns.Select((_, index) => "@value" + index)) + ");"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table and column identifiers come from the validated source schema and Quote escapes them; row values are bound parameters.
+                string.Join(",", columns.Select((_, index) => "@value" + index)) + ");";
             for (var index = 0; index < values.Length; index++)
             {
                 command.Parameters.AddWithValue("@value" + index, values[index] ?? DBNull.Value);
