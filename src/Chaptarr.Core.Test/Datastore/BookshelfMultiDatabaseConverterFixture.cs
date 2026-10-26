@@ -194,7 +194,7 @@ namespace Chaptarr.Core.Test.Datastore
             using var connection = new SqliteConnection(ConnectionString(path));
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT COUNT(*) FROM \"{table}\";";
+            command.CommandText = $"SELECT COUNT(*) FROM \"{table}\";"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- test passes fixed fixture table names only.
             return System.Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
         }
 

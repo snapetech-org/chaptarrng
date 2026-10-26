@@ -245,7 +245,7 @@ namespace NzbDrone.Core.Datastore
                 long inserted = 0;
                 long identical = 0;
                 using var rowsCommand = secondary.CreateCommand();
-                rowsCommand.CommandText = $"SELECT * FROM {Quote(table)};";
+                rowsCommand.CommandText = $"SELECT * FROM {Quote(table)};"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table comes from the BookshelfNG schema allowlist and Quote escapes the identifier.
                 using var rows = rowsCommand.ExecuteReader();
                 while (rows.Read())
                 {
@@ -384,7 +384,7 @@ namespace NzbDrone.Core.Datastore
             var indexes = primaryKeys.Select(key => columns.ToList().FindIndex(column => column.Name == key.Name)).ToArray();
             using var command = primary.CreateCommand();
             command.Transaction = transaction;
-            command.CommandText = $"SELECT * FROM {Quote(table)} WHERE " + string.Join(" AND ", primaryKeys.Select((key, index) => $"{Quote(key.Name)} IS @key{index}")) + " LIMIT 1;";
+            command.CommandText = $"SELECT * FROM {Quote(table)} WHERE " + string.Join(" AND ", primaryKeys.Select((key, index) => $"{Quote(key.Name)} IS @key{index}")) + " LIMIT 1;"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table and primary-key columns come from the validated source schema and Quote escapes each identifier.
             for (var index = 0; index < indexes.Length; index++)
             {
                 command.Parameters.AddWithValue("@key" + index, values[indexes[index]] ?? DBNull.Value);
@@ -412,7 +412,7 @@ namespace NzbDrone.Core.Datastore
             using var command = primary.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = $"INSERT INTO {Quote(table)} (" + string.Join(",", columns.Select(column => Quote(column.Name))) + ") VALUES (" +
-                string.Join(",", columns.Select((_, index) => "@value" + index)) + ");";
+                string.Join(",", columns.Select((_, index) => "@value" + index)) + ");"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table and column identifiers come from the validated source schema and Quote escapes them; row values are bound parameters.
             for (var index = 0; index < values.Length; index++)
             {
                 command.Parameters.AddWithValue("@value" + index, values[index] ?? DBNull.Value);
@@ -431,7 +431,7 @@ namespace NzbDrone.Core.Datastore
         private static List<SqliteColumn> GetColumns(SqliteConnection connection, string table)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = $"PRAGMA table_info({Quote(table)});";
+            command.CommandText = $"PRAGMA table_info({Quote(table)});"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table comes from the validated BookshelfNG schema allowlist and Quote escapes the identifier.
             using var reader = command.ExecuteReader();
             var columns = new List<SqliteColumn>();
             while (reader.Read())
@@ -458,7 +458,7 @@ namespace NzbDrone.Core.Datastore
         private static long CountRows(SqliteConnection connection, string table)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT COUNT(*) FROM {Quote(table)};";
+            command.CommandText = $"SELECT COUNT(*) FROM {Quote(table)};"; // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- table comes from the validated BookshelfNG schema allowlist and Quote escapes the identifier.
             return System.Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
         }
 
