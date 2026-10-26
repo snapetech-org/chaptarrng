@@ -233,6 +233,8 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(handoff, /after-migration-health/);
   assert.match(handoff, /--verify-bookshelfng-source/);
   assert.match(handoff, /readarr\.db\.chaptarr-failed-/);
+  assert.match(handoff, /failedTargetDatabase\.Name -match/);
+  assert.match(handoff, /\\d\{8\}T\\d\{9\}Z/);
   assert.match(handoff, /--verify-chaptarr-database/);
   assert.match(smoke, /FindNativeChaptarrDatabase/);
   assert.match(smoke, /HasNativeChaptarrLineage/);

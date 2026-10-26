@@ -322,6 +322,7 @@ try {
     throw 'The injected migration failure did not restore the schema-158 BookshelfNG canary.'
   }
   $failedTargetDatabase = Get-ChildItem -LiteralPath $legacyDataDirectory -Filter 'readarr.db.chaptarr-failed-*' -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^readarr\.db\.chaptarr-failed-\d{8}T\d{9}Z$' } |
     Select-Object -First 1
   if (-not $failedTargetDatabase) {
     throw 'The injected migration rollback did not retain the failed ChaptarrNG target database for diagnosis.'
