@@ -1243,7 +1243,11 @@ def install_mode_locked(args: argparse.Namespace, service: str) -> int:
     stage_parent = pathlib.Path(tempfile.mkdtemp(prefix=".chaptarrng-bookshelf-bootstrap-", dir=install_dir.parent))
     os.chmod(stage_parent, 0o755)
     try:
-        staged_app = extract_release_archive(archive_snapshot, stage_parent)
+        staged_app = extract_release_archive(archive_snapshot, stage_parent / "release")
+        os.chown(staged_app, dynamic_user, service_gid)
+        for path in staged_app.rglob("*"):
+            if not path.is_symlink():
+                os.chown(path, dynamic_user, service_gid)
         target_app = pathlib.Path(state["targetApp"])
         shutil.copytree(staged_app, target_app, symlinks=True, copy_function=shutil.copy2)
         os.chown(target_app, dynamic_user, service_gid)
