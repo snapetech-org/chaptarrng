@@ -141,7 +141,7 @@
     "@csstools/postcss-color-function": "5.0.15",
     "postcss-loader": "8.2.1",
     "postcss-mixins": "12.1.2",
-    "postcss-nested": "6.2.0",
+    "postcss-nested": "9.0.0",
     "postcss-simple-vars": "7.0.1",
     "prettier": "3.9.10",
     "require-nocache": "1.0.0",
