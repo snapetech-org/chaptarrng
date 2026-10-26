@@ -1,6 +1,7 @@
 import { i18n } from './i18n'
 import { storeJson } from './fileModels/store.json'
 import { sdk } from './sdk'
+import { uiPort } from './utils'
 
 export const main = sdk.setupMain(async ({ effects }) => {
   /**
@@ -35,7 +36,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
   return sdk.Daemons.of(effects).addDaemon('primary', {
     subcontainer: appSubcontainer,
     exec: {
-      command: ['/init'],
+      command: sdk.useEntrypoint(),
       env: {
         CHAPTARR_BOOKSHELF_COMPATIBILITY: 'true',
         CHAPTARR_DEFAULT_PORT: '8787',
@@ -53,19 +54,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
       gracePeriod: 14_700_000,
       trigger: sdk.trigger.cooldownTrigger(10_000),
       fn: () =>
-        sdk.healthCheck.runHealthScript(
-          [
-            '/usr/bin/env',
-            'CHAPTARR_BOOKSHELF_COMPATIBILITY=true',
-            'CHAPTARR_COMPAT_DATA_DIR=/config',
-            'CHAPTARR_CONFIG_FILE=/config/config.xml',
-            'CHAPTARR_DEFAULT_PORT=8787',
-            'CHAPTARR_EXPECTED_PORT=8787',
-            '/usr/local/bin/chaptarr-healthcheck',
-          ],
-          appSubcontainer,
-          { errorMessage: i18n('The web interface is not ready') },
-        ),
+        sdk.healthCheck.checkPortListening(effects, uiPort, {
+          successMessage: i18n('The web interface is ready'),
+          errorMessage: i18n('The web interface is not ready'),
+        }),
     },
     requires: [],
   })

@@ -9,9 +9,10 @@ and filesystem integration. See the
 [ChaptarrNG v0.9.977 release](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 for the published archives, checksums, and source RPMs.
 
-The current local code pass adds container health/readiness supervision and
-handoff source for more platform candidates. It remains unpublished and has
-not yet received the bulk validation pass.
+The current local candidate has passed the installed and runtime rehearsals
+listed in the [channel acceptance matrix](../docs/maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
+It remains unpublished; platform, architecture, and publisher gaps listed in
+that matrix keep the release gates closed.
 
 The old-identity package recipes remain disabled candidates. Do not install a
 bridge package or point ChaptarrNG at BookshelfNG appdata until migration,
@@ -195,7 +196,10 @@ checks.
 | Docker / GHCR | Standard .977 images are public; mutable BookshelfNG aliases remain unchanged. | Exact-head image passed interactive TTY No/Yes, headless Ask/defer, automatic conversion, `/ping`, migration health, source backup, and injected-failure rollback. | External image/alias delivery remains gated and unpublished; pinned tags still need operator pull/recreate. |
 | Helm / OCI | No BookshelfNG-identity replacement chart is published. | Kind installed upgrade from main-v0.4.21.71 passed ask No/defer, Yes, health, and explicit source restore. | Publish the exact accepted chart/image and exercise the external OCI/GitOps delivery path. |
 | Cloudron | No ChaptarrNG package update is published. | Local exact-head Cloudron-image wrapper passed manual defer and automatic conversion. It has no terminal prompt; an administrator controls the app update and can set `BOOKSHELFNG_MIGRATION_MODE=manual` before updating. | Install/update/backup/restore on an actual Cloudron platform and feed acceptance remain open. |
-| StartOS, Unraid, Co-op Cloud, external catalogs | Candidate source or draft handoffs exist; no accepted replacement feeds are published. | Source/contract checks only; no installed device or service update/rollback acceptance. These platforms do not provide a common y/n prompt; StartOS exposes a setting and the container recipes expose a mode variable. | Signed StartOS package/device, Unraid Community Applications, Swarm update, and external catalog acceptance are still required. |
+| StartOS | No candidate package is published. | StartOS 0.4.0.3 x86_64 VM updated the same `bookshelfng` package ID from test `.4.21:1` to synthetic `.9.979:1`; Manual deferred without changing the schema-158 database; Automatic migrated, kept a source backup and volume canaries, passed SQLite checks, and served `/ping`. | Official signed package, aarch64 runtime, external package repository, and package-manager rollback remain untested. |
+| Unraid | No replacement template is published. | XML/settings and draft PR contracts passed; no Community Applications install, update, or rollback was available. The template update flow has no y/n prompt. | Installed Unraid acceptance and an operator-controlled defer/retry handoff remain open. |
+| Co-op Cloud | No replacement recipe is published. | Recipe generation and source checks passed; no installed Docker Swarm update, backup, or rollback was available. The recipe exposes a manual/automatic setting rather than a y/n prompt. | Installed Swarm acceptance and backup/rollback remain open. |
+| External self-hosting catalogs | No replacements are published. | Local Compose contract only; CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other catalog entries have not been updated or accepted. There is no common y/n contract. | Each catalog needs its own identity, volume, update, defer, and recovery acceptance. |
 | macOS standalone | No BookshelfNG-owned remote update route can redirect these installs. | Shared standalone launcher contract passed. A manually dispatched hosted workflow now builds and tests x64 and arm64 archives against checksum-pinned BookshelfNG .71 predecessors; the run is pending and does not publish assets. | One-time manual bootstrap and installed macOS acceptance remain open until both hosted jobs pass. |
 | FreeBSD standalone | No BookshelfNG-owned remote update route can redirect these installs. | FreeBSD 15.1 installed BookshelfNG .71 to the exact local .978 archive. Terminal No/Yes, health, retained source backup, and forced-failure rollback passed. | One-time manual launcher/service switch remains an operator action; publication is gated. |
 | Windows standalone installer | No BookshelfNG-owned remote update route can redirect this install. | Chocolatey acceptance does not cover the separate Windows migration installer; its candidate was built but not installed and accepted. | Install and accept the standalone installer separately; keep publication gated. |
@@ -355,30 +359,32 @@ source. Debian/PPA, AppImage, Flatpak, Helm, Cloudron, Co-op Cloud, third-party
 catalogs, and pinned/offline installs still need an accepted channel update or
 an explicit retirement decision.
 
-The BookshelfNG StartOS package is parked at
-`docker.io/snapetech/bookshelfng:hardcover-v0.4.21.37`. Its wrapper keeps the
-`bookshelfng` package identity, backs up the `main`, `books`, and `downloads`
-volumes, mounts `/config`, `/books`, and `/downloads`, exposes port `8787`, and
-starts `/init`. Public ChaptarrNG `v0.9.977` uses `/entrypoint.sh`, defaults to
-port `8789`, and does not convert native Hardcover IDs. The current production-
-image candidate adds a compatible `/init` launcher; the Bookshelf compatibility
-target preserves port `8787` and native Hardcover mode. A disposable wrapper
-image derived from the published `.977` digest started through `/init`, passed
-`/ping` on port `8787`, and retained all three mounted paths. The StartOS
-package itself remains unchanged and needs an update to a released compatibility
-image, followed by install, upgrade, backup, and rollback checks on a StartOS
-device. No handoff has been tested or published.
+The BookshelfNG StartOS package keeps package ID `bookshelfng`, volume IDs
+`main`, `books`, and `downloads`, mounts `/config`, `/books`, and `/downloads`,
+and exposes port `8787` with native Hardcover compatibility. The candidate
+inherits its pinned image entrypoint through `sdk.useEntrypoint()` and uses the
+SDK's port-listening readiness check; it does not invoke `/init` as a child
+process or rely on a health script missing from the package rootfs. A StartOS
+0.4.0.3 x86_64 VM accepted a test-only update from a synthetic `.4.21:1`
+predecessor wrapper to `.9.979:1`: Manual kept the schema-158 database
+byte-identical and deferred startup; Automatic migrated to schema 124, kept a
+readable source backup and `/books`/`/downloads` canaries, passed integrity and
+foreign-key checks, and served `/ping`. This used a synthetic package signed
+with a task-local test key and a local x86_64 image. The official signed
+package, aarch64 runtime, external repository, and package-manager rollback
+still require acceptance.
 
-ChaptarrNG now carries source-only AppImage, Flatpak, Cloudron, Co-op Cloud,
-self-hosting catalog, and StartOS candidates. The candidates retain the old
-desktop/app IDs, BookshelfNG data directories, package ID, container name,
-port, and volume names. They are not published or accepted, and each
-installation channel still needs a built candidate, exact digest or artifact,
-upgrade testing, backup, and rollback. The StartOS candidate uses SDK 3.1.0 and
-requires StartOS 0.4.0.2 or newer. The external `bookshelfng-startos` package
-repository has not been modified; its package update and device acceptance
-remain separate handoff work. See the [legacy channel candidates](legacy/README.md)
-and [BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
+ChaptarrNG carries local AppImage, Flatpak, Cloudron, Co-op Cloud, self-hosting
+catalog, and StartOS candidates. AppImage and Flatpak passed local migration
+and rollback rehearsal; Cloudron passed a local image-wrapper rehearsal; and
+StartOS passed a test-package x86_64 VM update. These candidates remain
+unpublished. Cloudron platform acceptance, Co-op Cloud and catalog platform
+updates, and Unraid installation are open. The StartOS candidate uses SDK 3.1.0
+and requires StartOS 0.4.0.2 or newer. The external `bookshelfng-startos`
+package repository has not been modified; official signing, aarch64, and
+package-manager rollback remain open. See the
+[legacy channel candidates](legacy/README.md) and
+[BookshelfNG retirement status](../docs/BOOKSHELFNG_RETIREMENT.md).
 
 ## Legacy AppImage, Flatpak, Cloudron, and catalog candidates
 
@@ -414,9 +420,10 @@ build exposed this path collapse; the rebuilt candidates include the regression
 fix, covered by builder and startup-repair tests. The full Core test project
 passed 4,607 tests with 0 failures and 19 skips. These checks do not establish
 an update from a published ChaptarrNG candidate or acceptance with operator
-data. Representative-data acceptance remains open. Cloudron package generation,
-the canonical Co-op Cloud recipe review, and catalog-specific update and
-rollback flows have not been accepted. Keep each old installation in service
+data. Representative-data acceptance remains open. The Cloudron image wrapper
+is not an installed Cloudron platform update. Cloudron package metadata, the
+canonical Co-op Cloud recipe review, and catalog-specific update and rollback
+flows have not been accepted. Keep each old installation in service
 until that channel has passed its acceptance checks or has an explicit
 retirement decision. The StartOS package candidate and external repository boundary are documented in
 [`legacy/startos/README.md`](legacy/startos/README.md).
@@ -440,9 +447,10 @@ retirement decision. The StartOS package candidate and external repository bound
 - Complete the separate [BookshelfNG feature-parity roadmap](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/bookshelfng-parity-roadmap.md),
   or explicitly accept and document the behavior that will not move.
 - Validate AppImage and Flatpak migration against representative operator data,
-  including the shared-root path fix now in source. Generate
-  the Cloudron version metadata from its accepted build; update the external StartOS
-  package, canonical Co-op Cloud recipe, and supported catalog records to a
+  including the shared-root path fix now in source. Generate Cloudron version
+  metadata from its accepted image and test an installed Cloudron platform
+  update. Update and test the external StartOS package on both architectures,
+  the canonical Co-op Cloud recipe, and supported catalog records using a
   verified immutable digest. Run each channel's installed update, backup, and
   rollback checks. Record explicit retirement decisions for unsupported
   channels and preserve a documented manual path for pinned/offline installs.

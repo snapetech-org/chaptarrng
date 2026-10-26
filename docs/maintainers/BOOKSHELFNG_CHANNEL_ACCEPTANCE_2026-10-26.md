@@ -2,9 +2,9 @@
 
 ## Result
 
-The local 0.9.978 candidate passed installed handoff acceptance on Debian, Fedora, Arch, Windows Chocolatey, FreeBSD standalone, Docker, Helm, AppImage, and Flatpak paths described below. The shared standalone launcher also passed a Linux runtime harness covering No, headless Manual, Yes, health, source backup, and forced rollback. A local Cloudron-image runtime rehearsal passed after fixing its command handoff. The optional choice is presented at the package prompt, a terminal-backed desktop or standalone launch, or an explicit platform setting, depending on the channel. pacman uses a deferred two-transaction handoff because pacman scriptlets cannot cancel an active transaction.
+The local 0.9.978 candidate passed installed handoff acceptance on Debian, Fedora, Arch, Windows Chocolatey, FreeBSD standalone, Docker, Helm, AppImage, and Flatpak paths described below. The shared standalone launcher also passed a Linux runtime harness covering No, headless Manual, Yes, health, source backup, and forced rollback. A local Cloudron-image runtime rehearsal passed after fixing its command handoff. StartOS passed an installed x86_64 test-package update with manual defer and automatic migration; it remains a synthetic, test-key rehearsal. The optional choice is presented at the package prompt, a terminal-backed desktop or standalone launch, or an explicit platform setting, depending on the channel. pacman uses a deferred two-transaction handoff because pacman scriptlets cannot cancel an active transaction.
 
-This is **not 100% release-channel acceptance**. No bridge package or image was published, several package feeds contain no BookshelfNG predecessor, and macOS installed acceptance is pending its hosted run. StartOS, Cloudron platform updates, Co-op Cloud, Unraid, the standalone Windows migration installer, and external catalog installations were not available for installed acceptance. Release gates remain closed.
+This is **not 100% release-channel acceptance**. No bridge package or image was published, several package feeds contain no BookshelfNG predecessor, and macOS installed acceptance is pending a rerun of its hosted test after the process-cleanup fix. StartOS still needs the official signed package, aarch64 acceptance, and rollback. Cloudron platform updates, Co-op Cloud, Unraid, the standalone Windows migration installer, and external catalog installations remain open. Release gates remain closed.
 
 ## Choice behavior
 
@@ -18,8 +18,8 @@ This is **not 100% release-channel acceptance**. No bridge package or image was 
 | Flatpak | Yes in its terminal-backed launcher | Defers database conversion; it does not undo a Flatpak deployment. The user can retry later. | Converts on launch, retains the source database, and supports restore inside the sandbox. | The desktop entry sets `Terminal=true`. Local same-app-ID .71 to .978 rehearsal passed with synthetic schema-158 data, custom paths, health, and rollback. No is a data deferral. The candidate is unpublished. |
 | Helm / Kubernetes | No interactive terminal in the pod | Ask mode defers conversion and keeps the old data in place; operator action and a pod restart are required to retry. | The candidate pod converts, starts, and passes the configured health check; a rollback Job restores the source database. | Kind installed upgrade from the existing BookshelfNG chart tag main-v0.4.21.71 passed No/defer, Yes, and explicit rollback. Candidate chart and image are not published. |
 | Docker / Compose | Yes with an attached TTY; no in headless/Compose startup | TTY `n` defers conversion. Headless Ask writes a deferred marker, leaves the database and config byte-identical, and does not serve app `/ping`; the new container waits for operator action. | TTY `y` or a restart in automatic mode converts on first start, checks migration and app health, retains the source backup, and serves the existing endpoint. | Exact-head local candidate image passed interactive TTY No/Yes, headless Ask/defer, automatic handoff, `/ping`, migration check, and injected health-failure rollback. Image aliases and external pull/recreate delivery remain unpublished. |
-| StartOS | No y/n prompt; package configuration uses an automatic/manual choice | Manual mode defers conversion. | Automatic mode is designed to migrate at startup. | Source build, type check, and fixture bundle passed. No signed .s9pk or StartOS device was available; installed update, backup, and rollback are unverified. |
-| Unraid | No y/n prompt in the template update flow | The user must defer the template/image change. | A template update would deploy the replacement image. | XML/settings contract and draft PR checks passed; no Unraid Community Applications installation or rollback test was available. |
+| StartOS | No y/n prompt; package configuration uses an automatic/manual choice | Set Manual through the package action and restart; conversion is deferred and the source database remains byte-identical. | Set Automatic and restart; the replacement migrates, retains its source backup, passes database checks, and serves `/ping`. | StartOS 0.4.0.3 x86_64 VM: test-only SDK3 `bookshelfng` package `0.4.21:1` to synthetic candidate `0.9.979:1`; manual defer and automatic update passed with `/books` and `/downloads` canaries. This is not acceptance of the official signed package or public BookshelfNG .71 StartOS package; aarch64, package-manager rollback, and external-repository delivery remain untested. |
+| Unraid | No y/n prompt in the template update flow | Set migration mode to Manual in the template before applying the image update; conversion is deferred until Automatic is selected and the container is restarted. | Set Automatic and restart; the image performs migration on startup. | XML/settings contract and draft PR checks passed; no Unraid Community Applications installation or rollback test was available. |
 | Cloudron | No terminal prompt; the administrator can hold the app update or set manual/automatic mode | Set `BOOKSHELFNG_MIGRATION_MODE=manual` before applying the package update; the proxy keeps `/ping` healthy and shows the recovery instructions while the database remains unchanged. | Apply the update with automatic mode to convert on startup; Cloudron custom app environment can override the image default. | Exact-head Cloudron-image runtime passed manual defer and automatic conversion, including proxy liveness, source preservation, migration health, and backup. The candidate's first build exposed a missing inherited app command; the Dockerfile now passes it explicitly. Actual Cloudron platform install/update/backup/restore remains untested. |
 | Co-op Cloud | No y/n prompt in Swarm deployment | Requires operator-controlled defer. | Recipe candidate preserves stack and volume identities and pins the compatibility image. | Recipe generation and source checks passed; no installed Swarm update, backup, or rollback. |
 | Self-hosting catalogs | No common y/n contract | Depends on each catalog's UI and image replacement behavior. | Compose candidate preserves the bookshelfng service and volume identities. | Local Compose contract only; CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other external listings were not updated or accepted. |
@@ -83,11 +83,37 @@ rollback, and verification transcripts are retained in the task evidence
 directory. The archive was rebuilt through the standard builder and its digest
 matches the installed candidate.
 
+## StartOS installed update acceptance
+
+The StartOS 0.4.0.3 x86_64 VM first installed a test-only SDK3 package with
+package ID `bookshelfng`, version `0.4.21:1`, and the public BookshelfNG .71
+image digest. The candidate kept that ID and updated it to test version
+`0.9.979:1` using the corrected wrapper. The installed `.s9pk` SHA-256 was
+`312a0c956dac70d82623aecd866c0bfa2ae5b29f1749e4d1fdfbd5e9c4147bce`. The
+package action set Manual and the
+same test volume was upgraded: the schema-158 source database remained
+byte-identical, no `/ping` endpoint started, and the log recorded deferred
+migration. The subsequent Automatic setting migrated the same source to
+schema 124, retained a schema-158 backup, passed SQLite integrity and foreign
+key checks, and returned a healthy `/ping`. Unique canaries in `/books` and
+`/downloads` survived the update. Evidence is in
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/startos-corrected-manual-readonly.log`,
+`startos-corrected-automatic-acceptance.log`, and `startos-volume-canaries.log`.
+
+This run used a synthetic test package signed with the task-local key and a
+local x86_64 candidate image. It confirms the StartOS package update and data
+handoff in that test environment, but not the external maintainer's signed
+package, aarch64 image, published package repository, or package-manager
+rollback. The wrapper now inherits the image entrypoint with
+`sdk.useEntrypoint()` and uses StartOS's port readiness check; the former
+`/init` child-process invocation and missing in-image health script both
+blocked startup.
+
 ## Other package checks
 
-The 17-case legacy-channel Node contract suite passed after adding FreeBSD launcher/runtime, Windows standalone installer opt-in, and macOS workflow contract checks. Docker compatibility defaults and the exact-head installed-image interactive/headless Ask/automatic/rollback acceptance passed. The Cloudron manual/automatic runtime rehearsal passed after fixing the missing command. The AUR prompt test passed No/defer/restore and a later Yes retry. The Fedora 44 RPM prompt transaction regression passed interactive No/Yes and detached headless Ask; Debian passed headless rejection, apt No/Yes, and downgrade. Linux shell syntax, workflow policy, and `git diff --check` passed.
+The 19-case legacy-channel Node contract suite passed after adding FreeBSD launcher/runtime, Windows standalone installer opt-in, macOS workflow, and StartOS wrapper checks. Docker compatibility defaults and the exact-head installed-image interactive/headless Ask/automatic/rollback acceptance passed. The Cloudron manual/automatic runtime rehearsal passed after fixing the missing command. The AUR prompt test passed No/defer/restore and a later Yes retry. The Fedora 44 RPM prompt transaction regression passed interactive No/Yes and detached headless Ask; Debian passed headless rejection, apt No/Yes, and downgrade. Linux shell syntax, workflow policy, and `git diff --check` passed.
 
-The shared Linux standalone handoff harness used a checksum-verified public BookshelfNG .71 predecessor and the exact current ChaptarrNG candidate archive. No preserved the predecessor and restarted its `/ping`; headless Ask selected Manual without changing source files; Yes migrated populated schema-158 data to schema 124, passed integrity and foreign-key checks, retained a logical source backup, and returned healthy `/ping`. An injected replacement-health failure restored the source database and restarted BookshelfNG while retaining the failed target for diagnosis. This Linux harness validates the shared launcher/supervisor; Linux standalone archives do not gain a new update channel from it.
+The shared Linux standalone handoff harness used a checksum-verified public BookshelfNG .71 predecessor (SHA-256 `4197d53b757ebe99642fb8f4213f963dd54641401d1f188ab6daadcb3b024d5d`) and the exact ChaptarrNG candidate archive (SHA-256 `359897785599f850c2264d2cc2aad96c1fa1e69ffd4ad1b6e98e3d783c75d364`). No preserved the predecessor and restarted its `/ping`; headless Manual deferred without changing source files; Yes migrated data to schema 124, passed integrity and foreign-key checks, retained a logical source backup, and returned healthy `/ping`. An injected replacement-health failure restored the source database and restarted BookshelfNG while retaining the failed target for diagnosis. The rerun also confirms the harness now closes the PTY after a stalled Ctrl+C shutdown and reaps the candidate. This Linux harness validates the shared launcher/supervisor; Linux standalone archives do not gain a new update channel from it. Full output: `/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/standalone-handoff-stop-fix-v6.log`.
 
 Windows evidence is recorded at /var/tmp/chaptarrng-channel-acceptance-20261026/evidence/windows-final-acceptance.json and the full guest transcript is windows-server-2025-chocolatey-acceptance.log in the same evidence directory. Helm evidence is in helm-final2-acceptance.json and helm-final2-rollback-acceptance.json. Native VM package and service logs are retained beside them.
 
@@ -97,8 +123,8 @@ Windows evidence is recorded at /var/tmp/chaptarrng-channel-acceptance-20261026/
 - The Chocolatey feed rejection is unresolved. The local package passed, but no public package was pushed.
 - The AUR update candidate is local and unpublished.
 - Docker alias/image delivery, Helm OCI chart delivery, AppImage/Flatpak publication, and external catalog updates remain gated.
-- StartOS needs a signed package and real device. Cloudron needs an installed platform update/backup/restore rehearsal; Co-op Cloud, Unraid, and external catalog handoffs need their platform update and rollback tests.
-- macOS legacy installs need a one-time manual bootstrap and installed OS acceptance; the old BookshelfNG updater cannot be redirected from this repository. FreeBSD installed No/Yes/rollback acceptance is now complete, but the one-time launcher/service path switch remains an operator action.
+- StartOS passed the local x86_64 VM handoff, but the official signed package, aarch64 runtime, external repository, and package-manager rollback remain open. Cloudron needs an installed platform update/backup/restore rehearsal; Co-op Cloud, Unraid, and external catalog handoffs need their platform update and rollback tests.
+- macOS legacy installs need a one-time manual bootstrap; installed x64 and arm64 acceptance must be rerun after the candidate shutdown fix. The old BookshelfNG updater cannot be redirected from this repository. FreeBSD installed No/Yes/rollback acceptance is complete, but the one-time launcher/service path switch remains an operator action.
 - Representative operator data and production provider/API workflows are outside this channel-package campaign.
 
 Do not mark the global channel gate complete or publish these candidates until the blocked delivery and platform checks above are closed or the supported-channel scope is explicitly changed.

@@ -103,6 +103,8 @@ test('macOS and FreeBSD standalone archives include the optional, recoverable Bo
   assert.match(supervisor, /-bookshelf-health-url=/);
   assert.match(handoffTest, /def child_process_ids\([\s\S]*?def stop_candidate\([\s\S]*?os\.kill\(pid, signal\.SIGTERM\)/,
     'standalone acceptance cleanup stops app descendants directly on platforms without setsid --wait');
+  assert.match(handoffTest, /def stop_candidate\([\s\S]*?os\.close\(master\)/,
+    'standalone acceptance cleanup closes the controlling PTY so macOS can deliver hangup to its shell');
 });
 
 test('macOS installed handoff acceptance is manually dispatched and publication-free', () => {
@@ -286,7 +288,7 @@ test('release pins Cloudron and Compose candidates to the built compatibility im
   assert.ok(publishJob.includes('tar -tzf "$RUNNER_TEMP/release-assets/$container_candidates"'));
 });
 
-test('StartOS candidate documents the package identity and external device-acceptance gate', () => {
+test('StartOS candidate documents installed test acceptance and remaining release gates', () => {
   const readme = read('packaging/legacy/startos/README.md');
   const manifest = read('packaging/legacy/startos/candidate/startos/manifest/index.ts');
 
@@ -295,7 +297,8 @@ test('StartOS candidate documents the package identity and external device-accep
   assert.match(readme, /volume IDs `main`,\s*`books`, and `downloads`/);
   assert.match(readme, /`\/config`, `\/books`, and `\/downloads`/);
   assert.match(readme, /exact ChaptarrNG\s+multi-architecture Hardcover digest/);
-  assert.match(readme, /device install, backup, update, and rollback\s+acceptance still\s+belong to that package's handoff/i);
+  assert.match(readme, /x86_64 test-package update passed in a local\s+StartOS VM/i);
+  assert.match(readme, /official signed package, aarch64 runtime, external-repository\s+delivery, and package-manager rollback remain/i);
   assert.match(manifest, /packageRepo: 'https:\/\/github\.com\/snapetech\/bookshelfng-startos'/);
   assert.match(manifest, /upstreamRepo: 'https:\/\/github\.com\/snapetech-org\/chaptarrng'/);
   assert.match(manifest, /source: \{ dockerTag: 'ghcr\.io\/snapetech-org\/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' \}/);
@@ -411,6 +414,12 @@ test('noninteractive image and appliance channels defer ask mode without startin
     'the unready deferred StatefulSet has a documented automatic restart sequence');
   assert.match(startOsAction, /Automatically migrate BookshelfNG data on startup/);
   assert.match(startOsAction, /default: true/);
+  assert.match(startOsMain, /command: sdk\.useEntrypoint\(\)/,
+    'StartOS preserves the pinned image entrypoint and its default application command');
+  assert.match(startOsMain, /checkPortListening\(effects, uiPort/,
+    'StartOS readiness uses the built-in check instead of a path that may be absent from the image rootfs');
+  assert.doesNotMatch(startOsMain, /command: \['\/init'\]|runHealthScript/,
+    'StartOS does not invoke the image init wrapper as a child or depend on a separately packaged health script');
   assert.match(startOsMain, /BOOKSHELFNG_MIGRATION_MODE: autoMigrate \? 'automatic' : 'manual'/,
     'StartOS exposes an explicit automatic/manual first-start choice instead of a terminal prompt');
 });

@@ -287,6 +287,7 @@ def pid_is_running(pid: int) -> bool:
 
 def stop_candidate(process, master: int, log) -> None:
     descendants = set(child_process_ids(process.pid))
+    terminal_open = True
     if process.poll() is None:
         try:
             # The launcher owns this PTY. Let its normal Ctrl+C handler stop
@@ -297,11 +298,22 @@ def stop_candidate(process, master: int, log) -> None:
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            pass
+            # macOS can leave a terminal-backed shell alive after the app has
+            # handled Ctrl+C. Closing the PTY sends SIGHUP to its foreground
+            # process group and lets the supervisor run its normal cleanup.
+            try:
+                os.close(master)
+            except OSError:
+                pass
+            terminal_open = False
+            try:
+                process.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                pass
 
-    # macOS has no setsid --wait, so the app remains a child in the launcher's
-    # process tree. Signal those exact child PIDs rather than relying on
-    # killpg, which can return EPERM for a controlling-terminal process group.
+    # macOS has no setsid --wait, so the app can remain a child in the
+    # launcher's process tree. Signal those exact child PIDs rather than
+    # relying on killpg for this controlling-terminal process group.
     descendants.update(child_process_ids(process.pid))
     for pid in reversed(sorted(descendants)):
         if pid_is_running(pid):
@@ -310,7 +322,10 @@ def stop_candidate(process, master: int, log) -> None:
             except (ProcessLookupError, PermissionError):
                 pass
     if process.poll() is None:
-        process.terminate()
+        try:
+            process.terminate()
+        except (ProcessLookupError, PermissionError):
+            pass
 
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
@@ -327,13 +342,17 @@ def stop_candidate(process, master: int, log) -> None:
         except (ProcessLookupError, PermissionError):
             pass
     if process.poll() is None:
-        process.kill()
+        try:
+            process.kill()
+        except (ProcessLookupError, PermissionError):
+            pass
     process.wait(timeout=10)
     remaining = [pid for pid in descendants if pid_is_running(pid)]
     require(not remaining, f"Candidate child processes remained after cleanup: {remaining}")
     if process in RUNNING:
         RUNNING.remove(process)
-    os.close(master)
+    if terminal_open:
+        os.close(master)
     log.close()
 
 

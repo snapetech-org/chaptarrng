@@ -3,8 +3,10 @@
 `candidate/` contains the StartOS wrapper source for the existing BookshelfNG
 package identity. It keeps package ID `bookshelfng`, volume IDs `main`,
 `books`, and `downloads`, the `/config`, `/books`, and `/downloads` mounts,
-the `/init` startup contract, port `8787`, and Hardcover compatibility mode
-while moving the runtime to ChaptarrNG.
+the upstream image entrypoint and command, port `8787`, and Hardcover
+compatibility mode while moving the runtime to ChaptarrNG. The SDK inherits the
+image entrypoint with `sdk.useEntrypoint()`; it does not launch `/init` as a
+child process.
 
 The release candidate builder copies this source into the platform handoff
 bundle and replaces its image placeholder with the exact ChaptarrNG
@@ -13,8 +15,9 @@ the matching ChaptarrNG release plus revision `:1`. Do not build or publish
 the source template directly. Build and sign the generated candidate inside the
 external maintainer's StartOS packaging workspace; this repository does not
 hold that workspace key. The external StartOS package repository is not
-modified by this candidate; device install, backup, update, and rollback
-acceptance still belong to that package's handoff.
+modified by this candidate. The x86_64 test-package update passed in a local
+StartOS VM, but the official signed package, aarch64 runtime, external-repository
+delivery, and package-manager rollback remain part of that handoff.
 
 To turn a released, digest-pinned handoff bundle into signed packages without
 manually unpacking it, provide the bundle and its `.sha256` sidecar, point at
