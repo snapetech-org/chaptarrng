@@ -588,3 +588,9 @@ ChaptarrNG Windows run [40383424925](https://github.com/snapetech-org/chaptarrng
 ## Correction: Packer PR #20 validation target
 
 Run [40385069191](https://github.com/snapetech-org/packer/actions/runs/40385069191) is configured to validate PR #20's exact head `91f1ab3cbe56ca99dbfd8d98406a45a0b46c6e9d`. Its display title contains `owner-pr:20:<that SHA>:40383172380`, and the Packer workflow checks out the `inputs.pr_sha` value; `e53d977b` is the main-pinned workflow-source SHA. The validation job remains queued without a runner or steps, so no validation pass exists yet.
+
+## BookshelfNG `.76` recovery queue update — 2026-10-26 20:00 UTC
+
+Stale release run [40280771274](https://github.com/snapetech-org/bookshelfng/actions/runs/40280771274) is now cancelled. All eight jobs show no runner and zero steps, so it performed no validation or publication and caused no package side effects. The scoped recovery [40373866659](https://github.com/snapetech-org/bookshelfng/actions/runs/40373866659) has moved from `pending` to `queued`; its release-validation job `121751520187` now has the expected run-scoped JIT labels but still has no runner and zero steps. It has not started.
+
+The `.76` feeds are unchanged: Chocolatey is Approved at `.76`, AUR remains `0.4.21.71-1`, COPR build `11165173` failed without a source version, and Helm OCI remains `0.4.21-71`. Keep the recovery queued and verify its execution before claiming channel acceptance.
