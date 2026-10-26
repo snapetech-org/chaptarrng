@@ -36,6 +36,41 @@ update, data backup, rollback, and health checks on Cloudron. Generate
 `CloudronVersions.json` with the Cloudron CLI from the accepted package build;
 do not create release metadata from an unbuilt candidate.
 
+## Backup and restore
+
+Cloudron does not include `persistentDirs` in its filesystem backup. The
+manifest therefore sets `minBoxVersion` to `9.1.0` and uses `backupCommand` and
+`restoreCommand` to carry `/config`, `/books`, and `/downloads` through the
+backed-up `/app/data` directory. The backup hook uses SQLite's online backup
+API for the active `readarr.db`, `audioarr.db`, `chaptarr.db`, `logs.db`,
+`cache.db`, and `staging.db` files, records their presence and ownership, and
+archives the persistent trees. The restore hook verifies the archive checksum
+and database integrity, restores the bind mounts in place, removes stale
+SQLite sidecars, and checks the restored databases again.
+
+An installed Cloudron 10.1.6 VM rehearsal passed Manual defer, Automatic
+migration, native app backup, and native restore after the test databases and
+media canaries were changed. The restored schema-158 source returned healthy;
+Automatic then converted it to schema 124 and retained a source backup. A
+separate rollback restored the source database with Chaptarr's
+`-restore-bookshelf` utility, restored the legacy `.4.21` package, and returned
+BookshelfNG to healthy `/ping`.
+
+The original `.4.21` package has no backup/restore hooks, so its pre-update
+Cloudron backup contains app metadata and `/app/data` only; it does not contain
+the persistent directories. The new hooks protect backups after the candidate
+is installed. For an existing `.4.21` installation, use the candidate's
+retained BookshelfNG source backup before restoring the old package after a
+conversion. Cloudron runs `restoreCommand` in a temporary container before it
+starts the main app container, with the restored `/app/data` and persistent
+directories mounted. The restore hook therefore does not depend on a running
+ChaptarrNG process.
+
+The VM used a local test registry and a local exact-head ChaptarrNG image. This
+is installed platform evidence, not a published Cloudron package or feed
+acceptance. The tested candidate and full task evidence are recorded in the
+[channel acceptance matrix](../../../docs/maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
+
 Cloudron package source historically lives in the BookshelfNG repository. This
 ChaptarrNG-owned candidate records the package contract and supplies a safe
 source handoff without changing the external Cloudron listing.

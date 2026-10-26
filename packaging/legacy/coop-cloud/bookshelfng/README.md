@@ -49,12 +49,27 @@ Automatic migrated to schema 124, passed SQLite integrity checks, retained the
 BookshelfNG database backup, and served `/ping`. An injected unhealthy update
 paused. Restoring the full three-volume snapshot and redeploying the .71 image
 returned healthy BookshelfNG. The `backupbot.backup=true` label and local
-full-volume archive/restore were verified. The test did not run the official
-Backupbot CLI.
+full-volume archive/restore were verified. The official Backupbot II 2.4.0
+image (`sha256:870277cdba4b91ad6771184a7e208ba29151b951e39c68b4a3fd6f8d35252feb`)
+then backed up the schema-158 test database and all three same-name volumes.
+Its CLI restored after deliberate corruption; the database hash, integrity,
+schema and row counts matched, all three canaries returned, and the service
+mounts remained unchanged. See
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/coop-cloud-backupbot-acceptance.log`.
+
+Abra 0.13.0-beta backup orchestration also passed in an isolated Debian 13 /
+Docker 26.1 Swarm VM. Abra deployed a local QA recipe with the same
+`bookshelfng_app` service, volume identities, and `backupbot.backup=true`
+label, created and listed a Backupbot II snapshot, then restored the corrupted
+schema-158 fixture and three volume canaries through `abra app restore` after
+the app was scaled to zero. The database returned to its original SHA-256 and
+passed SQLite integrity and row-count checks; the app restarted with the same
+mounts. Evidence is in
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/coop-cloud-abra-backup-restore-acceptance.log`.
 
 The recipe has not been accepted into the canonical Co-op Cloud collection,
-and the image target is not published. Before deployment, use the generated
-recipe bundle pinned to the exact published digest that passed migration and
-rollback validation. External maintainer and Backupbot acceptance remain open.
+and the image target is not published. External maintainer acceptance also
+remains open. Before deployment, use the generated recipe bundle pinned to
+the exact published digest that passed migration and rollback validation.
 
 The external `proxy` network and a reachable Docker Swarm host are required.

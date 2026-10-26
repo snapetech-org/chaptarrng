@@ -8,13 +8,19 @@ USER root
 # migration readiness window. Keep a local proxy on the stable port while the
 # app starts on 8788.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends nginx-light \
+    && apt-get install -y --no-install-recommends \
+        bash coreutils findutils mawk nginx-light sqlite3 tar \
     && rm -rf /var/lib/apt/lists/*
 
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY migration-unavailable.html /usr/share/nginx/html/bookshelfng-unavailable.html
 COPY cloudron-entrypoint.sh /usr/local/bin/chaptarr-cloudron-entrypoint
-RUN chmod 0755 /usr/local/bin/chaptarr-cloudron-entrypoint
+COPY cloudron-backup.sh /usr/local/bin/chaptarr-cloudron-backup
+COPY cloudron-restore.sh /usr/local/bin/chaptarr-cloudron-restore
+RUN chmod 0755 \
+    /usr/local/bin/chaptarr-cloudron-entrypoint \
+    /usr/local/bin/chaptarr-cloudron-backup \
+    /usr/local/bin/chaptarr-cloudron-restore
 
 # Keep the previous Cloudron app identity and hand its existing /config volume
 # to the supervised first-start migration. The old Cloudron image used native

@@ -32,7 +32,34 @@ prior BookshelfNG image before marketplace submission.
 
 Automatic first-start migration is enabled by default. Use the package's
 **Configure BookshelfNG migration** action to defer conversion for a manual
-preview and apply; the setting is saved in the StartOS backup volume.
+preview and apply; the setting is saved in the StartOS backup volume. In
+Manual mode the supervisor holds the service and `/ping` is unavailable until
+you finish the documented migration and restart in Automatic mode.
+
+### Manual migration
+
+With the BookshelfNG package updated and the candidate held in Manual mode,
+preview the conversion from the running service container. The preview stages
+a temporary database and leaves `/config/readarr.db` unchanged:
+
+```sh
+start-cli package attach bookshelfng -- sh -lc \
+  'HARDCOVER=true HARDCOVER_NATIVE=true dotnet /app/Chaptarr.dll -preview-bookshelf-migration -data=/config'
+```
+
+Review the preview report. If it passes, make sure no BookshelfNG or
+ChaptarrNG application process is using the data directory and apply:
+
+```sh
+start-cli package attach bookshelfng -- sh -lc \
+  'HARDCOVER=true HARDCOVER_NATIVE=true dotnet /app/Chaptarr.dll -migrate-bookshelf -confirm-bookshelf-service-stopped -data=/config'
+```
+
+The apply command retains a schema-158 source backup under `/config`. Then use
+the package action to select Automatic and restart `bookshelfng`. The candidate
+starts from the converted database and serves `/ping`. Do not start the
+BookshelfNG image against the converted database; use the retained source
+backup and the documented restore command if you need to return to BookshelfNG.
 
 Application source: <https://github.com/snapetech-org/chaptarrng>
 

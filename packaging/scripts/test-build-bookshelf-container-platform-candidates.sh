@@ -44,11 +44,16 @@ assert manifest["version"] == "0.9.978"
 assert manifest["upstreamVersion"] == "0.9.978"
 assert manifest["httpPort"] == 8787
 assert manifest["persistentDirs"] == ["/config", "/books", "/downloads"]
+assert manifest["minBoxVersion"] == "9.1.0"
+assert manifest["backupCommand"] == "/usr/local/bin/chaptarr-cloudron-backup"
+assert manifest["restoreCommand"] == "/usr/local/bin/chaptarr-cloudron-restore"
 PY
 
 grep -Fxq "FROM $image" "$stage/cloudron/Dockerfile"
 test -s "$stage/cloudron/nginx.conf"
 test -s "$stage/cloudron/cloudron-entrypoint.sh"
+test -s "$stage/cloudron/cloudron-backup.sh"
+test -s "$stage/cloudron/cloudron-restore.sh"
 test -s "$stage/cloudron/migration-unavailable.html"
 grep -Fq 'COPY nginx.conf /etc/nginx/nginx.conf' "$stage/cloudron/Dockerfile"
 grep -Fq 'COPY migration-unavailable.html /usr/share/nginx/html/bookshelfng-unavailable.html' "$stage/cloudron/Dockerfile"
@@ -58,6 +63,25 @@ grep -Fq 'export CHAPTARR__SERVER__BINDADDRESS=127.0.0.1' "$stage/cloudron/cloud
 grep -Fq 'listen 8787;' "$stage/cloudron/nginx.conf"
 grep -Fq 'proxy_pass http://127.0.0.1:8788;' "$stage/cloudron/nginx.conf"
 grep -Fq 'return 200 "healthy\n";' "$stage/cloudron/nginx.conf"
+grep -Fq 'client_body_temp_path /run/chaptarr-nginx/client_body;' "$stage/cloudron/nginx.conf"
+grep -Fq 'proxy_temp_path /run/chaptarr-nginx/proxy_temp;' "$stage/cloudron/nginx.conf"
+grep -Fq 'mkdir -p \' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'chmod 1777 \' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'export PUID=0' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'export PGID=0' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'if [[ "${1:-}" == /bin/sh || "${1:-}" == sh ]]; then' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'exec "$@"' "$stage/cloudron/cloudron-entrypoint.sh"
+grep -Fq 'COPY cloudron-backup.sh /usr/local/bin/chaptarr-cloudron-backup' "$stage/cloudron/Dockerfile"
+grep -Fq 'COPY cloudron-restore.sh /usr/local/bin/chaptarr-cloudron-restore' "$stage/cloudron/Dockerfile"
+grep -Fq 'sqlite3' "$stage/cloudron/Dockerfile"
+grep -Fq 'PRAGMA integrity_check;' "$stage/cloudron/cloudron-backup.sh"
+grep -Fq 'PRAGMA integrity_check;' "$stage/cloudron/cloudron-restore.sh"
+grep -Fq 'chaptarr-cloudron-persistent-dirs.tar' "$stage/cloudron/cloudron-backup.sh"
+grep -Fq 'chaptarr-cloudron-persistent-dirs.tar' "$stage/cloudron/cloudron-restore.sh"
+for database in readarr.db audioarr.db chaptarr.db logs.db cache.db staging.db; do
+  grep -Fq "$database" "$stage/cloudron/cloudron-backup.sh"
+  grep -Fq "$database" "$stage/cloudron/cloudron-restore.sh"
+done
 grep -Fq "This ChaptarrNG image digest is pinned to the release" "$stage/cloudron/Dockerfile"
 if grep -Fq "replace it with the exact published multi-architecture digest" "$stage/cloudron/Dockerfile"; then
   echo "Cloudron Dockerfile retained stale instructions to replace the compatibility tag." >&2

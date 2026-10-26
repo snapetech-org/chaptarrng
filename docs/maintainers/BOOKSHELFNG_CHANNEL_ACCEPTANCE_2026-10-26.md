@@ -2,9 +2,9 @@
 
 ## Result
 
-The local 0.9.978 candidate passed installed handoff acceptance on Debian, Fedora, Arch, Windows Chocolatey, FreeBSD standalone, Docker, Helm, AppImage, Flatpak, and Co-op Cloud Swarm paths described below. The shared standalone launcher also passed a Linux runtime harness covering No, headless Manual, Yes, health, source backup, and forced rollback. A local Cloudron-image runtime rehearsal passed after fixing its command handoff. StartOS passed an installed x86_64 test-package update with manual defer and automatic migration; it remains a synthetic, test-key rehearsal. The optional choice is presented at the package prompt, a terminal-backed desktop or standalone launch, or an explicit platform setting, depending on the channel. pacman uses a deferred two-transaction handoff because pacman scriptlets cannot cancel an active transaction.
+The local 0.9.978 candidate passed installed handoff acceptance on Debian, Fedora, Arch, Windows Chocolatey, FreeBSD standalone, Docker, Helm, AppImage, Flatpak, and Co-op Cloud Swarm paths described below. The shared standalone launcher also passed a Linux runtime harness covering No, headless Manual, Yes, health, source backup, and forced rollback. Cloudron 10.1.6 passed an installed `.4.21` to `.4.23` package update, Manual defer, native backup/restore, Automatic migration, and the source-database plus old-package rollback path. StartOS passed x86_64 and aarch64 test-package updates covering Manual defer, automatic migration, health checks, and automatic source rollback; these remain synthetic, test-key rehearsals. The optional choice is presented at the package prompt, a terminal-backed desktop or standalone launch, or an explicit platform setting, depending on the channel. pacman uses a deferred two-transaction handoff because pacman scriptlets cannot cancel an active transaction.
 
-This is **not 100% release-channel acceptance**. No replacement artifact was published, and several package feeds contain no BookshelfNG predecessor. StartOS still needs the official signed package, aarch64 acceptance, and package-manager rollback. Cloudron platform updates, Unraid, canonical Co-op Cloud recipe/Backupbot acceptance, Windows standalone No-choice hosted validation, and external catalog installations remain open. Release gates remain closed.
+This is **not 100% release-channel acceptance**. No replacement artifact was published, and several package feeds contain no BookshelfNG predecessor. StartOS still needs the official signed package, external repository delivery, and package-manager rollback acceptance. Cloudron feed/catalog publication, Unraid, canonical Co-op Cloud recipe acceptance, and external catalog installations remain open. The old Cloudron `.4.21` package also cannot back up its persistent directories; that legacy backup gap is covered only after the new package with backup hooks is installed. Release gates remain closed.
 
 ## Choice behavior
 
@@ -18,14 +18,14 @@ This is **not 100% release-channel acceptance**. No replacement artifact was pub
 | Flatpak | Yes in its terminal-backed launcher | Defers database conversion; it does not undo a Flatpak deployment. The user can retry later. | Converts on launch, retains the source database, and supports restore inside the sandbox. | The desktop entry sets `Terminal=true`. Local same-app-ID .71 to .978 rehearsal passed with synthetic schema-158 data, custom paths, health, and rollback. No is a data deferral. The candidate is unpublished. |
 | Helm / Kubernetes | No interactive terminal in the pod | Ask mode defers conversion and keeps the old data in place; operator action and a pod restart are required to retry. | The candidate pod converts, starts, and passes the configured health check; a rollback Job restores the source database. | Kind installed upgrade from the existing BookshelfNG chart tag main-v0.4.21.71 passed No/defer, Yes, and explicit rollback. Candidate chart and image are not published. |
 | Docker / Compose | Yes with an attached TTY; no in headless/Compose startup | TTY `n` defers conversion. Headless Ask writes a deferred marker, leaves the database and config byte-identical, and does not serve app `/ping`; the new container waits for operator action. | TTY `y` or a restart in automatic mode converts on first start, checks migration and app health, retains the source backup, and serves the existing endpoint. | Exact-head local candidate image passed interactive TTY No/Yes, headless Ask/defer, automatic handoff, `/ping`, migration check, and injected health-failure rollback. Image aliases and external pull/recreate delivery remain unpublished. |
-| StartOS | No y/n prompt; package configuration uses an automatic/manual choice | Set Manual through the package action and restart; conversion is deferred and the source database remains byte-identical. | Set Automatic and restart; the replacement migrates, retains its source backup, passes database checks, and serves `/ping`. | StartOS 0.4.0.3 x86_64 VM: test-only SDK3 `bookshelfng` package `0.4.21:1` to synthetic candidate `0.9.979:1`; manual defer and automatic update passed with `/books` and `/downloads` canaries. This is not acceptance of the official signed package or public BookshelfNG .71 StartOS package; aarch64, package-manager rollback, and external-repository delivery remain untested. |
+| StartOS | No y/n prompt; package configuration uses an automatic/manual choice | Set Manual through the package action and start the candidate; conversion is deferred, the app remains unavailable, and the schema-158 source stays unchanged. Run the documented Console preview/apply, then switch back to Automatic and restart. | Set Automatic and start the candidate; the replacement previews, converts, retains its source backup, passes database checks, and serves `/ping`. A failed health check restores the source database and leaves ChaptarrNG stopped. | StartOS 0.4.0.3 x86_64 and aarch64 VMs passed test-key SDK3 package updates. ARM64 used synthetic predecessor `.4.21:3` to candidate `.9.979:1`; Manual defer, Console preview/apply, Automatic conversion, and injected health-failure rollback all passed with `/books` and `/downloads` canaries. The predecessor fixture wraps the pinned BookshelfNG Readarr 0.4.21.37 ARM64 image with a direct service command because its s6 `/init` requires PID 1. Official signed `.s9pk`, public `.71` package, external repository, and package-manager rollback remain unaccepted. |
 | Unraid | No y/n prompt in the template update flow | Set migration mode to Manual in the template before applying the image update; conversion is deferred until Automatic is selected and the container is restarted. | Set Automatic and restart; the image performs migration on startup. | XML/settings contract and draft PR checks passed; no Unraid Community Applications installation or rollback test was available. |
-| Cloudron | No terminal prompt; the administrator can hold the app update or set manual/automatic mode | Set `BOOKSHELFNG_MIGRATION_MODE=manual` before applying the package update; the proxy keeps `/ping` healthy and shows the recovery instructions while the database remains unchanged. | Apply the update with automatic mode to convert on startup; Cloudron custom app environment can override the image default. | Exact-head Cloudron-image runtime passed manual defer and automatic conversion, including proxy liveness, source preservation, migration health, and backup. The candidate's first build exposed a missing inherited app command; the Dockerfile now passes it explicitly. Actual Cloudron platform install/update/backup/restore remains untested. |
-| Co-op Cloud | No interactive y/n in Swarm. To choose No, keep the BookshelfNG stack deployed. Deploying the candidate with `manual` defers conversion but the new service does not serve `/ping` until the operator switches to Automatic and redeploys. | A Manual candidate update keeps the schema-158 database byte-identical and records `deferred`; the app endpoint is unavailable while held. | Redeploy the same stack in Automatic mode; the compatibility image converts, validates, retains a source backup, and serves `/ping`. | Isolated Debian 13 / Docker 26.1 Swarm upgraded the pinned BookshelfNG .71 source image to the exact-head .978 candidate. `bookshelfng_app` and all three volume names stayed stable. Manual preserved the database SHA-256 `f126ce2ae615dd6e898a446a2b122bc90ae9d10ea9a9ab2090cf0ca90830a1a1`, schema 158, and media canaries. Automatic reached schema 124, passed SQLite checks, kept the source backup and canaries, and served `/ping`. An injected unhealthy update paused as configured; restoring the three-volume snapshot and redeploying .71 returned healthy BookshelfNG at schema 158. The `backupbot.backup=true` label and full-volume archive/restore were verified; the official Backupbot CLI and canonical maintainer acceptance remain open. |
+| Cloudron | No terminal prompt; the administrator can hold the app update or set manual/automatic mode | Set `BOOKSHELFNG_MIGRATION_MODE=manual` before applying the package update; the proxy keeps `/ping` healthy and shows recovery instructions while the database remains unchanged. | Apply the update with automatic mode to convert on startup; Cloudron custom app environment can override the image default. | Cloudron 10.1.6 installed `.4.21` to `.4.23`; Manual defer, native backup/restore, Automatic migration, and source-database plus old-package rollback passed. The `.4.21` pre-update backup does not include persistent directories; `.4.23` adds backup/restore hooks. Feed/catalog publication remains open. |
+| Co-op Cloud | No interactive y/n in Swarm. To choose No, keep the BookshelfNG stack deployed. Deploying the candidate with `manual` defers conversion but the new service does not serve `/ping` until the operator switches to Automatic and redeploys. | A Manual candidate update keeps the schema-158 database byte-identical and records `deferred`; the app endpoint is unavailable while held. | Redeploy the same stack in Automatic mode; the compatibility image converts, validates, retains a source backup, and serves `/ping`. | Isolated Debian 13 / Docker 26.1 Swarm upgraded the pinned BookshelfNG .71 source image to the exact-head .978 candidate. `bookshelfng_app` and all three volume names stayed stable. Manual preserved the database SHA-256 `f126ce2ae615dd6e898a446a2b122bc90ae9d10ea9a9ab2090cf0ca90830a1a1`, schema 158, and media canaries. Automatic reached schema 124, passed SQLite checks, kept the source backup and canaries, and served `/ping`. An injected unhealthy update paused as configured; restoring the three-volume snapshot and redeploying .71 returned healthy BookshelfNG at schema 158. The official Backupbot II 2.4.0 image (`sha256:870277cdba4b91ad6771184a7e208ba29151b951e39c68b4a3fd6f8d35252feb`) backed up those same volume identities using the recipe label. Its restore recovered a corrupted schema-158 database byte-for-byte, passed SQLite checks, restored all three volume canaries, and left the service mounts unchanged. Abra 0.13.0-beta deployed an isolated recipe with the same service and volume identities, created and listed the snapshot, then restored the corrupted database byte-for-byte and restored all three canaries after the app was scaled to zero. The app restarted with unchanged mounts. Canonical recipe acceptance remains open. |
 | Self-hosting catalogs | No common y/n contract | Depends on each catalog's UI and image replacement behavior. | Compose candidate preserves the bookshelfng service and volume identities. | Local Compose contract only; CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other external listings were not updated or accepted. |
 | macOS standalone installs | No BookshelfNG-owned update channel to redirect; the bundled launcher asks when run in a terminal. | Answer No or set `BOOKSHELFNG_MIGRATION_MODE=manual`; keep the prior app and service path. | Answer Yes or set `automatic`; the wrapper stages migration, starts ChaptarrNG, and checks health. The operator switches the launcher/service after acceptance. | Hosted run [40270599787](https://github.com/snapetech-org/chaptarrng/actions/runs/40270599787) passed on macOS x64 and arm64 against checksum-pinned public .71 predecessors: No, headless Manual, Yes, health, source backup, and forced rollback. It publishes no assets and validates the handoff runtime; the one-time app/service path switch remains manual. |
 | FreeBSD standalone installs | No BookshelfNG-owned update channel to redirect; the bundled launcher asks when run in a terminal. | Answer No; the candidate exits without changing predecessor config/data. Restart BookshelfNG if it was stopped for the handoff. | Answer Yes; migration completes, ChaptarrNG starts, and health passes. The operator switches the launcher/service after acceptance. | FreeBSD 15.1 VM: installed BookshelfNG 0.4.21.71 to the exact local 0.9.978 archive; No, Yes, health, source backup, and forced-failure rollback passed. |
-| Windows standalone migration installer | Yes, through its explicit Migrate BookshelfNG action and the migration preview's Yes/No confirmation; closing the window defers | Close without selecting Migrate, or answer No at preview; BookshelfNG remains installed. | Select Migrate, review the preview, then answer Yes to run backup, conversion, service handoff, and health checks. | Hosted Windows run [40218131519](https://github.com/snapetech-org/chaptarrng/actions/runs/40218131519) installed the checksum-pinned .71 service, forced automatic rollback, completed the real installer handoff, and exercised explicit restore. The installer source is unchanged since that run. This campaign adds a No-at-preview service round-trip to the Windows smoke; its hosted result is pending. Chocolatey remains a separate channel. |
+| Windows standalone migration installer | Yes, through its explicit Migrate BookshelfNG action and the migration preview's Yes/No confirmation; closing the window defers | Close without selecting Migrate, or answer No at preview; BookshelfNG remains installed. | Select Migrate, review the preview, then answer Yes to run backup, conversion, service handoff, and health checks. | Hosted Windows run [40218131519](https://github.com/snapetech-org/chaptarrng/actions/runs/40218131519) installed the checksum-pinned .71 service, forced automatic rollback, completed the real installer handoff, and exercised explicit restore. The installer source is unchanged since that run. Hosted Windows run [40274632625](https://github.com/snapetech-org/chaptarrng/actions/runs/40274632625) completed the No-at-preview service round-trip; No kept BookshelfNG installed, Yes completed the upgrade, and injected-failure rollback, explicit restore, service cleanup, and selected-data-directory checks passed. Chocolatey remains a separate channel. |
 
 ## Windows Chocolatey evidence
 
@@ -53,7 +53,40 @@ Two TTY test harness issues were fixed before acceptance: GNU `timeout` needed `
 
 ## Cloudron image-wrapper evidence
 
-A local Cloudron candidate image layered the package Dockerfile, nginx proxy, and Cloudron entrypoint onto the exact-head application image. With `BOOKSHELFNG_MIGRATION_MODE=manual`, the app wrote `manual-review`, preserved the source database byte-for-byte, returned HTTP 200 from the proxy `/ping`, and served the migration instructions for normal requests. With automatic mode, the inner app listened on port 8788 behind the stable 8787 proxy, migration health passed, `/ping` and the app route worked, and the read-only migration check passed. The target database passed integrity at schema 124 with 4 authors, 9 books, and 4 book files; the retained schema-158 source backup passed integrity. Cloudron supports custom per-app environment values, so the operator can select manual mode before update and automatic mode when accepting conversion. This is a local image-wrapper rehearsal, not an installed Cloudron platform update/backup/restore acceptance.
+A local Cloudron candidate image layered the package Dockerfile, nginx proxy, and Cloudron entrypoint onto the exact-head application image. With `BOOKSHELFNG_MIGRATION_MODE=manual`, the app wrote `manual-review`, preserved the source database byte-for-byte, returned HTTP 200 from the proxy `/ping`, and served the migration instructions for normal requests. With automatic mode, the inner app listened on port 8788 behind the stable 8787 proxy, migration health passed, `/ping` and the app route worked, and the read-only migration check passed. The target database passed integrity at schema 124 with 4 authors, 9 books, and 4 book files; the retained schema-158 source backup passed integrity. Cloudron supports custom per-app environment values, so the operator can select manual mode before update and automatic mode when accepting conversion. This records the wrapper-only rehearsal; installed platform acceptance is recorded in the next section.
+
+## Cloudron installed platform evidence
+
+Cloudron 10.1.6 updated app `tech.snapetech.bookshelfng` from the BookshelfNG
+`.4.21` package to the local ChaptarrNG `.4.23` candidate, using the local
+`0.9.978-cloudron-backup-hooks-v2` application image. The app ID, port, and
+`/config`, `/books`, and `/downloads` mounts were preserved. Manual mode left
+the schema-158 database unchanged, kept `/ping` at HTTP 200, and showed the
+recovery page for normal requests.
+
+Native Cloudron backup task 22 completed. Its archive contains consistent
+SQLite snapshots for the active `readarr.db`, `logs.db`, `cache.db`, and
+`staging.db`, records absent `audioarr.db` and `chaptarr.db`, and includes the
+three persistent directories. The archive checksum and all SQLite integrity
+checks passed. After changing databases, config, and media canaries and adding
+stale database files, native restore task 25 restored the original config and
+canary hashes, schema-158 database, and file layout; the stale files were
+removed.
+
+Automatic mode then migrated schema 158 to 124, passed integrity and
+foreign-key checks, served `/ping`, and retained a BookshelfNG source backup.
+The internal `-restore-bookshelf` operation restored schema 158 with the
+original author/book counts, after which Cloudron restored the `.4.21` package
+and returned BookshelfNG to healthy `/ping`. This tested the supported rollback
+sequence while preserving later evidence files.
+
+The legacy `.4.21` pre-update Cloudron backup did not contain `/config`,
+`/books`, or `/downloads`: that package had no backup hooks. The new hooks only
+protect backups created after `.4.23` is installed. Full task evidence,
+including the backup ID and archive/database checks, is recorded in
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/cloudron-installed-platform-acceptance.md`.
+The VM image and registry were local QA infrastructure; no candidate or feed
+was published.
 
 ## FreeBSD standalone installed acceptance
 
@@ -85,29 +118,49 @@ matches the installed candidate.
 
 ## StartOS installed update acceptance
 
-The StartOS 0.4.0.3 x86_64 VM first installed a test-only SDK3 package with
-package ID `bookshelfng`, version `0.4.21:1`, and the public BookshelfNG .71
-image digest. The candidate kept that ID and updated it to test version
-`0.9.979:1` using the corrected wrapper. The installed `.s9pk` SHA-256 was
-`312a0c956dac70d82623aecd866c0bfa2ae5b29f1749e4d1fdfbd5e9c4147bce`. The
-package action set Manual and the
-same test volume was upgraded: the schema-158 source database remained
-byte-identical, no `/ping` endpoint started, and the log recorded deferred
-migration. The subsequent Automatic setting migrated the same source to
-schema 124, retained a schema-158 backup, passed SQLite integrity and foreign
-key checks, and returned a healthy `/ping`. Unique canaries in `/books` and
-`/downloads` survived the update. Evidence is in
-`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/startos-corrected-manual-readonly.log`,
-`startos-corrected-automatic-acceptance.log`, and `startos-volume-canaries.log`.
+The x86_64 and aarch64 StartOS 0.4.0.3 VMs used test-only SDK3 `.s9pk` files
+with package ID `bookshelfng`. The earlier x86_64 run updated test package
+`.4.21:1` to `.9.979:1`; its candidate SHA-256 was
+`312a0c956dac70d82623aecd866c0bfa2ae5b29f1749e4d1fdfbd5e9c4147bce`. The ARM64
+run updated synthetic predecessor `.4.21:3` to `.9.979:1`. The predecessor
+package SHA-256 was
+`e5f9318d17dae104f99d06cda29bfe9f4d9dbe10ca25164e90178fb2bf758c23`; the
+candidate SHA-256 was
+`77a0f9e0c1d916ed7594d6b33366819f67269684fd132ec446cda7d2777f5bde`.
 
-This run used a synthetic test package signed with the task-local key and a
-local x86_64 candidate image. It confirms the StartOS package update and data
-handoff in that test environment, but not the external maintainer's signed
-package, aarch64 image, published package repository, or package-manager
-rollback. The wrapper now inherits the image entrypoint with
-`sdk.useEntrypoint()` and uses StartOS's port readiness check; the former
-`/init` child-process invocation and missing in-image health script both
-blocked startup.
+On ARM64, the package action persisted Manual, the package supervisor held
+startup, and the schema-158 source remained unchanged. The Console migration
+preview passed, explicit apply converted to schema 124 and retained the
+BookshelfNG backup, and switching to Automatic restarted the same package with
+healthy `/ping`. Re-seeding from the retained schema-158 backup then proved
+the Automatic first-start path. SQLite integrity and foreign-key checks passed;
+the final database had 4 authors, 9 books, and 1 download client. The `/books`
+and `/downloads` canary hashes remained
+`cf812181855dbf277ee62c0d3fbd17be04e0aa3a501f8a3dd529e6189f47a127` and
+`d8b55e0867c52c71515b6261127404b0e9a37849fd7124fc528414ab2befcd34`.
+
+A final test package `.9.980:1` deliberately expected port `8788` while the
+candidate listened on `8787`. After the bounded health failure, StartOS
+restored the schema-158 source to the retained backup hash
+`5ee42780c008cf49d829c41f916383c91a8dc8936b867593739d2fedc4e6d260`, retained
+the failed schema-124 target separately, and left `/ping` unavailable. Both
+databases passed integrity and foreign-key checks. The failure candidate SHA
+was `74651a849c7cad66ae3e65cdd70f8327a3952a6583859ca0d59f16ccca3f553d`.
+
+The ARM64 predecessor fixture wraps the public BookshelfNG Readarr 0.4.21.37
+image with a direct service command because its s6 `/init` must run as PID 1;
+it is not the public `.71` StartOS package. All packages used a task-local
+signing key. The exact guest transcript, package logs, hashes, and offline
+SQLite checks are retained under
+`/var/tmp/chaptarrng-channel-acceptance-20261026/vms/startos-acceptance/arm64/`;
+the evidence summary is
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/startos-arm64-acceptance.md`.
+This verifies synthetic package identity, update, migration choice, health,
+and automatic source rollback on ARM64. It does not validate the external
+maintainer's signed package, official `.71` predecessor, repository delivery,
+or StartOS package-manager rollback. The candidate continues to inherit the
+image entrypoint with `sdk.useEntrypoint()` and uses StartOS's port readiness
+check.
 
 ## Other package checks
 
@@ -118,11 +171,29 @@ The shared Linux standalone handoff harness used a checksum-verified public Book
 Windows evidence is recorded at /var/tmp/chaptarrng-channel-acceptance-20261026/evidence/windows-final-acceptance.json and the full guest transcript is windows-server-2025-chocolatey-acceptance.log in the same evidence directory. Helm evidence is in helm-final2-acceptance.json and helm-final2-rollback-acceptance.json. Native VM package and service logs are retained beside them.
 
 Co-op Cloud Swarm source, Manual defer, Automatic migration, paused failed
-update, and archive restore evidence is under
+update, and volume restore evidence is under
 `/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/coop-cloud-swarm-*`.
-The VM used the local checksum-pinned .71 predecessor and exact-head .978
-candidate; the full pre-migration volume snapshot and SSH key were removed
-after the run.
+The Backupbot II acceptance log is
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/coop-cloud-backupbot-acceptance.log`.
+It records image digest `sha256:870277cdba4b91ad6771184a7e208ba29151b951e39c68b4a3fd6f8d35252feb`,
+an official `backup create` and `restore --noninteractive`, and successful
+restore of the schema-158 fixture (SHA-256
+`53901555272388bc56157239ab674e3493dbcbcfd70557e0a468b0df9cf091b7`) plus
+all three volume canaries. The VM used the local checksum-pinned .71
+predecessor and exact-head .978 candidate; temporary VM disks and keys were
+removed after the runs.
+
+Abra acceptance is recorded in
+`/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/coop-cloud-abra-backup-restore-acceptance.log`.
+Abra 0.13.0-beta was checksum-verified and used local server mode to deploy a
+test recipe with the `bookshelfng_app` identity, production volume names, and
+`backupbot.backup=true`. `abra app backup create`, `snapshots`, and `list`
+succeeded. After the database and volume canaries were corrupted and the app
+was scaled to zero, `abra app restore` recovered the schema-158 fixture
+byte-for-byte, passed SQLite integrity and row-count checks, restored all
+canaries, preserved service mounts, and restarted the app. The test recipe and
+helper are retained in
+`/var/tmp/chaptarrng-channel-acceptance-20261026/vms/coop-cloud-abra/`.
 
 ## Remaining release blockers
 
@@ -130,8 +201,8 @@ after the run.
 - The Chocolatey feed rejection is unresolved. The local package passed, but no public package was pushed.
 - The AUR update candidate is local and unpublished.
 - Docker alias/image delivery, Helm OCI chart delivery, AppImage/Flatpak publication, and external catalog updates remain gated.
-- StartOS passed the local x86_64 VM handoff, but the official signed package, aarch64 runtime, external repository, and package-manager rollback remain open. Cloudron needs an installed platform update/backup/restore rehearsal. Co-op Cloud passed local Swarm update, defer, failure-pause, and full-volume restore; canonical recipe/Backupbot acceptance remains open. Unraid and external catalog platform handoffs still need their own update and rollback tests.
-- The Windows standalone installer passed hosted Yes, injected-failure rollback, and explicit restore; the new No-at-preview service round-trip is pending its hosted Windows run.
+- StartOS passed synthetic x86_64 and aarch64 VM handoffs, including Manual, Automatic, health, and automatic source rollback. Its official signed package, public `.71` predecessor update, external repository, and package-manager rollback remain open. Cloudron's local installed platform path passed, but candidate/feed publication remains open and the `.4.21` pre-update backup excludes persistent directories. Co-op Cloud passed local Swarm update, defer, failure-pause, full-volume restore, official Backupbot II CLI backup/restore, and Abra CLI backup/restore orchestration; canonical recipe review, published digest, and maintainer acceptance remain open. Unraid and external catalog platform handoffs still need their own update and rollback tests.
+- The Windows standalone installer passed hosted Yes, No-at-preview defer, injected-failure rollback, explicit restore, service cleanup, and selected-data-directory checks. The old BookshelfNG updater cannot be redirected from this repository.
 - macOS legacy installs need a one-time manual bootstrap; hosted x64 and arm64 runtime handoff acceptance now passes. The old BookshelfNG updater cannot be redirected from this repository. FreeBSD installed No/Yes/rollback acceptance is complete, but the one-time launcher/service path switch remains an operator action.
 - Representative operator data and production provider/API workflows are outside this channel-package campaign.
 

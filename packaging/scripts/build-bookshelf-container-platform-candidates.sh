@@ -56,6 +56,8 @@ cp "$repo_root/packaging/legacy/cloudron/CloudronManifest.json" "$stage/cloudron
 cp "$repo_root/packaging/legacy/cloudron/nginx.conf" "$stage/cloudron/nginx.conf"
 cp "$repo_root/packaging/legacy/cloudron/migration-unavailable.html" "$stage/cloudron/migration-unavailable.html"
 cp "$repo_root/packaging/legacy/cloudron/cloudron-entrypoint.sh" "$stage/cloudron/cloudron-entrypoint.sh"
+cp "$repo_root/packaging/legacy/cloudron/cloudron-backup.sh" "$stage/cloudron/cloudron-backup.sh"
+cp "$repo_root/packaging/legacy/cloudron/cloudron-restore.sh" "$stage/cloudron/cloudron-restore.sh"
 cp -a "$repo_root/packaging/legacy/coop-cloud/bookshelfng/." "$stage/coop-cloud/bookshelfng/"
 cp "$repo_root/packaging/legacy/catalogs/compose.yaml" "$stage/catalogs/compose.yaml"
 python3 - "$repo_root/packaging/legacy/startos/candidate" "$stage/startos" <<'PY'

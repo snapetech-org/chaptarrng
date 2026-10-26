@@ -3,13 +3,14 @@
 > **Release status (2026-10-26).** ChaptarrNG `v0.9.977` remains the latest
 > public release. Local 0.9.978 candidates have passed installed handoff
 > acceptance on Debian, Fedora, Arch, Windows Chocolatey, AppImage, Flatpak,
-> Helm, and Docker. Docker offers y/n with an attached TTY; headless Docker
-> and Helm defer Ask mode. The Cloudron image wrapper passed local
-> manual/automatic runtime checks, but platform update and restore acceptance
-> remains open. FreeBSD standalone archives passed installed No/Yes and rollback
-> acceptance in a FreeBSD 15.1 VM. These candidates remain unpublished; StartOS,
-> Co-op Cloud, Unraid, external catalogs, the standalone Windows installer,
-> macOS, and the Cloudron platform still need platform-specific acceptance. Representative operator-data
+> Helm, Docker, Cloudron, and Co-op Cloud. Docker offers y/n with an attached
+> TTY; headless Docker and Helm defer Ask mode. Cloudron 10.1.6 passed an
+> installed `.4.21` to `.4.23` update, manual defer, native backup/restore,
+> automatic migration, and source-database plus old-package rollback. FreeBSD
+> standalone archives passed installed No/Yes and rollback acceptance in a
+> FreeBSD 15.1 VM. These candidates remain unpublished; StartOS, Co-op Cloud's
+> canonical recipe, Unraid, external catalogs, the standalone Windows
+> installer, and macOS still need platform-specific acceptance. Representative operator-data
 > and provider acceptance remain open, and no release, bridge publication, or
 > cutover has been authorized. See the
 > [channel acceptance matrix](maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
@@ -132,9 +133,11 @@ default. The Cloudron candidate keeps `/ping` available during supervised
 migration on its existing port while proxying application traffic to the local
 ChaptarrNG process. It has no terminal prompt: the administrator holds or
 applies the app update, or sets `BOOKSHELFNG_MIGRATION_MODE=manual` before
-updating and switches to `automatic` when accepting conversion. The local
-image-wrapper manual/automatic rehearsal passed; Cloudron platform update,
-backup, and restore acceptance remains open. The Helm bridge infers the old
+updating and switches to `automatic` when accepting conversion. Cloudron 10.1.6
+installed update, native backup/restore, automatic migration, and
+source-database plus old-package rollback passed locally; feed publication
+remains open, and the legacy `.4.21` pre-update backup excludes persistent
+directories. The Helm bridge infers the old
 chart's flavor and readable overrides,
 and requires `bookshelfMigration.providerMode` when a Secret or an unrecognized
 image tag leaves the effective mode ambiguous. Never infer provider mode from
