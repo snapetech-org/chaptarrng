@@ -38,7 +38,7 @@ env:
 
 jobs:
   require-release-readiness:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: read
     steps:
@@ -55,7 +55,7 @@ jobs:
 
   build-and-push:
     needs: require-release-readiness
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     outputs:
       image_digest: ${{ steps.build.outputs.digest }}
       bookshelf_softcover_digest: ${{ steps.build_softcover.outputs.digest }}

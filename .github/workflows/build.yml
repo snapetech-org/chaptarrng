@@ -1,4 +1,4 @@
-# ng-runner-policy: hosted-first-v1
+# ng-runner-policy: private-jit-required-v1
 name: Build ChaptarrNG
 
 on:
@@ -21,7 +21,7 @@ jobs:
   release-notes:
     name: Release-note contract
     if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot' && (github.event.action != 'edited' || github.event.changes.body != null)
-    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: read
     steps:
@@ -63,20 +63,13 @@ jobs:
 
   build:
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
-    # Trusted main Linux validation uses the isolated shared pool; PRs and
-    # non-Linux matrix legs use GitHub-hosted runners.
-    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && matrix.os == 'ubuntu-latest' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || matrix.os }}
+    # Each platform requests private capacity. Missing native JIT routes remain
+    # queued until their runner group and workflow access are verified.
+    runs-on: ${{ matrix.platform == 'windows-x64' && fromJSON('["self-hosted","Windows","X64","packer-windows"]') || matrix.platform == 'macos-intel' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","X64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-15-intel]
-        include:
-          - os: ubuntu-latest
-            platform: linux
-          - os: windows-latest
-            platform: win
-          - os: macos-15-intel
-            platform: osx
+        platform: [linux-x64, windows-x64, macos-intel]
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -84,7 +77,7 @@ jobs:
         fetch-depth: 0
 
     - name: Test stable GHCR image identity and legacy aliases
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       run: |
         bash packaging/scripts/test-publish-image-aliases.sh
         bash packaging/scripts/test-dispatch-ghcr-release-bridge.sh
@@ -93,69 +86,69 @@ jobs:
         bash packaging/scripts/test-bookshelfng-ppa-publish-gate.sh
 
     - name: Test release publisher configuration preflight
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       env:
         TMPDIR: ${{ runner.temp }}
       run: bash packaging/scripts/test-release-publisher-config.sh
 
     - name: Test Chocolatey legacy package publish gate
-      if: matrix.os == 'windows-latest'
+      if: matrix.platform == 'windows-x64'
       shell: pwsh
       run: ./packaging/scripts/test-chocolatey-publish-gate.ps1
 
     - name: Test Chocolatey BookshelfNG migration choice
-      if: matrix.os == 'windows-latest'
+      if: matrix.platform == 'windows-x64'
       shell: pwsh
       run: ./packaging/scripts/test-chocolatey-migration-choice.ps1
 
     - name: Test BookshelfNG migration journal fingerprints and desktop PostgreSQL handoff
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       env:
         TASK_SCRATCH_DIR: ${{ runner.temp }}
       run: bash packaging/scripts/test-bookshelfng-journal-fingerprint.sh
 
-    - name: Test hosted runner policy
-      if: matrix.os == 'ubuntu-latest'
+    - name: Test private runner policy
+      if: matrix.platform == 'linux-x64'
       run: python3 scripts/test_workflow_runner_policy.py
 
     - name: Test candidate BookshelfNG Debian bridge package
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       env:
         TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-deb-bridge-test
       run: bash packaging/scripts/test-build-bookshelfng-deb-bridge.sh
 
     - name: Test BookshelfNG AUR migration choice
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       env:
         TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-aur-choice-test
       run: bash packaging/scripts/test-bookshelfng-aur-choice.sh
 
     - name: Test candidate BookshelfNG RPM bridge package
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       env:
         TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-rpm-bridge-test
       run: bash packaging/scripts/test-build-bookshelfng-rpm-bridge.sh
 
     - name: Test candidate BookshelfNG Launchpad source package
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       env:
         TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-ppa-source-test
       run: bash packaging/scripts/test-build-bookshelfng-ppa-source.sh
 
     - name: Test BookshelfNG host migration helper
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       run: |
         bash -n scripts/bookshelfng-to-chaptarrng.sh scripts/test-bookshelfng-to-chaptarrng.sh
         bash scripts/test-bookshelfng-to-chaptarrng.sh
 
     - name: Test BookshelfNG Docker compatibility defaults
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       env:
         TMPDIR: ${{ runner.temp }}
       run: bash packaging/scripts/test-docker-bookshelf-compatibility-defaults.sh
 
     - name: Test legacy environment compatibility for unmapped retry
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       env:
         TMPDIR: ${{ runner.temp }}
       run: bash scripts/test-chaptarr-retry-unmapped-env.sh
@@ -319,11 +312,11 @@ jobs:
       run: dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --configuration Release --no-restore -p:UseSharedCompilation=false
 
     - name: Build tool-enabled M4B test image
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       run: docker build -f integration/Dockerfile.m4b-test -t chaptarrng-m4b-test:ci integration
 
     - name: Test real M4B merge, fallback, and restart recovery
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.platform == 'linux-x64'
       run: |
         docker run --rm --network none \
           --volume "$GITHUB_WORKSPACE:/workspace" \
@@ -422,31 +415,31 @@ jobs:
       run: test -s ./publish/Chaptarr/Chaptarr.Diagnostics.dll
 
     - name: Build Windows BookshelfNG migration installer
-      if: matrix.os == 'windows-latest'
+      if: matrix.platform == 'windows-x64'
       shell: pwsh
       run: ./packaging/scripts/build-windows-bookshelf-migration-installer.ps1 -KeepPayload
 
     - name: Test Windows migration installer SQLite fingerprint
-      if: matrix.os == 'windows-latest'
+      if: matrix.platform == 'windows-x64'
       shell: pwsh
       run: dotnet run --configuration Release --project ./distribution/windows/installer-net-smoke/ChaptarrNG.Installer.Smoke.csproj
 
     - name: Test Windows BookshelfNG installer upgrade and rollback services
-      if: matrix.os == 'windows-latest'
+      if: matrix.platform == 'windows-x64'
       env:
         CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST: ${{ runner.temp }}/chaptarr-bookshelf-service-roundtrip-cleanup.json
       shell: pwsh
       run: dotnet run --configuration Release --project ./distribution/windows/installer-net-smoke/ChaptarrNG.Installer.Smoke.csproj -- --windows-service-round-trip
 
     - name: Clean up Windows BookshelfNG installer round-trip services
-      if: always() && matrix.os == 'windows-latest'
+      if: always() && matrix.platform == 'windows-x64'
       env:
         CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST: ${{ runner.temp }}/chaptarr-bookshelf-service-roundtrip-cleanup.json
       shell: pwsh
       run: ./distribution/windows/installer-net-smoke/CleanupServiceRoundTrip.ps1 -ManifestPath $env:CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST
 
     - name: Remove temporary Windows installer payload
-      if: always() && matrix.os == 'windows-latest'
+      if: always() && matrix.platform == 'windows-x64'
       shell: pwsh
       run: |
         $payload = Join-Path $PWD 'distribution/windows/installer-net/Payload/Chaptarr.payload.zip'
@@ -460,7 +453,7 @@ jobs:
         }
 
     - name: Test Windows service preserves its selected data directory
-      if: matrix.os == 'windows-latest'
+      if: matrix.platform == 'windows-x64'
       shell: pwsh
       run: ./packaging/scripts/test-windows-service-data-path.ps1 -AppDirectory ./publish/Chaptarr
     
@@ -474,7 +467,7 @@ jobs:
 
   postgres-migrations:
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
-    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-24.04' }}
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     services:
       postgres:
         image: postgres:16
@@ -598,9 +591,9 @@ jobs:
 
   docker-compatibility-build:
     name: Docker (${{ matrix.target }})
-    runs-on: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     env:
-      BUILDKIT_EGRESS_PROXY: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
+      BUILDKIT_EGRESS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
     strategy:
       fail-fast: false
       matrix:

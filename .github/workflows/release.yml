@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   preflight:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     outputs:
       release_requested: ${{ steps.release-request.outputs.release_requested }}
     steps:
@@ -90,7 +90,7 @@ jobs:
 
   release:
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: write
     outputs:
@@ -314,7 +314,7 @@ jobs:
     name: Dispatch personal-account BookshelfNG GHCR bridge
     needs: [release, docker, publish-release]
     if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: read
     steps:
@@ -341,7 +341,7 @@ jobs:
   platform-runtime-packs:
     name: Build Linux x86 and FreeBSD .NET 10 runtime packs
     needs: release
-    runs-on: ubuntu-22.04
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-jit-linux-22-04","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     timeout-minutes: 360
     permissions:
       contents: read
@@ -381,7 +381,7 @@ jobs:
   standalone-assets:
     name: Build ${{ matrix.rid }} standalone release asset
     needs: [release, platform-runtime-packs]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     strategy:
       fail-fast: false
       matrix:
@@ -464,7 +464,7 @@ jobs:
   windows-migration-installer:
     name: Build BookshelfNG Windows migration installer
     needs: [release, standalone-assets]
-    runs-on: windows-latest
+    runs-on: [self-hosted, Windows, X64, packer-windows]
     permissions:
       contents: read
     steps:
@@ -522,7 +522,7 @@ jobs:
     name: Build gated BookshelfNG AppImage and Flatpak candidates
     needs: [release, standalone-assets]
     if: ${{ always() && needs.release.result == 'success' && needs.standalone-assets.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: read
     steps:
@@ -600,7 +600,7 @@ jobs:
   rpm-source:
     name: Build verified new and legacy COPR source RPMs
     needs: [release, standalone-assets]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: read
     steps:
@@ -646,7 +646,7 @@ jobs:
 
   publish-release:
     needs: [release, docker, standalone-assets, rpm-source, windows-migration-installer, legacy-desktop-candidates]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: write
     steps:
@@ -802,7 +802,7 @@ jobs:
   announce-discord:
     name: Announce release to Discord
     needs: [release, docker, publish-release]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: read
     env:

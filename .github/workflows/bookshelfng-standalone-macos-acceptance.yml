@@ -1,4 +1,4 @@
-# ng-runner-policy: hosted-first-v1
+# ng-runner-policy: private-jit-required-v1
 name: BookshelfNG standalone macOS handoff acceptance
 
 on:
@@ -14,17 +14,17 @@ concurrency:
 jobs:
   installed-handoff:
     name: BookshelfNG .71 to current ${{ matrix.rid }} archive
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.architecture == 'X64' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","X64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","ARM64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
         - rid: osx-x64
-          runner: macos-15-intel
+          architecture: X64
           predecessor_sha256: d4450af8991742b1e5bcb794b9ecb7f59b4d57e99b9a82dfc56cb437112955de
         - rid: osx-arm64
-          runner: macos-15
+          architecture: ARM64
           predecessor_sha256: 50dfa8f20611afd3ff23615a964c33d39f0c026297240a334ad12c61c11d0298
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

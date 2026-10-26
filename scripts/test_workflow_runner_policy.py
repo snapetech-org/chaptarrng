@@ -49,31 +49,76 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertNotRegex(push, r"(?m)^    branches:")
         self.assertNotRegex(source, r"(?m)^  pull_request(?:_target)?:")
 
-    def test_build_matrix_uses_shared_pool_only_for_trusted_main_linux(self) -> None:
+    def test_build_matrix_requests_private_capacity_for_each_platform(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         build = job_block(source, "build")
         runner_match = re.search(r"(?m)^    runs-on: (?P<runner>[^\n]+)$", build)
         self.assertIsNotNone(runner_match)
         runner = runner_match.group("runner")
-        self.assertIn("matrix.os == 'ubuntu-latest'", runner)
+        self.assertIn("matrix.platform == 'windows-x64'", runner)
+        self.assertIn("matrix.platform == 'macos-intel'", runner)
         self.assertIn('"group":"ng-shared-main-jit"', runner)
         self.assertIn('"ng-shared-main-chaptarrng"', runner)
         self.assertIn('"ng-main-run-{0}"', runner)
         self.assertIn("github.run_id", runner)
-        self.assertIn("github.event_name == 'push'", runner)
-        self.assertIn("github.event_name == 'workflow_dispatch'", runner)
-        self.assertIn("github.ref == 'refs/heads/main'", runner)
-        self.assertIn("|| matrix.os", runner)
+        self.assertIn(
+            "matrix.platform == 'windows-x64' && fromJSON('[\"self-hosted\",\"Windows\",\"X64\",\"packer-windows\"]')",
+            runner,
+        )
+        self.assertNotRegex(runner, r"ubuntu-latest|windows-latest|macos-[0-9]")
+        self.assertNotIn("|| matrix.os", runner)
         self.assertNotIn("TRUSTED_MAIN_RUNNERS_ENABLED", source)
+
+    def test_all_workflow_jobs_use_private_runner_groups_or_labels(self) -> None:
+        workflow_dir = WORKFLOW.parent
+        for workflow_path in sorted(workflow_dir.glob("*.yml")):
+            source = workflow_path.read_text(encoding="utf-8")
+            lines = source.splitlines()
+            for index, line in enumerate(lines):
+                if not re.match(r"^\s*runs-on:", line):
+                    continue
+                self.assertNotRegex(
+                    line,
+                    r"runs-on:.*\b(?:ubuntu-latest|ubuntu-[0-9]|windows-latest|macos-[0-9])",
+                    str(workflow_path),
+                )
+                self.assertNotRegex(
+                    line,
+                    r"\|\|\s*['\"]?(?:ubuntu-|windows-latest|macos-[0-9])|\|\|\s*matrix\.os",
+                    str(workflow_path),
+                )
+                if line.rstrip().endswith("runs-on:"):
+                    block = "\n".join(lines[index : index + 3])
+                    self.assertIn("group:", block, str(workflow_path))
+                else:
+                    self.assertRegex(
+                        line,
+                        r"self-hosted|group|fromJSON",
+                        f"{workflow_path}: {line}",
+                    )
+
+    def test_windows_release_jobs_use_the_private_packer_route(self) -> None:
+        expected = "[self-hosted, Windows, X64, packer-windows]"
+        windows_release_jobs = (
+            ("release.yml", "windows-migration-installer"),
+            ("release-distribution.yml", "build-chocolatey"),
+            ("release-distribution.yml", "publish-chocolatey"),
+        )
+        for workflow_name, job_name in windows_release_jobs:
+            source = (WORKFLOW.parent / workflow_name).read_text(encoding="utf-8")
+            job = job_block(source, job_name)
+            runner_match = re.search(r"(?m)^    runs-on: (?P<runner>[^\n]+)$", job)
+            self.assertIsNotNone(runner_match, f"{workflow_name}:{job_name}")
+            self.assertEqual(runner_match.group("runner"), expected)
+
+        for workflow_name in ("build.yml", "release.yml", "release-distribution.yml"):
+            source = (WORKFLOW.parent / workflow_name).read_text(encoding="utf-8")
+            self.assertNotRegex(source, r"(?m)^\s+runs-on: windows-latest\s*$")
 
     def test_buildkit_proxy_is_limited_to_trusted_main_and_reaches_build_steps(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         docker_job = job_block(source, "docker-compatibility-build")
-        expected_proxy_gate = (
-            "BUILDKIT_EGRESS_PROXY: ${{ (vars.NG_HOSTED_FIRST != 'true' || vars.NG_FORCE_JIT == 'true' || github.run_attempt > 1) && (github.event_name == 'push' || "
-            "github.event_name == 'workflow_dispatch') && github.ref == "
-            "'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}"
-        )
+        expected_proxy_gate = "BUILDKIT_EGRESS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}"
         self.assertIn(expected_proxy_gate, docker_job)
 
         buildx = step_block(source, "Set up Docker Buildx")
@@ -105,7 +150,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertNotRegex(push, r"(?m)^    branches:")
         self.assertNotRegex(source, r"(?m)^  pull_request(?:_target)?:")
 
-    def test_security_scans_use_the_shared_pool_only_on_trusted_main_runs(self) -> None:
+    def test_security_scans_use_private_jit_without_hosted_fallback(self) -> None:
         workflow_dir = WORKFLOW.parent
         for workflow_name, job_name in (
             ("codeql.yml", "analyze"),
@@ -117,16 +162,14 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             self.assertIsNotNone(runner_match, workflow_name)
             runner = runner_match.group("runner")
             self.assertIn('"group":"ng-shared-main-jit"', runner)
-            self.assertIn("github.event_name == 'push'", runner)
-            self.assertIn("github.event_name == 'workflow_dispatch'", runner)
-            self.assertIn("github.event_name == 'schedule'", runner)
-            self.assertIn("github.ref == 'refs/heads/main'", runner)
-            self.assertIn("|| 'ubuntu-latest'", runner)
+            self.assertIn('"self-hosted"', runner)
+            self.assertIn('"ng-main-run-{0}"', runner)
+            self.assertNotIn("ubuntu-latest", runner)
         semgrep = (workflow_dir / "semgrep-community.yml").read_text(encoding="utf-8")
         self.assertIn("docker info", semgrep)
         self.assertIn("docker run", semgrep)
 
-    def test_playwright_install_uses_hosted_linux_dependencies(self) -> None:
+    def test_playwright_install_uses_linux_dependencies(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("Install Chromium and system dependencies on Linux", source)
         self.assertIn("install --with-deps chromium", source)

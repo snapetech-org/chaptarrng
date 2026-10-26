@@ -1,14 +1,17 @@
 name: Dependency Review
 
 on:
-  workflow_dispatch: {}
+  pull_request:
+    types: [opened, synchronize, reopened]
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   dependency-review:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on:
+      group: public-fork-jit
+      labels: [self-hosted, linux, x64]
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

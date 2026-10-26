@@ -46,7 +46,7 @@ permissions:
 jobs:
   release-target:
     name: Validate published release target
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     outputs:
       tag: ${{ steps.target.outputs.tag }}
       version: ${{ steps.target.outputs.version }}
@@ -98,7 +98,7 @@ jobs:
 
   credentials:
     name: Check optional publisher credentials
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     outputs:
       aur: ${{ steps.check.outputs.aur }}
       copr: ${{ steps.check.outputs.copr }}
@@ -126,7 +126,7 @@ jobs:
       fail-fast: false
       matrix:
         series: ${{ fromJSON(needs.credentials.outputs.ppa_series) }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -170,7 +170,7 @@ jobs:
     name: Upload gated BookshelfNG source packages to Launchpad
     needs: [credentials, release-target, build-legacy-ppa]
     if: needs.credentials.outputs.ppa == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     steps:
     - name: Install Launchpad upload tool
       run: |
@@ -196,7 +196,7 @@ jobs:
   build-aur:
     name: Validate new and legacy AUR recipes
     needs: [release-target]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -238,7 +238,7 @@ jobs:
     name: Publish ChaptarrNG and BookshelfNG AUR identities
     needs: [credentials, release-target, build-aur]
     if: needs.credentials.outputs.aur == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     steps:
     - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
@@ -308,7 +308,7 @@ jobs:
   build-chocolatey:
     name: Build and validate the Chocolatey package
     needs: [release-target]
-    runs-on: windows-latest
+    runs-on: [self-hosted, Windows, X64, packer-windows]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -517,7 +517,7 @@ jobs:
     name: Publish new and legacy Chocolatey package identities
     needs: [credentials, release-target, build-chocolatey]
     if: needs.credentials.outputs.chocolatey == 'true'
-    runs-on: windows-latest
+    runs-on: [self-hosted, Windows, X64, packer-windows]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -540,7 +540,7 @@ jobs:
     name: Trigger COPR build
     needs: [credentials, release-target]
     if: needs.credentials.outputs.copr == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     steps:
     - name: Submit verified release tag to the ChaptarrNG COPR webhook
       env:
@@ -565,7 +565,7 @@ jobs:
     name: Trigger legacy bookshelfng COPR package
     needs: [credentials, release-target]
     if: needs.credentials.outputs.bookshelfng_copr == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     steps:
     - name: Submit the release tag to the existing bookshelfng COPR package
       env:
@@ -590,7 +590,7 @@ jobs:
     name: Publish the BookshelfNG Helm chart identity
     needs: [release-target]
     if: needs.release-target.outputs.legacy_bridge_enabled == 'true' && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: read
       packages: write
@@ -637,7 +637,7 @@ jobs:
     name: Report package channel results
     if: always()
     needs: [release-target, credentials, build-aur, publish-aur, build-chocolatey, publish-chocolatey, build-legacy-ppa, publish-legacy-ppa, trigger-copr, trigger-legacy-copr, publish-legacy-helm-bridge]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     steps:
     - name: Write channel results
       env:
