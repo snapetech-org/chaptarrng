@@ -60,6 +60,7 @@ cp "$repo_root/packaging/legacy/cloudron/cloudron-backup.sh" "$stage/cloudron/cl
 cp "$repo_root/packaging/legacy/cloudron/cloudron-restore.sh" "$stage/cloudron/cloudron-restore.sh"
 cp -a "$repo_root/packaging/legacy/coop-cloud/bookshelfng/." "$stage/coop-cloud/bookshelfng/"
 cp "$repo_root/packaging/legacy/catalogs/compose.yaml" "$stage/catalogs/compose.yaml"
+cp "$repo_root/packaging/legacy/catalogs/.env.sample" "$stage/catalogs/.env.sample"
 python3 - "$repo_root/packaging/legacy/startos/candidate" "$stage/startos" <<'PY'
 from pathlib import Path
 import shutil
@@ -145,6 +146,10 @@ replacements = {
         "CHAPTARRNG_COMPAT_IMAGE=" + image,
     ),
     root / "catalogs" / "compose.yaml": (legacy_tag, image),
+    root / "catalogs" / ".env.sample": (
+        "CHAPTARRNG_COMPAT_IMAGE=" + legacy_tag,
+        "CHAPTARRNG_COMPAT_IMAGE=" + image,
+    ),
 }
 
 for path, (old, new) in replacements.items():
@@ -176,11 +181,11 @@ ChaptarrNG release: @VERSION@
 Release multi-architecture image: `@IMAGE@`
 
 This bundle contains the Cloudron app source, Co-op Cloud recipe, self-hosting
-Compose candidate, Unraid template, and StartOS package source. Container
-platform candidates pin the exact image digest above. The StartOS package
-version is @VERSION@:1 so each ChaptarrNG release advances the existing package
-channel. The existing BookshelfNG app, stack, package, container, and volume
-identities remain in place.
+Compose candidate and its `.env.sample`, Unraid template, and StartOS package
+source. Container platform candidates pin the exact image digest above. The
+StartOS package version is @VERSION@:1 so each ChaptarrNG release advances the
+existing package channel. The existing BookshelfNG app, stack, package,
+container, and volume identities remain in place.
 
 Compose, Co-op Cloud, Cloudron, and Unraid candidates preserve the native
 Hardcover mode used by their existing BookshelfNG image or template. Set

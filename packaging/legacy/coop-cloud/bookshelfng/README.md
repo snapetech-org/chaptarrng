@@ -41,6 +41,19 @@ old Traefik service port. If the saved `config.xml` port differs, the health
 check reports the mismatch instead of treating the instance as ready. After a
 clean automatic rollback, set `BOOKSHELFNG_MIGRATION_MODE=retry` only after
 correcting the cause. An intervention-required state needs manual recovery.
+Keep configured legacy OIDC, SeerrNG, API-query, diagnostics, metadata,
+Google Books, Europeana, Open Library, Hardcover, Apify, audiobook-merge,
+path-limit, and Chromium environment values in `.env`.
+The recipe passes through the `BOOKSHELF_OIDC_*`,
+`BOOKSHELF_SEERRNG_API_KEY`, `BOOKSHELF_ALLOW_API_KEY_QUERY`,
+`BOOKSHELF_DIAGNOSTICS_*`, `BOOKSHELF_METADATA_SOURCES`,
+`GOOGLE_BOOKS_API_KEY`, `EUROPEANA_API_KEY`, `OPEN_LIBRARY_CONTACT_EMAIL`,
+`HARDCOVER_*`, `BOOKSHELF_M4B_*`, `BOOKSHELF_FFMPEG_PATH`, `METADATA_URL`,
+`MAX_PATH`, `MAX_NAME`, and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` settings.
+It also forwards legacy `BOOKSHELF__`, `AUDIOARR__`, and `READARR__`
+application, authentication, server/security, logging, updater, and full
+PostgreSQL settings. Leave unset fields blank so saved `config.xml` values
+remain authoritative.
 
 An isolated Debian 13 / Docker 26.1 Swarm rehearsal upgraded the pinned
 BookshelfNG 0.4.21.71 source image to a local exact-head ChaptarrNG candidate.

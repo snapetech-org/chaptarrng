@@ -54,7 +54,13 @@ namespace NzbDrone.Core.Configuration
             var legacyPrefix = legacySection + ":";
             foreach (var setting in configuration.AsEnumerable())
             {
-                if (setting.Value == null || !setting.Key.StartsWith(legacyPrefix, StringComparison.OrdinalIgnoreCase))
+                // Deployment templates may declare optional legacy values as
+                // empty placeholders. Treat those as unset so a later empty
+                // alias cannot mask a configured value from another section
+                // or the persisted config file. Native Chaptarr empty values
+                // are reapplied below and still support explicit clearing.
+                if (string.IsNullOrEmpty(setting.Value) ||
+                    !setting.Key.StartsWith(legacyPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -75,9 +81,11 @@ namespace NzbDrone.Core.Configuration
             string legacyKey,
             string chaptarrKey)
         {
+            // Empty root aliases are placeholders too; they must not shadow
+            // the persisted server settings.
             if (configuration[chaptarrKey] == null &&
                 !fallbackValues.ContainsKey(chaptarrKey) &&
-                configuration[legacyKey] != null)
+                !string.IsNullOrEmpty(configuration[legacyKey]))
             {
                 fallbackValues[chaptarrKey] = configuration[legacyKey];
             }

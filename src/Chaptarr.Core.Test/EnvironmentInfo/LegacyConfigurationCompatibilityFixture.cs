@@ -64,6 +64,34 @@ namespace NzbDrone.Core.Test.EnvironmentInfo
             });
         }
 
+        [Test]
+        public void should_ignore_empty_legacy_placeholders_and_keep_non_empty_fallbacks()
+        {
+            var configuration = BuildConfiguration(new Dictionary<string, string>
+            {
+                ["Bookshelf:Server:UrlBase"] = "library",
+                ["Audioarr:Server:UrlBase"] = "",
+                ["Readarr:Server:UrlBase"] = "",
+                ["Bookshelf:Postgres:Host"] = "database.internal",
+                ["Audioarr:Postgres:Host"] = "",
+                ["Readarr:Postgres:Host"] = "",
+                ["BOOKSHELF_PORT"] = "",
+                ["BOOKSHELF_URLBASE"] = "",
+                ["Chaptarr:Server:BindAddress"] = "127.0.0.1"
+            });
+
+            var result = LegacyConfigurationCompatibility.AddFallbackSections(configuration);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(result["Chaptarr:Server:UrlBase"], Is.EqualTo("library"));
+                Assert.That(result["Chaptarr:Postgres:Host"], Is.EqualTo("database.internal"));
+                Assert.That(result["Chaptarr:Server:BindAddress"], Is.EqualTo("127.0.0.1"));
+                Assert.That(result["Chaptarr:Server:Port"], Is.Null,
+                    "an empty root placeholder must not become a server override");
+            });
+        }
+
         private static IConfiguration BuildConfiguration(IDictionary<string, string> values)
         {
             return new ConfigurationBuilder()

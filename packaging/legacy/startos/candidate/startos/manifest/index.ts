@@ -5,7 +5,7 @@ export const manifest = setupManifest({
   id: 'bookshelfng',
   title: 'BookshelfNG',
   license: 'GPL-3.0-only',
-  packageRepo: 'https://github.com/snapetech/bookshelfng-startos',
+  packageRepo: 'https://github.com/snapetech-org/bookshelfng-startos',
   upstreamRepo: 'https://github.com/snapetech-org/chaptarrng',
   marketingUrl: 'https://github.com/snapetech-org/chaptarrng',
   donationUrl: 'https://ko-fi.com/snapetech',

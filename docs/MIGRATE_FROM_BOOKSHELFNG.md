@@ -1111,6 +1111,18 @@ PUID/PGID, timezone, and Hardcover settings. Starting the container runs the
 regular ChaptarrNG app and its automatic migration. The old `config.xml` keeps
 the saved app port and URL base.
 
+The template also carries the legacy OIDC, SeerrNG API key, API-key query
+policy, diagnostics, metadata-source, Google Books, Europeana, Open Library,
+Hardcover/Apify, audiobook-merge, metadata-server, path-limit, and Chromium
+environment settings into the new container.
+Keep their existing values if you configured them outside the BookshelfNG
+settings database. It also carries the old Bookshelf, Audioarr, and Readarr
+application, authentication, server/security, logging, updater, and PostgreSQL
+settings, including TLS and credentials; secret fields remain masked in the
+Unraid template. The Docker Compose candidates pass through the same settings
+from the environment file. Leave compatibility fields blank when `config.xml`
+already owns the setting.
+
 The template exposes `BOOKSHELFNG_MIGRATION_MODE`. Leave it as `automatic` for
 first-start conversion. Set it to `manual` to keep the old database untouched
 and the new container unavailable until a Console preview/apply is completed;
@@ -1141,9 +1153,19 @@ database.
 > against BookshelfNG appdata until migration and rollback acceptance close.
 
 Change the image to ChaptarrNG and retain the old service/container names, host
-paths, mount targets, and port mapping. The Compose candidate defaults to
-`HARDCOVER=false`, matching BookshelfNG's Goodreads behavior when no mode was
-configured. Keep `HARDCOVER=true` for a source that used native Hardcover IDs.
+paths, mount targets, and port mapping. The legacy catalog Compose recipe used
+the Hardcover image, so its candidate defaults to `HARDCOVER=true` and
+`HARDCOVER_NATIVE=true`. Set `HARDCOVER=false` only when migrating a prior
+softcover image. Start with `packaging/legacy/catalogs/.env.sample`, then copy
+the prior Compose environment values into `.env` before starting the candidate.
+Preserve any configured `HARDCOVER_AUTH`, `HARDCOVER_API_KEY`,
+`HARDCOVER_API_URL`, `GOOGLE_BOOKS_API_KEY`, `EUROPEANA_API_KEY`,
+`OPEN_LIBRARY_CONTACT_EMAIL`, `MAX_PATH`, `MAX_NAME`, `BOOKSHELF_M4B_MERGE`,
+`BOOKSHELF_M4B_AAC_BITRATE_KBPS`, and `BOOKSHELF_FFMPEG_PATH` values in the
+Compose environment. Preserve custom `BOOKSHELF__`, `AUDIOARR__`, or
+`READARR__` application, authentication, server/security, logging, updater,
+and PostgreSQL variables too, including TLS certificate settings and database
+credentials.
 The compatibility aliases map `latest`, `main`, `master`, and
 `hardcover` to the native Hardcover target, and `softcover` to the Goodreads
 target; release automation verifies each alias against its mode-specific image
@@ -1163,8 +1185,11 @@ services:
       PGID: "100"
       TZ: Etc/UTC
       CHAPTARR_BOOKSHELF_COMPATIBILITY: "true"
+      CHAPTARR_DEFAULT_PORT: "8787"
+      CHAPTARR_EXPECTED_PORT: "8787"
       BOOKSHELFNG_MIGRATION_MODE: automatic
-      HARDCOVER: "false" # keep true only if the old service used native Hardcover IDs
+      HARDCOVER: "true"
+      HARDCOVER_NATIVE: "true"
     volumes:
       - /host/path/to/bookshelfng-config:/config
       - /host/path/to/media:/data

@@ -19,6 +19,23 @@ Set `BOOKSHELFNG_PORT` to the existing container port and
 `8787`. The fresh-install app default follows the container port. A saved
 `config.xml` port remains authoritative, and the health check keeps the
 container unhealthy if that port no longer matches the Compose mapping.
+Copy `.env.sample` to `.env` before starting the candidate and keep the old
+port, provider, credentials, and other configured values. The sample defaults
+match the previous catalog's Hardcover image and volume identities; the
+release builder replaces the source image alias with the accepted digest.
+Keep the legacy OIDC, SeerrNG key, API-query, diagnostics, metadata,
+Google Books, Europeana, Open Library, Hardcover, Apify, audiobook-merge,
+path-limit, and Chromium environment values in the Compose
+environment when configured. The candidate explicitly passes through the
+`BOOKSHELF_OIDC_*`, `BOOKSHELF_SEERRNG_API_KEY`, `BOOKSHELF_ALLOW_API_KEY_QUERY`,
+`BOOKSHELF_DIAGNOSTICS_*`, `BOOKSHELF_METADATA_SOURCES`,
+`GOOGLE_BOOKS_API_KEY`, `EUROPEANA_API_KEY`, `OPEN_LIBRARY_CONTACT_EMAIL`,
+`HARDCOVER_*`, `BOOKSHELF_M4B_*`, `BOOKSHELF_FFMPEG_PATH`, `METADATA_URL`,
+`MAX_PATH`, `MAX_NAME`, and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` settings.
+It also forwards the legacy `BOOKSHELF__`, `AUDIOARR__`, and `READARR__`
+application, authentication, server/security, logging, updater, and full
+PostgreSQL settings. Leave unset fields blank so saved `config.xml` values
+remain authoritative.
 
 CasaOS, ZimaOS, Umbrel, TrueNAS, Cosmos, CapRover, Portainer, and other catalog
 records are maintained in their respective external repositories. This file

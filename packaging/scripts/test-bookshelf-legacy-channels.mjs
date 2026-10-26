@@ -5,6 +5,66 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const preservedBookshelfEnvironment = [
+  'HARDCOVER',
+  'HARDCOVER_NATIVE',
+  'HARDCOVER_AUTH',
+  'HARDCOVER_API_KEY',
+  'HARDCOVER_API_URL',
+  'HARDCOVER_APIFY_TOKEN',
+  'HARDCOVER_APIFY_GOODREADS_ACTOR',
+  'HARDCOVER_APIFY_GOODREADS_INPUT_TEMPLATE',
+  'BOOKSHELF_ALLOW_API_KEY_QUERY',
+  'BOOKSHELF_DIAGNOSTICS_ENABLED',
+  'BOOKSHELF_DIAGNOSTICS_AUTH_TOKEN',
+  'BOOKSHELF_DIAGNOSTICS_OTLP_ENDPOINT',
+  'BOOKSHELF_METADATA_SOURCES',
+  'GOOGLE_BOOKS_API_KEY',
+  'EUROPEANA_API_KEY',
+  'OPEN_LIBRARY_CONTACT_EMAIL',
+  'BOOKSHELF_OIDC_ISSUER_URL',
+  'BOOKSHELF_OIDC_CLIENT_ID',
+  'BOOKSHELF_OIDC_CLIENT_SECRET',
+  'BOOKSHELF_OIDC_REDIRECT_URI',
+  'BOOKSHELF_OIDC_SCOPES',
+  'BOOKSHELF_OIDC_ALLOWED_EMAILS',
+  'BOOKSHELF_OIDC_ALLOWED_EMAIL_DOMAINS',
+  'BOOKSHELF_OIDC_ALLOW_ANY_VERIFIED_USER',
+  'BOOKSHELF_OIDC_ALLOW_PRIVATE_ISSUER',
+  'BOOKSHELF_OIDC_PROVIDER',
+  'BOOKSHELF_SEERRNG_API_KEY',
+  'BOOKSHELF_M4B_MERGE',
+  'BOOKSHELF_M4B_AAC_BITRATE_KBPS',
+  'BOOKSHELF_FFMPEG_PATH',
+  'METADATA_URL',
+  'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH',
+  'PUID',
+  'PGID',
+  'TZ',
+  'MAX_PATH',
+  'MAX_NAME',
+];
+const legacyApplicationPrefixes = ['BOOKSHELF', 'AUDIOARR', 'READARR'];
+const legacyAppSettings = ['INSTANCENAME', 'THEME', 'LAUNCHBROWSER'];
+const legacyAuthSettings = ['APIKEY', 'ENABLED', 'METHOD', 'REQUIRED', 'TRUSTCGNATIPADDRESSES'];
+const legacyServerSettings = [
+  'PORT', 'URLBASE', 'BINDADDRESS', 'ENABLESSL', 'SSLPORT', 'SSLCERTPATH', 'SSLCERTPASSWORD',
+  'REQUESTSPERMINUTE', 'TRUSTEDPROXIES', 'ALLOWEDORIGINS', 'MAXREQUESTBODYSIZE',
+];
+const legacyLogSettings = ['LEVEL', 'ROTATE', 'SQL', 'CONSOLELEVEL', 'SYSLOGSERVER', 'SYSLOGPORT', 'SYSLOGLEVEL'];
+const legacyUpdateSettings = ['MECHANISM', 'AUTOMATICALLY', 'SCRIPTPATH', 'BRANCH'];
+const legacyPostgresSettings = [
+  'HOST', 'PORT', 'USER', 'PASSWORD', 'MAINDB', 'LOGDB', 'CACHEDB', 'SSLMODE', 'ROOTCERT', 'NORESETONCLOSE',
+];
+const legacySectionEnvironment = legacyApplicationPrefixes.flatMap((prefix) => [
+  ...legacyAppSettings.map((setting) => `${prefix}__APP__${setting}`),
+  ...legacyAuthSettings.map((setting) => `${prefix}__AUTH__${setting}`),
+  ...legacyServerSettings.map((setting) => `${prefix}__SERVER__${setting}`),
+  ...legacyLogSettings.map((setting) => `${prefix}__LOG__${setting}`),
+  ...legacyUpdateSettings.map((setting) => `${prefix}__UPDATE__${setting}`),
+  ...legacyPostgresSettings.map((setting) => `${prefix}__POSTGRES__${setting}`),
+]);
+
 function read(relativePath) {
   return normalizeLineEndings(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
 }
@@ -219,6 +279,7 @@ test('Cloudron candidate preserves application ID, health endpoint, port, and mo
 
 test('catalog Compose handoff keeps the BookshelfNG container and named volumes', () => {
   const compose = read('packaging/legacy/catalogs/compose.yaml');
+  const sample = read('packaging/legacy/catalogs/.env.sample');
 
   assert.match(compose, /container_name: bookshelfng/);
   assert.match(compose, /CHAPTARRNG_COMPAT_IMAGE:-ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover/);
@@ -226,6 +287,18 @@ test('catalog Compose handoff keeps the BookshelfNG container and named volumes'
   assert.match(compose, /bookshelfng-config:\/config/);
   assert.match(compose, /bookshelfng-books:\/books/);
   assert.match(compose, /bookshelfng-downloads:\/downloads/);
+  for (const key of preservedBookshelfEnvironment) {
+    assert.match(compose, new RegExp(`^\\s+${key}: \\u0024\\{${key}:-`, 'm'),
+      `catalog Compose preserves ${key}`);
+    assert.match(sample, new RegExp(`^${key}=`, 'm'),
+      `catalog .env.sample documents ${key}`);
+  }
+  for (const key of ['BOOKSHELF_PORT', 'BOOKSHELF_URLBASE', ...legacySectionEnvironment]) {
+    assert.match(compose, new RegExp(`^\\s+${key}: \\u0024\\{${key}:-`, 'm'),
+      `catalog Compose preserves legacy ${key}`);
+    assert.match(sample, new RegExp(`^${key}=`, 'm'),
+      `catalog .env.sample documents legacy ${key}`);
+  }
 });
 
 test('Co-op Cloud handoff keeps stack volumes and uses the compatibility image', () => {
@@ -246,9 +319,50 @@ test('Co-op Cloud handoff keeps stack volumes and uses the compatibility image',
   assert.match(compose, /version=\$\{COOP_CLOUD_RECIPE_VERSION:-0\.1\.0\+__CHAPTARRNG_VERSION__\}/);
   assert.match(sample, /^CHAPTARRNG_COMPAT_IMAGE=ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover$/m);
   assert.doesNotMatch(sample, /BOOKSHELFNG_HOST_PORT/);
+  for (const key of preservedBookshelfEnvironment) {
+    assert.match(compose, new RegExp(`^\\s+${key}: \\u0024\\{${key}:-`, 'm'),
+      `Co-op Cloud Compose preserves ${key}`);
+    assert.match(sample, new RegExp(`^${key}=`, 'm'),
+      `Co-op Cloud .env.sample documents ${key}`);
+  }
+  for (const key of ['BOOKSHELF_PORT', 'BOOKSHELF_URLBASE', ...legacySectionEnvironment]) {
+    assert.match(compose, new RegExp(`^\\s+${key}: \\u0024\\{${key}:-`, 'm'),
+      `Co-op Cloud Compose preserves legacy ${key}`);
+    assert.match(sample, new RegExp(`^${key}=`, 'm'),
+      `Co-op Cloud .env.sample documents legacy ${key}`);
+  }
   assert.match(readme, / backs up all\nthree named volumes/);
   assert.match(readme, /operator-directed rollback after a successful migration must\nrestore the matching BookshelfNG data backup/);
   assert.match(release, /Create an independent Co-op Cloud backup before upgrading/);
+});
+
+test('Unraid BookshelfNG identity template preserves legacy configuration and masks credentials', () => {
+  const template = read('packaging/legacy/unraid/bookshelfng.xml');
+
+  assert.match(template, /<Name>BookshelfNG<\/Name>/);
+  assert.match(template, /<Repository>ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover<\/Repository>/);
+  assert.match(template, /Target="CHAPTARR_BOOKSHELF_COMPATIBILITY"/);
+  assert.match(template, /Target="BOOKSHELFNG_MIGRATION_MODE"/);
+  for (const key of preservedBookshelfEnvironment) {
+    assert.match(template, new RegExp(`Target="${key}"`),
+      `Unraid template retains ${key}`);
+  }
+  for (const key of ['BOOKSHELF_PORT', 'BOOKSHELF_URLBASE', ...legacySectionEnvironment]) {
+    assert.match(template, new RegExp(`Target="${key}"`),
+      `Unraid template retains legacy ${key}`);
+  }
+  for (const key of [
+    'HARDCOVER_AUTH', 'HARDCOVER_API_KEY', 'HARDCOVER_APIFY_TOKEN',
+    'GOOGLE_BOOKS_API_KEY', 'EUROPEANA_API_KEY',
+    'BOOKSHELF_DIAGNOSTICS_AUTH_TOKEN', 'BOOKSHELF_OIDC_CLIENT_SECRET',
+    'BOOKSHELF_SEERRNG_API_KEY', 'BOOKSHELF__SERVER__SSLCERTPASSWORD',
+    'BOOKSHELF__AUTH__APIKEY',
+    'BOOKSHELF__POSTGRES__PASSWORD', 'AUDIOARR__POSTGRES__PASSWORD',
+    'READARR__POSTGRES__PASSWORD',
+  ]) {
+    assert.match(template, new RegExp(`Target="${key}"[^>]*Mask="true"`),
+      `Unraid template masks ${key}`);
+  }
 });
 
 test('release builds and verifies desktop migration candidates only behind all readiness gates', () => {
