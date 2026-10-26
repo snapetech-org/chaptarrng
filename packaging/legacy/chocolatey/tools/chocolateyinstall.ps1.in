@@ -15,6 +15,16 @@ $recoveryScriptPath = Join-Path $handoffDirectory 'bookshelfng-startup-recovery.
 $recoveryTaskName = 'ChaptarrNG-BookshelfNG-Migration-Recovery'
 $handoffTimeoutSeconds = 14700
 $handoffTaskTimeoutMinutes = 510
+$testArchivePath = [Environment]::GetEnvironmentVariable('CHAPTARRNG_TEST_ARCHIVE_PATH', 'Process')
+$testHandoffFailure = [Environment]::GetEnvironmentVariable('CHAPTARRNG_TEST_FAIL_HANDOFF', 'Process')
+if (-not [string]::IsNullOrWhiteSpace($testHandoffFailure)) {
+  if ($testHandoffFailure -ne 'after-migration-health') {
+    throw 'CHAPTARRNG_TEST_FAIL_HANDOFF only accepts after-migration-health.'
+  }
+  if ([string]::IsNullOrWhiteSpace($testArchivePath)) {
+    throw 'The private Windows acceptance rollback injection requires a checksum-pinned test archive.'
+  }
+}
 $configuredHandoffTimeout = [Environment]::GetEnvironmentVariable('CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS', 'Process')
 if (-not [string]::IsNullOrWhiteSpace($configuredHandoffTimeout)) {
   $parsedHandoffTimeout = 0
@@ -848,7 +858,6 @@ if (Test-Path -LiteralPath $stageDir) {
 try {
   New-Item -ItemType Directory -Force -Path $installRoot, $dataDir, (Join-Path $stageDir 'bin') | Out-Null
   # Private Windows acceptance may supply a local archive; the package's exact SHA-256 remains mandatory.
-  $testArchivePath = [Environment]::GetEnvironmentVariable('CHAPTARRNG_TEST_ARCHIVE_PATH', 'Process')
   if ([string]::IsNullOrWhiteSpace($testArchivePath)) {
     Get-ChocolateyWebFile -PackageName 'bookshelfng' -FileFullPath $archivePath `
       -Url $archiveUrl -Checksum '__ARCHIVE_SHA256__' -ChecksumType 'sha256'
@@ -1044,6 +1053,9 @@ try {
       ) $effectiveEnvironment
       if ($readinessExit -ne 0) {
         throw "ChaptarrNG started, but the migrated BookshelfNG database and provider profile were not readable (exit code $readinessExit)."
+      }
+      if ($testHandoffFailure -eq 'after-migration-health') {
+        throw 'Injected private Windows acceptance failure after BookshelfNG migration health passed.'
       }
       Write-SharedMigrationJournal -State 'healthy' -OutcomeName 'channel' -OutcomeValue 'chocolatey'
       Write-SharedMigrationJournal -OutcomeName 'channel-state' -OutcomeValue 'healthy'

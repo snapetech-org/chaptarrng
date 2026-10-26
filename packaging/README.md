@@ -76,6 +76,14 @@ No cancels the Chocolatey update and leaves BookshelfNG in place. Use
 `/MigrationMode=manual` to defer conversion without prompting and follow the
 standalone Console migration steps in
 [`docs/MIGRATE_FROM_BOOKSHELFNG.md`](../docs/MIGRATE_FROM_BOOKSHELFNG.md).
+
+The private Windows acceptance helper also injects a failure after a real
+BookshelfNG database migration passes health checks. It verifies Chocolatey
+still records the `.76` predecessor, the schema-158 source database and canary
+are restored, the original service executable and settings run healthy again,
+and the failed target database is retained for diagnosis before it retries the
+successful upgrade. This source-level rollback leg still needs an exact-head
+private Windows JIT pass before it counts as channel acceptance.
 Debian and RPM pre-install hooks also cancel their package transaction on No.
 Pacman cannot cancel an active transaction from a package scriptlet: the AUR
 hook records the deferral, restores the BookshelfNG application/unit/launcher

@@ -186,6 +186,9 @@ try {
   if ($packageMetadata.InstallScript -notmatch 'CHAPTARRNG_TEST_ARCHIVE_PATH') {
     throw 'The candidate package does not contain the checksum-pinned private Windows archive handoff.'
   }
+  if ($packageMetadata.InstallScript -notmatch 'CHAPTARRNG_TEST_FAIL_HANDOFF') {
+    throw 'The candidate package does not contain the guarded private Windows rollback injection.'
+  }
   $archiveHash = (Get-FileHash -LiteralPath $ArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
   $checksumPattern = '\$testArchiveHash -ne ''(?<hash>[a-f0-9]{64})'''
   $checksumMatch = [regex]::Match($packageMetadata.InstallScript, $checksumPattern)
@@ -281,6 +284,53 @@ try {
   }
 
   $env:CHAPTARRNG_TEST_ARCHIVE_PATH = $ArchivePath
+  $env:CHAPTARRNG_TEST_FAIL_HANDOFF = 'after-migration-health'
+  $env:CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS = '600'
+  try {
+    $rollbackResult = Invoke-Chocolatey @('upgrade', 'bookshelfng', '--version', $Version, '--source', $candidateSource, '--yes', '--no-progress', '--force', '--params', "'/ProviderMode=Goodreads'")
+  } finally {
+    Remove-Item Env:\CHAPTARRNG_TEST_ARCHIVE_PATH -ErrorAction SilentlyContinue
+    Remove-Item Env:\CHAPTARRNG_TEST_FAIL_HANDOFF -ErrorAction SilentlyContinue
+    Remove-Item Env:\CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS -ErrorAction SilentlyContinue
+  }
+  if ($rollbackResult.ExitCode -eq 0) { throw 'The injected post-migration failure unexpectedly completed the Chocolatey update.' }
+  $rollbackDiagnostic = 'Injected private Windows acceptance failure after BookshelfNG migration health passed.'
+  if (($rollbackResult.Output -join "`n") -notmatch [regex]::Escape($rollbackDiagnostic)) {
+    throw "The automatic rollback run failed before the intended post-migration injection: $($rollbackResult.Output -join "`n")"
+  }
+  if ((Get-InstalledPackageVersion 'bookshelfng') -ne $BookshelfVersion) {
+    throw 'Chocolatey did not retain the public BookshelfNG package version after the injected rollback.'
+  }
+  $serviceAfterRollback = Get-CimInstance -ClassName Win32_Service -Filter "Name='BookshelfNG'" -ErrorAction Stop
+  if (-not $serviceAfterRollback -or $serviceAfterRollback.State -ne 'Running' -or
+      $serviceAfterRollback.StartName -ne $serviceStartNameBeforeManual -or
+      $serviceAfterRollback.StartMode -ne $serviceStartModeBeforeManual) {
+    throw 'The injected migration failure did not restore and restart the original BookshelfNG service.'
+  }
+  if ((Get-NssmSetting 'Application') -ne $applicationBeforeManual -or
+      (Get-NssmSetting 'AppParameters') -ne $parametersBeforeManual -or
+      (Get-NssmSetting 'AppDirectory') -ne $directoryBeforeManual) {
+    throw 'The injected migration failure did not restore the original BookshelfNG service paths and parameters.'
+  }
+  if ((Get-FileHash -LiteralPath $applicationBeforeManual -Algorithm SHA256).Hash -ne $applicationHashBeforeManual) {
+    throw 'The injected migration failure changed the original BookshelfNG executable.'
+  }
+  Wait-BookshelfService | Out-Null
+  $healthUrl = Wait-BookshelfHealth
+  Invoke-MigrationFixture @('--verify-bookshelfng-source', $legacyDataDirectory) | Out-Null
+  if ((Get-MigrationCanary) -ne $canaryBeforeManual) {
+    throw 'The injected migration failure did not restore the schema-158 BookshelfNG canary.'
+  }
+  $failedTargetDatabase = Get-ChildItem -LiteralPath $legacyDataDirectory -Filter 'chaptarr.db.chaptarr-failed-*' -File -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+  if (-not $failedTargetDatabase) {
+    throw 'The injected migration rollback did not retain the failed ChaptarrNG target database for diagnosis.'
+  }
+  if ((Test-Path -LiteralPath $stageDirectory) -or (Test-Path -LiteralPath $previousDirectory) -or (Test-Path -LiteralPath $handoffManifest)) {
+    throw 'The injected migration rollback left staging, rollback-app, or deferred-handoff state behind.'
+  }
+
+  $env:CHAPTARRNG_TEST_ARCHIVE_PATH = $ArchivePath
   $env:CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS = '600'
   try {
     $automaticResult = Invoke-Chocolatey @('upgrade', 'bookshelfng', '--version', $Version, '--source', $candidateSource, '--yes', '--no-progress', '--force', '--params', "'/ProviderMode=Goodreads'")
@@ -343,7 +393,7 @@ try {
   Invoke-MigrationFixture @('--verify-bookshelfng-migration', $legacyDataDirectory) | Out-Null
 
   $handoffPassed = $true
-  Write-Host "PASS: BookshelfNG $BookshelfVersion MigrationMode=manual preserved the live service, executable, database, and logical canary; automatic candidate $Version migration preserved fixture records, integrity, source backup, service identity, running candidate process, data path, and /ping at $healthUrl."
+  Write-Host "PASS: BookshelfNG $BookshelfVersion MigrationMode=manual preserved the live service and data; an injected post-migration failure restored schema-158 source data, service configuration, executable, and health while retaining the failed target; automatic candidate $Version migration preserved fixture records, integrity, source backup, service identity, running candidate process, data path, and /ping at $healthUrl."
 } finally {
   if (-not $handoffPassed) {
     $service = Get-Service -Name 'BookshelfNG' -ErrorAction SilentlyContinue

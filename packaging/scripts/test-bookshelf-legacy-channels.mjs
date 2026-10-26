@@ -215,6 +215,8 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   const installer = read('packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in');
   const recovery = read('packaging/legacy/chocolatey/tools/bookshelfng-startup-recovery.ps1');
   const choiceTest = read('packaging/scripts/test-chocolatey-migration-choice.ps1');
+  const handoff = read('packaging/scripts/test-chocolatey-bookshelfng-handoff.ps1');
+  const smoke = read('distribution/windows/installer-net-smoke/Program.cs');
 
   assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironment'/);
   assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironmentExtra'/);
@@ -227,6 +229,11 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(installer, /BookshelfSource = -not \$alreadyMigrated/);
   assert.match(installer, /URLBASE/);
   assert.match(installer, /<EventTrigger>/);
+  assert.match(installer, /CHAPTARRNG_TEST_FAIL_HANDOFF/);
+  assert.match(handoff, /after-migration-health/);
+  assert.match(handoff, /--verify-bookshelfng-source/);
+  assert.match(handoff, /chaptarr\.db\.chaptarr-failed-/);
+  assert.match(smoke, /VerifyBookshelfSource/);
   assert.doesNotMatch(installer, /<BootTrigger>/);
   assert.match(recovery, /'AppEnvironment' @\(\$Manifest\.OldAppEnvironment\)/);
   assert.match(recovery, /'AppEnvironmentExtra' @\(\$Manifest\.OldAppEnvironmentExtra\)/);

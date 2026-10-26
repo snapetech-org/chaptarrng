@@ -153,6 +153,7 @@ int? RunBookshelfAcceptanceCommand(string[] arguments)
     {
         "--seed-bookshelfng",
         "--bookshelf-data-canary",
+        "--verify-bookshelfng-source",
         "--verify-bookshelfng-migration"
     };
     var command = commands.FirstOrDefault(arguments.Contains);
@@ -184,6 +185,10 @@ int? RunBookshelfAcceptanceCommand(string[] arguments)
                 Console.WriteLine(GetBookshelfDataCanary(File.Exists(candidateDatabase) ? candidateDatabase : sourceDatabase));
                 break;
             }
+            case "--verify-bookshelfng-source":
+                VerifyBookshelfSource(targetDirectory);
+                Console.WriteLine("PASS: restored BookshelfNG schema-158 source, canaries, SQLite integrity, and foreign keys verified.");
+                break;
             case "--verify-bookshelfng-migration":
                 VerifyBookshelfMigration(targetDirectory);
                 Console.WriteLine("PASS: converted BookshelfNG fixture records, SQLite integrity, foreign keys, and retained source backup verified.");
@@ -251,6 +256,38 @@ void SeedBookshelfDatabase(string targetDirectory)
     if (GetBookshelfDataCanary(databasePath) != GetExpectedFixtureCanary(portableLibraryPath))
     {
         throw new InvalidOperationException("The seeded BookshelfNG fixture did not retain its expected canary rows.");
+    }
+}
+
+void VerifyBookshelfSource(string targetDirectory)
+{
+    var sourcePath = Path.Combine(targetDirectory, "readarr.db");
+    if (!File.Exists(sourcePath))
+    {
+        throw new FileNotFoundException("The restored BookshelfNG source database was not found.", sourcePath);
+    }
+
+    var expected = GetExpectedFixtureCanary(Path.Combine(targetDirectory, "migration-acceptance-library").Replace('\\', '/'));
+    if (!string.Equals(GetBookshelfDataCanary(sourcePath), expected, StringComparison.Ordinal))
+    {
+        throw new InvalidDataException("The restored BookshelfNG source did not preserve the seeded author, book, edition, file, and setting canaries.");
+    }
+
+    using var connection = new SqliteConnection(CreateConnectionString(sourcePath, SqliteOpenMode.ReadOnly));
+    connection.Open();
+    if (QueryScalar<string>(connection, "PRAGMA integrity_check;") != "ok")
+    {
+        throw new InvalidDataException("The restored BookshelfNG source failed SQLite integrity_check.");
+    }
+
+    if (QueryScalar<long>(connection, "SELECT COUNT(*) FROM pragma_foreign_key_check;") != 0)
+    {
+        throw new InvalidDataException("The restored BookshelfNG source contains foreign-key violations.");
+    }
+
+    if (QueryScalar<long>(connection, "SELECT MAX(Version) FROM VersionInfo;") != 158)
+    {
+        throw new InvalidDataException("The restored BookshelfNG source is not at schema version 158.");
     }
 }
 
