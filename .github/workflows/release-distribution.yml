@@ -57,7 +57,7 @@ jobs:
         ref: main
         persist-credentials: false
 
-    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
+    - uses: ./.github/actions/setup-github-cli
 
     - name: Require retirement release readiness
       env:
@@ -135,7 +135,7 @@ jobs:
         ref: ${{ inputs.tag }}
         persist-credentials: false
 
-    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
+    - uses: ./.github/actions/setup-github-cli
 
     - name: Install Debian source packaging tools
       run: |
@@ -207,7 +207,7 @@ jobs:
         ref: ${{ inputs.tag }}
         persist-credentials: false
 
-    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
+    - uses: ./.github/actions/setup-github-cli
 
     - name: Download and verify the release archive
       env:

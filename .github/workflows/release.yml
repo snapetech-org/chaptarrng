@@ -24,8 +24,6 @@ jobs:
         ref: main
         persist-credentials: false
 
-    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
-
     - name: Detect a new stable version
       id: release-request
       shell: bash
@@ -33,32 +31,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         set -euo pipefail
-        version="$(python3 -c "import json; print(json.load(open('package.json', encoding='utf-8'))['version'])")"
-        if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-          echo "Expected a stable SemVer version in package.json, found $version." >&2
-          exit 1
-        fi
-
-        releases_json="$RUNNER_TEMP/published-releases.json"
-        gh release list --limit 100 --json tagName,isDraft,isPrerelease,publishedAt > "$releases_json"
-        latest_tag="$(jq -r '
-          [.[] | select(.isDraft == false and .isPrerelease == false and
-            (.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))]
-          | sort_by(.publishedAt)
-          | last
-          | .tagName // empty
-        ' "$releases_json")"
-        latest_version="${latest_tag#v}"
-        is_newer="$(python3 -c 'import sys; current=tuple(map(int, sys.argv[1].split("."))); latest=tuple(map(int, sys.argv[2].split("."))) if sys.argv[2] else (); print(str(current > latest).lower())' "$version" "$latest_version")"
-
-        if [[ "$is_newer" != true ]]; then
-          echo "Version $version is not newer than the latest published stable release ${latest_tag:-<none>}; skipping release publication."
-          echo 'release_requested=false' >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
-        echo "Version $version is newer than ${latest_tag:-<none>}; starting the stable release pipeline."
-        echo 'release_requested=true' >> "$GITHUB_OUTPUT"
+        python3 packaging/scripts/check_stable_release_version.py
 
     - name: Require a releasable branch
       shell: bash
@@ -107,7 +80,7 @@ jobs:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
+    - uses: ./.github/actions/setup-github-cli
 
     - name: Setup Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -322,7 +295,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.release.outputs.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-github-cli
       - name: Create scoped bridge-repository token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         id: app-token
@@ -660,7 +637,7 @@ jobs:
         ref: main
         persist-credentials: false
 
-    - uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e
+    - uses: ./.github/actions/setup-github-cli
 
     - name: Verify checked-out release source
       env:

@@ -406,17 +406,27 @@ test('release pins Cloudron and Compose candidates to the built compatibility im
   assert.ok(publishJob.includes('tar -tzf "$RUNNER_TEMP/release-assets/$container_candidates"'));
 });
 
-test('Linux release jobs install the checksum-pinned GitHub CLI on private JIT before using it', () => {
-  const action = 'uses: snapetech-org/bookshelfng/.github/actions/setup-github-cli@8d2aef3cec245a9814eea4654244184f92f7c18e';
+test('Linux release jobs install the checksum-pinned ChaptarrNG GitHub CLI action before using it', () => {
+  const action = 'uses: ./.github/actions/setup-github-cli';
   const release = read('.github/workflows/release.yml');
   const distribution = read('.github/workflows/release-distribution.yml');
+  assert.doesNotMatch(`${release}\n${distribution}`, /snapetech-org\/bookshelfng\/\.github\/actions\/setup-github-cli/);
 
-  for (const name of ['preflight', 'release', 'dispatch-legacy-ghcr', 'publish-release']) {
+  const preflight = readWorkflowJob(release, 'preflight');
+  assert.ok(preflight.includes('packaging/scripts/check_stable_release_version.py'));
+  assert.ok(!preflight.includes('gh release'));
+
+  for (const name of ['release', 'dispatch-legacy-ghcr', 'publish-release']) {
     const job = readWorkflowJob(release, name);
     assert.match(job, /ng-shared-main-jit/);
     assert.ok(job.includes(action), `${name} installs the pinned GitHub CLI on its private runner`);
     assert.ok(job.indexOf(action) < job.search(/gh release|dispatch-ghcr-release-bridge\.sh/),
       `${name} installs the CLI before the first use`);
+    if (name === 'dispatch-legacy-ghcr') {
+      assert.ok(job.includes('ref: ${{ needs.release.outputs.sha }}'));
+      assert.ok(job.indexOf('actions/checkout@') < job.indexOf(action),
+        'dispatch checks out the exact release source before using the local action and script');
+    }
   }
 
   for (const name of ['release-target', 'build-legacy-ppa', 'build-aur']) {
