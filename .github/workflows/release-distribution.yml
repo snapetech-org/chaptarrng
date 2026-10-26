@@ -475,6 +475,38 @@ jobs:
         $legacyMarker = Join-Path $legacyDataDir 'chaptarrng-bridge-preserves-data.test'
         Set-Content -Path $legacyMarker -Value 'preserve'
         $legacySource = "$legacyPackageDir;https://community.chocolatey.org/api/v2/"
+        $sourceDatabaseHashBeforeManual = (Get-FileHash -LiteralPath $legacyDb -Algorithm SHA256).Hash
+        $legacyApplicationBeforeManual = (& $nssm.Source get BookshelfNG Application | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($legacyApplicationBeforeManual)) {
+          throw 'NSSM could not read the installed BookshelfNG application before the manual-defer transaction.'
+        }
+        $legacyStageDir = Join-Path $env:ProgramData 'BookshelfNG\app.new'
+        $legacyPreviousDir = Join-Path $env:ProgramData 'BookshelfNG\app.previous'
+        $legacyHandoffManifest = Join-Path $env:ProgramData 'BookshelfNG\handoff\bookshelfng-migration-handoff.json'
+        $manualUpgradeOutput = @(& choco upgrade bookshelfng --source "$legacySource" --yes --no-progress --force --params "'/ProviderMode=Goodreads /MigrationMode=manual'" 2>&1)
+        $manualUpgradeExitCode = $LASTEXITCODE
+        if ($manualUpgradeExitCode -eq 0) {
+          throw 'Chocolatey unexpectedly accepted the Manual BookshelfNG update instead of deferring before staging.'
+        }
+        $manualDeferDiagnostic = 'MigrationMode=manual cancelled this package update before stopping BookshelfNG or changing its files.'
+        if (($manualUpgradeOutput -join "`n") -notmatch [regex]::Escape($manualDeferDiagnostic)) {
+          throw "Chocolatey manual mode failed without its expected defer diagnostic (exit code $manualUpgradeExitCode)."
+        }
+        $legacyService = Get-Service -Name 'BookshelfNG' -ErrorAction Stop
+        if ($legacyService.Status -ne 'Running') { throw 'Manual defer stopped the installed BookshelfNG service.' }
+        $sourceDatabaseHashAfterManual = (Get-FileHash -LiteralPath $legacyDb -Algorithm SHA256).Hash
+        if ($sourceDatabaseHashAfterManual -ne $sourceDatabaseHashBeforeManual) {
+          throw 'Manual defer changed the installed BookshelfNG database.'
+        }
+        $legacyApplicationAfterManual = (& $nssm.Source get BookshelfNG Application | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0 -or $legacyApplicationAfterManual -ne $legacyApplicationBeforeManual) {
+          throw 'Manual defer changed the BookshelfNG service application path.'
+        }
+        if (-not (Test-Path $legacyMarker)) { throw 'Manual defer removed the BookshelfNG data canary.' }
+        if ((Test-Path $legacyStageDir) -or (Test-Path $legacyPreviousDir) -or (Test-Path $legacyHandoffManifest)) {
+          throw 'Manual defer created staged application, rollback, or migration-handoff files.'
+        }
+        Write-Host 'Manual Chocolatey update deferred before service or application changes; BookshelfNG data and service stayed intact.'
         choco upgrade bookshelfng --source "$legacySource" --yes --no-progress --force --params "'/ProviderMode=Goodreads'"
         if ($LASTEXITCODE -ne 0) { throw 'Chocolatey could not upgrade the published BookshelfNG install through the bridge package.' }
         $nssm = Get-Command nssm.exe -ErrorAction Stop
