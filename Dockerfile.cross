@@ -74,7 +74,7 @@ RUN test -s /app/UI/index.html
 
 ###### runtime stage ######
 # Pin the cross-platform runtime to the patch shipped with SDK 10.0.402.
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.13-noble@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac AS runtime
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.14-noble@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee AS runtime
 RUN dotnet --list-runtimes | grep -Fq 'Microsoft.NETCore.App 10.0.13' \
     && dotnet --list-runtimes | grep -Fq 'Microsoft.AspNetCore.App 10.0.13'
 
