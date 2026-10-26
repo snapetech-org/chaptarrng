@@ -2,7 +2,7 @@
 
 ## Result
 
-The local 0.9.978 candidate passed installed handoff acceptance on Debian, Fedora, Arch, Windows Chocolatey, FreeBSD standalone, Docker, Helm, AppImage, Flatpak, and Co-op Cloud Swarm paths described below. The shared standalone launcher also passed a Linux runtime harness covering No, headless Manual, Yes, health, source backup, and forced rollback. Cloudron 10.1.6 passed an installed `.4.21` to `.4.23` package update, Manual defer, native backup/restore, Automatic migration, and the source-database plus old-package rollback path. StartOS passed x86_64 and aarch64 test-package updates covering Manual defer, automatic migration, health checks, and automatic source rollback; these remain synthetic, test-key rehearsals. A local Unraid-template Docker rehearsal passed manual defer, automatic migration, health, and forced rollback; it does not count as Community Applications or host acceptance. The optional choice is presented at the package prompt, a terminal-backed desktop or standalone launch, or an explicit platform setting, depending on the channel. pacman uses a deferred two-transaction handoff because pacman scriptlets cannot cancel an active transaction.
+The local 0.9.978 candidate passed installed handoff acceptance on Debian, Fedora, Arch, Windows Chocolatey, Linux x64 systemd standalone, FreeBSD standalone, Docker, Helm, AppImage, Flatpak, and Co-op Cloud Swarm paths described below. The shared Linux launcher harness also passed No, headless Manual, Yes, health, source backup, and forced rollback; it is separate from the Linux tarball’s systemd bootstrap, which is tested below. Cloudron 10.1.6 passed an installed .4.21 to .4.23 package update, Manual defer, native backup/restore, Automatic migration, and source-database plus old-package rollback. StartOS passed x86_64 and aarch64 test-package updates covering Manual defer, automatic migration, health, and source rollback; these remain synthetic, test-key rehearsals. A local Unraid-template Docker rehearsal passed manual defer, automatic migration, health, and forced rollback; it does not count as Community Applications or host acceptance. Channels expose the migration choice through a package prompt, terminal-backed launch, or platform setting where supported; pacman uses a deferred two-transaction handoff because its scriptlets cannot cancel an active transaction.
 
 This is **not 100% release-channel acceptance**. No replacement artifact was published, and several package feeds contain no BookshelfNG predecessor. StartOS still needs the official signed package, external repository delivery, and package-manager rollback acceptance. Cloudron feed/catalog publication, Unraid Community Applications/host update and rollback acceptance, canonical Co-op Cloud recipe acceptance, and external catalog installations remain open. The old Cloudron `.4.21` package also cannot back up its persistent directories; that legacy backup gap is covered only after the new package with backup hooks is installed. Release gates remain closed.
 
@@ -12,6 +12,7 @@ This is **not 100% release-channel acceptance**. No replacement artifact was pub
 | --- | --- | --- | --- | --- |
 | Debian / APT | Yes | Pre-install hook exits before staging; apt/dpkg cancels the candidate transaction and leaves the predecessor active. | Installs the same-name candidate, migrates during service startup, keeps the source backup, and supports tested rollback. | Installed Debian 13 VM, public BookshelfNG 0.4.21.71 to local 0.9.978; No, Yes, health, data, and rollback passed. |
 | Fedora / DNF / RPM | Yes | RPM pre-install hook exits before staging; DNF cancels the transaction and leaves the predecessor active. Detached ask mode fails closed before staging. | Installs the same-name candidate, migrates under the service environment, checks HTTP/database health, and keeps the source backup. | Fedora 44 VM with SELinux enforcing, BookshelfNG 0.4.21.71 to local 0.9.978; interactive No/Yes, headless rejection, service health, data, and rollback passed. RPM scriptlets read the controlling terminal because DNF redirects scriptlet stdin even during terminal-backed installs. |
+| Linux x64 standalone / systemd | No package prompt; the operator runs the bootstrap explicitly. | This test did not exercise a separate defer choice. A failed handoff invokes rollback and restores the predecessor. | The bootstrap stages the checksum-verified archive, migrates the existing service data, switches the service executable, checks health, and retains rollback files. | Debian 12 systemd VM: public BookshelfNG 0.4.21.71 to local 0.9.978; schema 158 to 124, settings and canaries preserved, integrity and foreign keys passed, and post-migration forced rollback restored healthy BookshelfNG. Candidate SHA-256 14d30e6e65cd17e3e030a28d8368a0b3fb135268673d2e91dd25dc2e0efbd843. |
 | Arch / AUR / pacman | Yes | pacman cannot cancel a transaction from a package scriptlet. The package transaction completes, then the hook restores the saved BookshelfNG app, unit, and launcher, leaves the database untouched, and records a deferred marker. The next package transaction asks again. | The next accepted transaction installs the ChaptarrNG runtime, converts the database, retains the BookshelfNG source backup, and starts the existing service. | Arch systemd VM: 0.4.21.71 to 0.9.978-2 with No, then 0.9.978-3 with Yes; schema 158 to 124, health and restore checks passed. |
 | Windows / Chocolatey | Yes | Chocolatey cancels before the service is stopped or application files are staged; 0.4.21.70 remains installed and running. | Upgrades the bookshelfng identity and replaces the executable while retaining the NSSM service name, LocalSystem identity, data directory, service arguments, and source database backup. | Windows Server 2025 VM: public 0.4.21.70 to local 0.9.978; No and Yes passed. Chocolatey exited 0 for Yes; /ping and migration health check passed. |
 | AppImage | Yes in its terminal-backed launcher | Defers database conversion; it does not undo a downloaded or replaced AppImage. The user can retry later. | Converts on launch, retains the source database, and supports restore. | The desktop entry sets `Terminal=true`. Local same-identity .71 to .978 rehearsal passed with synthetic schema-158 data, custom paths, health, and rollback. No is a data deferral. The candidate is unsigned and unpublished. |
@@ -167,7 +168,15 @@ check.
 
 The 19-case legacy-channel Node contract suite passed after adding FreeBSD launcher/runtime, Windows standalone installer opt-in, macOS workflow, and StartOS wrapper checks. The publication-free hosted macOS handoff run passed on x64 and arm64. Docker compatibility defaults and the exact-head installed-image interactive/headless Ask/automatic/rollback acceptance passed. The Cloudron manual/automatic runtime rehearsal passed after fixing the missing command. The AUR prompt test passed No/defer/restore and a later Yes retry. The Fedora 44 RPM prompt transaction regression passed interactive No/Yes and detached headless Ask; Debian passed headless rejection, apt No/Yes, and downgrade. Linux shell syntax, workflow policy, and `git diff --check` passed.
 
-The shared Linux standalone handoff harness used a checksum-verified public BookshelfNG .71 predecessor (SHA-256 `4197d53b757ebe99642fb8f4213f963dd54641401d1f188ab6daadcb3b024d5d`) and the exact ChaptarrNG candidate archive (SHA-256 `359897785599f850c2264d2cc2aad96c1fa1e69ffd4ad1b6e98e3d783c75d364`). No preserved the predecessor and restarted its `/ping`; headless Manual deferred without changing source files; Yes migrated data to schema 124, passed integrity and foreign-key checks, retained a logical source backup, and returned healthy `/ping`. An injected replacement-health failure restored the source database and restarted BookshelfNG while retaining the failed target for diagnosis. The rerun also confirms the harness now closes the PTY after a stalled Ctrl+C shutdown and reaps the candidate. This Linux harness validates the shared launcher/supervisor; Linux standalone archives do not gain a new update channel from it. Full output: `/var/tmp/chaptarrng-channel-acceptance-20261026/evidence/standalone-handoff-stop-fix-v6.log`.
+The shared Linux standalone handoff harness used a checksum-verified public BookshelfNG .71 predecessor and an earlier local ChaptarrNG candidate. No preserved the predecessor and restarted /ping; headless Manual deferred without changing source files; Yes migrated to schema 124, passed integrity and foreign-key checks, retained a logical source backup, and returned healthy /ping. An injected replacement-health failure restored BookshelfNG and retained the failed target for diagnosis. The rerun also confirms the harness closes the PTY after a stalled Ctrl+C shutdown and reaps the candidate. This validates the shared launcher/supervisor only; the Linux archive has its own systemd bootstrap, tested in the following section. Full output: /var/tmp/chaptarrng-channel-acceptance-20261026/evidence/standalone-handoff-stop-fix-v6.log.
+
+### Linux x64 standalone archive and systemd bootstrap
+
+A Debian 12 x86_64 VM ran the installed BookshelfNG 0.4.21.71 service under systemd with schema-158 fixture data, settings, a synthetic API-key canary, and a filesystem canary. The local ChaptarrNG 0.9.978 archive was built from e9900d8d120e2a952c12ba45af1eb8394fa8bf34; it was not published.
+
+The installed bootstrap migrated the target to schema 124, passed SQLite integrity and foreign-key checks, preserved settings and canaries, retained a logical backup matching the source baseline, switched the service path to Chaptarr, and returned healthy HTTP 200. A forced failure after the real migration restored the exact schema-158 source, predecessor executable and service, and health while retaining the valid schema-124 target copy. The run found and fixed a staging-directory collision and a service-user read-permission failure in the candidate payload.
+
+The final archive SHA-256 is 14d30e6e65cd17e3e030a28d8368a0b3fb135268673d2e91dd25dc2e0efbd843. The embedded bootstrap helper SHA-256 matches source: e5d02515a5d1564f301a556845461ababbebbf5b2ee689dc40123c18c76a4c2d. The predecessor archive SHA-256 is 4197d53b757ebe99642fb8f4213f963dd54641401d1f188ab6daadcb3b024d5d. Logs, test packages, and checksums are retained in /var/tmp/chaptarrng-channel-acceptance-20261026/evidence/linux-standalone-current-20261026/.
 
 Windows evidence is recorded at /var/tmp/chaptarrng-channel-acceptance-20261026/evidence/windows-final-acceptance.json and the full guest transcript is windows-server-2025-chocolatey-acceptance.log in the same evidence directory. Helm evidence is in helm-final2-acceptance.json and helm-final2-rollback-acceptance.json. Native VM package and service logs are retained beside them.
 
@@ -198,10 +207,10 @@ helper are retained in
 
 ## Current-worktree revalidation — 2026-10-26 follow-up
 
-This is code-level evidence for the modified worktree at `d43a005`; it does not
-replace the installed-package evidence above, which used an earlier `.978`
-candidate. No package was rebuilt and installed from the current diff across
-the platform VMs.
+This section records code-level evidence for the modified worktree at d43a005.
+At that follow-up cutoff it did not include a new package build and installed
+upgrade across the platform VMs. The later current-source Linux x64 systemd
+package and installed handoff acceptance is recorded below.
 
 The focused .NET migration/database set passed 299 tests, with 11 PostgreSQL
 cases skipped because their external database service is unavailable. The
@@ -228,9 +237,12 @@ is counted as a pass or failure. Logs are retained at
 `/var/tmp/chaptarrng-channel-acceptance-20261026/tmp/bookshelf-importer-7c37a74f/`
 was retained for diagnosis.
 
-The private-only workflow edits remain local and unpushed. No CI or canary was
-started. These local checks do not close the signed-package, feed/catalog,
-Unraid, canonical Co-op Cloud, external catalog, or private JIT rollout gates.
+At the time of this follow-up, private-only workflow edits were local and no CI
+or canary had been started. Those route changes were later committed to main
+in ca676141 and 7cbb1d2e; current runner state and the C0 gate are recorded
+in ORG_WIDE_PRIVATE_JIT_AUDIT_2026-10-26.md. This follow-up does not close
+the signed-package, feed/catalog, Unraid, canonical Co-op Cloud, external
+catalog, or private JIT rollout gates.
 
 ## Remaining release blockers
 
@@ -296,19 +308,19 @@ Image IDs, the reproducible harness, checksums, and filtered milestones are in
 
 ### Private Windows runner handoff
 
-The Windows package and installer acceptance evidence above includes successful
-hosted Windows runs. ChaptarrNG's local build, migration-installer, and
+The Windows package and installer results above are historical hosted runs;
+they establish package behavior but do not satisfy the current private-JIT
+runner requirement. ChaptarrNG's local build, migration-installer, and
 Chocolatey workflow jobs now target the historically approved private route
 `[self-hosted, Windows, X64, packer-windows]`. The organization currently has no
 online Windows registration carrying that label, so the private route and its
 release jobs are still unverified. Keep those jobs queued until the
 Packer/runner-policy owner restores the existing runner group/labels and
-broker/workflow access and passes a Windows canary after C0 clearance. The
-hosted VM results establish package behavior; they do not establish private
-runner acceptance. Restore the approved route in place; do not move Windows
+broker/workflow access and passes a Windows canary after C0 clearance.
+Restore the approved route in place; do not move Windows
 jobs to `windows-latest`, Linux JIT, or another runner. Keep them queued until
-the original runner group/labels, broker/workflow access, and canary are
-verified.
+the original runner group/labels and broker/workflow access are restored and
+the private Windows canary has passed.
 
 - Debian/PPA and Fedora/COPR publisher paths remain closed; direct VM package acceptance does not prove a PPA or COPR feed upgrade. The public BookshelfNG COPR repository had no packages for the tested Fedora series.
 - The Chocolatey feed rejection is unresolved. The local package passed, but no public package was pushed.
