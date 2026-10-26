@@ -1157,10 +1157,39 @@ def ensure_space(path: pathlib.Path, required_bytes: int, label: str) -> None:
         raise HandoffError(f"There is not enough free space on the {label} filesystem for the rollback copy and staged application.")
 
 
+def confirm_handoff(migration_mode: str, *, input_stream=None, output_stream=None) -> bool:
+    if migration_mode == "automatic":
+        return True
+    if migration_mode != "ask":
+        raise HandoffError("The migration mode must be 'ask' or 'automatic'.")
+
+    input_stream = sys.stdin if input_stream is None else input_stream
+    output_stream = sys.stderr if output_stream is None else output_stream
+    if not input_stream.isatty() or not output_stream.isatty():
+        raise HandoffError("No interactive terminal is available; migration was not started. Use --migration-mode automatic only when an unattended handoff is intended.")
+
+    print(
+        "Replace BookshelfNG with ChaptarrNG now? No leaves the BookshelfNG installation and its data unchanged. [y/N] ",
+        end="",
+        file=output_stream,
+        flush=True,
+    )
+    response = input_stream.readline().strip().lower()
+    if response in ("y", "yes"):
+        return True
+    if response in ("", "n", "no"):
+        return False
+    raise HandoffError("Please answer y or n; no changes were made.")
+
+
 def install_mode(args: argparse.Namespace) -> int:
     if os.geteuid() != 0:
         raise HandoffError("Run the one-time systemd bootstrap as root (usually with sudo).")
     service = validate_service_name(args.service)
+    if not confirm_handoff(args.migration_mode):
+        log("No changes made; the BookshelfNG installation and data remain unchanged.")
+        return 0
+
     lock_descriptor = acquire_service_handoff_lock(service)
     try:
         return install_mode_locked(args, service)
@@ -1474,6 +1503,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-dir", help="BookshelfNG appdata directory used by the service")
     parser.add_argument("--archive", help="Checksum-verified ChaptarrNG linux-x64 or linux-arm64 release archive")
     parser.add_argument("--backup-dir", help="New absolute path outside appdata and the install directory for retained rollback files")
+    parser.add_argument(
+        "--migration-mode",
+        choices=("ask", "automatic"),
+        default="ask",
+        help="Ask before replacing BookshelfNG (default), or explicitly skip the prompt for an unattended handoff",
+    )
     parser.add_argument("--health-timeout-seconds", type=int, default=MAX_HEALTH_TIMEOUT)
     args = parser.parse_args()
     if args.hook:

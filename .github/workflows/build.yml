@@ -141,6 +141,10 @@ jobs:
         bash -n scripts/bookshelfng-to-chaptarrng.sh scripts/test-bookshelfng-to-chaptarrng.sh
         bash scripts/test-bookshelfng-to-chaptarrng.sh
 
+    - name: Test Linux systemd standalone Yes/No handoff prompt
+      if: matrix.platform == 'linux-x64'
+      run: python3 scripts/test_bookshelfng_systemd_bootstrap_prompt.py
+
     - name: Test BookshelfNG Docker compatibility defaults
       if: matrix.platform == 'linux-x64'
       env:

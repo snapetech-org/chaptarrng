@@ -199,8 +199,13 @@ cannot discover the first ChaptarrNG release. For a manual Linux systemd
 installation, download the matching `linux-x64` or `linux-arm64` release
 archive and its `.sha256` sidecar from the ChaptarrNG release page. Extract the
 archive, then run its `scripts/bookshelfng-systemd-bootstrap.py` as root while
-the existing BookshelfNG service is running. The bootstrap verifies the
-archive checksum and service executable, captures the service's effective
+the existing BookshelfNG service is running. It asks `Replace BookshelfNG with
+ChaptarrNG now? [y/N]` by default; No, a blank answer, or end-of-input returns
+before acquiring the handoff lock, stopping the service, or writing files.
+Without an interactive terminal, Ask mode fails closed. Pass
+`--migration-mode automatic` only when an unattended replacement is intended.
+After Yes, the bootstrap verifies the archive checksum and service executable,
+captures the service's effective
 environment in memory, detects a dual-database SQLite source, and previews its
 merge with the same service account. It retains the prior application and
 `config.xml`, then installs ChaptarrNG at
