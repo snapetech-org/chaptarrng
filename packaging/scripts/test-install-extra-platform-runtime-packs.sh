@@ -14,7 +14,7 @@ for rid in linux-x86 freebsd-x64; do
   aspnet_source="$work/$rid-aspnet"
   mkdir -p \
     "$artifact_root/runtimes" \
-    "$artifact_root/sdk/sdk/10.0.402" \
+    "$artifact_root/sdk/sdk/10.0.403" \
     "$artifact_root/sdk/packs/Microsoft.NETCore.App.Ref" \
     "$dotnet_root/packs/Microsoft.NETCore.App.Ref" \
     "$runtime_source/host/fxr/10.0.12" \
@@ -41,7 +41,7 @@ TARGET_DOTNET
   printf 'runtime %s\n' "$rid" > "$runtime_source/host/fxr/10.0.12/hostfxr.marker"
   printf 'framework %s\n' "$rid" > "$runtime_source/shared/Microsoft.NETCore.App/10.0.12/framework.marker"
   printf 'aspnet %s\n' "$rid" > "$aspnet_source/shared/Microsoft.AspNetCore.App/10.0.12/aspnet.marker"
-  printf 'sdk %s\n' "$rid" > "$artifact_root/sdk/sdk/10.0.402/sdk.marker"
+  printf 'sdk %s\n' "$rid" > "$artifact_root/sdk/sdk/10.0.403/sdk.marker"
   printf 'pack %s\n' "$rid" > "$artifact_root/sdk/packs/Microsoft.NETCore.App.Ref/pack.marker"
   printf 'existing pack %s\n' "$rid" > "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker"
   touch -d '@946684800' "$artifact_root/sdk/packs/Microsoft.NETCore.App.Ref/pack.marker"
@@ -64,7 +64,7 @@ TARGET_DOTNET
     chmod 0755 "$directory"
   done
 
-  DOTNETVERSION=10.0.402 bash "$install_script" "$rid" "$artifact_root" "$dotnet_root" >/dev/null
+  DOTNETVERSION=10.0.403 bash "$install_script" "$rid" "$artifact_root" "$dotnet_root" >/dev/null
 
   if ! cmp -s "$work/$rid-sdk-dotnet" "$dotnet_root/dotnet"; then
     echo "Runtime-pack installation replaced the SDK host executable: $dotnet_root/dotnet." >&2
@@ -93,7 +93,7 @@ TARGET_DOTNET
   assert_marker "runtime $rid" "$dotnet_root/host/fxr/10.0.12/hostfxr.marker"
   assert_marker "framework $rid" "$dotnet_root/shared/Microsoft.NETCore.App/10.0.12/framework.marker"
   assert_marker "aspnet $rid" "$dotnet_root/shared/Microsoft.AspNetCore.App/10.0.12/aspnet.marker"
-  assert_marker "sdk $rid" "$dotnet_root/sdk/10.0.402/sdk.marker"
+  assert_marker "sdk $rid" "$dotnet_root/sdk/10.0.403/sdk.marker"
   assert_marker "pack $rid" "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker"
   pack_mtime="$(stat -c '%Y' "$dotnet_root/packs/Microsoft.NETCore.App.Ref/pack.marker")"
   if (( pack_mtime <= 1577836800 )); then

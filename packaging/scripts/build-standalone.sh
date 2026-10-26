@@ -65,7 +65,7 @@ if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
   )
 fi
 
-# The Windows targeting pack metadata shipped with .NET 10.0.402 also lists
+# The Windows targeting pack metadata shipped with the pinned .NET SDK also lists
 # FreeBSD as a WindowsDesktop runtime identifier, but no WindowsDesktop
 # runtime pack exists for FreeBSD. This server uses the portable console
 # project, so avoid restoring that unrelated framework pack for this RID.

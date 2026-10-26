@@ -61,8 +61,8 @@ RUN test -s /app/UI/index.html
 
 ###### runtime stage ######
 FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/aspnet:10.0.14-noble@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee
-RUN dotnet --list-runtimes | grep -Fq 'Microsoft.NETCore.App 10.0.13' \
-    && dotnet --list-runtimes | grep -Fq 'Microsoft.AspNetCore.App 10.0.13'
+RUN dotnet --list-runtimes | grep -Fq 'Microsoft.NETCore.App 10.0.14' \
+    && dotnet --list-runtimes | grep -Fq 'Microsoft.AspNetCore.App 10.0.14'
 # Copy Playwright Chromium from the browser stage
 COPY --from=browser /ms-playwright /ms-playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright

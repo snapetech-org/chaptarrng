@@ -5,7 +5,7 @@ the final BookshelfNG archive workflow:
 
 | Runtime identifiers | Runtime pack source |
 | --- | --- |
-| `linux-x64`, `linux-arm64`, `linux-musl-x64`, `linux-musl-arm64`, `osx-x64`, `osx-arm64`, `win-x64`, `win-x86` | .NET 10 SDK 10.0.402 |
+| `linux-x64`, `linux-arm64`, `linux-musl-x64`, `linux-musl-arm64`, `osx-x64`, `osx-arm64`, `win-x64`, `win-x86` | .NET 10 SDK 10.0.403 |
 | `linux-x86`, `freebsd-x64` | Pinned .NET 10 runtime packs built by `packaging/scripts/build-extra-platform-runtime-packs.sh` |
 
 ## Validate without publishing
@@ -20,12 +20,12 @@ assets can be considered for a future release.
 ## Build the custom runtime packs
 
 The Linux x86 and FreeBSD build uses Docker, .NET SDKs `10.0.110`, `10.0.111`,
-and `10.0.402`, the pinned `v10.0.12` .NET source, and a FreeBSD runtime
+and `10.0.403`, the pinned `v10.0.12` .NET source, and a FreeBSD runtime
 archive verified against its checked-in SHA-256. Use two unique, absolute,
 task-scoped directories that do not already exist:
 
 ```sh
-DOTNETVERSION=10.0.402 \
+DOTNETVERSION=10.0.403 \
 PLATFORM_RUNTIME_WORK_DIR=/tmp/chaptarrng-platform-runtime-work-task-id \
 PLATFORM_RUNTIME_PACKS_OUTPUT=/tmp/chaptarrng-platform-runtime-packs-task-id \
 bash packaging/scripts/build-extra-platform-runtime-packs.sh
@@ -50,13 +50,13 @@ overlapping pack file so the copy path is checked against a preexisting SDK.
 ## Build a standalone archive
 
 Build the frontend first so `_output/UI/index.html` exists. The archive builder
-requires .NET SDK `10.0.402` and an output directory.
+requires .NET SDK `10.0.403` and an output directory.
 For Linux x86 and FreeBSD, download or build the custom runtime-pack artifact,
 then set `CUSTOM_RUNTIME_PACKS_DIR` to its `packages` directory:
 
 ```sh
 CUSTOM_RUNTIME_PACKS_DIR=/path/to/platform-runtime-packs/packages \
-DOTNETVERSION=10.0.402 \
+DOTNETVERSION=10.0.403 \
 bash packaging/scripts/build-standalone.sh 0.0.0 freebsd-x64 /path/to/task-output
 ```
 
