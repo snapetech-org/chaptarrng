@@ -48,6 +48,10 @@ fail closed unless both `CHAPTARRNG_RELEASE_READY=true` and
 gate closes. Read the [migration guide](docs/MIGRATE_FROM_BOOKSHELFNG.md)
 and [retirement status](docs/BOOKSHELFNG_RETIREMENT.md) before switching.
 
+Once those gates are closed, a pushed `v*` tag matching `package.json` starts
+the private-JIT release pipeline. Main-branch version changes alone do not
+publish a release; release tags must point to a commit on `main`.
+
 On 2026-10-21, the current source candidate passed migration, database
 rollback, and normal-startup rehearsals against two isolated, populated
 BookshelfNG SQLite snapshots. Both startup copies auto-converted to schema

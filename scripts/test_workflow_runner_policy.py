@@ -45,7 +45,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         source = WORKFLOW.read_text(encoding="utf-8")
         push = event_block(source, "push")
         self.assertRegex(push, r"(?m)^    tags:\s*$")
-        self.assertIn("'v*.*.*'", push)
+        self.assertIn("'v*'", push)
         self.assertNotRegex(push, r"(?m)^    branches:")
         target = event_block(source, "pull_request_target")
         self.assertIn("branches: [main]", target)
@@ -154,7 +154,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
 
         self.assertIn("workflow_dispatch:", source)
         self.assertRegex(push, r"(?m)^    tags:\s*$")
-        self.assertIn("'v*.*.*'", push)
+        self.assertIn("'v*'", push)
         self.assertNotRegex(push, r"(?m)^    branches:")
         self.assertNotRegex(source, r"(?m)^  pull_request:")
 

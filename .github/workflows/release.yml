@@ -1,11 +1,11 @@
 # packer-windows-jit-v1
 name: Release
 
-# A version bump merged to the maintained stable main branch starts a release.
+# A pushed v* tag starts the stable release pipeline.
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -22,7 +22,6 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
         persist-credentials: false
 
     - name: Detect a new stable version
@@ -32,14 +31,25 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         set -euo pipefail
+        TAG="$GITHUB_REF_NAME"
+        VERSION="$(python3 -c "import json; print(json.load(open('package.json', encoding='utf-8'))['version'])")"
+        if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || "$TAG" != "v$VERSION" ]]; then
+          echo "Pushed tag $TAG must match package.json version v$VERSION."
+          exit 1
+        fi
         python3 packaging/scripts/check_stable_release_version.py
+        if ! grep -qx 'release_requested=true' "$GITHUB_OUTPUT"; then
+          echo "Pushed tag $TAG is not newer than the latest published stable release."
+          exit 1
+        fi
 
-    - name: Require a releasable branch
+    - name: Require the pushed tag to point to main
       shell: bash
       run: |
         set -euo pipefail
-        if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
-          echo "Releases must run from main; selected ref is $GITHUB_REF."
+        git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+        if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+          echo "Release tags must point to a commit on main."
           exit 1
         fi
 
@@ -72,7 +82,7 @@ jobs:
     permissions:
       contents: write
     outputs:
-      sha: ${{ steps.changelog.outputs.sha }}
+      sha: ${{ steps.source.outputs.sha }}
       tag: ${{ steps.tag.outputs.tag }}
       version: ${{ steps.tag.outputs.version }}
       release_body: ${{ steps.changelog.outputs.release_body }}
@@ -81,7 +91,7 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: false
 
     - uses: ./.github/actions/setup-github-cli
 
@@ -96,11 +106,6 @@ jobs:
       with:
         tool: git-cliff
 
-    - name: Configure release commit identity
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
     - name: Resolve source head
       id: source
       run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -114,30 +119,30 @@ jobs:
       run: |
         set -euo pipefail
         VERSION="$(python3 -c "import json; print(json.load(open('package.json', encoding='utf-8'))['version'])")"
-        echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+        TAG="$GITHUB_REF_NAME"
+        if [[ "$TAG" != "v$VERSION" ]]; then
+          echo "Pushed tag $TAG does not match package.json version v$VERSION."
+          exit 1
+        fi
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
     - name: Guard - tag matches versions
       run: python3 build-tools/version_guard.py release-tag --tag "${{ steps.tag.outputs.tag }}"
 
-    - name: Guard - selected branch has not advanced
+    - name: Guard - release tag is on main
       env:
         SOURCE_SHA: ${{ steps.source.outputs.sha }}
       shell: bash
       run: |
         set -euo pipefail
-        REMOTE_HEAD_SHA="$(git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | awk '{print $1}')"
-        if [[ -z "$REMOTE_HEAD_SHA" ]]; then
-          echo "Unable to resolve the current remote head for $GITHUB_REF_NAME."
-          exit 1
-        fi
-        if [[ "$REMOTE_HEAD_SHA" != "$SOURCE_SHA" ]]; then
-          echo "$GITHUB_REF_NAME advanced to $REMOTE_HEAD_SHA while this run validated $SOURCE_SHA."
-          echo "Run the release workflow again so the published image includes the current branch head."
+        git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+        if ! git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main; then
+          echo "Release source $SOURCE_SHA is not on main."
           exit 1
         fi
 
-    - name: Generate and commit changelog
+    - name: Generate release notes
       id: changelog
       env:
         TAG: ${{ steps.tag.outputs.tag }}
@@ -181,20 +186,6 @@ jobs:
           exit 1
         }
 
-        node scripts/prepend-changelog-section.mjs \
-          --current "$current_changelog" \
-          --existing CHANGELOG.md \
-          --output CHANGELOG.md
-        git add CHANGELOG.md
-        if ! git diff --cached --quiet; then
-          git commit \
-            -m "chore(release): prepare $TAG" \
-            -m "release-note: none"
-        fi
-        git push origin HEAD:refs/heads/main
-
-        prepared_sha="$(git rev-parse HEAD)"
-        echo "sha=$prepared_sha" >> "$GITHUB_OUTPUT"
         delimiter="release_body_$GITHUB_RUN_ID"
         {
           echo "release_body<<$delimiter"
@@ -202,19 +193,14 @@ jobs:
           echo "$delimiter"
         } >> "$GITHUB_OUTPUT"
 
-    - name: Create tag if absent
+    - name: Verify pushed tag is immutable
       env:
-        TAG: ${{ steps.tag.outputs.tag }}
-        RELEASE_SHA: ${{ steps.changelog.outputs.sha }}
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ steps.tag.outputs.tag }}
+        RELEASE_SHA: ${{ steps.source.outputs.sha }}
       shell: bash
       run: |
         set -euo pipefail
-        CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-        if [[ "$CURRENT_MAIN_SHA" != "$RELEASE_SHA" ]]; then
-          echo "main advanced to $CURRENT_MAIN_SHA before tag creation; rerun the release workflow."
-          exit 1
-        fi
         REMOTE_SHA="$(git ls-remote --tags origin "refs/tags/$TAG^{}" | awk '{print $1}' || true)"
         if [[ -z "$REMOTE_SHA" ]]; then
           REMOTE_SHA="$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1}' || true)"
@@ -228,20 +214,9 @@ jobs:
           fi
         fi
 
-        if [[ -n "$REMOTE_SHA" && "$REMOTE_SHA" != "$RELEASE_SHA" ]]; then
-          IS_DRAFT="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || echo false)"
-          if [[ "$IS_DRAFT" != "true" ]]; then
-            echo "Tag $TAG already exists at $REMOTE_SHA but release commit is $RELEASE_SHA."
-            echo "Published release tags cannot be moved; bump the version before creating another release."
-            exit 1
-          fi
-
-          echo "Moving draft tag $TAG from $REMOTE_SHA to validated release commit $RELEASE_SHA."
-          git tag --force "$TAG" "$RELEASE_SHA"
-          git push --force origin "refs/tags/$TAG:refs/tags/$TAG"
-        elif [[ -z "$REMOTE_SHA" ]]; then
-          git tag "$TAG" "$RELEASE_SHA"
-          git push origin "refs/tags/$TAG:refs/tags/$TAG"
+        if [[ "$REMOTE_SHA" != "$RELEASE_SHA" ]]; then
+          echo "Pushed tag $TAG points to $REMOTE_SHA, but this run checked out $RELEASE_SHA."
+          exit 1
         fi
 
     - name: Create draft release
@@ -287,7 +262,7 @@ jobs:
       id-token: write
     with:
       sha: ${{ needs.release.outputs.sha }}
-      branch: ${{ github.ref_name }}
+      branch: main
       legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
 
   dispatch-legacy-ghcr:
@@ -333,7 +308,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
@@ -378,7 +353,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
@@ -459,7 +434,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
@@ -519,7 +494,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
@@ -601,7 +576,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
@@ -650,7 +625,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - uses: ./.github/actions/setup-github-cli
@@ -766,12 +741,12 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: ${{ needs.release.outputs.tag }}
         RELEASE_BODY: ${{ needs.release.outputs.release_body }}
-        BRANCH: ${{ github.ref_name }}
+        RELEASE_TAG: ${{ needs.release.outputs.tag }}
       shell: bash
       run: |
         set -euo pipefail
-        if [[ "$BRANCH" != "main" ]]; then
-          echo "Stable releases must be published from main."
+        if [[ "$RELEASE_TAG" != "$GITHUB_REF_NAME" ]]; then
+          echo "Release publication does not match the pushed tag."
           exit 1
         fi
         notes="$RUNNER_TEMP/chaptarrng-release-notes.md"
@@ -815,7 +790,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: main
+        ref: ${{ needs.release.outputs.sha }}
         persist-credentials: false
 
     - name: Verify checked-out release source
