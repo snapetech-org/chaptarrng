@@ -17,5 +17,5 @@ jobs:
       github.event.pull_request.base.ref == 'main'
     permissions:
       contents: read
-    uses: ./.github/workflows/fork-safe-validation.yml
+    uses: snapetech-org/chaptarrng/.github/workflows/fork-safe-validation.yml@64e83eb6e1734f90e8429affc8fbb76abd6d9564
 
