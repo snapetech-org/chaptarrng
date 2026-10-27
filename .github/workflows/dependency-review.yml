@@ -2,7 +2,7 @@ name: Dependency Review
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
 permissions:
   contents: read
   pull-requests: read
@@ -11,7 +11,8 @@ jobs:
   dependency-review:
     if: >-
       github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
-      github.event.pull_request.user.login == 'snapetech'
+      github.event.pull_request.user.login == 'snapetech' &&
+      github.event.pull_request.draft == false
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     steps:
       - name: Checkout repository
