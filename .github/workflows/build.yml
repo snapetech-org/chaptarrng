@@ -6,9 +6,6 @@ run-name: >-
       format('owner-pr:{0}:{1}:{2}', inputs.pr_number, inputs.pr_sha, inputs.target_run_id) || github.workflow }}
 
 on:
-  pull_request_target:
-    branches: [main]
-    types: [opened, reopened, synchronize, ready_for_review]
   push:
     tags:
       - 'v*.*.*'
@@ -49,7 +46,7 @@ on:
         type: string
 
 # Build validation runs on tags, reusable workflow calls, or explicit dispatches.
-# Trusted owner PRs use the metadata-only route below for release-note checks.
+# Automatic pull-request checks are disabled.
 concurrency:
   group: build-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}
   cancel-in-progress: false
