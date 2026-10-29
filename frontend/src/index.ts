@@ -1,7 +1,7 @@
-import './polyfills';
 import 'Styles/globals.css';
-import './index.css';
 import { applyDocumentLocale } from 'Utilities/Localization/locale';
+import './polyfills';
+import './index.css';
 
 const BOOTSTRAP_RECOVERY_KEY = 'chaptarr_bootstrap_recovery_ts';
 const BOOTSTRAP_RECOVERY_WINDOW_MS = 60 * 1000;

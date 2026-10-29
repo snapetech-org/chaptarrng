@@ -48,6 +48,7 @@ class EnhancedSelectInputOption extends Component {
         id={String(id)}
         role="option"
         aria-selected={isSelected}
+        aria-disabled={isDisabled || undefined}
         tabIndex={-1}
         className={classNames(
           className,

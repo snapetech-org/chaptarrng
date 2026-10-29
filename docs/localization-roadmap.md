@@ -14,13 +14,14 @@ The server merges English, the declared parent catalog, then the exact locale ca
 
 ## Per-string provenance
 
-docs/localization/provenance.json stores reviewed messages by locale and records the source fingerprint reviewed. The catalog checker reports a message as:
+docs/localization/provenance.json stores explicit source-fingerprinted `reviewed` and `drafts` records per locale and message ID. The generated catalog report distinguishes:
 
-- **reviewed** when its current English fingerprint is listed for that locale;
-- **machine draft** when an exact locale catalog value differs from English and is not reviewed;
-- **inherited** when the value comes from English or an explicitly configured parent locale.
+- **reviewed** values whose current English fingerprint was reviewed and whose exact locale catalog contains the translation;
+- **machine drafts** explicitly recorded under `drafts`, with the current source fingerprint;
+- **unreviewed exact** legacy catalog values with no provenance record;
+- **inherited** values supplied by the configured parent locale or English fallback.
 
-Unreviewed existing translations are conservatively treated as drafts. Review a string only after checking meaning, terminology, context, placeholders, and punctuation. The generated counts are in docs/localization/catalog-status.md.
+Existing translations without contributor or workflow provenance are recorded as unreviewed, not assumed to be machine-generated. Record a translation as a draft only when its machine-draft origin is known. Review a string only after checking meaning, terminology, context, placeholders, and punctuation. The generated counts are in docs/localization/catalog-status.md.
 
 To refresh source fingerprints after reviewing changed English copy, run yarn localization:update-source-hashes. To update the generated status table, run yarn localization:update-status. Then run yarn check-translations, yarn check-localization, and yarn test-localization.
 

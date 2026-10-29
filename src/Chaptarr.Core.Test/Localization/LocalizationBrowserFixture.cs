@@ -49,6 +49,8 @@ namespace Chaptarr.Core.Test.Localization
             var originalLanguage = int.Parse(await languageControl.GetAttributeAsync("data-value") ?? "1");
             Assert.That(await languageControl.GetAttributeAsync("aria-labelledby"), Is.EqualTo("uiLanguage-label"));
             Assert.That(await page.Locator("#uiLanguage-label").CountAsync(), Is.EqualTo(1));
+            StringAssert.Contains("uiLanguage-help", await languageControl.GetAttributeAsync("aria-describedby"));
+            Assert.That(await page.Locator("#uiLanguage-help").CountAsync(), Is.EqualTo(1));
 
             try
             {
@@ -101,11 +103,32 @@ namespace Chaptarr.Core.Test.Localization
                 var dialog = page.GetByRole(AriaRole.Dialog);
                 await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
                 Assert.That(await dialog.GetAttributeAsync("aria-labelledby"), Is.Not.Null);
+                Assert.That(await dialog.Locator("button[aria-label]").CountAsync(), Is.GreaterThan(0));
                 await page.Keyboard.PressAsync("Escape");
+
+                await page.GotoAsync(settingsUrl);
+                await languageControl.ClickAsync();
+                await page.GetByRole(AriaRole.Option, new PageGetByRoleOptions { Name = "العربية" }).ClickAsync();
+                await page.Keyboard.PressAsync("Control+s");
+                await page.WaitForFunctionAsync("tag => document.documentElement.lang === tag", "ar");
+                await page.WaitForFunctionAsync(
+                    "id => document.querySelector('#uiLanguage')?.getAttribute('data-value') === String(id)",
+                    31);
 
                 await page.GotoAsync(new Uri(_baseUri, "unmapped").ToString());
                 await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+                await page.WaitForFunctionAsync("() => document.documentElement.dir === 'rtl'");
                 Assert.That(await page.GetByRole(AriaRole.Navigation).CountAsync(), Is.GreaterThan(0));
+
+                var importButtons = page.GetByRole(
+                    AriaRole.Button,
+                    new PageGetByRoleOptions { Name = "الواردات التفاعلية" });
+                Assert.That(await importButtons.CountAsync(), Is.GreaterThan(0), "Seed the test library with at least one unmapped file.");
+                await importButtons.First.ClickAsync();
+                var importDialog = page.GetByRole(AriaRole.Dialog);
+                await importDialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+                Assert.That(await importDialog.GetAttributeAsync("aria-labelledby"), Is.Not.Null);
+                await page.Keyboard.PressAsync("Escape");
 
                 await page.GotoAsync(settingsUrl);
                 await page.SetViewportSizeAsync(new ViewportSize { Width = 640, Height = 900 });

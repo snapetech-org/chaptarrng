@@ -109,8 +109,18 @@ function formatPattern(value, pattern, locale) {
     h: () => getDatePart(date, { hour: 'numeric', hourCycle: 'h12' }, 'hour', language),
     mm: () => getDatePart(date, { hour: 'numeric', hourCycle: 'h23', minute: '2-digit' }, 'minute', language),
     m: () => getDatePart(date, { hour: 'numeric', hourCycle: 'h23', minute: 'numeric' }, 'minute', language),
-    ss: () => getDatePart(date, { hour: 'numeric', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }, 'second', language),
-    s: () => getDatePart(date, { hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' }, 'second', language),
+    ss: () => getDatePart(
+      date,
+      { hour: 'numeric', minute: '2-digit', second: '2-digit', hourCycle: 'h23' },
+      'second',
+      language
+    ),
+    s: () => getDatePart(
+      date,
+      { hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' },
+      'second',
+      language
+    ),
     A: () => getDatePart(date, { hour: 'numeric', hourCycle: 'h12' }, 'dayPeriod', language),
     a: () => getDatePart(date, { hour: 'numeric', hourCycle: 'h12' }, 'dayPeriod', language)
       .toLocaleLowerCase(language),
@@ -228,7 +238,12 @@ function parseLocalizedNumber(input, options) {
   source = source.split(minusSymbol).join('-').replace(/\u2212/g, '-');
 
   let effectiveDecimal = source.includes('٫') ? '٫' : decimalSymbol;
-  if (effectiveDecimal === decimalSymbol && decimalSymbol !== '.' && source.includes('.') && !source.includes(decimalSymbol)) {
+  if (
+    effectiveDecimal === decimalSymbol &&
+    decimalSymbol !== '.' &&
+    source.includes('.') &&
+    !source.includes(decimalSymbol)
+  ) {
     const dotIsGrouping = groupSymbols.has('.') && /\.\d{3}$/.test(source);
     if (!dotIsGrouping) {
       effectiveDecimal = '.';

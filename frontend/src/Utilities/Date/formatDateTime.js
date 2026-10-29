@@ -1,5 +1,5 @@
-import formatDate from './formatDate';
 import translate from 'Utilities/String/translate';
+import formatDate from './formatDate';
 import formatTime from './formatTime';
 import isToday from './isToday';
 import isTomorrow from './isTomorrow';

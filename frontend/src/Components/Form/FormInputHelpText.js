@@ -9,6 +9,7 @@ import styles from './FormInputHelpText.css';
 function FormInputHelpText(props) {
   const {
     className,
+    id,
     text,
     link,
     tooltip,
@@ -18,12 +19,14 @@ function FormInputHelpText(props) {
   } = props;
 
   return (
-    <div className={classNames(
-      className,
-      isError && styles.isError,
-      isWarning && styles.isWarning,
-      isCheckInput && styles.isCheckInput
-    )}
+    <div
+      id={id}
+      className={classNames(
+        className,
+        isError && styles.isError,
+        isWarning && styles.isWarning,
+        isCheckInput && styles.isCheckInput
+      )}
     >
       {text}
 
@@ -56,6 +59,7 @@ function FormInputHelpText(props) {
 
 FormInputHelpText.propTypes = {
   className: PropTypes.string.isRequired,
+  id: PropTypes.string,
   text: PropTypes.string.isRequired,
   link: PropTypes.string,
   tooltip: PropTypes.string,

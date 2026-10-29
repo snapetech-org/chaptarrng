@@ -13,7 +13,6 @@ import PageContentBody from 'Components/Page/PageContentBody';
 import { inputTypes, kinds } from 'Helpers/Props';
 import SettingsToolbarConnector from 'Settings/SettingsToolbarConnector';
 import themes from 'Styles/Themes';
-import titleCase from 'Utilities/String/titleCase';
 import intlFormatters from 'Utilities/Localization/formatters.cjs';
 import {
   applyDocumentLocale,
@@ -22,6 +21,7 @@ import {
   SUPPORTED_UI_LOCALE_IDS,
   SUPPORTED_UI_LOCALES
 } from 'Utilities/Localization/locale';
+import titleCase from 'Utilities/String/titleCase';
 import translate, { translateWithFallback } from 'Utilities/String/translate';
 import styles from './UISettings.css';
 

@@ -11,7 +11,45 @@ const hashesPath = path.join(root, 'docs', 'localization', 'source-message-hashe
 const provenancePath = path.join(root, 'docs', 'localization', 'provenance.json');
 const terminologyPath = path.join(root, 'docs', 'localization', 'terminology.json');
 const reportPath = path.join(root, 'docs', 'localization', 'catalog-status.md');
-const expectedLocaleTags = ["en","ar","az","bg","bn","cs","da","de","es","fa","fr","he","hi","hu","id","it","ja","kk","ko","ms","nb","nl","pl","pt","ru","sv","th","tr","uk","uz","vi","zh-Hans","es-419","fr-CA","pt-BR","pt-PT","zh-Hant"];
+const expectedLocaleTags = [
+  'en',
+  'ar',
+  'az',
+  'bg',
+  'bn',
+  'cs',
+  'da',
+  'de',
+  'es',
+  'fa',
+  'fr',
+  'he',
+  'hi',
+  'hu',
+  'id',
+  'it',
+  'ja',
+  'kk',
+  'ko',
+  'ms',
+  'nb',
+  'nl',
+  'pl',
+  'pt',
+  'ru',
+  'sv',
+  'th',
+  'tr',
+  'uk',
+  'uz',
+  'vi',
+  'zh-Hans',
+  'es-419',
+  'fr-CA',
+  'pt-BR',
+  'pt-PT',
+  'zh-Hant',
+];
 const expectedRegionalFallbacks = {
   'es-419': 'es',
   'fr-CA': 'fr',
@@ -60,29 +98,43 @@ function buildStatusReport(english, registry, catalogs, provenance, fingerprints
     '',
     '# Localization catalog status',
     '',
-    'Source catalog: **' + Object.keys(english).length + ' messages** in `en.json`. Each locale below resolves all source IDs through its exact catalog, the explicit parent catalog where configured, and English fallback.',
+    'Source catalog: **' + Object.keys(english).length + ' messages** in `en.json`. Each locale below resolves source IDs through its exact catalog, configured parent catalog, and English fallback.',
     '',
-    'Unlisted strings are classified as **inherited**. Entries that differ from English in the exact locale catalog are **machine drafts** until a reviewer records the current source fingerprint in `provenance.json`. Regional parent entries remain inherited from their parent locale.',
+    'Strings without an exact translation inherit from the configured parent locale or English. Machine drafts and reviewed entries are explicit fingerprinted provenance records. Existing exact translations without provenance are shown as unreviewed; they are not assumed to be machine-generated.',
     '',
-    '| Locale | Exact catalog | Direction | Source | Machine drafts | Inherited | Reviewed |',
-    '| --- | --- | --- | ---: | ---: | ---: |'
+    '| Locale | Exact catalog | Direction | Source | Machine drafts | Unreviewed exact | Inherited | Reviewed |',
+    '| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |'
   ];
 
   for (const locale of registry.locales) {
     const exact = catalogs[locale.file] || {};
     const reviewed = provenance.reviewed[locale.tag] || {};
-    let sourceCount = 0;
+    const drafts = provenance.drafts[locale.tag] || {};
+    const sourceCount = Object.keys(english).length;
     let machineDrafts = 0;
+    let unreviewedExact = 0;
     let inherited = 0;
     let reviewedCount = 0;
 
     for (const key of Object.keys(english)) {
       if (locale.tag === 'en') {
-        sourceCount++;
-      } else if (reviewed[key] === fingerprints[key]) {
+        continue;
+      } else if (
+        Object.prototype.hasOwnProperty.call(exact, key) &&
+        reviewed[key] === fingerprints[key]
+      ) {
         reviewedCount++;
-      } else if (Object.prototype.hasOwnProperty.call(exact, key) && exact[key] !== english[key]) {
+      } else if (
+        Object.prototype.hasOwnProperty.call(exact, key) &&
+        drafts[key] === fingerprints[key] &&
+        exact[key] !== english[key]
+      ) {
         machineDrafts++;
+      } else if (
+        Object.prototype.hasOwnProperty.call(exact, key) &&
+        exact[key] !== english[key]
+      ) {
+        unreviewedExact++;
       } else {
         inherited++;
       }
@@ -91,7 +143,8 @@ function buildStatusReport(english, registry, catalogs, provenance, fingerprints
     const parentLabel = locale.fallback ? ' ← `' + locale.fallback + '.json`' : '';
     lines.push(
       '| `' + locale.tag + '` | `' + locale.file + '.json`' + parentLabel +
-      ' | ' + locale.direction + ' | ' + sourceCount + ' | ' + machineDrafts + ' | ' + inherited + ' | ' + reviewedCount + ' |'
+      ' | ' + locale.direction + ' | ' + sourceCount + ' | ' + machineDrafts +
+      ' | ' + unreviewedExact + ' | ' + inherited + ' | ' + reviewedCount + ' |'
     );
   }
 
@@ -138,7 +191,11 @@ function main() {
     }
   }
 
-  if (registry.version !== 1 || !Array.isArray(registry.locales) || registry.locales.length !== expectedLocaleTags.length) {
+  if (
+    registry.version !== 1 ||
+    !Array.isArray(registry.locales) ||
+    registry.locales.length !== expectedLocaleTags.length
+  ) {
     errors.push('ui-locales.json must define exactly ' + expectedLocaleTags.length + ' locale choices.');
   }
 
@@ -209,16 +266,50 @@ function main() {
     }
   }
 
-  for (const [locale, reviewed] of Object.entries(provenance.reviewed || {})) {
-    if (!localeTags.has(locale)) errors.push('Provenance references unsupported locale ' + locale + '.');
-    for (const [key, fingerprint] of Object.entries(reviewed)) {
-      if (!Object.prototype.hasOwnProperty.call(english, key)) {
-        errors.push(locale + ' review references unknown message ID ' + key + '.');
-      } else if (fingerprint !== fingerprints[key]) {
-        errors.push(locale + ' review is stale for ' + key + '; review the changed source before refreshing its fingerprint.');
+  if (
+    provenance.version !== 1 ||
+    !provenance.reviewed ||
+    typeof provenance.reviewed !== 'object' ||
+    !provenance.drafts ||
+    typeof provenance.drafts !== 'object'
+  ) {
+    errors.push('provenance.json must define version 1, reviewed, and drafts maps.');
+  }
+
+  const provenanceKeys = new Set();
+  for (const [status, entriesByLocale] of [
+    ['reviewed', provenance.reviewed || {}],
+    ['machine draft', provenance.drafts || {}]
+  ]) {
+    for (const [locale, entries] of Object.entries(entriesByLocale)) {
+      if (!localeTags.has(locale)) errors.push(status + ' provenance references unsupported locale ' + locale + '.');
+      for (const [key, fingerprint] of Object.entries(entries)) {
+        const recordKey = locale + '\0' + key;
+        if (!Object.prototype.hasOwnProperty.call(english, key)) {
+          errors.push(locale + ' ' + status + ' provenance references unknown message ID ' + key + '.');
+        } else if (fingerprint !== fingerprints[key]) {
+          errors.push(locale + ' ' + status + ' provenance is stale for ' + key + '; review the source before refreshing its fingerprint.');
+        }
+        if (!Object.prototype.hasOwnProperty.call(catalogs[(registry.locales.find((item) => item.tag === locale) || {}).file] || {}, key)) {
+          errors.push(locale + ' ' + status + ' provenance requires an exact catalog value for ' + key + '.');
+        }
+        if (status === 'machine draft' && locale !== 'en') {
+          const localeFile = (registry.locales.find((item) => item.tag === locale) || {}).file;
+          if (localeFile && catalogs[localeFile] && catalogs[localeFile][key] === english[key]) {
+            errors.push(locale + ' machine draft for ' + key + ' must differ from English.');
+          }
+        }
+        if (provenanceKeys.has(recordKey)) {
+          errors.push(locale + ' message ' + key + ' cannot have more than one provenance status.');
+        }
+        provenanceKeys.add(recordKey);
+        if (status === 'machine draft' && locale === 'en') {
+          errors.push('English source messages cannot be machine drafts.');
+        }
       }
     }
   }
+
 
   if (writeHashes) {
     const previousLegacyKeys = snapshot.legacyKeys || [];

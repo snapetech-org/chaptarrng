@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import Link from 'Components/Link/Link';
 import BidiText from 'Components/BidiText';
+import Link from 'Components/Link/Link';
 
 function BookTitleLink({ bookId, title, disambiguation }) {
   const link = `/book/${bookId}`;
