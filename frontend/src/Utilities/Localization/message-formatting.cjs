@@ -29,7 +29,14 @@ function resolveSelectKey(key, selection, translations) {
     `${key}.other`;
 }
 
+function resolveMessageFallback(key, translations) {
+  const otherKey = `${key}.other`;
+
+  return translations[otherKey] || translations[key] || key;
+}
+
 module.exports = {
+  resolveMessageFallback,
   resolvePluralKey,
   resolveSelectKey
 };

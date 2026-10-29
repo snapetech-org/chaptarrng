@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
+  resolveMessageFallback,
   resolvePluralKey,
   resolveSelectKey
 } = require('./message-formatting.cjs');
@@ -27,4 +28,17 @@ test('resolves select values and falls back to other', () => {
 
   assert.equal(resolveSelectKey('import.mode', 'book', messages), 'import.mode.book');
   assert.equal(resolveSelectKey('import.mode', 'author', messages), 'import.mode.other');
+});
+
+
+test('falls back to other, then the base message ID', () => {
+  assert.equal(
+    resolveMessageFallback('books.count', { 'books.count.other': '{count} books' }),
+    '{count} books'
+  );
+  assert.equal(
+    resolveMessageFallback('books.count', { 'books.count': '{count} book' }),
+    '{count} book'
+  );
+  assert.equal(resolveMessageFallback('books.count', {}), 'books.count');
 });
