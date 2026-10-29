@@ -1,8 +1,10 @@
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import intlFormatters from 'Utilities/Localization/formatters.cjs';
+import messageFormatting from 'Utilities/Localization/message-formatting.cjs';
 import { applyDocumentLocale, getLocale } from 'Utilities/Localization/locale';
 
-const { formatNumber, pluralCategory } = intlFormatters;
+const { formatNumber } = intlFormatters;
+const { resolvePluralKey, resolveSelectKey } = messageFormatting;
 
 function getTranslations() {
   return createAjaxRequest({
@@ -88,14 +90,8 @@ export function translatePlural(
   count: number,
   tokens: TranslationTokens = {}
 ) {
-  const amount = Number(count);
-  const category = pluralCategory(amount, getLocale());
-  const exactKey = `${key}.=${amount}`;
-  const categoryKey = `${key}.${category}`;
   const fallbackKey = `${key}.other`;
-  const selectedKey = Object.prototype.hasOwnProperty.call(translations, exactKey) ?
-    exactKey :
-    (Object.prototype.hasOwnProperty.call(translations, categoryKey) ? categoryKey : fallbackKey);
+  const selectedKey = resolvePluralKey(key, count, translations, getLocale());
 
   return translateWithDefault(
     selectedKey,
@@ -110,11 +106,8 @@ export function translateSelect(
   selection: string | number | boolean,
   tokens: TranslationTokens = {}
 ) {
-  const selectedKey = `${key}.${String(selection)}`;
   const fallbackKey = `${key}.other`;
-  const keyToUse = Object.prototype.hasOwnProperty.call(translations, selectedKey) ?
-    selectedKey :
-    fallbackKey;
+  const keyToUse = resolveSelectKey(key, selection, translations);
 
   return translateWithDefault(keyToUse, keyToUse, tokens, fallbackKey);
 }

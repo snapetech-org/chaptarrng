@@ -21,7 +21,7 @@ class ModalBody extends Component {
     let className = this.props.className;
     const hasScroller = scrollDirection !== scrollDirections.NONE;
     const bidiChildren = typeof children === 'string' || typeof children === 'number' ?
-      <BidiText>{bidiChildren}</BidiText> :
+      <BidiText>{children}</BidiText> :
       children;
 
     if (!className) {
@@ -38,9 +38,9 @@ class ModalBody extends Component {
         {
           hasScroller ?
             <div className={innerClassName}>
-              {children}
+              {bidiChildren}
             </div> :
-            children
+            bidiChildren
         }
       </Scroller>
     );

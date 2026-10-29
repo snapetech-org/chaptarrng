@@ -4,7 +4,7 @@ import intlFormatters from 'Utilities/Localization/formatters.cjs';
 import { getLocale } from 'Utilities/Localization/locale';
 import TextInput from './TextInput';
 
-const { formatNumber, parseLocalizedNumber } = intlFormatters;
+const { formatNumber, parseLocalizedNumber, stepNumber } = intlFormatters;
 
 function formatInputValue(value) {
   return value == null ? '' : formatNumber(value, {
@@ -73,6 +73,36 @@ class NumberInput extends Component {
     this.setState({ isFocused: true });
   };
 
+  onKeyDown = (event) => {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+      return;
+    }
+
+    if (this.props.readOnly || this.props.isDisabled || this.props.disabled) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const direction = event.key === 'ArrowUp' ? 1 : -1;
+    const currentValue = parseValue(this.props, this.state.value);
+    const nextValue = stepNumber(currentValue, direction, {
+      step: this.props.step,
+      min: this.props.min,
+      max: this.props.max
+    });
+
+    if (nextValue == null) {
+      return;
+    }
+
+    this.setState({ value: formatInputValue(nextValue) });
+    this.props.onChange({
+      name: this.props.name,
+      value: nextValue
+    });
+  };
+
   onBlur = () => {
     const { name, onChange } = this.props;
     const { value } = this.state;
@@ -95,8 +125,14 @@ class NumberInput extends Component {
         {...this.props}
         type="text"
         inputMode={this.props.isFloat ? 'decimal' : 'numeric'}
+        role="spinbutton"
+        aria-valuemin={this.props.min}
+        aria-valuemax={this.props.max}
+        aria-valuenow={parseValue(this.props, this.state.value) ?? undefined}
+        aria-valuetext={this.state.value || undefined}
         value={this.state.value}
         onChange={this.onChange}
+        onKeyDown={this.onKeyDown}
         onBlur={this.onBlur}
         onFocus={this.onFocus}
       />
@@ -109,6 +145,10 @@ NumberInput.propTypes = {
   value: PropTypes.number,
   min: PropTypes.number,
   max: PropTypes.number,
+  step: PropTypes.number,
+  isDisabled: PropTypes.bool,
+  disabled: PropTypes.bool,
+  readOnly: PropTypes.bool,
   isFloat: PropTypes.bool.isRequired,
   onChange: PropTypes.func.isRequired
 };
