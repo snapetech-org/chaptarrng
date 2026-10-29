@@ -1,4 +1,8 @@
 import createAjaxRequest from 'Utilities/createAjaxRequest';
+import intlFormatters from 'Utilities/Localization/formatters.cjs';
+import { applyDocumentLocale, getLocale } from 'Utilities/Localization/locale';
+
+const { formatNumber, pluralCategory } = intlFormatters;
 
 function getTranslations() {
   return createAjaxRequest({
@@ -11,73 +15,113 @@ function getTranslations() {
 let translations: Record<string, string> = {};
 
 export async function fetchTranslations(): Promise<boolean> {
-  return new Promise(async (resolve) => {
-    try {
-      const data = await getTranslations();
-      translations = data.Strings;
-      if (typeof data.Locale === 'string') {
-        const locale = data.Locale.replace(/_/g, '-');
-        document.documentElement.lang = locale;
-        const language = locale.toLowerCase().split('-', 1)[0];
-        document.documentElement.dir = [
-          'ar',
-          'dv',
-          'fa',
-          'he',
-          'ku',
-          'ps',
-          'sd',
-          'ug',
-          'ur',
-          'yi',
-        ].includes(language)
-          ? 'rtl'
-          : 'ltr';
-      }
+  try {
+    const data = await getTranslations();
+    translations = data.Strings || {};
 
-      resolve(true);
-    } catch {
-      resolve(false);
+    if (typeof data.Locale === 'string') {
+      applyDocumentLocale(data.Locale);
     }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+type TranslationValue = string | number | boolean;
+type TranslationTokens = Record<string, TranslationValue>;
+
+function interpolate(template: string, tokens: TranslationTokens) {
+  const formattedTokens: Record<string, TranslationValue> = { ...tokens };
+
+  Object.keys(tokens).forEach((token, index) => {
+    if (!Object.prototype.hasOwnProperty.call(formattedTokens, String(index))) {
+      formattedTokens[String(index)] = tokens[token];
+    }
+  });
+
+  formattedTokens.appName = 'Chaptarr';
+
+  return template.replace(/\{([a-z0-9]+?)\}/gi, (match, tokenMatch) => {
+    if (!Object.prototype.hasOwnProperty.call(formattedTokens, tokenMatch)) {
+      return match;
+    }
+
+    const value = formattedTokens[tokenMatch];
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return formatNumber(value, {}, getLocale());
+    }
+
+    return String(value);
   });
 }
 
 function translateWithDefault(
   key: string,
   fallback: string,
-  tokens: Record<string, string | number | boolean>
+  tokens: TranslationTokens,
+  missingKey = key
 ) {
   const { isProduction = true } = window.Chaptarr;
 
-  if (!isProduction && !(key in translations)) {
-    console.warn(`Missing translation for key: ${key}`);
+  if (!isProduction && !Object.prototype.hasOwnProperty.call(translations, key)) {
+    console.warn(`Missing translation for key: ${missingKey}`);
   }
 
   const translation = translations[key] || fallback;
 
-  tokens.appName = 'Chaptarr';
-
-  // Fallback to the old behaviour for translations not yet updated to use named tokens
-  Object.values(tokens).forEach((value, index) => {
-    tokens[index] = value;
-  });
-
-  return translation.replace(/\{([a-z0-9]+?)\}/gi, (match, tokenMatch) =>
-    String(tokens[tokenMatch] ?? match)
-  );
+  return interpolate(translation, tokens);
 }
 
 export function translateWithFallback(
   key: string,
   fallback: string,
-  tokens: Record<string, string | number | boolean> = {}
+  tokens: TranslationTokens = {}
 ) {
   return translateWithDefault(key, fallback, tokens);
 }
 
+export function translatePlural(
+  key: string,
+  count: number,
+  tokens: TranslationTokens = {}
+) {
+  const amount = Number(count);
+  const category = pluralCategory(amount, getLocale());
+  const exactKey = `${key}.=${amount}`;
+  const categoryKey = `${key}.${category}`;
+  const fallbackKey = `${key}.other`;
+  const selectedKey = Object.prototype.hasOwnProperty.call(translations, exactKey) ?
+    exactKey :
+    (Object.prototype.hasOwnProperty.call(translations, categoryKey) ? categoryKey : fallbackKey);
+
+  return translateWithDefault(
+    selectedKey,
+    selectedKey,
+    { ...tokens, count },
+    fallbackKey
+  );
+}
+
+export function translateSelect(
+  key: string,
+  selection: string | number | boolean,
+  tokens: TranslationTokens = {}
+) {
+  const selectedKey = `${key}.${String(selection)}`;
+  const fallbackKey = `${key}.other`;
+  const keyToUse = Object.prototype.hasOwnProperty.call(translations, selectedKey) ?
+    selectedKey :
+    fallbackKey;
+
+  return translateWithDefault(keyToUse, keyToUse, tokens, fallbackKey);
+}
+
 export default function translate(
   key: string,
-  tokens: Record<string, string | number | boolean> = {}
+  tokens: TranslationTokens = {}
 ) {
   return translateWithDefault(key, key, tokens);
 }

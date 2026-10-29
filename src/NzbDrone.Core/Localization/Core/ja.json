@@ -1863,7 +1863,6 @@
   "Search": "検索",
   "SearchAll": "すべて検索",
   "SearchAsYouType": "入力中に検索",
-
   "SearchBook": "書籍検索",
   "SearchBoxPlaceHolder": "例: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "一度開始するとChaptarrを再起動しないとキャンセルできません。",
@@ -2025,10 +2024,6 @@
   "Skip": "ツイート",
   "SkipFreeSpaceCheck": "フリースペースチェックをスキップする",
   "SkipFreeSpaceCheckWhenImportingHelpText": "Chaptarrがあなたの作者のルートフォルダから空きスペースを検出できないときに使用",
-  "SkipMissingAsinAudiobook": "ASIN のないオーディオブックをスキップ",
-  "SkipMissingAsinAudiobookHelpText": "ASIN が必要です。十分な書誌情報が期待できる、広く出版されている著者に適しています。識別子のないオーディオブックをスキップする設定と併用すると、ISBN と ASIN の両方が必要になります。",
-  "SkipMissingAsinBook": "ASIN のない書籍をスキップ",
-  "SkipMissingAsinBookHelpText": "ASINが必要です。完全なメタデータが期待できる、よく知られた作家や出版実績の豊富な作家に適しています。「識別子のない書籍をスキップ」と併用すると、ISBNとASINの両方が必要になります。",
   "SkipMissingDateAudiobook": "リリース日が不足しているオーディオブックをスキップする",
   "SkipMissingDateAudiobookHelpText": "リリース日をメタデータに含まないオーディオブックを非表示にします。 プロバイダーが次の著者のリフレッシュに日付を追加したら表示されます。",
   "SkipMissingDateBook": "リリース日が不足している本をスキップする",

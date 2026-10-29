@@ -1,24 +1,28 @@
+import intlFormatters from 'Utilities/Localization/formatters.cjs';
+import { getLocale } from 'Utilities/Localization/locale';
+
+const { formatUnit } = intlFormatters;
+
 function formatDurationMinutes(minutes) {
   if (minutes > 0) {
     const totalMinutes = Math.round(minutes);
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
-    const locale = typeof document === 'undefined' ? undefined : document.documentElement.lang;
-    const formatUnit = (value, unit) => new Intl.NumberFormat(locale, {
-      style: 'unit',
-      unit,
-      unitDisplay: 'narrow'
-    }).format(value);
+    const format = (value, unit) => {
+      return formatUnit(value, unit, {
+        unitDisplay: 'narrow'
+      }, getLocale());
+    };
 
     if (hours > 0 && mins > 0) {
-      return `${formatUnit(hours, 'hour')} ${formatUnit(mins, 'minute')}`;
+      return `${format(hours, 'hour')} ${format(mins, 'minute')}`;
     }
 
     if (hours > 0) {
-      return formatUnit(hours, 'hour');
+      return format(hours, 'hour');
     }
 
-    return formatUnit(mins, 'minute');
+    return format(mins, 'minute');
   }
 
   return '';

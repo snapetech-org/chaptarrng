@@ -1,4 +1,4 @@
-import dayjs from 'Utilities/Date/dayjsSetup';
+import formatDate from './formatDate';
 import translate from 'Utilities/String/translate';
 import formatTime from './formatTime';
 import isToday from './isToday';
@@ -31,7 +31,7 @@ function formatDateTime(date, dateFormat, timeFormat, { includeSeconds = false, 
   }
 
   const relativeDay = getRelativeDay(date, includeRelativeDay);
-  const formattedDate = dayjs(date).format(dateFormat);
+  const formattedDate = formatDate(date, dateFormat);
   const formattedTime = formatTime(date, timeFormat, { includeMinuteZero: true, includeSeconds });
 
   return `${relativeDay}${formattedDate} ${formattedTime}`;

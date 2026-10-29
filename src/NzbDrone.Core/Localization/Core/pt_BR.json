@@ -1863,7 +1863,6 @@
   "Search": "Buscar",
   "SearchAll": "Pesquisar Todos",
   "SearchAsYouType": "Pesquisar enquanto digita",
-
   "SearchBook": "Pesquisar livro",
   "SearchBoxPlaceHolder": "Por exemplo: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Isso não pode ser cancelado uma vez iniciado sem reiniciar Chaptarr.",
@@ -2025,10 +2024,6 @@
   "Skip": "Skip.",
   "SkipFreeSpaceCheck": "Ignorar verificação de espaço livre",
   "SkipFreeSpaceCheckWhenImportingHelpText": "Use quando o Chaptarr não conseguir detectar espaço livre na pasta raiz do autor",
-  "SkipMissingAsinAudiobook": "Pular audiolivros sem ASIN",
-  "SkipMissingAsinAudiobookHelpText": "Requer ASIN. É indicado para autores conhecidos e com muitas obras publicadas, dos quais se espera encontrar metadados completos. Se usado junto com a opção de pular audiolivros sem identificador, exige ISBN e ASIN.",
-  "SkipMissingAsinBook": "Pular livros sem ASIN",
-  "SkipMissingAsinBookHelpText": "Requer ASIN. Melhor para autores conhecidos e bem publicados, onde metadados completos são esperados. Combinado com 'Skip books missing identifier', requer tanto um ISBN quanto um ASIN.",
   "SkipMissingDateAudiobook": "Pular audiolivros com data de lançamento faltando",
   "SkipMissingDateAudiobookHelpText": "Esconde audiolivros sem data de lançamento nos metadados. Eles aparecerão assim que os fornecedores adicionarem uma data para o próximo autor atualizar.",
   "SkipMissingDateBook": "Skip livros com data de lançamento faltando",

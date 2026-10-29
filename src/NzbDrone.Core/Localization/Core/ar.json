@@ -1863,7 +1863,6 @@
   "Search": "بحث",
   "SearchAll": "بحث عن",
   "SearchAsYouType": "البحث أثناء الكتابة",
-
   "SearchBook": "البحث",
   "SearchBoxPlaceHolder": "مثال: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "لا يمكن إلغاء هذا بمجرد البدء دون إعادة تشغيل Chaptarr.",
@@ -2025,10 +2024,6 @@
   "Skip": "يتخطى",
   "SkipFreeSpaceCheck": "تخطي فحص المساحة الخالية",
   "SkipFreeSpaceCheckWhenImportingHelpText": "يُستخدم عندما يتعذر على Chaptarr اكتشاف المساحة الحرة من المجلد الجذر للمؤلف",
-  "SkipMissingAsinAudiobook": "تخطي الكتب الصوتية التي لا تحتوي على ASIN",
-  "SkipMissingAsinAudiobookHelpText": "يتطلب ASIN. يناسب المؤلفين المعروفين ذوي الإصدارات الواسعة، حيث يُتوقع توفر بيانات وصفية كاملة. عند استخدامه مع خيار تخطي الكتب الصوتية التي لا تحتوي على مُعرّف، يلزم وجود ISBN وASIN معًا.",
-  "SkipMissingAsinBook": "تخطي الكتب التي لا تحتوي على ASIN",
-  "SkipMissingAsinBookHelpText": "يتطلب رقم ASIN. الأفضل للمؤلفين المشهورين وذوي المنشورات الجيدة حيث من المتوقع الحصول على بيانات وصفية كاملة. بالاشتراك مع \"تخطي المعرف المفقود للكتب\"، يتطلب كلاً من رقم ISBN ورقم ASIN.",
   "SkipMissingDateAudiobook": "دفتر صوتي مُختلِف",
   "SkipMissingDateAudiobookHelpText": "كتب صوتية مخفية بدون موعد لإطلاق البيانات وسيظهرون بمجرد أن يضيف مقدمو الخدمات تاريخاً في تجديد صاحب البلاغ التالي.",
   "SkipMissingDateBook": "كتب التزلج مع تاريخ الإفراج المفقود",

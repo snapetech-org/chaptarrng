@@ -2946,5 +2946,6 @@
   "MoveFrom": "From",
   "MoveTo": "To",
   "MoveTotalSize": "Total size",
-  "SidecarFiles": "sidecar files"
+  "SidecarFiles": "sidecar files",
+  "ui.language.inheritedFallbackNotice": "Untranslated labels use English until a translation is added."
 }

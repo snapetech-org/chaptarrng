@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Scroller from 'Components/Scroller/Scroller';
+import BidiText from 'Components/BidiText';
 import { scrollDirections } from 'Helpers/Props';
 import styles from './ModalBody.css';
 
@@ -19,6 +20,9 @@ class ModalBody extends Component {
 
     let className = this.props.className;
     const hasScroller = scrollDirection !== scrollDirections.NONE;
+    const bidiChildren = typeof children === 'string' || typeof children === 'number' ?
+      <BidiText>{bidiChildren}</BidiText> :
+      children;
 
     if (!className) {
       className = hasScroller ? styles.modalScroller : styles.modalBody;

@@ -2,6 +2,7 @@ import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Measure from './Measure';
+import BidiText from 'Components/BidiText';
 import styles from './Marquee.css';
 
 const SPEED = 50; // pixels per second
@@ -129,7 +130,7 @@ class Marquee extends Component {
             }}
             title={text}
           >
-            {text}
+            <BidiText>{text}</BidiText>
           </span>
         </div>
       </Measure>

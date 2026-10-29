@@ -1,4 +1,5 @@
 const reload = require('require-nocache')(module);
+const logicalDirectionPlugin = require('./build/postcss-logical-direction');
 
 const cssVarsFiles = [
   './src/Styles/Variables/dimensions',
@@ -26,6 +27,7 @@ module.exports = {
         }, {})
     }],
     '@csstools/postcss-color-function',
-    'postcss-nested'
+    'postcss-nested',
+    logicalDirectionPlugin()
   ]
 };
