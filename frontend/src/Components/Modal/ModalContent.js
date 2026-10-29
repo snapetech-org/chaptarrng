@@ -1,10 +1,11 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import getUniqueElememtId from 'Utilities/getUniqueElementId';
-import ModalHeader from './ModalHeader';
 import Icon from 'Components/Icon';
 import Link from 'Components/Link/Link';
 import { icons } from 'Helpers/Props';
+import getUniqueElememtId from 'Utilities/getUniqueElementId';
+import translate from 'Utilities/String/translate';
+import ModalHeader from './ModalHeader';
 import styles from './ModalContent.css';
 
 function ModalContent(props) {
@@ -41,6 +42,7 @@ function ModalContent(props) {
         showCloseButton &&
           <Link
             className={styles.closeButton}
+            aria-label={translate('Close')}
             onPress={onModalClose}
           >
             <Icon

@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
-import Scroller from 'Components/Scroller/Scroller';
 import BidiText from 'Components/BidiText';
+import Scroller from 'Components/Scroller/Scroller';
 import { scrollDirections } from 'Helpers/Props';
 import styles from './ModalBody.css';
 

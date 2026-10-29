@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import Icon from 'Components/Icon';
 import BidiText from 'Components/BidiText';
+import Icon from 'Components/Icon';
 import Link from 'Components/Link/Link';
 import Popover from 'Components/Tooltip/Popover';
 import { icons, tooltipPositions } from 'Helpers/Props';

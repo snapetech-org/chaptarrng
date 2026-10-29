@@ -36,8 +36,14 @@ test('formats saved date and time patterns with localized names and digits', () 
   assert.equal(formatPattern(date, 'h:mm A', 'en'), '1:05 PM');
 });
 
-test('formats units using localized unit names', () => {
+test('formats units using locale-aware names, digits, and plural forms', () => {
   assert.match(formatUnit(2, 'kilometer', { unitDisplay: 'short' }, 'fr-FR'), /km/);
+  assert.equal(formatUnit(1, 'hour', { unitDisplay: 'long' }, 'en'), '1 hour');
+  assert.equal(formatUnit(2, 'hour', { unitDisplay: 'long' }, 'en'), '2 hours');
+  assert.equal(
+    formatUnit(2, 'hour', { unitDisplay: 'long' }, 'fr-FR'),
+    new Intl.NumberFormat('fr-FR', { style: 'unit', unit: 'hour', unitDisplay: 'long' }).format(2)
+  );
 });
 
 test('parses localized grouping, decimals, and native digits to canonical numbers', () => {

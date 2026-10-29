@@ -1,7 +1,7 @@
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import intlFormatters from 'Utilities/Localization/formatters.cjs';
-import messageFormatting from 'Utilities/Localization/message-formatting.cjs';
 import { applyDocumentLocale, getLocale } from 'Utilities/Localization/locale';
+import messageFormatting from 'Utilities/Localization/message-formatting.cjs';
 
 const { formatNumber } = intlFormatters;
 const { resolvePluralKey, resolveSelectKey } = messageFormatting;

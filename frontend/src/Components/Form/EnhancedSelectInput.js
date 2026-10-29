@@ -331,6 +331,7 @@ class EnhancedSelectInput extends Component {
       className,
       disabledClassName,
       name,
+      ariaDescribedBy,
       value,
       values,
       isDisabled,
@@ -393,6 +394,7 @@ class EnhancedSelectInput extends Component {
                           className={className}
                           id={name}
                           name={name}
+                          ariaDescribedBy={ariaDescribedBy}
                           value={value}
                           readOnly={isDisabled}
                           hasError={hasError}
@@ -433,6 +435,8 @@ class EnhancedSelectInput extends Component {
                         data-value={value == null ? '' : String(value)}
                         role="combobox"
                         aria-labelledby={`${name}-label`}
+                        aria-describedby={ariaDescribedBy}
+                        aria-invalid={hasError || undefined}
                         aria-haspopup="listbox"
                         aria-expanded={isOpen}
                         aria-controls={this._optionsId}
@@ -637,6 +641,7 @@ EnhancedSelectInput.propTypes = {
   className: PropTypes.string,
   disabledClassName: PropTypes.string,
   name: PropTypes.string.isRequired,
+  ariaDescribedBy: PropTypes.string,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number, PropTypes.arrayOf(PropTypes.string), PropTypes.arrayOf(PropTypes.number)]).isRequired,
   values: PropTypes.arrayOf(PropTypes.object).isRequired,
   isDisabled: PropTypes.bool.isRequired,

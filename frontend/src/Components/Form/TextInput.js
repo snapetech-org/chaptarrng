@@ -113,7 +113,7 @@ class TextInput extends Component {
   };
 
   onWheel = () => {
-    if (this.props.type === 'number') {
+    if (this.props.type === 'number' || this.props.role === 'spinbutton') {
       this._input.blur();
     }
   };
@@ -132,6 +132,7 @@ class TextInput extends Component {
       id,
       dir,
       inputMode,
+      ariaDescribedBy,
       role,
       ariaValueMin,
       ariaValueMax,
@@ -167,6 +168,8 @@ class TextInput extends Component {
         id={id || name}
         dir={dir || 'auto'}
         inputMode={inputMode}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={hasError || undefined}
         role={role}
         aria-valuemin={ariaValueMin}
         aria-valuemax={ariaValueMax}
@@ -201,6 +204,7 @@ TextInput.propTypes = {
   id: PropTypes.string,
   dir: PropTypes.string,
   inputMode: PropTypes.string,
+  ariaDescribedBy: PropTypes.string,
   role: PropTypes.string,
   ariaValueMin: PropTypes.number,
   ariaValueMax: PropTypes.number,

@@ -3,7 +3,6 @@ import React from 'react';
 import Link from 'Components/Link/Link';
 import { inputTypes, kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
-// import translate from 'Utilities/String/translate';
 import AutoCompleteInput from './AutoCompleteInput';
 import BookEditionSelectInputConnector from './BookEditionSelectInputConnector';
 import BookshelfInputConnector from './BookshelfInputConnector';
@@ -153,19 +152,28 @@ function FormInputGroup(props) {
 
   const lastButtonIndex = finalButtonsArray.length - 1;
   const hasButton = !!finalButtonsArray.length;
+  const name = otherProps.name;
+  const ariaDescribedBy = [
+    helpText ? `${name}-help` : null,
+    ...(!checkInput && helpTexts ? helpTexts.map((_, index) => `${name}-help-${index}`) : []),
+    (!checkInput || helpText) && helpTextWarning ? `${name}-warning` : null,
+    ...errors.map((_, index) => `${name}-error-${index}`),
+    ...warnings.map((_, index) => `${name}-warning-${index}`)
+  ].filter(Boolean).join(' ') || undefined;
 
   return (
     <div className={containerClassName}>
       <div className={className}>
         <div className={styles.inputContainer}>
           <InputComponent
+            {...otherProps}
             className={inputClassName}
             helpText={helpText}
             helpTextWarning={helpTextWarning}
             hasError={hasError}
             hasWarning={hasWarning}
             hasButton={hasButton}
-            {...otherProps}
+            ariaDescribedBy={ariaDescribedBy}
           />
 
           {
@@ -208,6 +216,7 @@ function FormInputGroup(props) {
       {
         !checkInput && helpText &&
           <FormInputHelpText
+            id={`${name}-help`}
             text={helpText}
           />
       }
@@ -220,6 +229,7 @@ function FormInputGroup(props) {
                 return (
                   <FormInputHelpText
                     key={index}
+                    id={`${name}-help-${index}`}
                     text={text}
                     isCheckInput={checkInput}
                   />
@@ -232,6 +242,7 @@ function FormInputGroup(props) {
       {
         (!checkInput || helpText) && helpTextWarning &&
           <FormInputHelpText
+            id={`${name}-warning`}
             text={helpTextWarning}
             isWarning={true}
           />
@@ -251,6 +262,7 @@ function FormInputGroup(props) {
           return (
             <FormInputHelpText
               key={index}
+              id={`${name}-error-${index}`}
               text={error.message}
               link={error.link}
               tooltip={error.detailedMessage}
@@ -266,6 +278,7 @@ function FormInputGroup(props) {
           return (
             <FormInputHelpText
               key={index}
+              id={`${name}-warning-${index}`}
               text={warning.message}
               link={warning.link}
               tooltip={warning.detailedMessage}

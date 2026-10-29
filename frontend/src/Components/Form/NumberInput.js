@@ -126,10 +126,10 @@ class NumberInput extends Component {
         type="text"
         inputMode={this.props.isFloat ? 'decimal' : 'numeric'}
         role="spinbutton"
-        aria-valuemin={this.props.min}
-        aria-valuemax={this.props.max}
-        aria-valuenow={parseValue(this.props, this.state.value) ?? undefined}
-        aria-valuetext={this.state.value || undefined}
+        ariaValueMin={this.props.min}
+        ariaValueMax={this.props.max}
+        ariaValueNow={parseValue(this.props, this.state.value) ?? undefined}
+        ariaValueText={this.state.value || undefined}
         value={this.state.value}
         onChange={this.onChange}
         onKeyDown={this.onKeyDown}
