@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import Icon from 'Components/Icon';
+import BidiText from 'Components/BidiText';
 import Link from 'Components/Link/Link';
 import Popover from 'Components/Tooltip/Popover';
 import { icons, tooltipPositions } from 'Helpers/Props';
@@ -102,7 +103,7 @@ function BookFormatAction(props) {
               onMouseDown={stopMouseDown}
               onPress={stopEvent}
             >
-              {getInstanceLabel(instance, mediaType)}
+              <BidiText>{getInstanceLabel(instance, mediaType)}</BidiText>
             </Link>
           ))
         }

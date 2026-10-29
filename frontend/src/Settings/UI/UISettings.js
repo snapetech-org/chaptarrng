@@ -14,34 +14,36 @@ import { inputTypes, kinds } from 'Helpers/Props';
 import SettingsToolbarConnector from 'Settings/SettingsToolbarConnector';
 import themes from 'Styles/Themes';
 import titleCase from 'Utilities/String/titleCase';
-import translate from 'Utilities/String/translate';
+import intlFormatters from 'Utilities/Localization/formatters.cjs';
+import {
+  applyDocumentLocale,
+  getLocale,
+  getUiLocaleById,
+  SUPPORTED_UI_LOCALE_IDS,
+  SUPPORTED_UI_LOCALES
+} from 'Utilities/Localization/locale';
+import translate, { translateWithFallback } from 'Utilities/String/translate';
 import styles from './UISettings.css';
 
-function getLocale() {
-  return document.documentElement.lang || navigator.language || 'en';
-}
+const { formatDate, formatDateParts } = intlFormatters;
 
 function getDateParts(options) {
   const date = new Date(Date.UTC(2014, 2, 25, 17, 0));
-  return new Intl.DateTimeFormat(getLocale(), {
+
+  return formatDateParts(date, {
     timeZone: 'UTC',
     ...options
-  })
-    .formatToParts(date)
-    .reduce((parts, part) => {
-      parts[part.type] = part.value;
-      return parts;
-    }, {});
+  }, getLocale());
 }
 
 function getTime(hour, minute, hour12) {
   const date = new Date(Date.UTC(2014, 2, 25, hour, minute));
-  return new Intl.DateTimeFormat(getLocale(), {
+  return formatDate(date, {
     timeZone: 'UTC',
     hour: 'numeric',
     minute: minute ? '2-digit' : undefined,
     hour12
-  }).format(date);
+  }, getLocale());
 }
 
 export function getFirstDayOfWeekOptions() {
@@ -157,6 +159,28 @@ export function getTimeFormatOptions() {
 }
 
 class UISettings extends Component {
+  componentDidMount() {
+    const uiLanguage = this.props.settings && this.props.settings.uiLanguage;
+    const selectedLocale = uiLanguage && getUiLocaleById(uiLanguage.value);
+    if (selectedLocale) {
+      applyDocumentLocale(selectedLocale.tag);
+    }
+  }
+
+  componentDidUpdate(previousProps) {
+    const previousLanguage = previousProps.settings.uiLanguage &&
+      previousProps.settings.uiLanguage.value;
+    const currentLanguage = this.props.settings.uiLanguage &&
+      this.props.settings.uiLanguage.value;
+
+    if (currentLanguage !== previousLanguage) {
+      const selectedLocale = getUiLocaleById(currentLanguage);
+      if (selectedLocale) {
+        applyDocumentLocale(selectedLocale.tag);
+      }
+    }
+  }
+
   //
   // Render
 
@@ -172,7 +196,18 @@ class UISettings extends Component {
       ...otherProps
     } = this.props;
 
-    const uiLanguages = languages.filter((item) => item.value !== 'Original');
+    const uiLanguages = SUPPORTED_UI_LOCALES.map((locale) => ({
+      key: locale.id,
+      value: locale.name
+    }));
+    const currentUiLanguageId = Number(settings.uiLanguage && settings.uiLanguage.value);
+    const currentLegacyLanguage = languages.find((language) =>
+      language.key === currentUiLanguageId && language.value !== 'Original'
+    );
+
+    if (!SUPPORTED_UI_LOCALE_IDS.has(currentUiLanguageId) && currentLegacyLanguage) {
+      uiLanguages.push(currentLegacyLanguage);
+    }
     const defaultMediaTypeSetting = settings.addNewDefaultMediaType || {
       value: 'audiobook'
     };
@@ -267,7 +302,7 @@ class UISettings extends Component {
 
               <FieldSet legend={translate('AddNewItem')}>
                 <FormGroup>
-                  <FormLabel>{translate('DefaultFormatForNewItems')}</FormLabel>
+                  <FormLabel name="addNewDefaultMediaType">{translate('DefaultFormatForNewItems')}</FormLabel>
                   <FormInputGroup
                     type={inputTypes.SELECT}
                     name="addNewDefaultMediaType"
@@ -282,7 +317,7 @@ class UISettings extends Component {
 
               <FieldSet legend={translate('Calendar')}>
                 <FormGroup>
-                  <FormLabel>{translate('FirstDayOfWeek')}</FormLabel>
+                  <FormLabel name="firstDayOfWeek">{translate('FirstDayOfWeek')}</FormLabel>
 
                   <FormInputGroup
                     type={inputTypes.SELECT}
@@ -294,7 +329,7 @@ class UISettings extends Component {
                 </FormGroup>
 
                 <FormGroup>
-                  <FormLabel>{translate('WeekColumnHeader')}</FormLabel>
+                  <FormLabel name="calendarWeekColumnHeader">{translate('WeekColumnHeader')}</FormLabel>
 
                   <FormInputGroup
                     type={inputTypes.SELECT}
@@ -309,7 +344,7 @@ class UISettings extends Component {
 
               <FieldSet legend={translate('Dates')}>
                 <FormGroup>
-                  <FormLabel>{translate('ShortDateFormat')}</FormLabel>
+                  <FormLabel name="shortDateFormat">{translate('ShortDateFormat')}</FormLabel>
 
                   <FormInputGroup
                     type={inputTypes.SELECT}
@@ -321,7 +356,7 @@ class UISettings extends Component {
                 </FormGroup>
 
                 <FormGroup>
-                  <FormLabel>{translate('LongDateFormat')}</FormLabel>
+                  <FormLabel name="longDateFormat">{translate('LongDateFormat')}</FormLabel>
 
                   <FormInputGroup
                     type={inputTypes.SELECT}
@@ -333,7 +368,7 @@ class UISettings extends Component {
                 </FormGroup>
 
                 <FormGroup>
-                  <FormLabel>{translate('TimeFormat')}</FormLabel>
+                  <FormLabel name="timeFormat">{translate('TimeFormat')}</FormLabel>
 
                   <FormInputGroup
                     type={inputTypes.SELECT}
@@ -345,7 +380,7 @@ class UISettings extends Component {
                 </FormGroup>
 
                 <FormGroup>
-                  <FormLabel>{translate('ShowRelativeDates')}</FormLabel>
+                  <FormLabel name="showRelativeDates">{translate('ShowRelativeDates')}</FormLabel>
                   <FormInputGroup
                     type={inputTypes.CHECK}
                     name="showRelativeDates"
@@ -358,7 +393,7 @@ class UISettings extends Component {
 
               <FieldSet legend={translate('Style')}>
                 <FormGroup>
-                  <FormLabel>{translate('Theme')}</FormLabel>
+                  <FormLabel name="theme">{translate('Theme')}</FormLabel>
                   <FormInputGroup
                     type={inputTypes.SELECT}
                     name="theme"
@@ -370,7 +405,7 @@ class UISettings extends Component {
                 </FormGroup>
 
                 <FormGroup>
-                  <FormLabel>{translate('EnableColorImpairedMode')}</FormLabel>
+                  <FormLabel name="enableColorImpairedMode">{translate('EnableColorImpairedMode')}</FormLabel>
                   <FormInputGroup
                     type={inputTypes.CHECK}
                     name="enableColorImpairedMode"
@@ -383,19 +418,21 @@ class UISettings extends Component {
 
               <FieldSet legend={translate('Language')}>
                 <FormGroup>
-                  <FormLabel>{translate('UILanguage')}</FormLabel>
+                  <FormLabel name="uiLanguage">{translate('UILanguage')}</FormLabel>
                   <FormInputGroup
                     type={inputTypes.SELECT}
                     name="uiLanguage"
                     values={uiLanguages}
-                    helpText={translate('UILanguageHelpText')}
+                    helpText={`${translate('UILanguageHelpText')} ${translateWithFallback(
+                      'ui.language.inheritedFallbackNotice',
+                      'Untranslated labels use English until a translation is added.'
+                    )}`}
                     helpTextWarning={translate('UILanguageHelpTextWarning')}
                     onChange={onInputChange}
                     {...settings.uiLanguage}
                     errors={
-                      languages.some(
-                        (language) => language.key === settings.uiLanguage.value
-                      ) ?
+                      SUPPORTED_UI_LOCALE_IDS.has(Number(settings.uiLanguage.value)) ||
+                      !!currentLegacyLanguage ?
                         settings.uiLanguage.errors :
                         [
                           ...settings.uiLanguage.errors,

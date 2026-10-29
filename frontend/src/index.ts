@@ -1,6 +1,7 @@
 import './polyfills';
 import 'Styles/globals.css';
 import './index.css';
+import { applyDocumentLocale } from 'Utilities/Localization/locale';
 
 const BOOTSTRAP_RECOVERY_KEY = 'chaptarr_bootstrap_recovery_ts';
 const BOOTSTRAP_RECOVERY_WINDOW_MS = 60 * 1000;
@@ -51,19 +52,6 @@ function isWebpackLoadError(error) {
   );
 }
 
-const rightToLeftLanguages = new Set([
-  'ar',
-  'dv',
-  'fa',
-  'he',
-  'ku',
-  'ps',
-  'sd',
-  'ug',
-  'ur',
-  'yi',
-]);
-
 async function getBootstrapTranslations() {
   try {
     const urlBase = window.Chaptarr.urlBase || '';
@@ -81,12 +69,7 @@ async function getBootstrapTranslations() {
 
     const localization = await response.json();
     if (typeof localization.Locale === 'string') {
-      const locale = localization.Locale.replace(/_/g, '-');
-      const language = locale.toLowerCase().split('-', 1)[0];
-      document.documentElement.lang = locale;
-      document.documentElement.dir = rightToLeftLanguages.has(language)
-        ? 'rtl'
-        : 'ltr';
+      applyDocumentLocale(localization.Locale);
     }
 
     return localization.Strings || {};

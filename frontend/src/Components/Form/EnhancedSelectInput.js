@@ -391,6 +391,7 @@ class EnhancedSelectInput extends Component {
                       >
                         <TextInput
                           className={className}
+                          id={name}
                           name={name}
                           value={value}
                           readOnly={isDisabled}
@@ -428,6 +429,14 @@ class EnhancedSelectInput extends Component {
                         </Link>
                       </div> :
                       <Link
+                        id={name}
+                        data-value={value == null ? '' : String(value)}
+                        role="combobox"
+                        aria-labelledby={`${name}-label`}
+                        aria-haspopup="listbox"
+                        aria-expanded={isOpen}
+                        aria-controls={this._optionsId}
+                        aria-activedescendant={isOpen && selectedOption ? String(selectedOption.key) : undefined}
                         className={classNames(
                           className,
                           hasError && styles.hasError,
@@ -503,6 +512,8 @@ class EnhancedSelectInput extends Component {
                     ref={ref}
                     id={this._optionsId}
                     className={styles.optionsContainer}
+                    role="listbox"
+                    aria-labelledby={`${name}-label`}
                     style={{
                       ...style,
                       minWidth: width
@@ -572,7 +583,11 @@ class EnhancedSelectInput extends Component {
                 innerClassName={styles.optionsInnerModalBody}
                 scrollDirection={scrollDirections.NONE}
               >
-                <Scroller className={styles.optionsModalScroller}>
+                <Scroller
+                  className={styles.optionsModalScroller}
+                  role="listbox"
+                  aria-labelledby={`${name}-label`}
+                >
                   <div className={styles.mobileCloseButtonContainer}>
                     <Link
                       className={styles.mobileCloseButton}

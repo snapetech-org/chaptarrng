@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "sourceLocale": "en",
+  "literalPolicy": [
+    "Keep translation placeholders such as {appName}, {author}, and {count} intact.",
+    "Do not translate or normalize filenames, filesystem paths, API values, identifiers, or imported metadata.",
+    "Preserve book, author, and series names exactly as supplied; isolate mixed-script text for display."
+  ],
+  "terms": [
+    {
+      "id": "domain.audiobook",
+      "sourceId": "AudiobookLabel",
+      "source": "Audiobook",
+      "meaning": "An audio edition of a book.",
+      "guidance": "Use the product's established term consistently.",
+      "preferredTranslations": {}
+    },
+    {
+      "id": "domain.ebook",
+      "sourceId": "EbookLabel",
+      "source": "eBook",
+      "meaning": "A digital text edition of a book.",
+      "guidance": "Preserve the product's established capitalization where the target language permits.",
+      "preferredTranslations": {}
+    },
+    {
+      "id": "domain.author",
+      "sourceId": "Author",
+      "source": "Author",
+      "meaning": "The creator credited for a book.",
+      "guidance": "Use consistently across library, search, and metadata screens.",
+      "preferredTranslations": {}
+    },
+    {
+      "id": "domain.edition",
+      "sourceId": "Edition",
+      "source": "Edition",
+      "meaning": "A particular publication or version of a book.",
+      "guidance": "Keep distinct from file format and release.",
+      "preferredTranslations": {}
+    },
+    {
+      "id": "domain.downloadClient",
+      "sourceId": "DownloadClient",
+      "source": "Download Client",
+      "meaning": "An external application used to retrieve book files.",
+      "guidance": "Keep consistent in settings and queue screens.",
+      "preferredTranslations": {}
+    },
+    {
+      "id": "domain.qualityProfile",
+      "sourceId": "QualityProfile",
+      "source": "Quality Profile",
+      "meaning": "Rules used to select preferred media quality.",
+      "guidance": "Use consistently in settings and item details.",
+      "preferredTranslations": {}
+    },
+    {
+      "id": "domain.rootFolder",
+      "sourceId": "RootFolder",
+      "source": "Root Folder",
+      "meaning": "A configured top-level storage location for the library.",
+      "guidance": "Do not confuse with a folder within an individual book path.",
+      "preferredTranslations": {}
+    },
+    {
+      "id": "domain.unmappedFiles",
+      "sourceId": "UnmappedFiles",
+      "source": "Unmapped Files",
+      "meaning": "Files that ChaptarrNG cannot currently match to a library item.",
+      "guidance": "Use consistently in the import workflow.",
+      "preferredTranslations": {}
+    },
+    {
+      "id": "domain.monitored",
+      "sourceId": "Monitored",
+      "source": "Monitored",
+      "meaning": "An item that ChaptarrNG continues to watch for wanted releases.",
+      "guidance": "Keep distinct from downloaded or available.",
+      "preferredTranslations": {}
+    },
+    {
+      "id": "domain.import",
+      "sourceId": "Import",
+      "source": "Import",
+      "meaning": "Adding an existing file to a matched library item.",
+      "guidance": "Use consistently for file intake and matching actions.",
+      "preferredTranslations": {}
+    }
+  ]
+}

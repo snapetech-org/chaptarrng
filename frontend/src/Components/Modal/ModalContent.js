@@ -1,11 +1,14 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import getUniqueElememtId from 'Utilities/getUniqueElementId';
+import ModalHeader from './ModalHeader';
 import Icon from 'Components/Icon';
 import Link from 'Components/Link/Link';
 import { icons } from 'Helpers/Props';
 import styles from './ModalContent.css';
 
 function ModalContent(props) {
+  const [titleId] = React.useState(() => getUniqueElememtId());
   const {
     className,
     children,
@@ -14,9 +17,24 @@ function ModalContent(props) {
     ...otherProps
   } = props;
 
+  const hasTitle = React.Children.toArray(children).some((child) =>
+    React.isValidElement(child) && child.type === ModalHeader
+  );
+  const childrenWithAccessibleTitle = React.Children.map(children, (child) => {
+    if (React.isValidElement(child) && child.type === ModalHeader) {
+      return React.cloneElement(child, { id: titleId });
+    }
+
+    return child;
+  });
+
   return (
     <div
       className={className}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={hasTitle ? titleId : undefined}
+      aria-label={hasTitle ? undefined : (typeof document !== 'undefined' ? document.title : 'Dialog')}
       {...otherProps}
     >
       {
@@ -32,7 +50,7 @@ function ModalContent(props) {
           </Link>
       }
 
-      {children}
+      {childrenWithAccessibleTitle}
     </div>
   );
 }

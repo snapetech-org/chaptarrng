@@ -1863,7 +1863,6 @@
   "Search": "Rechercher",
   "SearchAll": "Tout rechercher",
   "SearchAsYouType": "Rechercher pendant la saisie",
-
   "SearchBook": "Rechercher un livre",
   "SearchBoxPlaceHolder": "p. ex. : War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Cela ne peut pas être annulé une fois commencé sans redémarrer Chaptarr.",
@@ -2025,10 +2024,6 @@
   "Skip": "Sauter",
   "SkipFreeSpaceCheck": "Ignorer la vérification de l'espace libre",
   "SkipFreeSpaceCheckWhenImportingHelpText": "À utiliser lorsque Chaptarr ne parvient pas à détecter l'espace libre dans le dossier racine de votre auteur",
-  "SkipMissingAsinAudiobook": "Ignorer les livres audio sans ASIN",
-  "SkipMissingAsinAudiobookHelpText": "ASIN obligatoire. Convient aux auteurs connus et très publiés, pour lesquels on s’attend à disposer de métadonnées complètes. Avec l’option qui ignore les livres audio sans identifiant, un ISBN et un ASIN sont tous deux requis.",
-  "SkipMissingAsinBook": "Ignorer les livres sans ASIN",
-  "SkipMissingAsinBookHelpText": "Nécessite ASIN. Meilleur pour les auteurs bien connus et bien publiés où des métadonnées complètes sont attendues. Combiné avec 'Skip books manquant identificateur', nécessite à la fois un ISBN et un ASIN.",
   "SkipMissingDateAudiobook": "Sauter les livres audio avec la date de sortie manquante",
   "SkipMissingDateAudiobookHelpText": "Cacher les livres audio sans date de publication dans les métadonnées. Ils apparaîtront une fois que les fournisseurs ajouteront une date sur le prochain auteur rafraîchi.",
   "SkipMissingDateBook": "Sauter les livres avec la date de sortie manquante",

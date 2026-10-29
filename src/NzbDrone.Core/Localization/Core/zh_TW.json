@@ -1863,7 +1863,6 @@
   "Search": "搜尋",
   "SearchAll": "全部搜尋",
   "SearchAsYouType": "輸入時搜尋",
-
   "SearchBook": "搜尋書",
   "SearchBoxPlaceHolder": "例如戰爭與和平，gr：656，isbn：067003469X，az：B00JCDK5ME",
   "SearchCannotBeCancelled": "一旦啟動，如果不重新啟動 Chaptarr，則無法取消此操作。",
@@ -2025,10 +2024,6 @@
   "Skip": "跳過",
   "SkipFreeSpaceCheck": "跳過空間檢查",
   "SkipFreeSpaceCheckWhenImportingHelpText": "當 Chaptarr 無法偵測到作者根資料夾中的可用空間時使用",
-  "SkipMissingAsinAudiobook": "略過缺少 ASIN 的有聲書",
-  "SkipMissingAsinAudiobookHelpText": "需要 ASIN。適用於知名且作品豐富、通常應有完整中繼資料的作者。與「略過沒有識別碼的有聲書」同時啟用時，ISBN 和 ASIN 都必須存在。",
-  "SkipMissingAsinBook": "略過缺少 ASIN 的書籍",
-  "SkipMissingAsinBookHelpText": "需要ASIN。 對於知名、出版的作者而言最好, 並需要ISBN與ASIN。",
   "SkipMissingDateAudiobook": "跳過缺少發行日期的有聲讀物",
   "SkipMissingDateAudiobookHelpText": "在中繼資料中隱藏未發行日期的音效書 。 一旦提供者在下次作者刷新時添加日期, 它們就會出現 。",
   "SkipMissingDateBook": "跳過缺少發行日期的書籍",

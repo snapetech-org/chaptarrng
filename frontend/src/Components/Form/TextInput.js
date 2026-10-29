@@ -129,6 +129,9 @@ class TextInput extends Component {
       autoFocus,
       placeholder,
       name,
+      id,
+      dir,
+      inputMode,
       value,
       hasError,
       hasWarning,
@@ -155,6 +158,9 @@ class TextInput extends Component {
           hasButton && styles.hasButton
         )}
         name={name}
+        id={id || name}
+        dir={dir || 'auto'}
+        inputMode={inputMode}
         value={value}
         step={step}
         min={min}
@@ -180,6 +186,9 @@ TextInput.propTypes = {
   autoFocus: PropTypes.bool,
   placeholder: PropTypes.string,
   name: PropTypes.string.isRequired,
+  id: PropTypes.string,
+  dir: PropTypes.string,
+  inputMode: PropTypes.string,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number, PropTypes.array]).isRequired,
   hasError: PropTypes.bool,
   hasWarning: PropTypes.bool,

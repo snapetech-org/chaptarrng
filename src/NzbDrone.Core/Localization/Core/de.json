@@ -1863,7 +1863,6 @@
   "Search": "Suche",
   "SearchAll": "Alle durchsuchen",
   "SearchAsYouType": "Während der Eingabe suchen",
-
   "SearchBook": "Buch suchen",
   "SearchBoxPlaceHolder": "z. B.: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Dies kann nicht einmal gestartet werden, ohne Chaptarr neu zu starten.",
@@ -2025,10 +2024,6 @@
   "Skip": "Überspringen",
   "SkipFreeSpaceCheck": "Prüfung des freien Speichers überspringen",
   "SkipFreeSpaceCheckWhenImportingHelpText": "Aktiviere diese Option, wenn es Chaptarr nicht möglich ist, den freien Speicherplatz des Stammverzeichnisses für Autoren zu erkennen",
-  "SkipMissingAsinAudiobook": "Hörbücher ohne ASIN überspringen",
-  "SkipMissingAsinAudiobookHelpText": "ASIN erforderlich. Geeignet für bekannte Autoren mit umfangreichem Werk, bei denen vollständige Metadaten zu erwarten sind. Zusammen mit der Option, Hörbücher ohne Kennung zu überspringen, werden sowohl ISBN als auch ASIN verlangt.",
-  "SkipMissingAsinBook": "Bücher ohne ASIN überspringen",
-  "SkipMissingAsinBookHelpText": "Benötigt ASIN. Am besten für bekannte, gut veröffentlichte Autoren, bei denen vollständige Metadaten erwartet werden. Kombiniert mit \"Skip books missing identifier\" erfordert sowohl eine ISBN als auch eine ASIN.",
   "SkipMissingDateAudiobook": "Hörbücher mit fehlendem Veröffentlichungsdatum überspringen",
   "SkipMissingDateAudiobookHelpText": "Versteckt Hörbücher ohne Veröffentlichungsdatum in Metadaten. Sie werden erscheinen, sobald Anbieter ein Datum für die nächste Autoraktualisierung hinzufügen.",
   "SkipMissingDateBook": "Skip Bücher mit fehlendem Veröffentlichungsdatum",

@@ -1863,7 +1863,6 @@
   "Search": "검색",
   "SearchAll": "모두 검색",
   "SearchAsYouType": "입력 중 검색",
-
   "SearchBook": "본문 바로가기",
   "SearchBoxPlaceHolder": "예: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Chaptarr를 다시 시작하지 않고 한 번 시작할 수 없습니다.",
@@ -2025,10 +2024,6 @@
   "Skip": "팟캐스트",
   "SkipFreeSpaceCheck": "여유 공간 확인 건너 뛰기",
   "SkipFreeSpaceCheckWhenImportingHelpText": "Chaptarr가 저자 루트 폴더에서 무료 공간을 감지 할 수없는 경우 사용",
-  "SkipMissingAsinAudiobook": "ASIN이 없는 오디오북 건너뛰기",
-  "SkipMissingAsinAudiobookHelpText": "ASIN이 필요합니다. 완전한 메타데이터를 기대할 수 있는 유명 작가나 다수의 작품을 출간한 작가에게 적합합니다. 식별자가 없는 오디오북 건너뛰기 옵션과 함께 사용하면 ISBN과 ASIN이 모두 필요합니다.",
-  "SkipMissingAsinBook": "ASIN이 없는 책 건너뛰기",
-  "SkipMissingAsinBookHelpText": "ASIN을 요구합니다. 잘 알려진, 잘 출판 된 저자에 대 한 최고의 전체 metadata 예상. 'Skip 책 누락 된 식별자'와 결합 된 ISBN과 ASIN 모두가 필요합니다.",
   "SkipMissingDateAudiobook": "다운로드",
   "SkipMissingDateAudiobookHelpText": "metadata에서 릴리스 날짜가없는 오디오 북을 숨기기. 그들은 한 번 제공 업체가 다음 저자에 날짜를 추가합니다.",
   "SkipMissingDateBook": "다운로드",

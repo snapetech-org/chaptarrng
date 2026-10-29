@@ -1863,7 +1863,6 @@
   "Search": "Cari",
   "SearchAll": "Cari Semua",
   "SearchAsYouType": "Cari saat mengetik",
-
   "SearchBook": "Cari Buku",
   "SearchBoxPlaceHolder": "Contoh: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Ini tidak dapat dibatalkan sekali dimulai tanpa memulai kembali Chaptarr.",
@@ -2025,10 +2024,6 @@
   "Skip": "Lewati",
   "SkipFreeSpaceCheck": "Periksa Ruang Kosong Lewati",
   "SkipFreeSpaceCheckWhenImportingHelpText": "Gunakan ketika Chaptarr tidak dapat mendeteksi ruang bebas dari folder root penulis Anda",
-  "SkipMissingAsinAudiobook": "Lewati buku audio tanpa ASIN",
-  "SkipMissingAsinAudiobookHelpText": "ASIN wajib diisi. Cocok untuk penulis terkenal dengan banyak karya terbitan, yang biasanya memiliki metadata lengkap. Jika digabungkan dengan opsi untuk melewati buku audio tanpa pengenal, ISBN dan ASIN harus tersedia.",
-  "SkipMissingAsinBook": "Lewati buku tanpa ASIN",
-  "SkipMissingAsinBookHelpText": "Membutuhkan ASIN. Terbaik untuk penulis terkenal dan diterbitkan dengan baik yang diharapkan memiliki metadata lengkap. Dikombinasikan dengan 'Lewati buku yang hilang pengenalnya', memerlukan ISBN dan ASIN.",
   "SkipMissingDateAudiobook": "Lewati buku audio dengan hilang tanggal rilis",
   "SkipMissingDateAudiobookHelpText": "Menyembunyikan buku audio tanpa tanggal rilis dalam metadata. Mereka akan muncul setelah penyedia menambahkan tanggal pada penyegaran penulis berikutnya.",
   "SkipMissingDateBook": "Lewati buku dengan hilang tanggal rilis",

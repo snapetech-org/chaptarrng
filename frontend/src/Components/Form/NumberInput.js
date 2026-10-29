@@ -1,6 +1,17 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
+import intlFormatters from 'Utilities/Localization/formatters.cjs';
+import { getLocale } from 'Utilities/Localization/locale';
 import TextInput from './TextInput';
+
+const { formatNumber, parseLocalizedNumber } = intlFormatters;
+
+function formatInputValue(value) {
+  return value == null ? '' : formatNumber(value, {
+    useGrouping: false,
+    maximumFractionDigits: 20
+  }, getLocale());
+}
 
 function parseValue(props, value) {
   const {
@@ -13,11 +24,18 @@ function parseValue(props, value) {
     return null;
   }
 
-  let newValue = isFloat ? parseFloat(value) : parseInt(value);
+  let newValue = parseLocalizedNumber(value, {
+    locale: getLocale(),
+    isFloat
+  });
 
-  if (min != null && newValue != null && newValue < min) {
+  if (newValue == null) {
+    return null;
+  }
+
+  if (min != null && newValue < min) {
     newValue = min;
-  } else if (max != null && newValue != null && newValue > max) {
+  } else if (max != null && newValue > max) {
     newValue = max;
   }
 
@@ -25,31 +43,22 @@ function parseValue(props, value) {
 }
 
 class NumberInput extends Component {
-
-  //
-  // Lifecycle
-
   constructor(props, context) {
     super(props, context);
 
     this.state = {
-      value: props.value == null ? '' : props.value.toString(),
+      value: formatInputValue(props.value),
       isFocused: false
     };
   }
 
-  componentDidUpdate(prevProps, prevState) {
+  componentDidUpdate(prevProps) {
     const { value } = this.props;
 
     if (!isNaN(value) && value !== prevProps.value && !this.state.isFocused) {
-      this.setState({
-        value: value == null ? '' : value.toString()
-      });
+      this.setState({ value: formatInputValue(value) });
     }
   }
-
-  //
-  // Listeners
 
   onChange = ({ name, value }) => {
     this.setState({ value });
@@ -58,7 +67,6 @@ class NumberInput extends Component {
       name,
       value: parseValue(this.props, value)
     });
-
   };
 
   onFocus = () => {
@@ -66,23 +74,14 @@ class NumberInput extends Component {
   };
 
   onBlur = () => {
-    const {
-      name,
-      onChange
-    } = this.props;
-
+    const { name, onChange } = this.props;
     const { value } = this.state;
     const parsedValue = parseValue(this.props, value);
-    const stringValue = parsedValue == null ? '' : parsedValue.toString();
 
-    if (stringValue === value) {
-      this.setState({ isFocused: false });
-    } else {
-      this.setState({
-        value: stringValue,
-        isFocused: false
-      });
-    }
+    this.setState({
+      value: formatInputValue(parsedValue),
+      isFocused: false
+    });
 
     onChange({
       name,
@@ -90,17 +89,13 @@ class NumberInput extends Component {
     });
   };
 
-  //
-  // Render
-
   render() {
-    const value = this.state.value;
-
     return (
       <TextInput
         {...this.props}
-        type="number"
-        value={value == null ? '' : value}
+        type="text"
+        inputMode={this.props.isFloat ? 'decimal' : 'numeric'}
+        value={this.state.value}
         onChange={this.onChange}
         onBlur={this.onBlur}
         onFocus={this.onFocus}

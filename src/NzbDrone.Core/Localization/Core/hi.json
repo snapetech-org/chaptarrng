@@ -1863,7 +1863,6 @@
   "Search": "खोजें",
   "SearchAll": "सभी खोजें",
   "SearchAsYouType": "टाइप करते समय खोजें",
-
   "SearchBook": "पुस्तक",
   "SearchBoxPlaceHolder": "उदाहरण: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "इसे रद्द नहीं किया जा सकता है Chaptarr.",
@@ -2025,10 +2024,6 @@
   "Skip": "लॉग इन",
   "SkipFreeSpaceCheck": "फ्री स्पेस चेक छोड़ें",
   "SkipFreeSpaceCheckWhenImportingHelpText": "कब उपयोग करें Chaptarr अपने लेखक रूट फ़ोल्डर से मुक्त स्थान का पता लगाने में असमर्थ है",
-  "SkipMissingAsinAudiobook": "ASIN रहित ऑडियोबुक छोड़ें",
-  "SkipMissingAsinAudiobookHelpText": "ASIN आवश्यक है। यह उन प्रसिद्ध लेखकों के लिए उपयुक्त है जिनकी पुस्तकें व्यापक रूप से प्रकाशित हुई हैं और जिनका पूरा मेटाडेटा उपलब्ध होना चाहिए। बिना पहचानकर्ता वाली ऑडियोबुक छोड़ने का विकल्प साथ में चालू करने पर ISBN और ASIN दोनों आवश्यक होंगे।",
-  "SkipMissingAsinBook": "ASIN रहित पुस्तकें छोड़ें",
-  "SkipMissingAsinBookHelpText": "ASIN की आवश्यकता है। प्रसिद्ध, अच्छी तरह से प्रकाशित लेखकों के लिए सर्वश्रेष्ठ जहां पूरा मेटाडाटा अपेक्षित है। 'Skip किताबें लापता पहचानकर्ता' के साथ संयुक्त, दोनों एक ISBN और एक ASIN की आवश्यकता है।",
   "SkipMissingDateAudiobook": "लापता रिलीज की तारीख के साथ ऑडियोबुक छोड़ें",
   "SkipMissingDateAudiobookHelpText": "मेटाडाटा में कोई रिलीज तारीख के साथ ऑडियोबुक छुपाता है। वे तब दिखाई देंगे जब प्रदाता अगले लेखक को ताज़ा करने की तारीख जोड़ते हैं।",
   "SkipMissingDateBook": "लापता रिलीज की तारीख के साथ किताबें छोड़ें",

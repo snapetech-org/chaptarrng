@@ -1862,7 +1862,6 @@
   "Search": "搜索",
   "SearchAll": "搜索全部",
   "SearchAsYouType": "输入时搜索",
-
   "SearchBook": "搜索书籍",
   "SearchBoxPlaceHolder": "例如战争与和平，gr：656，isbn：067003469X，az：B00JCDK5ME",
   "SearchCannotBeCancelled": "启动时不能取消, 不重新启动Chaptarr 。",
@@ -2024,10 +2023,6 @@
   "Skip": "跳过",
   "SkipFreeSpaceCheck": "跳过剩余空间检查",
   "SkipFreeSpaceCheckWhenImportingHelpText": "当 Chaptarr 无法从您的作者根文件夹中检测到空闲空间时使用",
-  "SkipMissingAsinAudiobook": "跳过缺少 ASIN 的有声书",
-  "SkipMissingAsinAudiobookHelpText": "需要 ASIN。适用于知名且作品丰富、通常应有完整元数据的作者。与“跳过没有标识符的有声书”同时启用时，ISBN 和 ASIN 都必须存在。",
-  "SkipMissingAsinBook": "跳过缺少 ASIN 的书籍",
-  "SkipMissingAsinBookHelpText": "需要ASIN系统。 对知名的、公开出版的作者来说最好,因为他们需要完整的元数据。 与“缺少识别码的滑行图书”相结合,需要ISBN和ASIN两种方法。",
   "SkipMissingDateAudiobook": "跳过缺少发行日期的录音簿",
   "SkipMissingDateAudiobookHelpText": "隐藏元数据中没有发布日期的音频书。 一旦提供者在下一个作者更新时添加一个日期,它们就会出现 。",
   "SkipMissingDateBook": "略过缺少发行日期的书籍",

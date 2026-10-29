@@ -1862,7 +1862,6 @@
   "Search": "Tìm kiếm",
   "SearchAll": "Tìm kiếm tất cả",
   "SearchAsYouType": "Tìm kiếm khi nhập",
-
   "SearchBook": "Tìm kiếm",
   "SearchBoxPlaceHolder": "Ví dụ: War and Peace, gr:656, isbn:067003469X, az:B00JCDK5ME",
   "SearchCannotBeCancelled": "Không thể hủy bỏ điều này một khi bắt đầu mà không khởi chạy lại Chaptarr.",
@@ -2024,10 +2023,6 @@
   "Skip": "Bỏ qua",
   "SkipFreeSpaceCheck": "Bỏ qua kiểm tra dung lượng trống",
   "SkipFreeSpaceCheckWhenImportingHelpText": "Dùng khi Chaptarr không thể phát hiện khoảng trống từ thư mục gốc của bạn",
-  "SkipMissingAsinAudiobook": "Bỏ qua sách nói không có ASIN",
-  "SkipMissingAsinAudiobookHelpText": "Cần có ASIN. Phù hợp với các tác giả nổi tiếng, có nhiều tác phẩm đã xuất bản và thường có đầy đủ siêu dữ liệu. Khi bật cùng tùy chọn bỏ qua sách nói không có mã định danh, cả ISBN và ASIN đều bắt buộc.",
-  "SkipMissingAsinBook": "Bỏ qua sách không có ASIN",
-  "SkipMissingAsinBookHelpText": "Yêu cầu ASIN. Tốt nhất cho các tác giả nổi tiếng, xuất bản có uy tín, nơi có thể trông đợi toàn bộ siêu dữ liệu. Kết hợp với 'Skip sách thiếu bộ nhận diện', yêu cầu cả một ISBN và một ASIN.",
   "SkipMissingDateAudiobook": "Bỏ qua sách âm thanh với ngày phát hành còn thiếu",
   "SkipMissingDateAudiobookHelpText": "Ẩn sổ ghi âm không có ngày phát hành Họ sẽ xuất hiện khi các nhà cung cấp thêm ngày tháng về tác giả tiếp theo đang cập nhật.",
   "SkipMissingDateBook": "Bỏ qua sách còn thiếu",
