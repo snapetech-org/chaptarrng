@@ -4,7 +4,7 @@ import { applyDocumentLocale, getLocale } from 'Utilities/Localization/locale';
 import messageFormatting from 'Utilities/Localization/message-formatting.cjs';
 
 const { formatNumber } = intlFormatters;
-const { resolvePluralKey, resolveSelectKey } = messageFormatting;
+const { resolveMessageFallback, resolvePluralKey, resolveSelectKey } = messageFormatting;
 
 function getTranslations() {
   return createAjaxRequest({
@@ -95,7 +95,7 @@ export function translatePlural(
 
   return translateWithDefault(
     selectedKey,
-    selectedKey,
+    resolveMessageFallback(key, translations),
     { ...tokens, count },
     fallbackKey
   );
@@ -109,7 +109,12 @@ export function translateSelect(
   const fallbackKey = `${key}.other`;
   const keyToUse = resolveSelectKey(key, selection, translations);
 
-  return translateWithDefault(keyToUse, keyToUse, tokens, fallbackKey);
+  return translateWithDefault(
+    keyToUse,
+    resolveMessageFallback(key, translations),
+    tokens,
+    fallbackKey
+  );
 }
 
 export default function translate(
