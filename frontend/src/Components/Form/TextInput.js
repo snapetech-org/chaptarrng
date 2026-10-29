@@ -132,6 +132,12 @@ class TextInput extends Component {
       id,
       dir,
       inputMode,
+      role,
+      ariaValueMin,
+      ariaValueMax,
+      ariaValueNow,
+      ariaValueText,
+      onKeyDown,
       value,
       hasError,
       hasWarning,
@@ -161,11 +167,17 @@ class TextInput extends Component {
         id={id || name}
         dir={dir || 'auto'}
         inputMode={inputMode}
+        role={role}
+        aria-valuemin={ariaValueMin}
+        aria-valuemax={ariaValueMax}
+        aria-valuenow={ariaValueNow}
+        aria-valuetext={ariaValueText}
         value={value}
         step={step}
         min={min}
         max={max}
         onChange={this.onChange}
+        onKeyDown={onKeyDown}
         onFocus={this.onFocus}
         onBlur={onBlur}
         onCopy={onCopy}
@@ -189,6 +201,11 @@ TextInput.propTypes = {
   id: PropTypes.string,
   dir: PropTypes.string,
   inputMode: PropTypes.string,
+  role: PropTypes.string,
+  ariaValueMin: PropTypes.number,
+  ariaValueMax: PropTypes.number,
+  ariaValueNow: PropTypes.number,
+  ariaValueText: PropTypes.string,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number, PropTypes.array]).isRequired,
   hasError: PropTypes.bool,
   hasWarning: PropTypes.bool,
@@ -197,6 +214,7 @@ TextInput.propTypes = {
   min: PropTypes.number,
   max: PropTypes.number,
   onChange: PropTypes.func.isRequired,
+  onKeyDown: PropTypes.func,
   onFocus: PropTypes.func,
   onBlur: PropTypes.func,
   onCopy: PropTypes.func,

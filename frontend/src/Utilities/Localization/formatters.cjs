@@ -137,6 +137,41 @@ function formatTimeZoneOffset(date, compact) {
   return compact ? sign + hours + minutes : sign + hours + ':' + minutes;
 }
 
+function stepNumber(value, direction, options) {
+  const settings = options || {};
+  const step = Number(settings.step == null ? 1 : settings.step);
+
+  if (!Number.isFinite(step) || step <= 0 || (direction !== 1 && direction !== -1)) {
+    return null;
+  }
+
+  const current = Number.isFinite(Number(value)) ? Number(value) : 0;
+  const precision = Math.min(10, Math.max(
+    decimalPlaces(current),
+    decimalPlaces(step)
+  ));
+  let next = Number((current + (direction * step)).toFixed(precision));
+
+  if (settings.min != null && next < settings.min) {
+    next = settings.min;
+  } else if (settings.max != null && next > settings.max) {
+    next = settings.max;
+  }
+
+  return Number.isFinite(next) ? next : null;
+}
+
+function decimalPlaces(value) {
+  const source = String(value).toLowerCase();
+  const exponentIndex = source.indexOf('e');
+  const coefficient = exponentIndex === -1 ? source : source.slice(0, exponentIndex);
+  const exponent = exponentIndex === -1 ? 0 : Number(source.slice(exponentIndex + 1));
+  const decimalIndex = coefficient.indexOf('.');
+  const fractionLength = decimalIndex === -1 ? 0 : coefficient.length - decimalIndex - 1;
+
+  return Math.max(0, fractionLength - exponent);
+}
+
 function pluralCategory(value, locale) {
   const count = Number(value);
 
@@ -239,5 +274,6 @@ module.exports = {
   formatPattern,
   formatUnit,
   parseLocalizedNumber,
-  pluralCategory
+  pluralCategory,
+  stepNumber
 };

@@ -59,18 +59,22 @@ export function getWeekColumnOptions() {
     month: 'numeric',
     day: 'numeric'
   });
+  const { month: paddedMonth, day: paddedDay } = getDateParts({
+    month: '2-digit',
+    day: '2-digit'
+  });
 
   return [
     { key: 'ddd M/D', value: `${weekday} ${month}/${day}`, hint: 'ddd M/D' },
     {
       key: 'ddd MM/DD',
-      value: `${weekday} ${month.padStart(2, '0')}/${day.padStart(2, '0')}`,
+      value: `${weekday} ${paddedMonth}/${paddedDay}`,
       hint: 'ddd MM/DD'
     },
     { key: 'ddd D/M', value: `${weekday} ${day}/${month}`, hint: 'ddd D/M' },
     {
       key: 'ddd DD/MM',
-      value: `${weekday} ${day.padStart(2, '0')}/${month.padStart(2, '0')}`,
+      value: `${weekday} ${paddedDay}/${paddedMonth}`,
       hint: 'ddd DD/MM'
     }
   ];
