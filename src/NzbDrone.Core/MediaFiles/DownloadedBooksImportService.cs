@@ -1246,12 +1246,17 @@ namespace NzbDrone.Core.MediaFiles
 
         internal static bool IsSameRecording(Edition expected, Edition matched)
         {
-            return expected != null && matched != null &&
-                   !expected.IsEbook && !matched.IsEbook &&
-                   string.Equals(
-                       EditionMetadataProfileFilter.NormalizeLanguageBucket(expected.Language),
-                       EditionMetadataProfileFilter.NormalizeLanguageBucket(matched.Language),
-                       StringComparison.OrdinalIgnoreCase) &&
+            if (expected == null || matched == null || expected.IsEbook || matched.IsEbook)
+            {
+                return false;
+            }
+
+            var expectedLanguage = EditionMetadataProfileFilter.NormalizeLanguageBucket(expected.Language);
+            var matchedLanguage = EditionMetadataProfileFilter.NormalizeLanguageBucket(matched.Language);
+
+            return !string.IsNullOrWhiteSpace(expectedLanguage) &&
+                   !string.IsNullOrWhiteSpace(matchedLanguage) &&
+                   string.Equals(expectedLanguage, matchedLanguage, StringComparison.OrdinalIgnoreCase) &&
                    BookService.HaveSameNarration(expected, matched);
         }
 

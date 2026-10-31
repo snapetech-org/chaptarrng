@@ -44,6 +44,13 @@ namespace Chaptarr.Core.Test.MediaFiles
         }
 
         [Test]
+        public void should_reject_when_language_is_unknown()
+        {
+            Assert.That(DownloadedBooksImportService.IsSameRecording(Audiobook(1, null, "Ray Porter"), Audiobook(2, null, "Ray Porter")), Is.False);
+            Assert.That(DownloadedBooksImportService.IsSameRecording(Audiobook(1, "eng", "Ray Porter"), Audiobook(2, null, "Ray Porter")), Is.False);
+        }
+
+        [Test]
         public void should_not_judge_editions_without_narrators_or_with_a_full_cast_label()
         {
             Assert.That(DownloadedBooksImportService.IsSameRecording(Audiobook(1, "eng"), Audiobook(2, "eng")), Is.False);
