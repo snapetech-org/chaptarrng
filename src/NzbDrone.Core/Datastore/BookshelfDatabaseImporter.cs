@@ -2766,10 +2766,28 @@ namespace NzbDrone.Core.Datastore
 
         private static bool ConfiguredNativeHardcoverPrimaryMode()
         {
-            // Match BookshelfNG's runtime predicate exactly: only HARDCOVER=true
-            // enables native Hardcover IDs; unset and other values use Goodreads.
-            return string.Equals(Environment.GetEnvironmentVariable("HARDCOVER"), "true", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(Environment.GetEnvironmentVariable("HARDCOVER_NATIVE"), "false", StringComparison.OrdinalIgnoreCase);
+            // The old image flavor supplied this value implicitly. A single
+            // standard ChaptarrNG image cannot encode the old tag's provider
+            // mode, so require the caller to carry that setting forward instead
+            // of silently interpreting bare numeric IDs as Goodreads.
+            var nativeMode = Environment.GetEnvironmentVariable("HARDCOVER_NATIVE");
+            if (!string.IsNullOrWhiteSpace(nativeMode) && !bool.TryParse(nativeMode, out _))
+            {
+                throw new InvalidDataException("BookshelfNG migration requires HARDCOVER_NATIVE to be true or false when it is set. No database was changed.");
+            }
+
+            if (string.Equals(nativeMode, "false", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var hardcoverMode = Environment.GetEnvironmentVariable("HARDCOVER");
+            if (string.IsNullOrWhiteSpace(hardcoverMode) || !bool.TryParse(hardcoverMode, out var enabled))
+            {
+                throw new InvalidDataException("BookshelfNG migration requires an explicit HARDCOVER=true or HARDCOVER=false provider mode. No database was changed.");
+            }
+
+            return enabled;
         }
 
         private static bool RequireNativeHardcoverPrimaryMode()

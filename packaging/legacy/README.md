@@ -24,11 +24,13 @@ intervention, and records its outcome in the shared migration journal. Its
 PostgreSQL credentials and task-trigger behavior still need installed Windows
 acceptance.
 
-The container recipes reference the source-only
-`ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover` target. Before any
-channel update, publish an approved compatibility image, resolve its immutable
-multi-architecture digest, update the candidate to that digest, and complete
-that channel's install, update, backup, and rollback acceptance. AppImage and
+The container recipes use the single standard ChaptarrNG image. The release
+workflow pins each generated platform bundle to that release's verified
+multi-architecture digest; there is no provider-specific ChaptarrNG image.
+Every applicable channel still needs its own install, update, backup, and
+rollback acceptance before redirecting users. Preserve the old
+`HARDCOVER=true` or `false` provider setting in the channel configuration; the
+standard image cannot infer it from an old tag. AppImage and
 Flatpak candidates use the verified ChaptarrNG Linux x64 standalone archive
 staged by `packaging/scripts/prepare-bookshelf-desktop-candidates.sh`:
 
@@ -63,8 +65,8 @@ version-matched candidates under the existing desktop identities; it does not
 publish an AppImage update feed or a signed Flatpak remote.
 
 The same gated release also packages the Cloudron, Co-op Cloud, and generic
-self-hosting Compose candidates with the exact multi-architecture
-bookshelf-hardcover image digest produced by that release's Docker build.
+self-hosting Compose candidates with the exact multi-architecture standard
+ChaptarrNG image digest produced by that release's Docker build.
 Cloudron's app ID and persistent directories, Co-op Cloud's stack and volumes,
 and Compose's container and volumes stay unchanged. The bundle is named
 ChaptarrNG-<version>-bookshelfng-container-platform-candidates.tar.gz and has a

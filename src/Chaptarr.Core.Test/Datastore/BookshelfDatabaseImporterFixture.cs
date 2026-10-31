@@ -43,7 +43,9 @@ namespace Chaptarr.Core.Test.Datastore
             _previousHardcoverMode = Environment.GetEnvironmentVariable("HARDCOVER");
             _previousHardcoverNativeMode = Environment.GetEnvironmentVariable("HARDCOVER_NATIVE");
             _previousBookshelfUrlBase = Environment.GetEnvironmentVariable("BOOKSHELF_URLBASE");
-            Environment.SetEnvironmentVariable("HARDCOVER", null);
+            // Most migration fixtures use the legacy Goodreads default
+            // explicitly. Tests for ambiguous provider mode clear this value.
+            Environment.SetEnvironmentVariable("HARDCOVER", "false");
             Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", null);
             Environment.SetEnvironmentVariable("BOOKSHELF_URLBASE", null);
 
@@ -691,21 +693,22 @@ namespace Chaptarr.Core.Test.Datastore
         }
 
         [Test]
-        public void should_use_bookshelf_goodreads_default_when_bare_numeric_provider_ids_have_no_mode_override()
+        public void should_reject_bare_numeric_provider_ids_when_provider_mode_is_missing()
         {
             SetBareNumericProviderIds();
+            Environment.SetEnvironmentVariable("HARDCOVER", null);
+            var sourceBytes = File.ReadAllBytes(_sourcePath);
 
-            new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
-                _sourceConnectionString,
-                new MigrationContext(MigrationType.Main),
-                DatabaseType.SQLite);
+            var error = Assert.Throws<InvalidDataException>(() =>
+                new MigrationController(LogManager.GetLogger(nameof(BookshelfDatabaseImporterFixture)), null).Migrate(
+                    _sourceConnectionString,
+                    new MigrationContext(MigrationType.Main),
+                    DatabaseType.SQLite));
 
             Assert.Multiple(() =>
             {
-                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsAuthorId FROM Authors WHERE Id = 20;"), Is.EqualTo("gr:10"));
-                Assert.That(QueryScalar<string>(_sourcePath, "SELECT GoodreadsWorkId FROM Books WHERE Id = 30;"), Is.EqualTo("gr:30"));
-                Assert.That(QueryScalar<long>(_sourcePath, "SELECT GoodreadsEditionId FROM Editions WHERE Id = 40;"), Is.EqualTo(40));
-                Assert.That(QueryScalar<string>(_sourcePath, "SELECT Value FROM Config WHERE Key = 'BookshelfNGProviderDialect';"), Is.EqualTo("gr"));
+                Assert.That(error!.Message, Does.Contain("explicit HARDCOVER=true or HARDCOVER=false"));
+                Assert.That(File.ReadAllBytes(_sourcePath), Is.EqualTo(sourceBytes), "ambiguous source bytes must remain unchanged");
             });
         }
 

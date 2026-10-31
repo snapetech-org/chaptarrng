@@ -1,7 +1,7 @@
-# This compatibility image tag is a source candidate. Before a Cloudron update
+# This standard ChaptarrNG image tag is a source candidate. Before a Cloudron update
 # is accepted, replace it with the exact published multi-architecture digest
 # that passed the migration and rollback rehearsals.
-FROM ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover
+FROM ghcr.io/snapetech-org/chaptarrng:latest
 USER root
 
 # Cloudron requires a 2xx health response and the package has no separate

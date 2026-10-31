@@ -2,13 +2,15 @@
 
 This Compose service is the ChaptarrNG candidate for legacy BookshelfNG catalog
 entries that allow an existing user to edit the image field. It keeps the
-`bookshelfng` container name, default port `8787`, and the original named volumes for
-`/config`, `/books`, and `/downloads`. The default image is the source-only
-BookshelfNG-compatible ChaptarrNG target; set `CHAPTARRNG_COMPAT_IMAGE` to an
-immutable published digest before accepting an update.
+`bookshelfng` container name, the channel's configured host port, and the
+original named volumes for `/config`, `/books`, and `/downloads`. It uses the
+single standard ChaptarrNG image; candidate generation pins `CHAPTARRNG_IMAGE`
+to that release's immutable digest before an update is accepted.
 The candidate enables the first-start migration supervisor so an unsuccessful
 conversion restores the retained BookshelfNG database and configuration.
-Set `BOOKSHELFNG_MIGRATION_MODE=retry` only after a clean rollback and after
+Preserve the source provider mode as `HARDCOVER=true` or `false`; the
+single image cannot infer it from a tag. Set `BOOKSHELFNG_MIGRATION_MODE=retry`
+only after a clean rollback and after
 correcting the cause of the first failure; an intervention-required state needs
 manual recovery.
 The old catalog Compose recipe used the native Hardcover image, and the

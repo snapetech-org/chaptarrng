@@ -24,7 +24,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-defaults="$repo_root/docker-bookshelf-compatibility-defaults.sh"
 
 run_case() {
   local name="$1"
@@ -99,33 +98,6 @@ SH
   test "$(cat "$state_file")" = intervention-required
   test "$(sha256sum "$data_dir/readarr.db" | cut -d' ' -f1)" = "$database_hash"
   grep -Fq 'BookshelfNG migration preflight failed' "$test_root/desktop-yes.log"
-}
-
-docker_stage_body() {
-  local stage="$1"
-  awk -v stage="$stage" '
-    $0 == "FROM runtime AS " stage { in_stage = 1; next }
-    in_stage && /^FROM / { exit }
-    in_stage { print }
-  ' "$repo_root/Dockerfile.cross"
-}
-
-check_compatibility_provider_modes() {
-  local softcover hardcover standard
-  softcover="$(docker_stage_body bookshelf-softcover)"
-  hardcover="$(docker_stage_body bookshelf-hardcover)"
-  standard="$(docker_stage_body chaptarrng-standard)"
-
-  grep -Fxq "ENV HARDCOVER=false \\" <<<"$softcover"
-  grep -Fxq "    CHAPTARR_BOOKSHELF_COMPATIBILITY=true" <<<"$softcover"
-  grep -Fxq "ENV HARDCOVER=true \\" <<<"$hardcover"
-  grep -Fxq "    CHAPTARR_BOOKSHELF_COMPATIBILITY=true" <<<"$hardcover"
-  if grep -Fq "HARDCOVER=" <<<"$standard"; then
-    return 1
-  fi
-  if grep -Fq "CHAPTARR_BOOKSHELF_COMPATIBILITY=" <<<"$standard"; then
-    return 1
-  fi
 }
 
 check_deferred_container_stops_promptly() {
@@ -350,117 +322,58 @@ run_case 'production image keeps the StartOS /init command' bash -c '
   grep -Fq "dotnet /app/Chaptarr.dll -nobrowser -data=/config" "$2"
 ' _ "$repo_root/Dockerfile.cross" "$repo_root/docker-startos-init.sh"
 
-run_case 'source-build image includes legacy compatibility defaults' bash -c '
+run_case 'fresh and migrated installations publish one standard image target' bash -c '
   set -euo pipefail
-  grep -Fxq "COPY docker-entrypoint.sh /entrypoint.sh" "$1"
-  grep -Fxq "COPY docker-bookshelf-compatibility-defaults.sh /docker-bookshelf-compatibility-defaults.sh" "$1"
-' _ "$repo_root/Dockerfile.build"
+  [[ "$(grep -Fc "AS chaptarrng-standard" "$1")" -eq 1 ]]
+  grep -Fxq "EXPOSE 8789" "$1"
+  if grep -Eq "bookshelf-(softcover|hardcover)|CHAPTARR_DEFAULT_PORT=8787|EXPOSE 8787" "$1"; then exit 1; fi
+  [[ "$(grep -Fc "docker/build-push-action@" "$2")" -eq 1 ]]
+  grep -Fq "target: chaptarrng-standard" "$2"
+  if grep -Eq "target: bookshelf-(softcover|hardcover)|build_(softcover|hardcover)" "$2"; then exit 1; fi
+  grep -Fq "target: chaptarrng-standard" "$3"
+  if grep -Eq "bookshelf-(softcover|hardcover)|matrix.target" "$3"; then exit 1; fi
+  if grep -Fq "docker-bookshelf-compatibility-defaults.sh" "$4" "$5" "$6"; then exit 1; fi
+' _ "$repo_root/Dockerfile.cross" "$repo_root/.github/workflows/docker-publish.yml" "$repo_root/.github/workflows/build.yml" "$repo_root/docker-entrypoint.sh" "$repo_root/Dockerfile.build" "$repo_root/Dockerfile.build.optimized"
 
-run_case 'compatibility image targets advertise their legacy container port' bash -c '
+run_case 'the standard image detects legacy appdata and preserves the saved port' bash -c '
   set -euo pipefail
-  grep -A1 -Fx "FROM runtime AS bookshelf-softcover" "$1" | grep -Fxq "EXPOSE 8787"
-  grep -A1 -Fx "FROM runtime AS bookshelf-hardcover" "$1" | grep -Fxq "EXPOSE 8787"
-  grep -A1 -Fx "FROM runtime AS chaptarrng-standard" "$1" | grep -Fxq "EXPOSE 8789"
-' _ "$repo_root/Dockerfile.cross"
+  legacy_dir="$1/legacy-autodetect"
+  fresh_dir="$1/fresh-autodetect"
+  mkdir -p "$legacy_dir" "$fresh_dir"
+  : > "$legacy_dir/readarr.db"
+  printf "<Config><Port>9127</Port></Config>\n" > "$legacy_dir/config.xml"
+  : > "$fresh_dir/chaptarr.db"
+  env -i PATH="$PATH" DATA_DIR="$legacy_dir" sh -c '\''
+    . "$1"
+    test "$CHAPTARR_BOOKSHELF_COMPATIBILITY" = true
+    test "$BOOKSHELFNG_MIGRATION_MODE" = automatic
+    test "$CHAPTARR_DEFAULT_PORT" = 8787
+    test -z "${Chaptarr__Server__Port:-}"
+    test -z "${HARDCOVER:-}"
+  '\'' sh "$2"
+  env -i PATH="$PATH" DATA_DIR="$fresh_dir" sh -c '\''
+    . "$1"
+    test -z "${CHAPTARR_BOOKSHELF_COMPATIBILITY:-}"
+    test -z "${CHAPTARR_DEFAULT_PORT:-}"
+  '\'' sh "$2"
+  env -i PATH="$PATH" DATA_DIR="$fresh_dir" Readarr__Postgres__Host=bookshelf-db \
+    CHAPTARR_DEFAULT_PORT=8877 sh -c '\''
+    . "$1"
+    test "$CHAPTARR_BOOKSHELF_COMPATIBILITY" = true
+    test "$CHAPTARR_DEFAULT_PORT" = 8877
+    test "$Chaptarr__Server__Port" = 8877
+  '\'' sh "$2"
+  grep -Fq ". /docker-bookshelf-migration-detect.sh" "$3"
+  grep -Fq "COPY docker-bookshelf-migration-detect.sh /docker-bookshelf-migration-detect.sh" "$4"
+  grep -Fq "COPY docker-bookshelf-migration-detect.sh /docker-bookshelf-migration-detect.sh" "$5"
+' _ "$test_root" "$repo_root/docker-bookshelf-migration-detect.sh" "$repo_root/docker-entrypoint.sh" "$repo_root/Dockerfile.build" "$repo_root/Dockerfile.cross"
 
-run_case 'published standard image uses the port-advertising target' bash -c '
+run_case 'legacy channel aliases use the standard image and do not hardcode a separate provider build' bash -c '
   set -euo pipefail
-  grep -A10 -F "name: Build and push Docker image" "$1" | grep -Fxq "        target: chaptarrng-standard"
-' _ "$repo_root/.github/workflows/docker-publish.yml"
-
-run_case 'BookshelfNG compatibility images and attestations are behind migration readiness' bash -c '
-  set -euo pipefail
-  expected="if: steps.docker-tags.outputs.has_tags == '\''true'\'' && inputs.legacy_bridge_enabled == true && vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == '\''true'\'' && vars.CHAPTARRNG_RELEASE_READY == '\''true'\'' && vars.BOOKSHELFNG_RELEASE_READY == '\''true'\''"
-  [[ "$(grep -Fc "$expected" "$1")" -eq 4 ]]
-  grep -A1 -F "name: Build and push BookshelfNG softcover compatibility image" "$1" | grep -Fq "$expected"
-  grep -A1 -F "name: Build and push BookshelfNG Hardcover compatibility image" "$1" | grep -Fq "$expected"
-' _ "$repo_root/.github/workflows/docker-publish.yml"
-
-run_case 'compatibility image targets preserve provider mode' check_compatibility_provider_modes
-
-run_case 'fresh legacy image defaults to port 8787' bash -c '
-  set -euo pipefail
-  DATA_DIR="$1/fresh"
-  mkdir -p "$DATA_DIR"
-  CHAPTARR_BOOKSHELF_COMPATIBILITY=true
-  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT CHAPTARR_DEFAULT_PORT
-  . "$2"
-  [[ "$Chaptarr__Server__Port" == 8787 ]]
-  [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
-' _ "$test_root" "$defaults"
-
-run_case 'saved legacy port is retained' bash -c '
-  set -euo pipefail
-  DATA_DIR="$1/saved"
-  mkdir -p "$DATA_DIR"
-  printf "%s\n" "<Config><Port>8999</Port></Config>" > "$DATA_DIR/config.xml"
-  CHAPTARR_BOOKSHELF_COMPATIBILITY=true
-  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT CHAPTARR_DEFAULT_PORT
-  . "$2"
-  [[ -z "${Chaptarr__Server__Port:-}" ]]
-  [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
-' _ "$test_root" "$defaults"
-
-run_case 'explicit deployment port wins' bash -c '
-  set -euo pipefail
-  DATA_DIR="$1/override"
-  mkdir -p "$DATA_DIR"
-  CHAPTARR_BOOKSHELF_COMPATIBILITY=true
-  CHAPTARR__SERVER__PORT=9123
-  unset CHAPTARR_DEFAULT_PORT
-  . "$2"
-  [[ "$CHAPTARR__SERVER__PORT" == 9123 ]]
-  [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
-' _ "$test_root" "$defaults"
-
-run_case 'legacy Readarr port wins over the compatibility default' bash -c '
-  set -euo pipefail
-  DATA_DIR="$1/readarr-port"
-  mkdir -p "$DATA_DIR"
-  CHAPTARR_BOOKSHELF_COMPATIBILITY=true
-  Readarr__Server__Port=9123
-  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT CHAPTARR_DEFAULT_PORT
-  . "$2"
-  [[ "$Readarr__Server__Port" == 9123 ]]
-  [[ -z "${Chaptarr__Server__Port:-}" ]]
-  [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
-' _ "$test_root" "$defaults"
-
-run_case 'uppercase legacy Readarr port wins over the compatibility default' bash -c '
-  set -euo pipefail
-  DATA_DIR="$1/readarr-uppercase-port"
-  mkdir -p "$DATA_DIR"
-  CHAPTARR_BOOKSHELF_COMPATIBILITY=true
-  READARR__SERVER__PORT=9124
-  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT CHAPTARR_DEFAULT_PORT
-  . "$2"
-  [[ "$READARR__SERVER__PORT" == 9124 ]]
-  [[ -z "${Chaptarr__Server__Port:-}" ]]
-  [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
-' _ "$test_root" "$defaults"
-
-run_case 'legacy Audioarr port wins over the compatibility default' bash -c '
-  set -euo pipefail
-  DATA_DIR="$1/audioarr-port"
-  mkdir -p "$DATA_DIR"
-  CHAPTARR_BOOKSHELF_COMPATIBILITY=true
-  AUDIOARR__SERVER__PORT=9133
-  unset Chaptarr__Server__Port CHAPTARR__SERVER__PORT CHAPTARR_DEFAULT_PORT
-  . "$2"
-  [[ "$AUDIOARR__SERVER__PORT" == 9133 ]]
-  [[ -z "${Chaptarr__Server__Port:-}" ]]
-  [[ "$CHAPTARR_DEFAULT_PORT" == 8787 ]]
-' _ "$test_root" "$defaults"
-
-run_case 'standard ChaptarrNG image defaults remain unchanged' bash -c '
-  set -euo pipefail
-  DATA_DIR="$1/standard"
-  mkdir -p "$DATA_DIR"
-  unset CHAPTARR_BOOKSHELF_COMPATIBILITY Chaptarr__Server__Port CHAPTARR__SERVER__PORT CHAPTARR_DEFAULT_PORT
-  . "$2"
-  [[ -z "${Chaptarr__Server__Port:-}" ]]
-  [[ -z "${CHAPTARR_DEFAULT_PORT:-}" ]]
-' _ "$test_root" "$defaults"
+  grep -Fq "Every BookshelfNG alias is published from the same standard ChaptarrNG image digest." "$1"
+  grep -Fq "SOURCE_IMAGE: \${{ env.STANDARD_IMAGE }}@\${{ steps.build.outputs.digest }}" "$2"
+  if grep -Eq "BOOKSHELF_(SOFTCOVER|HARDCOVER)_(IMAGE|DIGEST)|build_(softcover|hardcover)" "$2"; then exit 1; fi
+' _ "$repo_root/packaging/scripts/publish-image-aliases.sh" "$repo_root/.github/workflows/docker-publish.yml"
 
 run_case 'ask mode without a terminal records deferral and does not start ChaptarrNG' bash -c '
   set -euo pipefail

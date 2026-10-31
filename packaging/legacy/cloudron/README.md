@@ -2,11 +2,11 @@
 
 This candidate keeps the installed Cloudron application ID
 `tech.snapetech.bookshelfng`, its `/config`, `/books`, and `/downloads`
-persistent directories, port `8787`, and `/ping` health check. The ChaptarrNG
-compatibility image enables the first-start migration supervisor and keeps the
-native Hardcover mode used by BookshelfNG's Cloudron image. Existing Cloudron
-app environment values override that default; preserve `HARDCOVER=false` only
-for an installation that previously used the Goodreads image flavor.
+persistent directories, port `8787`, and `/ping` health check. The standard ChaptarrNG image includes the first-start migration supervisor.
+The Cloudron package wrapper enables it and explicitly carries the native
+Hardcover mode used by the prior Cloudron image. Preserve `HARDCOVER=false` only
+for an installation that previously used the Goodreads flavor. This is a
+platform wrapper around the standard image, not a second ChaptarrNG build.
 If a first-start attempt rolls back cleanly, set
 `BOOKSHELFNG_MIGRATION_MODE=retry` only after correcting the cause. An
 intervention-required state needs manual recovery.
@@ -30,9 +30,9 @@ image defaults. The proxy keeps `/ping` healthy while manual mode waits, and
 shows the migration instructions on normal app requests.
 
 The candidate manifest and Dockerfile are not published. The Dockerfile uses
-the source-only `bookshelf-hardcover` image target; before a Cloudron update is
-accepted, pin the exact published multi-architecture digest and run install,
-update, data backup, rollback, and health checks on Cloudron. Generate
+the standard ChaptarrNG image; candidate generation pins it to the exact
+published multi-architecture digest. Before a Cloudron update is accepted, run
+install, update, data backup, rollback, and health checks on Cloudron. Generate
 `CloudronVersions.json` with the Cloudron CLI from the accepted package build;
 do not create release metadata from an unbuilt candidate.
 

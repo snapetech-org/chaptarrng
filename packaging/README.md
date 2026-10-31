@@ -337,17 +337,17 @@ and supports validated rollback.
 
 Docker Compose, Unraid, and other container users can keep `/config`,
 media/download mounts, ports, UID/GID, and environment settings. BookshelfNG
-selects native Hardcover identities only when `HARDCOVER=true` and
-`HARDCOVER_NATIVE` is not `false`; an unset or non-true `HARDCOVER` value and
-`HARDCOVER_NATIVE=false` select Goodreads. The ChaptarrNG importer persists
-that effective mode because bare numeric IDs contain no provider marker. The
-legacy mutable-image bridge maps the old `hardcover`/`main`/`latest` aliases to
-a Hardcover-enabled compatibility image and `softcover` to a Goodreads-mode
-image. These targets and alias changes are source-only, unpublished, and
-gated. The compatibility targets use port `8787` for a fresh data directory,
-preserve an existing `config.xml` port, and respect an explicit
-`Chaptarr__Server__Port` setting. Pinned versions and image digests still need
-an operator change. A repointed tag does not change a running container.
+stores primary Hardcover IDs as bare numbers, so the ChaptarrNG importer
+requires an explicit `HARDCOVER=true` or `HARDCOVER=false` setting and stops
+before promotion if the mode is missing or invalid. The previous plan to build
+separate Goodreads and Hardcover compatibility images is withdrawn. All legacy
+mutable image aliases must resolve to the same standard ChaptarrNG image digest;
+platform adapters and migration tooling carry the source mode. The standard
+image uses ChaptarrNG's normal fresh-install port `8789`; saved `config.xml`,
+explicit server settings, and a channel's host-port mapping preserve existing
+installations. This source change remains unpublished and gated. Pinned
+versions and image digests still need an operator update, and a repointed tag
+does not alter a running container.
 
 The BookshelfNG Windows WPF installer still installs the old application and
 does not hand off its `Readarr` service. ChaptarrNG now contains a source-only
@@ -419,8 +419,8 @@ the prior Flatpak bundle remains the executable rollback step.
 Cloudron keeps app ID `tech.snapetech.bookshelfng`, port `8787`, `/ping`, and
 all three persistent directories. The Compose candidates keep the `bookshelfng`
 container or named volume identities and the same port and mount paths. Those
-container files default to the source-only compatibility image target; replace
-it with the exact published image digest before accepting an update. Third-party
+container files now pin the one standard ChaptarrNG image digest during
+candidate generation. They do not create a second application image. Third-party
 catalog listings remain owned by their maintainers and are unchanged.
 
 The rebuilt local `.978` AppImage and Flatpak candidates are unsigned and

@@ -118,7 +118,7 @@ RUN set -eux; \
 
 # Copy entrypoint script for PUID/PGID support
 COPY docker-entrypoint.sh /entrypoint.sh
-COPY docker-bookshelf-compatibility-defaults.sh /docker-bookshelf-compatibility-defaults.sh
+COPY docker-bookshelf-migration-detect.sh /docker-bookshelf-migration-detect.sh
 COPY docker-bookshelf-compat-supervisor.sh /usr/local/bin/chaptarr-bookshelf-compat-supervisor
 COPY docker-bookshelf-liveness.sh /usr/local/bin/chaptarr-bookshelf-liveness
 RUN chmod +x /entrypoint.sh /usr/local/bin/chaptarr-bookshelf-compat-supervisor /usr/local/bin/chaptarr-bookshelf-liveness

@@ -91,9 +91,7 @@ for ((arg_index = 0; arg_index < ${#entrypoint_args[@]}; arg_index++)); do
     esac
 done
 
-# Restore BookshelfNG's fresh-install port for compatibility aliases without
-# overriding a saved port or an explicit deployment setting.
-. /docker-bookshelf-compatibility-defaults.sh
+. /docker-bookshelf-migration-detect.sh
 export CHAPTARR_COMPAT_DATA_DIR="$DATA_DIR"
 export CHAPTARR_CONFIG_FILE="${CHAPTARR_CONFIG_FILE:-$DATA_DIR/config.xml}"
 

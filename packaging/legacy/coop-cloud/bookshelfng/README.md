@@ -13,7 +13,7 @@
 
 This candidate keeps the existing `bookshelfng` recipe name, Swarm stack,
 service name, and named volumes while changing the image to ChaptarrNG's
-BookshelfNG compatibility target. The existing `/config`, `/books`, and
+single standard ChaptarrNG image. The existing `/config`, `/books`, and
 `/downloads` data remains mounted at the same paths. The recipe backs up all
 three named volumes through the Co-op Cloud backup labels.
 
@@ -34,10 +34,13 @@ a deferred marker, but ChaptarrNG does not serve `/ping` until the operator
 switches to `automatic` and redeploys the stack. The Manual setting is a data
 conversion hold, not a running BookshelfNG fallback.
 
-The recipe defaults to the native Hardcover mode used by the previous Co-op
-Cloud image. Set `HARDCOVER=false` only when the old service used the softcover
-image. The default internal port is `8787`; keep `BOOKSHELFNG_PORT` equal to the
-old Traefik service port. If the saved `config.xml` port differs, the health
+The recipe explicitly defaults to the native Hardcover mode used by the
+previous Co-op Cloud image. Set `HARDCOVER=false` only when the old service
+used the softcover image. A standard image digest cannot encode this setting,
+so keep the value in the deployment environment. The recipe's channel mapping keeps the existing Traefik service port. Saved
+`config.xml` and `CHAPTARR__SERVER__PORT` determine the internal application
+port; the single standard image does not add a Bookshelf-specific port
+default. If the saved `config.xml` port differs, the health
 check reports the mismatch instead of treating the instance as ready. After a
 clean automatic rollback, set `BOOKSHELFNG_MIGRATION_MODE=retry` only after
 correcting the cause. An intervention-required state needs manual recovery.

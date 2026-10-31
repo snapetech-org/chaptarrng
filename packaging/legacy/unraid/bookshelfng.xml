@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>BookshelfNG</Name>
-  <Repository>ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover</Repository>
+  <Repository>ghcr.io/snapetech-org/chaptarrng:latest</Repository>
   <Registry>https://ghcr.io/snapetech-org/chaptarrng</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
@@ -9,7 +9,7 @@
   <Icon>https://raw.githubusercontent.com/snapetech-org/chaptarrng/main/Logo/512.png</Icon>
   <WebUI>http://[IP]:[PORT:8787]/</WebUI>
   <Overview>ChaptarrNG keeps the BookshelfNG Unraid app identity, appdata, media mounts, and port while migrating the existing library on first startup.</Overview>
-  <Description>ChaptarrNG is Snapetech's maintained BookshelfNG replacement. Keep this existing BookshelfNG template, appdata path, and volume mappings when updating. The first compatible startup previews and converts the BookshelfNG database, then checks the migrated database and local health endpoint. If that first startup fails, the compatibility image restores the retained BookshelfNG database and config and stops for operator review. Existing application, authentication, server/security, logging, updater, PostgreSQL, Hardcover, OIDC, SeerrNG, metadata, diagnostics, and audiobook settings remain available as container variables. Keep a separate Unraid appdata backup before updating.</Description>
+  <Description>ChaptarrNG is Snapetech's maintained BookshelfNG replacement. Keep this existing BookshelfNG template, appdata path, and volume mappings when updating. The standard ChaptarrNG image runs the first-start migration supervisor, which previews and converts the BookshelfNG database, then checks the migrated database and local health endpoint. If that first startup fails, the supervisor restores the retained BookshelfNG database and config and stops for operator review. Existing application, authentication, server/security, logging, updater, PostgreSQL, Hardcover, OIDC, SeerrNG, metadata, diagnostics, and audiobook settings remain available as container variables. Keep a separate Unraid appdata backup before updating.</Description>
   <Support>https://github.com/snapetech-org/chaptarrng/issues</Support>
   <Project>https://github.com/snapetech-org/chaptarrng</Project>
   <TemplateURL>https://raw.githubusercontent.com/snapetech-org/chaptarrng/main/packaging/legacy/unraid/bookshelfng.xml</TemplateURL>

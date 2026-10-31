@@ -24,7 +24,7 @@ trap cleanup EXIT
 script="$repo_root/packaging/scripts/build-bookshelf-container-platform-candidates.sh"
 digest="sha256:$(printf '%064d' 0 | tr '0' 'a')"
 output="$work/output"
-VERSION=0.9.978 BOOKSHELF_HARDCOVER_DIGEST="$digest" OUTPUT_DIR="$output" bash "$script"
+VERSION=0.9.978 CHAPTARRNG_IMAGE_DIGEST="$digest" OUTPUT_DIR="$output" bash "$script"
 
 asset="ChaptarrNG-0.9.978-bookshelfng-container-platform-candidates.tar.gz"
 test -s "$output/$asset"
@@ -88,11 +88,11 @@ if grep -Fq "replace it with the exact published multi-architecture digest" "$st
   echo "Cloudron Dockerfile retained stale instructions to replace the compatibility tag." >&2
   exit 1
 fi
-compose_default_prefix="\${CHAPTARRNG_COMPAT_IMAGE:-"
+compose_default_prefix="\${CHAPTARRNG_IMAGE:-"
 compose_default="image: $compose_default_prefix$image}"
 grep -Fq "$compose_default" "$stage/coop-cloud/bookshelfng/compose.yml"
 grep -Fq "coop-cloud.\${STACK_NAME}.version=\${COOP_CLOUD_RECIPE_VERSION:-0.1.0+0.9.978}" "$stage/coop-cloud/bookshelfng/compose.yml"
-grep -Fxq "CHAPTARRNG_COMPAT_IMAGE=$image" "$stage/coop-cloud/bookshelfng/.env.sample"
+grep -Fxq "CHAPTARRNG_IMAGE=$image" "$stage/coop-cloud/bookshelfng/.env.sample"
 grep -Fq 'backupbot.backup=true' "$stage/coop-cloud/bookshelfng/compose.yml"
 grep -Fq 'test: ["CMD", "/usr/local/bin/chaptarr-healthcheck"]' "$stage/coop-cloud/bookshelfng/compose.yml"
 grep -Fq 'start_period: 245m' "$stage/coop-cloud/bookshelfng/compose.yml"
@@ -110,7 +110,7 @@ if grep -Fq 'BOOKSHELFNG_HOST_PORT' "$stage/coop-cloud/bookshelfng/.env.sample";
 fi
 grep -Fq "$compose_default" "$stage/catalogs/compose.yaml"
 test -s "$stage/catalogs/.env.sample"
-grep -Fxq "CHAPTARRNG_COMPAT_IMAGE=$image" "$stage/catalogs/.env.sample"
+grep -Fxq "CHAPTARRNG_IMAGE=$image" "$stage/catalogs/.env.sample"
 grep -Fq 'READARR__POSTGRES__PASSWORD=' "$stage/catalogs/.env.sample"
 grep -Fq 'READARR__APP__INSTANCENAME=' "$stage/catalogs/.env.sample"
 grep -Fq 'READARR__AUTH__APIKEY=' "$stage/catalogs/.env.sample"
@@ -135,7 +135,7 @@ grep -Fq "id: 'bookshelfng'" "$startos_manifest"
 grep -Fq "volumes: ['main', 'books', 'downloads', 'startos']" "$startos_manifest"
 grep -Fq "arch: ['x86_64', 'aarch64']" "$startos_manifest"
 grep -Fq "source: { dockerTag: '$image' }" "$startos_manifest"
-if grep -Fq '__BOOKSHELF_HARDCOVER_DIGEST__' "$startos_manifest"; then
+if grep -Fq '__CHAPTARRNG_IMAGE_DIGEST__' "$startos_manifest"; then
   echo "StartOS manifest retained its source digest placeholder." >&2
   exit 1
 fi
@@ -156,13 +156,13 @@ npm --prefix "$stage/startos" ci --ignore-scripts --no-audit --no-fund
 npm --prefix "$stage/startos" run check
 npm --prefix "$stage/startos" run build
 
-if VERSION=0.9.978 BOOKSHELF_HARDCOVER_DIGEST=not-a-digest OUTPUT_DIR="$work/invalid" bash "$script" >/dev/null 2>&1; then
+if VERSION=0.9.978 CHAPTARRNG_IMAGE_DIGEST=not-a-digest OUTPUT_DIR="$work/invalid" bash "$script" >/dev/null 2>&1; then
   echo "Container candidate builder accepted an unverified image reference." >&2
   exit 1
 fi
 test ! -e "$work/invalid"
 
-if VERSION=0.9.978 BOOKSHELF_HARDCOVER_DIGEST="$digest" OUTPUT_DIR="$output" bash "$script" >/dev/null 2>&1; then
+if VERSION=0.9.978 CHAPTARRNG_IMAGE_DIGEST="$digest" OUTPUT_DIR="$output" bash "$script" >/dev/null 2>&1; then
   echo "Container candidate builder unexpectedly overwrote an existing output directory." >&2
   exit 1
 fi

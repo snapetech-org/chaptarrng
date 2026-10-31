@@ -74,7 +74,7 @@ chmod 0755 "$fake_bin"/*
 
 digest="sha256:$(printf '%064d' 0 | tr '0' 'a')"
 VERSION=0.9.978 \
-BOOKSHELF_HARDCOVER_DIGEST="$digest" \
+CHAPTARRNG_IMAGE_DIGEST="$digest" \
 OUTPUT_DIR="$candidate_output" \
   bash "$repo_root/packaging/scripts/build-bookshelf-container-platform-candidates.sh" \
   > "$logs/container-candidate-build.log" 2>&1

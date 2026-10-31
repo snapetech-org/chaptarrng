@@ -293,8 +293,6 @@ jobs:
           VERSION: ${{ needs.release.outputs.version }}
           SOURCE_SHA: ${{ needs.release.outputs.sha }}
           IMAGE_DIGEST: ${{ needs.docker.outputs.image_digest }}
-          BOOKSHELF_SOFTCOVER_DIGEST: ${{ needs.docker.outputs.bookshelf_softcover_digest }}
-          BOOKSHELF_HARDCOVER_DIGEST: ${{ needs.docker.outputs.bookshelf_hardcover_digest }}
           SOURCE_REPOSITORY: ${{ github.repository }}
         run: bash packaging/scripts/dispatch-ghcr-release-bridge.sh
 
@@ -676,7 +674,7 @@ jobs:
       if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
       env:
         VERSION: ${{ needs.release.outputs.version }}
-        BOOKSHELF_HARDCOVER_DIGEST: ${{ needs.docker.outputs.bookshelf_hardcover_digest }}
+        CHAPTARRNG_IMAGE_DIGEST: ${{ needs.docker.outputs.image_digest }}
         OUTPUT_DIR: ${{ runner.temp }}/bookshelfng-container-platform-candidates
       run: |
         set -euo pipefail

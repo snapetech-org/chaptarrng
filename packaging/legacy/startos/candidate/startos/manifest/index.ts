@@ -13,7 +13,7 @@ export const manifest = setupManifest({
   volumes: ['main', 'books', 'downloads', 'startos'],
   images: {
     'bookshelfng': {
-      source: { dockerTag: 'ghcr.io/snapetech-org/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' },
+      source: { dockerTag: 'ghcr.io/snapetech-org/chaptarrng@sha256:__CHAPTARRNG_IMAGE_DIGEST__' },
       arch: ['x86_64', 'aarch64'],
     },
   },

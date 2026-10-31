@@ -15,7 +15,39 @@ branch at
 [`e67374f`](https://github.com/Chaptarr/chaptarr/commit/e67374f), which is in
 ChaptarrNG `main`'s history.
 
-## BookshelfNG consolidation status — 2026-10-21
+## Retirement status — 2026-10-30
+
+The latest published ChaptarrNG release is `v0.9.977`; the latest
+BookshelfNG release is `0.4.21.76`. ChaptarrNG source `main` is
+`474a3541`. The exact-head Build
+[#41164597664](https://github.com/snapetech-org/chaptarrng/actions/runs/41164597664)
+is queued and does not establish build, platform, security, or release
+acceptance. The scheduled BookshelfNG distribution bridge
+[#41157387864](https://github.com/snapetech-org/bookshelfng/actions/runs/41157387864)
+is pending with no jobs started; no BookshelfNG distribution identity has
+been redirected.
+
+The BookshelfNG-to-ChaptarrNG gate remains open for every contributed feature,
+data/configuration path, client contract, rollback path, and installation
+channel. ChaptarrNG-to-upstream retirement is a separate, cumulative gate:
+every BookshelfNG carryover and every ChaptarrNG capability that is maintained,
+actively developed, or unreleased remains a blocker. ChaptarrNG's current
+localization catalogs, accessibility and RTL behavior are included in that
+blocker set even though they are not in `v0.9.977`. The source-path audit
+was refreshed on 2026-10-30 against BookshelfNG `1bd7f2dc` and ChaptarrNG
+`474a3541`: 1,174 changed paths, 56 reviewed mappings, 644 dispositions, and
+530 undispositioned paths. These path counts do not measure missing feature
+count or establish parity. See the
+[pinned exact-head audit](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-30)
+for decision carry-forward rules and current maps. ChaptarrNG retirement also
+requires every item in the cumulative feature matrix below, whether released,
+maintained, active, or unreleased.
+
+Organization-wide build, test, scan, package, and release jobs must use private
+ephemeral JIT runners with no hosted fallback. Missing platform capacity blocks
+the exact-head evidence required to close a row.
+
+## Historical BookshelfNG consolidation status — 2026-10-21
 
 ChaptarrNG PR #131 is merged to `main`. Current source is on
 [ChaptarrNG `main`](https://github.com/snapetech-org/chaptarrng/tree/main).
@@ -616,7 +648,7 @@ upstream release must pass behavioral, data, security, and packaging checks.
 | Backup, authentication, and security | Encrypted full-backup archives; API-key controls, login throttling, response redaction, update verification, and request hardening | Encrypted portable backups; OIDC allow-list and verified-user policies; legacy OIDC, API/query-key, and SeerrNG environment compatibility; explicit trusted-proxy and CORS allowlists; per-client request limits; bounded body size; request correlation header; Bookshelf secrets and existing credentials | Current `main` ports the BookshelfNG proxy, CORS, rate-limit, request-size, request-ID, and API-key query-control behavior. Saved ChaptarrNG OIDC settings take precedence over `BOOKSHELF_OIDC_*` fallbacks; legacy callback values are accepted only for HTTPS `/signin-oidc`, and OIDC denies users when no allow-list or explicit allow-any-verified option is configured. `CHAPTARR__AUTH__ALLOWAPIKEYQUERY=false` disables `?apikey=`; the legacy `BOOKSHELF_ALLOW_API_KEY_QUERY=false` value remains supported when the ChaptarrNG option is unset. `CHAPTARR__AUTH__SEERRAPIKEY` takes precedence over the legacy `BOOKSHELF_SEERRNG_API_KEY`; the restricted SeerrNG credential cannot read global configuration or health endpoints and must scope history/file reads to one book. General request bodies default to 16 MiB (1–128 MiB configurable); the backup restore route keeps its separate 1 GiB upload limit. These source changes are not in `.977`. Validate configured proxies/origins and representative backup restores before cutover; preserve credentials and rollback, keep restrictions at least as strong, and never log secrets. |
 | Library browsing, performance, and operator workflow | Server-paged views and full-library API paging with totals; large-library query and cache improvements; root-folder backfill; managed file downloads; mobile accessibility; per-folder progress; cancellation safeguards | Previewable media moves, bulk moves, CLI helpers, and extra-file handling; see [Media moves](MEDIA_MOVES.md) | Preserve page completeness and order, root containment, no-file-move backfill, bounded memory/query behavior, responsive workflows, cancellation, and progress on representative large libraries. |
 | Release, package, and update channels | ChaptarrNG image at `ghcr.io/snapetech-org/chaptarrng`, Unraid identity, gated BookshelfNG aliases, and retired YunoHost publishing; a fail-closed same-name Helm chart candidate preserves BookshelfNG workload and PVC identities | BookshelfNG GHCR/Docker Hub tags, Unraid template, native installers, Linux package channels, Helm, and legacy update behavior | Preserve each retained channel or record an explicit maintainer decision to retire it; test historical installs, upgrades, package/image/service/data identities, and rollback. Helm still needs a published chart-source handoff plus installed PVC/GitOps upgrade and rollback acceptance. No single redirect reaches every installed copy. |
-| Localization | Twelve additional language catalogs, including Indonesian and Traditional Chinese, AudioBookShelf translations, locale metadata, English fallback, and locale-aware workflows | No separate BookshelfNG locale feature was identified; inherited keys remain in the source-path audit | Keep all supported strings, fallback behavior, and locale selection; complete native-speaker review and run translation-key and rendered-UI checks against the released upstream build. |
+| Localization | Twelve additional language catalogs, including Indonesian and Traditional Chinese, AudioBookShelf translations, locale metadata, English fallback, locale-aware number/date formatting, provenance checks, accessibility, and right-to-left layout behavior | No separate BookshelfNG locale feature was identified; inherited keys remain in the source-path audit | Keep all supported strings, fallback behavior, locale selection, and RTL presentation; complete native-speaker review and run translation-key and rendered-UI checks against the released upstream build. |
 | Data, database, and API compatibility | Existing ChaptarrNG databases, configuration, local IDs, SeerrNG links, migration-158 SQLite import/rollback, older SQLite upgrade candidate, paged library API, and PostgreSQL TLS settings | BookshelfNG databases/configuration and their provider identities, local IDs, settings, histories, and files | Keep each source recoverable; preserve identities and references; prove older-schema rollback, upgrade, restart, TLS validation, and populated-database behavior. |
 | Complete fork history and retirement scope | Historical ChaptarrNG `main` `c922fe79682e` at `v0.9.975` (658 commits ahead of upstream, zero behind, 1,671 changed paths); upstream `develop` `e67374f4`; open upstream PR #114 | Historical BookshelfNG `main` `a4b1146d34af`; PRs #128 and #130 are merged. BookshelfNG issue #114 is now closed; issue #144 remains open. | Regenerate exact source-to-upstream inventories for `main` and review current upstream issues and PRs before any ChaptarrNG-to-Chaptarr retirement. Retain, port, or prove equivalence for every behavior; this upstream retirement work is separate from closing the BookshelfNG product. |
 

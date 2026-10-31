@@ -189,7 +189,7 @@ jobs:
       if: matrix.platform == 'linux-x64'
       run: python3 scripts/test_bookshelfng_systemd_bootstrap_prompt.py
 
-    - name: Test BookshelfNG Docker compatibility defaults
+    - name: Test BookshelfNG migration supervisor and single image
       if: matrix.platform == 'linux-x64'
       env:
         TMPDIR: ${{ runner.temp }}
@@ -736,8 +736,8 @@ jobs:
       shell: bash
       run: rm -rf -- "${{ runner.temp }}/chaptarr-postgres-smoke-${{ github.run_id }}-${{ github.run_attempt }}"
 
-  docker-compatibility-build:
-    name: Docker (${{ matrix.target }})
+  docker-image-build:
+    name: Docker (single standard image)
     if: >-
       github.event_name != 'pull_request_target' &&
       (github.event_name != 'workflow_dispatch' || (inputs.windows_chocolatey_only != true && inputs.rpm_bridge_only != true && inputs.channel_contracts_only != true)) &&
@@ -746,16 +746,6 @@ jobs:
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     env:
       BUILDKIT_EGRESS_PROXY: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'http://10.0.2.100:3128' || '' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: chaptarrng-standard
-            cache-scope: standard
-          - target: bookshelf-softcover
-            cache-scope: bookshelf-softcover
-          - target: bookshelf-hardcover
-            cache-scope: bookshelf-hardcover
     permissions:
       contents: read
     steps:
@@ -787,7 +777,7 @@ jobs:
       with:
         context: .
         file: ./Dockerfile.cross
-        target: ${{ matrix.target }}
+        target: chaptarrng-standard
         platforms: linux/amd64,linux/arm64,linux/arm/v7
         push: false
         build-args: |
@@ -797,8 +787,8 @@ jobs:
           https_proxy=${{ env.BUILDKIT_EGRESS_PROXY }}
           NO_PROXY=localhost,127.0.0.1
           no_proxy=localhost,127.0.0.1
-        cache-from: type=gha,scope=bookshelfng-${{ matrix.cache-scope }}
-        cache-to: type=gha,scope=bookshelfng-${{ matrix.cache-scope }},mode=max
+        cache-from: type=gha,scope=bookshelfng-standard
+        cache-to: type=gha,scope=bookshelfng-standard,mode=max
 
   private-runner-policy:
     name: Private runner policy

@@ -56,7 +56,7 @@ import re
 import sys
 
 manifest = Path(sys.argv[1]).read_text(encoding="utf-8")
-if "__BOOKSHELF_HARDCOVER_DIGEST__" in manifest:
+if "__CHAPTARRNG_IMAGE_DIGEST__" in manifest:
     raise SystemExit("The StartOS image digest placeholder has not been resolved by the release handoff builder.")
 if not re.search(r"ghcr\.io/snapetech-org/chaptarrng@sha256:[a-f0-9]{64}", manifest):
     raise SystemExit("The StartOS manifest must pin the validated ChaptarrNG image digest.")

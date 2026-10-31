@@ -28,6 +28,47 @@ For local MCP access, see the [SnapeTech MCP integration guide](docs/integration
 
 ### BookshelfNG migration status
 
+**Status checked: 2026-10-30.** ChaptarrNG `v0.9.977` is still the latest
+published release; ChaptarrNG `main` is `474a3541`. The exact-head Build
+[#41164597664](https://github.com/snapetech-org/chaptarrng/actions/runs/41164597664)
+is queued and has not passed current-head validation. BookshelfNG
+`0.4.21.76` is still published, and its scheduled bridge run
+[#41157387864](https://github.com/snapetech-org/bookshelfng/actions/runs/41157387864)
+is pending with no jobs started. No legacy release, package, image, installer,
+updater, or chart identity has been redirected.
+
+BookshelfNG remains in service until each capability, data and configuration
+path, rollback path, and installation channel has its own acceptance evidence.
+ChaptarrNG-to-upstream retirement is a separate cumulative blocker covering
+all BookshelfNG carryover and every ChaptarrNG feature that is maintained,
+active, or unreleased. The localization catalogs, accessibility, and RTL
+support now in `main` are included in that gate. All organization build, test,
+scan, package, and release jobs require private ephemeral JIT; hosted fallback
+is not allowed, and missing platform capacity blocks validation.
+
+Migration uses the normal ChaptarrNG application and its standard image for
+both fresh and migrated installations. There is no separate compatibility
+build. The release and legacy-channel gates remain closed until the full
+feature, migration, rollback, and per-channel checklist passes.
+
+Chocolatey publishes standard ChaptarrNG `0.9.973` and BookshelfNG `0.4.21.76`;
+the ChaptarrNG package is behind release `v0.9.977`, and the old BookshelfNG
+package identity has not been bridged. The previous `.977` Chocolatey push
+returned HTTP 403. See the
+[Chocolatey package](https://community.chocolatey.org/packages/chaptarrng),
+[BookshelfNG package](https://community.chocolatey.org/packages/bookshelfng),
+and the [channel acceptance matrix](docs/BOOKSHELFNG_RETIREMENT.md#legacy-install-channels).
+
+The current BookshelfNG-to-ChaptarrNG source-path audit compares BookshelfNG
+`1bd7f2dc` with ChaptarrNG `474a3541` and records 1,174 changed paths. It has
+56 reviewed mappings and 644 dispositions; 530 paths remain open for review.
+These are path counts, not missing-feature counts, and do not establish runtime
+parity, migration acceptance, or channel continuity. See the
+[pinned BookshelfNG consolidation inventory and review](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-30).
+
+The implementation and rehearsal notes below preserve their original dates
+and scopes; none alone establishes cutover readiness.
+
 ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
 is the current published release. It includes the migration and rollback
 tools for BookshelfNG SQLite, plus the embedded source migration chain. Current
@@ -575,7 +616,7 @@ See the [SeerrNG Bookshelf backend guide](https://github.com/snapetech-org/seerr
 ### Integration & Automation
 * **Standard *arr Integrations** - Works with the usual *arr-family download clients and indexer protocols
 * **External Libraries** - Connect AudioBookShelf, Calibre Content Server, and Grimmory for supported refresh, import, metadata, cover, and edit-forwarding workflows; see the [integration guide](docs/EXTERNAL_LIBRARY_INTEGRATIONS.md) for the direction and limits of each connection
-* **BookLore and BookOrbit** - Optionally upload imported files to BookLore BookDrop. BookOrbit Book Dock support is in the unpublished retirement candidate and is not in `v0.9.977`. See the [integration guide](docs/BOOKLORE_INTEGRATION.md) for setup, file handling, and the explicit legacy-settings handoff.
+* **BookLore and BookOrbit** - BookLore BookDrop is an optional external connection, not a ChaptarrNG dependency; BookOrbit Book Dock support is in the unpublished retirement candidate and is not in `v0.9.977`. See the [integration guide](docs/BOOKLORE_INTEGRATION.md) for setup, file handling, and the explicit legacy-settings handoff.
 * **Emby and Jellyfin** - Refresh the media-server library after a grabbed release is imported
 * **MQTT and Webhooks** - Publish snapshots and canonical lifecycle events to MQTT, with optional Home Assistant discovery and opt-in canonical events for existing webhooks
 * **Import Lists** - Preview the next sync and review durable per-list history before relying on automatic-add behavior

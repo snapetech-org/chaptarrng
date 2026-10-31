@@ -15,6 +15,18 @@
 > cutover has been authorized. See the
 > [channel acceptance matrix](maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
 
+> **Superseding image design (2026-10-30):** Older evidence below may mention
+> provider-specific compatibility images or tags. That proposal was withdrawn.
+> All legacy aliases and generated platform candidates use the same standard
+> ChaptarrNG image; generated release candidates pin its exact digest. Provider
+> mode comes from preserved channel configuration or an explicit operator
+> choice. The standard container entrypoint recognizes `readarr.db`,
+> `audioarr.db`, and legacy Readarr/Bookshelf PostgreSQL settings and starts
+> the rollback supervisor automatically. When provider IDs are bare numeric
+> and their source mode is unavailable, preview stops without changing the
+> source; set the old `HARDCOVER` mode and retry. No redirect, release, or
+> cutover is authorized by this note.
+
 > Local Docker and Helm acceptance exercises passed, including deferred Ask,
 > automatic handoff, health checks, and recovery. They do not publish an
 > image/chart or establish acceptance of external catalogs and appliance
@@ -1129,8 +1141,8 @@ ChaptarrNG database and preserves the failed restore candidate for inspection.
 
 Stop BookshelfNG and back up the full appdata directory. In **Apps > Previous
 Apps**, apply the updated BookshelfNG template. The current source candidate
-points to `ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover`; the released
-template still points to BookshelfNG until the candidate is accepted. It
+points to the standard ChaptarrNG release image; the released template still
+points to BookshelfNG until the candidate is accepted. It
 retains the old `/config`, `/data`, `/download`, port,
 PUID/PGID, timezone, and Hardcover settings. Starting the container runs the
 regular ChaptarrNG app and its automatic migration. The old `config.xml` keeps
@@ -1383,7 +1395,7 @@ and the container network was disabled, so this does not validate media file
 access, provider calls, SeerrNG workflows, an image or package switch, rollback
 on an installed service, or full BookshelfNG feature parity.
 
-## StartOS `/init` and populated-database rehearsal (2026-10-21)
+## StartOS `/init` and populated-database rehearsal (2026-10-21, historical design)
 
 A local Linux/amd64 `bookshelf-hardcover` image built from ChaptarrNG commit
 [`2d6124e2`](https://github.com/snapetech-org/chaptarrng/commit/2d6124e2) was
@@ -1398,8 +1410,10 @@ authentication, and API key. `/ping` returned HTTP 200, the Docker
 health-check command passed, SQLite integrity was `ok`, and there were zero
 foreign-key violations. An unauthenticated `/api/v1/system/status` request
 returned HTTP 401. The original source database snapshot remained unchanged.
-Built image metadata exposed only `8787/tcp` for both compatibility targets;
-a standard image build exposed only `8789/tcp`.
+At the time, the test compared two temporary compatibility targets with the
+standard image's `8789/tcp` metadata. That packaging design was later
+withdrawn; the current candidate uses only the standard image, and channel
+configuration preserves the legacy service port.
 
 This exercises the Linux image and copied data only. The `/books` and
 `/downloads` mounts were empty, the container network was disabled, and the
@@ -1567,16 +1581,20 @@ as Goodreads IDs. With the source mode preserved, migration kept author,
 book, and edition IDs in Hardcover fields, passed database integrity checks,
 and served the converted API records. Rollback restored the source database
 byte-for-byte, retained the converted database separately, and the `.71`
-Hardcover image reopened the restored source. The current source candidate now
-fails closed on bare IDs when the mode is unset or invalid, and adds separate
-compatibility image targets for the legacy Goodreads and Hardcover aliases.
+Hardcover image reopened the restored source. The current importer fails
+closed on bare IDs when the mode is unset or invalid. An earlier candidate
+added separate compatibility image targets; that proposal was withdrawn and
+no such images were published. All legacy aliases now point to the standard
+ChaptarrNG image, and channel configuration or an operator choice supplies
+provider mode.
 Exact-head run [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100)
 passed the provider-mode regression and PostgreSQL fixture checks. The final
 Linux artifact refused conversion without a provider mode, preserved Goodreads
 and Hardcover identities with their explicit modes, converted during normal
 startup, and restored the source byte-for-byte during rollback. Local BuildKit
-target checks and hosted alias/bridge regression scripts also pass; the actual
-GHCR compatibility images and alias dispatch have not been built or published.
+target checks and hosted alias/bridge regression scripts also pass; no
+provider-specific images were published, and the standard-image legacy alias
+bridge remains gated and unpublished.
 This synthetic rehearsal does not establish operator-data or installer
 acceptance. See the detailed
 [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
@@ -1624,16 +1642,15 @@ mutable tag only affects a later pull or container recreation.
 
 The parked StartOS package is still BookshelfNG package ID `bookshelfng` and
 pins its `.37` native-Hardcover image. Its wrapper expects port `8787` and
-starts `/init`; public ChaptarrNG `v0.9.977` uses `/entrypoint.sh`, defaults
-to port `8789`, and does not convert native Hardcover IDs. The current
-production-image candidate adds an `/init` launcher and preserves the legacy
-port/provider defaults in its compatibility target. A disposable wrapper
-image based on the public `.977` digest passed startup through `/init`, `/ping`
-on `8787`, and checks for the `/config`, `/books`, and `/downloads` mounts.
-This only verifies the launcher. The StartOS package has not been updated or
-tested on a StartOS device. Keep the package on BookshelfNG until the released
-compatibility image passes package build, upgrade, backup, and rollback checks
-on a StartOS device.
+starts `/init`; public ChaptarrNG `v0.9.977` defaults to port `8789`. The
+current StartOS source candidate uses the one standard ChaptarrNG image digest,
+provides `/init` in that image, and supplies the legacy port and provider mode
+through package configuration. A disposable wrapper rehearsal against the
+public `.977` digest passed `/init`, `/ping` on `8787`, and mount checks; it
+does not validate the current source candidate. The package has not been
+updated or tested on a StartOS device. Keep it on BookshelfNG until the
+standard-image candidate passes package build, upgrade, backup, and rollback
+checks on a StartOS device.
 See the [channel status](../packaging/README.md#package-identities).
 
 ### Helm chart handoff

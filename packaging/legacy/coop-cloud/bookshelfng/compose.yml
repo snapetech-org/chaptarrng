@@ -1,6 +1,6 @@
 services:
   app:
-    image: ${CHAPTARRNG_COMPAT_IMAGE:-ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover}
+    image: ${CHAPTARRNG_IMAGE:-ghcr.io/snapetech-org/chaptarrng:latest}
     stop_grace_period: 8h30m
     healthcheck:
       test: ["CMD", "/usr/local/bin/chaptarr-healthcheck"]

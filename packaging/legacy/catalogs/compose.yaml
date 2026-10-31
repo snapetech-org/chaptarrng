@@ -1,6 +1,6 @@
 services:
   bookshelfng:
-    image: ${CHAPTARRNG_COMPAT_IMAGE:-ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover}
+    image: ${CHAPTARRNG_IMAGE:-ghcr.io/snapetech-org/chaptarrng:latest}
     container_name: bookshelfng
     restart: unless-stopped
     stop_grace_period: 8h30m

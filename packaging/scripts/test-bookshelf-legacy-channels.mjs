@@ -314,7 +314,7 @@ test('Cloudron candidate preserves application ID, health endpoint, port, and mo
   assert.equal(manifest.httpPort, 8787);
   assert.equal(manifest.healthCheckPath, '/ping');
   assert.deepEqual(manifest.persistentDirs, ['/config', '/books', '/downloads']);
-  assert.match(dockerfile, /^FROM ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover$/m);
+  assert.match(dockerfile, /^FROM ghcr\.io\/snapetech-org\/chaptarrng:latest$/m);
   assert.match(dockerfile, /^CMD \["dotnet", "\/app\/Chaptarr\.dll", "-nobrowser", "-data=\/config"\]$/m,
     'the Cloudron wrapper restores the app command cleared by its replacement ENTRYPOINT');
   assert.match(dockerfile, /BOOKSHELFNG_MIGRATION_MODE=automatic/);
@@ -328,7 +328,7 @@ test('catalog Compose handoff keeps the BookshelfNG container and named volumes'
   const sample = read('packaging/legacy/catalogs/.env.sample');
 
   assert.match(compose, /container_name: bookshelfng/);
-  assert.match(compose, /CHAPTARRNG_COMPAT_IMAGE:-ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover/);
+  assert.match(compose, /CHAPTARRNG_IMAGE:-ghcr\.io\/snapetech-org\/chaptarrng:latest/);
   assert.match(compose, /"127\.0\.0\.1:\$\{BOOKSHELFNG_HOST_PORT:-8787\}:\$\{BOOKSHELFNG_PORT:-8787\}\/tcp"/);
   assert.match(compose, /bookshelfng-config:\/config/);
   assert.match(compose, /bookshelfng-books:\/books/);
@@ -347,13 +347,13 @@ test('catalog Compose handoff keeps the BookshelfNG container and named volumes'
   }
 });
 
-test('Co-op Cloud handoff keeps stack volumes and uses the compatibility image', () => {
+test('Co-op Cloud handoff keeps stack volumes and uses the standard ChaptarrNG image', () => {
   const compose = read('packaging/legacy/coop-cloud/bookshelfng/compose.yml');
   const sample = read('packaging/legacy/coop-cloud/bookshelfng/.env.sample');
   const readme = read('packaging/legacy/coop-cloud/bookshelfng/README.md');
   const release = read('packaging/legacy/coop-cloud/bookshelfng/release/next');
 
-  assert.match(compose, /CHAPTARRNG_COMPAT_IMAGE:-ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover/);
+  assert.match(compose, /CHAPTARRNG_IMAGE:-ghcr\.io\/snapetech-org\/chaptarrng:latest/);
   assert.match(compose, /bookshelfng_config:\/config/);
   assert.match(compose, /bookshelfng_books:\/books/);
   assert.match(compose, /bookshelfng_downloads:\/downloads/);
@@ -363,7 +363,7 @@ test('Co-op Cloud handoff keeps stack volumes and uses the compatibility image',
   assert.match(compose, /order: stop-first/);
   assert.match(compose, /failure_action: pause/);
   assert.match(compose, /version=\$\{COOP_CLOUD_RECIPE_VERSION:-0\.1\.0\+__CHAPTARRNG_VERSION__\}/);
-  assert.match(sample, /^CHAPTARRNG_COMPAT_IMAGE=ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover$/m);
+  assert.match(sample, /^CHAPTARRNG_IMAGE=ghcr\.io\/snapetech-org\/chaptarrng:latest$/m);
   assert.doesNotMatch(sample, /BOOKSHELFNG_HOST_PORT/);
   for (const key of preservedBookshelfEnvironment) {
     assert.match(compose, new RegExp(`^\\s+${key}: \\u0024\\{${key}:-`, 'm'),
@@ -386,7 +386,7 @@ test('Unraid BookshelfNG identity template preserves legacy configuration and ma
   const template = read('packaging/legacy/unraid/bookshelfng.xml');
 
   assert.match(template, /<Name>BookshelfNG<\/Name>/);
-  assert.match(template, /<Repository>ghcr\.io\/snapetech-org\/chaptarrng:bookshelf-hardcover<\/Repository>/);
+  assert.match(template, /<Repository>ghcr\.io\/snapetech-org\/chaptarrng:latest<\/Repository>/);
   assert.match(template, /Target="CHAPTARR_BOOKSHELF_COMPATIBILITY"/);
   assert.match(template, /Target="BOOKSHELFNG_MIGRATION_MODE"/);
   for (const key of preservedBookshelfEnvironment) {
@@ -437,16 +437,16 @@ test('release builds and verifies desktop migration candidates only behind all r
   assert.match(publishJob, /ChaptarrNG-\$\{VERSION\}-bookshelfng\.flatpak/);
 });
 
-test('release pins Cloudron and Compose candidates to the built compatibility image digest', () => {
+test('release pins Cloudron and Compose candidates to the built standard image digest', () => {
   const workflow = read('.github/workflows/release.yml');
   const builder = read('packaging/scripts/build-bookshelf-container-platform-candidates.sh');
   const publishJob = readWorkflowJob(workflow, 'publish-release');
 
   assert.ok(builder.includes('^sha256:[a-f0-9]{64}$'));
   assert.ok(builder.includes('tech.snapetech.bookshelfng'));
-  assert.match(builder, /CHAPTARRNG_COMPAT_IMAGE=/);
+  assert.match(builder, /CHAPTARRNG_IMAGE=/);
   assert.ok(builder.includes('bookshelfng-container-platform-candidates.tar.gz'));
-  assert.ok(publishJob.includes('BOOKSHELF_HARDCOVER_DIGEST: ${{ needs.docker.outputs.bookshelf_hardcover_digest }}'));
+  assert.ok(publishJob.includes('CHAPTARRNG_IMAGE_DIGEST: ${{ needs.docker.outputs.image_digest }}'));
   assert.ok(publishJob.includes('build-bookshelf-container-platform-candidates.sh'));
   assert.ok(publishJob.includes('bookshelfng-container-platform-candidates.tar.gz'));
   assert.ok(publishJob.includes('tar -tzf "$RUNNER_TEMP/release-assets/$container_candidates"'));
@@ -518,7 +518,7 @@ test('Windows release uses private Packer and verifies the BookshelfNG handoff a
   assert.match(buildWorkflow, /windows_chocolatey_only:[\s\S]*?type: boolean[\s\S]*?default: false/);
   assert.match(build, /inputs\.windows_chocolatey_only[\s\S]*?fromJSON\('\["windows-x64"\]'\)/);
   assert.match(buildWorkflow, /postgres-migrations:[\s\S]*?inputs\.windows_chocolatey_only/);
-  assert.match(buildWorkflow, /docker-compatibility-build:[\s\S]*?inputs\.windows_chocolatey_only/);
+  assert.match(buildWorkflow, /docker-image-build:[\s\S]*?inputs\.windows_chocolatey_only/);
   assert.match(buildWorkflow, /rpm_bridge_only:[\s\S]*?type: boolean[\s\S]*?default: false/);
   const rpmAcceptance = readWorkflowJob(buildWorkflow, 'rpm-bridge-acceptance');
   assert.match(rpmAcceptance, /inputs\.rpm_bridge_only == true/);
@@ -554,7 +554,7 @@ test('StartOS candidate documents installed test acceptance and remaining releas
   assert.match(readme, /official signed package, update from the public `\.71` StartOS package,\s+external\s+repository delivery, or package-manager rollback/i);
   assert.match(manifest, /packageRepo: 'https:\/\/github\.com\/snapetech(?:-org)?\/bookshelfng-startos'/);
   assert.match(manifest, /upstreamRepo: 'https:\/\/github\.com\/snapetech-org\/chaptarrng'/);
-  assert.match(manifest, /source: \{ dockerTag: 'ghcr\.io\/snapetech-org\/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__' \}/);
+  assert.match(manifest, /source: \{ dockerTag: 'ghcr\.io\/snapetech-org\/chaptarrng@sha256:__CHAPTARRNG_IMAGE_DIGEST__' \}/);
 });
 
 test('interactive package migration choices default to No before conversion', () => {

@@ -74,7 +74,7 @@ RUN test -s /app/UI/index.html
 
 ###### runtime stage ######
 # Pin the cross-platform runtime to the patch shipped with SDK 10.0.403.
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.14-noble@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee AS runtime
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.14-noble@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee AS chaptarrng-standard
 RUN dotnet --list-runtimes | grep -Fq 'Microsoft.NETCore.App 10.0.14' \
     && dotnet --list-runtimes | grep -Fq 'Microsoft.AspNetCore.App 10.0.14'
 
@@ -134,7 +134,7 @@ RUN set -eux; \
 
 # Copy our robust entrypoint script
 COPY docker-entrypoint.sh /entrypoint.sh
-COPY docker-bookshelf-compatibility-defaults.sh /docker-bookshelf-compatibility-defaults.sh
+COPY docker-bookshelf-migration-detect.sh /docker-bookshelf-migration-detect.sh
 COPY docker-bookshelf-compat-supervisor.sh /usr/local/bin/chaptarr-bookshelf-compat-supervisor
 COPY docker-bookshelf-liveness.sh /usr/local/bin/chaptarr-bookshelf-liveness
 COPY --chmod=0755 docker-startos-init.sh /init
@@ -143,6 +143,9 @@ COPY docker-healthcheck.sh /usr/local/bin/chaptarr-healthcheck
 RUN chmod +x /usr/local/bin/chaptarr-healthcheck
 
 WORKDIR /app
+
+# Every fresh and migrated install uses this exact standard image.
+EXPOSE 8789
 
 # Containers are updated by pulling a new image, not by the in-app updater.
 ENV CHAPTARR_PACKAGE_UPDATE_MECHANISM=Docker \
@@ -157,30 +160,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=2m --retries=3 \
     CMD ["/usr/local/bin/chaptarr-healthcheck"]
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["dotnet", "/app/Chaptarr.dll", "-nobrowser", "-data=/config"]
-
-# These two lightweight targets preserve the source provider mode when an
-# existing BookshelfNG image alias is redirected to ChaptarrNG. The normal
-# ChaptarrNG target intentionally leaves HARDCOVER unset so new installs do
-# not silently choose a primary catalog.
-FROM runtime AS bookshelf-softcover
-EXPOSE 8787
-ENV HARDCOVER=false \
-    CHAPTARR_BOOKSHELF_COMPATIBILITY=true \
-    CHAPTARR_DEFAULT_PORT=8787 \
-    BOOKSHELFNG_MIGRATION_MODE=automatic
-HEALTHCHECK --interval=30s --timeout=10s --start-period=245m --retries=3 \
-    CMD ["/usr/local/bin/chaptarr-healthcheck"]
-
-FROM runtime AS bookshelf-hardcover
-EXPOSE 8787
-ENV HARDCOVER=true \
-    CHAPTARR_BOOKSHELF_COMPATIBILITY=true \
-    CHAPTARR_DEFAULT_PORT=8787 \
-    BOOKSHELFNG_MIGRATION_MODE=automatic
-HEALTHCHECK --interval=30s --timeout=10s --start-period=245m --retries=3 \
-    CMD ["/usr/local/bin/chaptarr-healthcheck"]
-
-# Keep the default Docker build target the ordinary ChaptarrNG image.
-FROM runtime AS chaptarrng-standard
-EXPOSE 8789
 

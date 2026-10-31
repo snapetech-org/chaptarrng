@@ -5,4 +5,4 @@ area: packaging
 action: none
 breaking: false
 ---
-The published standard Docker image now uses the target that advertises its default `8789` container port. BookshelfNG compatibility images continue to advertise `8787`.
+The standard ChaptarrNG image advertises its fresh-install default port `8789`. Legacy BookshelfNG package adapters use that same image digest and preserve their service port through channel configuration; no second compatibility image is built.

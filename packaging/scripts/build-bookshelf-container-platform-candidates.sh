@@ -2,7 +2,7 @@
 set -euo pipefail
 
 : "${VERSION:?VERSION must contain the ChaptarrNG release version}"
-: "${BOOKSHELF_HARDCOVER_DIGEST:?BOOKSHELF_HARDCOVER_DIGEST must contain the published compatibility image digest}"
+: "${CHAPTARRNG_IMAGE_DIGEST:?CHAPTARRNG_IMAGE_DIGEST must contain the standard ChaptarrNG image digest}"
 : "${OUTPUT_DIR:?OUTPUT_DIR must be a new task-scoped output directory}"
 
 if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
@@ -10,8 +10,8 @@ if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; th
   exit 2
 fi
 
-if [[ ! "$BOOKSHELF_HARDCOVER_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]; then
-  echo "Expected a sha256 digest for the BookshelfNG Hardcover compatibility image." >&2
+if [[ ! "$CHAPTARRNG_IMAGE_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+  echo "Expected a sha256 digest for the standard ChaptarrNG image." >&2
   exit 2
 fi
 
@@ -31,7 +31,7 @@ if [[ -e "$OUTPUT_DIR" || -L "$OUTPUT_DIR" ]]; then
 fi
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)
-image="ghcr.io/snapetech-org/chaptarrng@$BOOKSHELF_HARDCOVER_DIGEST"
+image="ghcr.io/snapetech-org/chaptarrng@$CHAPTARRNG_IMAGE_DIGEST"
 work=$(mktemp -d "$parent/.bookshelfng-container-candidates.XXXXXX")
 cleanup() {
   result=$?
@@ -113,7 +113,7 @@ image = sys.argv[2]
 version = sys.argv[3]
 startos_manifest = root / "startos" / "startos" / "manifest" / "index.ts"
 startos_text = startos_manifest.read_text(encoding="utf-8")
-placeholder = "ghcr.io/snapetech-org/chaptarrng@sha256:__BOOKSHELF_HARDCOVER_DIGEST__"
+placeholder = "ghcr.io/snapetech-org/chaptarrng@sha256:__CHAPTARRNG_IMAGE_DIGEST__"
 if startos_text.count(placeholder) != 1:
     raise SystemExit("StartOS manifest did not contain exactly one image digest placeholder.")
 startos_manifest.write_text(startos_text.replace(placeholder, image), encoding="utf-8")
@@ -126,9 +126,9 @@ if startos_version_text.count(old_startos_version) != 1:
     raise SystemExit("StartOS candidate does not contain exactly one package-version placeholder.")
 startos_version_file.write_text(startos_version_text.replace(old_startos_version, new_startos_version), encoding="utf-8")
 
-legacy_tag = "ghcr.io/snapetech-org/chaptarrng:bookshelf-hardcover"
+legacy_tag = "ghcr.io/snapetech-org/chaptarrng:latest"
 dockerfile_old = (
-    "# This compatibility image tag is a source candidate. Before a Cloudron update\n"
+    "# This standard ChaptarrNG image tag is a source candidate. Before a Cloudron update\n"
     "# is accepted, replace it with the exact published multi-architecture digest\n"
     "# that passed the migration and rollback rehearsals.\n"
     "FROM " + legacy_tag
@@ -142,20 +142,20 @@ replacements = {
     root / "cloudron" / "Dockerfile": (dockerfile_old, dockerfile_new),
     root / "coop-cloud" / "bookshelfng" / "compose.yml": (legacy_tag, image),
     root / "coop-cloud" / "bookshelfng" / ".env.sample": (
-        "CHAPTARRNG_COMPAT_IMAGE=" + legacy_tag,
-        "CHAPTARRNG_COMPAT_IMAGE=" + image,
+        "CHAPTARRNG_IMAGE=" + legacy_tag,
+        "CHAPTARRNG_IMAGE=" + image,
     ),
     root / "catalogs" / "compose.yaml": (legacy_tag, image),
     root / "catalogs" / ".env.sample": (
-        "CHAPTARRNG_COMPAT_IMAGE=" + legacy_tag,
-        "CHAPTARRNG_COMPAT_IMAGE=" + image,
+        "CHAPTARRNG_IMAGE=" + legacy_tag,
+        "CHAPTARRNG_IMAGE=" + image,
     ),
 }
 
 for path, (old, new) in replacements.items():
     text = path.read_text(encoding="utf-8")
     if text.count(old) != 1:
-        raise SystemExit(f"{path.relative_to(root)} did not contain exactly one expected compatibility image reference.")
+        raise SystemExit(f"{path.relative_to(root)} did not contain exactly one expected standard image reference.")
     path.write_text(text.replace(old, new), encoding="utf-8")
 
 compose_path = root / "coop-cloud" / "bookshelfng" / "compose.yml"
@@ -169,7 +169,7 @@ unraid_path = root / "unraid" / "bookshelfng.xml"
 unraid_text = unraid_path.read_text(encoding="utf-8")
 unraid_image = "<Repository>" + legacy_tag + "</Repository>"
 if unraid_text.count(unraid_image) != 1:
-    raise SystemExit("Unraid candidate does not preserve the BookshelfNG compatibility image tag.")
+    raise SystemExit("Unraid candidate does not preserve the BookshelfNG package identity on the standard ChaptarrNG image.")
 unraid_path.write_text(unraid_text.replace(unraid_image, "<Repository>" + image + "</Repository>"), encoding="utf-8")
 PY
 
@@ -187,18 +187,14 @@ StartOS package version is @VERSION@:1 so each ChaptarrNG release advances the
 existing package channel. The existing BookshelfNG app, stack, package,
 container, and volume identities remain in place.
 
-Compose, Co-op Cloud, Cloudron, and Unraid candidates preserve the native
-Hardcover mode used by their existing BookshelfNG image or template. Set
-`HARDCOVER=false` when migrating a prior softcover image. Helm infers the
-provider mode from the old `image.tag` or a readable `HARDCOVER` override; use
-an explicit `bookshelfMigration.providerMode` when the source setting is
-outside the chart values. Every image-backed candidate enables the first-start
-migration and rollback supervisor. StartOS explicitly keeps its existing
-Hardcover-mode source contract. The self-hosted Compose bundle
-accepts separate `BOOKSHELFNG_PORT` and `BOOKSHELFNG_HOST_PORT` values to
-retain a customized internal port and host binding. A container operator can
-set `BOOKSHELFNG_MIGRATION_MODE=retry` after a clean rollback and correction;
-an intervention-required state remains blocked for manual recovery.
+Every image-backed candidate pins the same standard ChaptarrNG image digest.
+The standard image does not infer provider mode from an old tag. Preserve the
+BookshelfNG source's `HARDCOVER=true` or `HARDCOVER=false` setting in channel
+configuration; if it is unavailable, resolve the provider mode before
+migration. ChaptarrNG stops conversion when the required mode is absent or
+invalid. Existing package, service, volume, and host-port identities are kept
+by platform configuration; no separate ChaptarrNG image target or fresh-install
+port default is used.
 
 These files are handoff candidates for their platform maintainers. They do not
 update external catalogs or establish platform install, backup, or rollback
