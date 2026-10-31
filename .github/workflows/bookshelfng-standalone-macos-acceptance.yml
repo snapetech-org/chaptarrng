@@ -1,8 +1,20 @@
 # ng-runner-policy: private-jit-required-v1
 name: BookshelfNG standalone macOS handoff acceptance
+run-name: ${{ format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool) }}
 
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: Admit this acceptance run to the private JIT broker
+        required: true
+        type: choice
+        options: [ci]
+      runner_pool:
+        description: Select the private ephemeral JIT pool
+        required: true
+        type: choice
+        options: [private]
 
 permissions:
   contents: read
@@ -14,7 +26,8 @@ concurrency:
 jobs:
   installed-handoff:
     name: BookshelfNG .76 to current ${{ matrix.rid }} archive
-    runs-on: ${{ matrix.architecture == 'X64' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","X64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","ARM64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    if: github.ref == 'refs/heads/main' && inputs.action == 'ci' && inputs.runner_pool == 'private'
+    runs-on: ${{ matrix.architecture == 'X64' && fromJSON(format('{{"group":"private-apple-builds","labels":["self-hosted","macOS","X64","private-apple","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-{1}-installed-handoff"]}}', github.run_id, strategy.job-index)) || fromJSON(format('{{"group":"private-apple-builds","labels":["self-hosted","macOS","ARM64","private-apple","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-{1}-installed-handoff"]}}', github.run_id, strategy.job-index)) }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
