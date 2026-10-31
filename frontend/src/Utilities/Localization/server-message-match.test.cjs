@@ -16,7 +16,7 @@ test('every registry pattern preserves every dynamic value exactly', () => {
   const matchers = compileServerMessageMatchers(records);
 
   for (const entry of records) {
-    const tokens = Object.fromEntries(entry.parameters.map(({ name }) => [name, `DYNAMIC_${name}_العربية` ]));
+    const tokens = Object.fromEntries(entry.parameters.map(({ name }) => [name, `DYNAMIC_${name}_العربية`]));
 
     for (const pattern of entry.patterns) {
       const message = pattern.replace(/\{value\d+\}/g, (token) => tokens[token.slice(1, -1)]);
@@ -39,7 +39,7 @@ test('fixed source matches are anchored and unknown messages remain unknown', ()
 
 test('captured external data is not recursively interpreted or normalized', () => {
   const matchers = compileServerMessageMatchers([
-    record('file', "File '{value0}' does not exist", ['value0']),
+    record('file', 'File \'{value0}\' does not exist', ['value0']),
     record('other', 'A category is recommended')
   ]);
   const value = 'A category is recommended / الكتب / file{0}.epub';
@@ -77,11 +77,11 @@ test('equally specific ambiguous messages are left unchanged', () => {
 
 test('ambiguous interior delimiters are rejected without changing any data', () => {
   const matchers = compileServerMessageMatchers([
-    record('two', "From '{value0}' to '{value1}'", ['value0', 'value1'])
+    record('two', 'From \'{value0}\' to \'{value1}\'', ['value0', 'value1'])
   ]);
 
-  assert.equal(matchServerMessage("From 'a' to 'b' to 'c'", matchers), null);
-  assert.deepEqual(matchServerMessage("From 'a' to 'b'", matchers).tokens, { value0: 'a', value1: 'b' });
+  assert.equal(matchServerMessage('From \'a\' to \'b\' to \'c\'', matchers), null);
+  assert.deepEqual(matchServerMessage('From \'a\' to \'b\'', matchers).tokens, { value0: 'a', value1: 'b' });
 });
 
 test('empty optional details and multiline external data are preserved', () => {
@@ -125,4 +125,48 @@ test('undeclared valueN examples stay literal and never become captures', () => 
   }]);
   assert.deepEqual(matchServerMessage('Use {value0} literally', matchers).tokens, {});
   assert.equal(matchServerMessage('Use private-provider-data literally', matchers), null);
+});
+
+test('real concatenated and FluentValidation outputs capture expanded values', () => {
+  const matchers = compileServerMessageMatchers(records);
+  const state = matchServerMessage('Unknown download state: pausedUP', matchers);
+  assert.equal(state.id, 'server.message.m0a3d9d1876f5');
+  assert.deepEqual(state.tokens, { value0: 'pausedUP' });
+  const folder = '/opt/Books [01]/كتاب {id}';
+  const descendant = matchServerMessage(`Must not be a descendant of '${folder}'`, matchers);
+  assert.equal(descendant.id, 'server.message.mc78af077e86e');
+  assert.deepEqual(descendant.tokens, { value0: folder });
+});
+
+test('app-authored folder relationships select fixed variants instead of leaking English captures', () => {
+  const matchers = compileServerMessageMatchers(records);
+  const path = '/books/Book 01 - كتاب';
+  const system = '/opt/chaptarr';
+  const cases = [
+    [`Path '${path}' is set to configured recycle bin folder`, 'server.message.m23e7ac60ea9c', { value0: path }],
+    [`Path '${path}' is child of configured recycle bin folder`, 'server.message.m23e7ac60ea9c.child', { value0: path }],
+    [`Path '${path}' cannot be set to the start up folder`, 'server.message.mca83d096fea2', { value0: path }],
+    [`Path '${path}' cannot be child of the start up folder`, 'server.message.mca83d096fea2.child', { value0: path }],
+    [`Path '${path}' is set to system folder ${system}`, 'server.message.mccd996f9f042', { value0: path, value1: system }],
+    [`Path '${path}' is child of system folder ${system}`, 'server.message.mccd996f9f042.child', { value0: path, value1: system }],
+    [`Path '${path}' is an ancestor of an existing author`, 'server.message.m2dffb9a40e48', { value0: path }],
+    [`Path '${path}' is an ancestor of an existing root folder`, 'server.message.m6b84bc76853e', { value0: path }]
+  ];
+  for (const [message, id, tokens] of cases) {
+    const result = matchServerMessage(message, matchers);
+    assert.equal(result.id, id);
+    assert.deepEqual(result.tokens, tokens);
+  }
+});
+
+test('optional environment hints capture only opaque diagnostic fields', () => {
+  const matchers = compileServerMessageMatchers(records);
+  const environment = 'PUID=1000 PGID=1001 UMASK=002';
+  const entry = records.find(({ id }) => id === 'server.message.m301553d117f5');
+  const text = entry.patterns[0].replace('{value0}', '/books').replace('{value1}', 'keith (uid=1000)');
+  assert.deepEqual(matchServerMessage(text, matchers).tokens, { value0: '/books', value1: 'keith (uid=1000)' });
+  const withEnvironment = `${text} (env: ${environment})`;
+  const result = matchServerMessage(withEnvironment, matchers);
+  assert.equal(result.id, 'server.message.m301553d117f5.environment');
+  assert.deepEqual(result.tokens, { value0: '/books', value1: 'keith (uid=1000)', value2: environment });
 });

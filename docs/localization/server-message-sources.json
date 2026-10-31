@@ -770,11 +770,17 @@
     },
     {
       "id": "server.message.m0a3d9d1876f5",
-      "source": "Unknown download state: {torrent.State}",
-      "sourceFingerprint": "3cb0582e652581eab5b446862c32004f55d40963df03a8f51f5371459550c144",
-      "parameters": [],
+      "source": "Unknown download state: {value0}",
+      "sourceFingerprint": "cddd4e6ab2f726578d570b463f536a84a40a4b881d6d1d20c7e461eda8655fd6",
+      "parameters": [
+        {
+          "name": "value0",
+          "sourceToken": "{torrent.State}",
+          "kind": "dynamic-data"
+        }
+      ],
       "patterns": [
-        "Unknown download state: {torrent.State}"
+        "Unknown download state: {value0}"
       ],
       "sourceTemplates": [
         "Unknown download state: {torrent.State}"
@@ -789,7 +795,8 @@
           "surface": "Server-owned queue/proxy/import/naming status, error, or notification text consumed by project UI"
         }
       ],
-      "protectedLiterals": []
+      "protectedLiterals": [],
+      "normalizationNote": "C# concatenation is a dynamic protocol-state value, not literal brace text."
     },
     {
       "id": "server.message.m0a5e4e3a7626",
@@ -1838,22 +1845,17 @@
     },
     {
       "id": "server.message.m23e7ac60ea9c",
-      "source": "Path '{value0}' is {value1} configured recycle bin folder",
-      "sourceFingerprint": "5c5987b77df07a58735aa48bb5ec80122f20b93039c7ea4e866fd43cb0543d42",
+      "source": "Path '{value0}' is the configured recycle bin folder",
+      "sourceFingerprint": "4bfa60b7a8a19cda709a467a513a317a2dbabc5c63ca386602973689b4cff76b",
       "parameters": [
         {
           "name": "value0",
-          "sourceToken": "{dynamic}",
-          "kind": "dynamic-data"
-        },
-        {
-          "name": "value1",
-          "sourceToken": "{dynamic}",
+          "sourceToken": "{path}",
           "kind": "dynamic-data"
         }
       ],
       "patterns": [
-        "Path '{value0}' is {value1} configured recycle bin folder"
+        "Path '{value0}' is set to configured recycle bin folder"
       ],
       "sourceTemplates": [
         "Path '{dynamic}' is {dynamic} configured recycle bin folder"
@@ -1866,9 +1868,56 @@
           "sourceLineSha256": "0b56a0c4e060afa75354b667fe2572126abf6c97f8fded1b2d8270d1ec405aad",
           "category": "validator-template",
           "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/RecycleBinValidator.cs",
+          "line": 34,
+          "sourceLine": "context.MessageFormatter.AppendArgument(\"relationship\", \"set to\");",
+          "sourceLineSha256": "8fbe682220fb361e363f14187ff8bb7d99aa451f91f7d6aeec95fafd230b82b7",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
         }
       ],
-      "protectedLiterals": []
+      "protectedLiterals": [],
+      "normalizationNote": "The app-authored relationship 'set to' is fixed grammar, not dynamic data. Only paths/system-folder values are captured."
+    },
+    {
+      "id": "server.message.m23e7ac60ea9c.child",
+      "source": "Path '{value0}' is inside the configured recycle bin folder",
+      "sourceFingerprint": "a6eb965575145751a5b49aa5c2dfb5cedf1f01933fd8b2e88502f7346786b6f6",
+      "parameters": [
+        {
+          "name": "value0",
+          "sourceToken": "{path}",
+          "kind": "dynamic-data"
+        }
+      ],
+      "patterns": [
+        "Path '{value0}' is child of configured recycle bin folder"
+      ],
+      "sourceTemplates": [
+        "Path '{dynamic}' is {dynamic} configured recycle bin folder"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/RecycleBinValidator.cs",
+          "line": 18,
+          "sourceLine": "protected override string GetDefaultMessageTemplate() => \"Path '{path}' is {relationship} configured recycle bin folder\";",
+          "sourceLineSha256": "0b56a0c4e060afa75354b667fe2572126abf6c97f8fded1b2d8270d1ec405aad",
+          "category": "validator-template",
+          "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/RecycleBinValidator.cs",
+          "line": 41,
+          "sourceLine": "context.MessageFormatter.AppendArgument(\"relationship\", \"child of\");",
+          "sourceLineSha256": "b9c73867c9f46ffd21986ae139bc20a5ed6f569fefa59a258932f9db8e3aa22b",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
+        }
+      ],
+      "protectedLiterals": [],
+      "normalizationNote": "The app-authored relationship 'child of' is fixed grammar, not dynamic data. Only paths/system-folder values are captured."
     },
     {
       "id": "server.message.m2546d2b6166c",
@@ -2471,8 +2520,53 @@
     },
     {
       "id": "server.message.m301553d117f5",
-      "source": "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{value2}",
-      "sourceFingerprint": "621c90f12ce2b854e0ad8166414e4f5527297df1532048fa8ea05ee2d23c9a7d",
+      "source": "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.",
+      "sourceFingerprint": "31209bc8d242219374cb412cbee2f288047b5e856583fd1ac53bf9d65bdb1086",
+      "parameters": [
+        {
+          "name": "value0",
+          "sourceToken": "{dynamic}",
+          "kind": "dynamic-data"
+        },
+        {
+          "name": "value1",
+          "sourceToken": "{dynamic}",
+          "kind": "dynamic-data"
+        }
+      ],
+      "patterns": [
+        "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories."
+      ],
+      "sourceTemplates": [
+        "Folder '{dynamic}' is not readable by user '{dynamic}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{dynamic}"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/FolderReadableValidator.cs",
+          "line": 57,
+          "sourceLine": "_errorMessage = \"Folder '{path}' is not readable by user '{user}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{dockerHint}\";",
+          "sourceLineSha256": "2f8b12cb2a3884bcedc092db877440cf06ecc88d8fb9e80041615b4a36f904a8",
+          "category": "api-message-resource",
+          "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/FolderReadableValidator.cs",
+          "line": 34,
+          "sourceLine": "var dockerHint = dockerEnv == null ? string.Empty : $\" (env: {dockerEnv})\";",
+          "sourceLineSha256": "647fc906dbbe48545708e5ed962dda1e87ac69e1aea4c0097ee9583deed15234",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
+        }
+      ],
+      "protectedLiterals": [
+        "Chaptarr"
+      ],
+      "normalizationNote": "The optional app-authored env label/wrapper is fixed wording. Its environment diagnostic fields remain a single opaque captured value."
+    },
+    {
+      "id": "server.message.m301553d117f5.environment",
+      "source": "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories. (Environment: {value2})",
+      "sourceFingerprint": "5768a4fb53e40defc9705201d7b23b36821adbf83c68e3f50480ca89e68d09f2",
       "parameters": [
         {
           "name": "value0",
@@ -2486,12 +2580,12 @@
         },
         {
           "name": "value2",
-          "sourceToken": "{dynamic}",
+          "sourceToken": "{dockerEnv}",
           "kind": "dynamic-data"
         }
       ],
       "patterns": [
-        "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{value2}"
+        "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories. (env: {value2})"
       ],
       "sourceTemplates": [
         "Folder '{dynamic}' is not readable by user '{dynamic}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{dynamic}"
@@ -2504,11 +2598,20 @@
           "sourceLineSha256": "2f8b12cb2a3884bcedc092db877440cf06ecc88d8fb9e80041615b4a36f904a8",
           "category": "api-message-resource",
           "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/FolderReadableValidator.cs",
+          "line": 34,
+          "sourceLine": "var dockerHint = dockerEnv == null ? string.Empty : $\" (env: {dockerEnv})\";",
+          "sourceLineSha256": "647fc906dbbe48545708e5ed962dda1e87ac69e1aea4c0097ee9583deed15234",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
         }
       ],
       "protectedLiterals": [
         "Chaptarr"
-      ]
+      ],
+      "normalizationNote": "The optional app-authored env label/wrapper is fixed wording. Its environment diagnostic fields remain a single opaque captured value."
     },
     {
       "id": "server.message.m30241a539efa",
@@ -6128,8 +6231,53 @@
     },
     {
       "id": "server.message.m78430e265616",
-      "source": "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories.{value2} Chaptarr determines this by attempting to create and delete a temporary file in the folder.",
-      "sourceFingerprint": "07d34aadbaadd27927f24efb79bc5e657f25712ab575457c90aac4d10a019d59",
+      "source": "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories. Chaptarr determines this by attempting to create and delete a temporary file in the folder.",
+      "sourceFingerprint": "8f221887cf4cf08c0364467a391fd4ab276d63a74ca3f3bdbadb3e1e92924cd3",
+      "parameters": [
+        {
+          "name": "value0",
+          "sourceToken": "{dynamic}",
+          "kind": "dynamic-data"
+        },
+        {
+          "name": "value1",
+          "sourceToken": "{dynamic}",
+          "kind": "dynamic-data"
+        }
+      ],
+      "patterns": [
+        "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories. Chaptarr determines this by attempting to create and delete a temporary file in the folder."
+      ],
+      "sourceTemplates": [
+        "Folder '{dynamic}' is not writable by user '{dynamic}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories.{dynamic} Chaptarr determines this by attempting to create and delete a temporary file in the folder."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/FolderWritableValidator.cs",
+          "line": 19,
+          "sourceLine": "protected override string GetDefaultMessageTemplate() =>",
+          "sourceLineSha256": "b5d623a8277b8954ff9c623523a76027b050ed3359a793ab7a5e158610477ef2",
+          "category": "validator-template",
+          "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/FolderWritableValidator.cs",
+          "line": 32,
+          "sourceLine": "var dockerHint = dockerEnv == null ? string.Empty : $\" (env: {dockerEnv})\";",
+          "sourceLineSha256": "647fc906dbbe48545708e5ed962dda1e87ac69e1aea4c0097ee9583deed15234",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
+        }
+      ],
+      "protectedLiterals": [
+        "Chaptarr"
+      ],
+      "normalizationNote": "The optional app-authored env label/wrapper is fixed wording. Its environment diagnostic fields remain a single opaque captured value."
+    },
+    {
+      "id": "server.message.m78430e265616.environment",
+      "source": "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories. (Environment: {value2}) Chaptarr determines this by attempting to create and delete a temporary file in the folder.",
+      "sourceFingerprint": "0846f8976ac3cdcd4dda38bc80e3948a3c50d9afbbb1e23f7de383def43f340e",
       "parameters": [
         {
           "name": "value0",
@@ -6143,12 +6291,12 @@
         },
         {
           "name": "value2",
-          "sourceToken": "{dynamic}",
+          "sourceToken": "{dockerEnv}",
           "kind": "dynamic-data"
         }
       ],
       "patterns": [
-        "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories.{value2} Chaptarr determines this by attempting to create and delete a temporary file in the folder."
+        "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories. (env: {value2}) Chaptarr determines this by attempting to create and delete a temporary file in the folder."
       ],
       "sourceTemplates": [
         "Folder '{dynamic}' is not writable by user '{dynamic}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories.{dynamic} Chaptarr determines this by attempting to create and delete a temporary file in the folder."
@@ -6161,11 +6309,20 @@
           "sourceLineSha256": "b5d623a8277b8954ff9c623523a76027b050ed3359a793ab7a5e158610477ef2",
           "category": "validator-template",
           "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/FolderWritableValidator.cs",
+          "line": 32,
+          "sourceLine": "var dockerHint = dockerEnv == null ? string.Empty : $\" (env: {dockerEnv})\";",
+          "sourceLineSha256": "647fc906dbbe48545708e5ed962dda1e87ac69e1aea4c0097ee9583deed15234",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
         }
       ],
       "protectedLiterals": [
         "Chaptarr"
-      ]
+      ],
+      "normalizationNote": "The optional app-authored env label/wrapper is fixed wording. Its environment diagnostic fields remain a single opaque captured value."
     },
     {
       "id": "server.message.m794b67a4d3b9",
@@ -10736,11 +10893,17 @@
     },
     {
       "id": "server.message.mc78af077e86e",
-      "source": "Must not be a descendant of '{systemFolder}'",
-      "sourceFingerprint": "aed2e88699b37b1daf01d137f441fa2b54a57b180b9739202c5d17b5e187e7f0",
-      "parameters": [],
+      "source": "Must not be a descendant of '{value0}'",
+      "sourceFingerprint": "a28b1b694f388a87740bc072c88c5871146776e6f57a1786a9a2400e178c8677",
+      "parameters": [
+        {
+          "name": "value0",
+          "sourceToken": "{systemFolder}",
+          "kind": "dynamic-data"
+        }
+      ],
       "patterns": [
-        "Must not be a descendant of '{systemFolder}'"
+        "Must not be a descendant of '{value0}'"
       ],
       "sourceTemplates": [
         "Must not be a descendant of '{systemFolder}'"
@@ -10755,7 +10918,8 @@
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
-      "protectedLiterals": []
+      "protectedLiterals": [],
+      "normalizationNote": "FluentValidation expands this registered formatter argument to a dynamic system-folder path."
     },
     {
       "id": "server.message.mc87b96cb40ec",
@@ -10903,22 +11067,17 @@
     },
     {
       "id": "server.message.mca83d096fea2",
-      "source": "Path '{value0}' cannot be {value1} the start up folder",
-      "sourceFingerprint": "079bb08f0835912055902f0e76fd4c9b4b846ecef815a75dc840b1e22ef7fed6",
+      "source": "Path '{value0}' cannot be the startup folder",
+      "sourceFingerprint": "5ae7d57901e6ed8db466b8bf403c1ce5385b72b29002a3f1351d1cead101da4a",
       "parameters": [
         {
           "name": "value0",
-          "sourceToken": "{dynamic}",
-          "kind": "dynamic-data"
-        },
-        {
-          "name": "value1",
-          "sourceToken": "{dynamic}",
+          "sourceToken": "{path}",
           "kind": "dynamic-data"
         }
       ],
       "patterns": [
-        "Path '{value0}' cannot be {value1} the start up folder"
+        "Path '{value0}' cannot be set to the start up folder"
       ],
       "sourceTemplates": [
         "Path '{dynamic}' cannot be {dynamic} the start up folder"
@@ -10931,9 +11090,56 @@
           "sourceLineSha256": "297e5195987de338979d118f5c363bf9f946f20ad143103ec0970bd464afd0a2",
           "category": "validator-template",
           "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/StartupFolderValidator.cs",
+          "line": 33,
+          "sourceLine": "context.MessageFormatter.AppendArgument(\"relationship\", \"set to\");",
+          "sourceLineSha256": "8fbe682220fb361e363f14187ff8bb7d99aa451f91f7d6aeec95fafd230b82b7",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
         }
       ],
-      "protectedLiterals": []
+      "protectedLiterals": [],
+      "normalizationNote": "The app-authored relationship 'set to' is fixed grammar, not dynamic data. Only paths/system-folder values are captured."
+    },
+    {
+      "id": "server.message.mca83d096fea2.child",
+      "source": "Path '{value0}' cannot be inside the startup folder",
+      "sourceFingerprint": "02107082d68bc865929708ec3a246fb6dd61e40180e20e8eaaae11a380e637d8",
+      "parameters": [
+        {
+          "name": "value0",
+          "sourceToken": "{path}",
+          "kind": "dynamic-data"
+        }
+      ],
+      "patterns": [
+        "Path '{value0}' cannot be child of the start up folder"
+      ],
+      "sourceTemplates": [
+        "Path '{dynamic}' cannot be {dynamic} the start up folder"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/StartupFolderValidator.cs",
+          "line": 18,
+          "sourceLine": "protected override string GetDefaultMessageTemplate() => \"Path '{path}' cannot be {relationship} the start up folder\";",
+          "sourceLineSha256": "297e5195987de338979d118f5c363bf9f946f20ad143103ec0970bd464afd0a2",
+          "category": "validator-template",
+          "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/StartupFolderValidator.cs",
+          "line": 40,
+          "sourceLine": "context.MessageFormatter.AppendArgument(\"relationship\", \"child of\");",
+          "sourceLineSha256": "b9c73867c9f46ffd21986ae139bc20a5ed6f569fefa59a258932f9db8e3aa22b",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
+        }
+      ],
+      "protectedLiterals": [],
+      "normalizationNote": "The app-authored relationship 'child of' is fixed grammar, not dynamic data. Only paths/system-folder values are captured."
     },
     {
       "id": "server.message.mcb9b05f6a4a0",
@@ -10962,27 +11168,22 @@
     },
     {
       "id": "server.message.mccd996f9f042",
-      "source": "Path '{value0}' is {value1} system folder {value2}",
-      "sourceFingerprint": "432ea46b4351ef4ad6d10820df95cd18a9c17ba086b65d5b4b47c1251c86385e",
+      "source": "Path '{value0}' is the system folder {value1}",
+      "sourceFingerprint": "483be2aa8e6a633717d2c0fc78e6a7898e199454fed56b36983a5156d7c1fa3c",
       "parameters": [
         {
           "name": "value0",
-          "sourceToken": "{dynamic}",
+          "sourceToken": "{path}",
           "kind": "dynamic-data"
         },
         {
           "name": "value1",
-          "sourceToken": "{dynamic}",
-          "kind": "dynamic-data"
-        },
-        {
-          "name": "value2",
-          "sourceToken": "{dynamic}",
+          "sourceToken": "{systemFolder}",
           "kind": "dynamic-data"
         }
       ],
       "patterns": [
-        "Path '{value0}' is {value1} system folder {value2}"
+        "Path '{value0}' is set to system folder {value1}"
       ],
       "sourceTemplates": [
         "Path '{dynamic}' is {dynamic} system folder {dynamic}"
@@ -10995,9 +11196,61 @@
           "sourceLineSha256": "efee0a651a9264b1b44412117edf25688c13761d76726ed20bb495e801e72221",
           "category": "validator-template",
           "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/SystemFolderValidator.cs",
+          "line": 24,
+          "sourceLine": "context.MessageFormatter.AppendArgument(\"relationship\", \"set to\");",
+          "sourceLineSha256": "8fbe682220fb361e363f14187ff8bb7d99aa451f91f7d6aeec95fafd230b82b7",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
         }
       ],
-      "protectedLiterals": []
+      "protectedLiterals": [],
+      "normalizationNote": "The app-authored relationship 'set to' is fixed grammar, not dynamic data. Only paths/system-folder values are captured."
+    },
+    {
+      "id": "server.message.mccd996f9f042.child",
+      "source": "Path '{value0}' is inside the system folder {value1}",
+      "sourceFingerprint": "d2bfd2afdfa90cd1f5a924c37880e2a2992b83903419c24738eb7fbb2badc170",
+      "parameters": [
+        {
+          "name": "value0",
+          "sourceToken": "{path}",
+          "kind": "dynamic-data"
+        },
+        {
+          "name": "value1",
+          "sourceToken": "{systemFolder}",
+          "kind": "dynamic-data"
+        }
+      ],
+      "patterns": [
+        "Path '{value0}' is child of system folder {value1}"
+      ],
+      "sourceTemplates": [
+        "Path '{dynamic}' is {dynamic} system folder {dynamic}"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/SystemFolderValidator.cs",
+          "line": 11,
+          "sourceLine": "protected override string GetDefaultMessageTemplate() => \"Path '{path}' is {relationship} system folder {systemFolder}\";",
+          "sourceLineSha256": "efee0a651a9264b1b44412117edf25688c13761d76726ed20bb495e801e72221",
+          "category": "validator-template",
+          "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/SystemFolderValidator.cs",
+          "line": 31,
+          "sourceLine": "context.MessageFormatter.AppendArgument(\"relationship\", \"child of\");",
+          "sourceLineSha256": "b9c73867c9f46ffd21986ae139bc20a5ed6f569fefa59a258932f9db8e3aa22b",
+          "category": "fixed-template-fragment",
+          "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
+        }
+      ],
+      "protectedLiterals": [],
+      "normalizationNote": "The app-authored relationship 'child of' is fixed grammar, not dynamic data. Only paths/system-folder values are captured."
     },
     {
       "id": "server.message.mcd62354c7d7b",
@@ -13569,12 +13822,64 @@
   ],
   "counts": {
     "originalTemplates": 486,
-    "sourceOccurrences": 643,
-    "translatableMessages": 481,
+    "sourceOccurrences": 650,
+    "translatableMessages": 486,
     "knownExistingCatalogKeys": 6,
-    "newCatalogKeys": 475,
-    "sourceCallsites": 642,
-    "excludedTemplates": 1
+    "newCatalogKeys": 480,
+    "sourceCallsites": 649,
+    "excludedTemplates": 1,
+    "rawInputSourceOccurrences": 643,
+    "sourceBindings": 657
   },
-  "sourceBaseHead": "50a3e94fb56f42068e6ff8893ad962ef282b37e9"
+  "sourceBaseHead": "50a3e94fb56f42068e6ff8893ad962ef282b37e9",
+  "normalizations": [
+    {
+      "id": "server.message.m0a3d9d1876f5",
+      "reason": "C# concatenation is a dynamic protocol-state value, not literal brace text."
+    },
+    {
+      "id": "server.message.mc78af077e86e",
+      "reason": "FluentValidation expands this registered formatter argument to a dynamic system-folder path."
+    },
+    {
+      "id": "server.message.m23e7ac60ea9c",
+      "variants": [
+        "server.message.m23e7ac60ea9c",
+        "server.message.m23e7ac60ea9c.child"
+      ],
+      "reason": "Only the two emitted set-to/child-of relationship branches are matched. Existing fixed ancestor messages are separate source records."
+    },
+    {
+      "id": "server.message.mca83d096fea2",
+      "variants": [
+        "server.message.mca83d096fea2",
+        "server.message.mca83d096fea2.child"
+      ],
+      "reason": "Only the two emitted set-to/child-of relationship branches are matched. Existing fixed ancestor messages are separate source records."
+    },
+    {
+      "id": "server.message.mccd996f9f042",
+      "variants": [
+        "server.message.mccd996f9f042",
+        "server.message.mccd996f9f042.child"
+      ],
+      "reason": "Only the two emitted set-to/child-of relationship branches are matched. Existing fixed ancestor messages are separate source records."
+    },
+    {
+      "id": "server.message.m301553d117f5",
+      "variants": [
+        "server.message.m301553d117f5",
+        "server.message.m301553d117f5.environment"
+      ],
+      "reason": "Empty Docker hint versus fixed env-label wrapper; only the environment summary is dynamic."
+    },
+    {
+      "id": "server.message.m78430e265616",
+      "variants": [
+        "server.message.m78430e265616",
+        "server.message.m78430e265616.environment"
+      ],
+      "reason": "Empty Docker hint versus fixed env-label wrapper; only the environment summary is dynamic."
+    }
+  ]
 }

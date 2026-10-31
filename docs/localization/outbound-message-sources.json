@@ -1130,6 +1130,35 @@
   ],
   "counts": {
     "messages": 57,
-    "sourceCallsites": 108
-  }
+    "sourceCallsites": 108,
+    "excludedCallsites": 2
+  },
+  "excluded": [
+    {
+      "category": "protected-technical-literal",
+      "reason": "Proper is a release-revision marker, not the adjective proper. The full core review intentionally preserves Proper/Real across all twelve locales.",
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Notifications/NotificationService.cs",
+          "line": 103,
+          "sourceLine": "qualityString += \" Proper\";",
+          "sourceLineSha256": "015cc2a4c06dd0473aa0d5876b4b965d738399eeb474569c953ae8a6364e10d4"
+        }
+      ],
+      "referenceId": "Proper",
+      "expectedValue": "Proper"
+    },
+    {
+      "category": "dynamic-metadata-field",
+      "reason": "Retag diff keys are metadata/protocol field identifiers and can originate outside the UI catalog; preserve them alongside paths and old/new values.",
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Notifications/NotificationService.cs",
+          "line": 136,
+          "sourceLine": "string.Join(\"\\n\", diff.Select(x => $\"{x.Key}: {FormatMissing(x.Value.Item1)} → {FormatMissing(x.Value.Item2)}\")));",
+          "sourceLineSha256": "0da14328a7f8cc1bfe28761b5ca8f73d3d3f7ca12d5a8d1bdf106d9311db7fd6"
+        }
+      ]
+    }
+  ]
 }

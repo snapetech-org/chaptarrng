@@ -7,13 +7,11 @@ function compilePattern(pattern, parameters) {
   const parameterNames = new Set(parameters);
 
   for (const match of pattern.matchAll(/\{(value\d+)\}/g)) {
-    if (!parameterNames.has(match[1])) {
-      continue;
+    if (parameterNames.has(match[1])) {
+      parts.push(pattern.slice(cursor, match.index));
+      names.push(match[1]);
+      cursor = match.index + match[0].length;
     }
-
-    parts.push(pattern.slice(cursor, match.index));
-    names.push(match[1]);
-    cursor = match.index + match[0].length;
   }
 
   parts.push(pattern.slice(cursor));
@@ -26,7 +24,7 @@ function compilePattern(pattern, parameters) {
     throw new Error('Adjacent server-message parameters are ambiguous');
   }
 
-  if (!parts.some((part) => /[A-Za-z]/.test(part))) {
+  if (!parts.some((part) => (/[A-Za-z]/).test(part))) {
     throw new Error('Server-message patterns require fixed application wording');
   }
 
@@ -49,7 +47,7 @@ function compileServerMessageMatchers(records) {
     ids.add(record.id);
     const parameters = record.parameters.map((parameter) => parameter.name);
 
-    if (parameters.some((name) => !/^value\d+$/.test(name)) ||
+    if (parameters.some((name) => !(/^value\d+$/).test(name)) ||
         new Set(parameters).size !== parameters.length) {
       throw new Error('Invalid server-message parameters');
     }
@@ -133,16 +131,14 @@ function matchServerMessage(message, matchers) {
 
     const tokens = matchTemplate(message, template);
 
-    if (!tokens) {
-      continue;
-    }
+    if (tokens) {
+      if (result && result.id !== template.id) {
+        return null;
+      }
 
-    if (result && result.id !== template.id) {
-      return null;
+      result = { id: template.id, source: template.source, tokens };
+      specificity = template.specificity;
     }
-
-    result = { id: template.id, source: template.source, tokens };
-    specificity = template.specificity;
   }
 
   return result;

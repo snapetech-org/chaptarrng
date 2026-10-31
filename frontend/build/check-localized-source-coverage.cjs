@@ -81,12 +81,35 @@ function checkSourceRegistry(root, file, { allowPending = false } = {}) {
       }
     }
   }
+  let excludedCallsites = 0;
+  for (const exclusion of inventory.excluded || []) {
+    if (!exclusion.reason || !['protected-technical-literal', 'dynamic-metadata-field'].includes(exclusion.category)) {
+      issues.push(file + ': exclusions need an explicit data/literal category and reason');
+    }
+    for (const callsite of exclusion.callsites) {
+      excludedCallsites++;
+      try {
+        readSourceCallsite(root, callsite);
+      } catch (error) {
+        issues.push(file + ': excluded caller changed: ' + error.message);
+      }
+    }
+    if (exclusion.referenceId) {
+      if (english[exclusion.referenceId] !== exclusion.expectedValue ||
+          targets.some(({ catalog }) => catalog[exclusion.referenceId] !== exclusion.expectedValue)) {
+        issues.push(exclusion.referenceId + ': protected technical marker changed');
+      }
+    }
+  }
+  if (excludedCallsites !== (inventory.counts.excludedCallsites || 0)) {
+    issues.push(file + ': excluded caller counts changed');
+  }
   const expectedCallsites = inventory.counts.sourceCallsites ?? inventory.counts.mappedCallsites;
   const expectedMessages = inventory.counts.messages ?? inventory.counts.mappedDistinctSources;
   if (sourceCallsites !== expectedCallsites || ids.size !== expectedMessages) {
     issues.push(file + ': coverage counts changed');
   }
-  return { issues, messages: ids.size, sourceCallsites, pendingTargets };
+  return { issues, messages: ids.size, sourceCallsites, excludedCallsites, pendingTargets };
 }
 
 function checkFieldDefinitions(root) {
@@ -114,11 +137,31 @@ function checkFieldDefinitions(root) {
   return { issues, fields: total };
 }
 
+function checkLoadingMessages(root) {
+  const inventory = JSON.parse(fs.readFileSync(path.join(root, 'docs/localization/loading-message-sources.json'), 'utf8'));
+  const expectedFile = 'frontend/src/Components/Loading/loading-messages.json';
+  if (inventory.runtimeDataFile !== expectedFile) {
+    return { issues: ['Loading message data must use its fixed repository path'], messages: 0 };
+  }
+  const runtimeFile = fs.realpathSync(path.join(root, expectedFile));
+  if (!runtimeFile.startsWith(fs.realpathSync(root) + path.sep)) {
+    return { issues: ['Loading message data escapes the repository'], messages: 0 };
+  }
+  const messages = JSON.parse(fs.readFileSync(runtimeFile, 'utf8'));
+  const expected = inventory.records.map(({ id, source }) => ({ id, source }));
+  return {
+    issues: JSON.stringify(messages) === JSON.stringify(expected) ? [] : ['Loading message fallback data differs from its source inventory'],
+    messages: messages.length
+  };
+}
+
 function checkLocalizedSourceCoverage(root, options = {}) {
   const results = {
     provider: checkSourceRegistry(root, 'docs/localization/provider-field-sources.json', options),
     outbound: checkSourceRegistry(root, 'docs/localization/outbound-message-sources.json', options),
     options: checkSourceRegistry(root, 'docs/localization/provider-option-sources.json', options),
+    loading: checkSourceRegistry(root, 'docs/localization/loading-message-sources.json', options),
+    loadingData: checkLoadingMessages(root),
     attributes: checkFieldDefinitions(root)
   };
   return { ...results, issues: Object.values(results).flatMap((result) => result.issues) };
@@ -133,4 +176,4 @@ if (require.main === module) {
     process.exitCode = 1;
   } else console.log(JSON.stringify(result));
 }
-module.exports = { fieldDefinitionText, checkLocalizedSourceCoverage, checkSourceRegistry };
+module.exports = { fieldDefinitionText, checkLocalizedSourceCoverage, checkSourceRegistry, checkLoadingMessages };

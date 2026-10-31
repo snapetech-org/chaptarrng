@@ -268,10 +268,16 @@
   },
   {
     "id": "server.message.m0a3d9d1876f5",
-    "source": "Unknown download state: {torrent.State}",
-    "parameters": [],
+    "source": "Unknown download state: {value0}",
+    "parameters": [
+      {
+        "name": "value0",
+        "sourceToken": "{torrent.State}",
+        "kind": "dynamic-data"
+      }
+    ],
     "patterns": [
-      "Unknown download state: {torrent.State}"
+      "Unknown download state: {value0}"
     ]
   },
   {
@@ -634,21 +640,30 @@
   },
   {
     "id": "server.message.m23e7ac60ea9c",
-    "source": "Path '{value0}' is {value1} configured recycle bin folder",
+    "source": "Path '{value0}' is the configured recycle bin folder",
     "parameters": [
       {
         "name": "value0",
-        "sourceToken": "{dynamic}",
-        "kind": "dynamic-data"
-      },
-      {
-        "name": "value1",
-        "sourceToken": "{dynamic}",
+        "sourceToken": "{path}",
         "kind": "dynamic-data"
       }
     ],
     "patterns": [
-      "Path '{value0}' is {value1} configured recycle bin folder"
+      "Path '{value0}' is set to configured recycle bin folder"
+    ]
+  },
+  {
+    "id": "server.message.m23e7ac60ea9c.child",
+    "source": "Path '{value0}' is inside the configured recycle bin folder",
+    "parameters": [
+      {
+        "name": "value0",
+        "sourceToken": "{path}",
+        "kind": "dynamic-data"
+      }
+    ],
+    "patterns": [
+      "Path '{value0}' is child of configured recycle bin folder"
     ]
   },
   {
@@ -886,7 +901,26 @@
   },
   {
     "id": "server.message.m301553d117f5",
-    "source": "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{value2}",
+    "source": "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.",
+    "parameters": [
+      {
+        "name": "value0",
+        "sourceToken": "{dynamic}",
+        "kind": "dynamic-data"
+      },
+      {
+        "name": "value1",
+        "sourceToken": "{dynamic}",
+        "kind": "dynamic-data"
+      }
+    ],
+    "patterns": [
+      "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories."
+    ]
+  },
+  {
+    "id": "server.message.m301553d117f5.environment",
+    "source": "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories. (Environment: {value2})",
     "parameters": [
       {
         "name": "value0",
@@ -900,12 +934,12 @@
       },
       {
         "name": "value2",
-        "sourceToken": "{dynamic}",
+        "sourceToken": "{dockerEnv}",
         "kind": "dynamic-data"
       }
     ],
     "patterns": [
-      "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{value2}"
+      "Folder '{value0}' is not readable by user '{value1}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories. (env: {value2})"
     ]
   },
   {
@@ -2133,7 +2167,26 @@
   },
   {
     "id": "server.message.m78430e265616",
-    "source": "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories.{value2} Chaptarr determines this by attempting to create and delete a temporary file in the folder.",
+    "source": "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories. Chaptarr determines this by attempting to create and delete a temporary file in the folder.",
+    "parameters": [
+      {
+        "name": "value0",
+        "sourceToken": "{dynamic}",
+        "kind": "dynamic-data"
+      },
+      {
+        "name": "value1",
+        "sourceToken": "{dynamic}",
+        "kind": "dynamic-data"
+      }
+    ],
+    "patterns": [
+      "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories. Chaptarr determines this by attempting to create and delete a temporary file in the folder."
+    ]
+  },
+  {
+    "id": "server.message.m78430e265616.environment",
+    "source": "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories. (Environment: {value2}) Chaptarr determines this by attempting to create and delete a temporary file in the folder.",
     "parameters": [
       {
         "name": "value0",
@@ -2147,12 +2200,12 @@
       },
       {
         "name": "value2",
-        "sourceToken": "{dynamic}",
+        "sourceToken": "{dockerEnv}",
         "kind": "dynamic-data"
       }
     ],
     "patterns": [
-      "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories.{value2} Chaptarr determines this by attempting to create and delete a temporary file in the folder."
+      "Folder '{value0}' is not writable by user '{value1}'. Permission denied - please ensure the Chaptarr process has write access to this directory and its subdirectories. (env: {value2}) Chaptarr determines this by attempting to create and delete a temporary file in the folder."
     ]
   },
   {
@@ -3687,10 +3740,16 @@
   },
   {
     "id": "server.message.mc78af077e86e",
-    "source": "Must not be a descendant of '{systemFolder}'",
-    "parameters": [],
+    "source": "Must not be a descendant of '{value0}'",
+    "parameters": [
+      {
+        "name": "value0",
+        "sourceToken": "{systemFolder}",
+        "kind": "dynamic-data"
+      }
+    ],
     "patterns": [
-      "Must not be a descendant of '{systemFolder}'"
+      "Must not be a descendant of '{value0}'"
     ]
   },
   {
@@ -3749,21 +3808,30 @@
   },
   {
     "id": "server.message.mca83d096fea2",
-    "source": "Path '{value0}' cannot be {value1} the start up folder",
+    "source": "Path '{value0}' cannot be the startup folder",
     "parameters": [
       {
         "name": "value0",
-        "sourceToken": "{dynamic}",
-        "kind": "dynamic-data"
-      },
-      {
-        "name": "value1",
-        "sourceToken": "{dynamic}",
+        "sourceToken": "{path}",
         "kind": "dynamic-data"
       }
     ],
     "patterns": [
-      "Path '{value0}' cannot be {value1} the start up folder"
+      "Path '{value0}' cannot be set to the start up folder"
+    ]
+  },
+  {
+    "id": "server.message.mca83d096fea2.child",
+    "source": "Path '{value0}' cannot be inside the startup folder",
+    "parameters": [
+      {
+        "name": "value0",
+        "sourceToken": "{path}",
+        "kind": "dynamic-data"
+      }
+    ],
+    "patterns": [
+      "Path '{value0}' cannot be child of the start up folder"
     ]
   },
   {
@@ -3776,26 +3844,40 @@
   },
   {
     "id": "server.message.mccd996f9f042",
-    "source": "Path '{value0}' is {value1} system folder {value2}",
+    "source": "Path '{value0}' is the system folder {value1}",
     "parameters": [
       {
         "name": "value0",
-        "sourceToken": "{dynamic}",
+        "sourceToken": "{path}",
         "kind": "dynamic-data"
       },
       {
         "name": "value1",
-        "sourceToken": "{dynamic}",
-        "kind": "dynamic-data"
-      },
-      {
-        "name": "value2",
-        "sourceToken": "{dynamic}",
+        "sourceToken": "{systemFolder}",
         "kind": "dynamic-data"
       }
     ],
     "patterns": [
-      "Path '{value0}' is {value1} system folder {value2}"
+      "Path '{value0}' is set to system folder {value1}"
+    ]
+  },
+  {
+    "id": "server.message.mccd996f9f042.child",
+    "source": "Path '{value0}' is inside the system folder {value1}",
+    "parameters": [
+      {
+        "name": "value0",
+        "sourceToken": "{path}",
+        "kind": "dynamic-data"
+      },
+      {
+        "name": "value1",
+        "sourceToken": "{systemFolder}",
+        "kind": "dynamic-data"
+      }
+    ],
+    "patterns": [
+      "Path '{value0}' is child of system folder {value1}"
     ]
   },
   {

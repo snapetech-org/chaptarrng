@@ -1365,7 +1365,9 @@
       "MinFormatScoreHelpText": "ea370b72f7d349bb9cd594386815b114a360e625a2a6df8c6861feb8fa684b2e",
       "Min": "12d276e847d282245907ed8426bd92276898a073aa9c1ed2c9f8c493ee59b6bd",
       "Seeders": "1d69d42425dec97d05c578331f1a4e43000d409b5ca75ba8abc119bd03eb1748",
-      "MIA": "5bb42a6ee729f8ea54959ea02575e2e65cadf0f000327ba0287b5b30123a5ec9"
+      "MIA": "5bb42a6ee729f8ea54959ea02575e2e65cadf0f000327ba0287b5b30123a5ec9",
+      "MediaManagement": "882c52a2352ee5276a44676e3dda91193a17e11b079a0ed522e8e36216d42dcc",
+      "MediaLibrary": "f1104b9dcab5e6b9bc0d3604038d8cdff1947a39c93b0229c59ef54101e4db4f"
     },
     "az": {},
     "bg": {},

@@ -142,12 +142,15 @@ function checkServerMessageCatalogs(root, { allowPending = false } = {}) {
   }
 
   const excludedCallsites = inventory.excluded.reduce((count, record) => count + record.callsites.length, 0);
-  const sourceTemplates = inventory.records.reduce((count, record) => count + record.sourceTemplates.length, 0);
+  const sourceTemplates = new Set(inventory.records.flatMap((record) => record.sourceTemplates)).size;
+  const callerIdentity = (callsite) => `${callsite.file}\0${callsite.line}\0${callsite.sourceLineSha256}`;
+  const uniqueCallsites = new Set(inventory.records.flatMap((record) => record.callsites.map(callerIdentity))).size;
 
-  if (sourceCallsites !== inventory.counts.sourceCallsites ||
+  if (sourceCallsites !== (inventory.counts.sourceBindings || inventory.counts.sourceCallsites) ||
+      uniqueCallsites !== inventory.counts.sourceCallsites ||
       inventory.records.length !== inventory.counts.translatableMessages ||
       inventory.excluded.length !== inventory.counts.excludedTemplates ||
-      sourceCallsites + excludedCallsites !== inventory.counts.sourceOccurrences ||
+      uniqueCallsites + excludedCallsites !== inventory.counts.sourceOccurrences ||
       sourceTemplates + inventory.excluded.length !== inventory.counts.originalTemplates) {
     issues.push('Server-message inventory coverage counts are stale');
   }
@@ -155,7 +158,8 @@ function checkServerMessageCatalogs(root, { allowPending = false } = {}) {
   return {
     issues,
     messages: inventory.records.length,
-    sourceCallsites,
+    sourceCallsites: uniqueCallsites,
+    sourceBindings: sourceCallsites,
     locales: targetFiles.length,
     excludedTemplates: inventory.excluded.length,
     pendingSource,
