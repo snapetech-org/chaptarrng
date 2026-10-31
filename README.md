@@ -32,8 +32,9 @@ For local MCP access, see the [SnapeTech MCP integration guide](docs/integration
 latest published release. The BookshelfNG handoff branch was integrated
 directly into `main`, followed by three missing localization commits from the
 other local task branches; source snapshot `bd589312` contains those commits.
-PR #183 was closed as integrated, and its remote branch was deleted. No
-exact-head private-JIT build
+PR #183 was closed as integrated, and its remote branch was deleted. The
+subsequent evidence update is `main` commit `c82f168c`; the application source
+snapshot it documents is `bd589312`. No exact-head private-JIT build
 or platform result exists for this source. Owner-PR run
 [#41167825847](https://github.com/snapetech-org/chaptarrng/actions/runs/41167825847)
 was cancelled on pre-integration head `f63796dd`; the current source has no
@@ -59,7 +60,7 @@ runner or steps. The macOS handoff, standalone-asset, and later Helm runs
 [#41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569),
 and [#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
 are likewise queued on older source without runners. GitHub reports no runs for
-the current source snapshot.
+`main` commit `c82f168c`.
 
 BookshelfNG remains in service until each capability, data and configuration
 path, rollback path, and installation channel has its own acceptance evidence.

@@ -6,7 +6,8 @@ BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977` remain the latest public
 application releases. The BookshelfNG single-image handoff and three follow-up
 localization commits were integrated directly into ChaptarrNG `main` at source
 snapshot `bd589312`; GitHub closed PR #183 as integrated, and its remote branch
-was deleted. This source change
+was deleted. The current documentation head is `c82f168c`, and the GitHub
+combined-status API returns no checks for that exact commit. This source change
 has no exact-head private-JIT build or platform result. Owner-PR run
 [#41167825847](https://github.com/snapetech-org/chaptarrng/actions/runs/41167825847)
 was cancelled on pre-integration head `f63796dd` and its validation jobs were
@@ -34,7 +35,7 @@ runner or steps. The macOS handoff, standalone-asset, and later Helm runs
 and [#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
 are likewise queued on older source without runners. The connected GitHub API
 shows no open ChaptarrNG pull requests and no exact-head workflow run for the
-current source snapshot.
+current `main` commit `c82f168c`.
 
 **Single-image migration contract (2026-10-30):** The earlier proposal for
 separate Goodreads and Hardcover compatibility images is withdrawn. The
