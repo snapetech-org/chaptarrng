@@ -2727,5 +2727,10 @@
   "TablePageSizeMinimumError": "페이지 크기는 최소 {min} 이상으로 설정해야 합니다",
   "TablePageSizeMaximumError": "페이지 크기는 {max}보다 클 수 없습니다",
   "BackupTypeManual": "수동 백업",
-  "BackupTypeBeforeUpdate": "업데이트 전"
+  "BackupTypeBeforeUpdate": "업데이트 전",
+  "Europeana": "Europeana",
+  "GoogleBooks": "Google Books",
+  "InternetArchive": "Internet Archive",
+  "LibraryOfCongress": "Library of Congress",
+  "OpenLibrary": "Open Library"
 }

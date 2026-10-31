@@ -2727,5 +2727,10 @@
   "TablePageSizeMinimumError": "每頁數量不得少於 {min}",
   "TablePageSizeMaximumError": "每頁數量不得超過 {max}",
   "BackupTypeManual": "手動備份",
-  "BackupTypeBeforeUpdate": "更新前"
+  "BackupTypeBeforeUpdate": "更新前",
+  "Europeana": "Europeana",
+  "GoogleBooks": "Google Books",
+  "InternetArchive": "Internet Archive",
+  "LibraryOfCongress": "Library of Congress",
+  "OpenLibrary": "Open Library"
 }

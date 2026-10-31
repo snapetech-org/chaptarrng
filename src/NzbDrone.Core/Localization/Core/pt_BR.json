@@ -2727,5 +2727,10 @@
   "TablePageSizeMinimumError": "O tamanho da página deve ser de pelo menos {min}",
   "TablePageSizeMaximumError": "O tamanho da página não pode exceder {max}",
   "BackupTypeManual": "Backup manual",
-  "BackupTypeBeforeUpdate": "Antes da atualização"
+  "BackupTypeBeforeUpdate": "Antes da atualização",
+  "Europeana": "Europeana",
+  "GoogleBooks": "Google Books",
+  "InternetArchive": "Internet Archive",
+  "LibraryOfCongress": "Library of Congress",
+  "OpenLibrary": "Open Library"
 }

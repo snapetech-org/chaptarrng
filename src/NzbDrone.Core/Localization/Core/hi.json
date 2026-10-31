@@ -2727,5 +2727,10 @@
   "TablePageSizeMinimumError": "पृष्ठ का आकार कम से कम {min} होना चाहिए",
   "TablePageSizeMaximumError": "पृष्ठ का आकार {max} से अधिक नहीं होना चाहिए",
   "BackupTypeManual": "मैन्युअल बैकअप",
-  "BackupTypeBeforeUpdate": "अपडेट से पहले"
+  "BackupTypeBeforeUpdate": "अपडेट से पहले",
+  "Europeana": "Europeana",
+  "GoogleBooks": "Google Books",
+  "InternetArchive": "Internet Archive",
+  "LibraryOfCongress": "Library of Congress",
+  "OpenLibrary": "Open Library"
 }

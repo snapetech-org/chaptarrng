@@ -2727,5 +2727,10 @@
   "TablePageSizeMinimumError": "يجب ألا يقل حجم الصفحة عن {min}",
   "TablePageSizeMaximumError": "يجب ألا يتجاوز حجم الصفحة {max}",
   "BackupTypeManual": "نسخة احتياطية يدوية",
-  "BackupTypeBeforeUpdate": "قبل التحديث"
+  "BackupTypeBeforeUpdate": "قبل التحديث",
+  "Europeana": "Europeana",
+  "GoogleBooks": "Google Books",
+  "InternetArchive": "Internet Archive",
+  "LibraryOfCongress": "Library of Congress",
+  "OpenLibrary": "Open Library"
 }

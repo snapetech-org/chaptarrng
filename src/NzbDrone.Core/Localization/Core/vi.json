@@ -2727,5 +2727,10 @@
   "TablePageSizeMinimumError": "Kích thước trang phải ít nhất là {min}",
   "TablePageSizeMaximumError": "Kích thước trang không được vượt quá {max}",
   "BackupTypeManual": "Bản sao lưu thủ công",
-  "BackupTypeBeforeUpdate": "Trước khi cập nhật"
+  "BackupTypeBeforeUpdate": "Trước khi cập nhật",
+  "Europeana": "Europeana",
+  "GoogleBooks": "Google Books",
+  "InternetArchive": "Internet Archive",
+  "LibraryOfCongress": "Library of Congress",
+  "OpenLibrary": "Open Library"
 }

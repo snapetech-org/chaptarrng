@@ -2727,5 +2727,10 @@
   "TablePageSizeMinimumError": "Ukuran halaman minimal {min}",
   "TablePageSizeMaximumError": "Ukuran halaman tidak boleh melebihi {max}",
   "BackupTypeManual": "Cadangan manual",
-  "BackupTypeBeforeUpdate": "Sebelum pembaruan"
+  "BackupTypeBeforeUpdate": "Sebelum pembaruan",
+  "Europeana": "Europeana",
+  "GoogleBooks": "Google Books",
+  "InternetArchive": "Internet Archive",
+  "LibraryOfCongress": "Library of Congress",
+  "OpenLibrary": "Open Library"
 }

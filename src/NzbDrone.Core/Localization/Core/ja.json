@@ -2727,5 +2727,10 @@
   "TablePageSizeMinimumError": "ページサイズは {min} 以上にしてください",
   "TablePageSizeMaximumError": "ページサイズは {max} 以下にしてください",
   "BackupTypeManual": "手動バックアップ",
-  "BackupTypeBeforeUpdate": "アップデート前"
+  "BackupTypeBeforeUpdate": "アップデート前",
+  "Europeana": "Europeana",
+  "GoogleBooks": "Google Books",
+  "InternetArchive": "Internet Archive",
+  "LibraryOfCongress": "Library of Congress",
+  "OpenLibrary": "Open Library"
 }
