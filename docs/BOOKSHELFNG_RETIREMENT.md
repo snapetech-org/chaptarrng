@@ -1,15 +1,16 @@
 # BookshelfNG retirement status
 
-## Current status — 2026-10-31 04:45 UTC
+## Current status — 2026-10-31 04:54 UTC
 
 BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977` remain the latest public
-application releases. The BookshelfNG single-image handoff and three follow-up
-localization commits were integrated directly into ChaptarrNG `main` at source
-snapshot `bd589312`; GitHub closed PR #183 as integrated, and its remote branch
-was deleted. The application source snapshot is `bd589312`; later `main`
-commits only update evidence/status documents. The GitHub combined-status API
-returned no checks for docs-only commits `c82f168c` and `79cccb61`. This source change
-has no exact-head private-JIT build or platform result. Owner-PR run
+application releases. ChaptarrNG `main` is
+`fa55ffabe632c7ee003791635ebe53fb1895d3df`; its latest application source
+snapshot is `bd5893120c24ada8ea492edc1ce21cd5cdc24d8b`. The BookshelfNG
+single-image handoff merged through PR #183 at
+`96c953b27e2b600eb9f70e23cf19b339c32dc3ad`; follow-up code preserves legacy
+Docker ports. The later `fa55ffab` commit changes a Debian release-tag gate
+assertion, not application code. No exact-head private-JIT build or platform
+result validates the application source or current main. Owner-PR run
 [#41167825847](https://github.com/snapetech-org/chaptarrng/actions/runs/41167825847)
 was cancelled on pre-integration head `f63796dd` and its validation jobs were
 skipped.
@@ -33,11 +34,15 @@ is queued at older SHA `64689f1f`; its Linux, macOS, and Windows jobs have no
 runner or steps. The macOS handoff and later Helm runs
 [#41168181470](https://github.com/snapetech-org/chaptarrng/actions/runs/41168181470)
 and [#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
-are queued on older source without runners. The connected GitHub API shows no
-open ChaptarrNG pull requests and no exact-head workflow run for the current
-app source. Standalone-assets run [41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569)
+are queued on older source without runners. No exact-head workflow run exists
+for the current app source. Standalone-assets run [41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569)
 has completed its `Build frontend once` job on a private runner; ten archive
 jobs remain queued at older SHA `64689f1f`.
+
+PR Build [#41168525352](https://github.com/snapetech-org/chaptarrng/actions/runs/41168525352)
+is waiting on merge-head validation at `96c953b2`; it does not validate
+current main. Preserve queued runs and do not dispatch duplicates or use local
+or hosted validation.
 
 **Single-image migration contract (2026-10-30):** The earlier proposal for
 separate Goodreads and Hardcover compatibility images is withdrawn. The
@@ -68,13 +73,13 @@ separate cumulative blocker covering BookshelfNG carryover and every
 ChaptarrNG capability that is maintained, active, or unreleased, including
 localization and RTL work now in `main`.
 
-The latest main-to-main BookshelfNG source-path audit remains pinned to source
-`1bd7f2dc` and ChaptarrNG target `64689f1f`: 1,174 changed paths, 56 reviewed
-mappings, 644 dispositions, and 530 paths still needing disposition. It has
-not been refreshed for source snapshot `bd589312`. The open set includes semantic review,
+The refreshed BookshelfNG source-path audit compares source `1bd7f2dc` with
+current ChaptarrNG `main` target `fa55ffab` (application source snapshot
+`bd589312`): 1,174 changed paths, 56 reviewed mappings, 587 dispositions, and
+587 paths still needing disposition. The open set includes semantic review,
 unmapped paths, source-deleted paths, and identical files without an explicit
 decision; it is not a count of missing runtime features. See the
-[exact-head consolidation audit](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-30)
+[exact-head consolidation audit](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-31)
 and its pinned inventory and maps. These path decisions do not close feature,
 data, rollback, or installed-channel acceptance.
 

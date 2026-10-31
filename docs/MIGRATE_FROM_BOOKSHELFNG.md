@@ -1,5 +1,26 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
+> **Current status (2026-10-31):** BookshelfNG `0.4.21.76` and ChaptarrNG
+> `v0.9.977` remain the latest public releases. ChaptarrNG `main` is
+> `fa55ffabe632c7ee003791635ebe53fb1895d3df`, with latest application source
+> snapshot `bd5893120c24ada8ea492edc1ce21cd5cdc24d8b`. PR #183 merged at
+> `96c953b27e2b600eb9f70e23cf19b339c32dc3ad`; the handoff uses the standard
+> ChaptarrNG application and image, with no compatibility build. No exact-head
+> private-JIT result validates the current application source. The PR Build
+> [41168525352](https://github.com/snapetech-org/chaptarrng/actions/runs/41168525352)
+> is waiting at the merge head; main and platform/archive work remains queued
+> at older source. No BookshelfNG identity has been redirected, and migration
+> apply remains frozen. Keep BookshelfNG running and backed up until every
+> feature, data/configuration path, rollback route, and installation channel
+> passes its own acceptance.
+
+> The current source-path ledger compares BookshelfNG `1bd7f2dc` to ChaptarrNG
+> `main` target `fa55ffab` (application source `bd589312`): 1,174 changed paths,
+> 56 reviewed mappings, 587 dispositions, and 587 paths without disposition.
+> Path counts are review records, not feature-parity or migration acceptance.
+> ChaptarrNG's separate upstream-retirement gate includes this full carryover
+> plus every ChaptarrNG feature that is maintained, active, or unreleased.
+
 > **Release status (2026-10-26).** ChaptarrNG `v0.9.977` remains the latest
 > public release. Local 0.9.978 candidates have passed installed handoff
 > acceptance on Debian, Fedora, Arch, Windows Chocolatey, AppImage, Flatpak,
