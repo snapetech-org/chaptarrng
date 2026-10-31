@@ -101,6 +101,8 @@ test('Windows Chocolatey release downloads private assets through the authentica
   assert.match(job, /Invoke-WebRequest -Uri \$apiUri\.AbsoluteUri -Headers \$assetHeaders -OutFile \$destination/);
   assert.match(job, /\$release\.draft -or \$release\.prerelease/);
   assert.match(job, /Get-FileHash .* -Algorithm SHA256/);
+  assert.match(job, /Copy-Item packaging\/legacy\/chocolatey\/tools\/bookshelfng-startup-recovery\.ps1/,
+    'the release package stages the recovery script required for stopped-service migrations');
   assert.doesNotMatch(job, /gh release download/);
   assert.doesNotMatch(job, /Invoke-WebRequest -Uri \$downloadUri\.AbsoluteUri -OutFile/);
 });
@@ -186,7 +188,8 @@ test('macOS installed handoff acceptance is manually dispatched and publication-
 
   assert.match(workflow, /^  workflow_dispatch:$/m);
   assert.match(workflow, /rid: osx-x64[\s\S]*?architecture: X64[\s\S]*?rid: osx-arm64[\s\S]*?architecture: ARM64/);
-  assert.match(workflow, /group":"ng-shared-main-jit"[\s\S]*?"macOS","X64"[\s\S]*?"macOS","ARM64"/);
+  assert.match(workflow, /"group":"private-apple-builds","labels":\["self-hosted","macOS","X64","private-apple"/);
+  assert.match(workflow, /"group":"private-apple-builds","labels":\["self-hosted","macOS","ARM64","private-apple"/);
   assert.match(workflow, /build-standalone\.sh "\$version" "\$\{\{ matrix\.rid \}\}"/);
   assert.match(workflow, /BookshelfNG-v\$\{\{ matrix\.predecessor_version \}\}-\$\{\{ matrix\.rid \}\}\.tar\.gz/);
   assert.match(workflow, /predecessor_version: 0\.4\.21\.76/);
@@ -509,6 +512,10 @@ test('Windows release uses private Packer and verifies the BookshelfNG handoff a
   assert.match(job, /test-chocolatey-bookshelfng-handoff\.ps1/);
   assert.match(job, /setup-dotnet@/);
   assert.match(handoff, /BookshelfVersion = '0\.4\.21\.76'/);
+  assert.match(handoff, /candidate Chocolatey package is missing the BookshelfNG startup recovery helper/);
+  assert.match(handoff, /bookshelfng-startup-recovery\.ps1/);
+  assert.ok(handoff.includes("Join-Path $repoRoot 'packaging\\legacy\\chocolatey\\tools\\bookshelfng-startup-recovery.ps1'"),
+    'the installed-handoff fixture stages the recovery helper into the package');
   assert.match(handoff, /--bookshelf-data-canary/);
   assert.match(handoff, /--verify-bookshelfng-migration/);
   assert.match(handoff, /ChaptarrNG\.Installer\.Smoke\.exe/);

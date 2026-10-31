@@ -49,6 +49,7 @@ source tree. Each remains under its own license:
 | m4b-tool (by sandreas) | MIT | https://github.com/sandreas/m4b-tool |
 | FFmpeg | LGPL-2.1-or-later (portions GPL, depending on build) | https://ffmpeg.org/ |
 | mp4v2 | MPL-1.1 | https://github.com/enzo1982/mp4v2 |
+| PDFsharp 6.5.0 | AGPL-3.0-only (selected at application startup) | https://docs.pdfsharp.net/General/License/License.html |
 
 m4b-tool is a PHP application and runs under the PHP runtime provided by the image.
 

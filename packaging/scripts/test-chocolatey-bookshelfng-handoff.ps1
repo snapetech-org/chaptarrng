@@ -71,6 +71,10 @@ function Read-PackageMetadata {
     $metadata = $nuspec.SelectSingleNode("//*[local-name()='metadata']")
     $installEntry = $zip.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '(?i)^tools/chocolateyinstall\.ps1$' } | Select-Object -First 1
     if (-not $installEntry) { throw 'The candidate Chocolatey package is missing tools/chocolateyinstall.ps1.' }
+    $recoveryEntry = $zip.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '(?i)^tools/bookshelfng-startup-recovery\.ps1$' } | Select-Object -First 1
+    if (-not $recoveryEntry -or $recoveryEntry.Length -le 0) {
+      throw 'The candidate Chocolatey package is missing the BookshelfNG startup recovery helper.'
+    }
     $reader = [IO.StreamReader]::new($installEntry.Open())
     try { $installScript = $reader.ReadToEnd() } finally { $reader.Dispose() }
     return [pscustomobject]@{
@@ -155,6 +159,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\legacy\chocolatey\tools\chocolateyinstall.ps1.in') -Destination (Join-Path $toolsDirectory 'chocolateyinstall.ps1')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\legacy\chocolatey\tools\chocolateyuninstall.ps1') -Destination (Join-Path $toolsDirectory 'chocolateyuninstall.ps1')
 
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\legacy\chocolatey\tools\bookshelfng-startup-recovery.ps1') -Destination (Join-Path $toolsDirectory 'bookshelfng-startup-recovery.ps1')
     $archiveHash = (Get-FileHash -LiteralPath $ArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
     $nuspecPath = Join-Path $packageRoot 'bookshelfng.nuspec'
     $nuspecText = (Get-Content -LiteralPath $nuspecPath -Raw).Replace('__VERSION__', $Version)

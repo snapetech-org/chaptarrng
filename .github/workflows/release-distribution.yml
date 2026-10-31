@@ -465,6 +465,7 @@ jobs:
         Copy-Item packaging/legacy/chocolatey/bookshelfng.nuspec.in (Join-Path $legacyPackageDir 'bookshelfng.nuspec')
         Copy-Item packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in (Join-Path $legacyToolsDir 'chocolateyinstall.ps1')
         Copy-Item packaging/legacy/chocolatey/tools/chocolateyuninstall.ps1 (Join-Path $legacyToolsDir 'chocolateyuninstall.ps1')
+        Copy-Item packaging/legacy/chocolatey/tools/bookshelfng-startup-recovery.ps1 (Join-Path $legacyToolsDir 'bookshelfng-startup-recovery.ps1')
         $legacyNuspec = Join-Path $legacyPackageDir 'bookshelfng.nuspec'
         $legacyNuspecText = (Get-Content $legacyNuspec -Raw).Replace('__VERSION__', $env:VERSION)
         [System.IO.File]::WriteAllText($legacyNuspec, $legacyNuspecText, [System.Text.UTF8Encoding]::new($false))
