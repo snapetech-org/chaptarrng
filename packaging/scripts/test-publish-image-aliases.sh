@@ -103,7 +103,7 @@ grep -Fq 'if [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true && "${MIGRATION_BRIDGE_GA
 grep -Fq 'needs.release-target.outputs.legacy_bridge_enabled' "$package_workflow"
 grep -Fq 'LEGACY_BRIDGE_ENABLED: ${{ needs.release-target.outputs.legacy_bridge_enabled }}' "$package_workflow"
 grep -Fq 'pkg_bases=(chaptarrng-bin)' "$package_workflow"
-grep -Fq "if: needs.credentials.outputs.bookshelfng_copr == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'" "$package_workflow"
+grep -Fq "needs.credentials.outputs.bookshelfng_copr == 'true' && needs.release-target.outputs.legacy_bridge_enabled == 'true'" "$package_workflow"
 grep -Fq 'run: ./packaging/scripts/publish-chocolatey-packages.ps1' "$package_workflow"
 grep -Fq "LEGACY_BRIDGE_ENABLED -ne 'true'" "$chocolatey_publish_script"
 if grep -Fq 'ghcr.io/${{ github.repository }}' "$docker_workflow"; then echo 'The published GHCR identity must not be derived from the transferred repository owner.' >&2; exit 1; fi
