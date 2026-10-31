@@ -1227,9 +1227,32 @@ namespace NzbDrone.Core.MediaFiles
                     continue;
                 }
 
+                if (IsSameRecording(expectedEdition, matchedEdition))
+                {
+                    // Providers list one recording several times (Audible regions, Hardcover and
+                    // Goodreads copies), and uploads rarely say which listing they are. Files that
+                    // match another listing of the grabbed narration are still the requested book.
+                    _logger.Debug(
+                        "Import matched edition {0} instead of grabbed edition {1}; same narration and language, accepting",
+                        matchedEdition.Id,
+                        expectedEdition.Id);
+                    continue;
+                }
+
                 decision.Reject(new Rejection(
                     $"Completed download was grabbed for edition '{expectedEdition.Title}', but import matched edition '{matchedEdition.Title}'. Chaptarr could not verify the expected edition."));
             }
+        }
+
+        internal static bool IsSameRecording(Edition expected, Edition matched)
+        {
+            return expected != null && matched != null &&
+                   !expected.IsEbook && !matched.IsEbook &&
+                   string.Equals(
+                       EditionMetadataProfileFilter.NormalizeLanguageBucket(expected.Language),
+                       EditionMetadataProfileFilter.NormalizeLanguageBucket(matched.Language),
+                       StringComparison.OrdinalIgnoreCase) &&
+                   BookService.HaveSameNarration(expected, matched);
         }
 
         private Edition ResolveExpectedTrackedEdition(Book book, DownloadClientItem downloadClientItem)

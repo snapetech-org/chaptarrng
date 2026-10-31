@@ -3125,7 +3125,7 @@ namespace NzbDrone.Core.Books
 
         // Narrator names arrive from several providers with inconsistent spacing and casing
         // ("Peter   Noble"), so compare on normalised tokens rather than the raw string.
-        private static bool HaveSameNarration(Edition left, Edition right)
+        internal static bool HaveSameNarration(Edition left, Edition right)
         {
             var names = GetEditionNarratorKeys(left).ToHashSet(StringComparer.OrdinalIgnoreCase);
             // A shared cast member or a generic "Full Cast" label cannot identify a recording.
