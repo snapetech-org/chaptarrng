@@ -28,23 +28,38 @@ For local MCP access, see the [SnapeTech MCP integration guide](docs/integration
 
 ### BookshelfNG migration status
 
-**Status checked: 2026-10-30.** ChaptarrNG `v0.9.977` remains the latest
-published release; `main` is `64689f1f`. The prior exact-head Build
-[#41164597664](https://github.com/snapetech-org/chaptarrng/actions/runs/41164597664)
-was cancelled on older head `474a3541` and provides no validation for current
-`main`. ChaptarrNG PR [#183](https://github.com/snapetech-org/chaptarrng/pull/183)
-proposes the one-image BookshelfNG handoff and now includes the latest
-private-JIT dispatch changes from `main`. Its earlier trusted owner-PR dispatch
+**Status checked: 2026-10-31 04:35 UTC.** ChaptarrNG `v0.9.977` remains the
+latest published release. The BookshelfNG handoff branch was integrated
+directly into `main`, followed by three missing localization commits from the
+other local task branches; source snapshot `bd589312` contains those commits.
+PR #183 was closed as integrated, and its remote branch was deleted. No
+exact-head private-JIT build
+or platform result exists for this source. Owner-PR run
 [#41167825847](https://github.com/snapetech-org/chaptarrng/actions/runs/41167825847)
-was queued on pre-integration head `f63796dd` and provides no validation for
-the current PR head. No exact-head private-JIT build/platform result exists for
-the updated branch. Do not treat queue acceptance as validation. BookshelfNG
-`0.4.21.76` remains
-published; its scheduled bridge run
-[#41157387864](https://github.com/snapetech-org/bookshelfng/actions/runs/41157387864)
-is waiting behind 16 earlier bridge runs without started jobs. No legacy
-release, package, image, installer, updater, or chart identity has been
-redirected.
+was cancelled on pre-integration head `f63796dd`; the current source has no
+passing private-JIT result.
+
+The older Build run
+[#41166424095](https://github.com/snapetech-org/chaptarrng/actions/runs/41166424095)
+has only its runner-contract job queued; platform jobs were skipped. Windows
+handoff run
+[#41166442007](https://github.com/snapetech-org/chaptarrng/actions/runs/41166442007)
+is queued without a runner. Helm Actions run
+[#41167175002](https://github.com/snapetech-org/chaptarrng/actions/runs/41167175002)
+is also queued without a runner or steps. That job would create a disposable
+Kind cluster on its private JIT runner; it never started, and no production
+cluster was involved. BookshelfNG `0.4.21.76` remains published. No release,
+package, image, installer, updater, or chart identity has been redirected.
+
+The latest observed full Build run
+[#41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
+is queued at older SHA `64689f1f`; its Linux, macOS, and Windows jobs have no
+runner or steps. The macOS handoff, standalone-asset, and later Helm runs
+[#41168181470](https://github.com/snapetech-org/chaptarrng/actions/runs/41168181470),
+[#41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569),
+and [#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
+are likewise queued on older source without runners. GitHub reports no runs for
+the current source snapshot.
 
 BookshelfNG remains in service until each capability, data and configuration
 path, rollback path, and installation channel has its own acceptance evidence.
@@ -55,12 +70,14 @@ support now in `main` are included in that gate. All organization build, test,
 scan, package, and release jobs require private ephemeral JIT; hosted fallback
 is not allowed, and missing platform capacity blocks validation.
 
-Migration uses the normal ChaptarrNG application and its standard image for
-both fresh and migrated installations. The standard container detects
-BookshelfNG appdata and starts its migration/rollback supervisor; there is no
-separate compatibility build. The release and legacy-channel gates remain
-closed until the full feature, migration, rollback, and per-channel checklist
-passes.
+Migration uses the normal ChaptarrNG application and one standard image for
+fresh and migrated installations. The container detects legacy SQLite and
+Readarr/Audioarr/Bookshelf PostgreSQL sources, then starts the bounded
+migration/rollback supervisor. Every migration requires an explicit provider
+mode and fails closed before source mutation without one. The image advertises
+both `8787/tcp` for migrated BookshelfNG data and `8789/tcp` for fresh installs.
+The release and legacy-channel gates remain closed until exact-head private-JIT
+and full per-channel acceptance pass.
 
 Chocolatey publishes standard ChaptarrNG `0.9.973` and BookshelfNG `0.4.21.76`;
 the ChaptarrNG package is behind release `v0.9.977`, and the old BookshelfNG
@@ -70,13 +87,12 @@ returned HTTP 403. See the
 [BookshelfNG package](https://community.chocolatey.org/packages/bookshelfng),
 and the [channel acceptance matrix](docs/BOOKSHELFNG_RETIREMENT.md#legacy-install-channels).
 
-The current main-to-main BookshelfNG source-path audit compares BookshelfNG
-`1bd7f2dc` with ChaptarrNG `64689f1f` and records 1,174 changed paths. It has
-56 reviewed mappings and 644 dispositions; 530 paths remain open for review.
-These are path counts, not missing-feature counts, and do not establish runtime
-parity, migration acceptance, or channel continuity. See the
+The latest main-to-main BookshelfNG source-path audit remains pinned to ChaptarrNG
+`64689f1f` and records 1,174 changed paths, 56 reviewed mappings, and 644
+dispositions; 530 paths remain open. It has not been refreshed for source
+snapshot `bd589312`. These are path counts, not missing-feature counts, and do
+not establish runtime parity, migration acceptance, or channel continuity. See the
 [pinned BookshelfNG consolidation inventory and review](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-30).
-The unmerged changes in ChaptarrNG PR #183 are not in this snapshot.
 
 The implementation and rehearsal notes below preserve their original dates
 and scopes; none alone establishes cutover readiness.

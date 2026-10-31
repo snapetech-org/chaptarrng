@@ -1,24 +1,40 @@
 # BookshelfNG retirement status
 
-## Current status — 2026-10-30
+## Current status — 2026-10-31 04:35 UTC
 
-BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977` are the latest public
-application releases. ChaptarrNG `main` is `64689f1f`. The prior exact-head
-Build [#41164597664](https://github.com/snapetech-org/chaptarrng/actions/runs/41164597664)
-was cancelled on the older `474a3541` head and does not validate current
-`main`. ChaptarrNG PR [#183](https://github.com/snapetech-org/chaptarrng/pull/183)
-proposes the one-image handoff and includes the latest private-JIT dispatch
-changes from `main`. The earlier trusted owner-PR dispatch
+BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977` remain the latest public
+application releases. The BookshelfNG single-image handoff and three follow-up
+localization commits were integrated directly into ChaptarrNG `main` at source
+snapshot `bd589312`; GitHub closed PR #183 as integrated, and its remote branch
+was deleted. This source change
+has no exact-head private-JIT build or platform result. Owner-PR run
 [#41167825847](https://github.com/snapetech-org/chaptarrng/actions/runs/41167825847)
-was queued on pre-integration head `f63796dd`; it does not validate the current
-PR head. No exact-head private-JIT build or platform result exists for the
-updated branch.
+was cancelled on pre-integration head `f63796dd` and its validation jobs were
+skipped.
 
-The scheduled BookshelfNG bridge
-[#41157387864](https://github.com/snapetech-org/bookshelfng/actions/runs/41157387864)
-is waiting behind 16 earlier bridge runs with no jobs started. No legacy
-package, image, installer, updater, or chart identity has been redirected.
-Keep BookshelfNG in service and leave release and bridge gates closed.
+Build run
+[#41166424095](https://github.com/snapetech-org/chaptarrng/actions/runs/41166424095)
+has only its runner-contract job queued; platform jobs were skipped. Windows
+handoff run
+[#41166442007](https://github.com/snapetech-org/chaptarrng/actions/runs/41166442007)
+is queued without a runner. Helm Actions run
+[#41167175002](https://github.com/snapetech-org/chaptarrng/actions/runs/41167175002)
+is queued without a runner or steps. It is a handoff workflow that would use a
+disposable Kind cluster on private JIT; no cluster was created, and no
+production cluster was involved. No legacy package, image, installer, updater,
+or chart identity has been redirected. Keep BookshelfNG in service and leave
+release and bridge gates closed.
+
+The latest observed full Build run
+[#41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
+is queued at older SHA `64689f1f`; its Linux, macOS, and Windows jobs have no
+runner or steps. The macOS handoff, standalone-asset, and later Helm runs
+[#41168181470](https://github.com/snapetech-org/chaptarrng/actions/runs/41168181470),
+[#41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569),
+and [#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
+are likewise queued on older source without runners. The connected GitHub API
+shows no open ChaptarrNG pull requests and no exact-head workflow run for the
+current source snapshot.
 
 **Single-image migration contract (2026-10-30):** The earlier proposal for
 separate Goodreads and Hardcover compatibility images is withdrawn. The
@@ -49,14 +65,14 @@ separate cumulative blocker covering BookshelfNG carryover and every
 ChaptarrNG capability that is maintained, active, or unreleased, including
 localization and RTL work now in `main`.
 
-The refreshed main-to-main BookshelfNG source-path audit compares source
-`1bd7f2dc` with target `64689f1f`: 1,174 changed paths, 56 reviewed mappings,
-644 dispositions, and 530 paths still needing disposition. The open set includes semantic review,
+The latest main-to-main BookshelfNG source-path audit remains pinned to source
+`1bd7f2dc` and ChaptarrNG target `64689f1f`: 1,174 changed paths, 56 reviewed
+mappings, 644 dispositions, and 530 paths still needing disposition. It has
+not been refreshed for source snapshot `bd589312`. The open set includes semantic review,
 unmapped paths, source-deleted paths, and identical files without an explicit
 decision; it is not a count of missing runtime features. See the
 [exact-head consolidation audit](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-30)
-and its pinned inventory and maps. The unmerged changes in ChaptarrNG PR #183
-are not included. These path decisions do not close feature,
+and its pinned inventory and maps. These path decisions do not close feature,
 data, rollback, or installed-channel acceptance.
 
 All organization build, test, scan, package, and release jobs require private
