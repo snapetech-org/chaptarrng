@@ -865,3 +865,32 @@ validation on the corrected worktree passed the full Core suite (4,932/4,961;
 PowerShell parser checks, and `git diff --check`. The exact-head installed
 Windows handoff and the external platform/feed acceptance gates are still
 unproven.
+
+## Direct-main localization integration and validation — 2026-10-31 20:22 UTC
+
+The committed localization branch was integrated directly into the local
+`main` candidate. Its latest source commit was `44b98118`; the merge commit is
+`ec833cb7`. The 187-file change adds provider-field and provider-option
+localization, notification and server-message rendering, loading-message
+registries, source inventories, and matching tests. It changes no workflow or
+runner routing. Its final two-file idempotence correction was included at
+`44b98118`; the linked worktree is clean.
+
+The merged code exposed a stale direct-download schema test that expected
+English text where the provider field now carries a catalog ID. The fixture
+now resolves the English catalog and restores the shared localization service
+afterward. The affected fixture passed 7/7. The full Core suite then passed
+4,941 tests, skipped 29, and failed zero (4,970 total) on SDK 10.0.403. This
+full run preceded the final frontend-only commit `44b98118`; its added
+idempotent-rendering regression test passed in the final localization suite.
+
+Final merged-source checks passed: localization Node suite 51/51, frontend
+typecheck, 37 UI locales/4,015 source IDs/52 catalogs, translation helper keys
+across 1,633 files, package/channel contracts 23/23, and `git diff --check`.
+Source-inventory checks have no structural issues, but strict direct locale
+coverage remains incomplete across the 12 target locales: 5,760 server-message
+entries and 7,068 provider/outbound-notification/option/loading entries are
+pending (12,828 total). The source-capture `--allow-pending` checks report 486
+server messages, 649 callsites, 657 bindings, 409 provider fields, 57 outbound
+messages, 136 options, and 17 loading messages. This is a localization
+acceptance gap; it is not counted as a pass.

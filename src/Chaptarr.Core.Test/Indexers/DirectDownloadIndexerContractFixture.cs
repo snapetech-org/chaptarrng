@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Chaptarr.Api.V1.Indexers;
 using Chaptarr.Http.ClientSchema;
@@ -14,25 +16,45 @@ using NzbDrone.Core.Indexers.DirectDownload;
 namespace Chaptarr.Core.Test.Indexers
 {
     [TestFixture]
+    [NonParallelizable]
     public class DirectDownloadIndexerContractFixture
     {
         private sealed class TestLocalizationService : ILocalizationService
         {
-            public Dictionary<string, string> GetLocalizationDictionary() => new();
+            private readonly Dictionary<string, string> _english;
+
+            public TestLocalizationService()
+            {
+                var path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Localization", "Core", "en.json");
+                _english = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path)) ?? new();
+            }
+
+            public Dictionary<string, string> GetLocalizationDictionary() => _english;
 
             public string GetCurrentLocale() => "en";
 
-            public string GetLocalizedString(string phrase) => phrase;
+            public string GetLocalizedString(string phrase) =>
+                _english.TryGetValue(phrase, out var localized) ? localized : phrase;
 
-            public string GetLocalizedString(string phrase, Dictionary<string, object> tokens) => phrase;
+            public string GetLocalizedString(string phrase, Dictionary<string, object> tokens) => GetLocalizedString(phrase);
         }
+
+        private FieldInfo _localizationServiceField;
+        private ILocalizationService _previousLocalizationService;
 
         [SetUp]
         public void SetUp()
         {
-            typeof(SchemaBuilder)
-                .GetField("_localizationService", BindingFlags.NonPublic | BindingFlags.Static)
-                .SetValue(null, new TestLocalizationService());
+            _localizationServiceField = typeof(SchemaBuilder)
+                .GetField("_localizationService", BindingFlags.NonPublic | BindingFlags.Static);
+            _previousLocalizationService = (ILocalizationService)_localizationServiceField.GetValue(null);
+            _localizationServiceField.SetValue(null, new TestLocalizationService());
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _localizationServiceField.SetValue(null, _previousLocalizationService);
         }
 
         [Test]
