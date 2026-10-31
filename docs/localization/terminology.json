@@ -113,6 +113,27 @@
       "meaning": "Adding an existing file to a matched library item.",
       "guidance": "Use consistently for file intake and matching actions.",
       "preferredTranslations": {}
+    },
+    {
+      "id": "domain.commandQueue",
+      "sourceId": "Queue",
+      "source": "Queue",
+      "meaning": "The app page listing pending and recently processed commands.",
+      "guidance": "Use the term for the command queue page, distinct from the action of adding a task to the queue.",
+      "preferredTranslations": {
+        "es": "Cola",
+        "zh-Hans": "队列",
+        "hi": "कतार",
+        "de": "Warteschlange",
+        "ja": "キュー",
+        "fr": "File d'attente",
+        "pt-BR": "Fila",
+        "ar": "طابور",
+        "ko": "대기열",
+        "zh-Hant": "佇列",
+        "vi": "Hàng đợi",
+        "id": "Antrean"
+      }
     }
   ]
 }
