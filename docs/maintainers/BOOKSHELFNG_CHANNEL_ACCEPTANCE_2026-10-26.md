@@ -868,9 +868,9 @@ unproven.
 
 ## Direct-main localization integration and validation — 2026-10-31 20:22 UTC
 
-The committed localization branch was integrated directly into the local
-`main` candidate. Its latest source commit was `44b98118`; the merge commit is
-`ec833cb7`. The 187-file change adds provider-field and provider-option
+The committed localization branch was integrated directly into `main` and
+pushed in delivery commit `ca1fd2b3`. Its latest source commit was `44b98118`;
+the merge commit is `ec833cb7`. The 187-file change adds provider-field and provider-option
 localization, notification and server-message rendering, loading-message
 registries, source inventories, and matching tests. It changes no workflow or
 runner routing. Its final two-file idempotence correction was included at
@@ -894,3 +894,23 @@ pending (12,828 total). The source-capture `--allow-pending` checks report 486
 server messages, 649 callsites, 657 bindings, 409 provider fields, 57 outbound
 messages, 136 options, and 17 loading messages. This is a localization
 acceptance gap; it is not counted as a pass.
+
+## Direct-main delivery snapshot — 2026-10-31 20:23 UTC
+
+Remote `main` is `ca1fd2b3d1d773415b939395727925551ad25bfd`. The merged
+localization topic ref was deleted after verifying its tip is an ancestor of
+main. The target repository now has only the remote `main` branch and no open
+pull requests. The integration push did not start a build, release, or
+installed-handoff run. The exact-head private-JIT build for `ca1fd2b3` is still
+absent.
+
+Build run
+[41229894913](https://github.com/snapetech-org/chaptarrng/actions/runs/41229894913)
+and macOS handoff run
+[41230571219](https://github.com/snapetech-org/chaptarrng/actions/runs/41230571219)
+remain queued on older heads. Run
+[41237761781](https://github.com/snapetech-org/chaptarrng/actions/runs/41237761781)
+is a queued trusted-owner metadata validation from former topic head
+`44b98118`; every build, package, and platform job in it was skipped. It does
+not validate the merged main candidate. No runs were canceled, retried, or
+dispatched.
