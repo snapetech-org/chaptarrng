@@ -431,7 +431,7 @@ test('release builds and verifies desktop migration candidates only behind all r
   const guardedSteps = desktopJob.match(/^      if: .*vars\.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true'.*vars\.CHAPTARRNG_RELEASE_READY == 'true'.*vars\.BOOKSHELFNG_RELEASE_READY == 'true'.*$/gm) ?? [];
   assert.equal(guardedSteps.length, 5, 'download, build, and upload steps all require every release gate');
   assert.match(desktopJob, /name: chaptarrng-bookshelfng-desktop-candidates/);
-  assert.match(publishJob, /needs: \[release, docker, standalone-assets, rpm-source, windows-migration-installer, legacy-desktop-candidates\]/);
+  assert.match(publishJob, /needs: \[preflight, release, docker, standalone-assets, rpm-source, windows-migration-installer, legacy-desktop-candidates\]/);
   assert.match(publishJob, /name: chaptarrng-bookshelfng-desktop-candidates/);
   assert.match(publishJob, /ChaptarrNG-\$\{VERSION\}-bookshelfng-x86_64\.AppImage/);
   assert.match(publishJob, /ChaptarrNG-\$\{VERSION\}-bookshelfng\.flatpak/);
@@ -513,6 +513,12 @@ test('Windows release uses private Packer and verifies the BookshelfNG handoff a
   assert.match(handoff, /ChaptarrNG\.Installer\.Smoke\.exe/);
   assert.match(handoff, /ParentProcessId=\$serviceProcessId/);
   assert.match(handoff, /MigrationMode=manual/);
+  const manualHealthRecheck = handoff.indexOf('$healthUrlAfterManual = Wait-BookshelfHealth');
+  const automaticMigration = handoff.indexOf("$env:CHAPTARRNG_TEST_ARCHIVE_PATH", manualHealthRecheck);
+  assert.ok(manualHealthRecheck >= 0 && automaticMigration > manualHealthRecheck,
+    'the unchanged BookshelfNG service must pass /ping after manual defer and before automatic migration');
+  assert.match(handoff, /if \(\$healthUrlAfterManual -ne \$healthUrl\)/,
+    'manual defer must retain the original BookshelfNG health endpoint');
   assert.match(handoff, /CHAPTARRNG_TEST_ARCHIVE_PATH/);
   assert.match(legacyInstaller, /CHAPTARRNG_TEST_ARCHIVE_PATH/);
   assert.match(buildWorkflow, /windows_chocolatey_only:[\s\S]*?type: boolean[\s\S]*?default: false/);

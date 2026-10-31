@@ -287,6 +287,10 @@ try {
   if ((Get-InstalledPackageVersion 'bookshelfng') -ne $BookshelfVersion) {
     throw 'Chocolatey recorded the candidate package as installed even though manual defer should have cancelled it.'
   }
+  $healthUrlAfterManual = Wait-BookshelfHealth
+  if ($healthUrlAfterManual -ne $healthUrl) {
+    throw 'Manual defer changed the BookshelfNG health endpoint.'
+  }
 
   $env:CHAPTARRNG_TEST_ARCHIVE_PATH = $ArchivePath
   $env:CHAPTARRNG_TEST_FAIL_HANDOFF = 'after-migration-health'
