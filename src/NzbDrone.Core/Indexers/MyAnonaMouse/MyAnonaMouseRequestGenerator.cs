@@ -21,7 +21,8 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
         private const int RecentPageSize = 500;
         private const int SearchPageSize = 100;
         private const int SearchMaxPages = 10;
-        private static readonly Regex BookNumberSuffixRegex = new Regex(@"\s*,?\s*book\s+\d+\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // the query is decoded before this runs, so "Book 0.5" can arrive as "Book 0 5"
+        private static readonly Regex BookNumberSuffixRegex = new Regex(@"\s*,?\s*book\s+\d+([.\s]\d+)?\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex MultiWhitespaceRegex = new Regex(@"\s{2,}", RegexOptions.Compiled);
 
         public MyAnonaMouseSettings Settings { get; set; }
@@ -165,8 +166,9 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
                 AddSearchTerm(decodedTitle, "MAM_SEARCH_FALLBACK_TERM: '{0}' (title-only fallback)", isFallback: true);
             }
 
-            // Interactive search: add a fallback query for verbose titles like "... , Book 3" that can hurt recall.
-            if (searchCriteria.InteractiveSearch && !string.IsNullOrWhiteSpace(decodedTitle))
+            // Last-resort query for verbose titles like "... , Book 3" that can hurt recall, for automatic
+            // and interactive searches alike (it only runs when the queries above found nothing).
+            if (!string.IsNullOrWhiteSpace(decodedTitle))
             {
                 var fallbackTitle = BookNumberSuffixRegex.Replace(decodedTitle, string.Empty).Trim();
                 if (!string.IsNullOrWhiteSpace(fallbackTitle) &&
