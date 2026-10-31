@@ -187,3 +187,22 @@ test('real grab/provenance/notification outputs match their fixed templates and 
   }
   assert.equal(matchServerMessage('titleProof=true; provider diagnostic payload', matchers), null);
 });
+
+test('OAuth and provider API wrappers match without translating captured values', () => {
+  const matchers = compileServerMessageMatchers(records);
+  const callback = matchServerMessage('QueryParam callbackUrl invalid.', matchers);
+  assert.equal(callback.id, 'server.message.m90ee48cf606f');
+  assert.deepEqual(callback.tokens, {});
+
+  const status = matchServerMessage(
+    'AudioBookShelf OIDC did not redirect (status 502 BadGateway). Ensure OpenID Connect is enabled and configured on your AudioBookShelf server.',
+    matchers
+  );
+  assert.equal(status.id, 'server.message.ma6e1d81614c2');
+  assert.deepEqual(status.tokens, { value0: '502 BadGateway' });
+
+  const submittedId = '123 / كتاب {id}';
+  const hardcover = matchServerMessage(`Invalid Hardcover series id: ${submittedId}`, matchers);
+  assert.equal(hardcover.id, 'server.message.mccef5f1c0beb');
+  assert.deepEqual(hardcover.tokens, { value0: 'series', value1: submittedId });
+});

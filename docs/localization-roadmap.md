@@ -8,13 +8,13 @@ The source catalog is src/NzbDrone.Core/Localization/Core/en.json. docs/localiza
 
 ## Locale registry and fallback
 
-src/NzbDrone.Core/Localization/Core/ui-locales.json is the shared registry used by the server and frontend. It defines the 37 supported BCP 47 choices, stable integer setting IDs, exact catalog file, direction, and explicit regional parent fallback. Current saved language IDs outside that set remain available in Settings only when they are already selected, so old preferences can be changed without losing them.
+src/NzbDrone.Core/Localization/Core/ui-locales.json is the shared registry used by the server and frontend. It retains all 37 BCP 47 locale mappings, stable integer setting IDs, exact catalog file, direction, and explicit regional parent fallback. The language selector offers English and the 32 locales whose resolved catalog has at least one non-English UI value; Azerbaijani, Kazakh, Malay, and Uzbek stay in the registry for compatibility but are omitted from new choices until their catalogs contain real translations. Regional variants that inherit a translated parent remain selectable. Current saved IDs outside the selectable set remain available in Settings while selected so users can migrate them without losing the preference.
 
 The server merges English, the declared parent catalog, then the exact locale catalog. Missing entries therefore inherit safely without copying English text into every file. The Settings page tells users that untranslated labels appear in English.
 
 ## Current target-locale review status
 
-The October 31, 2026 follow-up reviewed all 2,950 source IDs across the agreed 12 locales (35,400 decisions). Every target catalog contains all 2,950 baseline source IDs. The expanded English catalog now has 4,015 IDs; 1,065 new fixed server/schema/outbound IDs per locale are awaiting the serialized generation and review batch. The context-vetted milestone changes 7,388 target values from `a029e3b7`, rejects 30 purely stylistic proposals, preserves product/provider names and release revision markers, and replaces five ambiguous English source labels/help messages with plain wording. No uncertain model decisions remain in the accepted set.
+The October 31, 2026 follow-up reviewed all 2,950 baseline source IDs across the agreed 12 locales (35,400 decisions). Every target catalog contains those baseline IDs. The expanded English catalog now has 4,101 IDs; each target catalog has 2,955 direct values and 1,146 missing values (13,752 cells) awaiting the serialized generation and review batch. The source-only exception audit added 17 fixed or bounded API error messages from 25 callsites. The context-vetted milestone changes 7,388 target values from `a029e3b7`, rejects 30 purely stylistic proposals, preserves product/provider names and release revision markers, and replaces five ambiguous English source labels/help messages with plain wording. No uncertain model decisions remain in the accepted set.
 
 `docs/localization/core-review-evidence.json` records counts, exact catalog hashes, retained evidence hashes, and the limits of this review. These are machine drafts and agent contextual reviews; qualified native-speaker signoff remains unclaimed. The expanded implementation covers fixed server/API and persisted messages, provider schema labels/help/static options, and outbound notification copy. The frozen new-source batch has 12,780 target cells; generation/review and final headed Agentic VM acceptance remain pending.
 
@@ -40,7 +40,7 @@ Use docs/localization/terminology.json for canonical product terms, meanings, tr
 
 Use translatePlural with .zero, .one, .two, .few, .many, and .other suffix keys; Intl.PluralRules selects the locale category, with .other as the fallback. Use translateSelect with selector suffixes and an .other fallback. Format user-facing dates, numbers, and units with Utilities/Localization/formatters.cjs. Numeric form input is localized for display and parsing while its emitted JavaScript number remains canonical.
 
-Document lang and dir come from the selected locale. The PostCSS logical-property pass rewrites physical left/right layout declarations. Text from books, authors, filenames, and imported metadata is isolated with <bdi dir="auto">; input values and API/path values are not transformed.
+Document `lang` comes from the selected locale. Whole-document Arabic `dir=rtl` is gated off until shared layouts use direction-safe logical positioning and pass headed visual review; Arabic therefore keeps `lang=ar` while the document root remains LTR. Persian and Hebrew retain RTL root direction. Per-field direction and mixed-script isolation remain active. The PostCSS logical-property pass rewrites physical left/right layout declarations. Text from books, authors, filenames, and imported metadata is isolated with <bdi dir="auto">; input values and API/path values are not transformed.
 
 ## Browser acceptance
 
@@ -48,4 +48,4 @@ Use a headed browser session in the Agentic VM against an isolated local instanc
 
     CHAPTARR_LOCALIZATION_BROWSER_URL=http://127.0.0.1:8787/ dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --filter TestCategory=LocalizationBrowser
 
-The fixture switches through Arabic, Persian, and Hebrew in the UI, checks document direction, keyboard access to the language combobox, navigation, the books table, the unmapped/import screen, the keyboard-shortcuts dialog, mixed-direction input, and narrow 200% text layout. It restores the original UI language after the run. Use a disposable local database because the browser flow saves the UI language while it runs.
+The fixture switches through Arabic, Persian, and Hebrew in the UI, checks Arabic's gated LTR root and Persian/Hebrew RTL roots, keyboard access to the language combobox, navigation, the books table, the unmapped/import screen, the keyboard-shortcuts dialog, mixed-direction input, and narrow 200% text layout. It restores the original UI language after the run. Use a disposable local database because the browser flow saves the UI language while it runs.

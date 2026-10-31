@@ -403,6 +403,14 @@
     ]
   },
   {
+    "id": "server.message.m0e8c0447c3c8",
+    "source": "QueryParam state invalid.",
+    "parameters": [],
+    "patterns": [
+      "QueryParam state invalid."
+    ]
+  },
+  {
     "id": "server.message.m0ffa12a85bcc",
     "source": "The content server returned {value0} to a Calibre API request",
     "parameters": [
@@ -438,6 +446,14 @@
     "parameters": [],
     "patterns": [
       "Near-exact title evidence accepted by the active matcher mode."
+    ]
+  },
+  {
+    "id": "server.message.m12739b954cdf",
+    "source": "QueryParam pinId invalid.",
+    "parameters": [],
+    "patterns": [
+      "QueryParam pinId invalid."
     ]
   },
   {
@@ -772,6 +788,14 @@
     ]
   },
   {
+    "id": "server.message.m262dfad1709a",
+    "source": "Goodreads did not return an account ID for the authenticated user.",
+    "parameters": [],
+    "patterns": [
+      "Goodreads did not return an account ID for the authenticated user."
+    ]
+  },
+  {
     "id": "server.message.m2651c4cafa4d",
     "source": "Test was aborted due to an error: {value0}",
     "parameters": [
@@ -783,6 +807,14 @@
     ],
     "patterns": [
       "Test was aborted due to an error: {value0}"
+    ]
+  },
+  {
+    "id": "server.message.m2689d50f7d87",
+    "source": "QueryParam code invalid.",
+    "parameters": [],
+    "patterns": [
+      "QueryParam code invalid."
     ]
   },
   {
@@ -1325,6 +1357,14 @@
     ]
   },
   {
+    "id": "server.message.m415b9b0835fe",
+    "source": "Goodreads user ID must be numeric or a Goodreads profile URL containing a numeric ID.",
+    "parameters": [],
+    "patterns": [
+      "Goodreads user ID must be numeric or a Goodreads profile URL containing a numeric ID."
+    ]
+  },
+  {
     "id": "server.message.m4292967cbf4d",
     "source": "Proxy is set to ProxyEverything. This should work but IndexerOnly is recommended for better performance.",
     "parameters": [],
@@ -1475,6 +1515,14 @@
     ]
   },
   {
+    "id": "server.message.m46149c6c2146",
+    "source": "AudioBookShelf did not return an API key.",
+    "parameters": [],
+    "patterns": [
+      "AudioBookShelf did not return an API key."
+    ]
+  },
+  {
     "id": "server.message.m467034a6f197",
     "source": "Unable to connect to Subsonic Server",
     "parameters": [],
@@ -1617,6 +1665,14 @@
     ]
   },
   {
+    "id": "server.message.m4d95930d7f57",
+    "source": "AudioBookShelf did not return a valid access token.",
+    "parameters": [],
+    "patterns": [
+      "AudioBookShelf did not return a valid access token."
+    ]
+  },
+  {
     "id": "server.message.m4e3c9ff3f17f",
     "source": "entityType must be Author, AuthorMetadata, Book, Edition, or BookFile.",
     "parameters": [],
@@ -1663,6 +1719,14 @@
     ],
     "patterns": [
       "Metadata server ping response was not valid JSON: {value0}"
+    ]
+  },
+  {
+    "id": "server.message.m4fb2bd070194",
+    "source": "AudioBookShelf did not return any cookies for the OIDC session.",
+    "parameters": [],
+    "patterns": [
+      "AudioBookShelf did not return any cookies for the OIDC session."
     ]
   },
   {
@@ -2078,6 +2142,14 @@
     "parameters": [],
     "patterns": [
       "ids must be provided"
+    ]
+  },
+  {
+    "id": "server.message.m6928cb52f90a",
+    "source": "AudioBookShelf OIDC redirect missing Location header.",
+    "parameters": [],
+    "patterns": [
+      "AudioBookShelf OIDC redirect missing Location header."
     ]
   },
   {
@@ -2545,6 +2617,14 @@
     "parameters": [],
     "patterns": [
       "Unable to connect to Join API. Please try again later."
+    ]
+  },
+  {
+    "id": "server.message.m7c3fbbf71490",
+    "source": "QueryParam oauth_verifier invalid.",
+    "parameters": [],
+    "patterns": [
+      "QueryParam oauth_verifier invalid."
     ]
   },
   {
@@ -3082,6 +3162,14 @@
     ]
   },
   {
+    "id": "server.message.m90ee48cf606f",
+    "source": "QueryParam callbackUrl invalid.",
+    "parameters": [],
+    "patterns": [
+      "QueryParam callbackUrl invalid."
+    ]
+  },
+  {
     "id": "server.message.m91239a59f3b6",
     "source": "'None' is a reserved profile name",
     "parameters": [],
@@ -3422,6 +3510,14 @@
     ]
   },
   {
+    "id": "server.message.ma45de3679283",
+    "source": "Provider authorization expired. Please sign in again.",
+    "parameters": [],
+    "patterns": [
+      "Provider authorization expired. Please sign in again."
+    ]
+  },
+  {
     "id": "server.message.ma4a7539d1468",
     "source": "Jackett's all endpoint is not supported, please add indexers individually",
     "parameters": [],
@@ -3443,6 +3539,20 @@
     "parameters": [],
     "patterns": [
       "Unable to connect to qBittorrent"
+    ]
+  },
+  {
+    "id": "server.message.ma6e1d81614c2",
+    "source": "AudioBookShelf OIDC did not redirect (status {value0}). Ensure OpenID Connect is enabled and configured on your AudioBookShelf server.",
+    "parameters": [
+      {
+        "name": "value0",
+        "sourceToken": "{dynamic} {dynamic}",
+        "kind": "dynamic-data"
+      }
+    ],
+    "patterns": [
+      "AudioBookShelf OIDC did not redirect (status {value0}). Ensure OpenID Connect is enabled and configured on your AudioBookShelf server."
     ]
   },
   {
@@ -4090,6 +4200,14 @@
     ]
   },
   {
+    "id": "server.message.mc9032616fbb4",
+    "source": "QueryParam oauth_token invalid.",
+    "parameters": [],
+    "patterns": [
+      "QueryParam oauth_token invalid."
+    ]
+  },
+  {
     "id": "server.message.mc9036b7c4f55",
     "source": "At least one narrator name is required",
     "parameters": [],
@@ -4103,6 +4221,14 @@
     "parameters": [],
     "patterns": [
       "Must be 0 to disable or at least 60 minutes"
+    ]
+  },
+  {
+    "id": "server.message.mc95460cab48b",
+    "source": "Missing requestTokenSecret.",
+    "parameters": [],
+    "patterns": [
+      "Missing requestTokenSecret."
     ]
   },
   {
@@ -4215,6 +4341,25 @@
     ],
     "patterns": [
       "Path '{value0}' is child of system folder {value1}"
+    ]
+  },
+  {
+    "id": "server.message.mccef5f1c0beb",
+    "source": "Invalid Hardcover {value0} id: {value1}",
+    "parameters": [
+      {
+        "name": "value0",
+        "sourceToken": "{dynamic}",
+        "kind": "dynamic-data"
+      },
+      {
+        "name": "value1",
+        "sourceToken": "{dynamic}",
+        "kind": "dynamic-data"
+      }
+    ],
+    "patterns": [
+      "Invalid Hardcover {value0} id: {value1}"
     ]
   },
   {
@@ -4945,6 +5090,14 @@
     "parameters": [],
     "patterns": [
       "Use Direct Download Url (;download)"
+    ]
+  },
+  {
+    "id": "server.message.mf32c030ec635",
+    "source": "OIDC session expired. Please try again.",
+    "parameters": [],
+    "patterns": [
+      "OIDC session expired. Please try again."
     ]
   },
   {

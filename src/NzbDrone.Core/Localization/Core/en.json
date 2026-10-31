@@ -4082,5 +4082,22 @@
   "ui.task.importListSync": "Import List Sync",
   "ui.task.hardcoverLibrarySync": "Hardcover Library Sync",
   "ui.task.missingBookSearch": "Missing Book Search",
-  "ui.task.processPendingImports": "Process Pending Imports"
+  "ui.task.processPendingImports": "Process Pending Imports",
+  "server.message.m0e8c0447c3c8": "QueryParam state invalid.",
+  "server.message.m12739b954cdf": "QueryParam pinId invalid.",
+  "server.message.m262dfad1709a": "Goodreads did not return an account ID for the authenticated user.",
+  "server.message.m2689d50f7d87": "QueryParam code invalid.",
+  "server.message.m415b9b0835fe": "Goodreads user ID must be numeric or a Goodreads profile URL containing a numeric ID.",
+  "server.message.m46149c6c2146": "AudioBookShelf did not return an API key.",
+  "server.message.m4d95930d7f57": "AudioBookShelf did not return a valid access token.",
+  "server.message.m4fb2bd070194": "AudioBookShelf did not return any cookies for the OIDC session.",
+  "server.message.m6928cb52f90a": "AudioBookShelf OIDC redirect missing Location header.",
+  "server.message.m7c3fbbf71490": "QueryParam oauth_verifier invalid.",
+  "server.message.m90ee48cf606f": "QueryParam callbackUrl invalid.",
+  "server.message.ma45de3679283": "Provider authorization expired. Please sign in again.",
+  "server.message.ma6e1d81614c2": "AudioBookShelf OIDC did not redirect (status {value0}). Ensure OpenID Connect is enabled and configured on your AudioBookShelf server.",
+  "server.message.mc9032616fbb4": "QueryParam oauth_token invalid.",
+  "server.message.mc95460cab48b": "Missing requestTokenSecret.",
+  "server.message.mccef5f1c0beb": "Invalid Hardcover {value0} id: {value1}",
+  "server.message.mf32c030ec635": "OIDC session expired. Please try again."
 }

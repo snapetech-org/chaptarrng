@@ -1,17 +1,17 @@
 # Fixed server and notification copy review
 
-The core catalog review landed independently. This follow-up adds stable, source-fingerprinted coverage for fixed backend and provider copy; its new target-language generation and headed Agentic VM acceptance are still queued. Agent review does not claim qualified native-speaker approval.
+The source catalog and caller reviews are recorded below. The current source snapshot contains 4,101 English IDs, with 1,146 missing direct values per target locale (13,752 cells across twelve locales). Translation generation and final headed Agentic VM acceptance remain queued. Agent review does not claim qualified native-speaker approval.
 
 ## Source coverage
 
-- Server/API, validation, operational progress, and persisted failure messages: 486 distinct messages and 649 unique source callers (657 template/branch bindings). One wholly dynamic Telegram exception/status template is excluded because it contains no application wording.
+- Server/API, validation, operational progress, and persisted failure messages: 554 distinct messages and 736 unique source callers (746 template/branch bindings). One wholly dynamic Telegram exception/status template is excluded because it contains no application wording.
 - Provider field labels/help/warnings: 409 mapped sources and 643 callers, with all 811 explicit schema attribute values resolving to catalog IDs.
 - Static provider dropdown labels and explanatory hints: 136 sources, 174 callers, 27 enum types, and 165 enum members. Numeric values, member identifiers, protocol `EnumMember` values, dynamic provider option names, and example hints stay unchanged.
 - Outbound human-readable headings, bodies, fields, tests and sensor names: 57 sources and 108 callers, plus two explicitly fingerprinted exclusions for the Proper release marker and retag metadata field names. Transport keys, event names, topics, paths, book/author titles and provider responses stay data.
 
 All seventeen authored loading messages also retain their original no-repeat variety behind stable IDs, with contributor/product names protected. The runtime fallback data is checked against its source inventory.
 
-The union adds 1,065 English IDs to the 2,950-ID baseline: 4,015 sources and 12,780 new locale cells across twelve target languages. Registries carry stable IDs, source fingerprints, exact caller lines/hashes, and protected literal rules. `check-localized-source-coverage.cjs` and `check-server-message-catalogs.cjs` reject stale sources, missing target values, unsafe paths and placeholder/protected-value changes. `--allow-pending` is a preparation check, not final translation acceptance.
+The expanded source set has 4,101 English IDs, including 1,151 IDs beyond the 2,950-ID baseline. The current target catalogs have 2,955 direct values each and are missing 1,146 values apiece. Registries carry stable IDs, source fingerprints, exact caller lines/hashes, and protected literal rules. `check-localized-source-coverage.cjs` and `check-server-message-catalogs.cjs` reject stale sources, missing target values, unsafe paths and placeholder/protected-value changes. `--allow-pending` is a preparation check, not final translation acceptance.
 
 ## Presentation callers
 
@@ -63,11 +63,28 @@ raw; only source-proven detail prose is matched. Interactive grab errors use the
 bounded presenter for both visible errors and tooltips. Provider/OS/runtime
 payloads remain opaque, including nested captured diagnostic values.
 
-There are now 4,084 English sources. Each selected target locale still has
-2,955 direct values and lacks 1,129: 13,548 pending cells across twelve locales,
-including the 828 new cells in this delta. No target translations were added.
+At the 957f1a2e follow-up head there were 4,084 English sources and 1,129
+missing values per target locale. No target translations were added in that
+source-only milestone.
 The historical v4 bundle remains unmodified; it lacks these 69 sources and also
 contains five IDs that already have direct targets. A future current-head
 bundle must preserve those values and include this source delta. Remaining
 exception-wrapper/log source classification and full translated/native/headed
 acceptance are still open; this checkpoint does not claim whole-app closure.
+
+## Diagnostic and exception wrapper audit at d94dd074
+
+The audit added 17 fixed or bounded API error messages across 25 source
+callsites. The existing `OAuthInput` and `Form` components pass these messages
+through `translateServerMessage`, so the new keys cover current UI error
+surfaces. Dynamic AudioBookShelf status text and Hardcover identifier type and
+input values remain captured data. The startup-only remote-access failure,
+raw provider responses, exception details, paths, and user/library values stay
+outside the translation set. Exact callsites and source fingerprints are in
+`diagnostic-exception-wrapper-audit-20261031.json`; no native-speaker review is
+claimed.
+
+The current input now has 4,101 English IDs and 1,146 pending values per locale,
+or 13,752 target cells. All 17 new entries still need translation and review.
+The Arabic whole-document RTL gate also remains in place until logical-layout
+safety and headed visual review are complete.

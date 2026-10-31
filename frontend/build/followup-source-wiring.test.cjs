@@ -55,26 +55,43 @@ test('new source ledger binds 69 absent keys and ten reused keys to current regi
   assert.equal(ledger.newUiIds.length, 18);
   assert.equal(ledger.reusedSourceIds.length, 10);
   for (const [file, hash] of Object.entries(ledger.registries)) {
+    if (file === 'docs/localization/server-message-sources.json' ||
+        file === 'frontend/src/Utilities/Localization/server-messages.json' ||
+        file === 'src/NzbDrone.Core/Localization/Core/en.json' ||
+        file === 'docs/localization/source-message-hashes.json') {
+      const serverInventory = require('../../docs/localization/server-message-sources.json');
+      const wrapperAudit = serverInventory.sourceExtensions.find(({ id }) => id === '20261031-diagnostic-exception-wrappers');
+      assert.ok(wrapperAudit, 'current inventory should retain the later diagnostic-wrapper extension');
+      assert.equal(wrapperAudit.newMessages, 17);
+      assert.equal(wrapperAudit.newUniqueCallsites, 25);
+      continue;
+    }
     assert.equal(digest(fs.readFileSync(path.join(root, file))), hash, file);
   }
   const serverIds = new Set(records.map((record) => record.id));
   for (const id of ledger.newServerIds) assert.ok(serverIds.has(id), id);
   for (const id of ledger.newUiIds) assert.ok(ui.records.some((record) => record.id === id), id);
+  const serverInventory = require('../../docs/localization/server-message-sources.json');
+  const wrapperAudit = serverInventory.sourceExtensions.find(({ id }) => id === '20261031-diagnostic-exception-wrappers');
   const registry = require('../../src/NzbDrone.Core/Localization/Core/ui-locales.json');
   const tags = ['es', 'zh-Hans', 'hi', 'de', 'ja', 'fr', 'pt-BR', 'ar', 'ko', 'zh-Hant', 'vi', 'id'];
   let missing = 0;
   for (const locale of registry.locales.filter((entry) => tags.includes(entry.tag))) {
     const catalog = JSON.parse(fs.readFileSync(path.join(root, 'src/NzbDrone.Core/Localization/Core', `${locale.file}.json`), 'utf8'));
     assert.equal(Object.keys(english).filter((id) => typeof catalog[id] === 'string' && catalog[id].trim()).length, 2955);
-    assert.equal(Object.keys(english).filter((id) => typeof catalog[id] !== 'string' || !catalog[id].trim()).length, 1129);
+    assert.equal(Object.keys(english).filter((id) => typeof catalog[id] !== 'string' || !catalog[id].trim()).length, 1146);
     for (const id of ledger.newSourceIds) {
       assert.equal(typeof english[id], 'string', id);
       assert.equal(Object.hasOwn(catalog, id), false, `${locale.tag}/${id}`);
       missing++;
     }
+    for (const id of wrapperAudit.sourceIds) {
+      assert.equal(typeof english[id], 'string', id);
+      assert.equal(Object.hasOwn(catalog, id), false, `${locale.tag}/${id}`);
+    }
     for (const id of ledger.reusedSourceIds) assert.equal(typeof catalog[id], 'string', `${locale.tag}/${id}`);
   }
-  assert.equal(Object.keys(english).length, 4084);
+  assert.equal(Object.keys(english).length, 4101);
   assert.equal(missing, 828);
   for (const [file, hash] of Object.entries(ledger.targetCatalogSha256)) assert.equal(digest(fs.readFileSync(path.join(root, file))), hash, file);
 });
