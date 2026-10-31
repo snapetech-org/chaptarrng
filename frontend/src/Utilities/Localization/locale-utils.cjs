@@ -2,6 +2,7 @@ const RTL_LANGUAGES = new Set([
   'ar', 'ckb', 'dv', 'fa', 'he', 'khw', 'ks', 'ku', 'ps', 'sd', 'ug', 'ur', 'yi'
 ]);
 const RTL_SCRIPTS = new Set(['adlm', 'arab', 'hebr', 'nkoo', 'rohg', 'syrc', 'thaa']);
+const RTL_DOCUMENT_LAYOUT_REVIEW_REQUIRED = new Set(['ar']);
 
 function normalizeLocaleTag(locale) {
   return String(locale || 'en').replace(/_/g, '-').trim() || 'en';
@@ -19,6 +20,30 @@ function getDirectionForLocale(locale) {
   return RTL_LANGUAGES.has(parts[0].toLowerCase()) ? 'rtl' : 'ltr';
 }
 
+function getDocumentDirectionForLocale(locale) {
+  const language = normalizeLocaleTag(locale).split('-')[0].toLowerCase();
+  if (RTL_DOCUMENT_LAYOUT_REVIEW_REQUIRED.has(language)) {
+    return 'ltr';
+  }
+
+  return getDirectionForLocale(locale);
+}
+
+function getSelectableUiLocales(locales) {
+  return locales.filter((locale) => locale.uiSelectable === true);
+}
+
+function getUiLocaleOptionLabel(locale) {
+  const nativeName = String(locale.name || '').trim();
+  const englishName = String(locale.englishName || '').trim();
+
+  if (locale.tag === 'en' || !englishName || nativeName === englishName) {
+    return nativeName || englishName;
+  }
+
+  return `${nativeName} — ${englishName}`;
+}
+
 function applyDocumentLocale(locale, root) {
   const element = root || (typeof document !== 'undefined' ? document.documentElement : null);
 
@@ -28,7 +53,7 @@ function applyDocumentLocale(locale, root) {
 
   const tag = normalizeLocaleTag(locale);
   element.lang = tag;
-  element.dir = getDirectionForLocale(tag);
+  element.dir = getDocumentDirectionForLocale(tag);
 
   return { tag, direction: element.dir };
 }
@@ -45,5 +70,8 @@ module.exports = {
   applyDocumentLocale,
   getCurrentLocale,
   getDirectionForLocale,
+  getDocumentDirectionForLocale,
+  getSelectableUiLocales,
+  getUiLocaleOptionLabel,
   normalizeLocaleTag
 };

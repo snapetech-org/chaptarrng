@@ -56,9 +56,9 @@ namespace Chaptarr.Core.Test.Localization
             {
                 var locales = new[]
                 {
-                    (Name: "العربية", Tag: "ar", Id: 31, Direction: "rtl"),
-                    (Name: "فارسی", Tag: "fa", Id: 1003, Direction: "rtl"),
-                    (Name: "עברית", Tag: "he", Id: 23, Direction: "rtl")
+                    (Name: "العربية — Arabic", Tag: "ar", Id: 31, Direction: "ltr"),
+                    (Name: "فارسی — Persian", Tag: "fa", Id: 1003, Direction: "rtl"),
+                    (Name: "עברית — Hebrew", Tag: "he", Id: 23, Direction: "rtl")
                 };
 
                 await languageControl.FocusAsync();
@@ -108,7 +108,7 @@ namespace Chaptarr.Core.Test.Localization
 
                 await page.GotoAsync(settingsUrl);
                 await languageControl.ClickAsync();
-                await page.GetByRole(AriaRole.Option, new PageGetByRoleOptions { Name = "العربية" }).ClickAsync();
+                await page.GetByRole(AriaRole.Option, new PageGetByRoleOptions { Name = "العربية — Arabic" }).ClickAsync();
                 await page.Keyboard.PressAsync("Control+s");
                 await page.WaitForFunctionAsync("tag => document.documentElement.lang === tag", "ar");
                 await page.WaitForFunctionAsync(
@@ -117,7 +117,7 @@ namespace Chaptarr.Core.Test.Localization
 
                 await page.GotoAsync(new Uri(_baseUri, "unmapped").ToString());
                 await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
-                await page.WaitForFunctionAsync("() => document.documentElement.dir === 'rtl'");
+                await page.WaitForFunctionAsync("() => document.documentElement.dir === 'ltr'");
                 Assert.That(await page.GetByRole(AriaRole.Navigation).CountAsync(), Is.GreaterThan(0));
 
                 var importButtons = page.GetByRole(

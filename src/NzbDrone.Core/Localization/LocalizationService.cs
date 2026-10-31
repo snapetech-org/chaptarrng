@@ -232,6 +232,8 @@ namespace NzbDrone.Core.Localization
             public string File { get; set; }
             public string Fallback { get; set; }
             public string Direction { get; set; }
+            public string EnglishName { get; set; }
+            public bool UiSelectable { get; set; }
         }
 
         private static string GetResourceFilename(string culture)

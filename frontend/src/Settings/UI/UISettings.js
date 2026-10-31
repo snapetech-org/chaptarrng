@@ -18,6 +18,7 @@ import {
   applyDocumentLocale,
   getLocale,
   getUiLocaleById,
+  getUiLocaleOptionLabel,
   SUPPORTED_UI_LOCALE_IDS,
   SUPPORTED_UI_LOCALES
 } from 'Utilities/Localization/locale';
@@ -202,7 +203,7 @@ class UISettings extends Component {
 
     const uiLanguages = SUPPORTED_UI_LOCALES.map((locale) => ({
       key: locale.id,
-      value: locale.name
+      value: getUiLocaleOptionLabel(locale)
     }));
     const currentUiLanguageId = Number(settings.uiLanguage && settings.uiLanguage.value);
     const currentLegacyLanguage = languages.find((language) =>
@@ -210,7 +211,13 @@ class UISettings extends Component {
     );
 
     if (!SUPPORTED_UI_LOCALE_IDS.has(currentUiLanguageId) && currentLegacyLanguage) {
-      uiLanguages.push(currentLegacyLanguage);
+      const currentLegacyLocale = getUiLocaleById(currentUiLanguageId);
+      uiLanguages.push({
+        ...currentLegacyLanguage,
+        value: currentLegacyLocale ?
+          getUiLocaleOptionLabel(currentLegacyLocale) :
+          currentLegacyLanguage.value
+      });
     }
     const defaultMediaTypeSetting = settings.addNewDefaultMediaType || {
       value: 'audiobook'
