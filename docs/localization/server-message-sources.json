@@ -6272,6 +6272,7 @@
       ],
       "protectedLiterals": [
         "AudioBookShelf",
+        "Location",
         "OIDC"
       ]
     },
@@ -15821,7 +15822,7 @@
       ],
       "inputEvidence": {
         "file": "docs/localization/diagnostic-exception-wrapper-audit-20261031.json",
-        "sha256": "8a0867238bcc6d49ef4b4d6f730f880e3927ea806cf377b4c19e72145e8d086d"
+        "sha256": "aee672668cc70f05a737de47f93d604f61b376e53754e39c2996ed038aa9f510"
       },
       "method": "Audited fixed OAuth and provider-identifier API error wrappers passed to the existing Form/OAuthInput server-message presenter. Captured provider status, identifier type and submitted ID remain opaque. Startup-only remote-access diagnostics and raw exception/provider text remain excluded."
     }

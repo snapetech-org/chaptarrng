@@ -242,6 +242,7 @@
       ],
       "protectedLiterals": [
         "AudioBookShelf",
+        "Location",
         "OIDC"
       ]
     },

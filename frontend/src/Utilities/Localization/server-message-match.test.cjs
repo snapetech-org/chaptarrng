@@ -1,6 +1,9 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 const records = require('./server-messages.json');
+const sourceInventory = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../docs/localization/server-message-sources.json'), 'utf8'));
 const { compileServerMessageMatchers, matchServerMessage } = require('./server-message-match.cjs');
 
 function record(id, source, parameters = []) {
@@ -190,6 +193,8 @@ test('real grab/provenance/notification outputs match their fixed templates and 
 
 test('OAuth and provider API wrappers match without translating captured values', () => {
   const matchers = compileServerMessageMatchers(records);
+  const missingLocation = sourceInventory.records.find(({ source }) => source === 'AudioBookShelf OIDC redirect missing Location header.');
+  assert.deepEqual(missingLocation.protectedLiterals, ['AudioBookShelf', 'Location', 'OIDC']);
   const callback = matchServerMessage('QueryParam callbackUrl invalid.', matchers);
   assert.equal(callback.id, 'server.message.m90ee48cf606f');
   assert.deepEqual(callback.tokens, {});
