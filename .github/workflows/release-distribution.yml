@@ -326,10 +326,6 @@ jobs:
         ref: ${{ github.sha }}
         persist-credentials: false
 
-    - name: Install checksum-pinned GitHub CLI when the Packer image lacks it
-      shell: pwsh
-      run: ./packaging/scripts/setup-github-cli-windows.ps1
-
     - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       env:
         DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet

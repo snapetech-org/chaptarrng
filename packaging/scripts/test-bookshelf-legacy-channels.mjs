@@ -483,10 +483,9 @@ test('Linux release jobs install the checksum-pinned ChaptarrNG GitHub CLI actio
   }
 });
 
-test('Windows release keeps the private Packer route and verifies its GitHub CLI archive', () => {
+test('Windows release uses private Packer and verifies the BookshelfNG handoff archive', () => {
   const workflow = read('.github/workflows/release-distribution.yml');
   const job = readWorkflowJob(workflow, 'build-chocolatey');
-  const setup = read('packaging/scripts/setup-github-cli-windows.ps1');
   const handoff = read('packaging/scripts/test-chocolatey-bookshelfng-handoff.ps1');
   const buildWorkflow = read('.github/workflows/build.yml');
   const build = readWorkflowJob(buildWorkflow, 'build');
@@ -496,8 +495,16 @@ test('Windows release keeps the private Packer route and verifies its GitHub CLI
   assert.match(job, /"group":"packer-windows"/);
   assert.match(job, /"labels":\["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-\{0\}-build-chocolatey"\]/);
   assert.match(job, /github\.run_id/);
-  assert.ok(job.includes('setup-github-cli-windows.ps1'));
-  assert.ok(job.indexOf('setup-github-cli-windows.ps1') < job.indexOf('gh release download'));
+  const downloadStep = job.indexOf('name: Download and verify the release archive');
+  const packageStep = job.indexOf('name: Render and pack Chocolatey package');
+  assert.ok(downloadStep >= 0 && downloadStep < packageStep,
+    'the release archive is downloaded and verified before the package is built');
+  assert.doesNotMatch(job, /setup-github-cli-windows\.ps1|gh release download/,
+    'the Windows job uses its authenticated REST download and does not install an unused GitHub CLI');
+  assert.match(job, /api\.github\.com\/repos\/\$env:GITHUB_REPOSITORY\/releases\/tags/);
+  assert.match(job, /Authorization = "Bearer \$env:GH_TOKEN"/);
+  assert.match(job, /Invoke-WebRequest -Uri \$apiUri\.AbsoluteUri -Headers \$assetHeaders -OutFile \$destination/);
+  assert.match(job, /Get-FileHash .* -Algorithm SHA256/);
   assert.match(job, /test-chocolatey-bookshelfng-handoff\.ps1/);
   assert.match(job, /setup-dotnet@/);
   assert.match(handoff, /BookshelfVersion = '0\.4\.21\.76'/);
@@ -532,11 +539,6 @@ test('Windows release keeps the private Packer route and verifies its GitHub CLI
   assert.match(channelContracts, /ref: \$\{\{ github\.sha \}\}/);
   assert.match(channelContracts, /node --test packaging\/scripts\/test-bookshelf-legacy-channels\.mjs/);
   assert.match(build, /Test Chocolatey BookshelfNG \.76 to exact candidate handoff[\s\S]*?github\.event_name == 'workflow_dispatch'[\s\S]*?test-chocolatey-bookshelfng-handoff\.ps1/);
-  assert.match(setup, /version = '2\.103\.2'/);
-  assert.match(setup, /gh_\$\{version\}_windows_amd64\.zip/);
-  assert.match(setup, /fef9fcdd8fdabd0501ab8b3d99eac976f504ab55d01bef9e8ef428a5d900ddda/);
-  assert.match(setup, /Get-FileHash -LiteralPath \$archivePath -Algorithm SHA256/);
-  assert.match(setup, /Expand-Archive -LiteralPath \$archivePath/);
 });
 
 test('StartOS candidate documents installed test acceptance and remaining release gates', () => {
