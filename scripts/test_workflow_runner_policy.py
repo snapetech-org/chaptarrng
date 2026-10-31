@@ -122,10 +122,10 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             source = (WORKFLOW.parent / workflow_name).read_text(encoding="utf-8")
             self.assertNotRegex(source, r"(?m)^\s+runs-on: windows-latest\s*$")
 
-    def test_buildkit_proxy_is_limited_to_trusted_main_and_reaches_build_steps(self) -> None:
+    def test_buildkit_proxy_is_limited_to_trusted_main_and_release_tags(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         docker_job = job_block(source, "docker-compatibility-build")
-        expected_proxy_gate = "BUILDKIT_EGRESS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}"
+        expected_proxy_gate = "BUILDKIT_EGRESS_PROXY: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'http://10.0.2.100:3128' || '' }}"
         self.assertIn(expected_proxy_gate, docker_job)
 
         buildx = step_block(source, "Set up Docker Buildx")
@@ -147,6 +147,21 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertTrue(buildx_driver_options)
         self.assertTrue(all("," not in option for option in buildx_driver_options))
         self.assertIn("NO_PROXY=localhost,127.0.0.1", build)
+
+    def test_installed_helm_handoff_build_uses_only_the_trusted_main_proxy(self) -> None:
+        helm_workflow = (WORKFLOW.parent / "helm-handoff.yml").read_text(encoding="utf-8")
+        installed_handoff = WORKFLOW.parents[1] / "scripts" / "test_bookshelfng_helm_install_handoff.sh"
+        script = installed_handoff.read_text(encoding="utf-8")
+        expected_proxy_gate = "BUILDKIT_EGRESS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}"
+
+        self.assertIn(expected_proxy_gate, helm_workflow)
+        for name in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+            self.assertIn(
+                f'--build-arg "{name}=${{BUILDKIT_EGRESS_PROXY}}"',
+                script,
+            )
+        self.assertIn("--build-arg NO_PROXY=localhost,127.0.0.1", script)
+        self.assertIn("--build-arg no_proxy=localhost,127.0.0.1", script)
 
     def test_owner_pr_trigger_dispatches_only_metadata_to_private_validation(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
