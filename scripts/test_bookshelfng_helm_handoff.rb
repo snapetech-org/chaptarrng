@@ -302,4 +302,29 @@ custom_stateful_set = custom_objects.find { |item| item.is_a?(Hash) && item["kin
 custom_container = custom_stateful_set.dig("spec", "template", "spec", "containers").find { |item| item["name"] == "bookshelfng" }
 assert(custom_container["image"] == "registry.example/chaptarrng@#{DIGEST}", "explicit image mirror was not rendered")
 
-puts "BookshelfNG Helm handoff contract passed: all rendered resources matched the pinned legacy chart for default and retained installation values, versioned bridge package, both provider modes, release gates, digest pin, and fail-closed inputs verified."
+helm_workflow = File.read(File.join(ROOT, ".github", "workflows", "helm-handoff.yml"))
+installed_handoff = File.read(File.join(ROOT, "scripts", "test_bookshelfng_helm_install_handoff.sh"))
+assert(helm_workflow.include?("test_bookshelfng_helm_install_handoff.sh") &&
+       helm_workflow.include?("docker.io/snapetech/bookshelfng:hardcover-v0.4.21.76") &&
+       helm_workflow.include?("BOOKSHELFNG_LEGACY_IMAGE_DIGEST: sha256:40a53ac528b6789ca78686b4303bb6c436cd191cd813f915ea171d72b47a8c38") &&
+       helm_workflow.include?(%q|BUILDKIT_EGRESS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}|) &&
+       helm_workflow.include?("Upload Helm installed-handoff evidence"),
+       "Helm workflow no longer runs and retains the installed BookshelfNG .76 handoff")
+[
+  ["manual deferral", "upgrade_candidate manual 1"],
+  ["automatic conversion", "upgrade_candidate automatic 1 --wait"],
+  ["populated schema-158 fixture", "BookshelfNG.PopulatedMigration158.sql"],
+  ["populated row and identity continuity", "assert_migrated_fixture"],
+  ["same persistent claim through all revisions", "assert_pvc_identity"],
+  ["recorded persistent claim provenance", "SOURCE_PVC_UID"],
+  ["preserved SQLite source backup", "readarr.db.bookshelfng-backup-*.db"],
+  ["confirmed chart restore", "bookshelfMigration.rollback.confirmed=true"],
+  ["BookshelfNG recovery", "assert_ping bookshelfng-after-rollback"],
+  ["logical source database restored", 'test "$(pod_logical_hash)" = "$SOURCE_SQL_DUMP_SHA256"']
+].each do |label, contract|
+  assert(installed_handoff.include?(contract), "installed Helm acceptance is missing #{label}")
+end
+assert(!installed_handoff.include?("--set persistence.existingClaim="),
+       "Helm upgrade must keep managing the stable PVC resource instead of dropping it")
+
+puts "BookshelfNG Helm contract passed: pinned legacy resource identities and values, bridge package, provider modes, readiness gates, and a real installed .76 No/Yes/backup/restore/recovery path are wired."
