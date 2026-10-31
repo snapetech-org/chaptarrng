@@ -939,7 +939,7 @@
   "Images": "이미지",
   "Implementation": "- 연혁",
   "Import": "가져오기",
-  "ImportCustomFormat": "주문 형식",
+  "ImportCustomFormat": "사용자 정의 형식 가져오기",
   "ImportCustomFormatJsonLabel": "사용자 정의 형식 JSON",
   "ImportCustomFormatUnableToLoad": "사용자 정의 형식을 불러올 수 없습니다.",
   "ImportExtraFiles": "추가 파일 가져 오기",

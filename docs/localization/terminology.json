@@ -112,7 +112,20 @@
       "source": "Import",
       "meaning": "Adding an existing file to a matched library item.",
       "guidance": "Use consistently for file intake and matching actions.",
-      "preferredTranslations": {}
+      "preferredTranslations": {
+        "es": "Importar",
+        "zh-Hans": "导入",
+        "hi": "आयात",
+        "de": "Importieren",
+        "ja": "インポート",
+        "fr": "Importer",
+        "pt-BR": "Importar",
+        "ar": "استيراد",
+        "ko": "가져오기",
+        "zh-Hant": "匯入",
+        "vi": "Nhập",
+        "id": "Impor"
+      }
     },
     {
       "id": "domain.commandQueue",
