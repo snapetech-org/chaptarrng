@@ -249,6 +249,11 @@ namespace Chaptarr.Core.Test.Datastore
                 null,
                 new TestAppFolderInfo(_temporaryDirectory));
 
+            // These historical fixtures seed Hardcover credentials but no
+            // native Hardcover provider IDs. Declare the legacy Goodreads
+            // primary-provider mode explicitly; an unset mode is rejected.
+            Environment.SetEnvironmentVariable("HARDCOVER", "false");
+
             var preview = controller.MigrateBookshelf(
                 sourceConnectionString,
                 new MigrationContext(MigrationType.Main),
