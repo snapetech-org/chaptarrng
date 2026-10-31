@@ -1,11 +1,27 @@
 # ng-runner-policy: private-jit-required-v1
 name: Validate standalone release assets
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' &&
+      format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool) || github.workflow }}
 
 on:
   push:
     tags:
       - '**'
   workflow_dispatch:
+    inputs:
+      action:
+        description: Admit this workflow to the private JIT broker
+        required: true
+        type: choice
+        options:
+          - ci
+      runner_pool:
+        description: Select the private ephemeral JIT pool
+        required: true
+        type: choice
+        options:
+          - private
 
 permissions:
   contents: read

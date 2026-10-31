@@ -186,6 +186,9 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             '"ref": "main"',
         ):
             self.assertIn(token, dispatcher)
+        self.assertIn('"action": "ci"', dispatcher)
+        self.assertIn('"runner_pool": "private"', dispatcher)
+        self.assertIn("owner-pr:{0}:{1}:{2}:action:{3}:pool:{4}", source)
         self.assertNotIn("actions/checkout", dispatcher)
         self.assertNotIn("secrets.", dispatcher)
 
@@ -213,6 +216,60 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             "pull-requests: read",
         ):
             self.assertIn(permission, release_validation)
+
+    def test_build_and_helm_dispatches_expose_required_private_jit_claims(self) -> None:
+        workflows = (
+            (WORKFLOW, "ci", WORKFLOW.read_text(encoding="utf-8")),
+            (
+                WORKFLOW.parent / "helm-handoff.yml",
+                "ci",
+                (WORKFLOW.parent / "helm-handoff.yml").read_text(encoding="utf-8"),
+            ),
+            (
+                WORKFLOW.parent / "security.yml",
+                "scan",
+                (WORKFLOW.parent / "security.yml").read_text(encoding="utf-8"),
+            ),
+            (
+                WORKFLOW.parent / "semgrep-community.yml",
+                "scan",
+                (WORKFLOW.parent / "semgrep-community.yml").read_text(encoding="utf-8"),
+            ),
+            (
+                WORKFLOW.parent / "standalone-asset-validation.yml",
+                "ci",
+                (WORKFLOW.parent / "standalone-asset-validation.yml").read_text(encoding="utf-8"),
+            ),
+            (
+                WORKFLOW.parent / "trivy-filesystem.yml",
+                "scan",
+                (WORKFLOW.parent / "trivy-filesystem.yml").read_text(encoding="utf-8"),
+            ),
+        )
+        for path, action, source in workflows:
+            dispatch = event_block(source, "workflow_dispatch")
+            if path.name == "helm-handoff.yml":
+                self.assertNotRegex(source, r"(?m)^  push:")
+            for field, option in (("action", action), ("runner_pool", "private")):
+                input_match = re.search(
+                    rf"(?ms)^      {field}:\n(?P<body>.*?)(?=^      [A-Za-z0-9_-]+:|\Z)",
+                    dispatch,
+                )
+                self.assertIsNotNone(input_match, f"{path.name}: missing {field}")
+                input_body = input_match.group("body")
+                self.assertIn("required: true", input_body, f"{path.name}: {field}")
+                self.assertIn("type: choice", input_body, f"{path.name}: {field}")
+                self.assertRegex(
+                    input_body,
+                    rf"(?m)^          - {re.escape(option)}$",
+                    f"{path.name}: {field}",
+                )
+
+            run_name = source.split("run-name:", 1)[1].split("\non:", 1)[0]
+            self.assertIn("inputs.action", run_name, path.name)
+            self.assertIn("inputs.runner_pool", run_name, path.name)
+            self.assertIn("action:", run_name, path.name)
+            self.assertIn("pool:", run_name, path.name)
 
     def test_fedora_rpm_acceptance_is_an_exact_head_private_jit_dispatch(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
