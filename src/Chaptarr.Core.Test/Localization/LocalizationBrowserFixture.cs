@@ -131,7 +131,7 @@ namespace Chaptarr.Core.Test.Localization
                 await page.Keyboard.PressAsync("Escape");
 
                 await page.GotoAsync(settingsUrl);
-                await page.SetViewportSizeAsync(new ViewportSize { Width = 640, Height = 900 });
+                await page.SetViewportSizeAsync(640, 900);
                 await page.EvaluateAsync("() => { document.documentElement.style.fontSize = '200%'; }");
                 var overflows = await page.EvaluateAsync<bool>(
                     "() => { const form = document.querySelector('#uiSettings'); return !!form && form.scrollWidth > form.clientWidth + 2; }");
