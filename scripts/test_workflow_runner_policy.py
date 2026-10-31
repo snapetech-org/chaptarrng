@@ -276,6 +276,20 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("rpm_bridge_only:", source)
         self.assertIn("inputs.rpm_bridge_only != true", job_block(source, "build"))
 
+        rpm_bridge_path = (
+            WORKFLOW.parents[2]
+            / "packaging"
+            / "scripts"
+            / "test-build-bookshelfng-rpm-bridge.sh"
+        )
+        rpm_bridge = rpm_bridge_path.read_text(encoding="utf-8")
+        self.assertIn("src/Directory.Build.props", rpm_bridge)
+        self.assertIn("candidate-version.txt", rpm_bridge)
+        self.assertIn("CHAPTARRNG_CANDIDATE_VERSION=$candidate_version", rpm_bridge)
+        self.assertIn("ChaptarrNG-$candidate_version-linux-x64.tar.gz", rpm_bridge)
+        self.assertIn('"$candidate_version"', rpm_bridge)
+        self.assertNotIn("0.9.977", rpm_bridge)
+
         rpm_job = job_block(source, "rpm-bridge-acceptance")
         for token in (
             "github.event_name == 'workflow_dispatch'",
