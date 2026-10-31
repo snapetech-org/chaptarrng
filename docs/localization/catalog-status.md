@@ -4,44 +4,44 @@
 
 Source catalog: **2950 messages** in `en.json`. Each locale below resolves source IDs through its exact catalog, configured parent catalog, and English fallback.
 
-Strings without an exact translation inherit from the configured parent locale or English. Machine drafts and reviewed entries are explicit fingerprinted provenance records. Existing exact translations without provenance are shown as unreviewed; they are not assumed to be machine-generated.
+Source-equal exact values are separately classified as invariants or native equivalents by a source-fingerprinted agent audit; this classification does not claim qualified native review. Unclassified values remain unreviewed. Strings without an exact translation inherit from the configured parent locale or English. Machine drafts and reviewed entries are explicit fingerprinted provenance records. Existing exact translations without provenance are shown as unreviewed; they are not assumed to be machine-generated.
 
-| Locale | Exact catalog | Direction | Source IDs | Direct exact | Machine drafts | Unreviewed exact | Inherited | Reviewed |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `en` | `en.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 0 |
-| `ar` | `ar.json` | rtl | 2950 | 2950 | 214 | 2726 | 0 | 10 |
-| `az` | `az.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `bg` | `bg.json` | ltr | 2950 | 699 | 0 | 699 | 2251 | 0 |
-| `bn` | `bn.json` | ltr | 2950 | 3 | 0 | 3 | 2947 | 0 |
-| `cs` | `cs.json` | ltr | 2950 | 762 | 0 | 762 | 2188 | 0 |
-| `da` | `da.json` | ltr | 2950 | 675 | 0 | 675 | 2275 | 0 |
-| `de` | `de.json` | ltr | 2950 | 2950 | 212 | 2729 | 0 | 9 |
-| `es` | `es.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
-| `fa` | `fa.json` | rtl | 2950 | 10 | 0 | 10 | 2940 | 0 |
-| `fr` | `fr.json` | ltr | 2950 | 2950 | 210 | 2731 | 0 | 9 |
-| `he` | `he.json` | rtl | 2950 | 691 | 0 | 691 | 2259 | 0 |
-| `hi` | `hi.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
-| `hu` | `hu.json` | ltr | 2950 | 1081 | 0 | 1081 | 1869 | 0 |
-| `id` | `id.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
-| `it` | `it.json` | ltr | 2950 | 917 | 0 | 917 | 2033 | 0 |
-| `ja` | `ja.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
-| `kk` | `kk.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `ko` | `ko.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
-| `ms` | `ms.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `nb` | `nb_NO.json` | ltr | 2950 | 211 | 0 | 211 | 2739 | 0 |
-| `nl` | `nl.json` | ltr | 2950 | 771 | 0 | 771 | 2179 | 0 |
-| `pl` | `pl.json` | ltr | 2950 | 722 | 0 | 722 | 2228 | 0 |
-| `pt` | `pt.json` | ltr | 2950 | 961 | 0 | 961 | 1989 | 0 |
-| `ru` | `ru.json` | ltr | 2950 | 886 | 0 | 886 | 2064 | 0 |
-| `sv` | `sv.json` | ltr | 2950 | 878 | 0 | 878 | 2072 | 0 |
-| `th` | `th.json` | ltr | 2950 | 657 | 0 | 657 | 2293 | 0 |
-| `tr` | `tr.json` | ltr | 2950 | 869 | 0 | 869 | 2081 | 0 |
-| `uk` | `uk.json` | ltr | 2950 | 855 | 0 | 855 | 2095 | 0 |
-| `uz` | `uz.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `vi` | `vi.json` | ltr | 2950 | 2950 | 214 | 2726 | 0 | 10 |
-| `zh-Hans` | `zh_CN.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
-| `es-419` | `es_419.json` ← `es.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `fr-CA` | `fr_CA.json` ← `fr.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `pt-BR` | `pt_BR.json` ← `pt.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
-| `pt-PT` | `pt_PT.json` ← `pt.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `zh-Hant` | `zh_TW.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
+| Locale | Exact catalog | Direction | Source IDs | Direct exact | Classified source-equal | Machine drafts | Unreviewed exact | Inherited | Reviewed |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `en` | `en.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `ar` | `ar.json` | rtl | 2950 | 2950 | 26 | 1202 | 1712 | 0 | 10 |
+| `az` | `az.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 2950 | 0 |
+| `bg` | `bg.json` | ltr | 2950 | 699 | 0 | 0 | 699 | 2251 | 0 |
+| `bn` | `bn.json` | ltr | 2950 | 3 | 0 | 0 | 3 | 2947 | 0 |
+| `cs` | `cs.json` | ltr | 2950 | 762 | 0 | 0 | 762 | 2188 | 0 |
+| `da` | `da.json` | ltr | 2950 | 675 | 0 | 0 | 675 | 2275 | 0 |
+| `de` | `de.json` | ltr | 2950 | 2950 | 59 | 665 | 2217 | 0 | 9 |
+| `es` | `es.json` | ltr | 2950 | 2950 | 52 | 675 | 2214 | 0 | 9 |
+| `fa` | `fa.json` | rtl | 2950 | 10 | 0 | 0 | 10 | 2940 | 0 |
+| `fr` | `fr.json` | ltr | 2950 | 2950 | 77 | 558 | 2306 | 0 | 9 |
+| `he` | `he.json` | rtl | 2950 | 691 | 0 | 0 | 691 | 2259 | 0 |
+| `hi` | `hi.json` | ltr | 2950 | 2950 | 26 | 866 | 2049 | 0 | 9 |
+| `hu` | `hu.json` | ltr | 2950 | 1081 | 0 | 0 | 1081 | 1869 | 0 |
+| `id` | `id.json` | ltr | 2950 | 2950 | 48 | 713 | 2180 | 0 | 9 |
+| `it` | `it.json` | ltr | 2950 | 917 | 0 | 0 | 917 | 2033 | 0 |
+| `ja` | `ja.json` | ltr | 2950 | 2950 | 30 | 897 | 2014 | 0 | 9 |
+| `kk` | `kk.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 2950 | 0 |
+| `ko` | `ko.json` | ltr | 2950 | 2950 | 31 | 1144 | 1766 | 0 | 9 |
+| `ms` | `ms.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 2950 | 0 |
+| `nb` | `nb_NO.json` | ltr | 2950 | 211 | 0 | 0 | 211 | 2739 | 0 |
+| `nl` | `nl.json` | ltr | 2950 | 771 | 0 | 0 | 771 | 2179 | 0 |
+| `pl` | `pl.json` | ltr | 2950 | 722 | 0 | 0 | 722 | 2228 | 0 |
+| `pt` | `pt.json` | ltr | 2950 | 961 | 0 | 0 | 961 | 1989 | 0 |
+| `ru` | `ru.json` | ltr | 2950 | 886 | 0 | 0 | 886 | 2064 | 0 |
+| `sv` | `sv.json` | ltr | 2950 | 878 | 0 | 0 | 878 | 2072 | 0 |
+| `th` | `th.json` | ltr | 2950 | 657 | 0 | 0 | 657 | 2293 | 0 |
+| `tr` | `tr.json` | ltr | 2950 | 869 | 0 | 0 | 869 | 2081 | 0 |
+| `uk` | `uk.json` | ltr | 2950 | 855 | 0 | 0 | 855 | 2095 | 0 |
+| `uz` | `uz.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 2950 | 0 |
+| `vi` | `vi.json` | ltr | 2950 | 2950 | 35 | 961 | 1944 | 0 | 10 |
+| `zh-Hans` | `zh_CN.json` | ltr | 2950 | 2950 | 29 | 721 | 2191 | 0 | 9 |
+| `es-419` | `es_419.json` ← `es.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 2950 | 0 |
+| `fr-CA` | `fr_CA.json` ← `fr.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 2950 | 0 |
+| `pt-BR` | `pt_BR.json` ← `pt.json` | ltr | 2950 | 2950 | 47 | 540 | 2354 | 0 | 9 |
+| `pt-PT` | `pt_PT.json` ← `pt.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 2950 | 0 |
+| `zh-Hant` | `zh_TW.json` | ltr | 2950 | 2950 | 30 | 853 | 2058 | 0 | 9 |

@@ -14,18 +14,21 @@ The server merges English, the declared parent catalog, then the exact locale ca
 
 ## Current target-locale review status
 
-The October 30, 2026 audit of the agreed 12 locales found 220 source IDs absent from every exact target catalog; each resolves to English fallback. Additional exact catalog values that still equal the English source are also reported as inherited. This follow-up records 110 reviewed corrections and consistency fixes, but the remaining legacy exact translations have no review provenance. Full target-catalog translation and native-speaker quality review remain outstanding.
+The October 31, 2026 follow-up reviewed all 2,950 source IDs across the agreed 12 locales (35,400 decisions). Every target catalog now contains every source ID. The context-vetted milestone changes 7,388 target values from `a029e3b7`, rejects 30 purely stylistic proposals, preserves product/provider names and release revision markers, and replaces five ambiguous English source labels/help messages with plain wording. No uncertain model decisions remain in the accepted set.
+
+`docs/localization/core-review-evidence.json` records counts, exact catalog hashes, retained evidence hashes, and the limits of this review. These are machine drafts and agent contextual reviews; qualified native-speaker signoff remains unclaimed. Fixed server/API, persisted and outbound notification copy, and final headed Agentic VM acceptance are the next delivery milestone.
 
 ## Per-string provenance
 
 docs/localization/provenance.json stores explicit source-fingerprinted `reviewed` and `drafts` records per locale and message ID. The generated catalog report distinguishes:
 
 - **reviewed** values whose current English fingerprint was reviewed and whose exact locale catalog contains the translation;
+- **classified source-equal** exact values with a current fingerprint and an explicit invariant/native-equivalent category in `docs/localization/source-equalities.json`; these are agent classifications, not native-speaker approval;
 - **machine drafts** explicitly recorded under `drafts`, with the current source fingerprint;
 - **unreviewed exact** legacy catalog values with no provenance record;
 - **inherited** values supplied by the configured parent locale or English fallback.
 
-Existing translations without contributor or workflow provenance are recorded as unreviewed, not assumed to be machine-generated. Record a translation as a draft only when its machine-draft origin is known. Review a string only after checking meaning, terminology, context, placeholders, and punctuation. The catalog check verifies that source and target placeholder tokens match for every reviewed or machine-draft value. The generated counts are in docs/localization/catalog-status.md.
+Existing translations without contributor or workflow provenance remain unreviewed in this report even after model/agent QA; the semantic audit is recorded separately and does not create qualified reviewer provenance. Source-equal exact values remain distinct from missing inherited values. Record a translation as a draft only when its machine-draft origin is known. Review a string only after checking meaning, terminology, context, placeholders, and punctuation. The catalog check verifies that source and target placeholder tokens match for every reviewed or machine-draft value. The generated counts are in docs/localization/catalog-status.md.
 
 To refresh source fingerprints after reviewing changed English copy, run yarn localization:update-source-hashes. To update the generated status table, run yarn localization:update-status. Then run yarn check-translations, yarn check-localization, and yarn test-localization.
 
@@ -41,7 +44,7 @@ Document lang and dir come from the selected locale. The PostCSS logical-propert
 
 ## Browser acceptance
 
-Run the opt-in Playwright fixture against an isolated local instance with at least one seeded book:
+Use a headed browser session in the Agentic VM against an isolated local instance with at least one seeded book for acceptance review. Never use the host desktop. The opt-in automated fixture remains available for project test environments:
 
     CHAPTARR_LOCALIZATION_BROWSER_URL=http://127.0.0.1:8787/ dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --filter TestCategory=LocalizationBrowser
 

@@ -19,7 +19,7 @@
     "stylelint-linux": "stylelint $(find frontend -name '*.css') --config frontend/.stylelintrc",
     "stylelint-windows": "stylelint \"frontend/**/*.css\" --config frontend/.stylelintrc",
     "check-localization": "node frontend/build/check-localization-catalogs.js",
-    "test-localization": "node --test frontend/src/Utilities/Localization/formatters.test.cjs frontend/src/Utilities/Localization/locale-utils.test.cjs frontend/src/Utilities/Localization/message-formatting.test.cjs frontend/build/postcss-logical-direction.test.cjs",
+    "test-localization": "node --test frontend/build/source-equality-audit.test.cjs frontend/src/Utilities/Localization/formatters.test.cjs frontend/src/Utilities/Localization/locale-utils.test.cjs frontend/src/Utilities/Localization/message-formatting.test.cjs frontend/build/postcss-logical-direction.test.cjs",
     "localization:update-source-hashes": "node frontend/build/check-localization-catalogs.js --write-source-hashes",
     "localization:update-status": "node frontend/build/check-localization-catalogs.js --write-report"
   },
