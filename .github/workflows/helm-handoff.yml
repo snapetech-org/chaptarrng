@@ -32,12 +32,6 @@ jobs:
     env:
       BOOKSHELFNG_CHART_SOURCE_SHA: adea130aeea2b6ea29c28a6ea8bf4706169d15e4
       BUILDKIT_EGRESS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
-      HTTP_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
-      HTTPS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
-      http_proxy: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
-      https_proxy: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}
-      NO_PROXY: localhost,127.0.0.1
-      no_proxy: localhost,127.0.0.1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
@@ -90,6 +84,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export HTTP_PROXY="$BUILDKIT_EGRESS_PROXY" HTTPS_PROXY="$BUILDKIT_EGRESS_PROXY"
+          export http_proxy="$BUILDKIT_EGRESS_PROXY" https_proxy="$BUILDKIT_EGRESS_PROXY"
+          export NO_PROXY=localhost,127.0.0.1 no_proxy=localhost,127.0.0.1
           kind_version=v0.33.0
           kind_asset=kind-linux-amd64
           curl -fsSLo "$RUNNER_TEMP/$kind_asset" \

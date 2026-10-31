@@ -19,6 +19,9 @@ NAMESPACE=default
     printf 'A trusted-main private JIT proxy is required for the installed Helm build.\n' >&2
     exit 1
 }
+export HTTP_PROXY="$BUILDKIT_EGRESS_PROXY" HTTPS_PROXY="$BUILDKIT_EGRESS_PROXY"
+export http_proxy="$BUILDKIT_EGRESS_PROXY" https_proxy="$BUILDKIT_EGRESS_PROXY"
+export NO_PROXY=localhost,127.0.0.1 no_proxy=localhost,127.0.0.1
 
 mkdir -p "$EVIDENCE_DIR"
 exec > >(tee -a "$EVIDENCE_DIR/acceptance.log") 2>&1
