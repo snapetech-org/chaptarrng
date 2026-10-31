@@ -202,6 +202,27 @@
         "vi": "Trung bình",
         "id": "Sedang"
       }
+    },
+    {
+      "id": "domain.hardcoverProvider",
+      "sourceId": "Hardcover",
+      "source": "Hardcover",
+      "meaning": "The Hardcover book metadata and search provider, not a generic printed-book binding.",
+      "guidance": "Preserve the exact product spelling, capitalization, and Latin-script form in every locale.",
+      "preferredTranslations": {
+        "es": "Hardcover",
+        "zh-Hans": "Hardcover",
+        "hi": "Hardcover",
+        "de": "Hardcover",
+        "ja": "Hardcover",
+        "fr": "Hardcover",
+        "pt-BR": "Hardcover",
+        "ar": "Hardcover",
+        "ko": "Hardcover",
+        "zh-Hant": "Hardcover",
+        "vi": "Hardcover",
+        "id": "Hardcover"
+      }
     }
   ]
 }
