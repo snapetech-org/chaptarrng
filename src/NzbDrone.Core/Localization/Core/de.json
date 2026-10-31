@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "Nicht zugeordnete Dateien konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
   "UseSelectedMetadataSource": "Ausgewählten Katalog verwenden",
   "ui.backup.encryptedDownloadFailed": "Verschlüsseltes Backup konnte nicht erstellt werden.",
-  "ui.language.inheritedFallbackNotice": "Nicht übersetzte Beschriftungen werden in Englisch angezeigt, bis eine Übersetzung hinzugefügt wird."
+  "ui.language.inheritedFallbackNotice": "Nicht übersetzte Beschriftungen werden in Englisch angezeigt, bis eine Übersetzung hinzugefügt wird.",
+  "notification.field.links": "Links",
+  "notification.heading.renamed": "Umbenannt",
+  "notification.sensor.health": "Gesundheit",
+  "notification.sensor.missingBooks": "Fehlende Bücher",
+  "notification.sensor.queue": "Warteschlange"
 }

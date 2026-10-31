@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "Không thể tải các tệp chưa ánh xạ. Kiểm tra kết nối và thử lại.",
   "UseSelectedMetadataSource": "Sử dụng danh mục đã chọn",
   "ui.backup.encryptedDownloadFailed": "Không thể tạo bản sao lưu mã hóa.",
-  "ui.language.inheritedFallbackNotice": "Các nhãn chưa được dịch sẽ hiển thị bằng tiếng Anh cho đến khi thêm bản dịch."
+  "ui.language.inheritedFallbackNotice": "Các nhãn chưa được dịch sẽ hiển thị bằng tiếng Anh cho đến khi thêm bản dịch.",
+  "notification.field.links": "Liên kết",
+  "notification.heading.renamed": "Đã đổi tên",
+  "notification.sensor.health": "Sức khỏe",
+  "notification.sensor.missingBooks": "Thiếu sách",
+  "notification.sensor.queue": "Hàng đợi"
 }

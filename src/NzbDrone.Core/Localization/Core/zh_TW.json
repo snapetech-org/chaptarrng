@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "無法載入未映射檔案。請檢查您的連線並重試。",
   "UseSelectedMetadataSource": "使用選取的目錄來源",
   "ui.backup.encryptedDownloadFailed": "無法建立加密備份。",
-  "ui.language.inheritedFallbackNotice": "未翻譯的標籤會使用英文，直到新增翻譯為止。"
+  "ui.language.inheritedFallbackNotice": "未翻譯的標籤會使用英文，直到新增翻譯為止。",
+  "notification.field.links": "連結",
+  "notification.heading.renamed": "更名",
+  "notification.sensor.health": "系統健康",
+  "notification.sensor.missingBooks": "缺少的書",
+  "notification.sensor.queue": "佇列"
 }

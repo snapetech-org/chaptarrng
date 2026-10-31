@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "تعذر تحميل الملفات غير المربوطة. تحقق من اتصالك وحاول مرة أخرى.",
   "UseSelectedMetadataSource": "استخدم الكتالوج المحدد",
   "ui.backup.encryptedDownloadFailed": "تعذر إنشاء نسخة احتياطية مشفرة.",
-  "ui.language.inheritedFallbackNotice": "تُستخدم العبارات غير المترجمة باللغة الإنجليزية حتى يتم إضافة ترجمة لها."
+  "ui.language.inheritedFallbackNotice": "تُستخدم العبارات غير المترجمة باللغة الإنجليزية حتى يتم إضافة ترجمة لها.",
+  "notification.field.links": "الروابط",
+  "notification.heading.renamed": "تمت إعادة تسميته",
+  "notification.sensor.health": "الصحة",
+  "notification.sensor.missingBooks": "الكتب المفقودة",
+  "notification.sensor.queue": "طابور"
 }

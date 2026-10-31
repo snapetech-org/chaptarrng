@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "无法加载未映射文件。请检查连接并重试。",
   "UseSelectedMetadataSource": "使用选定的目录",
   "ui.backup.encryptedDownloadFailed": "无法创建加密备份。",
-  "ui.language.inheritedFallbackNotice": "未翻译的标签将暂时显示为英文，直至添加翻译。"
+  "ui.language.inheritedFallbackNotice": "未翻译的标签将暂时显示为英文，直至添加翻译。",
+  "notification.field.links": "链接",
+  "notification.heading.renamed": "更名",
+  "notification.sensor.health": "健康状态",
+  "notification.sensor.missingBooks": "缺失书籍",
+  "notification.sensor.queue": "队列"
 }

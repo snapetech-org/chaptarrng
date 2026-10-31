@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "Impossible de charger les fichiers non mappés. Vérifiez votre connexion et réessayez.",
   "UseSelectedMetadataSource": "Utiliser le catalogue sélectionné",
   "ui.backup.encryptedDownloadFailed": "Impossible de créer la sauvegarde chiffrée.",
-  "ui.language.inheritedFallbackNotice": "Les libellés non traduits restent en anglais jusqu'à l'ajout d'une traduction."
+  "ui.language.inheritedFallbackNotice": "Les libellés non traduits restent en anglais jusqu'à l'ajout d'une traduction.",
+  "notification.field.links": "Liens",
+  "notification.heading.renamed": "Renommé",
+  "notification.sensor.health": "Santé",
+  "notification.sensor.missingBooks": "Livres manquants",
+  "notification.sensor.queue": "File d'attente"
 }

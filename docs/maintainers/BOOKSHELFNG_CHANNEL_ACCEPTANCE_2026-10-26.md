@@ -889,8 +889,8 @@ typecheck, 37 UI locales/4,015 source IDs/52 catalogs, translation helper keys
 across 1,633 files, package/channel contracts 23/23, and `git diff --check`.
 Source-inventory checks have no structural issues, but strict direct locale
 coverage remains incomplete across the 12 target locales: 5,760 server-message
-entries and 7,068 provider/outbound-notification/option/loading entries are
-pending (12,828 total). The source-capture `--allow-pending` checks report 486
+entries and 7,008 provider/outbound-notification/option/loading entries are
+pending (12,768 total). The source-capture `--allow-pending` checks report 486
 server messages, 649 callsites, 657 bindings, 409 provider fields, 57 outbound
 messages, 136 options, and 17 loading messages. This is a localization
 acceptance gap; it is not counted as a pass.
@@ -914,3 +914,15 @@ is a queued trusted-owner metadata validation from former topic head
 `44b98118`; every build, package, and platform job in it was skipped. It does
 not validate the merged main candidate. No runs were canceled, retried, or
 dispatched.
+
+## Exact-source translation reuse — 2026-10-31 20:26 UTC
+
+The existing catalogs contain five existing translations whose English
+source exactly matches new outbound notification strings. Those five values
+were reused across the 12 target catalogs (60 entries total), without machine
+translation or changing any dynamic text. The catalog status report was
+regenerated and `yarn check-localization` passed. The localization test suite
+remains 51/51. Direct outbound coverage pending decreased from 684 to 624;
+provider, option, loading, and server-message coverage remains open. The
+reused values are tracked as unreviewed exact translations, not qualified
+localization sign-off.

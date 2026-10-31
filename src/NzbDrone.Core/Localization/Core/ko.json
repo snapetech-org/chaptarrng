@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "미매핑 파일을 로드할 수 없습니다. 연결을 확인하고 다시 시도하세요.",
   "UseSelectedMetadataSource": "선택된 카탈로그 사용",
   "ui.backup.encryptedDownloadFailed": "암호화된 백업을 생성할 수 없습니다.",
-  "ui.language.inheritedFallbackNotice": "번역이 추가될 때까지 번역되지 않은 라벨은 영어로 표시됩니다."
+  "ui.language.inheritedFallbackNotice": "번역이 추가될 때까지 번역되지 않은 라벨은 영어로 표시됩니다.",
+  "notification.field.links": "링크",
+  "notification.heading.renamed": "이름이 변경됨",
+  "notification.sensor.health": "상태",
+  "notification.sensor.missingBooks": "누락된 책",
+  "notification.sensor.queue": "대기열"
 }

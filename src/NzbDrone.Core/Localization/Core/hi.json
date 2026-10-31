@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "अनमैप्ड फ़ाइलें लोड नहीं कर सका। अपनी कनेक्शन की जांच करें और पुनः प्रयास करें।",
   "UseSelectedMetadataSource": "चुना गया कैटलॉग उपयोग करें",
   "ui.backup.encryptedDownloadFailed": "एन्क्रिप्टेड बैकअप बनाने में असमर्थ।",
-  "ui.language.inheritedFallbackNotice": "अनुवाद जोड़ा जाने तक अनुवादित न होने वाले लेबल अंग्रेज़ी में दिखाए जाते हैं।"
+  "ui.language.inheritedFallbackNotice": "अनुवाद जोड़ा जाने तक अनुवादित न होने वाले लेबल अंग्रेज़ी में दिखाए जाते हैं।",
+  "notification.field.links": "लिंक",
+  "notification.heading.renamed": "नाम बदलकर",
+  "notification.sensor.health": "स्वास्थ्य",
+  "notification.sensor.missingBooks": "अनुपस्थित पुस्तकें",
+  "notification.sensor.queue": "कतार"
 }

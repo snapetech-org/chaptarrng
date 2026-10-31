@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "No se pudieron cargar los archivos sin mapear. Verifique su conexión e inténtelo de nuevo.",
   "UseSelectedMetadataSource": "Usar el catálogo seleccionado",
   "ui.backup.encryptedDownloadFailed": "No se pudo crear la copia de seguridad cifrada.",
-  "ui.language.inheritedFallbackNotice": "Las etiquetas sin traducir se muestran en inglés hasta que se agregue una traducción."
+  "ui.language.inheritedFallbackNotice": "Las etiquetas sin traducir se muestran en inglés hasta que se agregue una traducción.",
+  "notification.field.links": "Enlaces",
+  "notification.heading.renamed": "Renombrado",
+  "notification.sensor.health": "Salud",
+  "notification.sensor.missingBooks": "Libros faltantes",
+  "notification.sensor.queue": "Cola"
 }

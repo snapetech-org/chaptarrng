@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "Não foi possível carregar os arquivos não mapeados. Verifique sua conexão e tente novamente.",
   "UseSelectedMetadataSource": "Usar o catálogo selecionado",
   "ui.backup.encryptedDownloadFailed": "Não foi possível criar o backup criptografado.",
-  "ui.language.inheritedFallbackNotice": "Rótulos não traduzidos usam inglês até que uma tradução seja adicionada."
+  "ui.language.inheritedFallbackNotice": "Rótulos não traduzidos usam inglês até que uma tradução seja adicionada.",
+  "notification.field.links": "Ligações",
+  "notification.heading.renamed": "Renomeado",
+  "notification.sensor.health": "Saúde",
+  "notification.sensor.missingBooks": "Livros ausentes",
+  "notification.sensor.queue": "Fila"
 }

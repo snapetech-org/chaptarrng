@@ -2948,5 +2948,10 @@
   "UnmappedFilesLoadFailed": "未マッピングファイルを読み込めませんでした。接続を確認して、もう一度お試しください。",
   "UseSelectedMetadataSource": "選択されたカタログを使用",
   "ui.backup.encryptedDownloadFailed": "暗号化されたバックアップを作成できませんでした。",
-  "ui.language.inheritedFallbackNotice": "翻訳が追加されるまで、未翻訳のラベルは英語で表示されます。"
+  "ui.language.inheritedFallbackNotice": "翻訳が追加されるまで、未翻訳のラベルは英語で表示されます。",
+  "notification.field.links": "リンク",
+  "notification.heading.renamed": "名前変更",
+  "notification.sensor.health": "ヘルス",
+  "notification.sensor.missingBooks": "欠落書籍",
+  "notification.sensor.queue": "キュー"
 }
