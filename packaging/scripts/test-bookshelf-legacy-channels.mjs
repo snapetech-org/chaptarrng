@@ -188,9 +188,10 @@ test('macOS installed handoff acceptance is manually dispatched and publication-
   assert.match(workflow, /rid: osx-x64[\s\S]*?architecture: X64[\s\S]*?rid: osx-arm64[\s\S]*?architecture: ARM64/);
   assert.match(workflow, /group":"ng-shared-main-jit"[\s\S]*?"macOS","X64"[\s\S]*?"macOS","ARM64"/);
   assert.match(workflow, /build-standalone\.sh "\$version" "\$\{\{ matrix\.rid \}\}"/);
-  assert.match(workflow, /BookshelfNG-main-v0\.4\.21\.71-\$\{\{ matrix\.rid \}\}\.tar\.gz/);
-  assert.match(workflow, /d4450af8991742b1e5bcb794b9ecb7f59b4d57e99b9a82dfc56cb437112955de/);
-  assert.match(workflow, /50dfa8f20611afd3ff23615a964c33d39f0c026297240a334ad12c61c11d0298/);
+  assert.match(workflow, /BookshelfNG-v\$\{\{ matrix\.predecessor_version \}\}-\$\{\{ matrix\.rid \}\}\.tar\.gz/);
+  assert.match(workflow, /predecessor_version: 0\.4\.21\.76/);
+  assert.match(workflow, /4f660a1367e28c01660c2e082c4f1778f652cca34affc0dba55d3f47ef67f747/);
+  assert.match(workflow, /d964bb1146b6c9e313758a967815f53f8d9aa45314bc30cfa55e96bb299433ce/);
   assert.match(workflow, /test-bookshelf-standalone-handoff\.py/);
   assert.doesNotMatch(workflow, /upload-artifact|gh release (create|upload)|docker push/);
 });

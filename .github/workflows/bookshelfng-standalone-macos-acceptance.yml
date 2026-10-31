@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   installed-handoff:
-    name: BookshelfNG .71 to current ${{ matrix.rid }} archive
+    name: BookshelfNG .76 to current ${{ matrix.rid }} archive
     runs-on: ${{ matrix.architecture == 'X64' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","X64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","ARM64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     timeout-minutes: 45
     strategy:
@@ -22,10 +22,12 @@ jobs:
         include:
         - rid: osx-x64
           architecture: X64
-          predecessor_sha256: d4450af8991742b1e5bcb794b9ecb7f59b4d57e99b9a82dfc56cb437112955de
+          predecessor_version: 0.4.21.76
+          predecessor_sha256: 4f660a1367e28c01660c2e082c4f1778f652cca34affc0dba55d3f47ef67f747
         - rid: osx-arm64
           architecture: ARM64
-          predecessor_sha256: 50dfa8f20611afd3ff23615a964c33d39f0c026297240a334ad12c61c11d0298
+          predecessor_version: 0.4.21.76
+          predecessor_sha256: d964bb1146b6c9e313758a967815f53f8d9aa45314bc30cfa55e96bb299433ce
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -58,8 +60,8 @@ jobs:
         PREDECESSOR_SHA256: ${{ matrix.predecessor_sha256 }}
       run: |
         set -euo pipefail
-        name='BookshelfNG-main-v0.4.21.71-${{ matrix.rid }}.tar.gz'
-        url="https://github.com/snapetech-org/bookshelfng/releases/download/main-v0.4.21.71/$name"
+        name='BookshelfNG-v${{ matrix.predecessor_version }}-${{ matrix.rid }}.tar.gz'
+        url="https://github.com/snapetech-org/bookshelfng/releases/download/v${{ matrix.predecessor_version }}/$name"
         archive="$RUNNER_TEMP/$name"
         curl --fail --location --retry 3 --retry-all-errors "$url" --output "$archive"
         curl --fail --location --retry 3 --retry-all-errors "$url.sha256" --output "$archive.sha256"
