@@ -857,7 +857,8 @@ ChaptarrNG inherits the Readarr-derived operational model and security work from
 - Optional authenticated encryption for full backup archives
 - Update binaries are verified by SHA256 before install
 
-CI runs CodeQL and Trivy dependency/secret scans. Published container images
+CI runs Trivy dependency/secret scans and Semgrep Community Edition. CodeQL is
+disabled for this repository. Published container images
 include a BuildKit SBOM and provenance metadata, plus a GitHub build-provenance
 attestation. The Compose example also enables `no-new-privileges` and binds
 the published web port to loopback by default.
@@ -929,4 +930,4 @@ See the [LICENSE](LICENSE) file for the full license text and [COPYRIGHT.md](COP
 
 ## Security scanning
 
-Run scripts/security-scan-local.sh for local Semgrep Community Edition and applicable Trivy scans. Public GitHub Actions workflows run these scans on changes and weekly, alongside any existing CodeQL workflow. See docs/security-scanning.md for offline setup and updates. Run scripts/install-security-hooks.sh once to enable the staged Semgrep pre-commit hook.
+Run scripts/security-scan-local.sh for local Semgrep Community Edition and applicable Trivy scans. Tag and manually dispatched GitHub Actions workflows run these scans on private ephemeral JIT runners; CodeQL is disabled. See docs/security-scanning.md for offline setup and updates. Run scripts/install-security-hooks.sh once to enable the staged Semgrep pre-commit hook.

@@ -15,8 +15,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # CodeQL is managed by GitHub's repository default setup. Uploading results
-  # from an advanced CodeQL workflow conflicts with that configured setup.
   trivy:
     name: Dependency and secret scan
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
@@ -24,7 +22,6 @@ jobs:
       TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2
     permissions:
       contents: read
-      security-events: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -44,10 +41,12 @@ jobs:
           output: trivy-results.sarif
           skip-dirs: .git,_output,_tests,frontend/node_modules
 
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee
+      - name: Retain Trivy report for review
         if: always() && hashFiles('trivy-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          sarif_file: trivy-results.sarif
-          category: trivy-filesystem
+          name: trivy-filesystem-reports
+          path: trivy-results.sarif
+          if-no-files-found: warn
+          retention-days: 7
 
