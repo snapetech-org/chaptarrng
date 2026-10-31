@@ -668,7 +668,7 @@
   "DonationsLegend": "Mendukung Pengembangan Chaptarr",
   "Download": "Unduh",
   "DirectDownload": "Unduh Langsung",
-  "DownloadClient": "Unduh Klien",
+  "DownloadClient": "Klien Unduhan",
   "DownloadClientCheckDownloadingToRoot": "Unduh klien {0} tempat mengunduh dalam folder root {1}Anda tidak boleh mengunduh ke folder root.",
   "DownloadClientCheckNoneAvailableMessage": "Tak ada klien unduh yang tersedia",
   "DownloadClientCheckUnableToCommunicateMessage": "Tidak dapat berkomunikasi dengan {0}.",

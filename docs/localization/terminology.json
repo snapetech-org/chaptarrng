@@ -29,7 +29,20 @@
       "source": "Author",
       "meaning": "The creator credited for a book.",
       "guidance": "Use consistently across library, search, and metadata screens.",
-      "preferredTranslations": {}
+      "preferredTranslations": {
+        "es": "Autor",
+        "zh-Hans": "作者",
+        "hi": "लेखक",
+        "de": "Autor",
+        "ja": "作者",
+        "fr": "Auteur",
+        "pt-BR": "Autor",
+        "ar": "مؤلف",
+        "ko": "저자",
+        "zh-Hant": "作者",
+        "vi": "Tác giả",
+        "id": "Penulis"
+      }
     },
     {
       "id": "domain.edition",
@@ -45,7 +58,20 @@
       "source": "Download Client",
       "meaning": "An external application used to retrieve book files.",
       "guidance": "Keep consistent in settings and queue screens.",
-      "preferredTranslations": {}
+      "preferredTranslations": {
+        "es": "Cliente de descarga",
+        "zh-Hans": "下载客户端",
+        "hi": "डाउनलोड क्लाइंट",
+        "de": "Download-Client",
+        "ja": "ダウンロードクライアント",
+        "fr": "Client de téléchargement",
+        "pt-BR": "Cliente de download",
+        "ar": "عميل التنزيل",
+        "ko": "다운로드 클라이언트",
+        "zh-Hant": "下載用戶端",
+        "vi": "Ứng dụng khách tải xuống",
+        "id": "Klien Unduhan"
+      }
     },
     {
       "id": "domain.qualityProfile",

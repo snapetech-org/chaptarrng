@@ -668,7 +668,7 @@
   "DonationsLegend": "Hỗ trợ phát triển Chaptarr",
   "Download": "Tải về",
   "DirectDownload": "Tải trực tiếp về",
-  "DownloadClient": "Tải xuống ứng dụng khách",
+  "DownloadClient": "Ứng dụng khách tải xuống",
   "DownloadClientCheckDownloadingToRoot": "Tải xuống ứng dụng khách {0} đặt các bản tải xuống trong thư mục gốc {1}. Bạn không nên tải xuống thư mục gốc.",
   "DownloadClientCheckNoneAvailableMessage": "Không có ứng dụng khách tải xuống nào",
   "DownloadClientCheckUnableToCommunicateMessage": "Không thể giao tiếp với {0}.",

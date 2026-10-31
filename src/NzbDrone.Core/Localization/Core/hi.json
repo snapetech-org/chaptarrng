@@ -668,7 +668,7 @@
   "DonationsLegend": "समर्थन Chaptarr विकास",
   "Download": "डाउनलोड",
   "DirectDownload": "डायरेक्ट डाउनलोड",
-  "DownloadClient": "क्लाइंट डाउनलोड करें",
+  "DownloadClient": "डाउनलोड क्लाइंट",
   "DownloadClientCheckDownloadingToRoot": "डाउनलोड क्लाइंट {0} रूट फ़ोल्डर में डाउनलोड करता है {1}। आपको रूट फ़ोल्डर में डाउनलोड नहीं करना चाहिए।",
   "DownloadClientCheckNoneAvailableMessage": "कोई डाउनलोड क्लाइंट उपलब्ध नहीं है",
   "DownloadClientCheckUnableToCommunicateMessage": "{0} के साथ संवाद करने में असमर्थ।",
