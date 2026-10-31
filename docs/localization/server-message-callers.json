@@ -2,8 +2,8 @@
   "version": 1,
   "scope": "Presentation boundaries only; stores retain raw server messages and captured provider/user values stay data. See server-copy-review.md for complete caller review.",
   "counts": {
-    "files": 32,
-    "callsites": 69
+    "files": 34,
+    "callsites": 74
   },
   "callsites": [
     {
@@ -101,6 +101,24 @@
       "line": 18,
       "sourceLine": "return translateServerMessage(xhr.responseJSON?.message || xhr.responseJSON?.error || translate('AuthorMediaMoveRequestFailed'));",
       "sourceLineSha256": "0182be8f2c44c8aaa4b15764a62b3c9c695ec8dd221a5a6114ad0e25931c9fc5"
+    },
+    {
+      "file": "frontend/src/Book/Details/Matching/BookMatchProvenanceTable.js",
+      "line": 118,
+      "sourceLine": "return range.detail ? `${label}: ${translateServerMessage(range.detail)}` : label;",
+      "sourceLineSha256": "36cb15985db9f79c1b1ca42ec277e4f05d37cfc2c8ebda844358ff0716ae836b"
+    },
+    {
+      "file": "frontend/src/Book/Details/Matching/BookMatchProvenanceTable.js",
+      "line": 264,
+      "sourceLine": "return translateServerMessage(signal.detail) || '';",
+      "sourceLineSha256": "ff99da9db465d19b08e83a4399539cfe1ce46e1f3d9a691606d2996c63bbf98f"
+    },
+    {
+      "file": "frontend/src/Book/Details/Matching/BookMatchProvenanceTable.js",
+      "line": 557,
+      "sourceLine": "title={translateServerMessage(signal.detail)}",
+      "sourceLineSha256": "d7a859f2ea7c1d3ca6681224a31b805fae594633e0664d919e1a8d46008857c3"
     },
     {
       "file": "frontend/src/Components/Form/EnhancedSelectInput.js",
@@ -251,6 +269,18 @@
       "line": 47,
       "sourceLine": "return message ? [translateServerMessage(message)] : [];",
       "sourceLineSha256": "362149931d9dba875e7c76668503df75239d55532775fa32bbe8d0a3c32eacae"
+    },
+    {
+      "file": "frontend/src/InteractiveSearch/InteractiveSearchRow.js",
+      "line": 64,
+      "sourceLine": "return translateServerMessage(grabError);",
+      "sourceLineSha256": "752323850afe12c6fc90993e3141fed0609e5af92dfc34cdbd083cd1a8962b27"
+    },
+    {
+      "file": "frontend/src/InteractiveSearch/InteractiveSearchRow.js",
+      "line": 346,
+      "sourceLine": "{translateServerMessage(grabError)}",
+      "sourceLineSha256": "da62b57a54c1641a4fbed3f1ab377b326a3ca71b7ce4491ea9a438d4aca76eb7"
     },
     {
       "file": "frontend/src/Search/Series/AddNewSeriesModalContent.js",

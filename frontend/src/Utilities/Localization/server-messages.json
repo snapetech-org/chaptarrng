@@ -168,6 +168,14 @@
     ]
   },
   {
+    "id": "server.message.m060675d5700c",
+    "source": "This logical field proved the identifier candidate's book or edition title.",
+    "parameters": [],
+    "patterns": [
+      "This logical field proved the identifier candidate's book or edition title."
+    ]
+  },
+  {
     "id": "server.message.m06254ce94096",
     "source": "rTorrent version should be at least 0.9.0. Version reported is {value0}",
     "parameters": [
@@ -212,6 +220,14 @@
     ]
   },
   {
+    "id": "server.message.m083b31b1f1e6",
+    "source": "Failed to connect to prowl, please check your settings.",
+    "parameters": [],
+    "patterns": [
+      "Failed to connect to prowl, please check your settings."
+    ]
+  },
+  {
     "id": "server.message.m08504a962fa8",
     "source": "Selected foreign edition '{value0}' does not belong to selected book {value1}.",
     "parameters": [
@@ -250,6 +266,29 @@
     ],
     "patterns": [
       "{value0} MonitorNewItems must be All, New, or None"
+    ]
+  },
+  {
+    "id": "server.message.m09734a3e9cf9",
+    "source": "No embedded tag value supplied author evidence; the folder path supplied it.",
+    "parameters": [],
+    "patterns": [
+      "No embedded tag value supplied author evidence; the folder path supplied it."
+    ]
+  },
+  {
+    "id": "server.message.m09853a3933ba",
+    "source": "No enabled {value0} download client is configured. Add and enable a {value1}-capable download client, then retry.",
+    "parameters": [
+      {
+        "name": "value0"
+      },
+      {
+        "name": "value1"
+      }
+    ],
+    "patterns": [
+      "No enabled {value0} download client is configured. Add and enable a {value1}-capable download client, then retry."
     ]
   },
   {
@@ -321,6 +360,14 @@
     ]
   },
   {
+    "id": "server.message.m0c585b47781f",
+    "source": "This logical field proved the pinned book author.",
+    "parameters": [],
+    "patterns": [
+      "This logical field proved the pinned book author."
+    ]
+  },
+  {
     "id": "server.message.m0df8751db78b",
     "source": "Selected root folder '{value0}' is missing a {value1} quality profile default",
     "parameters": [
@@ -386,6 +433,14 @@
     ]
   },
   {
+    "id": "server.message.m123c31b11b23",
+    "source": "Near-exact title evidence accepted by the active matcher mode.",
+    "parameters": [],
+    "patterns": [
+      "Near-exact title evidence accepted by the active matcher mode."
+    ]
+  },
+  {
     "id": "server.message.m12f378d7ddc5",
     "source": "Connection test failed: {value0}",
     "parameters": [
@@ -397,6 +452,21 @@
     ],
     "patterns": [
       "Connection test failed: {value0}"
+    ]
+  },
+  {
+    "id": "server.message.m1342cc36e68f",
+    "source": "No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds.",
+    "parameters": [
+      {
+        "name": "value0"
+      },
+      {
+        "name": "value1"
+      }
+    ],
+    "patterns": [
+      "No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds."
     ]
   },
   {
@@ -536,6 +606,14 @@
     "parameters": [],
     "patterns": [
       "At least one quality profile must be selected"
+    ]
+  },
+  {
+    "id": "server.message.m1cb06fc96c2e",
+    "source": "An exact ASIN/Audible ASIN lookup selected this edition candidate.",
+    "parameters": [],
+    "patterns": [
+      "An exact ASIN/Audible ASIN lookup selected this edition candidate."
     ]
   },
   {
@@ -746,6 +824,14 @@
     ]
   },
   {
+    "id": "server.message.m290e1a4f50ba",
+    "source": "No usable narrator evidence was present for this edition.",
+    "parameters": [],
+    "patterns": [
+      "No usable narrator evidence was present for this edition."
+    ]
+  },
+  {
     "id": "server.message.m2924c85ce471",
     "source": "Author IDs must be unique.",
     "parameters": [],
@@ -873,6 +959,14 @@
     "parameters": [],
     "patterns": [
       "Connection timed out"
+    ]
+  },
+  {
+    "id": "server.message.m2e1832187375",
+    "source": "Publisher tokens corroborated this edition.",
+    "parameters": [],
+    "patterns": [
+      "Publisher tokens corroborated this edition."
     ]
   },
   {
@@ -1080,6 +1174,14 @@
     ]
   },
   {
+    "id": "server.message.m380e19583eca",
+    "source": "Multiple audiobook editions were available, but the file supplied no usable narrator or full-book duration evidence to distinguish them. Chaptarr selected a native audiobook using its normal deterministic edition order.",
+    "parameters": [],
+    "patterns": [
+      "Multiple audiobook editions were available, but the file supplied no usable narrator or full-book duration evidence to distinguish them. Chaptarr selected a native audiobook using its normal deterministic edition order."
+    ]
+  },
+  {
     "id": "server.message.m382a86feb870",
     "source": "Metadata server ping did not return ok=true",
     "parameters": [],
@@ -1277,6 +1379,26 @@
     ]
   },
   {
+    "id": "server.message.m43edb49bfa4c",
+    "source": "The file has no usable duration.",
+    "parameters": [],
+    "patterns": [
+      "The file has no usable duration."
+    ]
+  },
+  {
+    "id": "server.message.m44064e27b666",
+    "source": "Unable to send text message: {value0}",
+    "parameters": [
+      {
+        "name": "value0"
+      }
+    ],
+    "patterns": [
+      "Unable to send text message: {value0}"
+    ]
+  },
+  {
     "id": "server.message.m4410286171ba",
     "source": "qBittorrent is reporting an error",
     "parameters": [],
@@ -1414,6 +1536,14 @@
     "parameters": [],
     "patterns": [
       "Unable to connect to Transmission"
+    ]
+  },
+  {
+    "id": "server.message.m4b0072b05f0b",
+    "source": "Embedded author evidence corroborated the path-selected candidate.",
+    "parameters": [],
+    "patterns": [
+      "Embedded author evidence corroborated the path-selected candidate."
     ]
   },
   {
@@ -1582,6 +1712,14 @@
     ]
   },
   {
+    "id": "server.message.m5314fa3dfe04",
+    "source": "Embedded title evidence corroborated the candidate selected from the folder and filename.",
+    "parameters": [],
+    "patterns": [
+      "Embedded title evidence corroborated the candidate selected from the folder and filename."
+    ]
+  },
+  {
     "id": "server.message.m532212ccb76d",
     "source": "Image downloaded successfully",
     "parameters": [],
@@ -1684,6 +1822,14 @@
     ]
   },
   {
+    "id": "server.message.m5aa6a41c72ca",
+    "source": "This logical field proved the identifier candidate's author.",
+    "parameters": [],
+    "patterns": [
+      "This logical field proved the identifier candidate's author."
+    ]
+  },
+  {
     "id": "server.message.m5b6d7aa6820c",
     "source": "Retry scheduled",
     "parameters": [],
@@ -1740,6 +1886,18 @@
     ]
   },
   {
+    "id": "server.message.m6026247dc0f2",
+    "source": "Download client rejected release: {value0}",
+    "parameters": [
+      {
+        "name": "value0"
+      }
+    ],
+    "patterns": [
+      "Download client rejected release: {value0}"
+    ]
+  },
+  {
     "id": "server.message.m609ed5f60975",
     "source": "Cannot re-add author: the author is not available on the metadata server.",
     "parameters": [],
@@ -1775,6 +1933,14 @@
     "parameters": [],
     "patterns": [
       "Username must not be empty."
+    ]
+  },
+  {
+    "id": "server.message.m61c0ddf68a65",
+    "source": "This field's position conflicted, so Strict did not use that field as title proof.",
+    "parameters": [],
+    "patterns": [
+      "This field's position conflicted, so Strict did not use that field as title proof."
     ]
   },
   {
@@ -1889,6 +2055,21 @@
     "parameters": [],
     "patterns": [
       "Authorization is required"
+    ]
+  },
+  {
+    "id": "server.message.m6849ebee10e9",
+    "source": "This torrent is already present in {value0} as '{value1}'.",
+    "parameters": [
+      {
+        "name": "value0"
+      },
+      {
+        "name": "value1"
+      }
+    ],
+    "patterns": [
+      "This torrent is already present in {value0} as '{value1}'."
     ]
   },
   {
@@ -2070,6 +2251,14 @@
     "parameters": [],
     "patterns": [
       "Must contain Author name"
+    ]
+  },
+  {
+    "id": "server.message.m736b5fe15618",
+    "source": "This logical field proved the pinned edition title.",
+    "parameters": [],
+    "patterns": [
+      "This logical field proved the pinned edition title."
     ]
   },
   {
@@ -2415,6 +2604,14 @@
     ]
   },
   {
+    "id": "server.message.m7daa93712844",
+    "source": "This logical field supplied title containment proof.",
+    "parameters": [],
+    "patterns": [
+      "This logical field supplied title containment proof."
+    ]
+  },
+  {
     "id": "server.message.m7db986dd5235",
     "source": "File does not exist",
     "parameters": [],
@@ -2616,6 +2813,14 @@
     ],
     "patterns": [
       "mediaType must be 'all', 'audiobook', or 'ebook'{value0}"
+    ]
+  },
+  {
+    "id": "server.message.m835cd53441fb",
+    "source": "Series-name tokens corroborated this book.",
+    "parameters": [],
+    "patterns": [
+      "Series-name tokens corroborated this book."
     ]
   },
   {
@@ -2885,6 +3090,14 @@
     ]
   },
   {
+    "id": "server.message.m9123e0c2a1bb",
+    "source": "A representative non-native edition was selected because no better native edition was proven.",
+    "parameters": [],
+    "patterns": [
+      "A representative non-native edition was selected because no better native edition was proven."
+    ]
+  },
+  {
     "id": "server.message.m91368e1b2976",
     "source": "The UI Language value cannot be less than 1",
     "parameters": [],
@@ -3068,6 +3281,22 @@
     "parameters": [],
     "patterns": [
       "Invalid audiobook tag mode"
+    ]
+  },
+  {
+    "id": "server.message.m9bb5b0761aa3",
+    "source": "Apikey is invalid",
+    "parameters": [],
+    "patterns": [
+      "Apikey is invalid"
+    ]
+  },
+  {
+    "id": "server.message.m9c90e66f400b",
+    "source": "Author identity was present in matchable metadata.",
+    "parameters": [],
+    "patterns": [
+      "Author identity was present in matchable metadata."
     ]
   },
   {
@@ -3311,11 +3540,27 @@
     ]
   },
   {
+    "id": "server.message.mae40d81346d7",
+    "source": "Narrator evidence corroborated this edition.",
+    "parameters": [],
+    "patterns": [
+      "Narrator evidence corroborated this edition."
+    ]
+  },
+  {
     "id": "server.message.maef426d77944",
     "source": "must be a valid URL that starts with http:// or https://",
     "parameters": [],
     "patterns": [
       "must be a valid URL that starts with http:// or https://"
+    ]
+  },
+  {
+    "id": "server.message.mafabf0b8cd14",
+    "source": "This logical field proved the pinned edition narrator.",
+    "parameters": [],
+    "patterns": [
+      "This logical field proved the pinned edition narrator."
     ]
   },
   {
@@ -3371,6 +3616,14 @@
     ],
     "patterns": [
       "{value0} '{value1}' resolves to multiple local authors. Retry with a local author id or a more specific provider identity."
+    ]
+  },
+  {
+    "id": "server.message.mb226a7601a47",
+    "source": "The identifier candidate belongs to the caller-restricted author.",
+    "parameters": [],
+    "patterns": [
+      "The identifier candidate belongs to the caller-restricted author."
     ]
   },
   {
@@ -3474,6 +3727,22 @@
     ]
   },
   {
+    "id": "server.message.mb762894b98c4",
+    "source": "This logical field supplied book-title containment proof.",
+    "parameters": [],
+    "patterns": [
+      "This logical field supplied book-title containment proof."
+    ]
+  },
+  {
+    "id": "server.message.mb7acdc796c01",
+    "source": "Narrator tokens corroborated this edition.",
+    "parameters": [],
+    "patterns": [
+      "Narrator tokens corroborated this edition."
+    ]
+  },
+  {
     "id": "server.message.mb8d345c1fd7e",
     "source": "Root folder path '{value0}' contains author folder '{value1}'",
     "parameters": [
@@ -3493,6 +3762,14 @@
     ]
   },
   {
+    "id": "server.message.mb9cbb26f3ba3",
+    "source": "Matching series position corroborated the title-eligible candidate.",
+    "parameters": [],
+    "patterns": [
+      "Matching series position corroborated the title-eligible candidate."
+    ]
+  },
+  {
     "id": "server.message.mba5771faddc5",
     "source": "Site protected by CloudFlare CAPTCHA. Valid CAPTCHA token required.",
     "parameters": [],
@@ -3506,6 +3783,14 @@
     "parameters": [],
     "patterns": [
       "Pattern cannot be empty"
+    ]
+  },
+  {
+    "id": "server.message.mbadd91901e47",
+    "source": "No usable field-bound series-position evidence was present.",
+    "parameters": [],
+    "patterns": [
+      "No usable field-bound series-position evidence was present."
     ]
   },
   {
@@ -3541,6 +3826,14 @@
     ]
   },
   {
+    "id": "server.message.mbbd2e6de2c1a",
+    "source": "The position conflicted, but this mode did not let position override stronger title proof.",
+    "parameters": [],
+    "patterns": [
+      "The position conflicted, but this mode did not let position override stronger title proof."
+    ]
+  },
+  {
     "id": "server.message.mbc0594f9f5e3",
     "source": "Chaptarr needs write access. Configure a user or trusted IP in calibre. See https://manual.calibre-ebook.com/server.html",
     "parameters": [],
@@ -3554,6 +3847,14 @@
     "parameters": [],
     "patterns": [
       "Author queued for import"
+    ]
+  },
+  {
+    "id": "server.message.mbcbc641ba38e",
+    "source": "Author tokens corroborated this candidate.",
+    "parameters": [],
+    "patterns": [
+      "Author tokens corroborated this candidate."
     ]
   },
   {
@@ -3600,6 +3901,14 @@
     "parameters": [],
     "patterns": [
       "Metadata field source preference is not supported."
+    ]
+  },
+  {
+    "id": "server.message.mbefd03741239",
+    "source": "Publication year conflicted with this edition; stronger book identity evidence won.",
+    "parameters": [],
+    "patterns": [
+      "Publication year conflicted with this edition; stronger book identity evidence won."
     ]
   },
   {
@@ -3687,6 +3996,18 @@
     ]
   },
   {
+    "id": "server.message.mc41179432177",
+    "source": "Getting release from indexer failed: {value0}",
+    "parameters": [
+      {
+        "name": "value0"
+      }
+    ],
+    "patterns": [
+      "Getting release from indexer failed: {value0}"
+    ]
+  },
+  {
     "id": "server.message.mc462c3fca43d",
     "source": "Completed file is missing from the staging folder.",
     "parameters": [],
@@ -3761,6 +4082,14 @@
     ]
   },
   {
+    "id": "server.message.mc8b126d79c7b",
+    "source": "The catalog edition has no usable publication year.",
+    "parameters": [],
+    "patterns": [
+      "The catalog edition has no usable publication year."
+    ]
+  },
+  {
     "id": "server.message.mc9036b7c4f55",
     "source": "At least one narrator name is required",
     "parameters": [],
@@ -3804,6 +4133,14 @@
     "parameters": [],
     "patterns": [
       "Query successful, but no results in the configured categories were returned from your indexer. This may be an issue with the indexer or your indexer category settings."
+    ]
+  },
+  {
+    "id": "server.message.mca7536ee5f0c",
+    "source": "The catalog edition has no usable duration.",
+    "parameters": [],
+    "patterns": [
+      "The catalog edition has no usable duration."
     ]
   },
   {
@@ -3889,6 +4226,24 @@
     ]
   },
   {
+    "id": "server.message.mcec1fcaa43a5",
+    "source": "No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds; nearest other narration {value2} seconds away.",
+    "parameters": [
+      {
+        "name": "value0"
+      },
+      {
+        "name": "value1"
+      },
+      {
+        "name": "value2"
+      }
+    ],
+    "patterns": [
+      "No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds; nearest other narration {value2} seconds away."
+    ]
+  },
+  {
     "id": "server.message.mced5ab929209",
     "source": "The download is missing files",
     "parameters": [],
@@ -3954,6 +4309,14 @@
     "parameters": [],
     "patterns": [
       "This author has already been added"
+    ]
+  },
+  {
+    "id": "server.message.md11a72264757",
+    "source": "Unable to post payload",
+    "parameters": [],
+    "patterns": [
+      "Unable to post payload"
     ]
   },
   {
@@ -4030,6 +4393,14 @@
     ]
   },
   {
+    "id": "server.message.md657eda9fd8b",
+    "source": "Edition format matches the discovered file type.",
+    "parameters": [],
+    "patterns": [
+      "Edition format matches the discovered file type."
+    ]
+  },
+  {
     "id": "server.message.md7cf291e278c",
     "source": "Unable to send test message. Response from API: {value0}",
     "parameters": [
@@ -4077,6 +4448,22 @@
     ],
     "patterns": [
       "Refresh interval must be at least {value0} minutes"
+    ]
+  },
+  {
+    "id": "server.message.md92a7552538b",
+    "source": "Matching series position was eligible to break a title tie.",
+    "parameters": [],
+    "patterns": [
+      "Matching series position was eligible to break a title tie."
+    ]
+  },
+  {
+    "id": "server.message.md9b3d7c8214b",
+    "source": "The same normalized author span appeared in this physical field throughout the group.",
+    "parameters": [],
+    "patterns": [
+      "The same normalized author span appeared in this physical field throughout the group."
     ]
   },
   {
@@ -4177,6 +4564,14 @@
     ]
   },
   {
+    "id": "server.message.me3e7aa14f3c4",
+    "source": "This field was excluded from fuzzy/content matching by the shared tag policy.",
+    "parameters": [],
+    "patterns": [
+      "This field was excluded from fuzzy/content matching by the shared tag policy."
+    ]
+  },
+  {
     "id": "server.message.me3f9929f31ad",
     "source": "Selected foreign edition '{value0}' could not be found.",
     "parameters": [
@@ -4237,6 +4632,14 @@
     ]
   },
   {
+    "id": "server.message.me59dec254c7d",
+    "source": "The matching torrent is no longer available in the selected download client. Search again before grabbing it.",
+    "parameters": [],
+    "patterns": [
+      "The matching torrent is no longer available in the selected download client. Search again before grabbing it."
+    ]
+  },
+  {
     "id": "server.message.me73b26812f91",
     "source": "Invalid mediaType parameter: '{value0}'. Valid values are: audiobook, ebook",
     "parameters": [
@@ -4248,6 +4651,14 @@
     ],
     "patterns": [
       "Invalid mediaType parameter: '{value0}'. Valid values are: audiobook, ebook"
+    ]
+  },
+  {
+    "id": "server.message.me74c7bc1f189",
+    "source": "Publication year corroborated this edition.",
+    "parameters": [],
+    "patterns": [
+      "Publication year corroborated this edition."
     ]
   },
   {
@@ -4315,6 +4726,21 @@
     ]
   },
   {
+    "id": "server.message.meb0aaaf88fff",
+    "source": "Difference {value0} seconds; matching tolerance {value1} seconds.",
+    "parameters": [
+      {
+        "name": "value0"
+      },
+      {
+        "name": "value1"
+      }
+    ],
+    "patterns": [
+      "Difference {value0} seconds; matching tolerance {value1} seconds."
+    ]
+  },
+  {
     "id": "server.message.meb46390efea0",
     "source": "Invalid authentication token",
     "parameters": [],
@@ -4336,6 +4762,14 @@
     "parameters": [],
     "patterns": [
       "Offset must be non-negative"
+    ]
+  },
+  {
+    "id": "server.message.mec15ef07ac20",
+    "source": "These nearby tokens were tolerated by the active matcher mode.",
+    "parameters": [],
+    "patterns": [
+      "These nearby tokens were tolerated by the active matcher mode."
     ]
   },
   {
@@ -4420,6 +4854,14 @@
     ],
     "patterns": [
       "Version 0.7.0+ is required, but found: {value0}"
+    ]
+  },
+  {
+    "id": "server.message.mefa23f5263d3",
+    "source": "No usable publication year was found in the matchable metadata.",
+    "parameters": [],
+    "patterns": [
+      "No usable publication year was found in the matchable metadata."
     ]
   },
   {
@@ -4535,6 +4977,14 @@
     "parameters": [],
     "patterns": [
       "Author not found"
+    ]
+  },
+  {
+    "id": "server.message.mf4b3a5b30180",
+    "source": "This text was considered but did not support or contradict the selected match.",
+    "parameters": [],
+    "patterns": [
+      "This text was considered but did not support or contradict the selected match."
     ]
   },
   {
@@ -4701,6 +5151,14 @@
     ],
     "patterns": [
       "Series with id {value0} not found"
+    ]
+  },
+  {
+    "id": "server.message.mfb797cca63fc",
+    "source": "This file is a multipart track, so its duration was not compared with the full-book edition duration.",
+    "parameters": [],
+    "patterns": [
+      "This file is a multipart track, so its duration was not compared with the full-book edition duration."
     ]
   },
   {

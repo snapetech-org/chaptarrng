@@ -21,6 +21,7 @@ import formatAge from 'Utilities/Number/formatAge';
 import formatBytes from 'Utilities/Number/formatBytes';
 import formatCustomFormatScore from 'Utilities/Number/formatCustomFormatScore';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import Peers from './Peers';
 import styles from './InteractiveSearchRow.css';
 
@@ -60,7 +61,7 @@ function getDownloadTooltip(isGrabbing, isGrabbed, grabError, existingTorrentAva
   } else if (existingTorrentAvailable) {
     return translate('AdoptExistingTorrent');
   } else if (grabError) {
-    return grabError;
+    return translateServerMessage(grabError);
   }
 
   return translate('AddToDownloadedQueue');
@@ -342,7 +343,7 @@ class InteractiveSearchRow extends Component {
               </Link>
               {grabError ? (
                 <div className={styles.grabError}>
-                  {grabError}
+                  {translateServerMessage(grabError)}
                 </div>
               ) : null}
             </div>

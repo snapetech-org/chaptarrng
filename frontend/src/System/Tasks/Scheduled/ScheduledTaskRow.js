@@ -8,8 +8,11 @@ import dayjs from 'Utilities/Date/dayjsSetup';
 import formatDate from 'Utilities/Date/formatDate';
 import formatDateTime from 'Utilities/Date/formatDateTime';
 import formatTimeSpan from 'Utilities/Date/formatTimeSpan';
-import translate from 'Utilities/String/translate';
+import scheduledTaskLabels from 'Utilities/Localization/scheduled-task-labels.cjs';
+import translate, { translateWithFallback } from 'Utilities/String/translate';
 import styles from './ScheduledTaskRow.css';
+
+const { getScheduledTaskLabel } = scheduledTaskLabels;
 
 function getFormattedDates(props) {
   const {
@@ -91,6 +94,7 @@ class ScheduledTaskRow extends Component {
   render() {
     const {
       name,
+      taskName,
       interval,
       lastExecution,
       lastStartTime,
@@ -116,11 +120,11 @@ class ScheduledTaskRow extends Component {
 
     return (
       <TableRow>
-        <TableRowCell>{name}</TableRowCell>
+        <TableRowCell>{getScheduledTaskLabel(taskName, name, translateWithFallback)}</TableRowCell>
         <TableRowCell
           className={styles.interval}
         >
-          {isDisabled ? 'disabled' : duration}
+          {isDisabled ? translate('Disabled') : duration}
         </TableRowCell>
 
         <TableRowCell
@@ -187,6 +191,7 @@ class ScheduledTaskRow extends Component {
 
 ScheduledTaskRow.propTypes = {
   name: PropTypes.string.isRequired,
+  taskName: PropTypes.string.isRequired,
   interval: PropTypes.number.isRequired,
   lastExecution: PropTypes.string.isRequired,
   lastStartTime: PropTypes.string.isRequired,

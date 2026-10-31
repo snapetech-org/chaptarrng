@@ -44,6 +44,7 @@ function checkSourceRegistry(root, file, { allowPending = false } = {}) {
   const ids = new Set();
   let sourceCallsites = 0;
   let pendingTargets = 0;
+  const referencesId = (line, id) => line.includes(JSON.stringify(id)) || line.includes(`'${id}'`);
   const tokens = (text) => (text.match(/\{[^{}]+\}/g) || []).sort();
   for (const record of inventory.records) {
     if (ids.has(record.id) || english[record.id] !== record.source ||
@@ -56,9 +57,9 @@ function checkSourceRegistry(root, file, { allowPending = false } = {}) {
       sourceCallsites++;
       try {
         readSourceCallsite(root, callsite);
-        if (!callsite.sourceLine.includes('"' + record.id + '"')) {
+        if (!referencesId(callsite.sourceLine, record.id)) {
           // A linked formatting source is allowed only alongside a proven ID caller.
-          if (!record.callsites.some((site) => site.sourceLine.includes('"' + record.id + '"'))) {
+          if (!record.callsites.some((site) => referencesId(site.sourceLine, record.id))) {
             issues.push(record.id + ': source caller does not reference the stable ID');
           }
         }
@@ -161,6 +162,7 @@ function checkLocalizedSourceCoverage(root, options = {}) {
     outbound: checkSourceRegistry(root, 'docs/localization/outbound-message-sources.json', options),
     options: checkSourceRegistry(root, 'docs/localization/provider-option-sources.json', options),
     loading: checkSourceRegistry(root, 'docs/localization/loading-message-sources.json', options),
+    followupUi: checkSourceRegistry(root, 'docs/localization/followup-ui-sources.json', options),
     loadingData: checkLoadingMessages(root),
     attributes: checkFieldDefinitions(root)
   };

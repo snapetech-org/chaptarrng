@@ -198,8 +198,8 @@ class EditAuthorModalContent extends Component {
     const syncMonitoredAcrossFormatsDisabled = !canSyncMonitoredAcrossFormats && !isSyncMonitoredAcrossFormatsChecked;
 
     const syncMonitoredAcrossFormatsHelpText = canSyncMonitoredAcrossFormats ?
-      'When enabled, monitored books are synced across formats immediately. This does not trigger a search.' :
-      'Requires both audiobook and ebook root folders configured for this author. Add the missing root folder, or clear this setting if it was enabled earlier.';
+      translate('ui.author.syncMonitoringHelp') :
+      translate('ui.author.syncMonitoringRequiresRoots');
 
     return (
       <ModalContent onModalClose={onModalClose}>

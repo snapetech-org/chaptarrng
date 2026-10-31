@@ -29,13 +29,16 @@ function ModalContent(props) {
     return child;
   });
 
+  const fallbackDialogLabel = typeof document === 'undefined' ?
+    translate('ui.dialog.label') : document.title || translate('ui.dialog.label');
+
   return (
     <div
       className={className}
       role="dialog"
       aria-modal="true"
       aria-labelledby={hasTitle ? titleId : undefined}
-      aria-label={hasTitle ? undefined : (typeof document !== 'undefined' ? document.title : 'Dialog')}
+      aria-label={hasTitle ? undefined : fallbackDialogLabel}
       {...otherProps}
     >
       {

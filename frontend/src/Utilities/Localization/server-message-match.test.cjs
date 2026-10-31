@@ -170,3 +170,20 @@ test('optional environment hints capture only opaque diagnostic fields', () => {
   assert.equal(result.id, 'server.message.m301553d117f5.environment');
   assert.deepEqual(result.tokens, { value0: '/books', value1: 'keith (uid=1000)', value2: environment });
 });
+
+test('real grab/provenance/notification outputs match their fixed templates and preserve opaque captures', () => {
+  const matchers = compileServerMessageMatchers(records);
+  const cases = [
+    ['Difference 7 seconds; matching tolerance 120 seconds.', 'Difference {value0} seconds; matching tolerance {value1} seconds.', { value0: '7', value1: '120' }],
+    ['No tag names a narrator; the length matched the pinned edition. Difference 7 seconds; matching tolerance 120 seconds.', 'No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds.', { value0: '7', value1: '120' }],
+    ['No tag names a narrator; the length matched the pinned edition. Difference 7 seconds; matching tolerance 120 seconds; nearest other narration 300 seconds away.', 'No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds; nearest other narration {value2} seconds away.', { value0: '7', value1: '120', value2: '300' }],
+    ['No enabled Torrent download client is configured. Add and enable a Torrent-capable download client, then retry.', 'No enabled {value0} download client is configured. Add and enable a {value1}-capable download client, then retry.', { value0: 'Torrent', value1: 'Torrent' }],
+    ['Unable to send text message: provider URL http://example.test/a/{value0}?q=العربية', 'Unable to send text message: {value0}', { value0: 'provider URL http://example.test/a/{value0}?q=العربية' }]
+  ];
+  for (const [message, source, tokens] of cases) {
+    const result = matchServerMessage(message, matchers);
+    assert.equal(result?.source, source, message);
+    assert.deepEqual(result.tokens, tokens, message);
+  }
+  assert.equal(matchServerMessage('titleProof=true; provider diagnostic payload', matchers), null);
+});

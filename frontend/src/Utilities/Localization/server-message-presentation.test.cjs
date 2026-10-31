@@ -74,3 +74,16 @@ test('shared presentation helpers do not add nested isolation to an English fall
   assert.equal(once, 'Path \'\u2068/books/Book 01 - كتاب\u2069\' does not exist');
   assert.equal(present(once), once);
 });
+
+test('new notification/grab/detail presentation resolves synthetic Arabic without changing stored data', () => {
+  const source = "This torrent is already present in {value0} as '{value1}'.";
+  const record = records.find((entry) => entry.source === source);
+  const present = loadPresenter({ [record.id]: 'موجود في {value0}: {value1}' });
+  const client = 'client/{value1}/العربية';
+  const title = '/books/Book (2026)';
+  const stored = { message: `This torrent is already present in ${client} as '${title}'.` };
+  const original = JSON.stringify(stored);
+  assert.equal(present(stored.message), `موجود في \u2068${client}\u2069: \u2068${title}\u2069`);
+  assert.equal(JSON.stringify(stored), original);
+  assert.equal(present('Downloading'), 'Downloading');
+});

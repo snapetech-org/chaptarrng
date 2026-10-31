@@ -237,7 +237,7 @@ function EditImportListModalContent(props) {
       return `${xhr.status} ${xhr.statusText}`;
     }
 
-    return xhr.statusText || 'An unknown error occurred';
+    return xhr.statusText || translate('ui.error.unknown');
   };
 
   const renderProviderField = (field) => {

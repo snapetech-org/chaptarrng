@@ -44,3 +44,30 @@ The coordinating agent independently reviewed matcher/presentation routing, raw 
 A task-owned Chaptarr instance at `http://192.168.50.148:18879` was reviewed in an isolated headed Agentic VM Chrome session. Arabic root-folder validation reproduced reordered Latin path punctuation and mixed-script filenames. The presentation helper now inserts FSI/PDI boundaries around each captured value; a repeated real failing save and a URL/query/port/PUID-shaped capture confirmed the rendered correction. Raw HTTP400 messages remain exact and contain no display controls. Three screenshots and raw-response evidence are retained under `chaptarrng-artifacts/vm-review-capture-v1`; both the browser session and preview backend were closed. Four temporary Arabic values in copied build output enabled this implementation test; they are not repository translations or native approval. Final translated provider/schema/RTL/narrow-layout acceptance is still pending.
 
 The same flow exposed two existing Arabic labels using broadcast/press-media wording for a book/audio library. `MediaManagement` and `MediaLibrary` now use the existing settings-header terminology for library media, with current-source draft provenance. No source IDs or frozen new-source inputs changed for those two contextual corrections.
+
+## Source-only follow-up at 957f1a2e
+
+The clean follow-up checkout fast-forwarded to current `main`, including its
+pinned-narration and private-runner changes. This source-only delta adds 69
+English IDs: 51 server/provenance/notification/grab-error templates, seven UI
+sources and eleven task labels. Ten existing IDs gain missing presentation
+callers. `source-followup-20261031.json` binds that bounded scope to the source
+registries, English fingerprints and unchanged target-catalog hashes.
+
+The server registry now has 537 messages, 711 unique source callers and 721
+bindings. Its presentation ledger covers 74 calls across 34 files. The UI/task
+follow-up registry has 28 IDs and 62 bindings, including the ten reused IDs.
+Known task IDs map to display labels; unknown task names and command dispatch
+retain their raw API data. Match-provenance observed/expected metadata remains
+raw; only source-proven detail prose is matched. Interactive grab errors use the
+bounded presenter for both visible errors and tooltips. Provider/OS/runtime
+payloads remain opaque, including nested captured diagnostic values.
+
+There are now 4,084 English sources. Each selected target locale still has
+2,955 direct values and lacks 1,129: 13,548 pending cells across twelve locales,
+including the 828 new cells in this delta. No target translations were added.
+The historical v4 bundle remains unmodified; it lacks these 69 sources and also
+contains five IDs that already have direct targets. A future current-head
+bundle must preserve those values and include this source delta. Remaining
+exception-wrapper/log source classification and full translated/native/headed
+acceptance are still open; this checkpoint does not claim whole-app closure.

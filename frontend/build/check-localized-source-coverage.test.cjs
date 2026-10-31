@@ -104,3 +104,39 @@ test('repository source inventories match current callers and static schema meta
   assert.deepEqual(checkLocalizedSourceCoverage(root, { allowPending: true }).issues, []);
   assert.deepEqual(checkServerMessageCatalogs(root, { allowPending: true }).issues, []);
 });
+
+test('source evidence recognizes JavaScript single-quoted IDs while refusing unreferenced IDs', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { sha256 } = require('./check-server-message-catalogs.cjs');
+  const { checkSourceRegistry } = require('./check-localized-source-coverage.cjs');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chaptarr-ui-source-'));
+  const core = 'src/NzbDrone.Core/Localization/Core/';
+  const inventoryFile = 'docs/localization/followup-ui-sources.json';
+  const write = (file, value) => {
+    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+    fs.writeFileSync(path.join(root, file), JSON.stringify(value));
+  };
+  try {
+    write(core + 'en.json', { 'ui.test.title': 'Example title' });
+    write(core + 'ui-locales.json', { locales: [] });
+    const sourceFile = 'frontend/src/Example.js';
+    fs.mkdirSync(path.dirname(path.join(root, sourceFile)), { recursive: true });
+    for (const quote of ["'", '"']) {
+      const sourceLine = `translate(${quote}ui.test.title${quote});`;
+      fs.writeFileSync(path.join(root, sourceFile), sourceLine + '\n');
+      const record = { id: 'ui.test.title', source: 'Example title', sourceFingerprint: sha256('ui.test.title\0Example title'), callsites: [{ file: sourceFile, line: 1, sourceLine, sourceLineSha256: sha256(sourceLine) }] };
+      const inventory = { records: [record], counts: { messages: 1, sourceCallsites: 1 }, excluded: [] };
+      write(inventoryFile, inventory);
+      assert.deepEqual(checkSourceRegistry(root, inventoryFile).issues, []);
+      record.callsites[0].sourceLine = 'unrelatedCall();';
+      record.callsites[0].sourceLineSha256 = sha256(record.callsites[0].sourceLine);
+      fs.writeFileSync(path.join(root, sourceFile), record.callsites[0].sourceLine + '\n');
+      write(inventoryFile, inventory);
+      assert.match(checkSourceRegistry(root, inventoryFile).issues.join('\n'), /does not reference the stable ID/);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

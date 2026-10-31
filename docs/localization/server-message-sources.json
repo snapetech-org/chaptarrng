@@ -530,6 +530,37 @@
       ]
     },
     {
+      "id": "server.message.m060675d5700c",
+      "source": "This logical field proved the identifier candidate's book or edition title.",
+      "sourceFingerprint": "62949f702a6556be0a71b3c02e3cc47d0f28688d5c417fd828e7c59d91d44b1f",
+      "parameters": [],
+      "patterns": [
+        "This logical field proved the identifier candidate's book or edition title."
+      ],
+      "sourceTemplates": [
+        "This logical field proved the identifier candidate's book or edition title."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14650,
+          "sourceLine": "\"This logical field proved the identifier candidate's book or edition title.\"));",
+          "sourceLineSha256": "6ad524ff803083fcd99bbe3d08b56132ee3e2be5cbb289f4b314346261ff5713",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14659,
+          "sourceLine": "Detail = \"This logical field proved the identifier candidate's book or edition title.\"",
+          "sourceLineSha256": "f253f4a1d204d5e92596fe2d917dcaea41f58b7c8e2e3273c8025f3cfa5bc37f",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m06254ce94096",
       "source": "rTorrent version should be at least 0.9.0. Version reported is {value0}",
       "sourceFingerprint": "1b80bfb6c5b39a4194610868efac340957e39018a3b34cd03643bbf832238b97",
@@ -649,6 +680,31 @@
       ]
     },
     {
+      "id": "server.message.m083b31b1f1e6",
+      "source": "Failed to connect to prowl, please check your settings.",
+      "sourceFingerprint": "f60b4cdc68e2637368737388b6fc582c8f16e293e5c134d7397e2d24d0b2e984",
+      "parameters": [],
+      "patterns": [
+        "Failed to connect to prowl, please check your settings."
+      ],
+      "sourceTemplates": [
+        "Failed to connect to prowl, please check your settings."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Notifications/Prowl/ProwlProxy.cs",
+          "line": 59,
+          "sourceLine": "throw new ProwlException(\"Failed to connect to prowl, please check your settings.\", ex);",
+          "sourceLineSha256": "17d126cbfde7f86eee3767edebe8000353eab76f0a60eca33cc11295f60d3cb4",
+          "category": "notification-test-error",
+          "surface": "Prowl Test forwards the owned exception message; captured inner diagnostic remains opaque"
+        }
+      ],
+      "protectedLiterals": [
+        "prowl"
+      ]
+    },
+    {
       "id": "server.message.m08504a962fa8",
       "source": "Selected foreign edition '{value0}' does not belong to selected book {value1}.",
       "sourceFingerprint": "579e3e1dad832233ceab757d4b0af4a2bf52a963d139f563666f4eab60791365",
@@ -738,6 +794,67 @@
         "None",
         "New"
       ]
+    },
+    {
+      "id": "server.message.m09734a3e9cf9",
+      "source": "No embedded tag value supplied author evidence; the folder path supplied it.",
+      "sourceFingerprint": "d5ca096db38837a45dd3f09b46c91176cb39b9731928ff31ff346377483a9ac4",
+      "parameters": [],
+      "patterns": [
+        "No embedded tag value supplied author evidence; the folder path supplied it."
+      ],
+      "sourceTemplates": [
+        "No embedded tag value supplied author evidence; the folder path supplied it."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9617,
+          "sourceLine": "Detail = \"No embedded tag value supplied author evidence; the folder path supplied it.\"",
+          "sourceLineSha256": "a12f6087f18a587daf374a86dd8d67d7f73a17999fe1b3f86eddcf5392e80598",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 10321,
+          "sourceLine": "Detail = \"No embedded tag value supplied author evidence; the folder path supplied it.\"",
+          "sourceLineSha256": "a12f6087f18a587daf374a86dd8d67d7f73a17999fe1b3f86eddcf5392e80598",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m09853a3933ba",
+      "source": "No enabled {value0} download client is configured. Add and enable a {value1}-capable download client, then retry.",
+      "sourceFingerprint": "5c471cda98910570775133fe3b4bd8df41fcad745e134a0cefecfb9c1c164115",
+      "parameters": [
+        {
+          "name": "value0"
+        },
+        {
+          "name": "value1"
+        }
+      ],
+      "patterns": [
+        "No enabled {value0} download client is configured. Add and enable a {value1}-capable download client, then retry."
+      ],
+      "sourceTemplates": [
+        "No enabled {dynamic} download client is configured. Add and enable a {dynamic}-capable download client, then retry."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Download/DownloadService.cs",
+          "line": 113,
+          "sourceLine": "throw new DownloadClientUnavailableException($\"No enabled {requestedProtocol} download client is configured. Add and enable a {requestedProtocol}-capable download client, then retry.\");",
+          "sourceLineSha256": "df596d3533e24c1e97e4f51226b37ce8bf6384abcb7a30660a9b714ae1ea1a49",
+          "category": "release-grab-error",
+          "surface": "Interactive release result error body and download tooltip; values remain raw"
+        }
+      ],
+      "protectedLiterals": []
     },
     {
       "id": "server.message.m0a31f17e7748",
@@ -916,6 +1033,37 @@
           "sourceLineSha256": "a58de5ff623e17bd2deb67d3cfd5ca5d43555f2a95430b78deb74445fc1f0d76",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m0c585b47781f",
+      "source": "This logical field proved the pinned book author.",
+      "sourceFingerprint": "6920d65772881c610c1f323560aad329dce8013da0bb6f553c140fb098b89fc1",
+      "parameters": [],
+      "patterns": [
+        "This logical field proved the pinned book author."
+      ],
+      "sourceTemplates": [
+        "This logical field proved the pinned book author."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 4330,
+          "sourceLine": "\"This logical field proved the pinned book author.\"));",
+          "sourceLineSha256": "bf65612e1fff34f6c519992e394d078ae7b860b25749648918e758b08fdd1f2f",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 4339,
+          "sourceLine": "Detail = \"This logical field proved the pinned book author.\"",
+          "sourceLineSha256": "b91a048411dbbc9a1850544c95c28b31a9f9f79c267279cb9f4e6e517fdcf9c2",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -1169,6 +1317,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m123c31b11b23",
+      "source": "Near-exact title evidence accepted by the active matcher mode.",
+      "sourceFingerprint": "6d056648da4894bec6538d330d151200ed9a76a40b597bb5069bee967167e92e",
+      "parameters": [],
+      "patterns": [
+        "Near-exact title evidence accepted by the active matcher mode."
+      ],
+      "sourceTemplates": [
+        "Near-exact title evidence accepted by the active matcher mode."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9919,
+          "sourceLine": "? \"Near-exact title evidence accepted by the active matcher mode.\"",
+          "sourceLineSha256": "a213dbb070a10510d50c32dcdced3012a6a3dbba249f21108220d5b3d2c3338a",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m12f378d7ddc5",
       "source": "Connection test failed: {value0}",
       "sourceFingerprint": "55d12ad6d48b6c4a99c275ccfef8bd55030f09f9fe31dad6cce3e1fd8068a830",
@@ -1193,6 +1364,44 @@
           "sourceLineSha256": "3220e470a210caf3fb0ebd3f8855f828f94b7526689cd97ebfecab2dd7c794f1",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m1342cc36e68f",
+      "source": "No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds.",
+      "sourceFingerprint": "7f3fc93905c215fed6d2885ea63d98638b7f99bd972a5c7ddd17362449d57100",
+      "parameters": [
+        {
+          "name": "value0"
+        },
+        {
+          "name": "value1"
+        }
+      ],
+      "patterns": [
+        "No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds."
+      ],
+      "sourceTemplates": [
+        "No tag names a narrator; the length matched the pinned edition. Difference {dynamic} seconds; matching tolerance {dynamic} seconds."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 4459,
+          "sourceLine": "detail = $\"No tag names a narrator; the length matched the pinned edition. Difference {diffSeconds} seconds; matching tolerance {allowedSeconds} seconds\" +",
+          "sourceLineSha256": "2294f8640e062b29f3d1c3f468a453082e4d726c5bd4177f178baa53c9d3ee18",
+          "category": "match-provenance-detail",
+          "surface": "Pinned narration duration signal detail"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 4460,
+          "sourceLine": "(nearestOtherNarration.HasValue ? $\"; nearest other narration {nearestOtherNarration.Value} seconds away.\" : \".\");",
+          "sourceLineSha256": "03768c3eea36d784a59c2524bb4bc5dd059598cdd2c9c5cb551febd94aef441c",
+          "category": "match-provenance-detail",
+          "surface": "Pinned narration duration branch"
         }
       ],
       "protectedLiterals": []
@@ -1560,6 +1769,40 @@
         }
       ],
       "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m1cb06fc96c2e",
+      "source": "An exact ASIN/Audible ASIN lookup selected this edition candidate.",
+      "sourceFingerprint": "44ccf0e7b025f90515da75b7c26239e59c0b4452d6556d650f5a0364e19c9791",
+      "parameters": [],
+      "patterns": [
+        "An exact ASIN/Audible ASIN lookup selected this edition candidate."
+      ],
+      "sourceTemplates": [
+        "An exact ASIN/Audible ASIN lookup selected this edition candidate."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14562,
+          "sourceLine": "\"An exact ASIN/Audible ASIN lookup selected this edition candidate.\"))",
+          "sourceLineSha256": "2171230e57725cc331c963b2e156c93aca06b96ba7d812d789e60f0124efd565",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14575,
+          "sourceLine": "Detail = \"An exact ASIN/Audible ASIN lookup selected this edition candidate.\"",
+          "sourceLineSha256": "83818cd8d8f8e14a6623044a2022881a25b6a437e7ba876a9d513dec003f4457",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": [
+        "ASIN",
+        "Audible"
+      ]
     },
     {
       "id": "server.message.m1dbdb2eaa5fb",
@@ -2124,6 +2367,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m290e1a4f50ba",
+      "source": "No usable narrator evidence was present for this edition.",
+      "sourceFingerprint": "cb8391f3bff1fe23a9a606767a434f057534e01bd99013f1450d6c34f0247e86",
+      "parameters": [],
+      "patterns": [
+        "No usable narrator evidence was present for this edition."
+      ],
+      "sourceTemplates": [
+        "No usable narrator evidence was present for this edition."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9780,
+          "sourceLine": "Detail = \"No usable narrator evidence was present for this edition.\"",
+          "sourceLineSha256": "5c8e4aebeed5c59508ca9f26a606131d3c655348f50c6969c6bbfebaaa3c73dc",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m2924c85ce471",
       "source": "Author IDs must be unique.",
       "sourceFingerprint": "b36efa57d0fb26e5dbbc4d8fa9f82c3206929bbf13c13aff1f2910ba0aa81f24",
@@ -2445,6 +2711,29 @@
           "sourceLineSha256": "c2bb5fcb97ee8e840f305f6762274c226813915dd064b8e731d95d7a12238589",
           "category": "operational-message",
           "surface": "Server-owned queue/proxy/import/naming status, error, or notification text consumed by project UI"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m2e1832187375",
+      "source": "Publisher tokens corroborated this edition.",
+      "sourceFingerprint": "ee4d8e2254fa06f573bbc17b1709447d7c2522eb9dcb9c5d4979447ac2f7ede8",
+      "parameters": [],
+      "patterns": [
+        "Publisher tokens corroborated this edition."
+      ],
+      "sourceTemplates": [
+        "Publisher tokens corroborated this edition."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9840,
+          "sourceLine": "Detail = \"Publisher tokens corroborated this edition.\"",
+          "sourceLineSha256": "04cbb0cc480fb3fcfe3aaf5618b88916fbd534f9020e302f2ea3543077946be6",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -3038,6 +3327,31 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m380e19583eca",
+      "source": "Multiple audiobook editions were available, but the file supplied no usable narrator or full-book duration evidence to distinguish them. Chaptarr selected a native audiobook using its normal deterministic edition order.",
+      "sourceFingerprint": "1e6bbda3552239a47503fb704e84c3335e3a4b7e63f8d9f8e65a56d6f504fce4",
+      "parameters": [],
+      "patterns": [
+        "Multiple audiobook editions were available, but the file supplied no usable narrator or full-book duration evidence to distinguish them. Chaptarr selected a native audiobook using its normal deterministic edition order."
+      ],
+      "sourceTemplates": [
+        "Multiple audiobook editions were available, but the file supplied no usable narrator or full-book duration evidence to distinguish them. Chaptarr selected a native audiobook using its normal deterministic edition order."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9791,
+          "sourceLine": "Detail = \"Multiple audiobook editions were available, but the file supplied no usable narrator or full-book duration evidence to distinguish them. Chaptarr selected a native audiobook using its normal deterministic edition order.\"",
+          "sourceLineSha256": "c3973348a931b5c2efffe1e66b3970266a2d013524f499f7f9ceba8d1af5fd37",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": [
+        "Chaptarr"
+      ]
+    },
+    {
       "id": "server.message.m382a86feb870",
       "source": "Metadata server ping did not return ok=true",
       "sourceFingerprint": "2e8cfa24ff2f3eadc5a93bee01f905db9f38bbbcdaefae1178fae4c56f3cba2a",
@@ -3576,6 +3890,56 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m43edb49bfa4c",
+      "source": "The file has no usable duration.",
+      "sourceFingerprint": "7c326c635a0bc6fc51903bab33d4ed2e79ee8e33305b1668dc8e1edb207fd957",
+      "parameters": [],
+      "patterns": [
+        "The file has no usable duration."
+      ],
+      "sourceTemplates": [
+        "The file has no usable duration."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9739,
+          "sourceLine": ": \"The file has no usable duration.\"",
+          "sourceLineSha256": "fb3c839a42830d6cd24a0ad037d0720a2cfd8bfadd5b07e642331fc642e17459",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m44064e27b666",
+      "source": "Unable to send text message: {value0}",
+      "sourceFingerprint": "93d2e4df193a0ca12070cec328cc421cafa5a14dd5beb3efac8ab810ddee5b44",
+      "parameters": [
+        {
+          "name": "value0"
+        }
+      ],
+      "patterns": [
+        "Unable to send text message: {value0}"
+      ],
+      "sourceTemplates": [
+        "Unable to send text message: {dynamic}"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Notifications/Prowl/ProwlProxy.cs",
+          "line": 55,
+          "sourceLine": "throw new ProwlException(\"Unable to send text message: \" + ex.Message, ex);",
+          "sourceLineSha256": "045e2b21c14047579a8a826dbb6cb0b611ef12468037896c19bd6b60a7c2221a",
+          "category": "notification-test-error",
+          "surface": "Prowl Test forwards the owned exception message; captured inner diagnostic remains opaque"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m4410286171ba",
       "source": "qBittorrent is reporting an error",
       "sourceFingerprint": "d9bcac09cbd1d76542f59d3ff6b2facc559680789da1eb39ac3f2d251d1c18de",
@@ -4039,6 +4403,37 @@
       "protectedLiterals": [
         "Transmission"
       ]
+    },
+    {
+      "id": "server.message.m4b0072b05f0b",
+      "source": "Embedded author evidence corroborated the path-selected candidate.",
+      "sourceFingerprint": "c0572a6625db8dd022ead6296ac2a1d3a7e1dd4342eedd72faf5a869789c603c",
+      "parameters": [],
+      "patterns": [
+        "Embedded author evidence corroborated the path-selected candidate."
+      ],
+      "sourceTemplates": [
+        "Embedded author evidence corroborated the path-selected candidate."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 10295,
+          "sourceLine": "\"Embedded author evidence corroborated the path-selected candidate.\"));",
+          "sourceLineSha256": "300359a1804d08858dc0375bec0a12221e9fe5df1bcbebaeb16f76685f4ec935",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 10304,
+          "sourceLine": "Detail = \"Embedded author evidence corroborated the path-selected candidate.\"",
+          "sourceLineSha256": "02ca53b0201d1077151a8a67e42a5a22ecb6f690d866beb7b7909261cd0acdd2",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
     },
     {
       "id": "server.message.m4b31cd0afb3b",
@@ -4553,6 +4948,37 @@
       ]
     },
     {
+      "id": "server.message.m5314fa3dfe04",
+      "source": "Embedded title evidence corroborated the candidate selected from the folder and filename.",
+      "sourceFingerprint": "0350751be9ae57f6f817f74b1110d54c7553d43ed755fe1a38dc9f7164633c2f",
+      "parameters": [],
+      "patterns": [
+        "Embedded title evidence corroborated the candidate selected from the folder and filename."
+      ],
+      "sourceTemplates": [
+        "Embedded title evidence corroborated the candidate selected from the folder and filename."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 10270,
+          "sourceLine": "\"Embedded title evidence corroborated the candidate selected from the folder and filename.\"));",
+          "sourceLineSha256": "837de0c9d33f2c0275bb61c9e0c2c8d4cc36578ba42d43a3dba2a760593bb08d",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 10279,
+          "sourceLine": "Detail = \"Embedded title evidence corroborated the candidate selected from the folder and filename.\"",
+          "sourceLineSha256": "a3c12a9e456c1941ded6ae8a3c34028754b04353ff6a1576dfb0c56185e16a64",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m532212ccb76d",
       "source": "Image downloaded successfully",
       "sourceFingerprint": "6849281732ed3827d5aca15f22547bf43f965929da3f8415ea1ef3013b3c13e0",
@@ -4855,6 +5281,37 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m5aa6a41c72ca",
+      "source": "This logical field proved the identifier candidate's author.",
+      "sourceFingerprint": "09d010284798922e8c84e510e5b4d615714f7078000f487eacb765079548b2e2",
+      "parameters": [],
+      "patterns": [
+        "This logical field proved the identifier candidate's author."
+      ],
+      "sourceTemplates": [
+        "This logical field proved the identifier candidate's author."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14621,
+          "sourceLine": "\"This logical field proved the identifier candidate's author.\"));",
+          "sourceLineSha256": "2e19371737012d16353816706e7878de48f84374791614f1dee2f42f93edda66",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14630,
+          "sourceLine": "Detail = \"This logical field proved the identifier candidate's author.\"",
+          "sourceLineSha256": "377a16d492336a228b83a4be5b010237f380f95adba00bc67d69200f8dba94b1",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m5b6d7aa6820c",
       "source": "Retry scheduled",
       "sourceFingerprint": "de1a3c993328b501c880941204bb0dcebebebc055f353ce5c28960bbde6f4e41",
@@ -5026,6 +5483,33 @@
       ]
     },
     {
+      "id": "server.message.m6026247dc0f2",
+      "source": "Download client rejected release: {value0}",
+      "sourceFingerprint": "6289debfb7e0b152289add31db01ae85cca3a2675f316bc9fb532528edc9271f",
+      "parameters": [
+        {
+          "name": "value0"
+        }
+      ],
+      "patterns": [
+        "Download client rejected release: {value0}"
+      ],
+      "sourceTemplates": [
+        "Download client rejected release: {dynamic}"
+      ],
+      "callsites": [
+        {
+          "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
+          "line": 188,
+          "sourceLine": "throw new NzbDroneClientException(HttpStatusCode.Conflict, $\"Download client rejected release: {message}\");",
+          "sourceLineSha256": "89a495280175b1229f04f8631c0679a12bff40b8731f0178d3ce09b37130a789",
+          "category": "release-grab-error",
+          "surface": "Interactive release result error body and download tooltip; values remain raw"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m609ed5f60975",
       "source": "Cannot re-add author: the author is not available on the metadata server.",
       "sourceFingerprint": "9ff2cb9e2fa10520e2a615ccff5b08acd7d10252f556a8a622f5c936f68d2bb8",
@@ -5119,6 +5603,29 @@
           "sourceLineSha256": "38d631009bd091ae9409c0d290fab0d8447dd2baa4e7d7118631362c097ca7a5",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m61c0ddf68a65",
+      "source": "This field's position conflicted, so Strict did not use that field as title proof.",
+      "sourceFingerprint": "c7e4a0b623686c5766bb4af2f9509e523e6005352d9df82bff15288f5e4a85e0",
+      "parameters": [],
+      "patterns": [
+        "This field's position conflicted, so Strict did not use that field as title proof."
+      ],
+      "sourceTemplates": [
+        "This field's position conflicted, so Strict did not use that field as title proof."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9683,
+          "sourceLine": "? \"This field's position conflicted, so Strict did not use that field as title proof.\"",
+          "sourceLineSha256": "cc6dda94c6dd952298726568bbc102b06adf3bcf46802c28b8849e753f4c8cf9",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -5471,6 +5978,36 @@
           "sourceLineSha256": "f3bdb47ff40a68cc00f47a38a435f0a437cfe04044b01e0ddd95ccf924e7bb07",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m6849ebee10e9",
+      "source": "This torrent is already present in {value0} as '{value1}'.",
+      "sourceFingerprint": "5e1a112bcf38c8b8e61bda205583f1f954173b65d698d8f79fcf37e06c770e7e",
+      "parameters": [
+        {
+          "name": "value0"
+        },
+        {
+          "name": "value1"
+        }
+      ],
+      "patterns": [
+        "This torrent is already present in {value0} as '{value1}'."
+      ],
+      "sourceTemplates": [
+        "This torrent is already present in {dynamic} as '{dynamic}'."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Download/TorrentAdoptionExceptions.cs",
+          "line": 11,
+          "sourceLine": ": base($\"This torrent is already present in {downloadClientName} as '{item.Title}'.\")",
+          "sourceLineSha256": "4f2bad61a0a028adca6b2d6acd350a54c6cbbf9bac6754f1f69c92c233c60254",
+          "category": "release-grab-error",
+          "surface": "Interactive release result error body and download tooltip; values remain raw"
         }
       ],
       "protectedLiterals": []
@@ -5973,6 +6510,37 @@
           "sourceLineSha256": "d52e6fdc1f2e00d0372a8b00d4e84e47b290a7f3d73f7ee4789f0268b282db0d",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m736b5fe15618",
+      "source": "This logical field proved the pinned edition title.",
+      "sourceFingerprint": "2affcc824852f5de56fdead34ca3f46d2091352be9be2e97718cdf414362cdf7",
+      "parameters": [],
+      "patterns": [
+        "This logical field proved the pinned edition title."
+      ],
+      "sourceTemplates": [
+        "This logical field proved the pinned edition title."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 4306,
+          "sourceLine": "\"This logical field proved the pinned edition title.\"));",
+          "sourceLineSha256": "2b7060b1a5e2cd6d67f6f57f8487c78ff4cda90cc95a6a71ff0449bab84bfde3",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 4315,
+          "sourceLine": "Detail = \"This logical field proved the pinned edition title.\"",
+          "sourceLineSha256": "2175a5af2b54dfcb1586a5f243e59bf700e7b0611ad08ac0b725bfe4d32a462a",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -6871,6 +7439,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m7daa93712844",
+      "source": "This logical field supplied title containment proof.",
+      "sourceFingerprint": "60625e9e82bf4941776f4c9f7ad1fffe110e3dfa8cdd4aa9f682d30647b04bc7",
+      "parameters": [],
+      "patterns": [
+        "This logical field supplied title containment proof."
+      ],
+      "sourceTemplates": [
+        "This logical field supplied title containment proof."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9920,
+          "sourceLine": ": \"This logical field supplied title containment proof.\";",
+          "sourceLineSha256": "bd70e07e71180a3901bfdd95ce5a29a8ea516ab967c00ab0261cb47004f258ce",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m7db986dd5235",
       "source": "File does not exist",
       "sourceFingerprint": "4b7928295a728520fe6b0c8ef23bb147bafed12a369cd1ab859a61df29787c8a",
@@ -7413,6 +8004,29 @@
         "audiobook",
         "ebook"
       ]
+    },
+    {
+      "id": "server.message.m835cd53441fb",
+      "source": "Series-name tokens corroborated this book.",
+      "sourceFingerprint": "d201d6b9dc36a04f84370c2794f8d934e0ec798bee98c0b133b118212cf2c231",
+      "parameters": [],
+      "patterns": [
+        "Series-name tokens corroborated this book."
+      ],
+      "sourceTemplates": [
+        "Series-name tokens corroborated this book."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9643,
+          "sourceLine": "Detail = \"Series-name tokens corroborated this book.\"",
+          "sourceLineSha256": "55f239d843fbd5dcebcd3304f67f0a9c6c568f3ec7a3fa5a80ff15361b2ddb21",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
     },
     {
       "id": "server.message.m8387ff993c50",
@@ -8292,6 +8906,29 @@
       ]
     },
     {
+      "id": "server.message.m9123e0c2a1bb",
+      "source": "A representative non-native edition was selected because no better native edition was proven.",
+      "sourceFingerprint": "79f57191681ba404d6828ede1ec56596d1ce1aaad84776526f43eb21b9419fd1",
+      "parameters": [],
+      "patterns": [
+        "A representative non-native edition was selected because no better native edition was proven."
+      ],
+      "sourceTemplates": [
+        "A representative non-native edition was selected because no better native edition was proven."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9856,
+          "sourceLine": ": \"A representative non-native edition was selected because no better native edition was proven.\"",
+          "sourceLineSha256": "c7c9765a8ea55c200341cbe9b1ec79cfd9ef34adf0738a4ba4e0cd7b69ac3345",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m91368e1b2976",
       "source": "The UI Language value cannot be less than 1",
       "sourceFingerprint": "da7121e381763202f46abf85998a954273f9ef34e1eddaf96dd05b07f7147365",
@@ -8935,6 +9572,52 @@
           "sourceLineSha256": "919ea9de4f2a0ee3c58b55c2be16101f9a0ffb1b04ee9dae407bf2e94aa764fc",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m9bb5b0761aa3",
+      "source": "Apikey is invalid",
+      "sourceFingerprint": "666c46981258a4202fcb310cf82f2e18274546d489b0b483c1d82d35760b42d1",
+      "parameters": [],
+      "patterns": [
+        "Apikey is invalid"
+      ],
+      "sourceTemplates": [
+        "Apikey is invalid"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Notifications/Prowl/ProwlProxy.cs",
+          "line": 52,
+          "sourceLine": "throw new ProwlException(\"Apikey is invalid\", ex);",
+          "sourceLineSha256": "c6ea85101640bb322e031219c226522efad57b4950f8b8ca9d8c4e6eb9585c40",
+          "category": "notification-test-error",
+          "surface": "Prowl Test forwards the owned exception message; captured inner diagnostic remains opaque"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m9c90e66f400b",
+      "source": "Author identity was present in matchable metadata.",
+      "sourceFingerprint": "cd82c985fc74f92cf4d72ff14721bf14a353cccfc4921e8a563d0786a5e2891f",
+      "parameters": [],
+      "patterns": [
+        "Author identity was present in matchable metadata."
+      ],
+      "sourceTemplates": [
+        "Author identity was present in matchable metadata."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9945,
+          "sourceLine": "\"Author identity was present in matchable metadata.\"));",
+          "sourceLineSha256": "ed6be79d126a9660ff2bf3ab427ad0415ef2838669cd367faec28db3972618c3",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -9723,6 +10406,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.mae40d81346d7",
+      "source": "Narrator evidence corroborated this edition.",
+      "sourceFingerprint": "6c24925b14cfd3d7cc13e6691cb7b549c550b7795d8e22255d6b25c1bcecc6da",
+      "parameters": [],
+      "patterns": [
+        "Narrator evidence corroborated this edition."
+      ],
+      "sourceTemplates": [
+        "Narrator evidence corroborated this edition."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9756,
+          "sourceLine": "Detail = \"Narrator evidence corroborated this edition.\"",
+          "sourceLineSha256": "3d61f53ce08ed37677fa38f2ad095147672e3373582a89cfa42c7f97a1c92994",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.maef426d77944",
       "source": "must be a valid URL that starts with http:// or https://",
       "sourceFingerprint": "4db5aa9c4f6285594b7abe695ad9b5610fea3e89765da431fe860e90ea9a8d54",
@@ -9746,6 +10452,29 @@
       "protectedLiterals": [
         "URL"
       ]
+    },
+    {
+      "id": "server.message.mafabf0b8cd14",
+      "source": "This logical field proved the pinned edition narrator.",
+      "sourceFingerprint": "211c618e359d0ebf93b5f36208763e3b29abcc725ab0b088223817589679628b",
+      "parameters": [],
+      "patterns": [
+        "This logical field proved the pinned edition narrator."
+      ],
+      "sourceTemplates": [
+        "This logical field proved the pinned edition narrator."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 4354,
+          "sourceLine": "Detail = \"This logical field proved the pinned edition narrator.\"",
+          "sourceLineSha256": "b569c7d9568e4dd17fe7fd20715864285cc1dc5d6a39ca3dec3064ac546e10ae",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
     },
     {
       "id": "server.message.mb014530ef471",
@@ -9866,6 +10595,37 @@
           "sourceLineSha256": "c2edd29170ba12165ae3952954e6dadedb55873f2ba30ab4034d3dcbe7b9e66d",
           "category": "api-message-resource",
           "surface": "server/API text; may be user-visible"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mb226a7601a47",
+      "source": "The identifier candidate belongs to the caller-restricted author.",
+      "sourceFingerprint": "5fc600496bb7588147de0e1e1018caa408051b15af03c1adcef93bd29988c832",
+      "parameters": [],
+      "patterns": [
+        "The identifier candidate belongs to the caller-restricted author."
+      ],
+      "sourceTemplates": [
+        "The identifier candidate belongs to the caller-restricted author."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14591,
+          "sourceLine": "\"The identifier candidate belongs to the caller-restricted author.\"));",
+          "sourceLineSha256": "d4d64d9f8106b6e6bf4c0d70d808d8506af6bf64876325521d6cb770662b26db",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14600,
+          "sourceLine": "Detail = \"The identifier candidate belongs to the caller-restricted author.\"",
+          "sourceLineSha256": "e6d3e38629baf776d32bd79b1ae7ac842be90a8b2caf365f9b8fb9b9db799a0e",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -10167,6 +10927,52 @@
       ]
     },
     {
+      "id": "server.message.mb762894b98c4",
+      "source": "This logical field supplied book-title containment proof.",
+      "sourceFingerprint": "7908f720b23cdac4db706b09ddc1987f2b07d6c74bbffa9c450204a1b4f5ad79",
+      "parameters": [],
+      "patterns": [
+        "This logical field supplied book-title containment proof."
+      ],
+      "sourceTemplates": [
+        "This logical field supplied book-title containment proof."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9917,
+          "sourceLine": "? \"This logical field supplied book-title containment proof.\"",
+          "sourceLineSha256": "c3aed73fa35818616c0d066ceb5f16c5bb91ac480a01f43f607cd6339c022882",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mb7acdc796c01",
+      "source": "Narrator tokens corroborated this edition.",
+      "sourceFingerprint": "1b689ac058cc13a85564955efa79e74b6476399e0386285d6d9b6dc1999fcbbc",
+      "parameters": [],
+      "patterns": [
+        "Narrator tokens corroborated this edition."
+      ],
+      "sourceTemplates": [
+        "Narrator tokens corroborated this edition."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9768,
+          "sourceLine": "Detail = \"Narrator tokens corroborated this edition.\"",
+          "sourceLineSha256": "cfe20f07cc7f071d1705645c8045ba34d83946da132b9fdc978a942d55ac47c1",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.mb8d345c1fd7e",
       "source": "Root folder path '{value0}' contains author folder '{value1}'",
       "sourceFingerprint": "c2253a31d19d2324f387a8a292ec394dde0b0ec7de551c3fbdc1d6be406e0dfa",
@@ -10196,6 +11002,29 @@
           "sourceLineSha256": "86998bf79d9d6b148f1bb5d46099b9d51b0deb9c0bc7842c3aeaf3066b457abd",
           "category": "validator-template",
           "surface": "server/API text; may be user-visible"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mb9cbb26f3ba3",
+      "source": "Matching series position corroborated the title-eligible candidate.",
+      "sourceFingerprint": "b9a2f329c7969fa86dac6e8b98ea0077454102ad764bd1c37f7fc5392f4a3bb4",
+      "parameters": [],
+      "patterns": [
+        "Matching series position corroborated the title-eligible candidate."
+      ],
+      "sourceTemplates": [
+        "Matching series position corroborated the title-eligible candidate."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9669,
+          "sourceLine": ": \"Matching series position corroborated the title-eligible candidate.\"",
+          "sourceLineSha256": "559ba76142d2ca743460e6beb9f97de72eee56a6f5daa50f0354ba045719b6d3",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -10242,6 +11071,29 @@
           "sourceLineSha256": "40b7bb2d57aa3c1c8321ad8c58aa3204db9cd464eef608af005fb76a994a0ff1",
           "category": "operational-message",
           "surface": "Server-owned queue/proxy/import/naming status, error, or notification text consumed by project UI"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mbadd91901e47",
+      "source": "No usable field-bound series-position evidence was present.",
+      "sourceFingerprint": "e0cab46d00c91e5b45708c8d0465c0f36d7264809fe68c6a7438ed45e130f21a",
+      "parameters": [],
+      "patterns": [
+        "No usable field-bound series-position evidence was present."
+      ],
+      "sourceTemplates": [
+        "No usable field-bound series-position evidence was present."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9698,
+          "sourceLine": "Detail = \"No usable field-bound series-position evidence was present.\"",
+          "sourceLineSha256": "efcdbb9ad417c301486496ca8b866c0ccfb93406996825ca1b1c7eb748f519bf",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -10339,6 +11191,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.mbbd2e6de2c1a",
+      "source": "The position conflicted, but this mode did not let position override stronger title proof.",
+      "sourceFingerprint": "f6bb88c51ecb9585376c705d24b11cfe681e1489a6fb8c2a5c9a44ad0f287886",
+      "parameters": [],
+      "patterns": [
+        "The position conflicted, but this mode did not let position override stronger title proof."
+      ],
+      "sourceTemplates": [
+        "The position conflicted, but this mode did not let position override stronger title proof."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9684,
+          "sourceLine": ": \"The position conflicted, but this mode did not let position override stronger title proof.\"",
+          "sourceLineSha256": "18243f43ae276e21265d9abb8af02c3186c6f5e99e95acf9fe7ac9a0b9e57640",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.mbc0594f9f5e3",
       "source": "Chaptarr needs write access. Configure a user or trusted IP in calibre. See https://manual.calibre-ebook.com/server.html",
       "sourceFingerprint": "abfc3f7c10bdd92b0a52be62607d1c5d70e66af5cc42fb1c5756aa18213e4ecf",
@@ -10382,6 +11257,29 @@
           "sourceLineSha256": "d198ec900106618484b251bd4ab18f4d76004a0293e704a986e436fc74dc6c36",
           "category": "api-message-resource",
           "surface": "server/API text; may be user-visible"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mbcbc641ba38e",
+      "source": "Author tokens corroborated this candidate.",
+      "sourceFingerprint": "1fbd51710f23ac4d1447a0278c04eef9bca7be3b9cb1642fd773c6e703b6b19f",
+      "parameters": [],
+      "patterns": [
+        "Author tokens corroborated this candidate."
+      ],
+      "sourceTemplates": [
+        "Author tokens corroborated this candidate."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9629,
+          "sourceLine": "Detail = \"Author tokens corroborated this candidate.\"",
+          "sourceLineSha256": "c9ecdd1e1957d67feac49eddcb53d9ded2660ff30d930ea3795808cd76b9666c",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -10518,6 +11416,29 @@
           "sourceLineSha256": "db29bed98cc69a3cd5f447d501a6ca58ca0ffaf1781979291b24aed4c100dadf",
           "category": "direct-api-result",
           "surface": "String body from an MVC API result; the caller may display it"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mbefd03741239",
+      "source": "Publication year conflicted with this edition; stronger book identity evidence won.",
+      "sourceFingerprint": "2aea71f30150993d4353d3ebdc9fb1728a583248c078cf8349c0c851c514b5ef",
+      "parameters": [],
+      "patterns": [
+        "Publication year conflicted with this edition; stronger book identity evidence won."
+      ],
+      "sourceTemplates": [
+        "Publication year conflicted with this edition; stronger book identity evidence won."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9809,
+          "sourceLine": ": \"Publication year conflicted with this edition; stronger book identity evidence won.\"",
+          "sourceLineSha256": "d5950e87065e2bb97472b9494e22745cff38bc637ec6b958da550d9f86e580a1",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -10755,6 +11676,33 @@
       ]
     },
     {
+      "id": "server.message.mc41179432177",
+      "source": "Getting release from indexer failed: {value0}",
+      "sourceFingerprint": "6e954759d0d94b7d1350ea53eeb069c82927352a9297f6d2314df98cade2885a",
+      "parameters": [
+        {
+          "name": "value0"
+        }
+      ],
+      "patterns": [
+        "Getting release from indexer failed: {value0}"
+      ],
+      "sourceTemplates": [
+        "Getting release from indexer failed: {dynamic}"
+      ],
+      "callsites": [
+        {
+          "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
+          "line": 193,
+          "sourceLine": "throw new NzbDroneClientException(HttpStatusCode.Conflict, $\"Getting release from indexer failed: {ex.Message}\");",
+          "sourceLineSha256": "2c5850ea517242364ee3faf365cd77ea8bd7540e8f5e2e33b3c2807153608165",
+          "category": "release-grab-error",
+          "surface": "Interactive release result error body and download tooltip; values remain raw"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.mc462c3fca43d",
       "source": "Completed file is missing from the staging folder.",
       "sourceFingerprint": "db6084bc8486aa0001c195f92c1f125f45e016893a5f36960b70a333cd3df375",
@@ -10945,6 +11893,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.mc8b126d79c7b",
+      "source": "The catalog edition has no usable publication year.",
+      "sourceFingerprint": "bdaead73bfd6f59aba5d5144579238da7f7fcec2e174e00360f54cbf180c0960",
+      "parameters": [],
+      "patterns": [
+        "The catalog edition has no usable publication year."
+      ],
+      "sourceTemplates": [
+        "The catalog edition has no usable publication year."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9827,
+          "sourceLine": "? \"The catalog edition has no usable publication year.\"",
+          "sourceLineSha256": "0028183d178bb361f8863366711c8bd2b6637c46efed3b9dcd6681cef22b999b",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.mc9036b7c4f55",
       "source": "At least one narrator name is required",
       "sourceFingerprint": "acf884196ab84ef274b4cfc5004dcf4d2b12fd0de5a5083141d6548fe392153a",
@@ -11061,6 +12032,29 @@
           "sourceLineSha256": "a20b7ea3e3b731fbb4fcf133432283e7ec7a9a91c943e72f0836792094b13a25",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mca7536ee5f0c",
+      "source": "The catalog edition has no usable duration.",
+      "sourceFingerprint": "998090804a5bbbca9d2955d459d9cd8f1764acd151c5e6a09f86684224d42553",
+      "parameters": [],
+      "patterns": [
+        "The catalog edition has no usable duration."
+      ],
+      "sourceTemplates": [
+        "The catalog edition has no usable duration."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9738,
+          "sourceLine": "? \"The catalog edition has no usable duration.\"",
+          "sourceLineSha256": "62d977ec1b48150055e4d7116dec7e03884646a9ccd6e8b5457d9ee22ff5a9af",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -11276,6 +12270,47 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.mcec1fcaa43a5",
+      "source": "No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds; nearest other narration {value2} seconds away.",
+      "sourceFingerprint": "65f4a548fe4178e9008f49548cab9498bed1d3ad6f6b554e3586fc500967daed",
+      "parameters": [
+        {
+          "name": "value0"
+        },
+        {
+          "name": "value1"
+        },
+        {
+          "name": "value2"
+        }
+      ],
+      "patterns": [
+        "No tag names a narrator; the length matched the pinned edition. Difference {value0} seconds; matching tolerance {value1} seconds; nearest other narration {value2} seconds away."
+      ],
+      "sourceTemplates": [
+        "No tag names a narrator; the length matched the pinned edition. Difference {dynamic} seconds; matching tolerance {dynamic} seconds; nearest other narration {dynamic} seconds away."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 4459,
+          "sourceLine": "detail = $\"No tag names a narrator; the length matched the pinned edition. Difference {diffSeconds} seconds; matching tolerance {allowedSeconds} seconds\" +",
+          "sourceLineSha256": "2294f8640e062b29f3d1c3f468a453082e4d726c5bd4177f178baa53c9d3ee18",
+          "category": "match-provenance-detail",
+          "surface": "Pinned narration duration signal detail"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 4460,
+          "sourceLine": "(nearestOtherNarration.HasValue ? $\"; nearest other narration {nearestOtherNarration.Value} seconds away.\" : \".\");",
+          "sourceLineSha256": "03768c3eea36d784a59c2524bb4bc5dd059598cdd2c9c5cb551febd94aef441c",
+          "category": "match-provenance-detail",
+          "surface": "Pinned narration duration branch"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.mced5ab929209",
       "source": "The download is missing files",
       "sourceFingerprint": "91c67a329b88148f9f1fb58ffef761a09bd073cb8c358651b42875775909fbce",
@@ -11456,6 +12491,37 @@
           "sourceLineSha256": "c34891ab10d77a7cac5f27460404a06e02dd6593f39f9bcfea42a7e923bde540",
           "category": "validator-template",
           "surface": "server/API text; may be user-visible"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.md11a72264757",
+      "source": "Unable to post payload",
+      "sourceFingerprint": "a8b2475aaea814ce1a27af8007a9395398af3954a1073a3c45a2963adea957b6",
+      "parameters": [],
+      "patterns": [
+        "Unable to post payload"
+      ],
+      "sourceTemplates": [
+        "Unable to post payload"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Notifications/Slack/SlackProxy.cs",
+          "line": 42,
+          "sourceLine": "throw new SlackExeption(\"Unable to post payload\", ex);",
+          "sourceLineSha256": "3b2647b3d779f3a4bfd50ed6836448527a72ed1584b8f6379de2600c6f42e0ac",
+          "category": "notification-test-error",
+          "surface": "Slack test catches exception.Message as validation failure"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Discord/DiscordProxy.cs",
+          "line": 42,
+          "sourceLine": "throw new DiscordException(\"Unable to post payload\", ex);",
+          "sourceLineSha256": "1f5ed5d062ac65dadccd0d2dddac7f366ec35b46764087db38420005bdb59035",
+          "category": "notification-test-error",
+          "surface": "Discord test catches exception.Message as validation failure"
         }
       ],
       "protectedLiterals": []
@@ -11660,6 +12726,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.md657eda9fd8b",
+      "source": "Edition format matches the discovered file type.",
+      "sourceFingerprint": "56a4b279b2ae93c1cdbd5e130a6f754d3fc55274b37aab9be410ab6ac4d33564",
+      "parameters": [],
+      "patterns": [
+        "Edition format matches the discovered file type."
+      ],
+      "sourceTemplates": [
+        "Edition format matches the discovered file type."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9855,
+          "sourceLine": "? \"Edition format matches the discovered file type.\"",
+          "sourceLineSha256": "e330537cc6b58ae04184b87b9c316497b5c330e6ded957014b8f2cd85309f092",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.md7cf291e278c",
       "source": "Unable to send test message. Response from API: {value0}",
       "sourceFingerprint": "acdd34a8f5f1a2af5fceb735843effdfc7a69cb48ee128ce05a1eacaba8f209f",
@@ -11799,6 +12888,52 @@
           "sourceLineSha256": "75d562127f2fd0c1d7928fdc796cc799102db4af3d9feac0780cad940c15c494",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.md92a7552538b",
+      "source": "Matching series position was eligible to break a title tie.",
+      "sourceFingerprint": "1ae527def3a9ea89ce386be94c4717346332537c92b944ed11a0aa44f931b3ab",
+      "parameters": [],
+      "patterns": [
+        "Matching series position was eligible to break a title tie."
+      ],
+      "sourceTemplates": [
+        "Matching series position was eligible to break a title tie."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9668,
+          "sourceLine": "? \"Matching series position was eligible to break a title tie.\"",
+          "sourceLineSha256": "9e48ff9c9da1f91119e01b05800529151f076b262424190d096b5d599ba08ace",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.md9b3d7c8214b",
+      "source": "The same normalized author span appeared in this physical field throughout the group.",
+      "sourceFingerprint": "0afd4d5aed2f300b8e6ef0ce06ec84e804fe0f3c116b010c76f29bd4b8f09be6",
+      "parameters": [],
+      "patterns": [
+        "The same normalized author span appeared in this physical field throughout the group."
+      ],
+      "sourceTemplates": [
+        "The same normalized author span appeared in this physical field throughout the group."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9962,
+          "sourceLine": "\"The same normalized author span appeared in this physical field throughout the group.\"));",
+          "sourceLineSha256": "e3df10fdbad036a412a1fa5ae17ffd0953418f90df5bd407b785b479f6ae126f",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -12094,6 +13229,37 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.me3e7aa14f3c4",
+      "source": "This field was excluded from fuzzy/content matching by the shared tag policy.",
+      "sourceFingerprint": "782ac717ef96c1f55a0d093c71d79ff6fe4f3c7c85cad3ae2bffd36d47d3262d",
+      "parameters": [],
+      "patterns": [
+        "This field was excluded from fuzzy/content matching by the shared tag policy."
+      ],
+      "sourceTemplates": [
+        "This field was excluded from fuzzy/content matching by the shared tag policy."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14390,
+          "sourceLine": "Detail = \"This field was excluded from fuzzy/content matching by the shared tag policy.\"",
+          "sourceLineSha256": "0890ca3a6dfd18e6e4dc0d2ce31a3aedcd7c5f292d089bda411dfa1ebf553657",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        },
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 14710,
+          "sourceLine": "Detail = \"This field was excluded from fuzzy/content matching by the shared tag policy.\"",
+          "sourceLineSha256": "0890ca3a6dfd18e6e4dc0d2ce31a3aedcd7c5f292d089bda411dfa1ebf553657",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.me3f9929f31ad",
       "source": "Selected foreign edition '{value0}' could not be found.",
       "sourceFingerprint": "8ae7e5e9072cbfa0693a9d4a20acb16e1006be123e19e12934d7c68a5efe33b7",
@@ -12312,6 +13478,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.me59dec254c7d",
+      "source": "The matching torrent is no longer available in the selected download client. Search again before grabbing it.",
+      "sourceFingerprint": "a86223d8f11988f05426ef87606a266a83cd0a0226d2da1cfce448208aa93c46",
+      "parameters": [],
+      "patterns": [
+        "The matching torrent is no longer available in the selected download client. Search again before grabbing it."
+      ],
+      "sourceTemplates": [
+        "The matching torrent is no longer available in the selected download client. Search again before grabbing it."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Download/DownloadService.cs",
+          "line": 125,
+          "sourceLine": "throw new ExistingTorrentNotFoundException(\"The matching torrent is no longer available in the selected download client. Search again before grabbing it.\");",
+          "sourceLineSha256": "e58414334377bc5773a5ee9c016159d5682563f3d210c0098cc04b248c0d8a5b",
+          "category": "release-grab-error",
+          "surface": "Interactive release result error body and download tooltip; values remain raw"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.me73b26812f91",
       "source": "Invalid mediaType parameter: '{value0}'. Valid values are: audiobook, ebook",
       "sourceFingerprint": "da1fd16b2396353cf1c2b7991b605c66d901da404cee4ec8c2dcc907e1ee5e37",
@@ -12343,6 +13532,29 @@
         "audiobook",
         "ebook"
       ]
+    },
+    {
+      "id": "server.message.me74c7bc1f189",
+      "source": "Publication year corroborated this edition.",
+      "sourceFingerprint": "59ebf1dc65c24d22411830937ef726a06fc6170e2399c8f89fcdc904829e7fc6",
+      "parameters": [],
+      "patterns": [
+        "Publication year corroborated this edition."
+      ],
+      "sourceTemplates": [
+        "Publication year corroborated this edition."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9808,
+          "sourceLine": "? \"Publication year corroborated this edition.\"",
+          "sourceLineSha256": "6d522d2acd0a80c92390135efdae1926ccb1748c0c66d6dcb96c5fb627ee02c4",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
     },
     {
       "id": "server.message.me8703ba3572c",
@@ -12570,6 +13782,36 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.meb0aaaf88fff",
+      "source": "Difference {value0} seconds; matching tolerance {value1} seconds.",
+      "sourceFingerprint": "5d2a25282de00dbe542063806ea7f06b602e9584d1b8e8683a45d5be59d5b63f",
+      "parameters": [
+        {
+          "name": "value0"
+        },
+        {
+          "name": "value1"
+        }
+      ],
+      "patterns": [
+        "Difference {value0} seconds; matching tolerance {value1} seconds."
+      ],
+      "sourceTemplates": [
+        "Difference {dynamic} seconds; matching tolerance {dynamic} seconds."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9717,
+          "sourceLine": ": $\"Difference {difference} seconds; matching tolerance {allowed} seconds.\"",
+          "sourceLineSha256": "10d6e05c5e701ecd41f77fae1ad7d175f0f7b08fd3457e4d700b934f31965308",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.meb46390efea0",
       "source": "Invalid authentication token",
       "sourceFingerprint": "f289a281c760f01c5020665cebd542dad6b140969565239ce03031bc794d7245",
@@ -12642,6 +13884,29 @@
           "sourceLineSha256": "f62ab8c603fcffbb253b3685801ed755527fc2e7b30df1ffd6204576e5f5b711",
           "category": "direct-api-result",
           "surface": "String body from an MVC API result; the caller may display it"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mec15ef07ac20",
+      "source": "These nearby tokens were tolerated by the active matcher mode.",
+      "sourceFingerprint": "298b93b3766547ac2f737580839a23e4f68ecad8a52b48fe628c1d2b345e5a3f",
+      "parameters": [],
+      "patterns": [
+        "These nearby tokens were tolerated by the active matcher mode."
+      ],
+      "sourceTemplates": [
+        "These nearby tokens were tolerated by the active matcher mode."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9871,
+          "sourceLine": "Detail = \"These nearby tokens were tolerated by the active matcher mode.\"",
+          "sourceLineSha256": "6aa3cfc1bef1e147499fda5a5215b8e42c3d54990e04f2be6629d06b77e4a1f3",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -12880,6 +14145,29 @@
           "sourceLineSha256": "3c03c56ecff31b23ad49b6ac203cd9a0196083470e48e74d11b63276e373298b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mefa23f5263d3",
+      "source": "No usable publication year was found in the matchable metadata.",
+      "sourceFingerprint": "cd8615e763afd5d346b6394655dfc30ecaf59f230f453a8d13270e85008d3752",
+      "parameters": [],
+      "patterns": [
+        "No usable publication year was found in the matchable metadata."
+      ],
+      "sourceTemplates": [
+        "No usable publication year was found in the matchable metadata."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9828,
+          "sourceLine": ": \"No usable publication year was found in the matchable metadata.\"",
+          "sourceLineSha256": "d212256cc9d597f2957745772ccfa824efaf236ee4777c786a6681a0ed318f22",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -13249,6 +14537,29 @@
           "sourceLineSha256": "1a230685230b43c0d660066c8376bc47a33a659f02188a88ee65f26e98dd8d52",
           "category": "api-response-resource",
           "surface": "Explicit API error/message response serialized for the client UI"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.mf4b3a5b30180",
+      "source": "This text was considered but did not support or contradict the selected match.",
+      "sourceFingerprint": "f44b6a8c7943319eb4279b7cd2e1b34b58f5b299be70e4f54f7950d6fb33daad",
+      "parameters": [],
+      "patterns": [
+        "This text was considered but did not support or contradict the selected match."
+      ],
+      "sourceTemplates": [
+        "This text was considered but did not support or contradict the selected match."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 10149,
+          "sourceLine": "\"This text was considered but did not support or contradict the selected match.\");",
+          "sourceLineSha256": "9d704e8d7fa9c69fc42dfadf5f914e003ed643bb8ff9a6db7a6928f3236e723d",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
         }
       ],
       "protectedLiterals": []
@@ -13681,6 +14992,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.mfb797cca63fc",
+      "source": "This file is a multipart track, so its duration was not compared with the full-book edition duration.",
+      "sourceFingerprint": "fdce58a85147efe1278565931bf8db3e9a463ddc63bf6b29eb1fdaa2baa7748f",
+      "parameters": [],
+      "patterns": [
+        "This file is a multipart track, so its duration was not compared with the full-book edition duration."
+      ],
+      "sourceTemplates": [
+        "This file is a multipart track, so its duration was not compared with the full-book edition duration."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/MediaFiles/BookImport/FileMatchingService.cs",
+          "line": 9716,
+          "sourceLine": "? \"This file is a multipart track, so its duration was not compared with the full-book edition duration.\"",
+          "sourceLineSha256": "eeefe58013154bcb20f80f9e76973ad7532581f090d4ff6a400a7360dc425763",
+          "category": "match-provenance-detail",
+          "surface": "Book matching signal/range detail tooltip; raw values and diagnostic bags stay data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.mfbd0513e376b",
       "source": "Invalid config contract",
       "sourceFingerprint": "a8a7a6596d32f89f91900bdbcf1e3d461e8f1cc25eb3d7680a49c62ce1c31545",
@@ -13821,15 +15155,15 @@
     }
   ],
   "counts": {
-    "originalTemplates": 486,
-    "sourceOccurrences": 650,
-    "translatableMessages": 486,
+    "originalTemplates": 537,
+    "sourceOccurrences": 712,
+    "translatableMessages": 537,
     "knownExistingCatalogKeys": 6,
-    "newCatalogKeys": 480,
-    "sourceCallsites": 649,
+    "newCatalogKeys": 531,
+    "sourceCallsites": 711,
     "excludedTemplates": 1,
     "rawInputSourceOccurrences": 643,
-    "sourceBindings": 657
+    "sourceBindings": 721
   },
   "sourceBaseHead": "ece16c4bd953e4ae77d7473c8b01871bf1d8c8ff",
   "normalizations": [
@@ -13880,6 +15214,69 @@
         "server.message.m78430e265616.environment"
       ],
       "reason": "Empty Docker hint versus fixed env-label wrapper; only the environment summary is dynamic."
+    }
+  ],
+  "sourceExtensions": [
+    {
+      "id": "20261031-source-followup",
+      "baseHead": "957f1a2ef0f3b15e50e57e4681207a84f9a0be47",
+      "newMessages": 51,
+      "newSourceBindings": 64,
+      "newUniqueCallsites": 62,
+      "sourceIds": [
+        "server.message.m736b5fe15618",
+        "server.message.m0c585b47781f",
+        "server.message.mafabf0b8cd14",
+        "server.message.m09734a3e9cf9",
+        "server.message.mbcbc641ba38e",
+        "server.message.m835cd53441fb",
+        "server.message.md92a7552538b",
+        "server.message.mb9cbb26f3ba3",
+        "server.message.m61c0ddf68a65",
+        "server.message.mbbd2e6de2c1a",
+        "server.message.mbadd91901e47",
+        "server.message.mfb797cca63fc",
+        "server.message.meb0aaaf88fff",
+        "server.message.mca7536ee5f0c",
+        "server.message.m43edb49bfa4c",
+        "server.message.mae40d81346d7",
+        "server.message.mb7acdc796c01",
+        "server.message.m290e1a4f50ba",
+        "server.message.m380e19583eca",
+        "server.message.me74c7bc1f189",
+        "server.message.mbefd03741239",
+        "server.message.mc8b126d79c7b",
+        "server.message.mefa23f5263d3",
+        "server.message.m2e1832187375",
+        "server.message.md657eda9fd8b",
+        "server.message.m9123e0c2a1bb",
+        "server.message.mec15ef07ac20",
+        "server.message.mb762894b98c4",
+        "server.message.m123c31b11b23",
+        "server.message.m7daa93712844",
+        "server.message.m5314fa3dfe04",
+        "server.message.m4b0072b05f0b",
+        "server.message.me3e7aa14f3c4",
+        "server.message.m1cb06fc96c2e",
+        "server.message.mb226a7601a47",
+        "server.message.m5aa6a41c72ca",
+        "server.message.m060675d5700c",
+        "server.message.m9c90e66f400b",
+        "server.message.md9b3d7c8214b",
+        "server.message.mf4b3a5b30180",
+        "server.message.m1342cc36e68f",
+        "server.message.mcec1fcaa43a5",
+        "server.message.md11a72264757",
+        "server.message.m9bb5b0761aa3",
+        "server.message.m44064e27b666",
+        "server.message.m083b31b1f1e6",
+        "server.message.m09853a3933ba",
+        "server.message.m6849ebee10e9",
+        "server.message.me59dec254c7d",
+        "server.message.m6026247dc0f2",
+        "server.message.mc41179432177"
+      ],
+      "method": "Current source-bound UI/provenance/notification/grab audit; supplements the retained original v3 input inventory. No target generation or native review claimed."
     }
   ]
 }
