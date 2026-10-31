@@ -116,11 +116,12 @@ namespace NzbDrone.Core.Indexers.Newznab
                     $"&q={NewsnabifyTitle(searchCriteria.BookQuery)}"));
             }
 
-            // Interactive search: a title like "..., Book 4" rarely appears in a release name, so every
-            // tier above can come back empty for a book the indexer does have. Tiers are tried in order
-            // until one returns results, so this only runs when the precise queries found nothing.
+            // A title like "..., Book 4" rarely appears in a release name, so every tier above can come
+            // back empty for a book the indexer does have. Tiers are tried in order until one returns
+            // results, so this only runs when the precise queries found nothing. Automatic searches
+            // (including those requested by SeerrNG) need it as much as interactive ones.
             // MyAnonaMouse has the same last-resort tier.
-            var queryWithoutBookNumber = searchCriteria.InteractiveSearch ? searchCriteria.BookQueryWithoutBookNumber : null;
+            var queryWithoutBookNumber = searchCriteria.BookQueryWithoutBookNumber;
             if (queryWithoutBookNumber != null)
             {
                 pageableRequests.AddTier();

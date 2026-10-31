@@ -123,6 +123,39 @@ namespace Chaptarr.Core.Test.Indexers
         }
 
         [Test]
+        public void should_add_book_number_fallback_as_last_tier_for_automatic_search()
+        {
+            var generator = CreateGenerator();
+            var searchCriteria = new BookSearchCriteria
+            {
+                Author = new Author { Name = "Joe Abercrombie" },
+                BookTitle = "The Trouble With Peace, Book 2",
+                InteractiveSearch = false
+            };
+
+            var chain = generator.GetSearchRequests(searchCriteria);
+
+            Assert.That(chain.Tiers, Is.EqualTo(3));
+            Assert.That(GetRequestPayload(chain, 2), Does.Contain("\"text\":\"Trouble With Peace\""));
+        }
+
+        [Test]
+        public void should_drop_a_fractional_book_number_in_the_fallback()
+        {
+            var generator = CreateGenerator();
+            var searchCriteria = new BookSearchCriteria
+            {
+                Author = new Author { Name = "George R.R. Martin" },
+                BookTitle = "The Hedge Knight, Book 0.5",
+                InteractiveSearch = false
+            };
+
+            var chain = generator.GetSearchRequests(searchCriteria);
+
+            Assert.That(GetRequestPayload(chain, chain.Tiers - 1), Does.Contain("\"text\":\"Hedge Knight\""));
+        }
+
+        [Test]
         public void should_not_strip_leading_parenthetical_title_to_empty_query()
         {
             var generator = CreateGenerator();

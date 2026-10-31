@@ -67,15 +67,17 @@ namespace Chaptarr.Core.Test.Indexers
         }
 
         [Test]
-        public void should_add_a_book_number_fallback_as_the_last_tier_for_interactive_search()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void should_add_a_book_number_fallback_as_the_last_tier(bool interactive)
         {
             var generator = CreateGenerator();
-            var automatic = generator.GetSearchRequests(Criteria(AudibleStyleTitle, interactive: false));
-            var interactive = generator.GetSearchRequests(Criteria(AudibleStyleTitle, interactive: true));
+            var plain = generator.GetSearchRequests(Criteria("Harry Potter and the Goblet of Fire", interactive));
+            var chain = generator.GetSearchRequests(Criteria(AudibleStyleTitle, interactive));
 
-            Assert.That(interactive.Tiers, Is.EqualTo(automatic.Tiers + 1));
+            Assert.That(chain.Tiers, Is.EqualTo(plain.Tiers + 1));
 
-            var fallback = UrlsInTier(interactive, interactive.Tiers - 1);
+            var fallback = UrlsInTier(chain, chain.Tiers - 1);
             Assert.That(fallback, Is.Not.Empty);
             Assert.That(fallback, Has.All.Contains(TitleInUrl));
             Assert.That(fallback, Has.None.Contains(BookNumberInUrl));
@@ -85,10 +87,9 @@ namespace Chaptarr.Core.Test.Indexers
         public void should_keep_the_book_number_in_every_tier_before_the_fallback()
         {
             var generator = CreateGenerator();
-            var automatic = generator.GetSearchRequests(Criteria(AudibleStyleTitle, interactive: false));
             var interactive = generator.GetSearchRequests(Criteria(AudibleStyleTitle, interactive: true));
 
-            for (var tier = 0; tier < automatic.Tiers; tier++)
+            for (var tier = 0; tier < interactive.Tiers - 1; tier++)
             {
                 Assert.That(UrlsInTier(interactive, tier), Is.Not.Empty.And.All.Contains(BookNumberInUrl), $"tier {tier}");
             }
@@ -129,14 +130,16 @@ namespace Chaptarr.Core.Test.Indexers
         }
 
         [Test]
-        public void should_not_add_a_book_number_fallback_for_automatic_search()
+        public void should_give_automatic_search_the_same_fallback_as_interactive_search()
         {
+            // SeerrNG requests and missing-book searches are automatic; without this tier they never
+            // find uploads named without the Audible ", Book N" suffix.
             var generator = CreateGenerator();
-            var plain = generator.GetSearchRequests(Criteria("Harry Potter and the Goblet of Fire", interactive: false));
             var automatic = generator.GetSearchRequests(Criteria(AudibleStyleTitle, interactive: false));
+            var interactive = generator.GetSearchRequests(Criteria(AudibleStyleTitle, interactive: true));
 
-            Assert.That(automatic.Tiers, Is.EqualTo(plain.Tiers));
-            Assert.That(UrlsInTier(automatic, automatic.Tiers - 1), Has.All.Contains(BookNumberInUrl));
+            Assert.That(automatic.Tiers, Is.EqualTo(interactive.Tiers));
+            Assert.That(UrlsInTier(automatic, automatic.Tiers - 1), Is.EquivalentTo(UrlsInTier(interactive, interactive.Tiers - 1)));
         }
 
         [Test]
