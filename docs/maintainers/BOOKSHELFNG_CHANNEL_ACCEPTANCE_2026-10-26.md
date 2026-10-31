@@ -765,3 +765,27 @@ Cloudron and Unraid feed/catalog delivery, canonical Co-op Cloud maintainer
 acceptance, package-feed/catalog handoffs, representative operator data,
 live-provider acceptance, and operational sign-off remain open. The release
 readiness gates stay closed.
+
+## CI failure triage — 2026-10-31 19:18 UTC
+
+The completed jobs in Build [41229894913](https://github.com/snapetech-org/chaptarrng/actions/runs/41229894913)
+all target old head `c59488f1` and do not show new current-main product defects:
+
+- PostgreSQL job `124621739312` passed 11/15 tests. Its four historical
+  fixture failures all reported the missing explicit `HARDCOVER` provider
+  mode. Commit `333238f2` corrected that setup; the matching local PostgreSQL
+  fixture suite passed 8/8.
+- Linux job `124621739542` passed the image-alias and bridge contracts, then
+  failed the Debian gate assertion fixed in `5c9db5ac`. The corrected gate
+  passed in private-JIT contract run `41230976187`; the current-main local
+  image-alias and bridge tests also pass.
+- Docker job `124621739583` failed before building because the private JIT
+  guest did not have the Docker executable. This remains a runner provisioning
+  issue.
+
+At 19:18 UTC the Windows job `124621739647` was still installing frontend
+dependencies; Chocolatey `.76` handoff step 63 had not started. The run is
+still against `c59488f1`, so it cannot establish exact-current-main provenance.
+No run was retried or dispatched, and no runner or workflow configuration was
+changed. The three completed job logs and this triage are retained under
+`/mnt/disks/scratch/task-worktrees/chaptarrng-finalize-20261031/evidence/`.
