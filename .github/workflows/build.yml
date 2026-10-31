@@ -248,11 +248,13 @@ jobs:
 
     - name: Guard (version) - package.json and Directory.Build.props in sync
       shell: bash
-      run: "$CHAPTARRNG_PYTHON" build-tools/version_guard.py sync
+      run: >-
+        "$CHAPTARRNG_PYTHON" build-tools/version_guard.py sync
 
     - name: Guard (.NET SDK) - workflow and container pins match global.json
       shell: bash
-      run: "$CHAPTARRNG_PYTHON" scripts/check_dotnet_sdk_pins.py
+      run: >-
+        "$CHAPTARRNG_PYTHON" scripts/check_dotnet_sdk_pins.py
 
     - name: Guard (version) - no decreases on main
       if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
