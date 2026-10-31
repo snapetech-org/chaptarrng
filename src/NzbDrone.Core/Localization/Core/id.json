@@ -890,7 +890,7 @@
   "GrimmoryPush": "Dorongan Grimmory",
   "GrimmoryPushDescriptionInterp": "Pilih bidang mana untuk mendorong ke Grimmory untuk {0} Buku. Ruas bidang terkunci dalam Grimmory sehingga sendiri metadata menyegarkan tidak overwrite mereka, apa pun yang tersisa unticked tidak tersentuh.",
   "Group": "Grup",
-  "Hardcover": "Penutup Keras",
+  "Hardcover": "Hardcover",
   "HardcoverApiKeyPlaceholder": "Tempelkan tombol API Anda di sini",
   "HardcoverApiSettingsLinkText": "Pengaturan API sampul keras",
   "HardcoverConnectIntro": "Hubungkan Hardcover sehingga Chaptarr dapat menyelaraskan rak dan metadata.",

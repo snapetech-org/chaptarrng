@@ -890,7 +890,7 @@
   "GrimmoryPush": "Grimmory推播",
   "GrimmoryPushDescriptionInterp": "選擇要推送到 {0} 本書的 Grimmory 的欄位。推送的欄位被鎖定在 Grimmory 中，因此其自己的元資料刷新不會覆蓋它們；任何未勾選的內容都不會受到影響。",
   "Group": "群組",
-  "Hardcover": "硬封面",
+  "Hardcover": "Hardcover",
   "HardcoverApiKeyPlaceholder": "在此貼上您的硬封面 API 金鑰",
   "HardcoverApiSettingsLinkText": "硬封面的 API 設定",
   "HardcoverConnectIntro": "連接硬封面, 讓Chaptarr能同步書架與中繼資料 。",

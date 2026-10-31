@@ -890,7 +890,7 @@
   "GrimmoryPush": "Grimmory 푸시",
   "GrimmoryPushDescriptionInterp": "Grimmory로 밀어주는 필드를 선택하십시오. {0} 책(s). 푸시 필드는 Grimmory에서 잠겨있어 자신의 메타 데이터가 새로 고침하지 않습니다. 모든 왼쪽 unticked은 터치되지 않습니다.",
   "Group": "그룹",
-  "Hardcover": "하드 커버",
+  "Hardcover": "Hardcover",
   "HardcoverApiKeyPlaceholder": "Hardcover API 키 붙여넣기",
   "HardcoverApiSettingsLinkText": "Hardcover의 API 설정",
   "HardcoverConnectIntro": "Hardcover를 연결하십시오 그래서 Chaptarr는 선반과 metadata를 동기화할 수 있습니다.",

@@ -890,7 +890,7 @@
   "GrimmoryPush": "Grimmory إدفع",
   "GrimmoryPushDescriptionInterp": "اختر الحقول التي تريد دفعها إلى Grimmory لكتب (كتب) {0}. يتم قفل الحقول المدفوعة في Grimmory بحيث لا تؤدي عمليات تحديث البيانات التعريفية الخاصة بها إلى الكتابة فوقها؛ أي شيء ترك دون تحديد لم يمس.",
   "Group": "مجموعة",
-  "Hardcover": "سرية",
+  "Hardcover": "Hardcover",
   "HardcoverApiKeyPlaceholder": "الصق مفتاح Hardcover API هنا",
   "HardcoverApiSettingsLinkText": "إعدادات API Hardcover",
   "HardcoverConnectIntro": "قم بتوصيل Hardcover حتى يتمكن Chaptarr من مزامنة الرفوف والبيانات التعريفية.",

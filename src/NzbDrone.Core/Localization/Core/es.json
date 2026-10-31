@@ -890,7 +890,7 @@
   "GrimmoryPush": "Grimmory Empuja",
   "GrimmoryPushDescriptionInterp": "Elige qué campos empujar a Grimmory para {0} book(s). Los campos empujados están encerrados en Grimmory, por lo que sus propios metadatos refrescantes no los sobreescriben; todo lo que queda desatado es intacto.",
   "Group": "Grupo",
-  "Hardcover": "Cubierta dura",
+  "Hardcover": "Hardcover",
   "HardcoverApiKeyPlaceholder": "Pruebe la clave de API de Hardcover aquí",
   "HardcoverApiSettingsLinkText": "Ajustes de API de Hardcover",
   "HardcoverConnectIntro": "Conecta Hardcover para que Chaptarr pueda sincronizar estantes y metadatos.",

@@ -890,7 +890,7 @@
   "GrimmoryPush": "Grimmory 推开",
   "GrimmoryPushDescriptionInterp": "どのフィールドをGrimmoryにプッシュするかを選択します {0} ブックス プッシュされたフィールドは、Grimmory でロックされているため、独自のメタデータが上書きされないため、左の未処理はすべて無修正です。",
   "Group": "グループ",
-  "Hardcover": "ハードカバー",
+  "Hardcover": "Hardcover",
   "HardcoverApiKeyPlaceholder": "Hardcover API キーをここに貼り付ける",
   "HardcoverApiSettingsLinkText": "HardcoverのAPI設定",
   "HardcoverConnectIntro": "Hardcover を接続すると、Chaptarr がシェルフとメタデータを同期できるようになります。",

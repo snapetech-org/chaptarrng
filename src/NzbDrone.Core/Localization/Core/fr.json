@@ -890,7 +890,7 @@
   "GrimmoryPush": "Pousser Grimmory",
   "GrimmoryPushDescriptionInterp": "Choisissez les champs à pousser à Grimmory pour {0} livre(s). Les champs poussés sont verrouillés dans Grimmory de sorte que ses propres métadonnées rafraîchies ne les écrasent pas ; tout ce qui reste non coupé est intact.",
   "Group": "Groupe",
-  "Hardcover": "Couverture rigide",
+  "Hardcover": "Hardcover",
   "HardcoverApiKeyPlaceholder": "Collez votre clé API Couverture rigide ici",
   "HardcoverApiSettingsLinkText": "Paramètres de l'API de couverture rigide",
   "HardcoverConnectIntro": "Connectez la couverture rigide afin que Chaptarr puisse synchroniser les tablettes et les métadonnées.",

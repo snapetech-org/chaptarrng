@@ -890,7 +890,7 @@
   "GrimmoryPush": "Grimmory 推开",
   "GrimmoryPushDescriptionInterp": "选择要推到哪个字段 Grimmory (单位:千美元) {0} 书籍。 按下字段被锁定 Grimmory 故它自己的元数据更新时,不会覆盖它们;所剩无几的,都未曾被检讨过。",
   "Group": "组",
-  "Hardcover": "硬盖",
+  "Hardcover": "Hardcover",
   "HardcoverApiKeyPlaceholder": "在此粘贴您的硬封面 API 密钥",
   "HardcoverApiSettingsLinkText": "硬封面的 API 设置",
   "HardcoverConnectIntro": "连接 Hardcover，以便 Chaptarr 可以同步货架和元数据。",

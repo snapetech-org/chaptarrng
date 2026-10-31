@@ -890,7 +890,7 @@
   "GrimmoryPush": "Grimmory पुश",
   "GrimmoryPushDescriptionInterp": "किस क्षेत्र को Grimmory के लिए पुश करने के लिए चुनें {0} पुस्तक(s). धक्का क्षेत्र Grimmory में बंद कर रहे हैं तो अपने मेटाडाटा ताज़ा उन्हें अधिलेखित नहीं है; कुछ भी छोड़ा unticked नहीं है।",
   "Group": "समूह",
-  "Hardcover": "हार्डकवर",
+  "Hardcover": "Hardcover",
   "HardcoverApiKeyPlaceholder": "अपने हार्डकवर पेस्ट करें API यहाँ कुंजी",
   "HardcoverApiSettingsLinkText": "हार्डकवर API सेटिंग्स",
   "HardcoverConnectIntro": "कनेक्ट हार्डकवर इसलिए Chaptarr अलमारियों और मेटाडाटा सिंक कर सकते हैं।",
