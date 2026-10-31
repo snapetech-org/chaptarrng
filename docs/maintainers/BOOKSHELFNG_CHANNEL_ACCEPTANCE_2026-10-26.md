@@ -653,10 +653,10 @@ BookshelfNG `.76` Chocolatey No/Yes/rollback acceptance, official StartOS packag
 
 ## Current source and acceptance recheck — 2026-10-31 18:56 UTC
 
-Direct-to-main consolidation is complete for this repository: `main` is
-`333238f270c982a69941bb34fcecf5bb68a1623d`, the remote branch inventory
-contains only `main`, and there are no open pull requests. PRs #184, #185, and
-#186 are merged. No ChaptarrNG application source changed after
+At the time of this 18:56 UTC snapshot, direct-to-main consolidation had
+`main` at `333238f270c982a69941bb34fcecf5bb68a1623d`, no open pull requests,
+and only `main` in the remote branch inventory. PRs #184, #185, and #186 were
+merged. No ChaptarrNG application source changed after
 `c59488f17040ef685b703f096cfb8c44cdd58522`; the later commits update
 acceptance workflows and tests.
 
@@ -744,19 +744,16 @@ result will provide installed handoff evidence for its recorded candidate
 head, not exact-`8ade12c2` source provenance. No exact-current-main platform
 Build run is recorded, and no new run was dispatched.
 
-The remote branch inventory now contains only `main`, and there are no open
-pull requests. The redundant remote localization topic ref was deleted after
-its committed catalog correction was represented on main by `fd7c0eba`. Its
-separate scratch worktree remains intact on local branch
-`codex/chaptarr-server-l10n-20261031` with an uncommitted localization expansion
-(133 tracked changes and 11 new files); it was not folded into main. Its
-focused server-message/catalog and UI tests passed 18/18, and the modified
-notification/download fixtures passed 10/10 on the local .NET SDK (details at
-`/mnt/disks/scratch/task-worktrees/chaptarrng-finalize-20261031/evidence/localization-wip-dotnet-fixtures-20261031.md`). However,
-the standard localization checker fails on stale source fingerprints, and the
-expansion has 5,700 pending server-message translations plus 450 provider and
-notification keys missing in each of the 12 target catalogs. It is not ready
-for main or release acceptance.
+There are no open pull requests. The committed UI catalog correction remains
+on main at `fd7c0eba`. A separate remote branch,
+`codex/chaptarr-server-l10n-20261031`, is three commits ahead of main, and its
+scratch worktree contains an uncommitted expansion (16 tracked files and three
+new files; no workflow files). The current worktree's standard UI catalog
+check passes for 37 locales, 4,015 source IDs, and 52 catalogs. Its server
+catalog check still reports 5,760 untranslated entries (5,712 server messages
+and 48 notification failures); the provider/source coverage check reports
+7,068 missing translations across provider fields/options, notifications, and
+loading messages. The expansion is not ready for main or release acceptance.
 
 Live release checks still show public ChaptarrNG `.977`, BookshelfNG `.76`, and
 no public `.978` release. The `.76` private-Windows handoff, exact-head private
@@ -789,3 +786,82 @@ still against `c59488f1`, so it cannot establish exact-current-main provenance.
 No run was retried or dispatched, and no runner or workflow configuration was
 changed. The three completed job logs and this triage are retained under
 `/mnt/disks/scratch/task-worktrees/chaptarrng-finalize-20261031/evidence/`.
+
+At 19:29 UTC, Intel macOS job `124621739617` is still queued in that same run.
+It uses the pre-`9c70c242` workflow revision and cannot validate the newer
+private Apple route. The run remains on `c59488f1`; exact-current-main
+platform validation is still absent.
+
+At 19:30 UTC, Windows job `124621739647` failed at step 28, `Install frontend
+dependencies`. Its log shows repeated Yarn network retries followed by
+`ESOCKETTIMEDOUT` while fetching
+`@fortawesome/free-solid-svg-icons@7.3.1` from `registry.yarnpkg.com`.
+Chocolatey `.76` handoff step 63 was skipped; no installed handoff result
+exists. This is a private-runner registry-egress failure, not a Chocolatey
+assertion. The full log is retained at
+`/mnt/disks/scratch/task-worktrees/chaptarrng-finalize-20261031/evidence/windows-job-124621739647-logs.txt`.
+
+## Local source corrections — 2026-10-31 19:57 UTC
+
+The Chocolatey release staging and handoff fixture now include
+`tools/bookshelfng-startup-recovery.ps1`, and the handoff verifier rejects a
+package if that helper is absent or empty. This closes a stopped-service
+migration defect in package construction. It has not yet been exercised in a
+Windows package build: the only current Windows run failed while downloading a
+Yarn dependency, before the `.76` handoff step.
+
+The exact-head Core test run on SDK 10.0.403 completed with 4,928 passed, 29
+skipped, and four failures. Three failures came from migration fixtures that
+cleared the explicit `HARDCOVER` provider mode; the fourth was PDFsharp 6.5
+rejecting PDF operations because the application had not selected a license.
+The fixtures now declare the legacy Goodreads mode and isolate environment
+changes. Application startup selects PDFsharp's AGPL license, and the PDF
+metadata fixture selects it before creating its sample document. The affected
+focused set then passed 5/5. The full Core suite was rerun after these
+corrections on SDK 10.0.403 and passed: 4,932 passed, 29 skipped, and zero
+failed (4,961 total). The TRX result is retained at
+`/mnt/disks/scratch/task-worktrees/chaptarrng-finalize-20261031/validation/core-after-fixes/core-after-fixes.trx`.
+
+Focused package/channel contracts passed 23/23; PowerShell parsing passed for
+all five Chocolatey scripts; the main localization check passed for 37 UI
+locales and 52 catalogs; `git diff --check` passed. Logs are retained under
+`/mnt/disks/scratch/task-worktrees/chaptarrng-finalize-20261031/evidence/`.
+No Actions run was retried, dispatched, or canceled.
+
+## Live repository and acceptance snapshot — 2026-10-31 20:04 UTC
+
+The target repository `snapetech-org/chaptarrng` is on `main` at
+`50a3e94fb56f42068e6ff8893ad962ef282b37e9`, with no open pull requests. Its
+remote heads are `main` and `codex/chaptarr-server-l10n-20261031`; the latter
+is three commits ahead and has no pull request. That localization branch and
+its separate scratch expansion remain incomplete, so neither is represented
+as merged or accepted. No other target-repository branch is outstanding.
+
+The old Build run
+[41229894913](https://github.com/snapetech-org/chaptarrng/actions/runs/41229894913)
+remains queued at `c59488f1`; its completed Windows job failed on a Yarn
+registry timeout before the Chocolatey `.76` handoff. The macOS Intel job in
+that run remains queued. The separate `.76` macOS handoff
+[41230571219](https://github.com/snapetech-org/chaptarrng/actions/runs/41230571219)
+is also queued at `4d02c9db`, with no steps run. The passing private-JIT
+contract run `41230976187` is at older commit `5c9db5ac`, not current main.
+There is no exact-head private-JIT build for `50a3e94f`.
+
+The latest recorded Helm handoff
+[41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
+failed before installed acceptance because the runner proxy returned HTTP 403
+for the pinned `kubectl` download. No production cluster was involved; this
+workflow's target is an ephemeral Kind cluster on its private runner. The
+public ChaptarrNG release remains `.977`; `.978` is unpublished. StartOS
+signing/repository delivery, Cloudron and Unraid delivery, canonical Co-op
+Cloud acceptance, package-feed/catalog handoffs, representative operator-data
+conversion, live-provider behavior, installed rollback, and operator sign-off
+remain open.
+
+No Actions run was dispatched, retried, or canceled while preserving the
+existing queued work. No runner or workflow routing was changed. Local
+validation on the corrected worktree passed the full Core suite (4,932/4,961;
+29 skipped), the legacy package/channel contracts (23/23), five Chocolatey
+PowerShell parser checks, and `git diff --check`. The exact-head installed
+Windows handoff and the external platform/feed acceptance gates are still
+unproven.

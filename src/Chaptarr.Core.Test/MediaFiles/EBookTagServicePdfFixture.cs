@@ -4,6 +4,7 @@ using System.IO.Abstractions;
 using NLog;
 using NUnit.Framework;
 using NzbDrone.Core.MediaFiles;
+using PdfSharp;
 using PdfSharp.Pdf;
 
 namespace Chaptarr.Core.Test.MediaFiles
@@ -21,6 +22,7 @@ namespace Chaptarr.Core.Test.MediaFiles
 
             try
             {
+                PdfSharpLicense.SetAgplLicense();
                 using (var document = new PdfDocument())
                 {
                     document.Info.Title = "Example PDF title";

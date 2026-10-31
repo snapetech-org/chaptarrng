@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using NLog;
 using NLog.Extensions.Logging;
 using Npgsql;
+using PdfSharp;
 using NzbDrone.Common.Composition.Extensions;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.EnvironmentInfo;
@@ -54,6 +55,8 @@ namespace NzbDrone.Host
         {
             try
             {
+                PdfSharpLicense.SetAgplLicense();
+
                 Logger.Info("Starting Chaptarr - {0} - Version {1}",
                             Environment.ProcessPath,
                             BuildInfo.Release);

@@ -15,6 +15,7 @@ using NzbDrone.Core.Datastore.Migration.Framework;
 namespace Chaptarr.Core.Test.Datastore
 {
     [TestFixture]
+    [NonParallelizable]
     public class DatabaseRestorationServiceFixture
     {
         private sealed class TestDiskProvider : DiskProviderBase
@@ -51,10 +52,18 @@ namespace Chaptarr.Core.Test.Datastore
         private string _tempFolder;
         private TestAppFolderInfo _appFolderInfo;
         private DatabaseRestorationService _subject;
+        private string _previousHardcover;
+        private string _previousHardcoverNative;
 
         [SetUp]
         public void SetUp()
         {
+            _previousHardcover = Environment.GetEnvironmentVariable("HARDCOVER");
+            _previousHardcoverNative = Environment.GetEnvironmentVariable("HARDCOVER_NATIVE");
+            // This populated BookshelfNG schema uses the legacy Goodreads
+            // interpretation for bare numeric provider IDs.
+            Environment.SetEnvironmentVariable("HARDCOVER", "false");
+            Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", null);
             _tempFolder = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"database_restore_{Guid.NewGuid():N}");
             Directory.CreateDirectory(_tempFolder);
             _appFolderInfo = new TestAppFolderInfo(_tempFolder);
@@ -68,6 +77,9 @@ namespace Chaptarr.Core.Test.Datastore
             {
                 Directory.Delete(_tempFolder, true);
             }
+
+            Environment.SetEnvironmentVariable("HARDCOVER", _previousHardcover);
+            Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", _previousHardcoverNative);
         }
 
         [Test]

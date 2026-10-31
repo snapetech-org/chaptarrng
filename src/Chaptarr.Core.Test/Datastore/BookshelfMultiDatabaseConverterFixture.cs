@@ -31,7 +31,10 @@ namespace Chaptarr.Core.Test.Datastore
             _previousHardcover = Environment.GetEnvironmentVariable("HARDCOVER");
             _previousHardcoverNative = Environment.GetEnvironmentVariable("HARDCOVER_NATIVE");
             _previousBookshelfUrlBase = Environment.GetEnvironmentVariable("BOOKSHELF_URLBASE");
-            Environment.SetEnvironmentVariable("HARDCOVER", null);
+            // The populated fixture uses BookshelfNG's legacy Goodreads
+            // interpretation for bare numeric provider IDs. State it explicitly
+            // because migration now rejects an ambiguous, unset provider mode.
+            Environment.SetEnvironmentVariable("HARDCOVER", "false");
             Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", null);
             Environment.SetEnvironmentVariable("BOOKSHELF_URLBASE", null);
 
