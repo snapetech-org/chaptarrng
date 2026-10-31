@@ -28,13 +28,13 @@ For local MCP access, see the [SnapeTech MCP integration guide](docs/integration
 
 ### BookshelfNG migration status
 
-**Status checked: 2026-10-31 04:35 UTC.** ChaptarrNG `v0.9.977` remains the
+**Status checked: 2026-10-31 04:45 UTC.** ChaptarrNG `v0.9.977` remains the
 latest published release. The BookshelfNG handoff branch was integrated
 directly into `main`, followed by three missing localization commits from the
 other local task branches; source snapshot `bd589312` contains those commits.
 PR #183 was closed as integrated, and its remote branch was deleted. The
-subsequent evidence update is `main` commit `c82f168c`; the application source
-snapshot it documents is `bd589312`. No exact-head private-JIT build
+application source snapshot is `bd589312`; subsequent `main` commits only
+update evidence/status documents. No exact-head private-JIT build
 or platform result exists for this source. Owner-PR run
 [#41167825847](https://github.com/snapetech-org/chaptarrng/actions/runs/41167825847)
 was cancelled on pre-integration head `f63796dd`; the current source has no
@@ -55,12 +55,14 @@ package, image, installer, updater, or chart identity has been redirected.
 The latest observed full Build run
 [#41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
 is queued at older SHA `64689f1f`; its Linux, macOS, and Windows jobs have no
-runner or steps. The macOS handoff, standalone-asset, and later Helm runs
-[#41168181470](https://github.com/snapetech-org/chaptarrng/actions/runs/41168181470),
-[#41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569),
+runner or steps. The macOS handoff and later Helm runs
+[#41168181470](https://github.com/snapetech-org/chaptarrng/actions/runs/41168181470)
 and [#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
-are likewise queued on older source without runners. GitHub reports no runs for
-`main` commit `c82f168c`.
+are queued on older source without runners. Standalone-assets run
+[#41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569)
+has one private frontend-build job succeeded, with ten archive/platform jobs
+still queued at older SHA `64689f1f`. At 04:39, GitHub reported no runs on
+`main` commit `c82f168c`; the subsequent docs-only commit had no status checks.
 
 BookshelfNG remains in service until each capability, data and configuration
 path, rollback path, and installation channel has its own acceptance evidence.
