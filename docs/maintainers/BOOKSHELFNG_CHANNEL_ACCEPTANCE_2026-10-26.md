@@ -959,3 +959,27 @@ This closes a generated-bundle regression-test gap; it does not establish
 external publication or installed Unraid, Cloudron, StartOS, or Co-op Cloud
 acceptance. Private Windows `.76` acceptance, external feed/repository
 delivery, and operator-data/live-provider sign-off remain open.
+
+## Old Build run failure triage — 2026-10-31 20:43 UTC
+
+Job logs for the stale Build run
+[41229894913](https://github.com/snapetech-org/chaptarrng/actions/runs/41229894913)
+separate source/test corrections from runner/build blockers:
+
+- PostgreSQL smoke ran 15 tests: 11 passed and four failed because those older
+  fixtures did not set the required `HARDCOVER=true` or `HARDCOVER=false`
+  migration mode. Commit `ece16c4b` corrected the fixtures and isolates their
+  environment changes. The merged source's local Core suite passed 4,941 tests,
+  with 29 skipped and none failed; this is not current-head private-JIT proof.
+- The Linux image-alias and bridge tests passed. Its old Debian publish-gate
+  assertion still expected tag-push publication after the release flow had
+  moved to private main-branch dispatch. Commit `ece16c4b` updated that
+  contract. Current Debian and Launchpad gate scripts both pass locally; logs
+  are retained in the task scratch evidence directory.
+- Docker stopped before the image build because the JIT guest had no `docker`
+  executable. This requires a compatible private runner build capability.
+- Windows stopped during Yarn dependency installation on a registry timeout;
+  its `.76` service, data-canary, and migration-choice steps were skipped.
+
+The follow-up run must use the current main SHA and compatible private
+platform capacity. No rerun or runner change was made.
