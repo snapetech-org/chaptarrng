@@ -273,6 +273,7 @@
   "Backups": "Backups",
   "BackupsContainUnencryptedCredentials": "Full backups include credentials. Without a mounted secret file configured through CHAPTARR_BACKUP_ENCRYPTION_KEY_FILE, they are stored as plain ZIP files. Quickstart Settings Backup remains a separate passphrase-encrypted export.",
   "DownloadEncryptedBackup": "Download Encrypted Backup",
+  "ui.backup.encryptedDownloadFailed": "Unable to create encrypted backup.",
   "EncryptedBackupPassphraseHelpText": "Use at least 16 characters and keep the passphrase separately from the backup. Chaptarr cannot recover a lost passphrase.",
   "EncryptedBackupPassphraseMismatch": "The passphrases do not match.",
   "EncryptedBackupRestoreHelpText": "Enter the passphrase used when this backup was created. The backup will be restored and Chaptarr will restart.",

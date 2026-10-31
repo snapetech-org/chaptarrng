@@ -5900,6 +5900,7 @@
     "Yes": "83605c8bf4b1776844da1f072adf76e2369f0097cbb21f6ff02709caf0946ab5",
     "YesCancel": "2b7e57ebb011d49095e260df06b00ef04d0291d4f0a0962b81c72ec873f8faed",
     "Yesterday": "0a3eeb128ff79b3baea2177dfc3cdc8554211795be2cabe2d99ad2face79c470",
+    "ui.backup.encryptedDownloadFailed": "592dccfb470b83eefed15688f68ae71a4e54e542b51c56cf70ad6ce173ccafae",
     "ui.language.inheritedFallbackNotice": "2a660d6da8f94fd957c8eacb3e2a0f74672e8096974d57cea61ab3bac490c164"
   }
 }

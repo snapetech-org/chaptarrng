@@ -8,7 +8,7 @@ function getFilename(response) {
   return match ? match[1] : defaultFilename;
 }
 
-export default async function downloadEncryptedBackup(passphrase) {
+export default async function downloadEncryptedBackup(passphrase, fallbackMessage) {
   const apiRoot = window.Chaptarr.apiRoot.replace(/\/$/, '');
   const response = await window.fetch(`${apiRoot}/system/backup/encrypted`, {
     method: 'POST',
@@ -24,7 +24,7 @@ export default async function downloadEncryptedBackup(passphrase) {
   });
 
   if (!response.ok) {
-    let message = 'Unable to create encrypted backup.';
+    let message = fallbackMessage;
 
     try {
       const error = await response.json();
