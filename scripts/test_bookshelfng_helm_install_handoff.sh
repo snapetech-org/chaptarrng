@@ -183,7 +183,7 @@ assert_migrated_fixture() {
     require test "$(pod_exec sqlite3 -readonly "$sql" \
         "SELECT COUNT(*) FROM DownloadClients WHERE Id=109 AND Settings LIKE '%legacy-audio%' AND Settings LIKE '%legacy-ebooks%';")" = 1
     require test "$(pod_exec sqlite3 -readonly "$sql" \
-        \"SELECT COUNT(*) FROM Config WHERE Key='FixtureSetting' AND Value='preserved';\")" = 1
+        "SELECT COUNT(*) FROM Config WHERE Key='FixtureSetting' AND Value='preserved';")" = 1
 }
 
 test -d "$REFERENCE_CHART"

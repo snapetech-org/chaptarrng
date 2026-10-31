@@ -150,7 +150,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
 
     def test_installed_helm_handoff_build_uses_only_the_trusted_main_proxy(self) -> None:
         helm_workflow = (WORKFLOW.parent / "helm-handoff.yml").read_text(encoding="utf-8")
-        installed_handoff = WORKFLOW.parents[1] / "scripts" / "test_bookshelfng_helm_install_handoff.sh"
+        installed_handoff = WORKFLOW.parents[2] / "scripts" / "test_bookshelfng_helm_install_handoff.sh"
         script = installed_handoff.read_text(encoding="utf-8")
         expected_proxy_gate = "BUILDKIT_EGRESS_PROXY: ${{ github.ref == 'refs/heads/main' && 'http://10.0.2.100:3128' || '' }}"
 
@@ -259,7 +259,10 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
     def test_security_scans_use_private_jit_without_hosted_fallback(self) -> None:
         workflow_dir = WORKFLOW.parent
         self.assertFalse((workflow_dir / "codeql.yml").exists())
-        self.assertTrue((workflow_dir / "codeql.yml.disabled").is_file())
+        self.assertFalse((workflow_dir / "codeql.yml.disabled").exists())
+        self.assertFalse((workflow_dir.parent / "codeql").exists())
+        for path in workflow_dir.glob("*.yml"):
+            self.assertNotIn("github/codeql-action/", path.read_text(encoding="utf-8"), path.name)
         workflow_name = "semgrep-community.yml"
         source = (workflow_dir / workflow_name).read_text(encoding="utf-8")
         job = job_block(source, "semgrep")
