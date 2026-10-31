@@ -983,3 +983,20 @@ separate source/test corrections from runner/build blockers:
 
 The follow-up run must use the current main SHA and compatible private
 platform capacity. No rerun or runner change was made.
+
+## Windows frontend-fetch timeout mitigation — 2026-10-31 20:51 UTC
+
+Commit `0ed9d0adb35a6542b5f39318bcf995b2c7533658` raises the Yarn Classic
+network timeout to 120 seconds in the Build workflow while retaining the
+frozen lockfile. This addresses the bounded `ESOCKETTIMEDOUT` observed while
+fetching Font Awesome 7.3.1 in the stale Windows build; it does not prove the
+registry or egress path is healthy.
+
+The updated workflow YAML parsed successfully, all 17 private-runner policy
+tests passed, `git diff --check` passed, the commit hook's Semgrep scan found
+zero issues, and the push-readiness plus image-alias gates passed. Logs are
+retained under
+`/mnt/disks/scratch/task-worktrees/chaptarrng-yarn-timeout-20261031/evidence/`.
+There is still no exact-head Actions run and no compatible Windows JIT runner
+is registered, so the BookshelfNG `.76` Chocolatey No/Yes/rollback handoff
+remains unaccepted. No run was dispatched or retried.
