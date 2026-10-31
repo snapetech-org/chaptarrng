@@ -168,6 +168,18 @@ jobs:
         test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
         test "$(git rev-parse "${RELEASE_TAG}^{commit}")" = "$RELEASE_SHA"
 
+    - name: Select Python executable for native runner
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ "${RUNNER_OS:-}" == "Windows" ]]; then
+          python_command=python
+        else
+          python_command=python3
+        fi
+        command -v "$python_command" >/dev/null
+        printf 'CHAPTARRNG_PYTHON=%s\n' "$python_command" >> "$GITHUB_ENV"
+
     - name: Test stable GHCR image identity and legacy aliases
       if: matrix.platform == 'linux-x64'
       run: |
@@ -269,10 +281,13 @@ jobs:
 
     - name: Guard (version) - package.json and Directory.Build.props in sync
       shell: bash
-      run: python3 build-tools/version_guard.py sync
+      run: >-
+        "$CHAPTARRNG_PYTHON" build-tools/version_guard.py sync
 
     - name: Guard (.NET SDK) - workflow and container pins match global.json
-      run: python3 scripts/check_dotnet_sdk_pins.py
+      shell: bash
+      run: >-
+        "$CHAPTARRNG_PYTHON" scripts/check_dotnet_sdk_pins.py
 
     - name: Guard (version) - no decreases on main
       if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
@@ -297,7 +312,7 @@ jobs:
           fi
         fi
 
-        python3 build-tools/version_guard.py monotonic \
+        "$CHAPTARRNG_PYTHON" build-tools/version_guard.py monotonic \
           --compare-ref "$COMPARE_REF" \
           --event-path "$GITHUB_EVENT_PATH"
 
@@ -326,7 +341,7 @@ jobs:
           fi
         fi
 
-        python3 build-tools/version_guard.py commit-hygiene --compare-ref "$COMPARE_REF"
+        "$CHAPTARRNG_PYTHON" build-tools/version_guard.py commit-hygiene --compare-ref "$COMPARE_REF"
 
     - name: Setup Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
