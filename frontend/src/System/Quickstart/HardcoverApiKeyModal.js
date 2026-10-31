@@ -18,6 +18,7 @@ import { inputTypes, kinds, sizes } from 'Helpers/Props';
 import { fetchHardcoverConfig } from 'Store/Actions/settingsActions';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './HardcoverApiKeyModal.css';
 
 class HardcoverApiKeyModal extends Component {
@@ -88,7 +89,7 @@ class HardcoverApiKeyModal extends Component {
 
       if (Array.isArray(xhr?.responseJSON)) {
         const messages = xhr.responseJSON
-          .map((e) => e?.errorMessage || e?.message)
+          .map((e) => translateServerMessage(e?.errorMessage || e?.message))
           .filter(Boolean);
 
         errorMessage = messages.length ? messages.join(' ') : errorMessage;
@@ -174,7 +175,7 @@ class HardcoverApiKeyModal extends Component {
               {saveError && (
                 <FormGroup>
                   <Alert kind={kinds.DANGER} className={styles.saveError}>
-                    {saveError}
+                    {translateServerMessage(saveError)}
                   </Alert>
                 </FormGroup>
               )}

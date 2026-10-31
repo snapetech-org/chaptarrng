@@ -101,6 +101,7 @@ function loadComponent(requests) {
     ['Helpers/Props', { kinds: { PRIMARY: 'primary' }, sizes: { LARGE: 'large', SMALL: 'small' } }],
     ['Utilities/createAjaxRequest', { __esModule: true, default: createRequestFactory(requests) }],
     ['Utilities/String/translate', { __esModule: true, default: (key) => key }],
+    ['Utilities/String/translateServerMessage', { __esModule: true, default: (message) => message }],
     ['./ImportListSyncModal.css', { __esModule: true, default: styles }]
   ]);
   const sandbox = {

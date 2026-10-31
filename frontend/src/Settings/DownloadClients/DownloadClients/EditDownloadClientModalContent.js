@@ -21,6 +21,7 @@ import { icons, inputTypes, kinds, sizes } from 'Helpers/Props';
 import AdvancedSettingsButton from 'Settings/AdvancedSettingsButton';
 import titleCase from 'Utilities/String/titleCase';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './EditDownloadClientModalContent.css';
 
 function LinkToggleButton({ isLinked, onPress, isLastButton, title, className }) {
@@ -45,6 +46,14 @@ function LinkToggleButton({ isLinked, onPress, isLastButton, title, className })
     </Button>
   );
 }
+
+LinkToggleButton.propTypes = {
+  isLinked: PropTypes.bool.isRequired,
+  onPress: PropTypes.func.isRequired,
+  isLastButton: PropTypes.bool,
+  title: PropTypes.string,
+  className: PropTypes.string
+};
 
 class EditDownloadClientModalContent extends Component {
   constructor(props) {
@@ -273,7 +282,7 @@ class EditDownloadClientModalContent extends Component {
                       className={styles.message}
                       kind={message.value.type}
                     >
-                      {message.value.message}
+                      {translateServerMessage(message.value.message)}
                     </Alert>
                 }
 

@@ -59,7 +59,7 @@ public class Kavita : NotificationBase<KavitaSettings>
     {
         var failures = new List<ValidationFailure>();
 
-        failures.AddIfNotNull(_kavitaService.Test(Settings, "Success! Kavita has been successfully configured!"));
+        failures.AddIfNotNull(_kavitaService.Test(Settings, Localize("notification.test.kavitaConfigured", "Success! Kavita has been successfully configured!")));
 
         return new ValidationResult(failures);
     }

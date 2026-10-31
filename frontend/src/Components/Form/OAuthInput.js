@@ -4,6 +4,7 @@ import FormInputHelpText from 'Components/Form/FormInputHelpText';
 import SpinnerErrorButton from 'Components/Link/SpinnerErrorButton';
 import { kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 
 function getOAuthErrorText(error) {
   if (!error) {
@@ -14,17 +15,17 @@ function getOAuthErrorText(error) {
 
   if (Array.isArray(responseJSON)) {
     const messages = responseJSON
-      .map((e) => e?.errorMessage)
+      .map((e) => translateServerMessage(e?.errorMessage))
       .filter(Boolean);
 
-    return messages.length ? messages.join(' ') : (error.responseText || null);
+    return messages.length ? messages.join(' ') : (translateServerMessage(error.responseText) || null);
   }
 
   if (responseJSON && typeof responseJSON === 'object') {
-    return responseJSON.message || error.responseText || null;
+    return translateServerMessage(responseJSON.message || error.responseText) || null;
   }
 
-  return error.responseText || null;
+  return translateServerMessage(error.responseText) || null;
 }
 
 function OAuthInput(props) {
@@ -39,9 +40,9 @@ function OAuthInput(props) {
   const errorText = getOAuthErrorText(error);
   const buttonLabel = label || translate('StartOAuth');
 
-  const implementationName = providerData && typeof providerData.implementationName === 'string'
-    ? providerData.implementationName
-    : '';
+  const implementationName = providerData && typeof providerData.implementationName === 'string' ?
+    providerData.implementationName :
+    '';
 
   const isPlex = implementationName.toLowerCase().includes('plex');
   const kind = isPlex ? kinds.WARNING : kinds.PRIMARY;

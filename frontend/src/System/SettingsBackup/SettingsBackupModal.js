@@ -17,6 +17,7 @@ import { inputTypes, kinds, sizes } from 'Helpers/Props';
 import useApiQuery from 'Store/Hooks/useApiQuery';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import SettingsBackupCategoryPicker, {
   getDefaultSettingsBackupCategories,
   toCategoryList
@@ -277,7 +278,7 @@ function SettingsBackupModal({ isOpen, onModalClose }) {
                   className={styles.statusAlert}
                   kind={kinds.DANGER}
                 >
-                  {saveError}
+                  {translateServerMessage(saveError)}
                 </Alert>
               </FormGroup>
             )}

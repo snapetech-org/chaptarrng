@@ -18,7 +18,7 @@ namespace NzbDrone.Core.Download.Clients.Direct
     {
         private static readonly DirectDownloadClientSettingsValidator Validator = new();
 
-        [FieldDefinition(0, Label = "Staging Folder", Type = FieldType.Path, HelpText = "Local folder where Chaptarr stages Direct downloads before import.")]
+        [FieldDefinition(0, Label = "provider.field.f9962f2ec3f39", Type = FieldType.Path, HelpText = "provider.field.f1a732caa0d94")]
         public string StagingFolder { get; set; }
 
         public NzbDroneValidationResult Validate()

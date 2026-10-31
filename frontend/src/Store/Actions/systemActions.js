@@ -6,7 +6,8 @@ import { createThunk, handleThunks } from 'Store/thunks';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import serverSideCollectionHandlers from 'Utilities/serverSideCollectionHandlers';
 import translate from 'Utilities/String/translate';
-import { pingServer, showMessage, hideMessage } from './appActions';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
+import { hideMessage, pingServer, showMessage } from './appActions';
 import { set } from './baseActions';
 import createFetchHandler from './Creators/createFetchHandler';
 import createHandleActions from './Creators/createHandleActions';
@@ -425,7 +426,6 @@ export const actionHandlers = handleThunks({
 
   [TEST_PROXY]: function(getState, payload, dispatch) {
     const {
-      proxyEnabled,
       proxyType,
       proxyHostname,
       proxyPort,
@@ -453,30 +453,30 @@ export const actionHandlers = handleThunks({
         const messageId = `proxy-test-${Date.now()}`;
         dispatch(showMessage({
           id: messageId,
-          message: translate('ProxyTestSuccessfulWithDetails', { details: data.message }),
+          message: translate('ProxyTestSuccessfulWithDetails', { details: translateServerMessage(data.message) }),
           type: 'success'
         }));
-        
+
         // Manually hide after 5 seconds
         setTimeout(() => {
           dispatch(hideMessage({ id: messageId }));
         }, 5000);
-        
+
         // Resolve the promise for success
         deferred.resolve(data);
       } else {
         const messageId = `proxy-test-error-${Date.now()}`;
         dispatch(showMessage({
           id: messageId,
-          message: translate('ProxyTestFailedWithDetails', { details: data.message }),
+          message: translate('ProxyTestFailedWithDetails', { details: translateServerMessage(data.message) }),
           type: 'error'
         }));
-        
+
         // Manually hide after 8 seconds
         setTimeout(() => {
           dispatch(hideMessage({ id: messageId }));
         }, 8000);
-        
+
         // Reject the promise for validation failure
         deferred.reject({ message: data.message || translate('ProxyTestFailed') });
       }
@@ -491,12 +491,12 @@ export const actionHandlers = handleThunks({
         }),
         type: 'error'
       }));
-      
+
       // Manually hide after 8 seconds
       setTimeout(() => {
         dispatch(hideMessage({ id: messageId }));
       }, 8000);
-      
+
       // Reject the promise for network failure
       deferred.reject({ message: xhr.responseText || translate('ConnectionFailed') });
     });

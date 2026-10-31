@@ -8,8 +8,11 @@ namespace NzbDrone.Core.Notifications.MqttGateway
 {
     public enum MqttGatewayQos
     {
+        [FieldOption(Label = "provider.option.o99a4b3998d1c")]
         AtMostOnce = 0,
+        [FieldOption(Label = "provider.option.oc13abe78e554")]
         AtLeastOnce = 1,
+        [FieldOption(Label = "provider.option.o5afee72c1059")]
         ExactlyOnce = 2
     }
 

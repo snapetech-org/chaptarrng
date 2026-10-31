@@ -26,10 +26,10 @@ namespace NzbDrone.Core.Notifications.Goodreads
             AddIds = new string[] { };
         }
 
-        [FieldDefinition(1, Label = "Remove from Bookshelves", Type = FieldType.Bookshelf)]
+        [FieldDefinition(1, Label = "provider.field.f07645d3cc302", Type = FieldType.Bookshelf)]
         public IEnumerable<string> RemoveIds { get; set; }
 
-        [FieldDefinition(1, Label = "Add to Bookshelves", Type = FieldType.Bookshelf)]
+        [FieldDefinition(1, Label = "provider.field.f29cf0df66cfa", Type = FieldType.Bookshelf)]
         public IEnumerable<string> AddIds { get; set; }
 
         public override NzbDroneValidationResult Validate()

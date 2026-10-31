@@ -15,6 +15,7 @@ import { icons, scrollDirections, sizes } from 'Helpers/Props';
 import { isMobile as isMobileUtil } from 'Utilities/browser';
 import * as keyCodes from 'Utilities/Constants/keyCodes';
 import getUniqueElememtId from 'Utilities/getUniqueElementId';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import FormInputHelpText from './FormInputHelpText';
 import HintedSelectInputOption from './HintedSelectInputOption';
 import HintedSelectInputSelectedValue from './HintedSelectInputSelectedValue';
@@ -36,17 +37,17 @@ function getFetchErrorText(error) {
 
   if (Array.isArray(responseJSON)) {
     const messages = responseJSON
-      .map((e) => e?.errorMessage)
+      .map((e) => translateServerMessage(e?.errorMessage))
       .filter(Boolean);
 
-    return messages.length ? messages.join(' ') : (error.responseText || null);
+    return messages.length ? messages.join(' ') : (translateServerMessage(error.responseText) || null);
   }
 
   if (responseJSON && typeof responseJSON === 'object') {
-    return responseJSON.message || responseJSON.error || error.responseText || null;
+    return translateServerMessage(responseJSON.message || responseJSON.error || error.responseText) || null;
   }
 
-  return error.responseText || (error.status && error.statusText ? `${error.status} ${error.statusText}` : null);
+  return translateServerMessage(error.responseText) || (error.status && error.statusText ? `${error.status} ${error.statusText}` : null);
 }
 
 function isArrowKey(keyCode) {

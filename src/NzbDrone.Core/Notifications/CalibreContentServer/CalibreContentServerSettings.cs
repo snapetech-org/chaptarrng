@@ -21,22 +21,22 @@ namespace NzbDrone.Core.Notifications.CalibreContentServer
     {
         private static readonly CalibreContentServerSettingsValidator Validator = new CalibreContentServerSettingsValidator();
 
-        [FieldDefinition(0, Label = "URL", HelpText = "Calibre content server URL, including http(s):// and port, e.g. http://localhost:8080", HelpTextWarning = "This connection functions as a one-way mirror: Chaptarr pushes books and its own deletions to this content server. Deleting a book on the content server itself is NOT reflected back into Chaptarr, and the book may be pushed to the server again later.")]
+        [FieldDefinition(0, Label = "provider.field.fe7a241debad5", HelpText = "provider.field.fcc88585f2a35", HelpTextWarning = "provider.field.f2f1d8ba51d2a")]
         public string Url { get; set; }
 
-        [FieldDefinition(1, Label = "Username", Privacy = PrivacyLevel.UserName, HelpText = "Optional, only needed if the content server requires authentication")]
+        [FieldDefinition(1, Label = "Username", Privacy = PrivacyLevel.UserName, HelpText = "provider.field.f8709fb3ef39f")]
         public string Username { get; set; }
 
-        [FieldDefinition(2, Label = "Password", Type = FieldType.Password, Privacy = PrivacyLevel.Password, HelpText = "Optional, only needed if the content server requires authentication")]
+        [FieldDefinition(2, Label = "Password", Type = FieldType.Password, Privacy = PrivacyLevel.Password, HelpText = "provider.field.f8709fb3ef39f")]
         public string Password { get; set; }
 
-        [FieldDefinition(3, Label = "Allow Edits & Deletes", Type = FieldType.Checkbox, HelpText = "Allow Chaptarr to edit or delete matching books on the content server when books change in Chaptarr or are deleted from Chaptarr")]
+        [FieldDefinition(3, Label = "provider.field.f1be8def5571a", Type = FieldType.Checkbox, HelpText = "provider.field.fbcbcfeb99134")]
         public bool SyncChanges { get; set; }
 
-        [FieldDefinition(4, Label = "Push Library Scan Imports", Type = FieldType.Checkbox, HelpText = "Also push books that arrive via library scans, for example books added through calibre-web, to this content server")]
+        [FieldDefinition(4, Label = "provider.field.fe2fa8b9f4041", Type = FieldType.Checkbox, HelpText = "provider.field.f34ef6818e4c8")]
         public bool PushLibraryImports { get; set; }
 
-        [FieldDefinition(5, Label = "Push Library Edits", Type = FieldType.Checkbox, HelpText = "When Chaptarr changes a book - a calibre push, a retag, or an edit - push the updated record to this content server")]
+        [FieldDefinition(5, Label = "provider.field.f2a41808a7b7a", Type = FieldType.Checkbox, HelpText = "provider.field.ffcf2138b1018")]
         public bool PushLibraryEdits { get; set; }
 
         public NzbDroneValidationResult Validate()

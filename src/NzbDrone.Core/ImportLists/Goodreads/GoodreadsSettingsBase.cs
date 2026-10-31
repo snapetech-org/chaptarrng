@@ -29,22 +29,22 @@ namespace NzbDrone.Core.ImportLists.Goodreads
         public string OAuthRequestTokenUrl => "https://www.goodreads.com/oauth/request_token";
         public string OAuthAccessTokenUrl => "https://www.goodreads.com/oauth/access_token";
 
-        [FieldDefinition(0, Label = "Access Token", Type = FieldType.Textbox, Hidden = HiddenType.Hidden, Privacy = PrivacyLevel.ApiKey)]
+        [FieldDefinition(0, Label = "provider.field.ff9db72ced1ee", Type = FieldType.Textbox, Hidden = HiddenType.Hidden, Privacy = PrivacyLevel.ApiKey)]
         public string AccessToken { get; set; }
 
-        [FieldDefinition(0, Label = "Access Token Secret", Type = FieldType.Textbox, Hidden = HiddenType.Hidden, Privacy = PrivacyLevel.ApiKey)]
+        [FieldDefinition(0, Label = "provider.field.f3efeb5b0889f", Type = FieldType.Textbox, Hidden = HiddenType.Hidden, Privacy = PrivacyLevel.ApiKey)]
         public string AccessTokenSecret { get; set; }
 
-        [FieldDefinition(0, Label = "Request Token Secret", Type = FieldType.Textbox, Hidden = HiddenType.Hidden, Privacy = PrivacyLevel.ApiKey)]
+        [FieldDefinition(0, Label = "provider.field.f275b6410b255", Type = FieldType.Textbox, Hidden = HiddenType.Hidden, Privacy = PrivacyLevel.ApiKey)]
         public string RequestTokenSecret { get; set; }
 
-        [FieldDefinition(0, Label = "Goodreads User ID", HelpText = "Numeric ID or profile URL. Leave blank to use the authenticated Goodreads user when OAuth credentials are available.", Type = FieldType.Textbox, Advanced = true)]
+        [FieldDefinition(0, Label = "provider.field.f0e1e2d8486b6", HelpText = "provider.field.f8ae75fc385e8", Type = FieldType.Textbox, Advanced = true)]
         public string UserId { get; set; }
 
-        [FieldDefinition(0, Label = "User Name", Type = FieldType.Textbox, Hidden = HiddenType.Hidden)]
+        [FieldDefinition(0, Label = "provider.field.fa969d04ec2d0", Type = FieldType.Textbox, Hidden = HiddenType.Hidden)]
         public string UserName { get; set; }
 
-        [FieldDefinition(99, Label = "Authenticate with Goodreads", Type = FieldType.OAuth)]
+        [FieldDefinition(99, Label = "provider.field.fef4618f47dc6", Type = FieldType.OAuth)]
         public string SignIn { get; set; }
 
         protected virtual AbstractValidator<TSettings> Validator => new GoodreadsSettingsBaseValidator<TSettings>();

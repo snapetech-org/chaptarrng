@@ -3,6 +3,7 @@ import React from 'react';
 import Link from 'Components/Link/Link';
 import { inputTypes, kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import AutoCompleteInput from './AutoCompleteInput';
 import BookEditionSelectInputConnector from './BookEditionSelectInputConnector';
 import BookshelfInputConnector from './BookshelfInputConnector';
@@ -263,9 +264,9 @@ function FormInputGroup(props) {
             <FormInputHelpText
               key={index}
               id={`${name}-error-${index}`}
-              text={error.message}
+              text={translateServerMessage(error.message)}
               link={error.link}
-              tooltip={error.detailedMessage}
+              tooltip={translateServerMessage(error.detailedMessage)}
               isError={true}
               isCheckInput={checkInput}
             />
@@ -279,9 +280,9 @@ function FormInputGroup(props) {
             <FormInputHelpText
               key={index}
               id={`${name}-warning-${index}`}
-              text={warning.message}
+              text={translateServerMessage(warning.message)}
               link={warning.link}
-              tooltip={warning.detailedMessage}
+              tooltip={translateServerMessage(warning.detailedMessage)}
               isWarning={true}
               isCheckInput={checkInput}
             />

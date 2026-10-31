@@ -11,6 +11,7 @@ using NzbDrone.Core.Books.Events;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.HealthCheck;
 using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.Localization;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Qualities;
@@ -42,6 +43,7 @@ namespace NzbDrone.Core.Notifications
         private readonly INotificationStatusService _notificationStatusService;
         private readonly IEditionService _editionService;
         private readonly Logger _logger;
+        private readonly NotificationText _notificationText;
 
         // A bulk author/book delete can publish one BookDeletedEvent per book. Draining them through a
         // single background worker (rather than one Task.StartNew per event) keeps a slow or rate-limited
@@ -51,12 +53,13 @@ namespace NzbDrone.Core.Notifications
         private readonly Channel<BookDeleteMessage> _bookDeleteNotificationQueue = Channel.CreateUnbounded<BookDeleteMessage>();
         private int _bookDeleteWorkerRunning;
 
-        public NotificationService(INotificationFactory notificationFactory, INotificationStatusService notificationStatusService, IEditionService editionService, Logger logger)
+        public NotificationService(INotificationFactory notificationFactory, INotificationStatusService notificationStatusService, IEditionService editionService, ILocalizationService localizationService, Logger logger)
         {
             _notificationFactory = notificationFactory;
             _notificationStatusService = notificationStatusService;
             _editionService = editionService;
             _logger = logger;
+            _notificationText = new NotificationText(localizationService);
         }
 
         private void EnsureEditionsLoaded(List<Book> books)
@@ -110,22 +113,20 @@ namespace NzbDrone.Core.Notifications
 
         private string GetBookDownloadMessage(Author author, Book book, List<BookFile> tracks)
         {
-            return string.Format("{0} - {1} ({2} Files Imported)",
-                author.Name,
-                book.Title,
-                tracks.Count);
+            return _notificationText.Get("notification.body.filesImported", "{author} - {book} ({count} files imported)",
+                new Dictionary<string, object> { ["author"] = author.Name, ["book"] = book.Title, ["count"] = tracks.Count });
         }
 
         private string GetBookIncompleteImportMessage(string source)
         {
-            return string.Format("Chaptarr failed to Import all files for {0}",
-                source);
+            return _notificationText.Get("notification.body.incompleteImport", "Chaptarr failed to import all files for {source}",
+                new Dictionary<string, object> { ["source"] = source });
         }
 
         private string FormatMissing(object value)
         {
             var text = value?.ToString();
-            return text.IsNullOrWhiteSpace() ? "<missing>" : text;
+            return text.IsNullOrWhiteSpace() ? _notificationText.Get("notification.body.missingValue", "<missing>") : text;
         }
 
         private string GetTrackRetagMessage(Author author, BookFile bookFile, Dictionary<string, Tuple<string, string>> diff)
@@ -361,7 +362,7 @@ namespace NzbDrone.Core.Notifications
 
         public void Handle(AuthorDeletedEvent message)
         {
-            var deleteMessage = new AuthorDeleteMessage(message.Author, message.DeleteFiles);
+            var deleteMessage = new AuthorDeleteMessage(message.Author, message.DeleteFiles, _notificationText);
 
             foreach (var notification in _notificationFactory.OnAuthorDeleteEnabled())
             {
@@ -392,7 +393,7 @@ namespace NzbDrone.Core.Notifications
                 return;
             }
 
-            var deleteMessage = new BookDeleteMessage(message.Book, message.DeleteFiles);
+            var deleteMessage = new BookDeleteMessage(message.Book, message.DeleteFiles, _notificationText);
 
             _bookDeleteNotificationQueue.Writer.TryWrite(deleteMessage);
 
@@ -563,7 +564,8 @@ namespace NzbDrone.Core.Notifications
                 DownloadClient = message.DownloadClient,
                 Quality = message.Quality,
                 SourceTitle = message.SourceTitle,
-                Message = message.Message
+                Message = message.MessageId == null ? message.Message :
+                    _notificationText.Get(message.MessageId, message.Message, message.MessageTokens)
             };
 
             foreach (var notification in _notificationFactory.OnDownloadFailureEnabled())
@@ -591,7 +593,7 @@ namespace NzbDrone.Core.Notifications
             var sourceTitle = trackedDownload?.DownloadItem?.Title ?? trackedDownload?.ImportItem?.Title;
             if (string.IsNullOrWhiteSpace(sourceTitle))
             {
-                sourceTitle = "an unknown download";
+                sourceTitle = _notificationText.Get("notification.body.unknownDownload", "an unknown download");
             }
 
             var downloadMessage = new BookDownloadMessage
@@ -654,7 +656,8 @@ namespace NzbDrone.Core.Notifications
         public void Handle(UpdateInstalledEvent message)
         {
             var updateMessage = new ApplicationUpdateMessage();
-            updateMessage.Message = $"Chaptarr updated from {message.PreviousVerison.ToString()} to {message.NewVersion.ToString()}";
+            updateMessage.Message = _notificationText.Get("notification.body.applicationUpdated", "Chaptarr updated from {previous} to {current}",
+                new Dictionary<string, object> { ["previous"] = message.PreviousVerison.ToString(), ["current"] = message.NewVersion.ToString() });
             updateMessage.PreviousVersion = message.PreviousVerison;
             updateMessage.NewVersion = message.NewVersion;
 

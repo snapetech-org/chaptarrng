@@ -24,7 +24,7 @@ namespace NzbDrone.Core.Notifications.BookOrbit
             BaseUrl = "http://localhost:3000";
         }
 
-        [FieldDefinition(0, Label = "Base URL", HelpText = "BookOrbitBaseUrlHelpText")]
+        [FieldDefinition(0, Label = "provider.field.f70589413a3c9", HelpText = "BookOrbitBaseUrlHelpText")]
         public string BaseUrl { get; set; }
 
         [FieldDefinition(1, Label = "Username", Privacy = PrivacyLevel.UserName, HelpText = "BookOrbitUsernameHelpText")]

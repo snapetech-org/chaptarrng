@@ -77,7 +77,7 @@ namespace NzbDrone.Core.Indexers.DirectDownload
             Urls = string.Empty;
         }
 
-        [FieldDefinition(0, Type = FieldType.TextArea, Label = "URLs", HelpText = "Enter one http:// or https:// URL per line. Chaptarr preserves the configured order and uses it for deterministic fallback.")]
+        [FieldDefinition(0, Type = FieldType.TextArea, Label = "provider.field.f1240054e2040", HelpText = "provider.field.f5c8c10dd48e0")]
         [JsonConverter(typeof(DirectDownloadUrlConfigurationConverter))]
         public string Urls
         {
@@ -87,14 +87,14 @@ namespace NzbDrone.Core.Indexers.DirectDownload
                 : string.Join("\n", NormalizeUrls(value));
         }
 
-        [FieldDefinition(1, Label = "API Key", Privacy = PrivacyLevel.ApiKey, HelpText = "Optional. Leave blank when the selected source does not require a key.")]
+        [FieldDefinition(1, Label = "ApiKey", Privacy = PrivacyLevel.ApiKey, HelpText = "provider.field.f80cf5c07c14e")]
         public string ApiKey
         {
             get => _apiKey;
             set => _apiKey = NormalizeWhitespace(value).IsNullOrWhiteSpace() ? null : NormalizeWhitespace(value);
         }
 
-        [FieldDefinition(2, Label = "Enable Slow-Download Browser Fallback", Type = FieldType.Checkbox, HelpText = "When the API key is absent or its fast-download resolution fails, use a headless browser to attempt slow-download links. Requires Playwright/Chromium in the Docker runtime.")]
+        [FieldDefinition(2, Label = "provider.field.fcff0d77f9e68", Type = FieldType.Checkbox, HelpText = "provider.field.f0a31411d36c6")]
         public bool EnableSlowFallback { get; set; }
 
         public int? EarlyReleaseLimit { get; set; }

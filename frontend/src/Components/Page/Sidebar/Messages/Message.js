@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Icon from 'Components/Icon';
 import { icons } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import ImportProgressMessage from './ImportProgressMessage';
 import styles from './Message.css';
 
@@ -48,7 +49,6 @@ function getDisplayIconName(name, isWorking, isPaused) {
 
 function Message(props) {
   const {
-    id,
     name,
     message,
     type,
@@ -63,7 +63,7 @@ function Message(props) {
     clickable,
     commandStatus
   } = props;
-  
+
   // Use command status from props to determine if paused
   const isPaused = commandStatus === 'paused';
   const isWorking = commandStatus === 'queued' || commandStatus === 'started';
@@ -73,7 +73,7 @@ function Message(props) {
   if (type === 'importProgress') {
     return (
       <ImportProgressMessage
-        message={message}
+        message={translateServerMessage(message)}
         progress={progress}
         counters={counters}
         currentItemName={currentItemName}
@@ -85,7 +85,7 @@ function Message(props) {
       />
     );
   }
-  
+
   // Use custom component for scan progress messages (now handles entire import pipeline)
   if (type === 'scanProgress') {
     const handleClick = () => {
@@ -93,13 +93,13 @@ function Message(props) {
         onClick(!isPaused);
       }
     };
-    
+
     // Determine the current stage based on message content
     let stageIcon = getIconName(name);
-    let stageText = message;
+    const stageText = translateServerMessage(message);
     let pausedText = translate('ImportProgressImportPaused');
-    let actionText = translate(isPaused ? 'Resume' : 'Pause');
-    
+    const actionText = translate(isPaused ? 'Resume' : 'Pause');
+
     if (message.includes('Scanning folder') || message.includes('library scan')) {
       stageIcon = icons.FOLDER_OPEN;
       pausedText = translate('FolderScanPaused');
@@ -113,9 +113,9 @@ function Message(props) {
       stageIcon = icons.DOWNLOAD;
       pausedText = translate('FileImportPaused');
     }
-    
+
     return (
-      <div 
+      <div
         className={classNames(
           styles.message,
           styles[type],
@@ -156,7 +156,7 @@ function Message(props) {
   }
 
   return (
-    <div 
+    <div
       className={classNames(
         styles.message,
         styles[type],
@@ -166,16 +166,16 @@ function Message(props) {
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
     >
-        <div className={styles.iconContainer}>
-          <Icon
-            name={isPaused ? icons.PAUSED : getDisplayIconName(name, isWorking, isPaused)}
-            isSpinning={isWorking && !isPaused}
-            title={name}
-          />
-        </div>
+      <div className={styles.iconContainer}>
+        <Icon
+          name={isPaused ? icons.PAUSED : getDisplayIconName(name, isWorking, isPaused)}
+          isSpinning={isWorking && !isPaused}
+          title={name}
+        />
+      </div>
 
       <div className={styles.text}>
-        {message}
+        {translateServerMessage(message)}
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import formatDateTime from 'Utilities/Date/formatDateTime';
 import formatAge from 'Utilities/Number/formatAge';
 import formatCustomFormatScore from 'Utilities/Number/formatCustomFormatScore';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './HistoryDetails.css';
 
 function getDetailedList(statusMessages) {
@@ -26,7 +27,7 @@ function getDetailedList(statusMessages) {
                   messages.map((message) => {
                     return (
                       <li key={message}>
-                        {message}
+                        {translateServerMessage(message)}
                       </li>
                     );
                   })
@@ -202,7 +203,7 @@ function HistoryDetails(props) {
           message ?
             <DescriptionListItem
               title={translate('Message')}
-              data={message}
+              data={translateServerMessage(message)}
             /> :
             null
         }
@@ -351,7 +352,7 @@ function HistoryDetails(props) {
           !!message &&
             <DescriptionListItem
               title={translate('Message')}
-              data={message}
+              data={translateServerMessage(message)}
             />
         }
       </DescriptionList>
@@ -580,7 +581,7 @@ function HistoryDetails(props) {
           !!message &&
             <DescriptionListItem
               title={translate('Message')}
-              data={message}
+              data={translateServerMessage(message)}
             />
         }
       </DescriptionList>

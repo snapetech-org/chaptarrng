@@ -28,14 +28,14 @@ namespace NzbDrone.Core.ImportLists.Hardcover
             ListIds = Array.Empty<string>();
         }
 
-        [FieldDefinition(0, Label = "Base URL", HelpText = "Hardcover API base URL")]
+        [FieldDefinition(0, Label = "provider.field.f70589413a3c9", HelpText = "provider.field.f21d73e148c35")]
         public string BaseUrl { get; set; }
 
-        [FieldDefinition(1, Label = "API Key", Privacy = PrivacyLevel.ApiKey, HelpText = "Hardcover personal API key (from Settings > API)")]
+        [FieldDefinition(1, Label = "ApiKey", Privacy = PrivacyLevel.ApiKey, HelpText = "provider.field.f8d223bd1b121")]
         public string ApiKey { get; set; }
-        [FieldDefinition(2, Label = "Username", Privacy = PrivacyLevel.UserName, HelpText = "Username for the Owner of the list you want to add")]
+        [FieldDefinition(2, Label = "Username", Privacy = PrivacyLevel.UserName, HelpText = "provider.field.fc2ff59e65c06")]
         public string User { get; set; }
-        [FieldDefinition(3, Type = FieldType.Select, SelectOptionsProviderAction = "getLists", Label = "Lists", HelpText = "Choose lists or reading statuses from the selected Hardcover account to sync")]
+        [FieldDefinition(3, Type = FieldType.Select, SelectOptionsProviderAction = "getLists", Label = "Lists", HelpText = "provider.field.f258d6cc199ae")]
         public IEnumerable<string> ListIds { get; set; }
 
         public string ListId => ListIds?.FirstOrDefault();

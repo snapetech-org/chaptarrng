@@ -11,10 +11,11 @@ import Tooltip from 'Components/Tooltip/Tooltip';
 import { kinds, tooltipPositions } from 'Helpers/Props';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './AuthorMediaMoveControl.css';
 
 function getErrorMessage(xhr) {
-  return xhr.responseJSON?.message || xhr.responseJSON?.error || translate('AuthorMediaMoveRequestFailed');
+  return translateServerMessage(xhr.responseJSON?.message || xhr.responseJSON?.error || translate('AuthorMediaMoveRequestFailed'));
 }
 
 function formatBytes(bytes) {
