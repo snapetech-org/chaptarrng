@@ -1,4 +1,4 @@
-# ng-runner-policy: private-jit-required-v1
+# ng-runner-policy: private-jit-only-v1
 # packer-windows-jit-v1
 name: Build ChaptarrNG
 run-name: >-
@@ -12,10 +12,20 @@ on:
   pull_request_target:
     branches: [main]
     types: [opened, reopened, synchronize, ready_for_review]
-  push:
-    tags:
-      - 'v*'
-  workflow_call: {}
+  workflow_call:
+    inputs:
+      action:
+        required: true
+        type: string
+      runner_pool:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
+      release_sha:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       action:
@@ -63,8 +73,9 @@ on:
         required: false
         type: string
 
-# Build validation runs on tags, reusable workflow calls, or explicit dispatches.
-# Trusted owner PRs use a metadata-only private-JIT route.
+# Build validation runs from a main-branch private dispatch or an exact release
+# tag passed through the main-branch reusable workflow call. Trusted owner PRs
+# use a metadata-only private-JIT route.
 concurrency:
   group: build-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}
   cancel-in-progress: false
@@ -118,10 +129,21 @@ jobs:
 
   build:
     if: >-
-      github.event_name != 'pull_request_target' &&
-      (github.event_name != 'workflow_dispatch' ||
-       (inputs.pr_number == '' && inputs.runner_policy_only != true && inputs.rpm_bridge_only != true && inputs.channel_contracts_only != true)) &&
-      (github.event_name != 'pull_request' || github.event.action != 'edited')
+      (
+        github.ref == 'refs/heads/main' &&
+        inputs.action == 'ci' &&
+        inputs.runner_pool == 'private' &&
+        inputs.pr_number == '' &&
+        inputs.runner_policy_only != true &&
+        inputs.rpm_bridge_only != true &&
+        inputs.channel_contracts_only != true
+      ) || (
+        github.ref == 'refs/heads/main' &&
+        inputs.action == 'publish' &&
+        inputs.runner_pool == 'private' &&
+        inputs.release_tag != '' &&
+        inputs.release_sha != ''
+      )
     # Each platform requests private capacity. Missing native JIT routes remain
     # queued until their runner group and workflow access are verified.
     runs-on: ${{ matrix.platform == 'windows-x64' && fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-{1}-build"]}}', github.run_id, strategy.job-index)) || matrix.platform == 'macos-intel' && fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","macOS","X64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
@@ -133,7 +155,18 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
+        ref: ${{ inputs.action == 'publish' && inputs.runner_pool == 'private' && inputs.release_tag != '' && inputs.release_sha || github.sha }}
         fetch-depth: 0
+
+    - name: Verify exact release tag source
+      if: inputs.action == 'publish'
+      env:
+        RELEASE_TAG: ${{ inputs.release_tag }}
+        RELEASE_SHA: ${{ inputs.release_sha }}
+      run: |
+        set -euo pipefail
+        test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+        test "$(git rev-parse "${RELEASE_TAG}^{commit}")" = "$RELEASE_SHA"
 
     - name: Test stable GHCR image identity and legacy aliases
       if: matrix.platform == 'linux-x64'
@@ -564,6 +597,8 @@ jobs:
     name: Fedora 44 BookshelfNG RPM No/Yes and rollback
     if: >-
       github.event_name == 'workflow_dispatch' &&
+      inputs.action == 'ci' &&
+      inputs.runner_pool == 'private' &&
       inputs.rpm_bridge_only == true &&
       inputs.pr_number == '' &&
       github.ref == 'refs/heads/main'
@@ -599,6 +634,8 @@ jobs:
     name: Legacy distribution and runner contracts
     if: >-
       github.event_name == 'workflow_dispatch' &&
+      inputs.action == 'ci' &&
+      inputs.runner_pool == 'private' &&
       inputs.channel_contracts_only == true &&
       inputs.pr_number == '' &&
       github.ref == 'refs/heads/main'
@@ -629,11 +666,22 @@ jobs:
 
   postgres-migrations:
     if: >-
-      github.event_name != 'pull_request_target' &&
-      (github.event_name != 'workflow_dispatch' || (inputs.windows_chocolatey_only != true && inputs.rpm_bridge_only != true && inputs.channel_contracts_only != true)) &&
-      (github.event_name != 'workflow_dispatch' ||
-       (inputs.pr_number == '' && inputs.runner_policy_only != true)) &&
-      (github.event_name != 'pull_request' || github.event.action != 'edited')
+      (
+        github.ref == 'refs/heads/main' &&
+        inputs.action == 'ci' &&
+        inputs.runner_pool == 'private' &&
+        inputs.pr_number == '' &&
+        inputs.windows_chocolatey_only != true &&
+        inputs.rpm_bridge_only != true &&
+        inputs.channel_contracts_only != true &&
+        inputs.runner_policy_only != true
+      ) || (
+        github.ref == 'refs/heads/main' &&
+        inputs.action == 'publish' &&
+        inputs.runner_pool == 'private' &&
+        inputs.release_tag != '' &&
+        inputs.release_sha != ''
+      )
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     services:
       postgres:
@@ -651,6 +699,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ inputs.action == 'publish' && inputs.runner_pool == 'private' && inputs.release_tag != '' && inputs.release_sha || github.sha }}
 
     - name: Configure user-writable .NET install directory
       shell: bash
@@ -754,10 +804,22 @@ jobs:
   docker-image-build:
     name: Docker (single standard image)
     if: >-
-      github.event_name != 'pull_request_target' &&
-      (github.event_name != 'workflow_dispatch' || (inputs.windows_chocolatey_only != true && inputs.rpm_bridge_only != true && inputs.channel_contracts_only != true)) &&
-      (github.event_name != 'workflow_dispatch' ||
-       (inputs.pr_number == '' && inputs.runner_policy_only != true))
+      (
+        github.ref == 'refs/heads/main' &&
+        inputs.action == 'ci' &&
+        inputs.runner_pool == 'private' &&
+        inputs.pr_number == '' &&
+        inputs.windows_chocolatey_only != true &&
+        inputs.rpm_bridge_only != true &&
+        inputs.channel_contracts_only != true &&
+        inputs.runner_policy_only != true
+      ) || (
+        github.ref == 'refs/heads/main' &&
+        inputs.action == 'publish' &&
+        inputs.runner_pool == 'private' &&
+        inputs.release_tag != '' &&
+        inputs.release_sha != ''
+      )
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     env:
       BUILDKIT_EGRESS_PROXY: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'http://10.0.2.100:3128' || '' }}
@@ -766,6 +828,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ inputs.action == 'publish' && inputs.runner_pool == 'private' && inputs.release_tag != '' && inputs.release_sha || github.sha }}
 
     - name: Set up QEMU for target-platform runtime steps
       uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
@@ -809,6 +873,8 @@ jobs:
     name: Private runner policy
     if: >-
       github.event_name == 'workflow_dispatch' &&
+      inputs.action == 'ci' &&
+      inputs.runner_pool == 'private' &&
       inputs.runner_policy_only == true &&
       inputs.pr_number == '' &&
       github.ref == 'refs/heads/main'
@@ -894,6 +960,8 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       (github.actor == 'snapetech' || github.actor == 'github-actions[bot]') &&
+      inputs.action == 'ci' &&
+      inputs.runner_pool == 'private' &&
       inputs.pr_number != '' &&
       inputs.pr_sha != '' &&
       inputs.target_run_id != '' &&
@@ -909,6 +977,10 @@ jobs:
         ref: ${{ inputs.pr_sha }}
         fetch-depth: 0
         persist-credentials: false
+    - name: Verify exact owner PR head
+      env:
+        EXPECTED_PR_SHA: ${{ inputs.pr_sha }}
+      run: test "$(git rev-parse HEAD)" = "$EXPECTED_PR_SHA"
     - name: Resolve current trusted PR metadata
       id: pr
       env:
@@ -988,6 +1060,8 @@ jobs:
         node --test scripts/release-notes.test.mjs
         node scripts/check-release-notes.mjs --base "$BASE_SHA" --head "$HEAD_SHA" --pr-body "$BODY_FILE" --summary-file "$GITHUB_STEP_SUMMARY"
         node scripts/preview-release-notes.mjs --base "$BASE_SHA" --head "$HEAD_SHA" | tee -a "$GITHUB_STEP_SUMMARY"
+    - name: Test private runner workflow policy
+      run: python3 scripts/test_workflow_runner_policy.py
 
   report-owner-pr-check:
     name: Report trusted owner PR validation
@@ -996,6 +1070,8 @@ jobs:
       always() &&
       github.event_name == 'workflow_dispatch' &&
       (github.actor == 'snapetech' || github.actor == 'github-actions[bot]') &&
+      inputs.action == 'ci' &&
+      inputs.runner_pool == 'private' &&
       inputs.pr_number != '' &&
       inputs.pr_sha != '' &&
       inputs.target_run_id != '' &&
