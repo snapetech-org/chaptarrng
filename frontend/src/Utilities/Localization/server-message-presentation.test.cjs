@@ -66,3 +66,11 @@ test('presentation isolation preserves the complete mixed-script capture and the
     value0: pathValue
   });
 });
+
+test('shared presentation helpers do not add nested isolation to an English fallback message', () => {
+  const present = loadPresenter({});
+  const raw = 'Path \'/books/Book 01 - كتاب\' does not exist';
+  const once = present(raw);
+  assert.equal(once, 'Path \'\u2068/books/Book 01 - كتاب\u2069\' does not exist');
+  assert.equal(present(once), once);
+});
