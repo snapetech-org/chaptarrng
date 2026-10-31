@@ -1,11 +1,14 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Current status (2026-10-31 10:45 UTC):** BookshelfNG `0.4.21.76` and
+> **Current status (2026-10-31 18:28 UTC):** BookshelfNG `0.4.21.76` and
 > ChaptarrNG `v0.9.977` remain the latest public releases; the local `0.9.978`
 > candidate remains unpublished. Consolidated source candidate `7e538f5c`
 > includes private-only build/release routing, automatic search and audiobook
 > import fixes, multi-edition update handling, and a post-defer Chocolatey
-> health check. No exact-head private-JIT result validates it. Build run
+> health check. The latest remote main observed is `b1f10c72`, whose private
+> fork-validation change is preserved; GitHub has no exact-head Actions run for
+> that head or the consolidated candidate. No exact-head private-JIT result
+> validates the candidate. Build run
 > [41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
 > remains queued on old SHA `64689f1f` with Linux, Windows, and PostgreSQL
 > failures; macOS is queued. Chocolatey `.76` run

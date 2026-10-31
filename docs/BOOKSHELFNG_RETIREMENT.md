@@ -1,17 +1,20 @@
 # BookshelfNG retirement status
 
-## Current status — 2026-10-31 10:45 UTC
+## Current status — 2026-10-31 18:28 UTC
 
 BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977` remain the latest public
 application releases; the local ChaptarrNG `0.9.978` candidate is unpublished.
-The source and workflow consolidation candidate is `7e538f5c`, based on main
-`fa55ffab`. It contains private-only build and release routing; fixes for the
+Remote main advanced to `b1f10c72` during this consolidation; that commit's
+private-fork validation policy is preserved. The source and workflow
+consolidation candidate is `7e538f5c`, based on `fa55ffab`. It contains
+private-only build and release routing; fixes for the
 observed Windows Python lookup and localization-browser compile failures;
 automatic book-number search fallback; same-recording audiobook import
 matching that requires known matching language and narrator data; book updates
 with multiple monitored editions; and the Chocolatey manual-defer health
 recheck. No exact-head private-JIT result validates this candidate or the
-current application source.
+current application source. No exact-head Build or platform Actions run
+validates remote main `b1f10c72` or the consolidated candidate.
 
 Build run
 [#41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
@@ -36,12 +39,23 @@ failed when the runner proxy returned HTTP 403 fetching pinned `kubectl` from
 workflow uses an ephemeral Kind cluster on the JIT runner; no production
 cluster was used.
 
-The latest read-only runner check found no compatible online ChaptarrNG Linux
-or Windows x64 runner. The Packer owner controls the shared broker cutover and
-runtime reopening; no ChaptarrNG dispatch or retry is authorized until that
-owner confirms admission is open. The last full organization inventory remains
-the October 26 baseline of 65 repositories and 419 workflow files; it does not
-prove organization-wide private-JIT coverage. Keep BookshelfNG running. The
+The Packer broker is active on installed runtime `de29ac9`, which is behind
+Packer main `ae20da4`. The Packer validation run
+[#41229001428](https://github.com/snapetech-org/packer/actions/runs/41229001428)
+failed two broker-policy tests and skipped its Windows canary. The 18:28 UTC
+broker read found six active jobs, 22
+eligible queue entries, and no free kspld0 slots. Online Linux guests belong to
+other repositories; no compatible ChaptarrNG Linux or Windows x64 runner is
+available. The Windows JIT runner is occupied by a different repository. The
+broker owner still controls cutover and capacity; no C0/slot-owner handoff was
+visible. Do not dispatch or retry until the owner confirms a compatible slot.
+The latest organization catalog is 65 repositories and 389 workflow files
+(08:12 UTC); the 17:54 group readback lists 65 repositories/393 refs in group
+10, 8/19 in group 8, and 12/29 in group 11. The broker inventory authorizes
+ChaptarrNG `build.yml` for `push`, `workflow_call`, and `workflow_dispatch`,
+but not `pull_request_target`; the queued PR #185 dispatcher is therefore not
+admitted. These different snapshots and incomplete event routing do not prove
+organization-wide private-JIT coverage. Keep BookshelfNG running. The
 `.76` Chocolatey installed No/Yes handoff, official StartOS package and
 repository acceptance, Cloudron and Unraid delivery, canonical Co-op Cloud
 recipe, remaining package-feed/catalog handoffs, representative operator data,

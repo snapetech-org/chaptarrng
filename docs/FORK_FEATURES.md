@@ -15,16 +15,19 @@ branch at
 [`e67374f`](https://github.com/Chaptarr/chaptarr/commit/e67374f), which is in
 ChaptarrNG `main`'s history.
 
-## Retirement status — 2026-10-31 10:45 UTC
+## Retirement status — 2026-10-31 18:28 UTC
 
 The latest published ChaptarrNG release is `v0.9.977`; the latest
-BookshelfNG release is `0.4.21.76`. The source and workflow consolidation
-candidate is `7e538f5c`, based on ChaptarrNG main `fa55ffab`. It preserves the
+BookshelfNG release is `0.4.21.76`. The latest remote main observed during
+this update is `b1f10c72`; its private fork-validation policy change is
+preserved. The source and workflow consolidation candidate is `7e538f5c`,
+based on prior main `fa55ffab`. It preserves the
 single ordinary ChaptarrNG product and standard image; no compatibility build
 was introduced. It also closes the reviewed automatic search, audiobook
 matching, multi-edition update, and Chocolatey defer-health code gaps. No
 exact-head private-JIT validation exists for this candidate or the current
-application source.
+application source. No exact-head Build or platform Actions result validates
+`b1f10c72` or the consolidated candidate.
 
 Build run
 [#41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
