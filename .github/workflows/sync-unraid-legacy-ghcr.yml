@@ -1,10 +1,27 @@
 name: Sync Unraid GHCR compatibility aliases
 
+run-name: >-
+  ${{ format('action:{0}:pool:{1}:tag:{2}', inputs.action, inputs.runner_pool, inputs.release_tag) }}
+
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
+    inputs:
+      action:
+        description: Required manual workflow action
+        type: choice
+        options:
+          - publish
+        required: true
+      runner_pool:
+        description: Required private JIT runner pool
+        type: choice
+        options:
+          - private
+        required: true
+      release_tag:
+        description: Exact stable release whose image aliases should be synchronized
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -16,17 +33,39 @@ concurrency:
 jobs:
   sync:
     if: >-
-      github.repository == 'snapetech-org/chaptarrng' &&
-      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-       (github.event_name == 'release' &&
-        github.event.action == 'published' &&
-        github.event.release.prerelease == false))
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+      (
+        github.event_name != 'workflow_dispatch' ||
+        (
+          github.ref == 'refs/heads/main' &&
+          inputs.action == 'publish' &&
+          inputs.runner_pool == 'private' &&
+          inputs.release_tag != ''
+        )
+      ) &&
+      (
+        github.repository == 'snapetech-org/chaptarrng' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+      )
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-sync"]}}', github.run_id)) }}
     timeout-minutes: 10
     permissions:
       contents: read
       packages: read
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify selected stable release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$RELEASE_TAG^{commit}" origin/main
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease |
+            jq -e --arg tag "$RELEASE_TAG" '.tagName == $tag and .isDraft == false and .isPrerelease == false' >/dev/null
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
@@ -42,7 +81,7 @@ jobs:
         env:
           SOURCE_IMAGE: ghcr.io/snapetech-org/chaptarrng
           TARGET_IMAGE: ghcr.io/snapetech/chaptarrng
-          SOURCE_TAG: latest
+          SOURCE_TAG: ${{ inputs.release_tag }}
           ALIASES: latest main master stable
         run: |
           set -euo pipefail

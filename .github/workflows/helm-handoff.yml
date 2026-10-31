@@ -17,14 +17,25 @@ on:
         type: choice
         options:
           - private
-
 permissions:
   contents: read
 
 jobs:
   helm-handoff:
     name: Render and install the BookshelfNG handoff
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    if: >-
+      (
+        github.event_name != 'workflow_dispatch' ||
+        (
+          github.ref == 'refs/heads/main' &&
+          inputs.action == 'ci' &&
+          inputs.runner_pool == 'private'
+        )
+      ) &&
+      (
+        true
+      )
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-helm-handoff"]}}', github.run_id)) }}
     timeout-minutes: 120
     env:
       BOOKSHELFNG_CHART_SOURCE_SHA: adea130aeea2b6ea29c28a6ea8bf4706169d15e4

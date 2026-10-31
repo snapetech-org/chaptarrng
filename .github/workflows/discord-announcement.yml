@@ -3,6 +3,18 @@ name: Announce to Discord
 on:
   workflow_dispatch:
     inputs:
+      action:
+        description: Required manual workflow action
+        type: choice
+        options:
+          - announce
+        required: true
+      runner_pool:
+        description: Required private JIT runner pool
+        type: choice
+        options:
+          - private
+        required: true
       title:
         description: Discord embed title
         required: true
@@ -21,8 +33,19 @@ permissions:
 
 jobs:
   announce:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    if: >-
+      (
+        github.event_name != 'workflow_dispatch' ||
+        (
+          github.ref == 'refs/heads/main' &&
+          inputs.action == 'announce' &&
+          inputs.runner_pool == 'private'
+        )
+      ) &&
+      (
+        github.ref == 'refs/heads/main'
+      )
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-announce"]}}', github.run_id)) }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:

@@ -19,7 +19,6 @@ on:
         type: choice
         options:
           - private
-
 permissions:
   contents: read
 
@@ -32,7 +31,8 @@ jobs:
     env:
       TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2
     name: Trivy source, dependency, and configuration scan
-    if: github.ref == 'refs/heads/main' && inputs.action == 'scan' && inputs.runner_pool == 'private'
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.action == 'scan' && inputs.runner_pool == 'private' && github.ref == 'refs/heads/main'
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-trivy"]}}', github.run_id)) }}
     timeout-minutes: 30
     steps:

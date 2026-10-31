@@ -5,9 +5,6 @@ run-name: >-
       format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool) || github.workflow }}
 
 on:
-  push:
-    tags:
-      - '**'
   workflow_dispatch:
     inputs:
       action:
@@ -22,7 +19,6 @@ on:
         type: choice
         options:
           - private
-
 permissions:
   contents: read
 
@@ -33,7 +29,9 @@ concurrency:
 jobs:
   trivy:
     name: Dependency and secret scan
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.action == 'scan' && inputs.runner_pool == 'private' && github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-trivy"]}}', github.run_id)) }}
     env:
       TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2
     permissions:

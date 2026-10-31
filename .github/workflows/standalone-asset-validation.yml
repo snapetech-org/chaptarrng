@@ -5,9 +5,6 @@ run-name: >-
       format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool) || github.workflow }}
 
 on:
-  push:
-    tags:
-      - '**'
   workflow_dispatch:
     inputs:
       action:
@@ -22,7 +19,6 @@ on:
         type: choice
         options:
           - private
-
 permissions:
   contents: read
 
@@ -33,7 +29,19 @@ concurrency:
 jobs:
   verify-runtime-pack-install:
     name: Preserve existing .NET directory permissions
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    if: >-
+      (
+        github.event_name != 'workflow_dispatch' ||
+        (
+          github.ref == 'refs/heads/main' &&
+          inputs.action == 'ci' &&
+          inputs.runner_pool == 'private'
+        )
+      ) &&
+      (
+        true
+      )
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-verify-runtime-pack-install"]}}', github.run_id)) }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -48,9 +56,20 @@ jobs:
       run: bash packaging/scripts/test-copy-dotnet-sdk-reference-packs.sh
 
   frontend:
-    if: github.event_name != 'pull_request'
+    if: >-
+      (
+        github.event_name != 'workflow_dispatch' ||
+        (
+          github.ref == 'refs/heads/main' &&
+          inputs.action == 'ci' &&
+          inputs.runner_pool == 'private'
+        )
+      ) &&
+      (
+        github.event_name != 'pull_request'
+      )
     name: Build frontend once
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-frontend"]}}', github.run_id)) }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -78,9 +97,20 @@ jobs:
         if-no-files-found: error
 
   extra-platform-runtimes:
-    if: github.event_name != 'pull_request'
+    if: >-
+      (
+        github.event_name != 'workflow_dispatch' ||
+        (
+          github.ref == 'refs/heads/main' &&
+          inputs.action == 'ci' &&
+          inputs.runner_pool == 'private'
+        )
+      ) &&
+      (
+        github.event_name != 'pull_request'
+      )
     name: Build Linux x86 and FreeBSD runtime packs
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-jit-linux-22-04","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-jit-linux-22-04","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-extra-platform-runtimes"]}}', github.run_id)) }}
     timeout-minutes: 360
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -112,10 +142,21 @@ jobs:
         if-no-files-found: error
 
   extra-standalone:
-    if: github.event_name != 'pull_request'
+    if: >-
+      (
+        github.event_name != 'workflow_dispatch' ||
+        (
+          github.ref == 'refs/heads/main' &&
+          inputs.action == 'ci' &&
+          inputs.runner_pool == 'private'
+        )
+      ) &&
+      (
+        github.event_name != 'pull_request'
+      )
     name: Build and verify ${{ matrix.rid }} archive
     needs: [frontend, extra-platform-runtimes]
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-{1}-extra-standalone"]}}', github.run_id, strategy.job-index)) }}
     strategy:
       fail-fast: false
       matrix:
@@ -174,10 +215,21 @@ jobs:
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")
 
   standalone:
-    if: github.event_name != 'pull_request'
+    if: >-
+      (
+        github.event_name != 'workflow_dispatch' ||
+        (
+          github.ref == 'refs/heads/main' &&
+          inputs.action == 'ci' &&
+          inputs.runner_pool == 'private'
+        )
+      ) &&
+      (
+        github.event_name != 'pull_request'
+      )
     name: Build and verify ${{ matrix.rid }} archive
     needs: frontend
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-{1}-standalone"]}}', github.run_id, strategy.job-index)) }}
     strategy:
       fail-fast: false
       matrix:

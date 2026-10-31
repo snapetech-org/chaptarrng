@@ -49,8 +49,19 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             self.assertIn(field, release_call)
         target = event_block(source, "pull_request_target")
         self.assertIn("branches: [main]", target)
-        self.assertIn("types: [opened, reopened, synchronize, ready_for_review]", target)
+        self.assertIn(
+            "types: [opened, reopened, synchronize, ready_for_review, labeled]",
+            target,
+        )
         self.assertNotRegex(source, r"(?m)^  pull_request:")
+
+        release_notes = job_block(source, "release-notes")
+        self.assertIn("github.event_name == 'pull_request_target'", release_notes)
+        self.assertIn("github.actor == 'snapetech'", release_notes)
+        self.assertIn("github.event.pull_request.head.repo.id == github.repository_id", release_notes)
+        self.assertIn("github.event.pull_request.base.ref == 'main'", release_notes)
+        self.assertIn("contains(github.event.pull_request.labels.*.name, 'action:ci')", release_notes)
+        self.assertIn("contains(github.event.pull_request.labels.*.name, 'pool:private')", release_notes)
 
         build = job_block(source, "build")
         for token in (
@@ -310,6 +321,8 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             "github.event.pull_request.head.repo.full_name == github.repository",
             "github.event.pull_request.head.repo.id == github.repository_id",
             "github.event.pull_request.base.ref == 'main'",
+            "contains(github.event.pull_request.labels.*.name, 'action:ci')",
+            "contains(github.event.pull_request.labels.*.name, 'pool:private')",
             "actions: write",
             "contents: none",
             '"ref": "main"',
