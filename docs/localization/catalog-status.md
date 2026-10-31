@@ -9,24 +9,24 @@ Strings without an exact translation inherit from the configured parent locale o
 | Locale | Exact catalog | Direction | Source IDs | Direct exact | Machine drafts | Unreviewed exact | Inherited | Reviewed |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `en` | `en.json` | ltr | 2950 | 0 | 0 | 0 | 0 | 0 |
-| `ar` | `ar.json` | rtl | 2950 | 2734 | 0 | 2724 | 216 | 10 |
+| `ar` | `ar.json` | rtl | 2950 | 2950 | 214 | 2726 | 0 | 10 |
 | `az` | `az.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
 | `bg` | `bg.json` | ltr | 2950 | 699 | 0 | 699 | 2251 | 0 |
 | `bn` | `bn.json` | ltr | 2950 | 3 | 0 | 3 | 2947 | 0 |
 | `cs` | `cs.json` | ltr | 2950 | 762 | 0 | 762 | 2188 | 0 |
 | `da` | `da.json` | ltr | 2950 | 675 | 0 | 675 | 2275 | 0 |
-| `de` | `de.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
-| `es` | `es.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
+| `de` | `de.json` | ltr | 2950 | 2950 | 212 | 2729 | 0 | 9 |
+| `es` | `es.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
 | `fa` | `fa.json` | rtl | 2950 | 10 | 0 | 10 | 2940 | 0 |
-| `fr` | `fr.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
+| `fr` | `fr.json` | ltr | 2950 | 2950 | 210 | 2731 | 0 | 9 |
 | `he` | `he.json` | rtl | 2950 | 691 | 0 | 691 | 2259 | 0 |
-| `hi` | `hi.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
+| `hi` | `hi.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
 | `hu` | `hu.json` | ltr | 2950 | 1081 | 0 | 1081 | 1869 | 0 |
-| `id` | `id.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
+| `id` | `id.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
 | `it` | `it.json` | ltr | 2950 | 917 | 0 | 917 | 2033 | 0 |
-| `ja` | `ja.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
+| `ja` | `ja.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
 | `kk` | `kk.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `ko` | `ko.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
+| `ko` | `ko.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
 | `ms` | `ms.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
 | `nb` | `nb_NO.json` | ltr | 2950 | 211 | 0 | 211 | 2739 | 0 |
 | `nl` | `nl.json` | ltr | 2950 | 771 | 0 | 771 | 2179 | 0 |
@@ -38,10 +38,10 @@ Strings without an exact translation inherit from the configured parent locale o
 | `tr` | `tr.json` | ltr | 2950 | 869 | 0 | 869 | 2081 | 0 |
 | `uk` | `uk.json` | ltr | 2950 | 855 | 0 | 855 | 2095 | 0 |
 | `uz` | `uz.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `vi` | `vi.json` | ltr | 2950 | 2734 | 0 | 2724 | 216 | 10 |
-| `zh-Hans` | `zh_CN.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
+| `vi` | `vi.json` | ltr | 2950 | 2950 | 214 | 2726 | 0 | 10 |
+| `zh-Hans` | `zh_CN.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
 | `es-419` | `es_419.json` ← `es.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
 | `fr-CA` | `fr_CA.json` ← `fr.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `pt-BR` | `pt_BR.json` ← `pt.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
+| `pt-BR` | `pt_BR.json` ← `pt.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
 | `pt-PT` | `pt_PT.json` ← `pt.json` | ltr | 2950 | 0 | 0 | 0 | 2950 | 0 |
-| `zh-Hant` | `zh_TW.json` | ltr | 2950 | 2734 | 0 | 2725 | 216 | 9 |
+| `zh-Hant` | `zh_TW.json` | ltr | 2950 | 2950 | 214 | 2727 | 0 | 9 |
