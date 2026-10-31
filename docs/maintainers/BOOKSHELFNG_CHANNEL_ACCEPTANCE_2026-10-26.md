@@ -1000,3 +1000,18 @@ retained under
 There is still no exact-head Actions run and no compatible Windows JIT runner
 is registered, so the BookshelfNG `.76` Chocolatey No/Yes/rollback handoff
 remains unaccepted. No run was dispatched or retried.
+
+## Packer capability validation update — 2026-10-31 21:14 UTC
+
+Packer `main` contains the Docker capability mapping fix at
+`f931c985fa65f77a484c5f4733b982ef664a947b`. Its exact-head private validation
+[41240630688](https://github.com/snapetech-org/packer/actions/runs/41240630688)
+passed the Packer project checks. The Windows private-runner canary and trusted
+owner PR validation were skipped; the source fix has not been deployed to the
+broker.
+
+ChaptarrNG remains at `dd9ce2f669faa6550cc86dba13f88b5c8f913cdc` with no
+exact-head Actions run. The latest organization runner registration snapshot
+has no Windows runner; the registered Apple runner is persistent rather than
+ephemeral JIT, and the Linux JIT runners are busy. The Packer check does not
+validate the ChaptarrNG Windows `.76` handoff or establish compatible capacity.
