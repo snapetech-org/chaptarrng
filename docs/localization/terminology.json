@@ -104,7 +104,20 @@
       "source": "Monitored",
       "meaning": "An item that ChaptarrNG continues to watch for wanted releases.",
       "guidance": "Keep distinct from downloaded or available.",
-      "preferredTranslations": {}
+      "preferredTranslations": {
+        "es": "Monitorizado",
+        "zh-Hans": "已追踪",
+        "hi": "निगरानी में",
+        "de": "Überwacht",
+        "ja": "監視",
+        "fr": "Surveillé",
+        "pt-BR": "Monitorado",
+        "ar": "مراقب",
+        "ko": "모니터링",
+        "zh-Hant": "已監控",
+        "vi": "Giám sát",
+        "id": "Dimonitor"
+      }
     },
     {
       "id": "domain.import",
