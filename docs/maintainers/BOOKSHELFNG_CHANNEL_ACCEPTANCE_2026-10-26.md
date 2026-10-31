@@ -650,3 +650,118 @@ Helm handoff [41168121048](https://github.com/snapetech-org/chaptarrng/actions/r
 Packer owns the shared broker cutover. Its latest private run [41229001428](https://github.com/snapetech-org/packer/actions/runs/41229001428) failed two broker-policy tests and skipped the Windows canary; the new Packer source has not passed its exact-main validation. The broker is active but its latest scan found six active jobs, 22 eligible queue entries, and no free kspld0 slots. Four busy Linux guests serve other repositories; the Windows runner is also occupied, and the idle Mac runner lacks ChaptarrNG labels. No C0/slot-owner handoff was visible. Do not dispatch or retry until the broker owner confirms a compatible slot. The latest organization catalog snapshot is 65 repositories and 389 workflow files from 08:12 UTC; the 17:54 group readback reported 65 repositories/393 refs in group 10 and runtime hash `de29ac9`. These different snapshots do not establish complete route coverage.
 
 BookshelfNG `.76` Chocolatey No/Yes/rollback acceptance, official StartOS package and repository acceptance, Cloudron and Unraid delivery, canonical Co-op Cloud recipe acceptance, remaining package-feed/catalog handoffs, representative operator-data conversion, live-provider behavior, installed rollback, exact-head private-JIT validation, release publication, and operator cutover remain open. ChaptarrNG `v0.9.977` is still the latest public release; `.978` and its compatibility candidates remain unpublished. Keep BookshelfNG running and release gates closed.
+
+## Current source and acceptance recheck — 2026-10-31 18:56 UTC
+
+Direct-to-main consolidation is complete for this repository: `main` is
+`333238f270c982a69941bb34fcecf5bb68a1623d`, the remote branch inventory
+contains only `main`, and there are no open pull requests. PRs #184, #185, and
+#186 are merged. No ChaptarrNG application source changed after
+`c59488f17040ef685b703f096cfb8c44cdd58522`; the later commits update
+acceptance workflows and tests.
+
+Two observed CI failures have narrow corrections on main:
+
+- Commit `5c9db5ac` corrects the Debian release-gate contract test. The release
+  workflow deliberately requires a private main-branch dispatch and exact tag
+  ancestry; the old test incorrectly required automatic tag-push release. Its
+  preflight-range assertion also included the later release job. The corrected
+  test now passes locally and is included in the private-JIT channel-contract
+  job.
+- Commit `333238f2` sets `HARDCOVER=false` for historical PostgreSQL fixture
+  cases that seed Hardcover credentials but no native Hardcover provider IDs.
+  This supplies the explicit source mode required by the fail-closed importer.
+  On a task-isolated PostgreSQL 16 instance and .NET SDK 10.0.403, all 8
+  `BookshelfPostgresDatabaseConverterFixture` cases passed, including schema
+  versions 1, 13, 22, and 33 with preview, conversion, and restoration. The
+  full evidence note is retained at
+  `/mnt/disks/scratch/task-worktrees/chaptarrng-finalize-20261031/evidence/postgres-fixture-local-20261031.md`.
+
+Local verification on the corrected checkout passed: Debian release gate,
+package-channel contracts (23/23), private runner policy (17/17), release
+readiness gate, publisher preflight, stable-version checks (8/8), PPA gate,
+Ruby YAML parsing, `git diff --check`, and the Semgrep hooks (0 findings).
+These checks do not substitute for exact-head private-JIT or installed-channel
+acceptance.
+
+Private contract coverage now has one exact private-JIT pass: run
+[41230976187](https://github.com/snapetech-org/chaptarrng/actions/runs/41230976187)
+completed at 18:56:40 UTC on `ng-shared-main-jit` runner
+`gha-kspld0-41230976187-124624942319-63ba83`, head `5c9db5ac`. The 23 legacy
+distribution contracts, corrected Debian release-gate check, and 17 private
+runner-policy tests all passed. This is the contract-only job; it is one commit
+behind current main and does not cover a full platform build or installed
+migration.
+
+Build [41229894913] is at older head `c59488f1`; its Linux package-contract step
+failed on the now-corrected stale assertion, and its PostgreSQL migration job
+failed on the now-corrected fixture mode. Docker, Intel macOS, and Windows jobs
+remain queued without a runner. Standalone BookshelfNG `.76` macOS handoff run
+[41230571219] is queued at `4d02c9db` on both architectures; neither job has
+started. There is no full Build result at current main `333238f2`.
+
+At the 18:49 UTC read-only runner snapshot, no compatible ChaptarrNG Linux,
+Windows, or macOS runner was online. Packer main `f80578c6` passed its private
+source-validation run [41229730083], but the active broker still runs an older
+binary; this does not establish broker deployment or route capacity. No C0 or
+slot-owner clearance was visible. Do not use hosted runners or widen runner
+access to bypass the missing capacity. The organization-wide private-JIT
+inventory remains incomplete.
+
+Live channel checks still show public ChaptarrNG `.977`, approved Chocolatey
+ChaptarrNG `.973`, and BookshelfNG `.76`; `.978` has no public release or tag.
+No `.76` private-Windows No/defer/Yes/rollback run has passed. Official signed
+StartOS repository/package acceptance, Cloudron and Unraid delivery, canonical
+Co-op Cloud recipe acceptance, Helm OCI handoff, and package-feed/catalog
+handoffs remain open. Earlier Helm attempts used only an ephemeral Kind cluster
+on the JIT runner; no production cluster was deployed. Representative operator
+data, live providers, installed recovery, rollback, external delivery, and
+operator acceptance also remain unproven. Release publication and BookshelfNG
+cutover remain frozen.
+
+## Current source and acceptance recheck — 2026-10-31 19:08 UTC
+
+`main` and `origin/main` are at `8ade12c2fffda731605bb6b509419ad4f3eaa8dc`.
+The committed twelve-locale semantic catalog correction was cherry-picked to
+main as `fd7c0eba` and pushed before the two subsequent owner commits that pin
+the Chaptarr scans and macOS jobs to private JIT. No ChaptarrNG migration or
+packaging implementation changed after `c59488f1`; the intervening ChaptarrNG
+source change is localization catalog and audit data. No open pull requests
+remain.
+
+At `fd7c0eba`, the localization catalog/provenance checker passed for 37 UI
+locales, 2,950 source IDs, and 52 core catalogs. The focused localization suite
+passed 16/16 tests. The remote main fast-forward also applied the user's
+commits `9c70c242` and `8ade12c2`; this acceptance work did not edit their
+workflow changes.
+
+Private Windows Build run
+[41229894913](https://github.com/snapetech-org/chaptarrng/actions/runs/41229894913)
+is still running at older head `c59488f1`. Its Windows job is on the private
+Packer runner, but as of 19:08 UTC it was still preparing Node/Yarn; the
+Chocolatey `.76` handoff step had not started. This is not a pass. The job's
+result will provide installed handoff evidence for its recorded candidate
+head, not exact-`8ade12c2` source provenance. No exact-current-main platform
+Build run is recorded, and no new run was dispatched.
+
+The remote branch inventory now contains only `main`, and there are no open
+pull requests. The redundant remote localization topic ref was deleted after
+its committed catalog correction was represented on main by `fd7c0eba`. Its
+separate scratch worktree remains intact on local branch
+`codex/chaptarr-server-l10n-20261031` with an uncommitted localization expansion
+(133 tracked changes and 11 new files); it was not folded into main. Its
+focused server-message/catalog and UI tests passed 18/18, and the modified
+notification/download fixtures passed 10/10 on the local .NET SDK (details at
+`/mnt/disks/scratch/task-worktrees/chaptarrng-finalize-20261031/evidence/localization-wip-dotnet-fixtures-20261031.md`). However,
+the standard localization checker fails on stale source fingerprints, and the
+expansion has 5,700 pending server-message translations plus 450 provider and
+notification keys missing in each of the 12 target catalogs. It is not ready
+for main or release acceptance.
+
+Live release checks still show public ChaptarrNG `.977`, BookshelfNG `.76`, and
+no public `.978` release. The `.76` private-Windows handoff, exact-head private
+JIT platform validation, official StartOS signing/repository delivery,
+Cloudron and Unraid feed/catalog delivery, canonical Co-op Cloud maintainer
+acceptance, package-feed/catalog handoffs, representative operator data,
+live-provider acceptance, and operational sign-off remain open. The release
+readiness gates stay closed.
