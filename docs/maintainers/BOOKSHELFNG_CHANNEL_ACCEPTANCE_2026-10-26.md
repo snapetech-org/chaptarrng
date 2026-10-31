@@ -1098,3 +1098,34 @@ recipe acceptance, affected external package feeds/catalogs, representative
 operator data and rollback, and live provider/API workflows. No release
 readiness variables were enabled, no package was published, and BookshelfNG
 retirement is not accepted.
+
+## Private-JIT route normalization update — 2026-10-31 22:55 UTC
+
+The current source/workflow head is `754be09cd3264abe213c9de0f0d98ddda65d5ca8`.
+This workflow-only commit standardizes dispatch `action`/`runner_pool` run
+names and adds the `smoke`/`private` inputs to the main-only gVisor runner
+check, while preserving its dedicated `gvisor-sandbox` target. Exact-head local
+checks passed: all 16 workflow files parsed, the private-runner policy suite
+passed 17/17, and the gVisor input and main-only target assertions passed.
+This does not constitute an Actions or runner smoke result.
+
+At 2026-10-31 22:55 UTC, exact-head Actions and check-runs were absent. The six
+older main runs listed in the preceding section remained queued. Windows JIT
+group 11 had zero runners; Linux group 10 had three online, all busy, and two
+offline; Apple group 8 had one idle persistent runner, not ephemeral JIT; and
+gVisor group 6 had zero runners. No compatible idle JIT capacity was available
+and no job or runner state was changed.
+
+The local consolidation audit found no safe unintegrated patch in the detached
+security-sweep, release-preflight, public-fork, no-hosted-fallback, or PR #181
+worktrees. Their useful changes are already present or superseded on `main`;
+the old hosted fallback and any CodeQL workflow are excluded by current policy.
+The local and remote branch inventories contain only `main`, and there are no
+open ChaptarrNG pull requests. Detached worktree contents and evidence were
+preserved.
+
+This route update leaves the channel gate open: the `.76` Windows handoff,
+external package/channel delivery, representative operator-data recovery,
+production provider/API behavior, and current-head private-JIT validation are
+still unaccepted. No packages were published and no release readiness gates
+were enabled.
