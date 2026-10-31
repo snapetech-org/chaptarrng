@@ -25,7 +25,7 @@ cleanup() {
       }
   fi
   if [[ $result -eq 0 ]]; then
-    rm -rf -- "$task_root"
+    echo "RPM bridge package transaction passed; evidence kept at $task_root" >&2
   else
     echo "RPM bridge package test failed; evidence kept at $task_root" >&2
     for evidence_file in "$task_root"/evidence/*; do
@@ -59,7 +59,16 @@ chmod 0755 "$task_root/payload/ChaptarrNG/playwright.ps1" \
 tar -czf "$task_root/ChaptarrNG-0.9.977-linux-x64.tar.gz" \
   -C "$task_root/payload" ChaptarrNG
 
-command -v docker >/dev/null
+if ! command -v docker >/dev/null 2>&1; then
+  printf '%s\n' 'Docker CLI is missing from the private JIT guest.' > "$task_root/evidence/docker-preflight.log"
+  echo 'RPM bridge package test requires the Docker CLI on the private JIT guest.' >&2
+  exit 127
+fi
+if ! docker version --format '{{.Server.Version}}' > "$task_root/evidence/docker-preflight.log" 2>&1; then
+  echo 'Docker CLI is present, but its daemon is unavailable to the private JIT guest.' >&2
+  exit 1
+fi
+
 docker_proxy_args=()
 for proxy_name in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do
   if [[ -n "${!proxy_name:-}" ]]; then

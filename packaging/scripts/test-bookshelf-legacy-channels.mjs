@@ -266,7 +266,8 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(sourceVerifier, /chaptarr\.db/);
   assert.match(sourceVerifier, /audioarr\.db/);
   assert.match(handoff, /readarr\.db\.chaptarr-failed-/);
-  assert.match(handoff, /failedTargetDatabase\.Name -match/);
+  assert.match(handoff, /Where-Object \{ \$_\.Name -match/,
+    'the failed migration database must be selected by its retained filename pattern');
   assert.match(handoff, /\\d\{8\}T\\d\{9\}Z/);
   assert.match(handoff, /--verify-chaptarr-database/);
   assert.match(smoke, /FindNativeChaptarrDatabase/);
@@ -491,7 +492,10 @@ test('Windows release keeps the private Packer route and verifies its GitHub CLI
   const build = readWorkflowJob(buildWorkflow, 'build');
   const legacyInstaller = read('packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in');
 
-  assert.match(job, /runs-on: \[self-hosted, Windows, X64, packer-windows\]/);
+  assert.match(job, /runs-on: \$\{\{ fromJSON\(format\(/);
+  assert.match(job, /"group":"packer-windows"/);
+  assert.match(job, /"labels":\["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-\{0\}-build-chocolatey"\]/);
+  assert.match(job, /github\.run_id/);
   assert.ok(job.includes('setup-github-cli-windows.ps1'));
   assert.ok(job.indexOf('setup-github-cli-windows.ps1') < job.indexOf('gh release download'));
   assert.match(job, /test-chocolatey-bookshelfng-handoff\.ps1/);
@@ -514,6 +518,11 @@ test('Windows release keeps the private Packer route and verifies its GitHub CLI
   assert.match(rpmAcceptance, /ng-shared-main-jit/);
   assert.match(rpmAcceptance, /gha-\{0\}-rpm-bridge-acceptance/);
   assert.match(rpmAcceptance, /test-build-bookshelfng-rpm-bridge\.sh/);
+  assert.match(rpmAcceptance, /name: Upload Fedora 44 RPM migration evidence[\s\S]*?if: always\(\)[\s\S]*?actions\/upload-artifact@/);
+  const rpmHarness = read('packaging/scripts/test-build-bookshelfng-rpm-bridge.sh');
+  assert.match(rpmHarness, /Docker CLI is missing from the private JIT guest/);
+  assert.match(rpmHarness, /docker version --format/);
+  assert.match(rpmHarness, /RPM bridge package transaction passed; evidence kept/);
   assert.match(buildWorkflow, /channel_contracts_only:[\s\S]*?type: boolean[\s\S]*?default: false/);
   const channelContracts = readWorkflowJob(buildWorkflow, 'channel-contracts');
   assert.match(channelContracts, /inputs\.channel_contracts_only == true/);
