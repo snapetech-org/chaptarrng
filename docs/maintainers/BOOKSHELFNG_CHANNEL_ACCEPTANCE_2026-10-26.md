@@ -1032,3 +1032,69 @@ zero failed on base `c9bff466` plus the change. Its GitHub Actions run
 skipped the build and test jobs. No exact-head private-JIT run exists for
 `8045f682`; the reported local suite is not private-JIT or installed-channel
 acceptance evidence.
+
+## Exact-main validation and channel boundary — 2026-10-31 22:31 UTC
+
+The direct-main code head is `6e0fb29f4f3b17740905caf3cbb7929dedacceb3`.
+The exact-head local Core suite passed **4,952 tests, with 29 skipped and zero
+failed**, using .NET SDK 10.0.403 and the confirmed local Six Labors license
+file. The TRX result is retained at
+`/mnt/disks/scratch/task-worktrees/chaptarrng-core-test-957f1a2-20261031/results/core-final-6e0fb29.trx`.
+The skipped cases require an external PostgreSQL configuration, Windows, live
+provider/service access, browser tooling, or installed FFmpeg behavior; they
+are not counted as passes. The separate disposable PostgreSQL 16 focused run
+passed 37/37 migration checks on source head `957f1a2e`; that run is controlled
+fixture evidence, not current-head private-JIT or operator-data acceptance.
+
+Exact-main supporting checks passed: localization tests **62/62**;
+`check-localization` for 37 UI locales, 4,084 source IDs, and 52 catalogs;
+private-runner policy tests **17/17**; parsing all 16 Actions workflow files;
+and `helm lint` for the compatibility chart. The pinned BookshelfNG chart
+contract test also passed against the reference chart at
+`adea130aeea2b6ea29c28a6ea8bf4706169d15e4`. It compared rendered resource
+identities and retained values, validated bridge packaging and gates, and
+checked that the real `.76` No/Yes/backup/restore/recovery script is wired.
+Its output is retained at
+`/mnt/disks/scratch/task-worktrees/chaptarrng-helm-acceptance-20261031/helm-handoff-contract.log`.
+That contract test did **not** run the installed handoff.
+
+The additional strict direct-translation scan reports **6,372 missing
+per-locale entries**. The catalog/provenance validator passes and permits the
+documented English fallback; this does not mean every source string has a
+direct translation in every locale.
+
+For clarity, “Helm handoff” means the ChaptarrNG package acceptance workflow
+`.github/workflows/helm-handoff.yml`. Its eventual installed test creates and
+deletes a disposable Kind cluster inside the runner; it does not deploy to a
+user or production cluster. Historical run
+[40343577463](https://github.com/snapetech-org/chaptarrng/actions/runs/40343577463)
+failed at `ruby/setup-ruby` with `EACCES` on `/opt/hostedtoolcache`, before the
+acceptance script and before Kind creation. The writable-cache step is now in
+the workflow, but has not been rerun on current main.
+
+The read-only exact-head snapshot at 2026-10-31 22:30 UTC found no Actions run
+or check run for `6e0fb29f`. Six older main runs remain queued and unchanged:
+[41230571219](https://github.com/snapetech-org/chaptarrng/actions/runs/41230571219),
+[41229894913](https://github.com/snapetech-org/chaptarrng/actions/runs/41229894913),
+[41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569),
+[41167175002](https://github.com/snapetech-org/chaptarrng/actions/runs/41167175002),
+[41166424095](https://github.com/snapetech-org/chaptarrng/actions/runs/41166424095),
+and [41166416822](https://github.com/snapetech-org/chaptarrng/actions/runs/41166416822).
+Windows private JIT had zero runners; Linux had three online and all busy;
+Apple had one idle persistent Mac, which is not an ephemeral JIT runner. No
+job or shared runner state was changed.
+
+Chocolatey listings checked on 2026-10-31 still show public BookshelfNG
+`0.4.21.76` and ChaptarrNG `0.9.973`. The current `.76` Chocolatey No/Yes/
+rollback handoff and unpublished `0.9.978` bridge therefore remain unaccepted.
+The [BookshelfNG listing](https://community.chocolatey.org/packages/bookshelfng)
+and [ChaptarrNG listing](https://community.chocolatey.org/packages/chaptarrng)
+do not establish delivery or acceptance of the candidate bridge.
+
+The global retirement gate remains open. Remaining evidence includes exact-head
+private-JIT validation, current `.76` Windows handoff, official StartOS package
+and repository rollback, Cloudron and Unraid delivery, canonical Co-op Cloud
+recipe acceptance, affected external package feeds/catalogs, representative
+operator data and rollback, and live provider/API workflows. No release
+readiness variables were enabled, no package was published, and BookshelfNG
+retirement is not accepted.
