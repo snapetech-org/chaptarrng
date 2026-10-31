@@ -1879,7 +1879,7 @@
   "SearchForMonitoredBooks": "監視された本を探す",
   "SearchForNewItems": "新規アイテムを探す",
   "SearchHardcoverDisabledIntro": "ハードカバー検索は、ハードカバーアカウントを接続するまで無効です",
-  "SearchHintGoodreadsLinkText": "グッドレッドID",
+  "SearchHintGoodreadsLinkText": "Goodreads ID",
   "SearchHintGoodreadsSuffix": "書籍（例: edition:656）、作品（例: work:4912783）、著者（例: author:128382）、ISBN（例: isbn:067003469X）、またはASIN（例: asin:B00JCDK5ME）の検索",
   "SearchHintPrefix": "で検索することもできます。",
   "SearchHintProviderAudible": "オーディオブックはタイトルまたはキーワードで Audible を検索します。 B08G9PRS1K などの Audible/Amazon ASIN を貼り付けることもできます。",

@@ -1878,7 +1878,7 @@
   "SearchForMonitoredBooks": "Tìm sách bị giám sát",
   "SearchForNewItems": "Tìm mục mới",
   "SearchHardcoverDisabledIntro": "Tìm kiếm khoá chữ hoa/ thường bị tắt cho đến khi bạn kết nối tài khoản khó đọc vào",
-  "SearchHintGoodreadsLinkText": "Căn cước tốt",
+  "SearchHintGoodreadsLinkText": "ID Goodreads",
   "SearchHintGoodreadsSuffix": "của một cuốn sách (ví dụ: edition:656), tác phẩm (ví dụ: work:4912783) hoặc tác giả (ví dụ: author:128382), ISBN (ví dụ: isbn:067003469X) hoặc ASIN (ví dụ: asin:B00JCDK5ME)",
   "SearchHintPrefix": "Bạn cũng có thể tìm kiếm sử dụng",
   "SearchHintProviderAudible": "Audiobook tìm kiếm Audible theo tiêu đề hoặc từ khóa. Bạn cũng có thể dán ASIN Audible/Amazon, chẳng hạn như B08G9PRS1K.",

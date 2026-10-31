@@ -1879,7 +1879,7 @@
   "SearchForMonitoredBooks": "البحث عن الكتب المراقَبة",
   "SearchForNewItems": "البحث عن بنود جديدة",
   "SearchHardcoverDisabledIntro": "البحث المكثف معطل حتى تصل حسابك السري",
-  "SearchHintGoodreadsLinkText": "الهويات الجيدة",
+  "SearchHintGoodreadsLinkText": "معرّف Goodreads",
   "SearchHintGoodreadsSuffix": "لكتاب (مثل edition:656)، أو عمل (مثل work:4912783) أو مؤلف (مثل author:128382)، وISBN (مثل isbn:067003469X) أو ASIN (مثل asin:B00JCDK5ME)",
   "SearchHintPrefix": "يمكنك أيضا البحث باستخدام",
   "SearchHintProviderAudible": "تبحث الكتب الصوتية عن Audible حسب العنوان أو الكلمات الرئيسية. يمكنك أيضًا لصق Audible/Amazon ASIN، مثل B08G9PRS1K.",
