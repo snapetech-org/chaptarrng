@@ -2333,7 +2333,7 @@ namespace Chaptarr.Api.V1.Books
 
             var wasMonitoredForFacadeMediaType = facadeContext != null &&
                                                  book.IsMonitoredForMediaType(facadeContext.MediaType);
-            var beforeMonitoredEditionId = book?.Editions?.SingleOrDefault(e => e != null && e.Monitored)?.Id;
+            var beforeMonitoredEditionId = GetSingleMonitoredEditionId(book?.Editions);
 
             var model = bookResource.ToModel(book, facadeContext);
             model.Editions = (model.Editions ?? Enumerable.Empty<Edition>())
@@ -2359,7 +2359,7 @@ namespace Chaptarr.Api.V1.Books
             }
             var afterMonitoredEditionId = shouldSkipEditionRepair
                 ? beforeMonitoredEditionId
-                : model?.Editions?.SingleOrDefault(e => e != null && e.Monitored)?.Id;
+                : GetSingleMonitoredEditionId(model?.Editions);
 
             if (ShouldApplyFacadeSpecificBookMonitoring(
                     facadeContext,
@@ -2405,6 +2405,15 @@ namespace Chaptarr.Api.V1.Books
             }
 
             return Accepted(model.Id);
+        }
+
+        // A book can reach an update with more than one monitored edition (e.g. an author add
+        // pre-selected one and a request added another); the update repairs that state, so
+        // reading the previous selection must not throw. Null unless exactly one is monitored.
+        internal static int? GetSingleMonitoredEditionId(IEnumerable<Edition> editions)
+        {
+            var monitored = editions?.Where(e => e != null && e.Monitored).Take(2).ToList();
+            return monitored?.Count == 1 ? monitored[0].Id : null;
         }
 
         private BookMediaType? ResolveBookshelfLegacyUpdateMediaType(BookResource resource, int sourceBookId)
