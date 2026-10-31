@@ -3,7 +3,7 @@
 name: Release
 run-name: >-
   ${{ github.event_name == 'workflow_dispatch' &&
-      format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool) || github.workflow }}
+      format('action:{0}:pool:{1}:tag:{2}', inputs.action, inputs.runner_pool, inputs.release_tag) || github.workflow }}
 
 # Select a stable release tag from a main-branch dispatch. The tag must match
 # the main version, point to main, and is checked out exactly by each build.

@@ -176,7 +176,9 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             self.assertIn(f"          - {value}", input_match.group("body"))
         self.assertIn("release_tag:", dispatch)
         self.assertIn("required: true", dispatch)
-        self.assertNotIn("inputs.release_tag", source.split("run-name:", 1)[1].split("\non:", 1)[0])
+        run_name = source.split("run-name:", 1)[1].split("\non:", 1)[0]
+        self.assertIn("format('action:{0}:pool:{1}:tag:{2}'", run_name)
+        self.assertIn("inputs.release_tag", run_name)
 
         preflight = job_block(source, "preflight")
         for token in (
