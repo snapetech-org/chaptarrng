@@ -1,8 +1,8 @@
 # BookshelfNG on StartOS
 
 This wrapper preserves the existing BookshelfNG StartOS package ID and volume
-contract while running ChaptarrNG's BookshelfNG-compatible Hardcover image on
-x86_64 and aarch64 systems. The release handoff builder replaces the image
+contract while running ChaptarrNG's standard image in BookshelfNG
+compatibility mode on x86_64 and aarch64 systems. The release handoff builder replaces the image
 placeholder in `startos/manifest/index.ts` with the exact published
 multi-architecture digest. The package persists the application database at
 `/config`, the library at `/books`, and download files at `/downloads`.

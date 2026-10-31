@@ -356,13 +356,19 @@ run_case 'the standard image detects legacy appdata and preserves the saved port
     test -z "${CHAPTARR_BOOKSHELF_COMPATIBILITY:-}"
     test -z "${CHAPTARR_DEFAULT_PORT:-}"
   '\'' sh "$2"
-  env -i PATH="$PATH" DATA_DIR="$fresh_dir" Readarr__Postgres__Host=bookshelf-db \
-    CHAPTARR_DEFAULT_PORT=8877 sh -c '\''
-    . "$1"
-    test "$CHAPTARR_BOOKSHELF_COMPATIBILITY" = true
-    test "$CHAPTARR_DEFAULT_PORT" = 8877
-    test "$Chaptarr__Server__Port" = 8877
-  '\'' sh "$2"
+  for postgres_name in \
+    Readarr__Postgres__Host READARR__POSTGRES__HOST \
+    Audioarr__Postgres__Host AUDIOARR__POSTGRES__HOST \
+    Bookshelf__Postgres__Host BOOKSHELF__POSTGRES__HOST; do
+    env -i PATH="$PATH" DATA_DIR="$fresh_dir" \
+      "$postgres_name=bookshelf-db" CHAPTARR_DEFAULT_PORT=8877 sh -c '\''
+        . "$1"
+        test "$CHAPTARR_BOOKSHELF_COMPATIBILITY" = true
+        test "$BOOKSHELFNG_MIGRATION_MODE" = automatic
+        test "$CHAPTARR_DEFAULT_PORT" = 8877
+        test "$Chaptarr__Server__Port" = 8877
+      '\'' sh "$2"
+  done
   grep -Fq ". /docker-bookshelf-migration-detect.sh" "$3"
   grep -Fq "COPY docker-bookshelf-migration-detect.sh /docker-bookshelf-migration-detect.sh" "$4"
   grep -Fq "COPY docker-bookshelf-migration-detect.sh /docker-bookshelf-migration-detect.sh" "$5"

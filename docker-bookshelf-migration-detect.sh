@@ -14,8 +14,11 @@ for database in "$DATA_DIR/readarr.db" "$DATA_DIR/audioarr.db"; do
 done
 
 if [ "$bookshelf_source_found" != true ]; then
+    # These legacy service prefixes identify migration sources. Chaptarr's own
+    # PostgreSQL setting is also used by fresh installs and is not sufficient.
     for name in \
         Readarr__Postgres__Host READARR__POSTGRES__HOST \
+        Audioarr__Postgres__Host AUDIOARR__POSTGRES__HOST \
         Bookshelf__Postgres__Host BOOKSHELF__POSTGRES__HOST; do
         value=$(printenv "$name" 2>/dev/null || true)
         if [ -n "$value" ]; then

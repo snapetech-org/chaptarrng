@@ -1,8 +1,9 @@
 # Updating the ChaptarrNG runtime image
 
 This package keeps the StartOS `bookshelfng` identity and wraps ChaptarrNG's
-BookshelfNG-compatible Hardcover image. The ChaptarrNG release candidate
-builder injects the exact multi-architecture image digest into
+standard ChaptarrNG image with the package's Hardcover provider mode. The
+release candidate builder injects the exact multi-architecture image digest
+into
 `startos/manifest/index.ts`.
 
 ## Updating the package
