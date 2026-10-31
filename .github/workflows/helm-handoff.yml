@@ -1,25 +1,22 @@
 # ng-runner-policy: private-jit-required-v1
 name: BookshelfNG Helm handoff
+run-name: ${{ format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool) }}
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/helm-handoff.yml"
-      - ".github/workflows/release.yml"
-      - ".github/workflows/release-distribution.yml"
-      - "charts/bookshelfng/**"
-      - "packaging/scripts/build-bookshelfng-helm-bridge.sh"
-      - "packaging/scripts/publish-bookshelfng-helm-bridge.sh"
-      - "scripts/test_bookshelfng_helm_handoff.rb"
-      - "scripts/test_bookshelfng_helm_install_handoff.sh"
-      - "Dockerfile.cross"
-      - "docker-bookshelf-compat-supervisor.sh"
-      - "docker-bookshelf-liveness.sh"
-      - "docker-entrypoint.sh"
-      - "docker-healthcheck.sh"
-      - "src/**"
   workflow_dispatch:
+    inputs:
+      action:
+        description: Admit this workflow to the private JIT broker
+        required: true
+        type: choice
+        options:
+          - ci
+      runner_pool:
+        description: Select the private ephemeral JIT pool
+        required: true
+        type: choice
+        options:
+          - private
 
 permissions:
   contents: read

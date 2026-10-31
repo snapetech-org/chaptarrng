@@ -64,7 +64,7 @@ class EncryptedBackupModalContent extends Component {
 
     this.setState({ isExporting: true, error: null });
 
-    downloadEncryptedBackup(passphrase)
+    downloadEncryptedBackup(passphrase, translate('ui.backup.encryptedDownloadFailed'))
       .then(() => {
         this.setState({ isExporting: false }, this.onModalClose);
       })

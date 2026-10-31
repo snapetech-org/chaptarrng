@@ -3,7 +3,10 @@
 name: Build ChaptarrNG
 run-name: >-
   ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number != '' &&
-      format('owner-pr:{0}:{1}:{2}', inputs.pr_number, inputs.pr_sha, inputs.target_run_id) || github.workflow }}
+      format('owner-pr:{0}:{1}:{2}:action:{3}:pool:{4}', inputs.pr_number, inputs.pr_sha,
+        inputs.target_run_id, inputs.action, inputs.runner_pool) ||
+      (github.event_name == 'workflow_dispatch' &&
+       format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool)) || github.workflow }}
 
 on:
   pull_request_target:
@@ -15,6 +18,18 @@ on:
   workflow_call: {}
   workflow_dispatch:
     inputs:
+      action:
+        description: Admit this workflow to the private JIT broker
+        required: true
+        type: choice
+        options:
+          - ci
+      runner_pool:
+        description: Select the private ephemeral JIT pool
+        required: true
+        type: choice
+        options:
+          - private
       windows_chocolatey_only:
         description: Run only the Windows Chocolatey BookshelfNG migration acceptance
         required: false
@@ -851,6 +866,8 @@ jobs:
         payload = json.dumps({
             "ref": "main",
             "inputs": {
+                "action": "ci",
+                "runner_pool": "private",
                 "pr_number": number,
                 "pr_sha": sha,
                 "target_run_id": target,
