@@ -137,7 +137,7 @@ COPY --from=build /app .
 
 RUN chown -R abc:users /app
 
-EXPOSE 8789
+EXPOSE 8787 8789
 HEALTHCHECK --interval=30s --timeout=10s --start-period=2m --retries=3 \
     CMD ["/usr/local/bin/chaptarr-healthcheck"]
 USER abc

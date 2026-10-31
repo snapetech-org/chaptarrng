@@ -325,8 +325,10 @@ run_case 'production image keeps the StartOS /init command' bash -c '
 run_case 'fresh and migrated installations publish one standard image target' bash -c '
   set -euo pipefail
   [[ "$(grep -Fc "AS chaptarrng-standard" "$1")" -eq 1 ]]
-  grep -Fxq "EXPOSE 8789" "$1"
-  if grep -Eq "bookshelf-(softcover|hardcover)|CHAPTARR_DEFAULT_PORT=8787|EXPOSE 8787" "$1"; then exit 1; fi
+  for image_dockerfile in "$1" "$5" "$6"; do
+    grep -Fxq "EXPOSE 8787 8789" "$image_dockerfile"
+    if grep -Eq "bookshelf-(softcover|hardcover)|CHAPTARR_DEFAULT_PORT=8787" "$image_dockerfile"; then exit 1; fi
+  done
   [[ "$(grep -Fc "docker/build-push-action@" "$2")" -eq 1 ]]
   grep -Fq "target: chaptarrng-standard" "$2"
   if grep -Eq "target: bookshelf-(softcover|hardcover)|build_(softcover|hardcover)" "$2"; then exit 1; fi

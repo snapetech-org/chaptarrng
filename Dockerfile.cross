@@ -145,7 +145,7 @@ RUN chmod +x /usr/local/bin/chaptarr-healthcheck
 WORKDIR /app
 
 # Every fresh and migrated install uses this exact standard image.
-EXPOSE 8789
+EXPOSE 8787 8789
 
 # Containers are updated by pulling a new image, not by the in-app updater.
 ENV CHAPTARR_PACKAGE_UPDATE_MECHANISM=Docker \

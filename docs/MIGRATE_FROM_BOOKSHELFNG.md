@@ -143,24 +143,29 @@ choose automatic or manual first-start migration; automatic is the default,
 and the choice is included in StartOS backups.
 
 BookshelfNG selects native Hardcover identities only when `HARDCOVER=true` and
-`HARDCOVER_NATIVE` is not `false`; an unset or non-true `HARDCOVER` value and
-`HARDCOVER_NATIVE=false` select Goodreads. Preserve both settings from the old
-service when present. The Docker alias bridge, Cloudron, Co-op Cloud, catalog
-Compose, Unraid, and StartOS candidates preserve the native Hardcover defaults
-used by those channels; standalone desktop launchers retain their Goodreads
-default. The Cloudron candidate keeps `/ping` available during supervised
-migration on its existing port while proxying application traffic to the local
-ChaptarrNG process. It has no terminal prompt: the administrator holds or
-applies the app update, or sets `BOOKSHELFNG_MIGRATION_MODE=manual` before
-updating and switches to `automatic` when accepting conversion. Cloudron 10.1.6
-installed update, native backup/restore, automatic migration, and
-source-database plus old-package rollback passed locally; feed publication
-remains open, and the legacy `.4.21` pre-update backup excludes persistent
-directories. The Helm bridge infers the old
-chart's flavor and readable overrides,
-and requires `bookshelfMigration.providerMode` when a Secret or an unrecognized
-image tag leaves the effective mode ambiguous. Never infer provider mode from
-numeric IDs.
+`HARDCOVER_NATIVE` is not `false`; its runtime defaults an unset or non-true
+`HARDCOVER` value to Goodreads. The migration importer requires an explicit
+provider mode for every BookshelfNG conversion so it can persist the source
+dialect in the compatibility profile. Set `HARDCOVER=true` or `false`, or use
+`HARDCOVER_NATIVE=false` to explicitly select Goodreads. Preserve the source
+values for both preview and apply; missing or invalid values stop conversion
+before the source database is changed. The single standard image and its legacy
+aliases do not encode provider mode. Cloudron, Co-op Cloud, catalog Compose,
+Unraid, and StartOS candidates preserve those channels' native Hardcover
+defaults; set `HARDCOVER=false` when the source used Goodreads. Standalone
+desktop launchers keep their Goodreads default. The Cloudron candidate keeps
+`/ping` available during supervised migration on its existing port while
+proxying application traffic to the local ChaptarrNG process. It has no
+terminal prompt: the administrator holds or applies the app update, or sets
+`BOOKSHELFNG_MIGRATION_MODE=manual` before updating and switches to `automatic`
+when accepting conversion. Cloudron 10.1.6 installed update, native
+backup/restore, automatic migration, and source-database plus old-package
+rollback passed locally; feed publication remains open, and the legacy `.4.21`
+pre-update backup excludes persistent directories. The Helm bridge infers the
+old chart's flavor and readable overrides, and requires
+`bookshelfMigration.providerMode` when a Secret or unrecognized image tag
+leaves the effective mode ambiguous. Never infer provider mode from numeric
+IDs.
 
 ### Migrate with the standalone ChaptarrNG Console
 
@@ -675,19 +680,18 @@ target settings contract; conversion updates the provider and contract names
 while retaining those values. This compatibility is source-only and is not in
 published `v0.9.977`.
 
-Preserve `HARDCOVER=true`, `HARDCOVER_AUTH`, `HARDCOVER_API_KEY`, and any
-custom `HARDCOVER_API_URL` environment value used by the BookshelfNG install.
-Run preview and migration with the same `HARDCOVER` and `HARDCOVER_NATIVE`
-values as the source install. When native Hardcover mode is active, BookshelfNG
-stores many primary provider IDs as bare numbers; the converter uses
-`HARDCOVER=true` (unless `HARDCOVER_NATIVE=false`) to preserve those as
-Hardcover identities. Set `HARDCOVER=false` for a Goodreads-primary source.
-BookshelfNG's runtime defaults an unset or unrecognized `HARDCOVER` value to
-Goodreads; native Hardcover IDs are selected only when `HARDCOVER=true` and
-`HARDCOVER_NATIVE` is not `false`. The converter now follows that exact
-predicate. Preview reports the selected interpretation for authors, books,
-editions, and series. Changing the mode during conversion can associate every
-bare numeric ID with the wrong provider.
+Preserve `HARDCOVER`, `HARDCOVER_NATIVE`, `HARDCOVER_AUTH`,
+`HARDCOVER_API_KEY`, and any custom `HARDCOVER_API_URL` used by BookshelfNG.
+Run preview and migration with the same provider mode as the source install.
+When native Hardcover mode is active, BookshelfNG stores many primary provider
+IDs as bare numbers; the converter uses the explicit mode to preserve those as
+Hardcover identities. Set `HARDCOVER=false` for a Goodreads-primary source, or
+set `HARDCOVER_NATIVE=false` to explicitly select Goodreads. Although
+BookshelfNG's application runtime defaults an unset `HARDCOVER` value to
+Goodreads, the migration importer does not make that guess: it requires an
+explicit mode for each migration and reports the selected interpretation for
+authors, books, editions, and series. Changing the mode between preview and
+apply can associate every bare numeric ID with the wrong provider.
 
 PR #131 candidate commit `12f290bd` now also writes ChaptarrNG's persisted
 `HardcoverEnabled=true` setting when migration runs with native Hardcover mode

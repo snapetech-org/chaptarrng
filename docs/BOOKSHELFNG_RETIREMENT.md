@@ -25,13 +25,16 @@ separate Goodreads and Hardcover compatibility images is withdrawn. The
 ChaptarrNG source changes now define one standard image build and one digest
 for all legacy aliases. No image from this candidate has been built or
 published yet. A tag cannot carry the old image's implicit provider setting,
-so migration must receive
-`HARDCOVER=true` or `HARDCOVER=false` from preserved channel configuration or
-an explicit operator choice when it encounters bare numeric provider IDs. The
-standard image detects legacy SQLite files and Readarr/Bookshelf PostgreSQL
-settings, then starts the migration supervisor; it fails closed if provider
-mode is needed but missing or invalid. Fresh ChaptarrNG installs keep port
-`8789`; a BookshelfNG `config.xml` port or explicit channel mapping is retained.
+so every migration must receive `HARDCOVER=true` or `HARDCOVER=false` from
+preserved channel configuration or an explicit operator choice;
+`HARDCOVER_NATIVE=false` explicitly selects Goodreads. The importer needs this
+mode to record the source dialect even when source identities are namespaced,
+and fails closed before changing the source database when mode is missing or
+invalid. The standard image detects legacy SQLite files and
+Readarr/Audioarr/Bookshelf PostgreSQL settings, then starts the migration
+supervisor. Fresh ChaptarrNG installs keep port `8789`; migrated installs can
+retain the legacy `8787` port through saved `config.xml` or explicit channel
+settings, and the image advertises both ports for automatic Docker mappings.
 These source changes still need exact-head private-JIT validation and do not
 authorize a public alias redirect.
 
@@ -1130,7 +1133,7 @@ acceptance remain open.
   SeerrNG availability/history parity, live provider fulfillment, retries,
   operator-data acceptance, or complete request workflow acceptance; see
   [the integration evidence](SEERRNG_INTEGRATION.md).
-- The merged source also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Bare numeric source IDs require explicit `HARDCOVER=true` or `HARDCOVER=false`; an unset or invalid mode fails closed. The prior plan to build separate softcover and Hardcover Docker targets is withdrawn. All legacy aliases must use the same standard image digest, and channel adapters or operator tooling must preserve the source provider setting. These source changes are not in `.977`, and converted-data acceptance remains open.
+- The merged source also ports the native Hardcover metadata client and routes `hc:`/legacy Hardcover work, author, and edition IDs to it. The importer maps a saved `HardcoverAuth` value to ChaptarrNG's `HardcoverApiToken` setting; environment credentials remain external to the database. Every migration requires an explicit provider mode (`HARDCOVER=true` or `false`, or `HARDCOVER_NATIVE=false` for Goodreads) so the importer can persist the source dialect; a missing or invalid mode fails closed even when IDs are namespaced. The prior plan to build separate softcover and Hardcover Docker targets is withdrawn. All legacy aliases use the same standard image digest, and channel adapters or operator tooling must preserve the source provider setting. These source changes are not in `.977`, and converted-data acceptance remains open.
 - BookshelfNG's BookLore notification settings and `OnReleaseImport` trigger are copied unchanged into ChaptarrNG, and remain in the retained source backup. A separate BookOrbit Book Dock destination is candidate work in this branch; it does not rewrite BookLore URLs or credentials. Mock tests cover login, Book Dock permission, streamed uploads, redirects, rejected credentials/files, and partial-batch failure. An isolated BookOrbit v3.2.0 live API check passed setup, login, permission check, EPUB upload/listing, and unsupported-file rejection. That does not verify downstream processing of a production book or a real-user handoff. The integration is not in `.977`, and the broader retirement gate remains open.
 - Merged PR #131 adds ChaptarrNG's format-aware author-media move workflow:
   preview and confirm a single-author or bulk move, move only registered media
@@ -1256,19 +1259,20 @@ to Goodreads. Repeating the switch with the source provider mode preserved
 Hardcover IDs, converted data and API results, and passed SQLite integrity and
 foreign-key checks. Rollback preview was byte-preserving; rollback restored the
 source database byte-for-byte, kept the converted database as a backup, and the
-`.71` image reopened the restored source. ChaptarrNG now fails closed when a
-bare numeric ID has no explicit provider mode and builds separate Goodreads
-and Hardcover compatibility targets for the legacy aliases. Those changes are
+`.71` image reopened the restored source. The migration importer now requires
+an explicit provider mode for every conversion and fails closed before source
+mutation when it is absent or invalid. The former separate Goodreads and
+Hardcover image targets were withdrawn; all legacy aliases use the standard
+image, and channel configuration must carry the source mode. Those changes are
 source-only. Exact-head run [39175250100](https://github.com/snapetech-org/chaptarrng/actions/runs/39175250100)
 passed the provider-mode regression and PostgreSQL fixture checks. The final
 Linux artifact refused conversion without a provider mode, preserved Goodreads
 and Hardcover identities with their explicit modes, converted during normal
 startup, and restored the source byte-for-byte during rollback. Local BuildKit
 target checks and hosted alias/bridge regression scripts also pass; the actual
-The GHCR migration alias dispatch has not been run or published; the source
-contract now requires every legacy alias to resolve to the standard image digest.
-This synthetic rehearsal does not establish operator-data acceptance or
-validate the Unraid template handoff; details are in the
+GHCR migration alias dispatch has not been run or published. This synthetic
+rehearsal does not establish operator-data acceptance or validate the Unraid
+template handoff; details are in the
 [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
 
 BookshelfNG's `BookImportMinimumMatchPercent` setting (default 70, valid range
@@ -1340,7 +1344,7 @@ gate.
 | Channel | Published ChaptarrNG state | BookshelfNG handoff state |
 | --- | --- | --- |
 | Debian / Ubuntu `.deb` and PPA | No ChaptarrNG package is published. | The gated `bookshelfng` `.deb` release asset and Launchpad source-package publisher preserve the service, environment file, and `/var/lib/bookshelfng` data path. The checksum-verified public `.71` package upgraded to the local `.977` candidate and back in Debian Trixie with real dependency resolution and no conffile prompt. A systemd-running container upgraded an active `.71` service and passed `/ping`; after restoring the pre-upgrade data copy, downgrade to `.71` restarted the service and passed `/ping`. This used a fresh empty `.71` database and synthetic canaries, not representative data. External PPA credentials, archive, and enabled series remain unvalidated, and no PPA package has been uploaded. Real-host acceptance and representative-data rollback remain open. |
-| Docker / GHCR | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same published multi-architecture standard-image digest. | Legacy aliases remain unchanged. The rejected provider-specific image targets are removed in the current source candidate; every old alias must resolve to the same standard digest. The standard image exposes ChaptarrNG's normal `8789/tcp` port; saved `config.xml`, explicit server settings, and channel adapters preserve the deployment's public mapping. A single image cannot infer the old tag's provider mode, so migration requires an explicit `HARDCOVER=true` or `false` setting and fails closed without one. The bridge stays disabled; no multi-architecture image rebuild or alias dispatch has been published, and pinned version tags/digests need an operator update. |
+| Docker / GHCR | `ghcr.io/snapetech-org/chaptarrng:0.9.977`, `:latest`, and `:main` resolve to the same published multi-architecture standard-image digest. | Legacy aliases remain unchanged. The rejected provider-specific image targets are removed in the current source candidate; every old alias must resolve to the same standard digest. The standard image keeps `8789/tcp` for fresh installs and advertises `8787/tcp` for migrated BookshelfNG installs whose saved config or adapter selects the legacy port. A single image cannot infer the old tag's provider mode, so every migration requires an explicit setting: `HARDCOVER=true` or `false`, or `HARDCOVER_NATIVE=false` for Goodreads. The bridge stays disabled; no multi-architecture image rebuild or alias dispatch has been published, and pinned version tags/digests need an operator update. |
 | AUR | `chaptarrng-bin 0.9.977-1` is published. | `bookshelfng-bin 0.4.21.71-1` remains public. A local `.977-1` candidate passed isolated pacman upgrade/downgrade, synthetic populated migration/restore, and active systemd service handoff checks. The test used a network-isolated Arch container and a synthetic migration-158 database; representative operator data and host-specific settings remain open. |
 | Fedora COPR | `chaptarrng 0.9.977-1` built successfully for Fedora 43, 44, 45, and Rawhide x86_64. | The BookshelfNG bridge trigger was skipped; current `slskdn/bookshelfng` repo metadata has no packages for Fedora 43, 44, 45, or Rawhide x86_64. A local Fedora 44 RPM transaction upgraded the published `.71` package to a `.977` candidate and downgraded back, preserving config/data canaries. `systemctl` was mocked and RPM dependencies bypassed; live COPR/DNF and real-systemd handoff remain untested. |
 | Chocolatey | The [standard `chaptarrng` package](https://community.chocolatey.org/packages/chaptarrng) `0.9.973` is public (approved October 20); it trails ChaptarrNG `v0.9.977`. A `.977` package is not on the feed. | The [BookshelfNG package identity](https://community.chocolatey.org/packages/bookshelfng) is public at `0.4.21.76` (approved October 26; the final GitHub release is `0.4.21.76`). The bridge is unpublished; a previous `.977` push returned HTTP 403. The source bridge preserves the BookshelfNG service identity, configured data path and NSSM arguments, previews migration, preserves or explicitly accepts provider mode, backs up PostgreSQL sources, checks `/ping`, and restores data and app files on startup failure. It leaves the service stopped if rollback cannot be verified. Update the standard package, resolve publisher authorization, then validate populated SQLite/PostgreSQL conversion, rollback, and the installed old-identity handoff. |
