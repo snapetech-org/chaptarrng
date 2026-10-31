@@ -68,6 +68,10 @@ function sourceFingerprint(key, value) {
   return crypto.createHash('sha256').update(key + '\0' + value, 'utf8').digest('hex');
 }
 
+function placeholderTokens(value) {
+  return (value.match(/\{[^{}]+\}/g) || []).sort();
+}
+
 function writeJson(file, value) {
   fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n');
 }
@@ -290,12 +294,18 @@ function main() {
         } else if (fingerprint !== fingerprints[key]) {
           errors.push(locale + ' ' + status + ' provenance is stale for ' + key + '; review the source before refreshing its fingerprint.');
         }
-        if (!Object.prototype.hasOwnProperty.call(catalogs[(registry.locales.find((item) => item.tag === locale) || {}).file] || {}, key)) {
+        const localeFile = (registry.locales.find((item) => item.tag === locale) || {}).file;
+        const localeCatalog = localeFile ? catalogs[localeFile] || {} : {};
+        if (!Object.prototype.hasOwnProperty.call(localeCatalog, key)) {
           errors.push(locale + ' ' + status + ' provenance requires an exact catalog value for ' + key + '.');
+        } else if (
+          Object.prototype.hasOwnProperty.call(english, key) &&
+          JSON.stringify(placeholderTokens(english[key])) !== JSON.stringify(placeholderTokens(localeCatalog[key]))
+        ) {
+          errors.push(locale + ' ' + status + ' provenance has a placeholder mismatch for ' + key + '.');
         }
         if (status === 'machine draft' && locale !== 'en') {
-          const localeFile = (registry.locales.find((item) => item.tag === locale) || {}).file;
-          if (localeFile && catalogs[localeFile] && catalogs[localeFile][key] === english[key]) {
+          if (localeCatalog[key] === english[key]) {
             errors.push(locale + ' machine draft for ' + key + ' must differ from English.');
           }
         }

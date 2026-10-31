@@ -12,6 +12,10 @@ src/NzbDrone.Core/Localization/Core/ui-locales.json is the shared registry used 
 
 The server merges English, the declared parent catalog, then the exact locale catalog. Missing entries therefore inherit safely without copying English text into every file. The Settings page tells users that untranslated labels appear in English.
 
+## Current target-locale review status
+
+The October 30, 2026 audit of the agreed 12 locales found 220 source IDs absent from every exact target catalog; each resolves to English fallback. Additional exact catalog values that still equal the English source are also reported as inherited. This follow-up records 110 reviewed corrections and consistency fixes, but the remaining legacy exact translations have no review provenance. Full target-catalog translation and native-speaker quality review remain outstanding.
+
 ## Per-string provenance
 
 docs/localization/provenance.json stores explicit source-fingerprinted `reviewed` and `drafts` records per locale and message ID. The generated catalog report distinguishes:
@@ -21,7 +25,7 @@ docs/localization/provenance.json stores explicit source-fingerprinted `reviewed
 - **unreviewed exact** legacy catalog values with no provenance record;
 - **inherited** values supplied by the configured parent locale or English fallback.
 
-Existing translations without contributor or workflow provenance are recorded as unreviewed, not assumed to be machine-generated. Record a translation as a draft only when its machine-draft origin is known. Review a string only after checking meaning, terminology, context, placeholders, and punctuation. The generated counts are in docs/localization/catalog-status.md.
+Existing translations without contributor or workflow provenance are recorded as unreviewed, not assumed to be machine-generated. Record a translation as a draft only when its machine-draft origin is known. Review a string only after checking meaning, terminology, context, placeholders, and punctuation. The catalog check verifies that source and target placeholder tokens match for every reviewed or machine-draft value. The generated counts are in docs/localization/catalog-status.md.
 
 To refresh source fingerprints after reviewing changed English copy, run yarn localization:update-source-hashes. To update the generated status table, run yarn localization:update-status. Then run yarn check-translations, yarn check-localization, and yarn test-localization.
 
