@@ -23,6 +23,7 @@ import { align, icons, kinds, sizes, sortDirections } from 'Helpers/Props';
 import { getMediaTypeFromExtension } from 'Utilities/MediaFile/getMediaTypeFromExtension';
 import hasDifferentItemsOrOrder from 'Utilities/Object/hasDifferentItemsOrOrder';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import getToggledRange from 'Utilities/Table/getToggledRange';
 import UnmappedFilesMediaTypeToggle from './UnmappedFilesMediaTypeToggle';
 import UnmappedFilesTableHeader from './UnmappedFilesTableHeader';
@@ -587,7 +588,7 @@ class UnmappedFilesTable extends Component {
             {
               !!sendLogsPreviewError &&
                 <Alert kind={kinds.DANGER}>
-                  {sendLogsPreviewError}
+                  {translateServerMessage(sendLogsPreviewError)}
                 </Alert>
             }
 

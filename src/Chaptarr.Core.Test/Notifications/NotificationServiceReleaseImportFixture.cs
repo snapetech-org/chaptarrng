@@ -94,6 +94,7 @@ namespace Chaptarr.Core.Test.Notifications
                 factory,
                 DispatchProxy.Create<INotificationStatusService, NotificationStatusServiceProxy>(),
                 DispatchProxy.Create<IEditionService, ThrowingProxy<IEditionService>>(),
+                null,
                 LogManager.GetCurrentClassLogger());
 
             var author = new Author { Id = 1, Name = "Novel Author" };

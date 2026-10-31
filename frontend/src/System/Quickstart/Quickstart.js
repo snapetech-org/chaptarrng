@@ -10,6 +10,7 @@ import PageToolbarButton from 'Components/Page/Toolbar/PageToolbarButton';
 import PageToolbarSection from 'Components/Page/Toolbar/PageToolbarSection';
 import { align, icons, kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import QuickstartAudioBookShelfSection from './QuickstartAudioBookShelfSection';
 import QuickstartCustomFormatsSection from './QuickstartCustomFormatsSection';
 import QuickstartDownloadClientsSection from './QuickstartDownloadClientsSection';
@@ -264,12 +265,12 @@ function Quickstart(props) {
   const onConnectionTestFailure = (name, error) => {
     const responseJson = error?.responseJSON;
     const responseMessage = Array.isArray(responseJson) ?
-      responseJson.map((failure) => failure?.errorMessage || failure?.message).filter(Boolean).join(' ') :
+      responseJson.map((failure) => failure?.errorMessage || failure?.message).filter(Boolean).map(translateServerMessage).join(' ') :
       responseJson?.error || responseJson?.message;
 
     setConnectionResults((results) => ({
       ...results,
-      [name]: responseMessage || error?.statusText || error?.message || translate('QuickstartConnectionFailed')
+      [name]: translateServerMessage(responseMessage || error?.statusText || error?.message) || translate('QuickstartConnectionFailed')
     }));
   };
 

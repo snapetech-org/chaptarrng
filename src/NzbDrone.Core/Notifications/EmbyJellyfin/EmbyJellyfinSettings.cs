@@ -42,11 +42,11 @@ namespace NzbDrone.Core.Notifications.EmbyJellyfin
         [FieldDefinition(2, Label = "Port")]
         public int Port { get; set; }
 
-        [FieldDefinition(3, Label = "UseSsl", Type = FieldType.Checkbox, HelpText = "NotificationsSettingsUseSslHelpText")]
+        [FieldDefinition(3, Label = "provider.field.f1bb2b1610fc9", Type = FieldType.Checkbox, HelpText = "NotificationsSettingsUseSslHelpText")]
         [FieldToken(TokenField.HelpText, "UseSsl", "serviceName", "Emby / Jellyfin")]
         public bool UseSsl { get; set; }
 
-        [FieldDefinition(4, Label = "UrlBase", Type = FieldType.Textbox, Advanced = true, HelpText = "EmbyJellyfinUrlBaseHelpText")]
+        [FieldDefinition(4, Label = "provider.field.f39e9193cf08e", Type = FieldType.Textbox, Advanced = true, HelpText = "EmbyJellyfinUrlBaseHelpText")]
         public string UrlBase { get; set; }
 
         [FieldDefinition(5, Label = "ApiKey", Type = FieldType.Password, Privacy = PrivacyLevel.ApiKey, HelpText = "EmbyJellyfinApiKeyHelpText")]

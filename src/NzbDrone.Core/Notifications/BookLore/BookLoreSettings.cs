@@ -24,7 +24,7 @@ namespace NzbDrone.Core.Notifications.BookLore
             BaseUrl = "http://localhost:6060";
         }
 
-        [FieldDefinition(0, Label = "Base URL", HelpText = "BookLoreBaseUrlHelpText")]
+        [FieldDefinition(0, Label = "provider.field.f70589413a3c9", HelpText = "BookLoreBaseUrlHelpText")]
         public string BaseUrl { get; set; }
 
         [FieldDefinition(1, Label = "Username", Privacy = PrivacyLevel.UserName, HelpText = "BookLoreUsernameHelpText")]

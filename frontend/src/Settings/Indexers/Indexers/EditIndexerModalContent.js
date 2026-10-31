@@ -17,6 +17,7 @@ import { inputTypes, kinds } from 'Helpers/Props';
 import AdvancedSettingsButton from 'Settings/AdvancedSettingsButton';
 import titleCase from 'Utilities/String/titleCase';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './EditIndexerModalContent.css';
 
 function isPrivateHost(hostname) {
@@ -146,7 +147,7 @@ function EditIndexerModalContent(props) {
               {
                 isDirectDownload && item.message?.message &&
                   <Alert kind={kinds.INFO}>
-                    {item.message.message}
+                    {translateServerMessage(item.message.message)}
                   </Alert>
               }
 

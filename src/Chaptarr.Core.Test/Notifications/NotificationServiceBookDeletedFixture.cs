@@ -51,6 +51,7 @@ namespace Chaptarr.Core.Test.Notifications
                 DispatchProxy.Create<INotificationFactory, ThrowingProxy<INotificationFactory>>(),
                 DispatchProxy.Create<INotificationStatusService, ThrowingProxy<INotificationStatusService>>(),
                 DispatchProxy.Create<IEditionService, ThrowingProxy<IEditionService>>(),
+                null,
                 LogManager.GetCurrentClassLogger());
 
             var book = new Book { Id = 1, Author = new Author { Id = 1, Name = "Jim Butcher" } };
@@ -69,6 +70,7 @@ namespace Chaptarr.Core.Test.Notifications
                 factory,
                 DispatchProxy.Create<INotificationStatusService, ThrowingProxy<INotificationStatusService>>(),
                 DispatchProxy.Create<IEditionService, ThrowingProxy<IEditionService>>(),
+                null,
                 LogManager.GetCurrentClassLogger());
 
             var book = new Book { Id = 1, Author = new Author { Id = 1, Name = "Jim Butcher" } };

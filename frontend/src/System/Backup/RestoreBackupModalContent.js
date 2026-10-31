@@ -13,6 +13,7 @@ import ModalFooter from 'Components/Modal/ModalFooter';
 import ModalHeader from 'Components/Modal/ModalHeader';
 import { icons, kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './RestoreBackupModalContent.css';
 
 function getErrorMessage(error) {
@@ -20,7 +21,7 @@ function getErrorMessage(error) {
     return translate('BackupRestoreError');
   }
 
-  return error.responseJSON.message;
+  return translateServerMessage(error.responseJSON.message);
 }
 
 function isBookshelfEncryptedBackup(file) {

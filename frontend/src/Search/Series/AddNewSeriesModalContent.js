@@ -13,6 +13,7 @@ import ModalHeader from 'Components/Modal/ModalHeader';
 import { icons, kinds, sizes } from 'Helpers/Props';
 import stripHtml from 'Utilities/String/stripHtml';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import AddAuthorOptionsForm from '../Common/AddAuthorOptionsForm.js';
 import { getMissingAddFormatSetup } from '../Common/addFormatSetup.cjs';
 import styles from './AddNewSeriesModalContent.css';
@@ -382,7 +383,7 @@ class AddNewSeriesModalContent extends Component {
                 </div>
               )}
 
-              {fetchError && <Alert kind={kinds.WARNING}>{fetchError}</Alert>}
+              {fetchError && <Alert kind={kinds.WARNING}>{translateServerMessage(fetchError)}</Alert>}
 
               {addError && <Alert kind={kinds.DANGER}>{addError}</Alert>}
 
@@ -497,7 +498,7 @@ class AddNewSeriesModalContent extends Component {
               {error && (
                 <Alert kind={kinds.DANGER}>
                   {translate('SeriesAddError')}
-                  {error.message || error}
+                  {translateServerMessage(error.message || error)}
                 </Alert>
               )}
             </div>

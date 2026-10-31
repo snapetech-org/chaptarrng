@@ -4,6 +4,7 @@ import Icon from 'Components/Icon';
 import { icons, kinds } from 'Helpers/Props';
 import dayjs from 'Utilities/Date/dayjsSetup';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 
 function QueueDetails(props) {
   const {
@@ -35,7 +36,7 @@ function QueueDetails(props) {
         <Icon
           name={icons.DOWNLOAD}
           kind={kinds.DANGER}
-          title={translate('ImportFailedInterp', [errorMessage])}
+          title={translate('ImportFailedInterp', [translateServerMessage(errorMessage)])}
         />
       );
     }
@@ -48,7 +49,7 @@ function QueueDetails(props) {
       <Icon
         name={icons.DOWNLOADING}
         kind={kinds.DANGER}
-        title={translate('DownloadFailedInterp', [errorMessage])}
+        title={translate('DownloadFailedInterp', [translateServerMessage(errorMessage)])}
       />
     );
   }

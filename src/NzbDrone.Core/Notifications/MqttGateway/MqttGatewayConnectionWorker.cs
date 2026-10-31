@@ -24,6 +24,8 @@ namespace NzbDrone.Core.Notifications.MqttGateway
         private readonly MqttGatewaySnapshotProvider _snapshotProvider;
         private readonly IConfigFileProvider _configFileProvider;
         private readonly Logger _logger;
+        private readonly NotificationText _notificationText;
+        private readonly string _configurationFingerprint;
         private readonly Channel<WorkItem> _queue;
         private readonly CancellationTokenSource _shutdown = new();
         private readonly Task _runTask;
@@ -36,6 +38,7 @@ namespace NzbDrone.Core.Notifications.MqttGateway
                                            MqttGatewaySettings settings,
                                            MqttGatewaySnapshotProvider snapshotProvider,
                                            IConfigFileProvider configFileProvider,
+                                           NotificationText notificationText,
                                            Logger logger)
         {
             _definition = definition;
@@ -43,6 +46,8 @@ namespace NzbDrone.Core.Notifications.MqttGateway
             _snapshotProvider = snapshotProvider;
             _configFileProvider = configFileProvider;
             _logger = logger;
+            _notificationText = notificationText;
+            _configurationFingerprint = notificationText.LocaleFingerprint(MqttGatewayMqtt.GetSettingsFingerprint(settings));
             _queue = Channel.CreateBounded<WorkItem>(new BoundedChannelOptions(EventQueueCapacity)
             {
                 FullMode = BoundedChannelFullMode.Wait,
@@ -55,7 +60,7 @@ namespace NzbDrone.Core.Notifications.MqttGateway
 
         public string ConfigurationFingerprint()
         {
-            return MqttGatewayMqtt.GetSettingsFingerprint(_settings);
+            return _configurationFingerprint;
         }
 
         public bool TryPublishEvent(MqttGatewayEvent gatewayEvent)
@@ -401,15 +406,15 @@ namespace NzbDrone.Core.Notifications.MqttGateway
             var instance = _settings.InstanceId;
             var components = new Dictionary<string, object>
             {
-                ["books_total"] = CreateSensor(instance, "books_total", "Books Total", "sensor.chaptarr_books_total", stateTopic, availabilityTopic, "{{ value_json.books_total }}", stateClass: "measurement"),
-                ["audiobooks_total"] = CreateSensor(instance, "audiobooks_total", "Audiobooks Total", "sensor.chaptarr_audiobooks_total", stateTopic, availabilityTopic, "{{ value_json.audiobooks_total }}", stateClass: "measurement"),
-                ["missing_books"] = CreateSensor(instance, "missing_books", "Missing Books", "sensor.chaptarr_missing_books", stateTopic, availabilityTopic, "{{ value_json.missing_books }}", stateClass: "measurement"),
-                ["wanted_books"] = CreateSensor(instance, "wanted_books", "Wanted Books", "sensor.chaptarr_wanted_books", stateTopic, availabilityTopic, "{{ value_json.wanted_books }}", stateClass: "measurement"),
-                ["queue"] = CreateSensor(instance, "queue", "Queue", "sensor.chaptarr_queue", stateTopic, availabilityTopic, "{{ value_json.queue }}", stateClass: "measurement"),
-                ["upcoming_releases"] = CreateSensor(instance, "upcoming_releases", "Upcoming Releases", "sensor.chaptarr_upcoming_releases", stateTopic, availabilityTopic, "{{ value_json.upcoming_releases }}", stateClass: "measurement"),
-                ["library_size"] = CreateSensor(instance, "library_size", "Library Size", "sensor.chaptarr_library_size", stateTopic, availabilityTopic, "{{ value_json.library_size }}", deviceClass: "data_size", unit: "B", stateClass: "measurement"),
-                ["last_import"] = CreateSensor(instance, "last_import", "Last Import", "sensor.chaptarr_last_import", stateTopic, availabilityTopic, "{{ value_json.last_import or none }}", deviceClass: "timestamp"),
-                ["health"] = CreateSensor(instance, "health", "Health", "sensor.chaptarr_health", stateTopic, availabilityTopic, "{{ value_json.health }}", deviceClass: "enum", options: new[] { "ok", "warning", "error" }, icon: "mdi:heart-pulse")
+                ["books_total"] = CreateSensor(instance, "books_total", _notificationText.Get("notification.sensor.booksTotal", "Books Total"), "sensor.chaptarr_books_total", stateTopic, availabilityTopic, "{{ value_json.books_total }}", stateClass: "measurement"),
+                ["audiobooks_total"] = CreateSensor(instance, "audiobooks_total", _notificationText.Get("notification.sensor.audiobooksTotal", "Audiobooks Total"), "sensor.chaptarr_audiobooks_total", stateTopic, availabilityTopic, "{{ value_json.audiobooks_total }}", stateClass: "measurement"),
+                ["missing_books"] = CreateSensor(instance, "missing_books", _notificationText.Get("notification.sensor.missingBooks", "Missing Books"), "sensor.chaptarr_missing_books", stateTopic, availabilityTopic, "{{ value_json.missing_books }}", stateClass: "measurement"),
+                ["wanted_books"] = CreateSensor(instance, "wanted_books", _notificationText.Get("notification.sensor.wantedBooks", "Wanted Books"), "sensor.chaptarr_wanted_books", stateTopic, availabilityTopic, "{{ value_json.wanted_books }}", stateClass: "measurement"),
+                ["queue"] = CreateSensor(instance, "queue", _notificationText.Get("notification.sensor.queue", "Queue"), "sensor.chaptarr_queue", stateTopic, availabilityTopic, "{{ value_json.queue }}", stateClass: "measurement"),
+                ["upcoming_releases"] = CreateSensor(instance, "upcoming_releases", _notificationText.Get("notification.sensor.upcomingReleases", "Upcoming Releases"), "sensor.chaptarr_upcoming_releases", stateTopic, availabilityTopic, "{{ value_json.upcoming_releases }}", stateClass: "measurement"),
+                ["library_size"] = CreateSensor(instance, "library_size", _notificationText.Get("notification.sensor.librarySize", "Library Size"), "sensor.chaptarr_library_size", stateTopic, availabilityTopic, "{{ value_json.library_size }}", deviceClass: "data_size", unit: "B", stateClass: "measurement"),
+                ["last_import"] = CreateSensor(instance, "last_import", _notificationText.Get("notification.sensor.lastImport", "Last Import"), "sensor.chaptarr_last_import", stateTopic, availabilityTopic, "{{ value_json.last_import or none }}", deviceClass: "timestamp"),
+                ["health"] = CreateSensor(instance, "health", _notificationText.Get("notification.sensor.health", "Health"), "sensor.chaptarr_health", stateTopic, availabilityTopic, "{{ value_json.health }}", deviceClass: "enum", options: new[] { "ok", "warning", "error" }, icon: "mdi:heart-pulse")
             };
 
             var payload = new Dictionary<string, object>

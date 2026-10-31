@@ -25,6 +25,7 @@ import { coerceFolderType, FolderType } from 'Helpers/Props/folderTypes';
 import monitorNewItemsOptions from 'Utilities/Author/monitorNewItemsOptions';
 import monitorOptions from 'Utilities/Author/monitorOptions';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './EditRootFolderModalContent.css';
 
 const SHOW_CALIBRE_UI = true;
@@ -147,12 +148,12 @@ class EditRootFolderModalContent extends Component {
     const { saveError } = this.props;
 
     if (saveError.message) {
-      return saveError.message;
+      return translateServerMessage(saveError.message);
     }
 
     if (saveError.responseJSON && saveError.responseJSON.length > 0) {
-      return saveError.responseJSON[0].errorMessage ||
-        saveError.responseJSON[0].message ||
+      return translateServerMessage(saveError.responseJSON[0].errorMessage ||
+        saveError.responseJSON[0].message) ||
         translate('RootFolderSaveError');
     }
 

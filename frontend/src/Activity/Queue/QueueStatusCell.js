@@ -5,6 +5,7 @@ import TableRowCell from 'Components/Table/Cells/TableRowCell';
 import Popover from 'Components/Tooltip/Popover';
 import { icons, kinds, tooltipPositions } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './QueueStatusCell.css';
 
 function getDetailedPopoverBody(statusMessages) {
@@ -14,13 +15,13 @@ function getDetailedPopoverBody(statusMessages) {
         statusMessages.map(({ title, messages }) => {
           return (
             <div key={title}>
-              {title}
+              {translateServerMessage(title)}
               <ul>
                 {
                   messages.map((message) => {
                     return (
                       <li key={message}>
-                        {message}
+                        {translateServerMessage(message)}
                       </li>
                     );
                   })
@@ -65,11 +66,11 @@ function QueueStatusCell(props) {
   }
 
   if (isConversionFailed && conversionMessage) {
-    popoverBody = conversionMessage;
+    popoverBody = translateServerMessage(conversionMessage);
   }
 
   if (isConversionCancelled && conversionMessage) {
-    popoverBody = conversionMessage;
+    popoverBody = translateServerMessage(conversionMessage);
   }
 
   // status === 'downloading'
@@ -213,7 +214,7 @@ function QueueStatusCell(props) {
             className={isConverting ? styles.convertingIcon : null}
           />
         }
-        title={title}
+        title={translateServerMessage(title)}
         body={popoverBody}
         position={tooltipPositions.RIGHT}
         canFlip={false}

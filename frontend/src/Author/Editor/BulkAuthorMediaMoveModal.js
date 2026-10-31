@@ -12,9 +12,10 @@ import ModalFooter from 'Components/Modal/ModalFooter';
 import ModalHeader from 'Components/Modal/ModalHeader';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 
 function getErrorMessage(xhr) {
-  return xhr.responseJSON?.message || xhr.responseJSON?.error || translate('AuthorMediaMoveRequestFailed');
+  return translateServerMessage(xhr.responseJSON?.message || xhr.responseJSON?.error || translate('AuthorMediaMoveRequestFailed'));
 }
 
 function formatBytes(bytes) {

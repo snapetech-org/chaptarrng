@@ -38,56 +38,56 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
             SearchLanguages = Array.Empty<int>();
         }
 
-        [FieldDefinition(0, Label = "Website URL", Hidden = HiddenType.Hidden)]
+        [FieldDefinition(0, Label = "provider.field.feb650fa1243e", Hidden = HiddenType.Hidden)]
         public string BaseUrl { get; set; }
 
         private string _mamId;
 
-        [FieldDefinition(1, Label = "mam_id", Type = FieldType.Password, Privacy = PrivacyLevel.Password, HelpText = "The mam_id is found under Preferences > Security")]
+        [FieldDefinition(1, Label = "provider.field.fa5d0dbd394ef", Type = FieldType.Password, Privacy = PrivacyLevel.Password, HelpText = "provider.field.f77f1b50c39ac")]
         public string MamId
         {
             get => _mamId;
             set => _mamId = string.IsNullOrEmpty(value) ? value : value.Trim();
         }
 
-        [FieldDefinition(1, Label = "mam_ssl", Type = FieldType.Checkbox, HelpText = "Set if your MAM session uses the mam_ssl cookie (most accounts do). This adds mam_ssl=1 to requests.", Advanced = true)]
+        [FieldDefinition(1, Label = "provider.field.f7b6980f35f3c", Type = FieldType.Checkbox, HelpText = "provider.field.f965f27b9207d", Advanced = true)]
         public bool MamSsl { get; set; }
 
-        [FieldDefinition(2, Type = FieldType.Select, Label = "Freeleech Wedges", SelectOptions = typeof(MyAnonaMouseFreeleechWedgeAction), HelpText = "Follow your MAM site preference, or ask MAM to apply a personal freeleech wedge when grabbing an eligible torrent. Prefer Wedge falls back to a normal download if MAM cannot apply one.")]
+        [FieldDefinition(2, Type = FieldType.Select, Label = "provider.field.f515ca00fdbc1", SelectOptions = typeof(MyAnonaMouseFreeleechWedgeAction), HelpText = "provider.field.f4c3929f32227")]
         public int UseFreeleechWedge { get; set; }
 
-        [FieldDefinition(3, Type = FieldType.Checkbox, Label = "Only Use Wedges for Audiobooks", HelpText = "Do not request a wedge for ebook torrents. Chaptarr also avoids requesting wedges for torrents already marked free, personal freeleech, or VIP.")]
+        [FieldDefinition(3, Type = FieldType.Checkbox, Label = "provider.field.fb3ba54306f30", HelpText = "provider.field.f5d22c0abb0f6")]
         public bool UseFreeleechOnlyForAudiobooks { get; set; }
 
-        [FieldDefinition(4, Type = FieldType.Textbox, Label = "Minimum Seeders", HelpText = "Minimum number of seeders required.")]
+        [FieldDefinition(4, Type = FieldType.Textbox, Label = "provider.field.fd783e4d6293b", HelpText = "provider.field.fb8265760181c")]
         public int MinimumSeeders { get; set; }
 
-        [FieldDefinition(5, Type = FieldType.Checkbox, Label = "Enable Deep Search", HelpText = "Use JSON API with enhanced metadata including title, description, narrator, and duration information when available", Hidden = HiddenType.Hidden)]
+        [FieldDefinition(5, Type = FieldType.Checkbox, Label = "provider.field.fd1d33dec9414", HelpText = "provider.field.fda201a931c3d", Hidden = HiddenType.Hidden)]
         public bool EnableDeepSearch { get; set; }
 
-        [FieldDefinition(6, Type = FieldType.Checkbox, Label = "Integrate with Audiobookshelf", HelpText = "If you've connected ABS this will enhance your MAM searching", Hidden = HiddenType.Hidden)]
+        [FieldDefinition(6, Type = FieldType.Checkbox, Label = "provider.field.f5269857c4a80", HelpText = "provider.field.fddbb45739308", Hidden = HiddenType.Hidden)]
         public bool IntegrateWithAbs { get; set; }
 
-        [FieldDefinition(7, Type = FieldType.Number, Label = "Seed Time", Unit = "hours", HelpText = "Time in hours to seed before the download client stops the torrent. Leave empty to use the download client's default seeding rules. MAM requires at least 72 hours within 30 days; values below 72 hours will warn.")]
+        [FieldDefinition(7, Type = FieldType.Number, Label = "IndexerSettingsSeedTime", Unit = "hours", HelpText = "provider.field.f47441f72616d")]
         public int? SeedTimeHours { get; set; }
 
-        [FieldDefinition(8, Type = FieldType.Number, Label = "Early Download Limit", Unit = "days", HelpText = "Time before release date Chaptarr will download from this indexer, empty is no limit", Advanced = true)]
+        [FieldDefinition(8, Type = FieldType.Number, Label = "provider.field.fa4001360c131", Unit = "days", HelpText = "provider.field.f8ef2df0a1d96", Advanced = true)]
         public int? EarlyReleaseLimit { get; set; }
 
         // VIP Status - populated during connection test, hidden from editing (display-only elsewhere)
-        [FieldDefinition(9, Type = FieldType.Textbox, Label = "MAM User Class", HelpText = "Detected on connection test", Hidden = HiddenType.Hidden)]
+        [FieldDefinition(9, Type = FieldType.Textbox, Label = "provider.field.fb02d807fec76", HelpText = "provider.field.f3bd6c86c637a", Hidden = HiddenType.Hidden)]
         public string UserClass { get; set; }
 
-        [FieldDefinition(10, Type = FieldType.Checkbox, Label = "VIP Member", HelpText = "Detected on connection test", Hidden = HiddenType.Hidden)]
+        [FieldDefinition(10, Type = FieldType.Checkbox, Label = "provider.field.f7e906a8a7a41", HelpText = "provider.field.f3bd6c86c637a", Hidden = HiddenType.Hidden)]
         public bool IsVip { get; set; }
 
-        [FieldDefinition(11, Type = FieldType.Checkbox, Label = "Protect Unsatisfied Slots", HelpText = "Pause MAM grabs before your unsatisfied-torrent limit is reached. Disabling this can trigger MAM's 24-hour download suspension.", Advanced = true)]
+        [FieldDefinition(11, Type = FieldType.Checkbox, Label = "provider.field.fa29bea30de58", HelpText = "provider.field.fcc2215a99125", Advanced = true)]
         public bool ProtectUnsatisfiedSlots { get; set; }
 
-        [FieldDefinition(12, Type = FieldType.Number, Label = "Safety Reserve", Unit = "slots", HelpText = "Slots Chaptarr will always keep free to protect against MAM's reporting delay and downloads started outside Chaptarr. Neither automatic nor Interactive Search grabs can use this reserve.")]
+        [FieldDefinition(12, Type = FieldType.Number, Label = "provider.field.fececc0ba3a53", Unit = "slots", HelpText = "provider.field.fd2727e11e19f")]
         public int UnsatisfiedSlotReserve { get; set; }
 
-        [FieldDefinition(13, Type = FieldType.Number, Label = "User Buffer", Unit = "slots", HelpText = "Additional slots automatic grabs will keep free for releases you choose in Interactive Search or download outside Chaptarr. Interactive Search can use this buffer, but never the Safety Reserve.")]
+        [FieldDefinition(13, Type = FieldType.Number, Label = "provider.field.f5cb8dfbc2510", Unit = "slots", HelpText = "provider.field.f00d387283c10")]
         public int ManualGrabBuffer { get; set; }
 
         [FieldDefinition(14, Type = FieldType.Checkbox, Label = "IndexerSettingsNeverMoveOnImport", HelpText = "IndexerSettingsNeverMoveOnImportHelpText")]
@@ -95,19 +95,19 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
 
         // BookshelfNG exposed these MAM browse filters. Keep their serialized values and apply
         // them to Chaptarr's richer JSON search so existing indexer settings remain effective.
-        [FieldDefinition(15, Type = FieldType.Select, Label = "Search Type", SelectOptions = typeof(MyAnonaMouseSearchType), HelpText = "Filter MAM search results by account and freeleech status. Empty uses Chaptarr's seeder-aware default.")]
+        [FieldDefinition(15, Type = FieldType.Select, Label = "provider.field.f9a57b04a9014", SelectOptions = typeof(MyAnonaMouseSearchType), HelpText = "provider.field.f5da30e901390")]
         public int? SearchType { get; set; }
 
-        [FieldDefinition(16, Type = FieldType.Checkbox, Label = "Search in description")]
+        [FieldDefinition(16, Type = FieldType.Checkbox, Label = "provider.field.f7d8829f167e7")]
         public bool SearchInDescription { get; set; }
 
-        [FieldDefinition(17, Type = FieldType.Checkbox, Label = "Search in series")]
+        [FieldDefinition(17, Type = FieldType.Checkbox, Label = "provider.field.f492adad97f7b")]
         public bool SearchInSeries { get; set; }
 
-        [FieldDefinition(18, Type = FieldType.Checkbox, Label = "Search in filenames")]
+        [FieldDefinition(18, Type = FieldType.Checkbox, Label = "provider.field.f5bc9475e1083")]
         public bool SearchInFilenames { get; set; }
 
-        [FieldDefinition(19, Type = FieldType.Select, Label = "Search Languages", SelectOptions = typeof(MyAnonaMouseSearchLanguages), HelpText = "Optional MAM language filter. When empty, the author's metadata profile languages are used.")]
+        [FieldDefinition(19, Type = FieldType.Select, Label = "provider.field.f794ff3ca7f46", SelectOptions = typeof(MyAnonaMouseSearchLanguages), HelpText = "provider.field.f38207e4f9b29")]
         public IEnumerable<int> SearchLanguages { get; set; }
 
         // Persisted provider snapshot used by the grab guard. These are not user-editable.
@@ -148,101 +148,101 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
 
     public enum MyAnonaMouseSearchType
     {
-        [FieldOption(Label = "All torrents", Hint = "Search everything")]
+        [FieldOption(Label = "provider.option.o3e6bbeeff4ef", Hint = "provider.option.o415155739590")]
         All = 0,
 
-        [FieldOption(Label = "Only active", Hint = "Last update had 1+ seeders")]
+        [FieldOption(Label = "provider.option.oc83a723bae52", Hint = "provider.option.o99a1dca2bd66")]
         Active = 1,
 
-        [FieldOption(Label = "Freeleech", Hint = "Freeleech torrents")]
+        [FieldOption(Label = "provider.option.o294a0c3d28c4", Hint = "provider.option.oaab534cd510a")]
         Freeleech = 2,
 
-        [FieldOption(Label = "Freeleech or VIP", Hint = "Freeleech or VIP torrents")]
+        [FieldOption(Label = "provider.option.o72a071498ead", Hint = "provider.option.ob31cf1a5e75d")]
         FreeleechOrVip = 3,
 
-        [FieldOption(Label = "VIP", Hint = "VIP torrents")]
+        [FieldOption(Label = "provider.option.o986e2890737d", Hint = "provider.option.o7c3056a206f0")]
         Vip = 4,
 
-        [FieldOption(Label = "Not VIP", Hint = "Torrents not VIP")]
+        [FieldOption(Label = "provider.option.obff67db96859", Hint = "provider.option.o7a21be239c11")]
         NotVip = 5
     }
 
     public enum MyAnonaMouseSearchLanguages
     {
-        [FieldOption(Label = "English")] English = 1,
-        [FieldOption(Label = "Afrikaans")] Afrikaans = 17,
-        [FieldOption(Label = "Arabic")] Arabic = 32,
-        [FieldOption(Label = "Bengali")] Bengali = 35,
-        [FieldOption(Label = "Bosnian")] Bosnian = 51,
-        [FieldOption(Label = "Bulgarian")] Bulgarian = 18,
-        [FieldOption(Label = "Burmese")] Burmese = 6,
-        [FieldOption(Label = "Cantonese")] Cantonese = 44,
-        [FieldOption(Label = "Catalan")] Catalan = 19,
-        [FieldOption(Label = "Chinese")] Chinese = 2,
-        [FieldOption(Label = "Croatian")] Croatian = 49,
-        [FieldOption(Label = "Czech")] Czech = 20,
-        [FieldOption(Label = "Danish")] Danish = 21,
-        [FieldOption(Label = "Dutch")] Dutch = 22,
-        [FieldOption(Label = "Estonian")] Estonian = 61,
-        [FieldOption(Label = "Farsi")] Farsi = 39,
-        [FieldOption(Label = "Finnish")] Finnish = 23,
-        [FieldOption(Label = "French")] French = 36,
-        [FieldOption(Label = "German")] German = 37,
-        [FieldOption(Label = "Greek")] Greek = 26,
-        [FieldOption(Label = "Greek, Ancient")] GreekAncient = 59,
-        [FieldOption(Label = "Gujarati")] Gujarati = 3,
-        [FieldOption(Label = "Hebrew")] Hebrew = 27,
-        [FieldOption(Label = "Hindi")] Hindi = 8,
-        [FieldOption(Label = "Hungarian")] Hungarian = 28,
-        [FieldOption(Label = "Icelandic")] Icelandic = 63,
-        [FieldOption(Label = "Indonesian")] Indonesian = 53,
-        [FieldOption(Label = "Irish")] Irish = 56,
-        [FieldOption(Label = "Italian")] Italian = 43,
-        [FieldOption(Label = "Japanese")] Japanese = 38,
-        [FieldOption(Label = "Javanese")] Javanese = 12,
-        [FieldOption(Label = "Kannada")] Kannada = 5,
-        [FieldOption(Label = "Korean")] Korean = 41,
-        [FieldOption(Label = "Lithuanian")] Lithuanian = 50,
-        [FieldOption(Label = "Latin")] Latin = 46,
-        [FieldOption(Label = "Latvian")] Latvian = 62,
-        [FieldOption(Label = "Malay")] Malay = 33,
-        [FieldOption(Label = "Malayalam")] Malayalam = 58,
-        [FieldOption(Label = "Manx")] Manx = 57,
-        [FieldOption(Label = "Marathi")] Marathi = 9,
-        [FieldOption(Label = "Norwegian")] Norwegian = 48,
-        [FieldOption(Label = "Polish")] Polish = 45,
-        [FieldOption(Label = "Portuguese")] Portuguese = 34,
-        [FieldOption(Label = "Brazilian Portuguese (BP)")] BrazilianPortuguese = 52,
-        [FieldOption(Label = "Punjabi")] Punjabi = 14,
-        [FieldOption(Label = "Romanian")] Romanian = 30,
-        [FieldOption(Label = "Russian")] Russian = 16,
-        [FieldOption(Label = "Scottish Gaelic")] ScottishGaelic = 24,
-        [FieldOption(Label = "Sanskrit")] Sanskrit = 60,
-        [FieldOption(Label = "Serbian")] Serbian = 31,
-        [FieldOption(Label = "Slovenian")] Slovenian = 54,
-        [FieldOption(Label = "Spanish")] Spanish = 4,
-        [FieldOption(Label = "Castilian Spanish")] CastilianSpanish = 55,
-        [FieldOption(Label = "Swedish")] Swedish = 40,
-        [FieldOption(Label = "Tagalog")] Tagalog = 29,
-        [FieldOption(Label = "Tamil")] Tamil = 11,
-        [FieldOption(Label = "Telugu")] Telugu = 10,
-        [FieldOption(Label = "Thai")] Thai = 7,
-        [FieldOption(Label = "Turkish")] Turkish = 42,
-        [FieldOption(Label = "Ukrainian")] Ukrainian = 25,
-        [FieldOption(Label = "Urdu")] Urdu = 15,
-        [FieldOption(Label = "Vietnamese")] Vietnamese = 13,
+        [FieldOption(Label = "provider.option.oba118bf7fc9c")] English = 1,
+        [FieldOption(Label = "provider.option.o6884e4dc7300")] Afrikaans = 17,
+        [FieldOption(Label = "provider.option.obafb66f32cd7")] Arabic = 32,
+        [FieldOption(Label = "provider.option.oe7f4fe2631bb")] Bengali = 35,
+        [FieldOption(Label = "provider.option.o1d25285d7182")] Bosnian = 51,
+        [FieldOption(Label = "provider.option.oecd986094baf")] Bulgarian = 18,
+        [FieldOption(Label = "provider.option.o2e9fa8e62006")] Burmese = 6,
+        [FieldOption(Label = "provider.option.oad83a00f609f")] Cantonese = 44,
+        [FieldOption(Label = "provider.option.o843c489421f4")] Catalan = 19,
+        [FieldOption(Label = "provider.option.o8a9779f42128")] Chinese = 2,
+        [FieldOption(Label = "provider.option.o754787c2f88c")] Croatian = 49,
+        [FieldOption(Label = "provider.option.o8b463ea23a7e")] Czech = 20,
+        [FieldOption(Label = "provider.option.ofe4338ad620c")] Danish = 21,
+        [FieldOption(Label = "provider.option.o45f16144c18c")] Dutch = 22,
+        [FieldOption(Label = "provider.option.o4d8bdb8972a2")] Estonian = 61,
+        [FieldOption(Label = "provider.option.oe4d40d318e99")] Farsi = 39,
+        [FieldOption(Label = "provider.option.o5710b435f90a")] Finnish = 23,
+        [FieldOption(Label = "provider.option.o7458199fe97a")] French = 36,
+        [FieldOption(Label = "provider.option.oa659b60d246d")] German = 37,
+        [FieldOption(Label = "provider.option.o5c74e5b8100c")] Greek = 26,
+        [FieldOption(Label = "provider.option.o60a7067462bf")] GreekAncient = 59,
+        [FieldOption(Label = "provider.option.oaa1324f5df47")] Gujarati = 3,
+        [FieldOption(Label = "provider.option.o33e00df2aac3")] Hebrew = 27,
+        [FieldOption(Label = "provider.option.o63c2dc51d089")] Hindi = 8,
+        [FieldOption(Label = "provider.option.o58801e6907f0")] Hungarian = 28,
+        [FieldOption(Label = "provider.option.o2bca68c58bb4")] Icelandic = 63,
+        [FieldOption(Label = "provider.option.o4fe1bb67f3b9")] Indonesian = 53,
+        [FieldOption(Label = "provider.option.od65819e43e55")] Irish = 56,
+        [FieldOption(Label = "provider.option.ofe1d9c7db376")] Italian = 43,
+        [FieldOption(Label = "provider.option.obe4ee906d3ef")] Japanese = 38,
+        [FieldOption(Label = "provider.option.o1d8b8d4e409f")] Javanese = 12,
+        [FieldOption(Label = "provider.option.o4829406f52d7")] Kannada = 5,
+        [FieldOption(Label = "provider.option.o04656c6fe003")] Korean = 41,
+        [FieldOption(Label = "provider.option.o8625f6a2065b")] Lithuanian = 50,
+        [FieldOption(Label = "provider.option.o2d38c456a2ec")] Latin = 46,
+        [FieldOption(Label = "provider.option.o28fa038bb8bc")] Latvian = 62,
+        [FieldOption(Label = "provider.option.ocd43b2d3b020")] Malay = 33,
+        [FieldOption(Label = "provider.option.o2247ef59ce64")] Malayalam = 58,
+        [FieldOption(Label = "provider.option.o54b0bff947fb")] Manx = 57,
+        [FieldOption(Label = "provider.option.o6bbef3a79c78")] Marathi = 9,
+        [FieldOption(Label = "provider.option.o71f4cf5c7a23")] Norwegian = 48,
+        [FieldOption(Label = "provider.option.o770341d6e89e")] Polish = 45,
+        [FieldOption(Label = "provider.option.o98b01b890687")] Portuguese = 34,
+        [FieldOption(Label = "provider.option.o911140b89c71")] BrazilianPortuguese = 52,
+        [FieldOption(Label = "provider.option.o9e61f8c4fbca")] Punjabi = 14,
+        [FieldOption(Label = "provider.option.o096b861df653")] Romanian = 30,
+        [FieldOption(Label = "provider.option.o5bcc40adf6e0")] Russian = 16,
+        [FieldOption(Label = "provider.option.o1435d07cdf1c")] ScottishGaelic = 24,
+        [FieldOption(Label = "provider.option.oa3ab29b2b806")] Sanskrit = 60,
+        [FieldOption(Label = "provider.option.ob4a077dadb30")] Serbian = 31,
+        [FieldOption(Label = "provider.option.odea070feef80")] Slovenian = 54,
+        [FieldOption(Label = "provider.option.o3411059cb8e0")] Spanish = 4,
+        [FieldOption(Label = "provider.option.o7285d46b982d")] CastilianSpanish = 55,
+        [FieldOption(Label = "provider.option.oa89a9329d3d4")] Swedish = 40,
+        [FieldOption(Label = "provider.option.o605eac303049")] Tagalog = 29,
+        [FieldOption(Label = "provider.option.o135d78ac8f56")] Tamil = 11,
+        [FieldOption(Label = "provider.option.oa4504b3d0ff7")] Telugu = 10,
+        [FieldOption(Label = "provider.option.oad705ee19c04")] Thai = 7,
+        [FieldOption(Label = "provider.option.o6e7aac65db01")] Turkish = 42,
+        [FieldOption(Label = "provider.option.o6f424303fa12")] Ukrainian = 25,
+        [FieldOption(Label = "provider.option.o2c6ef73fc9e2")] Urdu = 15,
+        [FieldOption(Label = "provider.option.of25499e9df5c")] Vietnamese = 13,
         [FieldOption(Label = "Other")] Other = 47
     }
 
     public enum MyAnonaMouseFreeleechWedgeAction
     {
-        [FieldOption(Label = "Follow MAM Preferences", Hint = "Do not force a wedge; let your MAM account preferences decide")]
+        [FieldOption(Label = "provider.option.o687198870652", Hint = "provider.option.od54cdf586b7b")]
         Never = 0,
 
-        [FieldOption(Label = "Prefer Wedge", Hint = "Request a personal freeleech wedge when eligible, then fall back to a normal download if unavailable")]
+        [FieldOption(Label = "provider.option.o6c3105944211", Hint = "provider.option.o9cb1fa5198db")]
         Preferred = 1,
 
-        [FieldOption(Label = "Require Wedge", Hint = "Fail the grab if MAM cannot apply the required personal freeleech wedge")]
+        [FieldOption(Label = "provider.option.o0be971351722", Hint = "provider.option.o836f9584c3e0")]
         Required = 2,
     }
 }

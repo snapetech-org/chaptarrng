@@ -10,6 +10,7 @@ import ModalHeader from 'Components/Modal/ModalHeader';
 import { kinds, sizes } from 'Helpers/Props';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './ImportListSyncModal.css';
 
 function getErrorMessage(xhr) {
@@ -18,7 +19,7 @@ function getErrorMessage(xhr) {
     const messages = responseJson
       .map((error) => error?.errorMessage || error?.message || (typeof error === 'string' ? error : null))
       .filter((message) => typeof message === 'string' && message.trim().length)
-      .map((message) => message.trim());
+      .map((message) => translateServerMessage(message.trim()));
 
     if (messages.length) {
       return messages.join(' ');
@@ -26,12 +27,12 @@ function getErrorMessage(xhr) {
   }
 
   if (typeof responseJson === 'string') {
-    return responseJson;
+    return translateServerMessage(responseJson);
   }
 
-  return responseJson?.message ||
+  return translateServerMessage(responseJson?.message ||
     responseJson?.detail ||
-    responseJson?.error ||
+    responseJson?.error) ||
     (xhr?.status && xhr?.statusText ? `${xhr.status} ${xhr.statusText}` : null) ||
     xhr?.statusText ||
     translate('RequestFailed');

@@ -16,6 +16,7 @@ import ModalHeader from 'Components/Modal/ModalHeader';
 import { inputTypes, kinds } from 'Helpers/Props';
 import AdvancedSettingsButton from 'Settings/AdvancedSettingsButton';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import AudioBookShelfLibraryMappings from './AudioBookShelfLibraryMappings';
 import NotificationEventItems from './NotificationEventItems';
 import styles from './EditNotificationModalContent.css';
@@ -91,7 +92,7 @@ function EditNotificationModalContent(props) {
                     className={styles.message}
                     kind={message.value.type}
                   >
-                    {message.value.message}
+                    {translateServerMessage(message.value.message)}
                   </Alert>
               }
 

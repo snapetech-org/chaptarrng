@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using NLog;
+using NzbDrone.Core.Localization;
 using NzbDrone.Common.Messaging;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Events;
@@ -16,6 +17,7 @@ using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Configuration.Events;
 using NzbDrone.Core.ThingiProvider.Events;
 using NzbDrone.Core.Notifications.Webhook;
 using Newtonsoft.Json.Linq;
@@ -38,6 +40,7 @@ namespace NzbDrone.Core.Notifications.MqttGateway
         private readonly IMediaFileRepository _mediaFileRepository;
         private readonly MqttGatewaySnapshotProvider _snapshotProvider;
         private readonly Logger _logger;
+        private readonly NotificationText _notificationText;
         private readonly Channel<IEvent> _events;
         private readonly CancellationTokenSource _shutdown = new();
         private readonly Dictionary<int, MqttGatewayConnectionWorker> _connections = new();
@@ -60,6 +63,7 @@ namespace NzbDrone.Core.Notifications.MqttGateway
                                   ISeriesBookLinkService seriesBookLinkService,
                                   IMediaFileRepository mediaFileRepository,
                                   MqttGatewaySnapshotProvider snapshotProvider,
+                                  ILocalizationService localizationService,
                                   Logger logger)
         {
             _notificationFactory = notificationFactory;
@@ -73,6 +77,7 @@ namespace NzbDrone.Core.Notifications.MqttGateway
             _mediaFileRepository = mediaFileRepository;
             _snapshotProvider = snapshotProvider;
             _logger = logger;
+            _notificationText = new NotificationText(localizationService);
             _events = Channel.CreateBounded<IEvent>(new BoundedChannelOptions(ServiceQueueCapacity)
             {
                 FullMode = BoundedChannelFullMode.Wait,
@@ -149,7 +154,8 @@ namespace NzbDrone.Core.Notifications.MqttGateway
                 return;
             }
 
-            if (message is ProviderAddedEvent<INotification> ||
+            if (message is ConfigSavedEvent ||
+                message is ProviderAddedEvent<INotification> ||
                 message is ProviderUpdatedEvent<INotification> ||
                 message is ProviderDeletedEvent<INotification>)
             {
@@ -245,7 +251,7 @@ namespace NzbDrone.Core.Notifications.MqttGateway
                     definition.Settings is MqttGatewaySettings mqttSettings &&
                     mqttSettings.Validate().IsValid)
                 {
-                    desired[definition.Id] = (definition, mqttSettings, MqttGatewayMqtt.GetSettingsFingerprint(mqttSettings));
+                    desired[definition.Id] = (definition, mqttSettings, _notificationText.LocaleFingerprint(MqttGatewayMqtt.GetSettingsFingerprint(mqttSettings)));
                 }
 
                 if (string.Equals(definition.Implementation, nameof(Webhook), StringComparison.OrdinalIgnoreCase) &&
@@ -279,6 +285,7 @@ namespace NzbDrone.Core.Notifications.MqttGateway
                         item.Value.Settings,
                         _snapshotProvider,
                         _configFileProvider,
+                        _notificationText,
                         _logger);
                 }
             }

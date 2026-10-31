@@ -14,9 +14,9 @@ The server merges English, the declared parent catalog, then the exact locale ca
 
 ## Current target-locale review status
 
-The October 31, 2026 follow-up reviewed all 2,950 source IDs across the agreed 12 locales (35,400 decisions). Every target catalog now contains every source ID. The context-vetted milestone changes 7,388 target values from `a029e3b7`, rejects 30 purely stylistic proposals, preserves product/provider names and release revision markers, and replaces five ambiguous English source labels/help messages with plain wording. No uncertain model decisions remain in the accepted set.
+The October 31, 2026 follow-up reviewed all 2,950 source IDs across the agreed 12 locales (35,400 decisions). Every target catalog contains all 2,950 baseline source IDs. The expanded English catalog now has 4,015 IDs; 1,065 new fixed server/schema/outbound IDs per locale are awaiting the serialized generation and review batch. The context-vetted milestone changes 7,388 target values from `a029e3b7`, rejects 30 purely stylistic proposals, preserves product/provider names and release revision markers, and replaces five ambiguous English source labels/help messages with plain wording. No uncertain model decisions remain in the accepted set.
 
-`docs/localization/core-review-evidence.json` records counts, exact catalog hashes, retained evidence hashes, and the limits of this review. These are machine drafts and agent contextual reviews; qualified native-speaker signoff remains unclaimed. Fixed server/API, persisted and outbound notification copy, and final headed Agentic VM acceptance are the next delivery milestone.
+`docs/localization/core-review-evidence.json` records counts, exact catalog hashes, retained evidence hashes, and the limits of this review. These are machine drafts and agent contextual reviews; qualified native-speaker signoff remains unclaimed. The expanded implementation covers fixed server/API and persisted messages, provider schema labels/help/static options, and outbound notification copy. The frozen new-source batch has 12,780 target cells; generation/review and final headed Agentic VM acceptance remain pending.
 
 ## Per-string provenance
 

@@ -4,6 +4,7 @@ import React from 'react';
 import Icon from 'Components/Icon';
 import Link from 'Components/Link/Link';
 import { icons } from 'Helpers/Props';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './FormInputHelpText.css';
 
 function FormInputHelpText(props) {
@@ -28,14 +29,14 @@ function FormInputHelpText(props) {
         isCheckInput && styles.isCheckInput
       )}
     >
-      {text}
+      {translateServerMessage(text)}
 
       {
         link ?
           <Link
             className={styles.link}
             to={link}
-            title={tooltip}
+            title={translateServerMessage(tooltip)}
           >
             <Icon
               name={icons.EXTERNAL_LINK}
@@ -49,7 +50,7 @@ function FormInputHelpText(props) {
           <Icon
             containerClassName={styles.details}
             name={icons.INFO}
-            title={tooltip}
+            title={translateServerMessage(tooltip)}
           /> :
           null
       }

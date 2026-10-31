@@ -78,6 +78,7 @@ namespace Chaptarr.Core.Test.Notifications
                 factory,
                 DispatchProxy.Create<INotificationStatusService, NoOpNotificationStatusServiceProxy>(),
                 DispatchProxy.Create<IEditionService, ThrowingProxy<IEditionService>>(),
+                null,
                 LogManager.GetCurrentClassLogger());
         }
 
@@ -96,7 +97,7 @@ namespace Chaptarr.Core.Test.Notifications
             };
 
             Assert.DoesNotThrow(() => service.Handle(new BookImportIncompleteEvent(trackedDownload)));
-            Assert.That(recorder.ImportFailureMessage.Message, Is.EqualTo("Chaptarr failed to Import all files for an unknown download"));
+            Assert.That(recorder.ImportFailureMessage.Message, Is.EqualTo("Chaptarr failed to import all files for an unknown download"));
         }
 
         [Test]

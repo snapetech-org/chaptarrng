@@ -26,6 +26,7 @@ import AdvancedSettingsButton from 'Settings/AdvancedSettingsButton';
 import HardcoverApiKeyModal from 'System/Quickstart/HardcoverApiKeyModal';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import styles from './EditImportListModalContent.css';
 
 function ImportListMonitoringOptionsPopoverContent() {
@@ -185,7 +186,8 @@ function EditImportListModalContent(props) {
 
             return f?.errorMessage || f?.message || null;
           })
-          .filter((v) => typeof v === 'string' && v.trim().length);
+          .filter((v) => typeof v === 'string' && v.trim().length)
+          .map(translateServerMessage);
 
         if (messages.length) {
           return messages.join(' ');
@@ -193,25 +195,26 @@ function EditImportListModalContent(props) {
       }
 
       if (typeof responseJson === 'string') {
-        return responseJson;
+        return translateServerMessage(responseJson);
       }
 
       if (responseJson.message) {
-        return responseJson.message;
+        return translateServerMessage(responseJson.message);
       }
 
       if (responseJson.error) {
-        return responseJson.error;
+        return translateServerMessage(responseJson.error);
       }
 
       if (responseJson.detail) {
-        return responseJson.detail;
+        return translateServerMessage(responseJson.detail);
       }
 
       if (responseJson.errors && typeof responseJson.errors === 'object') {
         const errorValues = Object.values(responseJson.errors)
           .flat()
-          .filter((v) => typeof v === 'string' && v.trim().length);
+          .filter((v) => typeof v === 'string' && v.trim().length)
+          .map(translateServerMessage);
 
         if (errorValues.length) {
           return errorValues.join(' ');
@@ -619,7 +622,7 @@ function EditImportListModalContent(props) {
                     className={styles.message}
                     kind={message.value.type}
                   >
-                    {message.value.message}
+                    {translateServerMessage(message.value.message)}
                   </Alert>
               }
 
@@ -641,7 +644,7 @@ function EditImportListModalContent(props) {
                     kind={kinds.WARNING}
                     role="alert"
                   >
-                    {goodreadsValidationMessage}
+                    {translateServerMessage(goodreadsValidationMessage)}
                   </Alert>
               }
 
