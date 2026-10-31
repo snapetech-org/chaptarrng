@@ -4252,16 +4252,29 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 return new PinnedFirstCrackEvaluation { FailureReason = "media_type_mismatch" };
             }
 
-            // 1) Narrator evidence (scan all matchable tag values)
-            if (!TryFindNarratorEvidence(target.NarratorCandidates, target.Book.Author?.Name, tags, out matchedNarrator))
+            // 1) Narrator evidence (scan all matchable tag values). Many rips carry no narrator
+            // credit at all; that is missing evidence, not a contradiction. When no tag names any
+            // narrator, a length that singles out the pinned recording stands in for it.
+            string durationDetail = null;
+            var observedSeconds = 0;
+            if (!TryFindNarratorEvidence(target.NarratorCandidates, target.Book.Author?.Name, tags, out matchedNarrator) &&
+                !TryProvePinnedNarrationByDuration(file, tags, target.Book, target.Edition, out observedSeconds, out durationDetail))
             {
                 return new PinnedFirstCrackEvaluation { FailureReason = "wanted narrator not present in embedded tags" };
             }
 
-            // 2) Title smoke test (reuse existing containment logic)
-            if (!_containmentValidator.ValidateEditionInTags(target.Edition.Title, tags))
+            // 2) Title smoke test (reuse existing containment logic). Audible-style edition titles end
+            // in ", Book N", which uploads rarely repeat in their tags.
+            var provedTitle = target.Edition.Title;
+            if (!_containmentValidator.ValidateEditionInTags(provedTitle, tags))
             {
-                return new PinnedFirstCrackEvaluation { FailureReason = "wanted edition title not present in embedded tags" };
+                provedTitle = PinnedTitleBookNumberSuffix.Replace(target.Edition.Title, string.Empty).Trim();
+                if (provedTitle.Length == 0 ||
+                    provedTitle.Length == target.Edition.Title.Trim().Length ||
+                    !_containmentValidator.ValidateEditionInTags(provedTitle, tags))
+                {
+                    return new PinnedFirstCrackEvaluation { FailureReason = "wanted edition title not present in embedded tags" };
+                }
             }
 
             // 3) Author smoke test (reuse existing containment logic)
@@ -4275,18 +4288,20 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 Mode = GetConfiguredMatchingStrictness().ToString(),
                 Route = "pinned_target/embedded_tags",
                 MatchedVia = "pinned_first_crack",
-                Summary = "Matched the pinned edition from title, author, and narrator evidence"
+                Summary = durationDetail == null
+                    ? "Matched the pinned edition from title, author, and narrator evidence"
+                    : "Matched the pinned edition from title, author, and length; no tag names a narrator"
             };
             var identityValues = new List<MatchIdentityProofValue>();
 
-            foreach (var titleEvidence in _containmentValidator.GetEditionTitleEvidence(target.Edition.Title, tags) ?? Array.Empty<EditionTitleEvidence>())
+            foreach (var titleEvidence in _containmentValidator.GetEditionTitleEvidence(provedTitle, tags) ?? Array.Empty<EditionTitleEvidence>())
             {
                 identityValues.Add(new MatchIdentityProofValue(
                     MatchIdentityRole.Title,
                     "embedded_tag",
                     titleEvidence.FieldName,
                     titleEvidence.FieldValue,
-                    target.Edition.Title,
+                    provedTitle,
                     "edition",
                     "This logical field proved the pinned edition title."));
                 provenance.SupportingSignals.Add(new MatchSignal
@@ -4296,7 +4311,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                     Source = "embedded_tag",
                     Field = titleEvidence.FieldName,
                     Observed = LimitSignalValue(titleEvidence.FieldValue),
-                    Expected = LimitSignalValue(target.Edition.Title),
+                    Expected = LimitSignalValue(provedTitle),
                     Detail = "This logical field proved the pinned edition title."
                 });
             }
@@ -4340,6 +4355,19 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 });
             }
 
+            if (durationDetail != null)
+            {
+                provenance.SupportingSignals.Add(new MatchSignal
+                {
+                    Type = "duration",
+                    Scope = "edition",
+                    Source = "media_info",
+                    Observed = observedSeconds.ToString(CultureInfo.InvariantCulture),
+                    Expected = target.Edition.DurationSeconds?.ToString(CultureInfo.InvariantCulture),
+                    Detail = durationDetail
+                });
+            }
+
             provenance.EvidenceValues = BuildEvidenceValuesFromSignals(provenance, tags, "embedded_tag");
             var identityProof = new MatchIdentityProof(PreferSourceIdentityValues(identityValues));
 
@@ -4366,6 +4394,113 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 MatchedNarrator = matchedNarrator,
                 Match = pinnedMatch
             };
+        }
+
+        private bool TryProvePinnedNarrationByDuration(
+            DiscoveredFileWithMetadata file,
+            IDictionary<string, List<string>> tags,
+            Book pinnedBook,
+            Edition pinnedEdition,
+            out int observedSeconds,
+            out string detail)
+        {
+            observedSeconds = 0;
+            detail = null;
+
+            if (NamesAnyNarrator(tags))
+            {
+                return false;
+            }
+
+            var expectedSeconds = pinnedEdition?.DurationSeconds;
+            if (!expectedSeconds.HasValue || expectedSeconds.Value <= 0)
+            {
+                return false;
+            }
+
+            var fileSeconds = file?.DurationSeconds;
+            if ((!fileSeconds.HasValue || fileSeconds.Value <= 0) && _mediaInfoExtractor != null && !string.IsNullOrWhiteSpace(file?.Path))
+            {
+                fileSeconds = MediaDuration.FromTimeSpan(_mediaInfoExtractor.GetDuration(file.Path));
+            }
+
+            if (!fileSeconds.HasValue || fileSeconds.Value <= 0)
+            {
+                return false;
+            }
+
+            var diffSeconds = Math.Abs(expectedSeconds.Value - fileSeconds.Value);
+            var allowedSeconds = AudiobookDurationTolerance.ForMatchingSeconds(expectedSeconds.Value);
+            if (diffSeconds > allowedSeconds)
+            {
+                return false;
+            }
+
+            // Narrations of one book can be minutes apart (two Harry Potter readings differ by
+            // seven), well inside the matching tolerance. The length only identifies the pinned
+            // narration when every other known narration is clearly farther from the file.
+            var nearestOtherNarration = (pinnedBook?.Editions ?? new List<Edition>())
+                .Where(e => e != null &&
+                            e.Id != pinnedEdition.Id &&
+                            !e.IsEbook &&
+                            e.DurationSeconds.GetValueOrDefault() > 0 &&
+                            GetNarratorCandidates(e).Count > 0 &&
+                            !BookService.HaveSameNarration(pinnedEdition, e))
+                .Select(e => (int?)Math.Abs(e.DurationSeconds.Value - fileSeconds.Value))
+                .Min();
+
+            if (nearestOtherNarration.HasValue &&
+                nearestOtherNarration.Value - diffSeconds < PinnedNarrationLengthMarginSeconds)
+            {
+                return false;
+            }
+
+            observedSeconds = fileSeconds.Value;
+            detail = $"No tag names a narrator; the length matched the pinned edition. Difference {diffSeconds} seconds; matching tolerance {allowedSeconds} seconds" +
+                     (nearestOtherNarration.HasValue ? $"; nearest other narration {nearestOtherNarration.Value} seconds away." : ".");
+            return true;
+        }
+
+        private const int PinnedNarrationLengthMarginSeconds = 120;
+
+        // Same suffix the indexer fallbacks drop (BookSearchCriteria.BookQueryWithoutBookNumber).
+        private static readonly Regex PinnedTitleBookNumberSuffix = new Regex(@"\s*,?\s*book\s+\d+(\.\d+)?\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // Tags that credit a narrator in the containers AudioTag reads (COMPOSER and PERFORMER
+        // carry the narrator in common audiobook taggers), plus free-text credits anywhere.
+        private static readonly HashSet<string> NarratorCreditTagNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "NARRATOR", "NARRATORS", "NARRATEDBY", "READER", "READ BY", "PERFORMER", "COMPOSER", "©wrt", "TCOM", "WM/Narrator", "WM/Composer"
+        };
+
+        private static bool NamesAnyNarrator(IDictionary<string, List<string>> tags)
+        {
+            foreach (var kv in tags ?? new Dictionary<string, List<string>>())
+            {
+                if (kv.Value == null || !kv.Value.Any(v => !string.IsNullOrWhiteSpace(v)))
+                {
+                    continue;
+                }
+
+                var name = kv.Key ?? string.Empty;
+                var lastSeparator = name.LastIndexOf(':');
+                if (lastSeparator >= 0)
+                {
+                    name = name.Substring(lastSeparator + 1);
+                }
+
+                if (NarratorCreditTagNames.Contains(name.Trim()))
+                {
+                    return true;
+                }
+
+                if (kv.Value.Any(v => v != null && Regex.IsMatch(v, @"\b(?:narrated|read)\s+by\b|\bnarrators?\b", RegexOptions.IgnoreCase)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static List<string> GetNarratorCandidates(Edition edition)
