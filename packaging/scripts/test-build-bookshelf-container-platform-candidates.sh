@@ -123,10 +123,29 @@ grep -Fq 'OPEN_LIBRARY_CONTACT_EMAIL=' "$stage/catalogs/.env.sample"
 grep -Fq 'MAX_PATH=' "$stage/catalogs/.env.sample"
 grep -Fq 'MAX_NAME=' "$stage/catalogs/.env.sample"
 grep -Fq "Release multi-architecture image: \`$image\`" "$stage/README.md"
-grep -Fq "\`HARDCOVER=false\` when migrating a prior softcover image." "$stage/README.md"
-grep -Fq "old \`image.tag\`" "$stage/README.md"
-grep -Fq "explicit \`bookshelfMigration.providerMode\`" "$stage/README.md"
-grep -Fq "\`BOOKSHELFNG_PORT\` and \`BOOKSHELFNG_HOST_PORT\`" "$stage/README.md"
+grep -Fq "BookshelfNG source's \`HARDCOVER=true\` or \`HARDCOVER=false\` setting in channel" "$stage/README.md"
+grep -Fq 'Existing package, service, volume, and host-port identities are kept' "$stage/README.md"
+
+python3 - "$repo_root/packaging/legacy/unraid/bookshelfng.xml" "$stage/unraid/bookshelfng.xml" "$image" <<'PY'
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+
+source = ET.parse(Path(sys.argv[1])).getroot()
+candidate = ET.parse(Path(sys.argv[2])).getroot()
+expected_image = sys.argv[3]
+source_image = source.find("Repository")
+candidate_image = candidate.find("Repository")
+if source.tag != "Container" or candidate.tag != "Container":
+    raise SystemExit("The Unraid source and release candidate must be container templates.")
+if source_image is None or candidate_image is None:
+    raise SystemExit("The Unraid source and release candidate must declare an image repository.")
+if candidate_image.text != expected_image:
+    raise SystemExit("The generated Unraid template is not pinned to the release image digest.")
+source_image.text = expected_image
+if ET.tostring(source) != ET.tostring(candidate):
+    raise SystemExit("The generated Unraid template changed settings beyond the release image digest.")
+PY
 
 startos_manifest="$stage/startos/startos/manifest/index.ts"
 startos_version="$stage/startos/startos/versions/current.ts"

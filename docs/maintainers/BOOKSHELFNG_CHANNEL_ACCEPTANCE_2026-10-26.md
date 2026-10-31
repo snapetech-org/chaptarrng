@@ -926,3 +926,36 @@ remains 51/51. Direct outbound coverage pending decreased from 684 to 624;
 provider, option, loading, and server-message coverage remains open. The
 reused values are tracked as unreviewed exact translations, not qualified
 localization sign-off.
+
+## Current-main handoff and runner snapshot — 2026-10-31 20:32 UTC
+
+Remote `main` is `c9bff466a1a29d4fb12c34a0bd4aa3923710f80f`; the repository has
+no open pull requests and only the remote `main` branch. No Actions run exists
+for this exact head. The existing `.76` macOS acceptance run
+[41230571219](https://github.com/snapetech-org/chaptarrng/actions/runs/41230571219)
+is still queued on `4d02c9db` for both architectures. Build
+[41229894913](https://github.com/snapetech-org/chaptarrng/actions/runs/41229894913)
+is queued on `c59488f1`; its PostgreSQL, Linux, Docker, and Windows jobs failed,
+and Intel macOS remains queued. Windows stopped at frontend dependency install:
+Yarn timed out fetching `@fortawesome/free-solid-svg-icons-7.3.1.tgz`; the
+Chocolatey `.76` handoff step was skipped, so this run supplies no installed
+migration evidence. The standalone-assets and Helm jobs also remain queued on
+older source heads. None validates the current candidate.
+
+The 20:30 UTC private-JIT broker snapshot had seven active jobs and 35 eligible
+queue entries, with no hosted recoveries or free kspld0 slots; Windows group
+11 had no runners. No compatible ChaptarrNG runner was online. Existing queued
+work was preserved, and no run was dispatched, retried, or canceled.
+
+The generated container-platform bundle check was tightened on current main:
+it compares the emitted Unraid XML with the source template, allowing only the
+release digest-pinned image value, and updates two generated-README assertions
+to the current contract. The exact 0.9.978 candidate bundle test passed,
+including its checksum, Cloudron, Co-op Cloud, catalog, Unraid, and StartOS
+checks plus `npm ci`, TypeScript check, and StartOS build. The run log is
+retained at
+`/mnt/disks/scratch/task-worktrees/chaptarrng-unraid-bundle-contract-20261031/evidence-main-test-20261031.log`.
+This closes a generated-bundle regression-test gap; it does not establish
+external publication or installed Unraid, Cloudron, StartOS, or Co-op Cloud
+acceptance. Private Windows `.76` acceptance, external feed/repository
+delivery, and operator-data/live-provider sign-off remain open.
