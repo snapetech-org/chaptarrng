@@ -3,17 +3,22 @@
 ## Current status — 2026-10-30
 
 BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977` are the latest public
-application releases. ChaptarrNG `main` is `474a3541`. Its exact-head Build
-[#41164597664](https://github.com/snapetech-org/chaptarrng/actions/runs/41164597664)
-is queued; only the legacy distribution and runner-contract job is queued, and
-the build, platform, and security jobs in that run are skipped. This head has
-no completed exact-head validation.
+application releases. ChaptarrNG `main` is `64689f1f`. The prior exact-head
+Build [#41164597664](https://github.com/snapetech-org/chaptarrng/actions/runs/41164597664)
+was cancelled on the older `474a3541` head and does not validate current
+`main`. ChaptarrNG PR [#183](https://github.com/snapetech-org/chaptarrng/pull/183)
+proposes the one-image handoff and includes the latest private-JIT dispatch
+changes from `main`. The earlier trusted owner-PR dispatch
+[#41167825847](https://github.com/snapetech-org/chaptarrng/actions/runs/41167825847)
+was queued on pre-integration head `f63796dd`; it does not validate the current
+PR head. No exact-head private-JIT build or platform result exists for the
+updated branch.
 
 The scheduled BookshelfNG bridge
 [#41157387864](https://github.com/snapetech-org/bookshelfng/actions/runs/41157387864)
-is pending with no jobs started. No legacy package, image, installer, updater,
-or chart identity has been redirected. Keep BookshelfNG in service and leave
-release and bridge gates closed.
+is waiting behind 16 earlier bridge runs with no jobs started. No legacy
+package, image, installer, updater, or chart identity has been redirected.
+Keep BookshelfNG in service and leave release and bridge gates closed.
 
 **Single-image migration contract (2026-10-30):** The earlier proposal for
 separate Goodreads and Hardcover compatibility images is withdrawn. The
@@ -41,13 +46,14 @@ separate cumulative blocker covering BookshelfNG carryover and every
 ChaptarrNG capability that is maintained, active, or unreleased, including
 localization and RTL work now in `main`.
 
-The refreshed BookshelfNG source-path audit compares source `1bd7f2dc` with
-target `474a3541`: 1,174 changed paths, 56 reviewed mappings, 644 dispositions,
-and 530 paths still needing disposition. The open set includes semantic review,
+The refreshed main-to-main BookshelfNG source-path audit compares source
+`1bd7f2dc` with target `64689f1f`: 1,174 changed paths, 56 reviewed mappings,
+644 dispositions, and 530 paths still needing disposition. The open set includes semantic review,
 unmapped paths, source-deleted paths, and identical files without an explicit
 decision; it is not a count of missing runtime features. See the
 [exact-head consolidation audit](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-30)
-and its pinned inventory and maps. These path decisions do not close feature,
+and its pinned inventory and maps. The unmerged changes in ChaptarrNG PR #183
+are not included. These path decisions do not close feature,
 data, rollback, or installed-channel acceptance.
 
 All organization build, test, scan, package, and release jobs require private
