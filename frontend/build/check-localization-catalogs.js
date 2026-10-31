@@ -106,8 +106,8 @@ function buildStatusReport(english, registry, catalogs, provenance, fingerprints
     '',
     'Strings without an exact translation inherit from the configured parent locale or English. Machine drafts and reviewed entries are explicit fingerprinted provenance records. Existing exact translations without provenance are shown as unreviewed; they are not assumed to be machine-generated.',
     '',
-    '| Locale | Exact catalog | Direction | Source | Machine drafts | Unreviewed exact | Inherited | Reviewed |',
-    '| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |'
+    '| Locale | Exact catalog | Direction | Source IDs | Direct exact | Machine drafts | Unreviewed exact | Inherited | Reviewed |',
+    '| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |'
   ];
 
   for (const locale of registry.locales) {
@@ -119,36 +119,34 @@ function buildStatusReport(english, registry, catalogs, provenance, fingerprints
     let unreviewedExact = 0;
     let inherited = 0;
     let reviewedCount = 0;
+    let directExact = 0;
 
     for (const key of Object.keys(english)) {
       if (locale.tag === 'en') {
         continue;
-      } else if (
-        Object.prototype.hasOwnProperty.call(exact, key) &&
-        reviewed[key] === fingerprints[key]
-      ) {
-        reviewedCount++;
-      } else if (
-        Object.prototype.hasOwnProperty.call(exact, key) &&
-        drafts[key] === fingerprints[key] &&
-        exact[key] !== english[key]
-      ) {
-        machineDrafts++;
-      } else if (
-        Object.prototype.hasOwnProperty.call(exact, key) &&
-        exact[key] !== english[key]
-      ) {
-        unreviewedExact++;
       } else {
-        inherited++;
+        if (!Object.prototype.hasOwnProperty.call(exact, key)) {
+          inherited++;
+          continue;
+        }
+
+        directExact++;
+        if (reviewed[key] === fingerprints[key]) {
+          reviewedCount++;
+        } else if (drafts[key] === fingerprints[key] && exact[key] !== english[key]) {
+          machineDrafts++;
+        } else {
+          unreviewedExact++;
+        }
       }
     }
 
     const parentLabel = locale.fallback ? ' ← `' + locale.fallback + '.json`' : '';
     lines.push(
       '| `' + locale.tag + '` | `' + locale.file + '.json`' + parentLabel +
-      ' | ' + locale.direction + ' | ' + sourceCount + ' | ' + machineDrafts +
-      ' | ' + unreviewedExact + ' | ' + inherited + ' | ' + reviewedCount + ' |'
+      ' | ' + locale.direction + ' | ' + sourceCount + ' | ' + directExact +
+      ' | ' + machineDrafts + ' | ' + unreviewedExact + ' | ' + inherited +
+      ' | ' + reviewedCount + ' |'
     );
   }
 
