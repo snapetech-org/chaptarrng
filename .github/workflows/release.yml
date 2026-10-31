@@ -1,57 +1,101 @@
+# ng-runner-policy: private-jit-only-v1
 # packer-windows-jit-v1
 name: Release
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' &&
+      format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool) || github.workflow }}
 
-# A pushed v* tag starts the stable release pipeline.
+# Select a stable release tag from a main-branch dispatch. The tag must match
+# the main version, point to main, and is checked out exactly by each build.
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Admit this release workflow to the private JIT broker
+        required: true
+        type: choice
+        options:
+          - publish
+      runner_pool:
+        description: Select the private ephemeral JIT pool
+        required: true
+        type: choice
+        options:
+          - private
+      release_tag:
+        description: Exact existing stable release tag to validate and build
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.release_tag }}
   cancel-in-progress: false
 
 jobs:
   preflight:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.action == 'publish' &&
+      inputs.runner_pool == 'private' &&
+      inputs.release_tag != ''
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     outputs:
       release_requested: ${{ steps.release-request.outputs.release_requested }}
+      release_tag: ${{ steps.release-request.outputs.release_tag }}
+      release_version: ${{ steps.release-request.outputs.release_version }}
+      release_sha: ${{ steps.release-request.outputs.release_sha }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
+        ref: ${{ github.sha }}
+        fetch-depth: 0
         persist-credentials: false
 
-    - name: Detect a new stable version
+    - name: Validate the selected stable release tag
       id: release-request
       shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_TAG: ${{ inputs.release_tag }}
+        ACTION: ${{ inputs.action }}
+        RUNNER_POOL: ${{ inputs.runner_pool }}
       run: |
         set -euo pipefail
-        TAG="$GITHUB_REF_NAME"
+        TAG="$RELEASE_TAG"
+        if [[ "$GITHUB_REF" != refs/heads/main || "$ACTION" != publish || "$RUNNER_POOL" != private ]]; then
+          echo 'Releases require a main-branch workflow dispatch with action=publish and pool=private.' >&2
+          exit 1
+        fi
+        if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Release tag $TAG must use stable vMAJOR.MINOR.PATCH syntax." >&2
+          exit 1
+        fi
+        git fetch --no-tags origin "refs/tags/${TAG}:refs/tags/${TAG}" refs/heads/main:refs/remotes/origin/main
         VERSION="$(python3 -c "import json; print(json.load(open('package.json', encoding='utf-8'))['version'])")"
-        if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ || "$TAG" != "v$VERSION" ]]; then
-          echo "Pushed tag $TAG must match package.json version v$VERSION."
+        TAG_VERSION="$(git show "$TAG:package.json" | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")"
+        if [[ "$TAG" != "v$VERSION" || "$TAG_VERSION" != "$VERSION" ]]; then
+          echo "Selected tag $TAG must match package.json version $VERSION on main and at the tag."
+          exit 1
+        fi
+        RELEASE_SHA="$(git rev-parse "${TAG}^{commit}")"
+        if ! git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main; then
+          echo "Selected release tag $TAG does not point to a commit on main." >&2
           exit 1
         fi
         python3 packaging/scripts/check_stable_release_version.py
         if ! grep -qx 'release_requested=true' "$GITHUB_OUTPUT"; then
-          echo "Pushed tag $TAG is not newer than the latest published stable release."
+          echo "Selected tag $TAG is not newer than the latest published stable release."
           exit 1
         fi
-
-    - name: Require the pushed tag to point to main
-      shell: bash
-      run: |
-        set -euo pipefail
-        git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
-        if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
-          echo "Release tags must point to a commit on main."
-          exit 1
-        fi
+        {
+          echo "release_tag=$TAG"
+          echo "release_version=$VERSION"
+          echo "release_sha=$RELEASE_SHA"
+        } >> "$GITHUB_OUTPUT"
 
     - name: Require retirement release readiness
       if: steps.release-request.outputs.release_requested == 'true'
@@ -75,9 +119,15 @@ jobs:
       checks: write
       contents: read
       pull-requests: read
+    with:
+      action: publish
+      runner_pool: private
+      release_tag: ${{ needs.preflight.outputs.release_tag }}
+      release_sha: ${{ needs.preflight.outputs.release_sha }}
 
   release:
-    needs: validate
+    needs: [preflight, validate]
+    if: needs.preflight.outputs.release_requested == 'true'
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: write
@@ -90,6 +140,7 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
+        ref: ${{ needs.preflight.outputs.release_sha }}
         fetch-depth: 0
         persist-credentials: false
 
@@ -108,7 +159,13 @@ jobs:
 
     - name: Resolve source head
       id: source
-      run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      env:
+        EXPECTED_RELEASE_SHA: ${{ needs.preflight.outputs.release_sha }}
+      run: |
+        set -euo pipefail
+        actual_sha="$(git rev-parse HEAD)"
+        test "$actual_sha" = "$EXPECTED_RELEASE_SHA"
+        echo "sha=$actual_sha" >> "$GITHUB_OUTPUT"
 
     - name: Guard - versions in sync
       run: python3 build-tools/version_guard.py sync
@@ -116,12 +173,16 @@ jobs:
     - name: Resolve tag
       id: tag
       shell: bash
+      env:
+        RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
+        RELEASE_VERSION: ${{ needs.preflight.outputs.release_version }}
+        RELEASE_SHA: ${{ needs.preflight.outputs.release_sha }}
       run: |
         set -euo pipefail
         VERSION="$(python3 -c "import json; print(json.load(open('package.json', encoding='utf-8'))['version'])")"
-        TAG="$GITHUB_REF_NAME"
-        if [[ "$TAG" != "v$VERSION" ]]; then
-          echo "Pushed tag $TAG does not match package.json version v$VERSION."
+        TAG="$RELEASE_TAG"
+        if [[ "$(git rev-parse HEAD)" != "$RELEASE_SHA" || "$VERSION" != "$RELEASE_VERSION" || "$TAG" != "v$VERSION" ]]; then
+          echo "Checked-out tag $TAG does not match the validated release source and version."
           exit 1
         fi
         echo "tag=$TAG" >> "$GITHUB_OUTPUT"
@@ -425,7 +486,12 @@ jobs:
 
   windows-migration-installer:
     name: Build BookshelfNG Windows migration installer
-    needs: [release, standalone-assets]
+    needs: [preflight, release, standalone-assets]
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.action == 'publish' &&
+      inputs.runner_pool == 'private'
     runs-on: ${{ fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-windows-migration-installer"]}}', github.run_id)) }}
     permissions:
       contents: read
@@ -616,7 +682,7 @@ jobs:
         if-no-files-found: error
 
   publish-release:
-    needs: [release, docker, standalone-assets, rpm-source, windows-migration-installer, legacy-desktop-candidates]
+    needs: [preflight, release, docker, standalone-assets, rpm-source, windows-migration-installer, legacy-desktop-candidates]
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     permissions:
       contents: write
@@ -740,11 +806,12 @@ jobs:
         TAG: ${{ needs.release.outputs.tag }}
         RELEASE_BODY: ${{ needs.release.outputs.release_body }}
         RELEASE_TAG: ${{ needs.release.outputs.tag }}
+        EXPECTED_RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
       shell: bash
       run: |
         set -euo pipefail
-        if [[ "$RELEASE_TAG" != "$GITHUB_REF_NAME" ]]; then
-          echo "Release publication does not match the pushed tag."
+        if [[ "$RELEASE_TAG" != "$EXPECTED_RELEASE_TAG" ]]; then
+          echo "Release publication does not match the validated release tag."
           exit 1
         fi
         notes="$RUNNER_TEMP/chaptarrng-release-notes.md"
@@ -762,6 +829,8 @@ jobs:
       contents: read
       packages: write
     with:
+      action: publish
+      runner_pool: private
       tag: ${{ needs.release.outputs.tag }}
       version: ${{ needs.release.outputs.version }}
       legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}

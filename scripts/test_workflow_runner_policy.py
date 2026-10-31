@@ -41,16 +41,30 @@ def step_block(source: str, name: str) -> str:
 
 
 class WorkflowRunnerPolicyTests(unittest.TestCase):
-    def test_push_trigger_is_tag_only(self) -> None:
+    def test_build_uses_only_dispatch_and_owner_pr_routes(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
-        push = event_block(source, "push")
-        self.assertRegex(push, r"(?m)^    tags:\s*$")
-        self.assertIn("'v*'", push)
-        self.assertNotRegex(push, r"(?m)^    branches:")
+        self.assertNotRegex(source, r"(?m)^  push:")
+        release_call = event_block(source, "workflow_call")
+        for field in ("action:", "runner_pool:", "release_tag:", "release_sha:"):
+            self.assertIn(field, release_call)
         target = event_block(source, "pull_request_target")
         self.assertIn("branches: [main]", target)
         self.assertIn("types: [opened, reopened, synchronize, ready_for_review]", target)
         self.assertNotRegex(source, r"(?m)^  pull_request:")
+
+        build = job_block(source, "build")
+        for token in (
+            "github.ref == 'refs/heads/main'",
+            "inputs.action == 'ci'",
+            "inputs.action == 'publish'",
+            "inputs.runner_pool == 'private'",
+            "inputs.release_tag != ''",
+            "inputs.release_sha != ''",
+            "inputs.release_sha || github.sha",
+            "Verify exact release tag source",
+            'test "$(git rev-parse "${RELEASE_TAG}^{commit}")" = "$RELEASE_SHA"',
+        ):
+            self.assertIn(token, build)
 
     def test_build_matrix_requests_private_capacity_for_each_platform(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
@@ -122,9 +136,127 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             source = (WORKFLOW.parent / workflow_name).read_text(encoding="utf-8")
             self.assertNotRegex(source, r"(?m)^\s+runs-on: windows-latest\s*$")
 
+    def test_release_workflows_have_private_jit_markers_and_no_hosted_fallback(self) -> None:
+        for workflow_name in ("build.yml", "release.yml", "release-distribution.yml"):
+            source = (WORKFLOW.parent / workflow_name).read_text(encoding="utf-8")
+            self.assertTrue(
+                source.startswith(
+                    "# ng-runner-policy: private-jit-only-v1\n# packer-windows-jit-v1"
+                ),
+                workflow_name,
+            )
+            self.assertNotRegex(
+                source,
+                r"(?m)^\s*runs-on:\s*(?:ubuntu-latest|ubuntu-[0-9]+|windows-latest|macos-[0-9]+)",
+                workflow_name,
+            )
+
+    def test_release_dispatch_builds_the_exact_main_tag(self) -> None:
+        source = (WORKFLOW.parent / "release.yml").read_text(encoding="utf-8")
+        self.assertNotRegex(source, r"(?m)^  push:")
+        dispatch = event_block(source, "workflow_dispatch")
+        for field, value in (("action", "publish"), ("runner_pool", "private")):
+            input_match = re.search(
+                rf"(?ms)^      {field}:\n(?P<body>.*?)(?=^      [A-Za-z0-9_-]+:|\Z)",
+                dispatch,
+            )
+            self.assertIsNotNone(input_match, field)
+            self.assertIn("required: true", input_match.group("body"))
+            self.assertIn(f"          - {value}", input_match.group("body"))
+        self.assertIn("release_tag:", dispatch)
+        self.assertIn("required: true", dispatch)
+        self.assertNotIn("inputs.release_tag", source.split("run-name:", 1)[1].split("\non:", 1)[0])
+
+        preflight = job_block(source, "preflight")
+        for token in (
+            "github.ref == 'refs/heads/main'",
+            "inputs.action == 'publish'",
+            "inputs.runner_pool == 'private'",
+            "RELEASE_TAG: ${{ inputs.release_tag }}",
+            'TAG_VERSION="$(git show "$TAG:package.json"',
+            'git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main',
+            "release_sha=$RELEASE_SHA",
+            "packaging/scripts/check_stable_release_version.py",
+        ):
+            self.assertIn(token, preflight)
+
+        validate = job_block(source, "validate")
+        for token in (
+            "action: publish",
+            "runner_pool: private",
+            "release_tag: ${{ needs.preflight.outputs.release_tag }}",
+            "release_sha: ${{ needs.preflight.outputs.release_sha }}",
+        ):
+            self.assertIn(token, validate)
+
+        release = job_block(source, "release")
+        self.assertIn("ref: ${{ needs.preflight.outputs.release_sha }}", release)
+        self.assertIn("EXPECTED_RELEASE_SHA: ${{ needs.preflight.outputs.release_sha }}", release)
+        self.assertIn("RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}", release)
+
+        windows = job_block(source, "windows-migration-installer")
+        for token in (
+            "github.ref == 'refs/heads/main'",
+            "inputs.action == 'publish'",
+            "inputs.runner_pool == 'private'",
+            "needs: [preflight, release, standalone-assets]",
+        ):
+            self.assertIn(token, windows)
+
+        publisher = job_block(source, "publish-release")
+        self.assertIn("EXPECTED_RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}", publisher)
+        self.assertIn('"$RELEASE_TAG" != "$EXPECTED_RELEASE_TAG"', publisher)
+
+        packages = job_block(source, "publish-packages")
+        self.assertIn("action: publish", packages)
+        self.assertIn("runner_pool: private", packages)
+
+    def test_distribution_dispatch_requires_main_private_publish_route(self) -> None:
+        source = (WORKFLOW.parent / "release-distribution.yml").read_text(encoding="utf-8")
+        self.assertNotRegex(source, r"(?m)^  push:")
+        dispatch = event_block(source, "workflow_dispatch")
+        for field, value in (("action", "publish"), ("runner_pool", "private")):
+            input_match = re.search(
+                rf"(?ms)^      {field}:\n(?P<body>.*?)(?=^      [A-Za-z0-9_-]+:|\Z)",
+                dispatch,
+            )
+            self.assertIsNotNone(input_match, field)
+            self.assertIn("required: true", input_match.group("body"))
+            self.assertIn(f"          - {value}", input_match.group("body"))
+        call = event_block(source, "workflow_call")
+        self.assertIn("action:", call)
+        self.assertIn("runner_pool:", call)
+        run_name = source.split("run-name:", 1)[1].split("\non:", 1)[0]
+        self.assertIn("inputs.action", run_name)
+        self.assertIn("inputs.runner_pool", run_name)
+        self.assertNotIn("inputs.tag", run_name)
+
+        target = job_block(source, "release-target")
+        for token in (
+            "github.ref == 'refs/heads/main'",
+            "inputs.action == 'publish'",
+            "inputs.runner_pool == 'private'",
+            "EVENT_NAME: ${{ github.event_name }}",
+            "ACTION: ${{ inputs.action }}",
+            "RUNNER_POOL: ${{ inputs.runner_pool }}",
+            'git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main',
+        ):
+            self.assertIn(token, target)
+
+        self.assertIn("needs: [release-target]", job_block(source, "credentials"))
+        for name in ("build-chocolatey", "publish-chocolatey"):
+            job = job_block(source, name)
+            for token in (
+                "github.ref == 'refs/heads/main'",
+                "inputs.action == 'publish'",
+                "inputs.runner_pool == 'private'",
+                '"group":"packer-windows"',
+            ):
+                self.assertIn(token, job)
+
     def test_buildkit_proxy_is_limited_to_trusted_main_and_release_tags(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
-        docker_job = job_block(source, "docker-compatibility-build")
+        docker_job = job_block(source, "docker-image-build")
         expected_proxy_gate = "BUILDKIT_EGRESS_PROXY: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'http://10.0.2.100:3128' || '' }}"
         self.assertIn(expected_proxy_gate, docker_job)
 
@@ -165,12 +297,9 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
 
     def test_owner_pr_trigger_dispatches_only_metadata_to_private_validation(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
-        push = event_block(source, "push")
 
         self.assertIn("workflow_dispatch:", source)
-        self.assertRegex(push, r"(?m)^    tags:\s*$")
-        self.assertIn("'v*'", push)
-        self.assertNotRegex(push, r"(?m)^    branches:")
+        self.assertNotRegex(source, r"(?m)^  push:")
         self.assertNotRegex(source, r"(?m)^  pull_request:")
 
         dispatcher = job_block(source, "dispatch-owner-pr")
@@ -198,9 +327,13 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
 
         validation = job_block(source, "owner-pr-validation")
         self.assertIn("github.actor == 'github-actions[bot]'", validation)
+        self.assertIn("inputs.action == 'ci'", validation)
+        self.assertIn("inputs.runner_pool == 'private'", validation)
         self.assertIn("ref: ${{ inputs.pr_sha }}", validation)
         self.assertIn("persist-credentials: false", validation)
+        self.assertIn("test \"$(git rev-parse HEAD)\" = \"$EXPECTED_PR_SHA\"", validation)
         self.assertIn("node scripts/check-release-notes.mjs", validation)
+        self.assertIn("python3 scripts/test_workflow_runner_policy.py", validation)
 
         reporter = job_block(source, "report-owner-pr-check")
         self.assertIn("checks: write", reporter)
@@ -305,7 +438,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             self.assertIn(token, rpm_job)
 
         self.assertIn("inputs.rpm_bridge_only != true", job_block(source, "postgres-migrations"))
-        self.assertIn("inputs.rpm_bridge_only != true", job_block(source, "docker-compatibility-build"))
+        self.assertIn("inputs.rpm_bridge_only != true", job_block(source, "docker-image-build"))
 
     def test_legacy_channel_contracts_are_an_exact_head_private_jit_dispatch(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
@@ -325,7 +458,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         ):
             self.assertIn(token, job)
         self.assertIn("inputs.channel_contracts_only != true", job_block(source, "postgres-migrations"))
-        self.assertIn("inputs.channel_contracts_only != true", job_block(source, "docker-compatibility-build"))
+        self.assertIn("inputs.channel_contracts_only != true", job_block(source, "docker-image-build"))
 
     def test_security_scans_use_private_jit_without_hosted_fallback(self) -> None:
         workflow_dir = WORKFLOW.parent
