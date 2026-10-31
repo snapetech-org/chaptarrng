@@ -3,6 +3,12 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 test_image="fedora:44@sha256:43b29f65a41eb9c35e1cd5323e3bdf3b655c2357a9f4f1ff2f9c2798e5045d80"
+candidate_version="$(sed -nE 's|^[[:space:]]*<AssemblyVersion>([0-9]+\.[0-9]+\.[0-9]+)\.0</AssemblyVersion>[[:space:]]*$|\1|p' \
+  "$repo_root/src/Directory.Build.props" | head -n 1)"
+if [[ ! "$candidate_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Could not derive a three-part candidate version from $repo_root/src/Directory.Build.props." >&2
+  exit 1
+fi
 task_root="${TASK_SCRATCH_DIR:-}"
 if [[ -n "$task_root" ]]; then
   if [[ -e "$task_root" ]]; then
@@ -39,6 +45,7 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$task_root/payload/ChaptarrNG" "$task_root/evidence"
+printf '%s\n' "$candidate_version" > "$task_root/evidence/candidate-version.txt"
 cat > "$task_root/payload/ChaptarrNG/Chaptarr" <<'PAYLOAD'
 #!/bin/sh
 exit 0
@@ -56,7 +63,7 @@ exit 0
 NODE
 chmod 0755 "$task_root/payload/ChaptarrNG/playwright.ps1" \
   "$task_root/payload/ChaptarrNG/.playwright/node/linux-x64/node"
-tar -czf "$task_root/ChaptarrNG-0.9.977-linux-x64.tar.gz" \
+tar -czf "$task_root/ChaptarrNG-$candidate_version-linux-x64.tar.gz" \
   -C "$task_root/payload" ChaptarrNG
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -76,12 +83,14 @@ for proxy_name in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do
   fi
 done
 
-docker run --rm -i --user 0:0 "${docker_proxy_args[@]}" \
+docker run --rm -i --user 0:0 \
+  --env "CHAPTARRNG_CANDIDATE_VERSION=$candidate_version" "${docker_proxy_args[@]}" \
   --mount "type=bind,src=$repo_root,dst=/repo,readonly" \
   --mount "type=bind,src=$task_root,dst=/work" \
   "$test_image" sh -s > "$task_root/evidence/rpm-transaction.log" 2>&1 <<'FEDORA_TEST'
 set -eu
 export DNF_YUM_AUTO_YES=1
+candidate_version="${CHAPTARRNG_CANDIDATE_VERSION:?candidate version is required}"
 cat > /etc/yum.repos.d/fedora.repo <<'FEDORA_REPOS'
 [fedora]
 name=Fedora 44 - x86_64
@@ -105,7 +114,8 @@ dnf -q --disablerepo='*' --enablerepo=fedora --enablerepo=updates install -y \
 
 top=/work/rpmbuild
 mkdir -p "$top/BUILD" "$top/BUILDROOT" "$top/RPMS" "$top/SOURCES" "$top/SPECS" "$top/SRPMS"
-cp /work/ChaptarrNG-0.9.977-linux-x64.tar.gz "$top/SOURCES/ChaptarrNG-0.9.977-linux-x64.tar.gz"
+cp "/work/ChaptarrNG-$candidate_version-linux-x64.tar.gz" \
+  "$top/SOURCES/ChaptarrNG-$candidate_version-linux-x64.tar.gz"
 for source in /repo/packaging/legacy/rpm/*.service \
   /repo/packaging/legacy/rpm/*.sysusers /repo/packaging/legacy/rpm/*.tmpfiles; do
   cp "$source" "$top/SOURCES/"
@@ -119,7 +129,7 @@ cp /repo/packaging/legacy/rpm/bookshelfng.env \
   /repo/packaging/legacy/scripts/bookshelfng-prepare \
   /repo/packaging/legacy/scripts/bookshelfng-journal \
   /repo/packaging/legacy/scripts/bookshelfng-finalize "$top/SOURCES/"
-sed 's/__VERSION__/0.9.977/g' /repo/packaging/legacy/rpm/bookshelfng.spec.in \
+sed "s/__VERSION__/$candidate_version/g" /repo/packaging/legacy/rpm/bookshelfng.spec.in \
   > "$top/SPECS/bookshelfng.spec"
 
 mkdir -p /work/old-payload
@@ -174,7 +184,7 @@ OLDSPEC
 rpmbuild -bb --define "_topdir $top" "$top/SPECS/bookshelfng-old.spec"
 rpmbuild -bb --define "_topdir $top" "$top/SPECS/bookshelfng.spec"
 old_rpm="$top/RPMS/x86_64/bookshelfng-0.4.21.71-1.x86_64.rpm"
-new_rpm=$(find "$top/RPMS/x86_64" -maxdepth 1 -name 'bookshelfng-0.9.977-1*.rpm' -print -quit)
+new_rpm=$(find "$top/RPMS/x86_64" -maxdepth 1 -name "bookshelfng-$candidate_version-1*.rpm" -print -quit)
 test -s "$old_rpm"
 test -s "$new_rpm"
 if rpm -qp --requires "$new_rpm" | grep -FxE '/usr/bin/(node|pwsh)'; then
@@ -296,7 +306,7 @@ fi
 grep -Fq '[y/N]' /work/evidence/ask-no.log
 grep -Fq 'replacement cancelled' /work/evidence/ask-no.log
 grep -Fq '[y/N]' /work/evidence/ask-yes.log
-test "$(rpm -q --qf '%{VERSION}' bookshelfng)" = 0.9.977
+test "$(rpm -q --qf '%{VERSION}' bookshelfng)" = "$candidate_version"
 test -x /usr/lib/chaptarrng/bin/Chaptarr
 test "$(cat /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff-status)" = healthy
 test ! -f /var/lib/bookshelfng/.chaptarrng-bookshelfng-migration-pending
@@ -371,7 +381,7 @@ then
 fi
 
 grep -Fq '[y/N]' /work/evidence/ask-yes-custom-dropin.log
-test "$(rpm -q --qf '%{VERSION}' bookshelfng)" = 0.9.977
+test "$(rpm -q --qf '%{VERSION}' bookshelfng)" = "$candidate_version"
 test -x /usr/lib/bookshelfng/Readarr
 grep -Fq 'ExecStart=/usr/lib/bookshelfng/Readarr' /usr/lib/systemd/system/bookshelfng.service
 test "$(cat /var/lib/bookshelfng/.chaptarrng-bookshelfng-handoff-status)" = operator-review-required
