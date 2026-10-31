@@ -15,17 +15,23 @@ branch at
 [`e67374f`](https://github.com/Chaptarr/chaptarr/commit/e67374f), which is in
 ChaptarrNG `main`'s history.
 
-## Retirement status — 2026-10-30
+## Retirement status — 2026-10-31
 
 The latest published ChaptarrNG release is `v0.9.977`; the latest
-BookshelfNG release is `0.4.21.76`. ChaptarrNG source `main` is
-`474a3541`. The exact-head Build
-[#41164597664](https://github.com/snapetech-org/chaptarrng/actions/runs/41164597664)
-is queued and does not establish build, platform, security, or release
-acceptance. The scheduled BookshelfNG distribution bridge
-[#41157387864](https://github.com/snapetech-org/bookshelfng/actions/runs/41157387864)
-is pending with no jobs started; no BookshelfNG distribution identity has
-been redirected.
+BookshelfNG release is `0.4.21.76`. ChaptarrNG `main` is
+`fa55ffabe632c7ee003791635ebe53fb1895d3df`; its latest application source
+snapshot is `bd5893120c24ada8ea492edc1ce21cd5cdc24d8b`. PR #183 merged at
+`96c953b27e2b600eb9f70e23cf19b339c32dc3ad` and uses one ordinary ChaptarrNG
+product and standard image. No compatibility build was introduced. PR Build
+[#41168525352](https://github.com/snapetech-org/chaptarrng/actions/runs/41168525352)
+is waiting on merge-head validation at `96c953b2`; main Build
+[#41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
+is queued at older `64689f1f`. Standalone-assets
+[#41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569)
+completed its frontend job, while ten platform/archive jobs remain queued at
+the older SHA. No exact-head private-JIT validation exists for the current
+app source or current main. No BookshelfNG distribution identity has been
+redirected.
 
 The BookshelfNG-to-ChaptarrNG gate remains open for every contributed feature,
 data/configuration path, client contract, rollback path, and installation
@@ -34,11 +40,12 @@ every BookshelfNG carryover and every ChaptarrNG capability that is maintained,
 actively developed, or unreleased remains a blocker. ChaptarrNG's current
 localization catalogs, accessibility and RTL behavior are included in that
 blocker set even though they are not in `v0.9.977`. The source-path audit
-was refreshed on 2026-10-30 against BookshelfNG `1bd7f2dc` and ChaptarrNG
-`474a3541`: 1,174 changed paths, 56 reviewed mappings, 644 dispositions, and
-530 undispositioned paths. These path counts do not measure missing feature
+was refreshed on 2026-10-31 against BookshelfNG `1bd7f2dc` and ChaptarrNG
+`main` target `fa55ffab` (application source snapshot `bd589312`): 1,174
+changed paths, 56 reviewed mappings, 587 dispositions, and 587
+undispositioned paths. These path counts do not measure missing feature
 count or establish parity. See the
-[pinned exact-head audit](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-30)
+[pinned exact-head audit](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-31)
 for decision carry-forward rules and current maps. ChaptarrNG retirement also
 requires every item in the cumulative feature matrix below, whether released,
 maintained, active, or unreleased.

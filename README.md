@@ -28,19 +28,25 @@ For local MCP access, see the [SnapeTech MCP integration guide](docs/integration
 
 ### BookshelfNG migration status
 
-**Status checked: 2026-10-31 04:45 UTC.** ChaptarrNG `v0.9.977` remains the
-latest published release. The BookshelfNG handoff branch was integrated
-directly into `main`, followed by three missing localization commits from the
-other local task branches; source snapshot `bd589312` contains those commits.
-PR #183 was closed as integrated, and its remote branch was deleted. The
-application source snapshot is `bd589312`; subsequent `main` commits only
-update evidence/status documents. No exact-head private-JIT build
-or platform result exists for this source. Owner-PR run
+**Status checked: 2026-10-31 04:54 UTC.** ChaptarrNG `v0.9.977` remains the
+latest published release. ChaptarrNG `main` is
+`fa55ffabe632c7ee003791635ebe53fb1895d3df`; its latest application source
+snapshot is `bd5893120c24ada8ea492edc1ce21cd5cdc24d8b`. PR #183 merged at
+`96c953b27e2b600eb9f70e23cf19b339c32dc3ad`; the one-image handoff and Docker
+port preservation are in `main`. The later `fa55ffab` commit updates the
+Debian release-tag gate assertion, not application code. No exact-head
+private-JIT build or platform result exists for application source `bd589312`
+or current `main` `fa55ffab`. Owner-PR run
 [#41167825847](https://github.com/snapetech-org/chaptarrng/actions/runs/41167825847)
 was cancelled on pre-integration head `f63796dd`; the current source has no
 passing private-JIT result.
 
-The older Build run
+The PR Build run
+[#41168525352](https://github.com/snapetech-org/chaptarrng/actions/runs/41168525352)
+is waiting on merge-head validation at `96c953b2`; it does not validate
+current `main`.
+
+The older full Build run
 [#41166424095](https://github.com/snapetech-org/chaptarrng/actions/runs/41166424095)
 has only its runner-contract job queued; platform jobs were skipped. Windows
 handoff run
@@ -61,8 +67,9 @@ and [#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/4116
 are queued on older source without runners. Standalone-assets run
 [#41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569)
 has one private frontend-build job succeeded, with ten archive/platform jobs
-still queued at older SHA `64689f1f`. At 04:39, GitHub reported no runs on
-`main` commit `c82f168c`; the subsequent docs-only commit had no status checks.
+still queued at older SHA `64689f1f`. No exact-head pass for the current app
+source is recorded. Preserve queued runs; do not dispatch duplicates or use
+local or hosted validation.
 
 BookshelfNG remains in service until each capability, data and configuration
 path, rollback path, and installation channel has its own acceptance evidence.
@@ -90,12 +97,12 @@ returned HTTP 403. See the
 [BookshelfNG package](https://community.chocolatey.org/packages/bookshelfng),
 and the [channel acceptance matrix](docs/BOOKSHELFNG_RETIREMENT.md#legacy-install-channels).
 
-The latest main-to-main BookshelfNG source-path audit remains pinned to ChaptarrNG
-`64689f1f` and records 1,174 changed paths, 56 reviewed mappings, and 644
-dispositions; 530 paths remain open. It has not been refreshed for source
-snapshot `bd589312`. These are path counts, not missing-feature counts, and do
+The latest BookshelfNG source-path audit compares source `1bd7f2dc` with
+current ChaptarrNG `main` `fa55ffab` (application source snapshot `bd589312`).
+It records 1,174 changed paths, 56 reviewed mappings, 587 dispositions, and
+587 paths still open. These are path counts, not missing-feature counts, and do
 not establish runtime parity, migration acceptance, or channel continuity. See the
-[pinned BookshelfNG consolidation inventory and review](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-30).
+[pinned BookshelfNG consolidation inventory and review](https://github.com/snapetech-org/bookshelfng/blob/main/docs/maintainers/chaptarr-consolidation.md#exact-head-source-path-audit--2026-10-31).
 
 The implementation and rehearsal notes below preserve their original dates
 and scopes; none alone establishes cutover readiness.
