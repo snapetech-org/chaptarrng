@@ -676,6 +676,9 @@ jobs:
     - name: Test legacy distribution contracts
       run: node --test packaging/scripts/test-bookshelf-legacy-channels.mjs
 
+    - name: Test stable release and Debian publication contracts
+      run: bash packaging/scripts/test-bookshelfng-deb-publish-gate.sh
+
     - name: Test private runner policy
       run: python3 scripts/test_workflow_runner_policy.py
 
