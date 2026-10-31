@@ -4,7 +4,8 @@
   "literalPolicy": [
     "Keep translation placeholders such as {appName}, {author}, and {count} intact.",
     "Do not translate or normalize filenames, filesystem paths, API values, identifiers, or imported metadata.",
-    "Preserve book, author, and series names exactly as supplied; isolate mixed-script text for display."
+    "Preserve book, author, and series names exactly as supplied; isolate mixed-script text for display.",
+    "Preserve product and provider names, configuration variable names, URLs, and permission labels exactly."
   ],
   "terms": [
     {
