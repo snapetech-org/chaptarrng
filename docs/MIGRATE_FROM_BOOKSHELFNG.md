@@ -1,18 +1,21 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Current status (2026-10-31):** BookshelfNG `0.4.21.76` and ChaptarrNG
-> `v0.9.977` remain the latest public releases. ChaptarrNG `main` is
-> `fa55ffabe632c7ee003791635ebe53fb1895d3df`, with latest application source
-> snapshot `bd5893120c24ada8ea492edc1ce21cd5cdc24d8b`. PR #183 merged at
-> `96c953b27e2b600eb9f70e23cf19b339c32dc3ad`; the handoff uses the standard
-> ChaptarrNG application and image, with no compatibility build. No exact-head
-> private-JIT result validates the current application source. The PR Build
-> [41168525352](https://github.com/snapetech-org/chaptarrng/actions/runs/41168525352)
-> is waiting at the merge head; main and platform/archive work remains queued
-> at older source. No BookshelfNG identity has been redirected, and migration
-> apply remains frozen. Keep BookshelfNG running and backed up until every
-> feature, data/configuration path, rollback route, and installation channel
-> passes its own acceptance.
+> **Current status (2026-10-31 10:45 UTC):** BookshelfNG `0.4.21.76` and
+> ChaptarrNG `v0.9.977` remain the latest public releases; the local `0.9.978`
+> candidate remains unpublished. Consolidated source candidate `7e538f5c`
+> includes private-only build/release routing, automatic search and audiobook
+> import fixes, multi-edition update handling, and a post-defer Chocolatey
+> health check. No exact-head private-JIT result validates it. Build run
+> [41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
+> remains queued on old SHA `64689f1f` with Linux, Windows, and PostgreSQL
+> failures; macOS is queued. Chocolatey `.76` run
+> [41166442007](https://github.com/snapetech-org/chaptarrng/actions/runs/41166442007)
+> is queued on `eec975d2`, so the `.76` No/Yes handoff has not run. Helm run
+> [41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
+> failed before installed acceptance when the runner proxy returned HTTP 403
+> for pinned `kubectl`. No BookshelfNG identity has been redirected; keep
+> BookshelfNG running and backed up until feature, data, rollback, and channel
+> acceptance passes on the exact candidate.
 
 > The current source-path ledger compares BookshelfNG `1bd7f2dc` to ChaptarrNG
 > `main` target `fa55ffab` (application source `bd589312`): 1,174 changed paths,

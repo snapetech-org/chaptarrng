@@ -1,48 +1,51 @@
 # BookshelfNG retirement status
 
-## Current status — 2026-10-31 04:54 UTC
+## Current status — 2026-10-31 10:45 UTC
 
 BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977` remain the latest public
-application releases. ChaptarrNG `main` is
-`fa55ffabe632c7ee003791635ebe53fb1895d3df`; its latest application source
-snapshot is `bd5893120c24ada8ea492edc1ce21cd5cdc24d8b`. The BookshelfNG
-single-image handoff merged through PR #183 at
-`96c953b27e2b600eb9f70e23cf19b339c32dc3ad`; follow-up code preserves legacy
-Docker ports. The later `fa55ffab` commit changes a Debian release-tag gate
-assertion, not application code. No exact-head private-JIT build or platform
-result validates the application source or current main. Owner-PR run
-[#41167825847](https://github.com/snapetech-org/chaptarrng/actions/runs/41167825847)
-was cancelled on pre-integration head `f63796dd` and its validation jobs were
-skipped.
+application releases; the local ChaptarrNG `0.9.978` candidate is unpublished.
+The source and workflow consolidation candidate is `7e538f5c`, based on main
+`fa55ffab`. It contains private-only build and release routing; fixes for the
+observed Windows Python lookup and localization-browser compile failures;
+automatic book-number search fallback; same-recording audiobook import
+matching that requires known matching language and narrator data; book updates
+with multiple monitored editions; and the Chocolatey manual-defer health
+recheck. No exact-head private-JIT result validates this candidate or the
+current application source.
 
 Build run
-[#41166424095](https://github.com/snapetech-org/chaptarrng/actions/runs/41166424095)
-has only its runner-contract job queued; platform jobs were skipped. Windows
-handoff run
-[#41166442007](https://github.com/snapetech-org/chaptarrng/actions/runs/41166442007)
-is queued without a runner. Helm Actions run
-[#41167175002](https://github.com/snapetech-org/chaptarrng/actions/runs/41167175002)
-is queued without a runner or steps. It is a handoff workflow that would use a
-disposable Kind cluster on private JIT; no cluster was created, and no
-production cluster was involved. No legacy package, image, installer, updater,
-or chart identity has been redirected. Keep BookshelfNG in service and leave
-release and bridge gates closed.
-
-The latest observed full Build run
 [#41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
-is queued at older SHA `64689f1f`; its Linux, macOS, and Windows jobs have no
-runner or steps. The macOS handoff and later Helm runs
-[#41168181470](https://github.com/snapetech-org/chaptarrng/actions/runs/41168181470)
-and [#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
-are queued on older source without runners. No exact-head workflow run exists
-for the current app source. Standalone-assets run [41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569)
-has completed its `Build frontend once` job on a private runner; ten archive
-jobs remain queued at older SHA `64689f1f`.
+is still queued at older SHA `64689f1f`; its Linux image-alias contract,
+Windows Python lookup, and PostgreSQL localization-browser build jobs failed,
+while macOS remains queued. The Windows Chocolatey `.76` run
+[#41166442007](https://github.com/snapetech-org/chaptarrng/actions/runs/41166442007)
+is still queued at `eec975d2`, so it has not exercised the new candidate.
+Standalone-assets run
+[#41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569)
+has private-runner frontend and most archive results on the older SHA; its
+Linux x86/FreeBSD runtime-pack job remains queued without a runner. macOS
+handoff [#41168181470](https://github.com/snapetech-org/chaptarrng/actions/runs/41168181470)
+is also queued on old source.
 
-PR Build [#41168525352](https://github.com/snapetech-org/chaptarrng/actions/runs/41168525352)
-is waiting on merge-head validation at `96c953b2`; it does not validate
-current main. Preserve queued runs and do not dispatch duplicates or use local
-or hosted validation.
+Helm run
+[#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
+ran on private JIT at `64689f1f`. Checkout, Helm lint, cache preparation,
+handoff contracts, and the pinned `kind` download/checksum passed. It then
+failed when the runner proxy returned HTTP 403 fetching pinned `kubectl` from
+`dl.k8s.io`; the installed BookshelfNG `.76` handoff script did not run. The
+workflow uses an ephemeral Kind cluster on the JIT runner; no production
+cluster was used.
+
+The latest read-only runner check found no compatible online ChaptarrNG Linux
+or Windows x64 runner. The Packer owner controls the shared broker cutover and
+runtime reopening; no ChaptarrNG dispatch or retry is authorized until that
+owner confirms admission is open. The last full organization inventory remains
+the October 26 baseline of 65 repositories and 419 workflow files; it does not
+prove organization-wide private-JIT coverage. Keep BookshelfNG running. The
+`.76` Chocolatey installed No/Yes handoff, official StartOS package and
+repository acceptance, Cloudron and Unraid delivery, canonical Co-op Cloud
+recipe, remaining package-feed/catalog handoffs, representative operator data,
+provider behavior, rollback, and release publication remain open.
 
 **Single-image migration contract (2026-10-30):** The earlier proposal for
 separate Goodreads and Hardcover compatibility images is withdrawn. The

@@ -15,23 +15,30 @@ branch at
 [`e67374f`](https://github.com/Chaptarr/chaptarr/commit/e67374f), which is in
 ChaptarrNG `main`'s history.
 
-## Retirement status — 2026-10-31
+## Retirement status — 2026-10-31 10:45 UTC
 
 The latest published ChaptarrNG release is `v0.9.977`; the latest
-BookshelfNG release is `0.4.21.76`. ChaptarrNG `main` is
-`fa55ffabe632c7ee003791635ebe53fb1895d3df`; its latest application source
-snapshot is `bd5893120c24ada8ea492edc1ce21cd5cdc24d8b`. PR #183 merged at
-`96c953b27e2b600eb9f70e23cf19b339c32dc3ad` and uses one ordinary ChaptarrNG
-product and standard image. No compatibility build was introduced. PR Build
-[#41168525352](https://github.com/snapetech-org/chaptarrng/actions/runs/41168525352)
-is waiting on merge-head validation at `96c953b2`; main Build
+BookshelfNG release is `0.4.21.76`. The source and workflow consolidation
+candidate is `7e538f5c`, based on ChaptarrNG main `fa55ffab`. It preserves the
+single ordinary ChaptarrNG product and standard image; no compatibility build
+was introduced. It also closes the reviewed automatic search, audiobook
+matching, multi-edition update, and Chocolatey defer-health code gaps. No
+exact-head private-JIT validation exists for this candidate or the current
+application source.
+
+Build run
 [#41168115692](https://github.com/snapetech-org/chaptarrng/actions/runs/41168115692)
-is queued at older `64689f1f`. Standalone-assets
+is queued at old SHA `64689f1f` with failed Linux, Windows, and PostgreSQL
+jobs and a queued macOS job. Standalone-assets run
 [#41168142569](https://github.com/snapetech-org/chaptarrng/actions/runs/41168142569)
-completed its frontend job, while ten platform/archive jobs remain queued at
-the older SHA. No exact-head private-JIT validation exists for the current
-app source or current main. No BookshelfNG distribution identity has been
-redirected.
+completed frontend and most archive jobs on that old SHA; Linux x86/FreeBSD
+runtime-pack work remains queued. Helm run
+[#41168121048](https://github.com/snapetech-org/chaptarrng/actions/runs/41168121048)
+failed on private JIT when its proxy returned HTTP 403 for the pinned
+`kubectl` download, before installed acceptance ran. Chocolatey `.76` run
+[#41166442007](https://github.com/snapetech-org/chaptarrng/actions/runs/41166442007)
+is still queued on `eec975d2`; installed `.76` No/Yes acceptance remains
+open. No BookshelfNG distribution identity has been redirected.
 
 The BookshelfNG-to-ChaptarrNG gate remains open for every contributed feature,
 data/configuration path, client contract, rollback path, and installation
