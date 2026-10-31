@@ -1,9 +1,19 @@
+# ng-runner-policy: private-jit-only-v1
 # packer-windows-jit-v1
 name: Publish package-manager channels
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' &&
+      format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool) || github.workflow }}
 
 on:
   workflow_call:
     inputs:
+      action:
+        required: true
+        type: string
+      runner_pool:
+        required: true
+        type: string
       tag:
         required: true
         type: string
@@ -27,6 +37,18 @@ on:
         required: false
   workflow_dispatch:
     inputs:
+      action:
+        description: Admit this publisher workflow to the private JIT broker
+        required: true
+        type: choice
+        options:
+          - publish
+      runner_pool:
+        description: Select the private ephemeral JIT pool
+        required: true
+        type: choice
+        options:
+          - private
       tag:
         description: Published stable release tag to retry
         required: true
@@ -47,6 +69,11 @@ permissions:
 jobs:
   release-target:
     name: Validate published release target
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.action == 'publish' &&
+      inputs.runner_pool == 'private' &&
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     outputs:
       tag: ${{ steps.target.outputs.tag }}
@@ -73,6 +100,8 @@ jobs:
         VERSION: ${{ inputs.version }}
         EVENT_NAME: ${{ github.event_name }}
         REF: ${{ github.ref }}
+        ACTION: ${{ inputs.action }}
+        RUNNER_POOL: ${{ inputs.runner_pool }}
         REQUESTED_LEGACY_BRIDGE: ${{ inputs.legacy_bridge_enabled }}
         MIGRATION_BRIDGE_GATE: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED || 'false' }}
         BOOKSHELFNG_RELEASE_READY: ${{ vars.BOOKSHELFNG_RELEASE_READY || 'false' }}
@@ -81,15 +110,25 @@ jobs:
         [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]
         [[ "$TAG" == "v${VERSION}" ]]
         [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+        if [[ "$REF" != refs/heads/main || "$ACTION" != publish || "$RUNNER_POOL" != private ]]; then
+          echo 'Package publishing requires action=publish, pool=private, and a main-branch workflow run.' >&2
+          exit 1
+        fi
+        if [[ "$EVENT_NAME" != workflow_dispatch && "$EVENT_NAME" != workflow_call ]]; then
+          echo 'Package publishing requires an explicit private dispatch or release workflow call.' >&2
+          exit 1
+        fi
+        git fetch --no-tags origin "refs/tags/${TAG}:refs/tags/${TAG}" refs/heads/main:refs/remotes/origin/main
+        release_sha="$(git rev-parse "${TAG}^{commit}")"
+        if ! git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main; then
+          echo "Package tag $TAG must point to a commit on main." >&2
+          exit 1
+        fi
         legacy_bridge_enabled=false
         if [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true && "${MIGRATION_BRIDGE_GATE,,}" == true && "${BOOKSHELFNG_RELEASE_READY,,}" == true ]]; then
           legacy_bridge_enabled=true
         elif [[ "${REQUESTED_LEGACY_BRIDGE,,}" == true ]]; then
           echo 'Legacy BookshelfNG publishing was requested, but both CHAPTARRNG_MIGRATION_BRIDGE_ENABLED and BOOKSHELFNG_RELEASE_READY must be true; legacy publishing remains disabled.' >> "$GITHUB_STEP_SUMMARY"
-        fi
-        if [[ "$EVENT_NAME" == workflow_dispatch && "$REF" != refs/heads/main ]]; then
-          echo 'Package retries must run from main.' >&2
-          exit 1
         fi
         state="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease)"
         echo "$state" | jq -e '.isDraft == false and .isPrerelease == false' >/dev/null
@@ -101,6 +140,7 @@ jobs:
 
   credentials:
     name: Check optional publisher credentials
+    needs: [release-target]
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     outputs:
       aur: ${{ steps.check.outputs.aur }}
@@ -319,6 +359,10 @@ jobs:
   build-chocolatey:
     name: Build and validate the Chocolatey package
     needs: [release-target]
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.action == 'publish' &&
+      inputs.runner_pool == 'private'
     runs-on: ${{ fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-build-chocolatey"]}}', github.run_id)) }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -498,7 +542,11 @@ jobs:
   publish-chocolatey:
     name: Publish new and legacy Chocolatey package identities
     needs: [credentials, release-target, build-chocolatey]
-    if: needs.credentials.outputs.chocolatey == 'true'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.action == 'publish' &&
+      inputs.runner_pool == 'private' &&
+      needs.credentials.outputs.chocolatey == 'true'
     runs-on: ${{ fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-publish-chocolatey"]}}', github.run_id)) }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -619,7 +667,11 @@ jobs:
 
   distribution-summary:
     name: Report package channel results
-    if: always()
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      inputs.action == 'publish' &&
+      inputs.runner_pool == 'private'
     needs: [release-target, credentials, build-aur, publish-aur, build-chocolatey, publish-chocolatey, build-legacy-ppa, publish-legacy-ppa, trigger-copr, trigger-legacy-copr, publish-legacy-helm-bridge]
     runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
     steps:
