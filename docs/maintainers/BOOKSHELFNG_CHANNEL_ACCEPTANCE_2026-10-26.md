@@ -1015,3 +1015,20 @@ exact-head Actions run. The latest organization runner registration snapshot
 has no Windows runner; the registered Apple runner is persistent rather than
 ephemeral JIT, and the Linux JIT runners are busy. The Packer check does not
 validate the ChaptarrNG Windows `.76` handoff or establish compatible capacity.
+
+## Pinned narration import correction — 2026-10-31 21:17 UTC
+
+The one-commit change from ChaptarrNG PR #188 was reviewed and integrated
+directly into `main` as `8045f6827d9b4a1c83377c146bb7a5a7cfc7f6e8`; the redundant
+PR was closed. For a pinned audiobook edition, an untagged file can now match
+by duration only within the existing tolerance and when every other known
+narration is at least 120 seconds farther away. Conflicting narrator tags,
+missing duration, ambiguous lengths, and title/author mismatches still reject.
+The user-facing release-note fragment is included in the commit.
+
+The PR description reports a full Core run of 4,952 passed, 29 skipped, and
+zero failed on base `c9bff466` plus the change. Its GitHub Actions run
+[41242252070](https://github.com/snapetech-org/chaptarrng/actions/runs/41242252070)
+skipped the build and test jobs. No exact-head private-JIT run exists for
+`8045f682`; the reported local suite is not private-JIT or installed-channel
+acceptance evidence.
