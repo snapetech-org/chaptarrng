@@ -118,3 +118,11 @@ test('duplicate IDs and conflicting exact patterns are refused', () => {
   assert.throws(() => compileServerMessageMatchers([record('same', 'First'), record('same', 'Second')]), /duplicate/);
   assert.throws(() => compileServerMessageMatchers([record('first', 'Same'), record('second', 'Same')]), /Conflicting/);
 });
+
+test('undeclared valueN examples stay literal and never become captures', () => {
+  const matchers = compileServerMessageMatchers([{
+    id: 'example.literalValue', source: 'Use {value0} literally', parameters: [], patterns: ['Use {value0} literally']
+  }]);
+  assert.deepEqual(matchServerMessage('Use {value0} literally', matchers).tokens, {});
+  assert.equal(matchServerMessage('Use private-provider-data literally', matchers), null);
+});

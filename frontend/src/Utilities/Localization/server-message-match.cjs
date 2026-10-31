@@ -4,12 +4,13 @@ function compilePattern(pattern, parameters) {
   const parts = [];
   const names = [];
   let cursor = 0;
-  const tokens = new RegExp(
-    parameters.length ? `\\{(${parameters.join('|')})\\}` : '(?!)',
-    'g'
-  );
+  const parameterNames = new Set(parameters);
 
-  for (const match of pattern.matchAll(tokens)) {
+  for (const match of pattern.matchAll(/\{(value\d+)\}/g)) {
+    if (!parameterNames.has(match[1])) {
+      continue;
+    }
+
     parts.push(pattern.slice(cursor, match.index));
     names.push(match[1]);
     cursor = match.index + match[0].length;
