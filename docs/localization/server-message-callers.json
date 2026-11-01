@@ -2,8 +2,8 @@
   "version": 1,
   "scope": "Presentation boundaries only; stores retain raw server messages and captured provider/user values stay data. See server-copy-review.md for complete caller review.",
   "counts": {
-    "files": 34,
-    "callsites": 74
+    "files": 36,
+    "callsites": 78
   },
   "callsites": [
     {
@@ -119,6 +119,12 @@
       "line": 557,
       "sourceLine": "title={translateServerMessage(signal.detail)}",
       "sourceLineSha256": "d7a859f2ea7c1d3ca6681224a31b805fae594633e0664d919e1a8d46008857c3"
+    },
+    {
+      "file": "frontend/src/Book/Narrator/NarratorSearchModalContent.js",
+      "line": 100,
+      "sourceLine": "              {translateServerMessage(errorMessage || error.message) || translate('NarratorSearchFailed')}",
+      "sourceLineSha256": "b83e8e49852b3eff533b85156006df52596e16b9052a99e6f3ddd207e49943fc"
     },
     {
       "file": "frontend/src/Components/Form/EnhancedSelectInput.js",
@@ -293,6 +299,24 @@
       "line": 501,
       "sourceLine": "{translateServerMessage(error.message || error)}",
       "sourceLineSha256": "a4fbca27d82d81fd819cefb9c965ffcdaa054e0c4d113e48a972266b52383de7"
+    },
+    {
+      "file": "frontend/src/Search/Series/AddNewSeriesModalContentConnector.js",
+      "line": 677,
+      "sourceLine": "      const renderedError = translateServerMessage(errorMessage) || errorMessage || translate('SeriesAddError');",
+      "sourceLineSha256": "7341d2f79b0b5a5463cd10afdbef35c6495c4150d924809a7f87dcf1ff33dcd9"
+    },
+    {
+      "file": "frontend/src/Search/Series/AddNewSeriesModalContentConnector.js",
+      "line": 720,
+      "sourceLine": "            const partialError = translateServerMessage(e.message) || e.message || translate('SeriesAddError');",
+      "sourceLineSha256": "95da82a639882efbd88a32bbbad8abe6350c50d792311e7d0263cf38739d716a"
+    },
+    {
+      "file": "frontend/src/Search/Series/AddNewSeriesModalContentConnector.js",
+      "line": 787,
+      "sourceLine": "          const partialError = translateServerMessage(apiError) || apiError;",
+      "sourceLineSha256": "9b8497889ec165735122cecab2da9a62b3491e797081ed6fd2203155f19c15d9"
     },
     {
       "file": "frontend/src/Settings/DownloadClients/DownloadClients/EditDownloadClientModalContent.js",

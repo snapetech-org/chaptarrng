@@ -12,6 +12,7 @@ import Table from 'Components/Table/Table';
 import TableBody from 'Components/Table/TableBody';
 import { kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import NarratorSearchRow from './NarratorSearchRow';
 import styles from './NarratorSearchModalContent.css';
 
@@ -96,7 +97,7 @@ class NarratorSearchModalContent extends Component {
 
           {hasError && !isSearching && (
             <Alert kind={kinds.DANGER} role="alert">
-              {errorMessage || error.message || translate('NarratorSearchFailed')}
+              {translateServerMessage(errorMessage || error.message) || translate('NarratorSearchFailed')}
               <div>
                 <Button
                   size="small"

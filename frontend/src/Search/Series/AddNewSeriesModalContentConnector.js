@@ -19,6 +19,7 @@ import {
 } from 'Utilities/Author/monitorOptions';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
+import translateServerMessage from 'Utilities/String/translateServerMessage';
 import AddNewSeriesModalContent from './AddNewSeriesModalContent';
 
 function createMapStateToProps() {
@@ -673,12 +674,13 @@ class AddNewSeriesModalContentConnector extends Component {
     };
 
     const handleFailure = (errorMessage) => {
-      this.setState({ isAddingSeries: false, addError: errorMessage });
+      const renderedError = translateServerMessage(errorMessage) || errorMessage || translate('SeriesAddError');
+      this.setState({ isAddingSeries: false, addError: renderedError });
 
       this.props.dispatchShowMessage({
         id: `series-add-error-${Date.now()}`,
         name: 'SeriesAddError',
-        message: errorMessage,
+        message: renderedError,
         type: 'error',
         hideAfter: 12
       });
@@ -715,7 +717,7 @@ class AddNewSeriesModalContentConnector extends Component {
           try {
             validateResultOrThrow(data2);
           } catch (e) {
-            const partialError = e.message || translate('SeriesAddError');
+            const partialError = translateServerMessage(e.message) || e.message || translate('SeriesAddError');
             const authorsCount = data1?.addedAuthors?.length || 0;
             const booksCount = data1?.monitoredBooks?.length || 0;
             const pendingCount = data1?.pendingAuthorImportIds?.length || 0;
@@ -781,7 +783,8 @@ class AddNewSeriesModalContentConnector extends Component {
         });
 
         second.fail((xhr2) => {
-          const partialError = this.getApiErrorMessage(xhr2);
+          const apiError = this.getApiErrorMessage(xhr2);
+          const partialError = translateServerMessage(apiError) || apiError;
           const authorsCount = data1?.addedAuthors?.length || 0;
           const booksCount = data1?.monitoredBooks?.length || 0;
           const pendingCount = data1?.pendingAuthorImportIds?.length || 0;
