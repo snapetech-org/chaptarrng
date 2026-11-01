@@ -71,7 +71,7 @@ test('normalizes locale tags and derives direction from language or script', () 
   assert.equal(getDirectionForLocale('az-Latn'), 'ltr');
   assert.equal(getDirectionForLocale('zh-Hant'), 'ltr');
   assert.equal(getDirectionForLocale('en-US'), 'ltr');
-  assert.equal(getDocumentDirectionForLocale('ar-EG'), 'rtl');
+  assert.equal(getDocumentDirectionForLocale('ar-EG'), 'ltr');
   assert.equal(getDocumentDirectionForLocale('fa'), 'rtl');
 });
 
@@ -83,12 +83,12 @@ test('applies lang and direction to the document root', () => {
   assert.equal(getCurrentLocale(root), 'fa-IR');
 });
 
-test('applies Arabic language metadata and RTL document direction', () => {
+test('keeps Arabic language metadata while gating whole-document RTL', () => {
   const root = { lang: '', dir: '' };
   assert.equal(getDirectionForLocale('ar'), 'rtl');
-  assert.deepEqual(applyDocumentLocale('ar', root), { tag: 'ar', direction: 'rtl' });
+  assert.deepEqual(applyDocumentLocale('ar', root), { tag: 'ar', direction: 'ltr' });
   assert.equal(root.lang, 'ar');
-  assert.equal(root.dir, 'rtl');
+  assert.equal(root.dir, 'ltr');
 });
 
 test('shows only locales with actual non-English catalog values', () => {
