@@ -1214,10 +1214,14 @@ cluster is involved.
 An organization CodeQL audit covered all 65 accessible `snapetech-org`
 repositories: default setup is `not-configured` wherever GitHub exposes the
 code-scanning endpoint, and the remaining repositories report that Advanced
-Security is disabled. Code search found no `github/codeql-action` workflow
-invocation. ChaptarrNG's generated Actions registration remains listed by
-GitHub, but its configuration is `not-configured` and its most recent run was
-2026-10-22. This is not a current CodeQL scan.
+Security is disabled. The Code Quality setup endpoint returned
+`not-configured` for all 65 repositories. Code search found no
+`github/codeql-action` workflow invocation. ChaptarrNG's generated Actions
+registration remains listed by GitHub, but its code-scanning configuration is
+`not-configured` and its most recent run was 2026-10-22. MileageNG also retains
+a generated CodeQL Code Quality registration, but its current setup is
+`not-configured` and its latest run was 2026-10-19. These are not current
+CodeQL scans.
 
 The global channel gate remains open. No release-readiness variables were
 enabled, and no release or package was published. Windows `.76`, Fedora RPM,
