@@ -1263,3 +1263,27 @@ package-feed/catalog delivery, Fedora RPM, macOS standalone, representative
 operator-data rollback, and live provider/API acceptance remain open. The
 earlier pinned Helm acceptance run failed before its install script and
 created no ephemeral Kind cluster or production cluster.
+
+## Mainline consolidation and live JIT recheck — 2026-11-01 01:47 UTC
+
+The `snapetech-org/chaptarrng` remote has only `main`, and GitHub reports no
+open ChaptarrNG pull requests. I audited 23 non-main local worktree
+registrations. Useful public-fork JIT, localization PR #181, Semgrep
+suppression, PostgreSQL, release-preflight, owner-PR validation, and per-job
+JIT-label changes are already represented on `main`, with newer guards. The
+remaining old hosted-runner fallback is incompatible with the owner policy and
+was not transplanted. The old Unraid worktree's package-template regression
+matches the current `main` test. Worktree data and generated evidence were left
+untouched; a separate uncommitted localization follow-up remains in its older
+scratch worktree and was not merged wholesale because that tree's effective
+diff also removes several thousand current-main lines.
+
+The packaged Chocolatey prompt/.76 handoff run
+[`41261304264`](https://github.com/snapetech-org/chaptarrng/actions/runs/41261304264)
+still has no assigned runner. The only compatible private Windows runner is
+busy in PlezyNG run
+[`41257920222`](https://github.com/snapetech-org/PlezyNG/actions/runs/41257920222),
+currently in `Setup Flutter`; it was left undisturbed. Fedora RPM, channel
+contracts, standalone asset validation, and standalone macOS acceptance remain
+queued. No release readiness variable was enabled, no package was published,
+and no cluster was created.
