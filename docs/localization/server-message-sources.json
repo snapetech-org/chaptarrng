@@ -40,7 +40,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
-          "line": 167,
+          "line": 168,
           "sourceLine": "job.Message = \"Cancelling conversion\";",
           "sourceLineSha256": "1a74d536721e6fa8058b9755b692802908db79e4d0f72dab829c6e00de50f152",
           "category": "operational-message",
@@ -79,7 +79,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
-          "line": 177,
+          "line": 178,
           "sourceLine": "job.Message = \"Conversion cancelled\";",
           "sourceLineSha256": "4921fcc6da5858c7763463a79e85e4c6a34309e73249b81d2eda89bac31d5e7e",
           "category": "operational-message",
@@ -148,7 +148,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
-          "line": 117,
+          "line": 118,
           "sourceLine": "job.Message = \"Waiting to convert\";",
           "sourceLineSha256": "2f4be1af134646df5b14a02d9ffdf21b5d69d98b0bda63ef31241449ed273aa9",
           "category": "operational-message",
@@ -286,8 +286,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/TorrentInfo/TorrentHashResolver.cs",
           "line": 35,
-          "sourceLine": "                    \"This magnet link\" => \"This magnet link is BitTorrent v2-only. Chaptarr currently requires a v1 info hash to track torrent downloads.\",",
-          "sourceLineSha256": "2972f74312ec77ce02bf2b4302a6d09d484a2bec901f698bf0d1da3dc7df1327",
+          "sourceLine": "\"This magnet link\" => \"This magnet link is BitTorrent v2-only. Chaptarr currently requires a v1 info hash to track torrent downloads.\",",
+          "sourceLineSha256": "8f0fb0af9e02ce7c1cb4b5c211e30bf03dcfd407ab1ed5a8fe542e166924b789",
           "category": "release-grab-error",
           "surface": "Torrent grab rejection surfaced through the existing release-grab message presenter."
         }
@@ -493,8 +493,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1045,
-          "sourceLine": "                return WithSnippet(ConversionFailureCategory.InvalidInput, \"m4b-tool/ffmpeg could not decode one of the source audio files.\", snippetLine);",
-          "sourceLineSha256": "82f266884f5c32a8a42a89faceb602ef0859505c6a78c34dbdf1a8719cf01d47",
+          "sourceLine": "return WithSnippet(ConversionFailureCategory.InvalidInput, \"m4b-tool/ffmpeg could not decode one of the source audio files.\", snippetLine);",
+          "sourceLineSha256": "fa43b9957cdc5b9bbfd57c51209f2274a2e8aa630ff2396cccecaf4916c3d176",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -712,20 +712,20 @@
       ],
       "callsites": [
         {
-          "file": "src/Chaptarr.Api.V1/Profiles/Metadata/MetadataProfileResource.cs",
-          "line": 117,
-          "sourceLine": "throw new BadRequestException(\"Profile type must be General, Audiobook, or Ebook\");",
-          "sourceLineSha256": "c80008fcf93c83e950af8b098ef25727d13d9b5adf1be34ef77deb4a8fee9d0c",
-          "category": "api-error",
-          "surface": "server/API text; may be user-visible"
-        },
-        {
           "file": "src/Chaptarr.Api.V1/Profiles/Metadata/MetadataProfileController.cs",
           "line": 44,
           "sourceLine": ".WithMessage(\"Profile type must be General, Audiobook, or Ebook\");",
           "sourceLineSha256": "34fef8cb7bcc02c30f18056690c2b82bdb6de27655fff425e7c8c8765f2ec42d",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Profiles/Metadata/MetadataProfileResource.cs",
+          "line": 117,
+          "sourceLine": "throw new BadRequestException(\"Profile type must be General, Audiobook, or Ebook\");",
+          "sourceLineSha256": "c80008fcf93c83e950af8b098ef25727d13d9b5adf1be34ef77deb4a8fee9d0c",
+          "category": "api-error",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": [
@@ -902,8 +902,8 @@
         {
           "file": "src/NzbDrone.Core/Download/DownloadClientProvider.cs",
           "line": 174,
-          "sourceLine": "                return $\"No enabled {requestedProtocolLabel} download client is configured. Add and enable a {requestedProtocolLabel}-capable download client, then retry.\";",
-          "sourceLineSha256": "4fe5bf147b98e240056c559ab7525b7e2c681bd6d47f0d0d8d5919eb7bee7acf",
+          "sourceLine": "return $\"No enabled {requestedProtocolLabel} download client is configured. Add and enable a {requestedProtocolLabel}-capable download client, then retry.\";",
+          "sourceLineSha256": "b382a71e96ada8a86491d55bfd0f2ad6167ec8eb164e0d9cbcc5acb893c0a544",
           "category": "release-grab-error",
           "surface": "Download-client selection error returned through ReleaseController and displayed at existing release-grab/interactive-search translation boundaries."
         },
@@ -1154,6 +1154,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
+          "line": 370,
+          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\");",
+          "sourceLineSha256": "d5512c78896c755a9c5b9ddeb12d8e8551cc5b1491c9cd44c1c15426cc98dae4",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
           "line": 199,
           "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\");",
@@ -1164,14 +1172,6 @@
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
           "line": 975,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\");",
-          "sourceLineSha256": "d5512c78896c755a9c5b9ddeb12d8e8551cc5b1491c9cd44c1c15426cc98dae4",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 370,
           "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\");",
           "sourceLineSha256": "d5512c78896c755a9c5b9ddeb12d8e8551cc5b1491c9cd44c1c15426cc98dae4",
           "category": "validation-failure",
@@ -1243,8 +1243,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 804,
-          "sourceLine": "                return ConversionOutputValidationResult.Fail(\"Converted M4B does not have a readable audio duration\");",
-          "sourceLineSha256": "e013f7836d51909afa9e741368a492de39b45632056405456808a0b08fb7530a",
+          "sourceLine": "return ConversionOutputValidationResult.Fail(\"Converted M4B does not have a readable audio duration\");",
+          "sourceLineSha256": "a8d80d2a8b551415e018cbe573724ae399590a130a96377fe57b57ce5102bcf3",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -1498,11 +1498,41 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Indexers/MyAnonaMouse/MyAnonaMouse.cs",
-          "line": 258,
+          "line": 266,
           "sourceLine": "return new ValidationFailure(string.Empty, $\"Connection test failed: {ex.Message}\");",
           "sourceLineSha256": "3220e470a210caf3fb0ebd3f8855f828f94b7526689cd97ebfecab2dd7c794f1",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m12f8b73a2b72",
+      "source": "Chaptarr is unable to connect to Download Station if 2-Factor Authentication is enabled on your DSM account",
+      "sourceFingerprint": "089de74ddee6ee02e23d783bd65cb8eff5ba0a3caee95a5e365adf48cac0a2a8",
+      "parameters": [],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "Chaptarr is unable to connect to Download Station if 2-Factor Authentication is enabled on your DSM account"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
+          "line": 56,
+          "sourceLine": "public override ProviderMessage Message => new ProviderMessage(\"Chaptarr is unable to connect to Download Station if 2-Factor Authentication is enabled on your DSM account\", ProviderMessageType.Warning, \"server.message.m12f8b73a2b72\");",
+          "sourceLineSha256": "ceb8df55655860e497a87799a195b20b12317cb47f67174f44be2973ce6d7159",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/UsenetDownloadStation.cs",
+          "line": 52,
+          "sourceLine": "public override ProviderMessage Message => new ProviderMessage(\"Chaptarr is unable to connect to Download Station if 2-Factor Authentication is enabled on your DSM account\", ProviderMessageType.Warning, \"server.message.m12f8b73a2b72\");",
+          "sourceLineSha256": "ceb8df55655860e497a87799a195b20b12317cb47f67174f44be2973ce6d7159",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
         }
       ],
       "protectedLiterals": []
@@ -1522,8 +1552,8 @@
         {
           "file": "src/NzbDrone.Core/Download/DownloadClientProvider.cs",
           "line": 99,
-          "sourceLine": "                    throw new DownloadClientUnavailableException(\"No download client was found without tags or a matching author tag. Please check your settings.\");",
-          "sourceLineSha256": "fe9439fdd90b5bcbc99aa4d2d31625320adff08ded4847dad74db8c8e839839f",
+          "sourceLine": "throw new DownloadClientUnavailableException(\"No download client was found without tags or a matching author tag. Please check your settings.\");",
+          "sourceLineSha256": "56960b109c6162855cb2d072939c740621389464869f056643bab2ba11ce9ddc",
           "category": "release-grab-error",
           "surface": "Download-client selection error returned through ReleaseController and displayed at existing release-grab/interactive-search translation boundaries."
         }
@@ -1646,8 +1676,8 @@
         {
           "file": "src/NzbDrone.Core/Profiles/Releases/PerlRegexFactory.cs",
           "line": 62,
-          "sourceLine": "                        throw new ArgumentException(\"Unknown or unsupported perl regex modifier: \" + modifier);",
-          "sourceLineSha256": "d294346bb10ba3264acaaf15e8a68a03acbbcb83f64b20b151745d9490a3c85c",
+          "sourceLine": "throw new ArgumentException(\"Unknown or unsupported perl regex modifier: \" + modifier);",
+          "sourceLineSha256": "b4424b205a885e2e11bba270ba74f83fab8bbac253a4f6af0b9dd1034eeb471f",
           "category": "api-error",
           "surface": "Invalid release restriction regex appears in the interactive-search error surface; only the user-supplied modifier character is dynamic."
         }
@@ -2039,8 +2069,8 @@
         {
           "file": "src/NzbDrone.Core/Download/DownloadClientProvider.cs",
           "line": 118,
-          "sourceLine": "                        throw new DownloadClientUnavailableException($\"Indexer specified download client is not available due to recent failures for {indexer.Name}\");",
-          "sourceLineSha256": "a5d28722966f08ea2e41da5f62d47b2b4ca1cea0d045b6fa56852130454e2ce1",
+          "sourceLine": "throw new DownloadClientUnavailableException($\"Indexer specified download client is not available due to recent failures for {indexer.Name}\");",
+          "sourceLineSha256": "b332f4ac8c6d04ec2e6fc3cb2bd0b7ed1283600d7b95823e48c664394860806f",
           "category": "release-grab-error",
           "surface": "Download-client selection error returned through ReleaseController and displayed at existing release-grab/interactive-search translation boundaries."
         }
@@ -2114,8 +2144,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 211,
-          "sourceLine": "            UpdateTerminal(downloadId, ConversionJobStatus.Completed, null, \"Converted M4B imported\");",
-          "sourceLineSha256": "6902d07d9ca2d6425a8f11ea0a07eff74ad4b492ae50418a2def14eb3fb253ee",
+          "sourceLine": "UpdateTerminal(downloadId, ConversionJobStatus.Completed, null, \"Converted M4B imported\");",
+          "sourceLineSha256": "0dcb683f7177f68bb59a7397b6fbace0e7870a1a368427126615feeea6c80c5e",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -2247,8 +2277,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 299,
-          "sourceLine": "                            Requeue(job, \"Recovering interrupted M4B conversion\");",
-          "sourceLineSha256": "dda9cad94ad33ed5202ef0ab69ab8a0c3addb6c8f851915aa46b2e2da5ef3968",
+          "sourceLine": "Requeue(job, \"Recovering interrupted M4B conversion\");",
+          "sourceLineSha256": "3248c41b42dbff6042f97931ff8835a3658ec1e3063706b6d8658eedb4b152e1",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -2504,16 +2534,16 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Notifications/Goodreads/GoodreadsNotificationBase.cs",
-          "line": 173,
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
+          "line": 211,
           "sourceLine": "throw new BadRequestException(\"Goodreads did not return an account ID for the authenticated user.\");",
           "sourceLineSha256": "0393f00b9e5dc5361bb725c6dfb6e3bb8c6ad62f0a30d76910a0ca1a26057d45",
           "category": "api-error",
           "surface": "server/API text; may be user-visible"
         },
         {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 211,
+          "file": "src/NzbDrone.Core/Notifications/Goodreads/GoodreadsNotificationBase.cs",
+          "line": 173,
           "sourceLine": "throw new BadRequestException(\"Goodreads did not return an account ID for the authenticated user.\");",
           "sourceLineSha256": "0393f00b9e5dc5361bb725c6dfb6e3bb8c6ad62f0a30d76910a0ca1a26057d45",
           "category": "api-error",
@@ -2982,8 +3012,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 776,
-          "sourceLine": "                : result.ErrorMessage + \" A readable converted M4B was produced but will not be imported because m4b-tool reported a failure.\";",
-          "sourceLineSha256": "0347ba7519a2e82163e428c57cb825d5e7c364cf115cc738b47db9dd4e13ff22",
+          "sourceLine": ": result.ErrorMessage + \" A readable converted M4B was produced but will not be imported because m4b-tool reported a failure.\";",
+          "sourceLineSha256": "7460939b3e956d1828e9893d4168772ef354ede03476ab2d60b169f43017ad6c",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -3176,9 +3206,9 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 88,
-          "sourceLine": "                throw new NzbDroneClientException(HttpStatusCode.NotFound, \"Couldn't find requested release in cache, try searching again\");",
-          "sourceLineSha256": "ff3f2b1ddb82c7608e2c618e6ecd7f55767c2a31ed10cb45ba1cd59e40dfe8a5",
+          "line": 90,
+          "sourceLine": "\"Couldn't find requested release in cache, try searching again\",",
+          "sourceLineSha256": "fb67e17d5518760ab9fcc982fe0cea74b41bf5979700f043d0da6167233ac996",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         }
@@ -3210,19 +3240,19 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Validation/Paths/FolderReadableValidator.cs",
-          "line": 57,
-          "sourceLine": "_errorMessage = \"Folder '{path}' is not readable by user '{user}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{dockerHint}\";",
-          "sourceLineSha256": "2f8b12cb2a3884bcedc092db877440cf06ecc88d8fb9e80041615b4a36f904a8",
-          "category": "api-message-resource",
-          "surface": "server/API text; may be user-visible"
-        },
-        {
-          "file": "src/NzbDrone.Core/Validation/Paths/FolderReadableValidator.cs",
           "line": 34,
           "sourceLine": "var dockerHint = dockerEnv == null ? string.Empty : $\" (env: {dockerEnv})\";",
           "sourceLineSha256": "647fc906dbbe48545708e5ed962dda1e87ac69e1aea4c0097ee9583deed15234",
           "category": "fixed-template-fragment",
           "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/FolderReadableValidator.cs",
+          "line": 57,
+          "sourceLine": "_errorMessage = \"Folder '{path}' is not readable by user '{user}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{dockerHint}\";",
+          "sourceLineSha256": "2f8b12cb2a3884bcedc092db877440cf06ecc88d8fb9e80041615b4a36f904a8",
+          "category": "api-message-resource",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": [
@@ -3260,19 +3290,19 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Validation/Paths/FolderReadableValidator.cs",
-          "line": 57,
-          "sourceLine": "_errorMessage = \"Folder '{path}' is not readable by user '{user}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{dockerHint}\";",
-          "sourceLineSha256": "2f8b12cb2a3884bcedc092db877440cf06ecc88d8fb9e80041615b4a36f904a8",
-          "category": "api-message-resource",
-          "surface": "server/API text; may be user-visible"
-        },
-        {
-          "file": "src/NzbDrone.Core/Validation/Paths/FolderReadableValidator.cs",
           "line": 34,
           "sourceLine": "var dockerHint = dockerEnv == null ? string.Empty : $\" (env: {dockerEnv})\";",
           "sourceLineSha256": "647fc906dbbe48545708e5ed962dda1e87ac69e1aea4c0097ee9583deed15234",
           "category": "fixed-template-fragment",
           "surface": "App-authored grammar fragment consumed by a source-bound fixed pattern variant"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/Paths/FolderReadableValidator.cs",
+          "line": 57,
+          "sourceLine": "_errorMessage = \"Folder '{path}' is not readable by user '{user}'. Permission denied - please ensure the Chaptarr process has read access to this directory and its subdirectories.{dockerHint}\";",
+          "sourceLineSha256": "2f8b12cb2a3884bcedc092db877440cf06ecc88d8fb9e80041615b4a36f904a8",
+          "category": "api-message-resource",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": [
@@ -3295,8 +3325,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 82,
-          "sourceLine": "                    SetFailure(result, ConversionFailureCategory.ToolUnavailable, \"FFmpeg is not available (required by m4b-tool)\");",
-          "sourceLineSha256": "5b6572fc69d5c244abed2fd56090b6837d64b359f9e36f60e0d179f564057540",
+          "sourceLine": "SetFailure(result, ConversionFailureCategory.ToolUnavailable, \"FFmpeg is not available (required by m4b-tool)\");",
+          "sourceLineSha256": "77e16fd99f44a5445d53e71bbff41aeb4440e892c3f57f54318c96f3883c00ed",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -3367,6 +3397,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
+          "line": 343,
+          "sourceLine": "return new ValidationFailure(fieldName, \"Root folder is required\");",
+          "sourceLineSha256": "42e12e67007a91397f3be5b21daeb925bbb11aaa0a437f3377b24ce5c9339b05",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
           "line": 172,
           "sourceLine": "return new ValidationFailure(fieldName, \"Root folder is required\");",
@@ -3377,14 +3415,6 @@
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
           "line": 948,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Root folder is required\");",
-          "sourceLineSha256": "42e12e67007a91397f3be5b21daeb925bbb11aaa0a437f3377b24ce5c9339b05",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 343,
           "sourceLine": "return new ValidationFailure(fieldName, \"Root folder is required\");",
           "sourceLineSha256": "42e12e67007a91397f3be5b21daeb925bbb11aaa0a437f3377b24ce5c9339b05",
           "category": "validation-failure",
@@ -3462,8 +3492,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1124,
-          "sourceLine": "                message += \" Tool output: \" + firstLine;",
-          "sourceLineSha256": "6e1c4abe3ccd8f64768be8ec38f5d620864b8adab0740530368f2352684bca68",
+          "sourceLine": "message += \" Tool output: \" + firstLine;",
+          "sourceLineSha256": "3a2b3d3b322a86017a616dd531c1742a8037bb86a87e11d65b3fa266decf5a50",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -3734,14 +3764,6 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
-          "line": 44,
-          "sourceLine": ".WithMessage($\"Under {discographySeedTimeMinimum} leads to H&R\");",
-          "sourceLineSha256": "548a66dca44f21eb64ae41ae5cade43927db93b28130314362b2a4ffb4347730",
-          "category": "validation-message",
-          "surface": "FluentValidation error response; validation errors are returned to the client UI"
-        },
-        {
-          "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
           "line": 28,
           "sourceLine": ".WithMessage($\"Under {seedRatioMinimum} leads to H&R\");",
           "sourceLineSha256": "359ff2724169f0a114ade22963838d77a0f187bdbfdc22e3b9cb694598fa7098",
@@ -3753,6 +3775,14 @@
           "line": 36,
           "sourceLine": ".WithMessage($\"Under {seedTimeMinimum} leads to H&R\");",
           "sourceLineSha256": "986a338e9319eb3dd63ee0eb862b10db71863f86ed012d0bd5de9cc2881c95fa",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
+          "line": 44,
+          "sourceLine": ".WithMessage($\"Under {discographySeedTimeMinimum} leads to H&R\");",
+          "sourceLineSha256": "548a66dca44f21eb64ae41ae5cade43927db93b28130314362b2a4ffb4347730",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -4573,6 +4603,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
+          "line": 354,
+          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\");",
+          "sourceLineSha256": "a08e0ee844fea12d3be7c38444d2e08687962e2b5f7a3d4a3867314cfd670999",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
           "line": 183,
           "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\");",
@@ -4583,14 +4621,6 @@
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
           "line": 959,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\");",
-          "sourceLineSha256": "a08e0ee844fea12d3be7c38444d2e08687962e2b5f7a3d4a3867314cfd670999",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 354,
           "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\");",
           "sourceLineSha256": "a08e0ee844fea12d3be7c38444d2e08687962e2b5f7a3d4a3867314cfd670999",
           "category": "validation-failure",
@@ -4668,8 +4698,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 543,
-          "sourceLine": "                            error = $\"{error} Converted file retained at: {attemptOutputPath}\";",
-          "sourceLineSha256": "8bfa2ab150237263f0fedf8fdef7b38547731d264c8ecd115071d356af7722e8",
+          "sourceLine": "error = $\"{error} Converted file retained at: {attemptOutputPath}\";",
+          "sourceLineSha256": "94b366075876caa43d37de12600695e776d53127df82999e4f2c276f3f2450f2",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -4848,6 +4878,28 @@
       ]
     },
     {
+      "id": "server.message.m47f0922640fa",
+      "source": "Testing will execute the script with the EventType set to Test, ensure your script handles this correctly",
+      "sourceFingerprint": "71d05001a97fa1ed2e40c25cdfe0d3482d95734b77a98e0865e941c8025898f1",
+      "parameters": [],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "Testing will execute the script with the EventType set to Test, ensure your script handles this correctly"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Notifications/CustomScript/CustomScript.cs",
+          "line": 38,
+          "sourceLine": "public override ProviderMessage Message => new ProviderMessage(\"Testing will execute the script with the EventType set to Test, ensure your script handles this correctly\", ProviderMessageType.Warning, \"server.message.m47f0922640fa\");",
+          "sourceLineSha256": "5af0787724292e8df71cceade1ece7f2405dad56d5e197b396726bc78711dd6d",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m48c9cd18eeef",
       "source": "pattern is required",
       "sourceFingerprint": "fd79adad27a4c7a5ea06ebf51ea98a6ff861f9abfcce9c9a392758dd0fe21b70",
@@ -4963,9 +5015,9 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 269,
-          "sourceLine": "            throw new NzbDroneClientException(HttpStatusCode.BadRequest, \"A bookId, authorId, or seriesId is required for interactive search\");",
-          "sourceLineSha256": "ce18bae9eab519a0391f01b74498dd7f937712079307f9a2064758537d04d01e",
+          "line": 309,
+          "sourceLine": "\"A bookId, authorId, or seriesId is required for interactive search\",",
+          "sourceLineSha256": "b4df88d8d3a9c7188bbb91abdc0d6fc4337b019132fc7001495f7eb29da84b91",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         }
@@ -5016,8 +5068,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1028,
-          "sourceLine": "                return WithSnippet(ConversionFailureCategory.DependencyMissing, \"Conversion environment is missing a required tool or PHP extension. Rebuild/update the container image, then retry.\", snippetLine);",
-          "sourceLineSha256": "310706f252d1d2abe69263928f2e0535018d1f58808dfce319a68367fb885ec4",
+          "sourceLine": "return WithSnippet(ConversionFailureCategory.DependencyMissing, \"Conversion environment is missing a required tool or PHP extension. Rebuild/update the container image, then retry.\", snippetLine);",
+          "sourceLineSha256": "26565c7d4df1d686bda992b3df49b4ca0382041f47f7d6879d51869ebc839bc6",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -5062,14 +5114,6 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Download/DownloadClientBase.cs",
-          "line": 183,
-          "sourceLine": "return new NzbDroneValidationFailure(propertyName, \"Folder does not exist\")",
-          "sourceLineSha256": "daa9b292336d7b3945bb06ce2381d1b9cad372ccec41d8b4df17fa49fe0f0ef8",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
           "line": 472,
           "sourceLine": "return new NzbDroneValidationFailure(fieldName, $\"Folder does not exist\")",
@@ -5090,6 +5134,14 @@
           "line": 264,
           "sourceLine": "return new NzbDroneValidationFailure(fieldName, $\"Folder does not exist\")",
           "sourceLineSha256": "77374856b57feeb3da88dbb754ef0c44d1d252dd3269b67d50ca6e31b41e70c3",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/DownloadClientBase.cs",
+          "line": 183,
+          "sourceLine": "return new NzbDroneValidationFailure(propertyName, \"Folder does not exist\")",
+          "sourceLineSha256": "daa9b292336d7b3945bb06ce2381d1b9cad372ccec41d8b4df17fa49fe0f0ef8",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -5143,6 +5195,32 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m4cd205e7d07a",
+      "source": "rTorrent will not pause torrents when they meet the seed criteria. Chaptarr can remove torrents after seeding is done only when Remove Completed is enabled and the torrent is not protected by Preserve torrents in client or Post-Import Category. After importing it will also set \"{value0}\" as an rTorrent view, which can be used in rTorrent scripts to customize behavior.",
+      "sourceFingerprint": "32aa6d37621b47656f5444761638d0cc6a177224a1114bf7195213dcc2c814d5",
+      "parameters": [
+        {
+          "name": "value0"
+        }
+      ],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "rTorrent will not pause torrents when they meet the seed criteria. Chaptarr can remove torrents after seeding is done only when Remove Completed is enabled and the torrent is not protected by Preserve torrents in client or Post-Import Category. After importing it will also set \"{value0}\" as an rTorrent view, which can be used in rTorrent scripts to customize behavior."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/rTorrent/RTorrent.cs",
+          "line": 146,
+          "sourceLine": "public override ProviderMessage Message => new ProviderMessage($\"rTorrent will not pause torrents when they meet the seed criteria. Chaptarr can remove torrents after seeding is done only when Remove Completed is enabled and the torrent is not protected by Preserve torrents in client or Post-Import Category. After importing it will also set \\\"{_imported_view}\\\" as an rTorrent view, which can be used in rTorrent scripts to customize behavior.\", ProviderMessageType.Info, \"server.message.m4cd205e7d07a\", new { value0 = _imported_view });",
+          "sourceLineSha256": "ec9e98f5b0873648cafba5df6dd78a0c1dfa35505ef2a34c59916f1f95c103e2",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m4d3e6de749b4",
       "source": "Conversion could not write or rename files in the conversion folder. Check destination folder ownership and permissions.",
       "sourceFingerprint": "77bc4917a678682a32b9052872091fac9934a167a1e3fd08c0b8754898ccdc0e",
@@ -5157,8 +5235,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1021,
-          "sourceLine": "                return WithSnippet(ConversionFailureCategory.PermissionDenied, \"Conversion could not write or rename files in the conversion folder. Check destination folder ownership and permissions.\", snippetLine);",
-          "sourceLineSha256": "8e798000b8a9efb035b1b233df44e0c255d4d7a293ac22f0b4504e5aad59d44b",
+          "sourceLine": "return WithSnippet(ConversionFailureCategory.PermissionDenied, \"Conversion could not write or rename files in the conversion folder. Check destination folder ownership and permissions.\", snippetLine);",
+          "sourceLineSha256": "c7a1740967d88684ba53b46095332212fa685cf6bc4eccf9539706ee142cd2f0",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -5316,8 +5394,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 406,
-          "sourceLine": "                    Requeue(job, \"Recovering expired M4B conversion lease\");",
-          "sourceLineSha256": "98b357c507b72d1d833414e38192ff42aea50d066421eed0af39c76a12708a7f",
+          "sourceLine": "Requeue(job, \"Recovering expired M4B conversion lease\");",
+          "sourceLineSha256": "5c596dfc0891eea0fcba50d2bdb5409303f35a63d4f3b0a2e85ff924936661b6",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -5479,25 +5557,25 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 115,
-          "sourceLine": "                            throw new NzbDroneClientException(HttpStatusCode.NotFound, \"Unable to parse books in the release\");",
-          "sourceLineSha256": "813d19f2f3d51119abb932fb6669da40f09a8f74c95a6e157021e11443b5a3e7",
+          "line": 123,
+          "sourceLine": "\"Unable to parse books in the release\",",
+          "sourceLineSha256": "6d4945dd06f41b7fa41253bee6db70c91f5073d57a4947dbcf4b27c0d2691dda",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 146,
-          "sourceLine": "                    throw new NzbDroneClientException(HttpStatusCode.NotFound, \"Unable to parse books in the release\");",
-          "sourceLineSha256": "abdb558bfb16bf91586728863d92cbf6f3eeb7a3e78473c8c67df28753defa58",
+          "line": 163,
+          "sourceLine": "\"Unable to parse books in the release\",",
+          "sourceLineSha256": "6d4945dd06f41b7fa41253bee6db70c91f5073d57a4947dbcf4b27c0d2691dda",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 151,
-          "sourceLine": "                    throw new NzbDroneClientException(HttpStatusCode.NotFound, \"Unable to parse books in the release\");",
-          "sourceLineSha256": "abdb558bfb16bf91586728863d92cbf6f3eeb7a3e78473c8c67df28753defa58",
+          "line": 163,
+          "sourceLine": "\"Unable to parse books in the release\",",
+          "sourceLineSha256": "6d4945dd06f41b7fa41253bee6db70c91f5073d57a4947dbcf4b27c0d2691dda",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         }
@@ -5634,9 +5712,9 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
-          "line": 126,
-          "sourceLine": "ErrorMessage = \"selectedBooks must include foreignAuthorId values\"",
-          "sourceLineSha256": "57d612d2380111b8b92d3a1b53d20410b91094b82e38423793d04dce74b4bc7a",
+          "line": 130,
+          "sourceLine": "ErrorMessage = \"selectedBooks must include foreignAuthorId values\",",
+          "sourceLineSha256": "b3c9ce27e12571cf0cccc9e88d36e2bcede645e2313ccf20a35521c3310cd5bc",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
         }
@@ -5758,16 +5836,16 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Validation/RuleBuilderExtensions.cs",
-          "line": 24,
+          "file": "src/Chaptarr.Http/Validation/RuleBuilderExtensions.cs",
+          "line": 22,
           "sourceLine": "return ruleBuilder.Matches(\"^https?://\", RegexOptions.IgnoreCase).WithMessage(\"must start with http:// or https://\");",
           "sourceLineSha256": "f4a1872d6738c4524c5c927f6be9f1e7a318445a5c12ae47bc16920df0428f61",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
         {
-          "file": "src/Chaptarr.Http/Validation/RuleBuilderExtensions.cs",
-          "line": 22,
+          "file": "src/NzbDrone.Core/Validation/RuleBuilderExtensions.cs",
+          "line": 24,
           "sourceLine": "return ruleBuilder.Matches(\"^https?://\", RegexOptions.IgnoreCase).WithMessage(\"must start with http:// or https://\");",
           "sourceLineSha256": "f4a1872d6738c4524c5c927f6be9f1e7a318445a5c12ae47bc16920df0428f61",
           "category": "validation-message",
@@ -5813,9 +5891,9 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
-          "line": 104,
-          "sourceLine": "ErrorMessage = \"Invalid selectedMediaType (expected 'audiobook' or 'ebook')\"",
-          "sourceLineSha256": "46bd45ddaaa2d08443828cedab318bd72908cfc68fdb2a8bf831086b90cefa89",
+          "line": 107,
+          "sourceLine": "ErrorMessage = \"Invalid selectedMediaType (expected 'audiobook' or 'ebook')\",",
+          "sourceLineSha256": "d2681e6ba039608bcd69f4ce62d10efe53a40cd13651c473325953be9510e0d9",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
         }
@@ -5841,6 +5919,28 @@
           "sourceLineSha256": "6ad9530c3517a59cb9534a0c52d72adef753a6acfe9cfc80c55c312e047506ae",
           "category": "api-error",
           "surface": "server/API text; may be user-visible"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m566bae95cfdb",
+      "source": "This indexer supports ebook searches only. Configured URLs remain in the order you enter them.",
+      "sourceFingerprint": "f5103841570fa674e751c4197b1c90e869157855df131a961a740325058a0b4f",
+      "parameters": [],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "This indexer supports ebook searches only. Configured URLs remain in the order you enter them."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Indexers/DirectDownload/DirectDownloadIndexer.cs",
+          "line": 46,
+          "sourceLine": "\"This indexer supports ebook searches only. Configured URLs remain in the order you enter them.\",",
+          "sourceLineSha256": "654af87de3be09d7f558a381389aff2ea7cd3ea54f55221cb955577193213183",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
         }
       ],
       "protectedLiterals": []
@@ -5931,8 +6031,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 89,
-          "sourceLine": "                    SetFailure(result, ConversionFailureCategory.ToolUnavailable, \"FFprobe is not available (required to validate converted audiobooks)\");",
-          "sourceLineSha256": "641bf736d0955118da1019f8f529eb91f0584589a6e372b23af441f58b1c61da",
+          "sourceLine": "SetFailure(result, ConversionFailureCategory.ToolUnavailable, \"FFprobe is not available (required to validate converted audiobooks)\");",
+          "sourceLineSha256": "c12ca12d72a1cd947d7e3e433a091d4b4ccb80e72e248e91e947ff96dd1daf66",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -6118,8 +6218,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 539,
-          "sourceLine": "                        var error = result.ErrorMessage.IsNullOrWhiteSpace() ? \"M4B conversion failed\" : result.ErrorMessage;",
-          "sourceLineSha256": "cd863dd27e3f25d1de374d546faa5c8fddbf9edc58f6b6b609c97a3a35247c51",
+          "sourceLine": "var error = result.ErrorMessage.IsNullOrWhiteSpace() ? \"M4B conversion failed\" : result.ErrorMessage;",
+          "sourceLineSha256": "2bb9543fb53726414fd6c9337f4863ca78bc98523038452b6e72c9ffc11a7499",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -6149,8 +6249,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1401,
-          "sourceLine": "            return string.Format(CultureInfo.InvariantCulture, \"Converting to M4B - {0:0.#}%\", progress);",
-          "sourceLineSha256": "6c3ed63d7b6ecc99588553fe48148d0d99e6df235b50f3da3b3b9edb7ef7d947",
+          "sourceLine": "return string.Format(CultureInfo.InvariantCulture, \"Converting to M4B - {0:0.#}%\", progress);",
+          "sourceLineSha256": "bbe0189decdaa096d20890f5a3e8ce6119078039f945cd22d17b740f54cecac5",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -6279,11 +6379,11 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 188,
-          "sourceLine": "throw new NzbDroneClientException(HttpStatusCode.Conflict, $\"Download client rejected release: {message}\");",
-          "sourceLineSha256": "89a495280175b1229f04f8631c0679a12bff40b8731f0178d3ce09b37130a789",
+          "line": 216,
+          "sourceLine": "throw NzbDroneClientException.WithMessageId(",
+          "sourceLineSha256": "0fdf3584000adb8a8dbd1ab59134870700bc86ccce06c5ab32d7be1118e0a03a",
           "category": "release-grab-error",
-          "surface": "Interactive release result error body and download tooltip; values remain raw"
+          "surface": "Interactive release result error body and download tooltip; stable app text is keyed, captured download-client detail remains a dynamic value"
         }
       ],
       "protectedLiterals": []
@@ -6476,6 +6576,38 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m621dd0308bef",
+      "source": "User Class: {value0} (Standard member); unsatisfied torrents: {value1}/{value2}",
+      "sourceFingerprint": "9605178ad7e7ffc0c8e748ee3c6173d563344587cb2c3e47c95099855ac12d00",
+      "parameters": [
+        {
+          "name": "value0"
+        },
+        {
+          "name": "value1"
+        },
+        {
+          "name": "value2"
+        }
+      ],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "User Class: {value0} (Standard member); unsatisfied torrents: {value1}/{value2}"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Indexers/MyAnonaMouse/MyAnonaMouse.cs",
+          "line": 240,
+          "sourceLine": "? $\"User Class: {cls} (Standard member); unsatisfied torrents: {Settings.UnsatisfiedCount}/{Settings.UnsatisfiedLimit}\"",
+          "sourceLineSha256": "f31f0656c33265957055e2aaa83bb428822371936fe5380c60ac71e507668aa3",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m623b1093a9c9",
       "source": "Unable to connect to Torrent Download Station",
       "sourceFingerprint": "e4c0b8416efde9b3caba7389eed4fb84421f53e8cf8bfd56d2a68bcb4f4740a1",
@@ -6594,8 +6726,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 531,
-          "sourceLine": "                        MarkReady(job, \"Converted M4B ready to import\");",
-          "sourceLineSha256": "249d064b207e442d0115a2e97fef84592a1e5de8861db22630e49199e345bb30",
+          "sourceLine": "MarkReady(job, \"Converted M4B ready to import\");",
+          "sourceLineSha256": "662b6f1e33dba2dcb0ae35b0943205dbf2bffc589da8253939d9dde0996464a9",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -6708,8 +6840,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 494,
-          "sourceLine": "                    MarkReady(job, \"Using retained M4B\");",
-          "sourceLineSha256": "f236c34f763b6d86d7e9cb26c2a84e7cd5df0f8098126a9e8064b199e8248a3c",
+          "sourceLine": "MarkReady(job, \"Using retained M4B\");",
+          "sourceLineSha256": "1a3b095939b23ee4cecfee7e9f18e9a5b412f019eb239af3a6b451462b55c53b",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -6737,16 +6869,16 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Notifications/Goodreads/GoodreadsNotificationBase.cs",
-          "line": 143,
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
+          "line": 64,
           "sourceLine": "return new ValidationFailure(string.Empty, $\"Goodreads authentication error: {ex.Message}\");",
           "sourceLineSha256": "4d95440dbcad3bc2d38d69334fd925f7f9bc0fb2acda1bc6eeca1cc08055f251",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 64,
+          "file": "src/NzbDrone.Core/Notifications/Goodreads/GoodreadsNotificationBase.cs",
+          "line": 143,
           "sourceLine": "return new ValidationFailure(string.Empty, $\"Goodreads authentication error: {ex.Message}\");",
           "sourceLineSha256": "4d95440dbcad3bc2d38d69334fd925f7f9bc0fb2acda1bc6eeca1cc08055f251",
           "category": "validation-failure",
@@ -7040,8 +7172,8 @@
         {
           "file": "src/NzbDrone.Core/Download/DownloadClientProvider.cs",
           "line": 206,
-          "sourceLine": "                       ?? throw new DownloadClientUnavailableException(\"Internal Direct download client is not available.\");",
-          "sourceLineSha256": "91480fe77154c56f6f675865e2798fe4a8a956b30c8cc991f9b01000e70575ca",
+          "sourceLine": "?? throw new DownloadClientUnavailableException(\"Internal Direct download client is not available.\");",
+          "sourceLineSha256": "c1ab7b0aa45513254abda5cbca7d6b49f93b3f2e5a5559ac55ab1ea74654f1ff",
           "category": "release-grab-error",
           "surface": "Download-client selection error returned through ReleaseController and displayed at existing release-grab/interactive-search translation boundaries."
         }
@@ -7146,6 +7278,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
+          "line": 349,
+          "sourceLine": "return new ValidationFailure(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\");",
+          "sourceLineSha256": "df170d1d63f5def9ae4d9960661f9c2f25aa5fd64dcac73eead7c23743081217",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
           "line": 178,
           "sourceLine": "return new ValidationFailure(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\");",
@@ -7156,14 +7296,6 @@
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
           "line": 954,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\");",
-          "sourceLineSha256": "df170d1d63f5def9ae4d9960661f9c2f25aa5fd64dcac73eead7c23743081217",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 349,
           "sourceLine": "return new ValidationFailure(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\");",
           "sourceLineSha256": "df170d1d63f5def9ae4d9960661f9c2f25aa5fd64dcac73eead7c23743081217",
           "category": "validation-failure",
@@ -7340,9 +7472,9 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
-          "line": 89,
-          "sourceLine": "ErrorMessage = \"selectedBooks is required\"",
-          "sourceLineSha256": "a2262a4a5d06dd3b624cc73cdb9c10fd8ccf6855b185f50e33be00d3791a4852",
+          "line": 91,
+          "sourceLine": "ErrorMessage = \"selectedBooks is required\",",
+          "sourceLineSha256": "340f94fec02d6dd2f3f4193e4196989c532bf1eb14ace71008149231968864ab",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
         }
@@ -7391,6 +7523,28 @@
           "sourceLineSha256": "d52e6fdc1f2e00d0372a8b00d4e84e47b290a7f3d73f7ee4789f0268b282db0d",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.m73172a5045d6",
+      "source": "Books from your Hardcover lists and reading statuses will be matched by title and author name against your configured metadata source.",
+      "sourceFingerprint": "6ae7d9f92e8b8a2e7246b95985e53499da81d1de76072ffcbf1ad2ccfd4ced58",
+      "parameters": [],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "Books from your Hardcover lists and reading statuses will be matched by title and author name against your configured metadata source."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/ImportLists/Hardcover/HardcoverImport.cs",
+          "line": 26,
+          "sourceLine": "\"Books from your Hardcover lists and reading statuses will be matched by title and author name against your configured metadata source.\",",
+          "sourceLineSha256": "122192dafeea9d79edd32813dd833ae75c6c8d82f4ceaa107aa470b5e6704d1b",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
         }
       ],
       "protectedLiterals": []
@@ -7644,8 +7798,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 451,
-          "sourceLine": "                    job.Message = $\"Converting to M4B ({tokenBudget} CPU thread{(tokenBudget == 1 ? string.Empty : \"s\")})\";",
-          "sourceLineSha256": "8c62c1ae2af4ec1b00d08c5ede5f43265df67c1527d9b4c1b880b931cdebc87f",
+          "sourceLine": "job.Message = $\"Converting to M4B ({tokenBudget} CPU thread{(tokenBudget == 1 ? string.Empty : \"s\")})\";",
+          "sourceLineSha256": "8a8cad3c83e1b57a5d484e42bc665da003dfe6974531e085eae156dd355cb97a",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -7709,8 +7863,8 @@
         {
           "file": "src/NzbDrone.Core/Download/DownloadClientProvider.cs",
           "line": 177,
-          "sourceLine": "            return $\"No enabled {requestedProtocolLabel} download client is configured. {alternateClients} Add and enable a {requestedProtocolLabel}-capable download client, then retry.\";",
-          "sourceLineSha256": "cf49f89d6af2c883571c3f761e67b613ae8ae489be906c8bc313349facb6e7ca",
+          "sourceLine": "return $\"No enabled {requestedProtocolLabel} download client is configured. {alternateClients} Add and enable a {requestedProtocolLabel}-capable download client, then retry.\";",
+          "sourceLineSha256": "b18f7fdf0cedc67b21fdf5a25c21a0837883fec5bf06d4a65e37e2eee68562fa",
           "category": "release-grab-error",
           "surface": "Download-client selection error returned through ReleaseController and displayed at existing release-grab/interactive-search translation boundaries."
         }
@@ -7825,6 +7979,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/Download/Clients/NzbVortex/NzbVortexSettings.cs",
+          "line": 19,
+          "sourceLine": ".WithMessage(\"API Key is required\");",
+          "sourceLineSha256": "b2d72b3b0c853bab0bcf7740d4875974ccce2b0f7f73c318d520ce67b71236e5",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
           "file": "src/NzbDrone.Core/Notifications/AudioBookShelf/AudioBookShelfSettings.cs",
           "line": 21,
           "sourceLine": "RuleFor(c => c.ApiKey).NotEmpty().WithMessage(\"API Key is required\");",
@@ -7837,14 +7999,6 @@
           "line": 22,
           "sourceLine": "RuleFor(c => c.ApiKey).NotEmpty().WithMessage(\"API Key is required\");",
           "sourceLineSha256": "d5b0e91a61db3aa3a74fe0aa216812deee6c11f8d5d07b9051500971a90a5ad4",
-          "category": "validation-message",
-          "surface": "FluentValidation error response; validation errors are returned to the client UI"
-        },
-        {
-          "file": "src/NzbDrone.Core/Download/Clients/NzbVortex/NzbVortexSettings.cs",
-          "line": 19,
-          "sourceLine": ".WithMessage(\"API Key is required\");",
-          "sourceLineSha256": "b2d72b3b0c853bab0bcf7740d4875974ccce2b0f7f73c318d520ce67b71236e5",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -7957,8 +8111,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 99,
-          "sourceLine": "                        SetFailure(result, ConversionFailureCategory.InvalidInput, $\"Input file does not exist: {file}\");",
-          "sourceLineSha256": "5a01c224b6cfe44fcf96adf51b9d34d0633f2b065eb90cdb2e5ad0fdbca2e787",
+          "sourceLine": "SetFailure(result, ConversionFailureCategory.InvalidInput, $\"Input file does not exist: {file}\");",
+          "sourceLineSha256": "bd3eeccf303fefdd27d315fcb324ee23a479b38f8a36facaa95c06f80045155e",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -8147,19 +8301,19 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 564,
-          "sourceLine": "throw new BadRequestException(\"Proxy mode must be Disabled, IndexerOnly, or ProxyEverything\");",
-          "sourceLineSha256": "8ccc39c6148f7b10c9864cd1e37a4ee08aa922b82a978ea9b620da75c9b1b468",
-          "category": "api-error",
-          "surface": "server/API text; may be user-visible"
-        },
-        {
-          "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
           "line": 121,
           "sourceLine": ".WithMessage(\"Proxy mode must be Disabled, IndexerOnly, or ProxyEverything\");",
           "sourceLineSha256": "29421e573deaf2adfedfa8b5b6533ed78858586739f3e3fc7b92ebf75cc0c7de",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
+          "line": 564,
+          "sourceLine": "throw new BadRequestException(\"Proxy mode must be Disabled, IndexerOnly, or ProxyEverything\");",
+          "sourceLineSha256": "8ccc39c6148f7b10c9864cd1e37a4ee08aa922b82a978ea9b620da75c9b1b468",
+          "category": "api-error",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": []
@@ -8332,8 +8486,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 789,
-          "sourceLine": "                return ConversionOutputValidationResult.Fail(\"Converted M4B file is too small to be a valid audiobook\");",
-          "sourceLineSha256": "f85026ed99bffb5110b2c52576b020af4853f05e8a0b760836ba7107fa8aa004",
+          "sourceLine": "return ConversionOutputValidationResult.Fail(\"Converted M4B file is too small to be a valid audiobook\");",
+          "sourceLineSha256": "f10b8a4ee0cebc7eec076fa9c14b1402ac42af01696e5e25c83e5116b9a3e701",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -8528,18 +8682,18 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Books/Calibre/CalibreSettings.cs",
-          "line": 21,
-          "sourceLine": "RuleFor(c => c.OutputFormat).Must(x => x.Split(',').All(y => Enum.TryParse<CalibreFormat>(y, true, out _))).WithMessage(\"Invalid output formats\");",
-          "sourceLineSha256": "dd2ee6e58ffd769c5b26f93620fecdd6997b8711c683c6070e50389eb6cef2dc",
-          "category": "validation-message",
-          "surface": "FluentValidation error response; validation errors are returned to the client UI"
-        },
-        {
           "file": "src/Chaptarr.Api.V1/RootFolders/RootFolderController.cs",
           "line": 97,
           "sourceLine": "SharedValidator.RuleFor(c => c.OutputFormat).Must(x => x.Split(',').All(y => Enum.TryParse<CalibreFormat>(y, true, out _))).When(x => x.OutputFormat.IsNotNullOrWhiteSpace()).WithMessage(\"Invalid output formats\");",
           "sourceLineSha256": "16cfe8c270ff1bb594443806b4d315d9556243e13387a2557330bd3682208ed1",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Books/Calibre/CalibreSettings.cs",
+          "line": 21,
+          "sourceLine": "RuleFor(c => c.OutputFormat).Must(x => x.Split(',').All(y => Enum.TryParse<CalibreFormat>(y, true, out _))).WithMessage(\"Invalid output formats\");",
+          "sourceLineSha256": "dd2ee6e58ffd769c5b26f93620fecdd6997b8711c683c6070e50389eb6cef2dc",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -8951,16 +9105,16 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Notifications/PushBullet/PushBulletProxy.cs",
-          "line": 140,
+          "file": "src/NzbDrone.Core/ImportLists/Chaptarr/ChaptarrV1Proxy.cs",
+          "line": 69,
           "sourceLine": "return new ValidationFailure(\"ApiKey\", \"API Key is invalid\");",
           "sourceLineSha256": "e8ee5fc58cca842b0b7f3ec4041577360c26db6e8d099793cc0d8603405f8780",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
-          "file": "src/NzbDrone.Core/ImportLists/Chaptarr/ChaptarrV1Proxy.cs",
-          "line": 69,
+          "file": "src/NzbDrone.Core/Notifications/PushBullet/PushBulletProxy.cs",
+          "line": 140,
           "sourceLine": "return new ValidationFailure(\"ApiKey\", \"API Key is invalid\");",
           "sourceLineSha256": "e8ee5fc58cca842b0b7f3ec4041577360c26db6e8d099793cc0d8603405f8780",
           "category": "validation-failure",
@@ -9116,8 +9270,8 @@
         {
           "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
           "line": 67,
-          "sourceLine": "ErrorMessage = \"foreignSeriesId is required\"",
-          "sourceLineSha256": "a7a7fdeec3e5996727f943542045a2e3a4845fc45ba31a897839d3194470c6dd",
+          "sourceLine": "ErrorMessage = \"foreignSeriesId is required\",",
+          "sourceLineSha256": "d0617c2b756fd635da6f85d4b7c47ac1072101166ca63e54b268b686cfcf0b41",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
         }
@@ -9163,6 +9317,14 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
+          "line": 124,
+          "sourceLine": ".WithMessage(\"Proxy type must be Http, Socks4, or Socks5\");",
+          "sourceLineSha256": "dc08283609d821af87810521e711226930ad53dff512c571527cb4cdc218a8a8",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
           "line": 569,
           "sourceLine": "throw new BadRequestException(\"Proxy type must be Http, Socks4, or Socks5\");",
           "sourceLineSha256": "8a28ee18191365998c585838362d731c502968ad1fbe42952033246f506740e7",
@@ -9171,15 +9333,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Configuration/ProxyController.cs",
-          "line": 144,
-          "sourceLine": "throw new BadRequestException(\"Proxy type must be Http, Socks4, or Socks5\");",
-          "sourceLineSha256": "8a28ee18191365998c585838362d731c502968ad1fbe42952033246f506740e7",
-          "category": "api-error",
-          "surface": "server/API text; may be user-visible"
-        },
-        {
-          "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 124,
+          "line": 30,
           "sourceLine": ".WithMessage(\"Proxy type must be Http, Socks4, or Socks5\");",
           "sourceLineSha256": "dc08283609d821af87810521e711226930ad53dff512c571527cb4cdc218a8a8",
           "category": "validation-message",
@@ -9187,11 +9341,11 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Configuration/ProxyController.cs",
-          "line": 30,
-          "sourceLine": ".WithMessage(\"Proxy type must be Http, Socks4, or Socks5\");",
-          "sourceLineSha256": "dc08283609d821af87810521e711226930ad53dff512c571527cb4cdc218a8a8",
-          "category": "validation-message",
-          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+          "line": 144,
+          "sourceLine": "throw new BadRequestException(\"Proxy type must be Http, Socks4, or Socks5\");",
+          "sourceLineSha256": "8a28ee18191365998c585838362d731c502968ad1fbe42952033246f506740e7",
+          "category": "api-error",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": []
@@ -9310,8 +9464,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 560,
-          "sourceLine": "                    MarkFailed(job, \"M4B conversion failed: \" + ex.Message);",
-          "sourceLineSha256": "5aa1664b29da687fed273b754f90a23bb61d5e48f6b13970550ee16e60037b88",
+          "sourceLine": "MarkFailed(job, \"M4B conversion failed: \" + ex.Message);",
+          "sourceLineSha256": "1128912cef2ef6eaebf17419d363b3e35771aafb823ffc52c5acf6810249b4ba",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -9612,8 +9766,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1048,
-          "sourceLine": "            return WithSnippet(ConversionFailureCategory.Unknown, $\"m4b-tool failed with exit code {toolResult.ExitCode}.\", snippetLine);",
-          "sourceLineSha256": "51417db72406d11ef99d65c3a794b87d795a1727409f2b8c0c394620adf339ab",
+          "sourceLine": "return WithSnippet(ConversionFailureCategory.Unknown, $\"m4b-tool failed with exit code {toolResult.ExitCode}.\", snippetLine);",
+          "sourceLineSha256": "90fc1099b1d76cd6979a7a27fd1ab865962a2dd5efeea3d07c7d5217ee07b766",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -9765,14 +9919,6 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Notifications/Apprise/AppriseSettings.cs",
-          "line": 22,
-          "sourceLine": ".WithMessage(\"Allowed characters a-z, 0-9 and -\");",
-          "sourceLineSha256": "78fd2ff307886ee3f79aa799a3aab804320f281ed4cced1a7b734e1d08e13e52",
-          "category": "validation-message",
-          "surface": "FluentValidation error response; validation errors are returned to the client UI"
-        },
-        {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/DelugeSettings.cs",
           "line": 16,
           "sourceLine": "RuleFor(c => c.AudiobookCategory).Matches(\"^[-a-z0-9]*$\").WithMessage(\"Allowed characters a-z, 0-9 and -\");",
@@ -9801,6 +9947,14 @@
           "line": 19,
           "sourceLine": "RuleFor(c => c.EbookImportedCategory).Matches(\"^[-a-z0-9]*$\").WithMessage(\"Allowed characters a-z, 0-9 and -\");",
           "sourceLineSha256": "cc065628fb394c86497e2b0c0f02aed8a7c7024f987b3a6d266a7266134efb7e",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Apprise/AppriseSettings.cs",
+          "line": 22,
+          "sourceLine": ".WithMessage(\"Allowed characters a-z, 0-9 and -\");",
+          "sourceLineSha256": "78fd2ff307886ee3f79aa799a3aab804320f281ed4cced1a7b734e1d08e13e52",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -9892,8 +10046,8 @@
         {
           "file": "src/NzbDrone.Core/Download/DownloadClientProvider.cs",
           "line": 113,
-          "sourceLine": "                        throw new DownloadClientUnavailableException($\"Indexer specified download client does not exist for {indexer.Name}\");",
-          "sourceLineSha256": "81eabc0c00a0372319c422dd12c3e78ca3f36bf87b94847d053b9b912a71a283",
+          "sourceLine": "throw new DownloadClientUnavailableException($\"Indexer specified download client does not exist for {indexer.Name}\");",
+          "sourceLineSha256": "835e4bce630237f663d0ee29163c7b696d273c22639c1168e072524329d4fe6f",
           "category": "release-grab-error",
           "surface": "Download-client selection error returned through ReleaseController and displayed at existing release-grab/interactive-search translation boundaries."
         }
@@ -9914,7 +10068,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Indexers/MyAnonaMouse/MyAnonaMouse.cs",
-          "line": 255,
+          "line": 263,
           "sourceLine": "return new ValidationFailure(string.Empty, \"Authentication failed. Verify your mam_id is correct (found under Preferences > Security on MAM). If using a proxy, ensure it's configured in Settings > General > Proxy.\");",
           "sourceLineSha256": "503dafca53c4a9b8b877318b2e9ed6ffd041292a74506bfb425a27448150eaf0",
           "category": "validation-failure",
@@ -9984,6 +10138,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
+          "line": 80,
+          "sourceLine": "throw new BadRequestException(\"QueryParam callbackUrl invalid.\");",
+          "sourceLineSha256": "56c521eeba8919bae70369b6da72bae2ddd39cb13fbfe7d493b135f4525bc28c",
+          "category": "api-error",
+          "surface": "server/API text; may be user-visible"
+        },
+        {
           "file": "src/NzbDrone.Core/Notifications/AudioBookShelf/AudioBookShelf.cs",
           "line": 782,
           "sourceLine": "throw new BadRequestException(\"QueryParam callbackUrl invalid.\");",
@@ -10000,14 +10162,6 @@
           "surface": "server/API text; may be user-visible"
         },
         {
-          "file": "src/NzbDrone.Core/Notifications/Twitter/Twitter.cs",
-          "line": 88,
-          "sourceLine": "throw new BadRequestException(\"QueryParam callbackUrl invalid.\");",
-          "sourceLineSha256": "56c521eeba8919bae70369b6da72bae2ddd39cb13fbfe7d493b135f4525bc28c",
-          "category": "api-error",
-          "surface": "server/API text; may be user-visible"
-        },
-        {
           "file": "src/NzbDrone.Core/Notifications/Plex/Server/PlexServer.cs",
           "line": 215,
           "sourceLine": "throw new BadRequestException(\"QueryParam callbackUrl invalid.\");",
@@ -10016,8 +10170,8 @@
           "surface": "server/API text; may be user-visible"
         },
         {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 80,
+          "file": "src/NzbDrone.Core/Notifications/Twitter/Twitter.cs",
+          "line": 88,
           "sourceLine": "throw new BadRequestException(\"QueryParam callbackUrl invalid.\");",
           "sourceLineSha256": "56c521eeba8919bae70369b6da72bae2ddd39cb13fbfe7d493b135f4525bc28c",
           "category": "api-error",
@@ -10193,14 +10347,6 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Notifications/CalibreContentServer/CalibreContentServer.cs",
-          "line": 307,
-          "sourceLine": ": new ValidationFailure(\"Username\", \"Authentication failed\"));",
-          "sourceLineSha256": "0a94dc17f9e6f743c49ee71513d87928819463ef4d0f86bf39346f1e9bbccd79",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 467,
           "sourceLine": "return new NzbDroneValidationFailure(\"Password\", \"Authentication failed\");",
@@ -10221,6 +10367,14 @@
           "line": 305,
           "sourceLine": "return new ValidationFailure(\"Username\", \"Authentication failed\");",
           "sourceLineSha256": "9bbea3b9a4fe354156dce7bbdb3b266b731c3e19de91ecf7b9de1f236d7ab05b",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/CalibreContentServer/CalibreContentServer.cs",
+          "line": 307,
+          "sourceLine": ": new ValidationFailure(\"Username\", \"Authentication failed\"));",
+          "sourceLineSha256": "0a94dc17f9e6f743c49ee71513d87928819463ef4d0f86bf39346f1e9bbccd79",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -10258,8 +10412,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 816,
-          "sourceLine": "                        $\"Converted M4B duration looks wrong. Source duration is about {FormatDuration(expectedDuration)} but output is {FormatDuration(outputDuration)}; allowed difference is {FormatDuration(allowedDifference)}.\");",
-          "sourceLineSha256": "14b4c09fbeb2eb73169025a85111a7f2c13767bb9c66d9e88c80bed81c4df910",
+          "sourceLine": "$\"Converted M4B duration looks wrong. Source duration is about {FormatDuration(expectedDuration)} but output is {FormatDuration(outputDuration)}; allowed difference is {FormatDuration(allowedDifference)}.\");",
+          "sourceLineSha256": "ce65424862ba1557f720ced5efc34204841ab1f5fe52e7e942211edc67c2b700",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -10432,9 +10586,9 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
-          "line": 79,
-          "sourceLine": "ErrorMessage = \"selectedMediaType is required\"",
-          "sourceLineSha256": "a2bbec780489d767f21749fb84f7c5a66c57afbab273b5569c91c048d0b5802d",
+          "line": 80,
+          "sourceLine": "ErrorMessage = \"selectedMediaType is required\",",
+          "sourceLineSha256": "35d1d2182e24337a247854b2a0486b5740819f3ece0d2af54f0c82c0fa4f6870",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
         }
@@ -10454,18 +10608,18 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Books/Services/AuthorService.cs",
-          "line": 999,
-          "sourceLine": "failures.Add(new ValidationFailure(propertyName, \"Selected root folder is not configured. Add it in Settings → Media Management.\"));",
-          "sourceLineSha256": "48ba1c5dc74062acef0edd5424675b70bc9b02f3b4071ff67ea33fa40f7fb995",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
           "line": 636,
           "sourceLine": "new ValidationFailure(\"RootFolder\", \"Selected root folder is not configured. Add it in Settings → Media Management.\")",
           "sourceLineSha256": "9d148bd5d4bb6abe68b990acd543e3a46fcf59b2e81b33848e8a89b6d19682a4",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/Books/Services/AuthorService.cs",
+          "line": 999,
+          "sourceLine": "failures.Add(new ValidationFailure(propertyName, \"Selected root folder is not configured. Add it in Settings → Media Management.\"));",
+          "sourceLineSha256": "48ba1c5dc74062acef0edd5424675b70bc9b02f3b4071ff67ea33fa40f7fb995",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -10581,6 +10735,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/Books/Calibre/CalibreProxy.cs",
+          "line": 1174,
+          "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"Unknown exception: \" + ex.Message);",
+          "sourceLineSha256": "5907648dbeb4978bcd36290c1777d235279ee97300b0395adf2f251dcffcf762",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 490,
           "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"Unknown exception: \" + ex.Message);",
@@ -10647,14 +10809,6 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/uTorrent/UTorrent.cs",
           "line": 333,
-          "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"Unknown exception: \" + ex.Message);",
-          "sourceLineSha256": "5907648dbeb4978bcd36290c1777d235279ee97300b0395adf2f251dcffcf762",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/Books/Calibre/CalibreProxy.cs",
-          "line": 1174,
           "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"Unknown exception: \" + ex.Message);",
           "sourceLineSha256": "5907648dbeb4978bcd36290c1777d235279ee97300b0395adf2f251dcffcf762",
           "category": "validation-failure",
@@ -10913,6 +11067,38 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m9f7f2489aa05",
+      "source": "✓ VIP Member - Class: {value0}; unsatisfied torrents: {value1}/{value2}",
+      "sourceFingerprint": "c00ebccb84ddacc000bc735c0308b581038c5230e3674d10585a16490c7c9dad",
+      "parameters": [
+        {
+          "name": "value0"
+        },
+        {
+          "name": "value1"
+        },
+        {
+          "name": "value2"
+        }
+      ],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "✓ VIP Member - Class: {value0}; unsatisfied torrents: {value1}/{value2}"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Indexers/MyAnonaMouse/MyAnonaMouse.cs",
+          "line": 237,
+          "sourceLine": "? $\"\\u2713 VIP Member - Class: {cls}; unsatisfied torrents: {Settings.UnsatisfiedCount}/{Settings.UnsatisfiedLimit}\"",
+          "sourceLineSha256": "0cd76f57db3711c0bb5ec4e2ff31bda3b3121ec2e4ba2d69188a22b7f87753a0",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m9fa2dc8d8674",
       "source": "Download Client does not exist",
       "sourceFingerprint": "6c75ee3aeb5db4dc668fa28600c6afd8aa532c449164f4b9fa93b4e945ba116b",
@@ -11036,8 +11222,8 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/ImportLists/HttpImportListBase.cs",
-          "line": 239,
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
+          "line": 299,
           "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
           "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
           "category": "validation-failure",
@@ -11046,22 +11232,6 @@
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
           "line": 70,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
-          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 904,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
-          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 299,
           "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
           "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
           "category": "validation-failure",
@@ -11078,6 +11248,22 @@
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Series/GoodreadsSeriesImportList.cs",
           "line": 136,
+          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
+          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
+          "line": 904,
+          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
+          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/ImportLists/HttpImportListBase.cs",
+          "line": 239,
           "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
           "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
           "category": "validation-failure",
@@ -11353,8 +11539,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1040,
-          "sourceLine": "                return WithSnippet(ConversionFailureCategory.ChapterOrTagging, \"m4b-tool failed while writing chapters or tags. The converted audio is not being imported automatically.\", snippetLine);",
-          "sourceLineSha256": "ea912974da0e5298599222194c066ffc6de36d17574ca8ec4935f89ac624c8f1",
+          "sourceLine": "return WithSnippet(ConversionFailureCategory.ChapterOrTagging, \"m4b-tool failed while writing chapters or tags. The converted audio is not being imported automatically.\", snippetLine);",
+          "sourceLineSha256": "7d9e5a49ab3c59b8d709f37c2f272315df8af8562d8bcf765c9dcc0f2f101c18",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -11725,8 +11911,8 @@
         {
           "file": "src/NzbDrone.Core/Download/DownloadClientProvider.cs",
           "line": 170,
-          "sourceLine": "                .Select(result => $\"Found {result.Count} enabled {result.ProtocolLabel} client(s).\"));",
-          "sourceLineSha256": "eb1c6eebe6d45b76a69d43d94439f3dd3589f6f27ef1f17e0b4958bf57a0dd83",
+          "sourceLine": ".Select(result => $\"Found {result.Count} enabled {result.ProtocolLabel} client(s).\"));",
+          "sourceLineSha256": "cb77205769872ddb1c6befe7e6023cbc5917420549a6d2854c5c7064f7348f53",
           "category": "release-grab-error",
           "surface": "Download-client selection error returned through ReleaseController and displayed at existing release-grab/interactive-search translation boundaries."
         }
@@ -11885,8 +12071,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 192,
-          "sourceLine": "                    SetFailure(result, ConversionFailureCategory.OutputMissing, \"m4b-tool finished but did not create the converted M4B file\", output);",
-          "sourceLineSha256": "bc415bbad07b76af6f9840770b5d754729fa6ab5943a75b25bb0328f4c6a10a6",
+          "sourceLine": "SetFailure(result, ConversionFailureCategory.OutputMissing, \"m4b-tool finished but did not create the converted M4B file\", output);",
+          "sourceLineSha256": "5af21c96e2e2656bce34dc3d4f8da1b8c6dff5a2bc68f3c1258f0a6bf3234780",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -12204,6 +12390,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
+          "line": 359,
+          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\");",
+          "sourceLineSha256": "dc0db97ead9bd93acfde5d2680d68493215b4f77ff3e3eadd7433fe4583a2732",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
           "line": 188,
           "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\");",
@@ -12214,14 +12408,6 @@
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
           "line": 964,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\");",
-          "sourceLineSha256": "dc0db97ead9bd93acfde5d2680d68493215b4f77ff3e3eadd7433fe4583a2732",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 359,
           "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\");",
           "sourceLineSha256": "dc0db97ead9bd93acfde5d2680d68493215b4f77ff3e3eadd7433fe4583a2732",
           "category": "validation-failure",
@@ -12317,17 +12503,17 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 227,
-          "sourceLine": "                    throw new NzbDroneClientException(HttpStatusCode.BadRequest, \"An authorId is required when searching for a series pack\");",
-          "sourceLineSha256": "e8a875397997ca280652473b2c5e9d7ab9447cb0583a8acabb7a1efcaf3d6a0e",
+          "line": 261,
+          "sourceLine": "\"An authorId is required when searching for a series pack\",",
+          "sourceLineSha256": "093235e0c416d138edee6f183b8c28051f1d0f6a30d4b3ab0190b7309c7cf546",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 258,
-          "sourceLine": "                    throw new NzbDroneClientException(HttpStatusCode.BadRequest, \"An authorId is required when searching for a series pack\");",
-          "sourceLineSha256": "e8a875397997ca280652473b2c5e9d7ab9447cb0583a8acabb7a1efcaf3d6a0e",
+          "line": 261,
+          "sourceLine": "\"An authorId is required when searching for a series pack\",",
+          "sourceLineSha256": "093235e0c416d138edee6f183b8c28051f1d0f6a30d4b3ab0190b7309c7cf546",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         }
@@ -12692,8 +12878,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 569,
-          "sourceLine": "                    MarkFailed(job, \"M4B conversion job failed: \" + ex.Message);",
-          "sourceLineSha256": "6050b0e1d2b7f137686721d8dfc7a866cd365805899a7e9290f13fe7d7446266",
+          "sourceLine": "MarkFailed(job, \"M4B conversion job failed: \" + ex.Message);",
+          "sourceLineSha256": "50b96354f27cbf083970a768533c32a4bc4420315f63e23faf0e7cd332d140ca",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -13086,7 +13272,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 193,
+          "line": 225,
           "sourceLine": "throw new NzbDroneClientException(HttpStatusCode.Conflict, $\"Getting release from indexer failed: {ex.Message}\");",
           "sourceLineSha256": "2c5850ea517242364ee3faf365cd77ea8bd7540e8f5e2e33b3c2807153608165",
           "category": "release-grab-error",
@@ -13171,6 +13357,28 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.mc6073db4b613",
+      "source": "Chaptarr will handle automatic removal of torrents based on the current seed criteria in Settings -> Indexers",
+      "sourceFingerprint": "60d9dca503ffe7f9e0a1fc7dfb82ff5ce389ab73262e4b141bc64db4628a9074",
+      "parameters": [],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "Chaptarr will handle automatic removal of torrents based on the current seed criteria in Settings -> Indexers"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Flood/Flood.cs",
+          "line": 89,
+          "sourceLine": "public override ProviderMessage Message => new ProviderMessage(\"Chaptarr will handle automatic removal of torrents based on the current seed criteria in Settings -> Indexers\", ProviderMessageType.Info, \"server.message.mc6073db4b613\");",
+          "sourceLineSha256": "88d48a62918394932694d9bd8051e67932de38ec1241df0e6ccf6eb725238bb2",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.mc63ea6c0320c",
       "source": "Converted M4B contains a {value0} stream that is not attached cover art",
       "sourceFingerprint": "c3c87044c63320712a450568be051b69cd323bbf15d094f6d6ef0b1a6b99077f",
@@ -13191,8 +13399,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 917,
-          "sourceLine": "\t                    error = $\"Converted M4B contains a {codecType} stream that is not attached cover art\";",
-          "sourceLineSha256": "ed4e4065bd9424a14e998bdab1e426adf77abc8d431916079e0970894c9f8002",
+          "sourceLine": "error = $\"Converted M4B contains a {codecType} stream that is not attached cover art\";",
+          "sourceLineSha256": "95657d0a0b1c3fc32ca8e46af7f113d92709daa7bda188f92ef0b4c3c5407d61",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -13352,6 +13560,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
+          "line": 99,
+          "sourceLine": "throw new BadRequestException(\"QueryParam oauth_token invalid.\");",
+          "sourceLineSha256": "6cad1e2fa2d22f404d41ed08a45d81888c3a1956b8365202216be72c33f5ce2a",
+          "category": "api-error",
+          "surface": "server/API text; may be user-visible"
+        },
+        {
           "file": "src/NzbDrone.Core/Notifications/Goodreads/GoodreadsNotificationBase.cs",
           "line": 71,
           "sourceLine": "throw new BadRequestException(\"QueryParam oauth_token invalid.\");",
@@ -13362,14 +13578,6 @@
         {
           "file": "src/NzbDrone.Core/Notifications/Twitter/Twitter.cs",
           "line": 103,
-          "sourceLine": "throw new BadRequestException(\"QueryParam oauth_token invalid.\");",
-          "sourceLineSha256": "6cad1e2fa2d22f404d41ed08a45d81888c3a1956b8365202216be72c33f5ce2a",
-          "category": "api-error",
-          "surface": "server/API text; may be user-visible"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 99,
           "sourceLine": "throw new BadRequestException(\"QueryParam oauth_token invalid.\");",
           "sourceLineSha256": "6cad1e2fa2d22f404d41ed08a45d81888c3a1956b8365202216be72c33f5ce2a",
           "category": "api-error",
@@ -13440,16 +13648,16 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Notifications/Goodreads/GoodreadsNotificationBase.cs",
-          "line": 76,
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
+          "line": 104,
           "sourceLine": "throw new BadRequestException(\"Missing requestTokenSecret.\");",
           "sourceLineSha256": "54b57688eeba3a4180a1588c0e888c6c9cd363c451bbd9183a60db2455f79342",
           "category": "api-error",
           "surface": "server/API text; may be user-visible"
         },
         {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 104,
+          "file": "src/NzbDrone.Core/Notifications/Goodreads/GoodreadsNotificationBase.cs",
+          "line": 76,
           "sourceLine": "throw new BadRequestException(\"Missing requestTokenSecret.\");",
           "sourceLineSha256": "54b57688eeba3a4180a1588c0e888c6c9cd363c451bbd9183a60db2455f79342",
           "category": "api-error",
@@ -13796,8 +14004,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1034,
-          "sourceLine": "                return WithSnippet(ConversionFailureCategory.CoverEmbedding, \"m4b-tool failed while embedding cover art. Retry without embedded cover art may succeed.\", snippetLine);",
-          "sourceLineSha256": "5c39e4f2cd74faec0e42ebc8da9c2a1ec47676f41d230e2e7de8075b82e7cfa6",
+          "sourceLine": "return WithSnippet(ConversionFailureCategory.CoverEmbedding, \"m4b-tool failed while embedding cover art. Retry without embedded cover art may succeed.\", snippetLine);",
+          "sourceLineSha256": "58510a7ee3f6b59ea33867fd9be0f97a62a3b9a0f414296fd96b708166003946",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -14068,20 +14276,20 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Notifications/Slack/SlackProxy.cs",
-          "line": 42,
-          "sourceLine": "throw new SlackExeption(\"Unable to post payload\", ex);",
-          "sourceLineSha256": "3b2647b3d779f3a4bfd50ed6836448527a72ed1584b8f6379de2600c6f42e0ac",
-          "category": "notification-test-error",
-          "surface": "Slack test catches exception.Message as validation failure"
-        },
-        {
           "file": "src/NzbDrone.Core/Notifications/Discord/DiscordProxy.cs",
           "line": 42,
           "sourceLine": "throw new DiscordException(\"Unable to post payload\", ex);",
           "sourceLineSha256": "1f5ed5d062ac65dadccd0d2dddac7f366ec35b46764087db38420005bdb59035",
           "category": "notification-test-error",
           "surface": "Discord test catches exception.Message as validation failure"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Slack/SlackProxy.cs",
+          "line": 42,
+          "sourceLine": "throw new SlackExeption(\"Unable to post payload\", ex);",
+          "sourceLineSha256": "3b2647b3d779f3a4bfd50ed6836448527a72ed1584b8f6379de2600c6f42e0ac",
+          "category": "notification-test-error",
+          "surface": "Slack test catches exception.Message as validation failure"
         }
       ],
       "protectedLiterals": []
@@ -14178,35 +14386,61 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 102,
-          "sourceLine": "                            throw new NzbDroneClientException(HttpStatusCode.NotFound, \"Unable to find the requested book\");",
-          "sourceLineSha256": "c96103c625c3f1f40349c2b3371cd9658b1b21f3506dc4d0ed4e4a5337994f98",
+          "line": 107,
+          "sourceLine": "\"Unable to find the requested book\",",
+          "sourceLineSha256": "8d7fc0287719270565361a805a4cb3fe7b4aeed5b6def16ba8492702047dc974",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 135,
-          "sourceLine": "                            throw new NzbDroneClientException(HttpStatusCode.NotFound, \"Unable to find the requested book\");",
-          "sourceLineSha256": "c96103c625c3f1f40349c2b3371cd9658b1b21f3506dc4d0ed4e4a5337994f98",
+          "line": 149,
+          "sourceLine": "\"Unable to find the requested book\",",
+          "sourceLineSha256": "8d7fc0287719270565361a805a4cb3fe7b4aeed5b6def16ba8492702047dc974",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 282,
-          "sourceLine": "                throw new NzbDroneClientException(HttpStatusCode.NotFound, \"Unable to find the requested book\");",
-          "sourceLineSha256": "e27730aedd8ac9d23a182017910359df96a1195212117abf077dabf318b3045c",
+          "line": 325,
+          "sourceLine": "\"Unable to find the requested book\",",
+          "sourceLineSha256": "8d7fc0287719270565361a805a4cb3fe7b4aeed5b6def16ba8492702047dc974",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 386,
-          "sourceLine": "                    throw new NzbDroneClientException(HttpStatusCode.NotFound, \"Unable to find the requested book\");",
-          "sourceLineSha256": "9e6000e73b2121675c80258e74589a571e2093bc574581c5d02e06a405bbc08c",
+          "line": 432,
+          "sourceLine": "\"Unable to find the requested book\",",
+          "sourceLineSha256": "8d7fc0287719270565361a805a4cb3fe7b4aeed5b6def16ba8492702047dc974",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
+      "id": "server.message.md4a741052e8b",
+      "source": "User Class: {value0} (Standard member)",
+      "sourceFingerprint": "f4a46aed1bfba95c2f4a334b04cdb29f35e4b06316eaa5b908174d2a9ab23a63",
+      "parameters": [
+        {
+          "name": "value0"
+        }
+      ],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "User Class: {value0} (Standard member)"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Indexers/MyAnonaMouse/MyAnonaMouse.cs",
+          "line": 241,
+          "sourceLine": ": $\"User Class: {cls} (Standard member)\";",
+          "sourceLineSha256": "9b1d9c226970ea69d89292b548213838d808e24db4154d8f9f983b09a00dd863",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
         }
       ],
       "protectedLiterals": []
@@ -14226,8 +14460,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1009,
-          "sourceLine": "                    \"Conversion was cancelled.\");",
-          "sourceLineSha256": "3f80bae786895b725569fd1fd10749e4b96bf2222f422b7a59b348aabefeecb8",
+          "sourceLine": "\"Conversion was cancelled.\");",
+          "sourceLineSha256": "da7eb0bfc2089484feee917f5482548cd543ff44945d7e0beff648c451fe5775",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -14329,6 +14563,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
+          "line": 375,
+          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\");",
+          "sourceLineSha256": "832e7817360ba680d0c98a64b87a8ef5147bfcf7a6c8b8e7f492b0d8188a7564",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
           "line": 204,
           "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\");",
@@ -14339,14 +14581,6 @@
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
           "line": 980,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\");",
-          "sourceLineSha256": "832e7817360ba680d0c98a64b87a8ef5147bfcf7a6c8b8e7f492b0d8188a7564",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 375,
           "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\");",
           "sourceLineSha256": "832e7817360ba680d0c98a64b87a8ef5147bfcf7a6c8b8e7f492b0d8188a7564",
           "category": "validation-failure",
@@ -14370,8 +14604,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 783,
-          "sourceLine": "                return ConversionOutputValidationResult.Fail(\"Converted M4B file was not created\");",
-          "sourceLineSha256": "f9b04a0c6ab5482907e3897dd0e8aa30adeb56e32906c6fc3f716a27917227f1",
+          "sourceLine": "return ConversionOutputValidationResult.Fail(\"Converted M4B file was not created\");",
+          "sourceLineSha256": "a9bb61d2b542018461f66e9592d9baa95ff615b209c27806d9421bc56dbae171",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -14404,6 +14638,32 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.md6a7ade8523b",
+      "source": "✓ VIP Member - Class: {value0}",
+      "sourceFingerprint": "092bc162035fee946b265ecb2e88284d5550155fcaa753d3fc48d6fc78884537",
+      "parameters": [
+        {
+          "name": "value0"
+        }
+      ],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "✓ VIP Member - Class: {value0}"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Indexers/MyAnonaMouse/MyAnonaMouse.cs",
+          "line": 238,
+          "sourceLine": ": $\"\\u2713 VIP Member - Class: {cls}\"",
+          "sourceLineSha256": "cbee8bd090a6d5f6fbde30d5ef4c140eb05961980cd712377697a0f8ddabe1fc",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.md764ed5e74b4",
       "source": "{value0} conversion was cancelled.",
       "sourceFingerprint": "6e19b762533b543ae21ef80b06f5285d0fa859a2ee81f4e9060d30c0aa0fdb17",
@@ -14424,16 +14684,16 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 195,
-          "sourceLine": "                    MarkCancelled(job, $\"{job.TargetQualityName ?? \"M4B\"} conversion was cancelled.\");",
-          "sourceLineSha256": "47d6ab90097aff336297640c4c75764b251cd5c914d38a4e8412aedb091e637a",
+          "sourceLine": "MarkCancelled(job, $\"{job.TargetQualityName ?? \"M4B\"} conversion was cancelled.\");",
+          "sourceLineSha256": "8c6b4ea5b8dc186855cb06ec101976b7ee8c90364cce42f5d2b4f594034d6806",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         },
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 603,
-          "sourceLine": "            MarkCancelled(job, $\"{request.TargetQualityName ?? \"M4B\"} conversion was cancelled.\");",
-          "sourceLineSha256": "fd87bf3d444a2027ab01a638aa9f7622151cbdc4ad22ccfa68786d34714b4d29",
+          "sourceLine": "MarkCancelled(job, $\"{request.TargetQualityName ?? \"M4B\"} conversion was cancelled.\");",
+          "sourceLineSha256": "e60a2173817aeea3829f7590963e82994d2bc0e6ecce3ca48429c02a442bef37",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -14543,8 +14803,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 995,
-          "sourceLine": "                return new ConversionFailure(ConversionFailureCategory.Unknown, \"m4b-tool did not return a process result\");",
-          "sourceLineSha256": "3fccba541da026bb8068e55cf21f7ff6af41fa6806ef012827830d9b9a44e87b",
+          "sourceLine": "return new ConversionFailure(ConversionFailureCategory.Unknown, \"m4b-tool did not return a process result\");",
+          "sourceLineSha256": "4b4b351d9b8aae0f54b006992a467fb0770c7711c5378da81ca9fcda3c0aebaf",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -14795,6 +15055,28 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.mddaec7220c51",
+      "source": "Connection succeeded, but MAM account status is unavailable or stale. Cached counts are not shown.",
+      "sourceFingerprint": "2d052a7710dcc133b4130a83ce3dfb35686364eddcf32ea1d7cbe5c23bda1c95",
+      "parameters": [],
+      "patterns": [],
+      "explicitOnly": true,
+      "sourceTemplates": [
+        "Connection succeeded, but MAM account status is unavailable or stale. Cached counts are not shown."
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Indexers/MyAnonaMouse/MyAnonaMouse.cs",
+          "line": 224,
+          "sourceLine": "\"Connection succeeded, but MAM account status is unavailable or stale. Cached counts are not shown.\",",
+          "sourceLineSha256": "793216c7d5ec6bca49ca3a587483363aea38769e744b16b4aa76b67828c69908",
+          "category": "provider-test-message",
+          "surface": "Provider test notice localized only from its trusted app message ID; dynamic parameters remain data"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.mdefc6fdd23a6",
       "source": "Profile type must be Audiobook or Ebook",
       "sourceFingerprint": "d10c5d3709b5780b54465e59962cb0b34bb41d4769bd9e846f6d2072bc8ac865",
@@ -14807,20 +15089,20 @@
       ],
       "callsites": [
         {
-          "file": "src/Chaptarr.Api.V1/Profiles/Quality/QualityProfileResource.cs",
-          "line": 129,
-          "sourceLine": "throw new BadRequestException(\"Profile type must be Audiobook or Ebook\");",
-          "sourceLineSha256": "4c9dcc111f37dfbda057ce0f11ce38bdc80838fbcba5b86bb1a2632930a59d2f",
-          "category": "api-error",
-          "surface": "server/API text; may be user-visible"
-        },
-        {
           "file": "src/Chaptarr.Api.V1/Profiles/Quality/QualityProfileController.cs",
           "line": 28,
           "sourceLine": ".WithMessage(\"Profile type must be Audiobook or Ebook\");",
           "sourceLineSha256": "90f632dd9ba4dba5f8bd6b84a93f3fe8dcba303eedc61a327721d3b467953c22",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Profiles/Quality/QualityProfileResource.cs",
+          "line": 129,
+          "sourceLine": "throw new BadRequestException(\"Profile type must be Audiobook or Ebook\");",
+          "sourceLineSha256": "4c9dcc111f37dfbda057ce0f11ce38bdc80838fbcba5b86bb1a2632930a59d2f",
+          "category": "api-error",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": [
@@ -14923,8 +15205,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1395,
-          "sourceLine": "                    return \"Finalizing M4B\";",
-          "sourceLineSha256": "406ba66d343a24795788eca4e6c165a8ddf9520cd87bd955b0d98716fa7a5b4e",
+          "sourceLine": "return \"Finalizing M4B\";",
+          "sourceLineSha256": "a7564fac0607f93f40dbfb411b6901e4c453d4352bbbb940da3f429027fe3977",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -15045,6 +15327,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/Books/Calibre/CalibreProxy.cs",
+          "line": 1168,
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\")",
+          "sourceLineSha256": "7d3ea9e9cfc6da8ae2446ddb2d3b5fbe7be5df5660a24590d116a01e6a86bde4",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 475,
           "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\")",
@@ -15087,14 +15377,6 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/uTorrent/UTorrent.cs",
           "line": 327,
-          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\")",
-          "sourceLineSha256": "7d3ea9e9cfc6da8ae2446ddb2d3b5fbe7be5df5660a24590d116a01e6a86bde4",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/Books/Calibre/CalibreProxy.cs",
-          "line": 1168,
           "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\")",
           "sourceLineSha256": "7d3ea9e9cfc6da8ae2446ddb2d3b5fbe7be5df5660a24590d116a01e6a86bde4",
           "category": "validation-failure",
@@ -15205,8 +15487,8 @@
         {
           "file": "src/NzbDrone.Core/Download/DownloadClientProvider.cs",
           "line": 135,
-          "sourceLine": "                    throw new DownloadClientUnavailableException($\"All download clients for {downloadProtocol} are not available\");",
-          "sourceLineSha256": "66510a19c1c26507cfea720e3bb3631dc893e6245b2c936f69a50664abe2bb41",
+          "sourceLine": "throw new DownloadClientUnavailableException($\"All download clients for {downloadProtocol} are not available\");",
+          "sourceLineSha256": "5d46af2c9eb76cb3b8c63090a805ed2e183de3824d7e6b5d91e209bcc240ef4d",
           "category": "release-grab-error",
           "surface": "Download-client selection error returned through ReleaseController and displayed at existing release-grab/interactive-search translation boundaries."
         }
@@ -15232,18 +15514,18 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Books/Services/AuthorService.cs",
-          "line": 1006,
-          "sourceLine": "failures.Add(new ValidationFailure(propertyName, $\"Selected root folder is not configured for {expected}.\"));",
-          "sourceLineSha256": "69dad0df103fa962450f78754663f82778793be358fe306672805fc1a4219e42",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
           "line": 645,
           "sourceLine": "new ValidationFailure(\"RootFolder\", $\"Selected root folder is not configured for {expected}.\")",
           "sourceLineSha256": "df7a63fa1ad8c5e0d37cc685045eebf501df8e66ebe90bc59bade88c6735b5c3",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/Books/Services/AuthorService.cs",
+          "line": 1006,
+          "sourceLine": "failures.Add(new ValidationFailure(propertyName, $\"Selected root folder is not configured for {expected}.\"));",
+          "sourceLineSha256": "69dad0df103fa962450f78754663f82778793be358fe306672805fc1a4219e42",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -15599,16 +15881,16 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 294,
-          "sourceLine": "                            MarkReady(job, \"Recovered converted M4B; waiting to import\");",
-          "sourceLineSha256": "0583695746163270b3781cf39eb004a8ab18224b1c3dd4706092d80ae90fb799",
+          "sourceLine": "MarkReady(job, \"Recovered converted M4B; waiting to import\");",
+          "sourceLineSha256": "c4c08ca1322d57196f62156fadc1f3a48e45c5fa80768aa1715a87c914c5a2b7",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         },
         {
           "file": "src/NzbDrone.Core/MediaFiles/ConversionJobService.cs",
           "line": 401,
-          "sourceLine": "                    MarkReady(job, \"Recovered converted M4B; waiting to import\");",
-          "sourceLineSha256": "e1001fa5b3906902b98945e2da36e00002a1090f8b263ed1a82b562efb083ce5",
+          "sourceLine": "MarkReady(job, \"Recovered converted M4B; waiting to import\");",
+          "sourceLineSha256": "c4c08ca1322d57196f62156fadc1f3a48e45c5fa80768aa1715a87c914c5a2b7",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -15780,8 +16062,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 75,
-          "sourceLine": "                    SetFailure(result, ConversionFailureCategory.ToolUnavailable, \"m4b-tool is not available\");",
-          "sourceLineSha256": "3125f0491d264492628eaacc81521d25f82934667760a311347d3c421876f43d",
+          "sourceLine": "SetFailure(result, ConversionFailureCategory.ToolUnavailable, \"m4b-tool is not available\");",
+          "sourceLineSha256": "847a285aa44049c41718669cadaf03bfc2c0122c385cf2aef024e8ba9279a6b8",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -16047,8 +16329,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1002,
-          "sourceLine": "                    $\"m4b-tool timed out after {TimeSpan.FromMilliseconds(toolResult.TimeoutMs):g}. The conversion was stopped.\");",
-          "sourceLineSha256": "984a14ffffeb3ca55d9d5ee5653143d4de465b4702d5def75934749a62e6647b",
+          "sourceLine": "$\"m4b-tool timed out after {TimeSpan.FromMilliseconds(toolResult.TimeoutMs):g}. The conversion was stopped.\");",
+          "sourceLineSha256": "d16778bc56d9de981bfc97bb4a49d70b931df834399c6ba525cbe14a4a3f83e0",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -16165,8 +16447,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 775,
-          "sourceLine": "                ? \"m4b-tool reported a failure after producing a readable M4B. The file was retained for inspection.\"",
-          "sourceLineSha256": "f948565f64d224eddf9469b22728bb30517860c80324707194533ee87d9ae843",
+          "sourceLine": "? \"m4b-tool reported a failure after producing a readable M4B. The file was retained for inspection.\"",
+          "sourceLineSha256": "e32c23ede1296c87e486eceecfbd3700493124539b709f14c12af70fa58cea58",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -16237,8 +16519,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 794,
-          "sourceLine": "                return ConversionOutputValidationResult.Fail(\"Converted M4B does not contain a readable audio stream\");",
-          "sourceLineSha256": "6ecf0e8e04898387ff1cba7bd6981aa067001c961aa0a4546838cb95ea4e6556",
+          "sourceLine": "return ConversionOutputValidationResult.Fail(\"Converted M4B does not contain a readable audio stream\");",
+          "sourceLineSha256": "d4651b4e7f798dd709a76de4c95d59ce8dace2430ab0da680990ebe1ffa22e4d",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -16271,6 +16553,14 @@
       ],
       "callsites": [
         {
+          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
+          "line": 365,
+          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\");",
+          "sourceLineSha256": "91eff0b5bc15d361c765696ca252de1aee737fe11a4645c57523738d4b3557bc",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
           "line": 194,
           "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\");",
@@ -16281,14 +16571,6 @@
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
           "line": 970,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\");",
-          "sourceLineSha256": "91eff0b5bc15d361c765696ca252de1aee737fe11a4645c57523738d4b3557bc",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
-          "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 365,
           "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\");",
           "sourceLineSha256": "91eff0b5bc15d361c765696ca252de1aee737fe11a4645c57523738d4b3557bc",
           "category": "validation-failure",
@@ -16517,8 +16799,8 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/TorrentInfo/TorrentHashResolver.cs",
           "line": 36,
-          "sourceLine": "                    \"This torrent file\" => \"This torrent file is BitTorrent v2-only. Chaptarr currently requires a v1 info hash to track torrent downloads.\",",
-          "sourceLineSha256": "343c52c69c777553b2c80f4d1dc6e1501639b06a83b4765df30e0eb0835949c2",
+          "sourceLine": "\"This torrent file\" => \"This torrent file is BitTorrent v2-only. Chaptarr currently requires a v1 info hash to track torrent downloads.\",",
+          "sourceLineSha256": "a7460c7ae6f3bf814642233082deb48099b6d29ec7c0386b3b72a37cf526538b",
           "category": "release-grab-error",
           "surface": "Torrent grab rejection surfaced through the existing release-grab message presenter."
         }
@@ -16598,9 +16880,9 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 123,
-          "sourceLine": "                        throw new NzbDroneClientException(HttpStatusCode.NotFound, \"Unable to find matching author and books\");",
-          "sourceLineSha256": "a9d0b1b24ac74fc48941c5503e7f9c0d403839723e8ef247a6a3fe7cda7422be",
+          "line": 134,
+          "sourceLine": "\"Unable to find matching author and books\",",
+          "sourceLineSha256": "1fcec02fc3a67e30c1858f9da10b368ffc63b3c500033813c8dd9d50b129fa28",
           "category": "api-error",
           "surface": "Release search/grab API error; releaseActions stores the raw response and InteractiveSearchRow/InteractiveSearch use the existing translateServerMessage presenter."
         }
@@ -16729,19 +17011,19 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1751,
-          "sourceLine": "return StatusCode(500, new ApiErrorResource { Error = \"Internal server error\" });",
-          "sourceLineSha256": "5d741de959df79116c013133d9306170f7a9d82d95f8de837095fa10694bf815",
-          "category": "api-response-resource",
-          "surface": "Explicit API error/message response serialized for the client UI"
-        },
-        {
-          "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
           "line": 1677,
           "sourceLine": "return StatusCode(500, \"Internal server error\");",
           "sourceLineSha256": "9d51f0b0bbebda442c680a04c178d58f77b5670debc2239fa152badc680bec5f",
           "category": "direct-api-result",
           "surface": "String body from an MVC API result; the caller may display it"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
+          "line": 1751,
+          "sourceLine": "return StatusCode(500, new ApiErrorResource { Error = \"Internal server error\" });",
+          "sourceLineSha256": "5d741de959df79116c013133d9306170f7a9d82d95f8de837095fa10694bf815",
+          "category": "api-response-resource",
+          "surface": "Explicit API error/message response serialized for the client UI"
         }
       ],
       "protectedLiterals": []
@@ -17052,16 +17334,16 @@
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 120,
-          "sourceLine": "                    Message = string.Format(CultureInfo.InvariantCulture, \"Converting to M4B - 0 of {0}\", inputFiles.Length),",
-          "sourceLineSha256": "6bb9196a7d4fa73d3b440b27990446d2e3f81476562c44658636d4a95904d20a",
+          "sourceLine": "Message = string.Format(CultureInfo.InvariantCulture, \"Converting to M4B - 0 of {0}\", inputFiles.Length),",
+          "sourceLineSha256": "91be433639655eae6e6d2ce32b42aea354cbc80b683cdc03e2b9db924e9af72e",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         },
         {
           "file": "src/NzbDrone.Core/MediaFiles/M4bConversionService.cs",
           "line": 1398,
-          "sourceLine": "                return string.Format(CultureInfo.InvariantCulture, \"Converting to M4B - {0} of {1}\", currentStep.Value, totalSteps.Value);",
-          "sourceLineSha256": "b55e47a618829295c63ed67ea677f4ac0e1e22fd3f5a93eab155dbe0480ad6fe",
+          "sourceLine": "return string.Format(CultureInfo.InvariantCulture, \"Converting to M4B - {0} of {1}\", currentStep.Value, totalSteps.Value);",
+          "sourceLineSha256": "3a3b30df13bfb83b8a86f2d846abdd9dd6e9b035f60bf16a61a06975fb845ed5",
           "category": "operational-message",
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
@@ -17188,15 +17470,15 @@
     }
   ],
   "counts": {
-    "originalTemplates": 607,
-    "sourceOccurrences": 800,
-    "translatableMessages": 607,
+    "originalTemplates": 618,
+    "sourceOccurrences": 812,
+    "translatableMessages": 618,
     "knownExistingCatalogKeys": 6,
-    "newCatalogKeys": 601,
-    "sourceCallsites": 799,
+    "newCatalogKeys": 612,
+    "sourceCallsites": 811,
     "excludedTemplates": 1,
-    "rawInputSourceOccurrences": 668,
-    "sourceBindings": 809
+    "rawInputSourceOccurrences": 680,
+    "sourceBindings": 821
   },
   "sourceBaseHead": "ece16c4bd953e4ae77d7473c8b01871bf1d8c8ff",
   "normalizations": [
@@ -17408,6 +17690,31 @@
         "sha256": "039734299ca1673ba062f735da07f269d693965343d734657be8808127df05fb"
       },
       "method": "Bounded source/caller audit of fixed app-authored release search/grab errors, download-client selection messages with historical wording, torrent v2-only source errors, regex modifier failures, and persisted M4B queue/error messages. Opaque provider/exception/path/tool-output values remain data. Tool output is parsed as one opaque token only after an allowlisted fixed WithSnippet base matches; no suffix parser inspects its payload. Suffixes appended after tool output remain part of that opaque token."
+    },
+    {
+      "id": "20261101-provider-message-trusted-ids",
+      "baseHead": "c0aebe1e11ea75eb936d69a563a0d6405fe66ce8",
+      "newMessages": 11,
+      "newSourceBindings": 12,
+      "newUniqueCallsites": 12,
+      "sourceIds": [
+        "server.message.m566bae95cfdb",
+        "server.message.m73172a5045d6",
+        "server.message.mddaec7220c51",
+        "server.message.md6a7ade8523b",
+        "server.message.m9f7f2489aa05",
+        "server.message.md4a741052e8b",
+        "server.message.m621dd0308bef",
+        "server.message.m4cd205e7d07a",
+        "server.message.mc6073db4b613",
+        "server.message.m12f8b73a2b72",
+        "server.message.m47f0922640fa"
+      ],
+      "inputEvidence": {
+        "file": "docs/localization/provider-message-source-audit-20261101.json",
+        "sha256": "ca0530ebd3ab153e986d352a424795913b9c203b932ac25608b28e1b35b2f18d"
+      },
+      "method": "Bounded provider-test notice audit; fixed app-authored ProviderMessage sources are explicit-ID-only, while external API and provider values remain opaque."
     }
   ]
 }

@@ -10,6 +10,7 @@ namespace Chaptarr.Http.ErrorManagement
     {
         public string Message { get; set; }
         public string MessageId { get; set; }
+        public object MessageParameters { get; set; }
         public string Description { get; set; }
         public object Content { get; set; }
 

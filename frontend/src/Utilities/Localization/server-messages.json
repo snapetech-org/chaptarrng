@@ -495,6 +495,13 @@
     ]
   },
   {
+    "id": "server.message.m12f8b73a2b72",
+    "source": "Chaptarr is unable to connect to Download Station if 2-Factor Authentication is enabled on your DSM account",
+    "parameters": [],
+    "patterns": [],
+    "explicitOnly": true
+  },
+  {
     "id": "server.message.m131b7c5d7656",
     "source": "No download client was found without tags or a matching author tag. Please check your settings.",
     "parameters": [],
@@ -549,7 +556,9 @@
     "source": "Unknown or unsupported perl regex modifier: {value0}",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{modifier}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -689,7 +698,9 @@
     "source": "Indexer specified download client is not available due to recent failures for {value0}",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{indexer.Name}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -1209,7 +1220,9 @@
     "source": "Tool output: {value0}",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{firstLine}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -1619,7 +1632,9 @@
     "source": "Converted file retained at: {value0}",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{attemptOutputPath}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -1681,6 +1696,13 @@
     "patterns": [
       "Old uTorrent client with unsupported API, need 3.0 or higher"
     ]
+  },
+  {
+    "id": "server.message.m47f0922640fa",
+    "source": "Testing will execute the script with the EventType set to Test, ensure your script handles this correctly",
+    "parameters": [],
+    "patterns": [],
+    "explicitOnly": true
   },
   {
     "id": "server.message.m48c9cd18eeef",
@@ -1775,6 +1797,17 @@
     "patterns": [
       "Could not get series data"
     ]
+  },
+  {
+    "id": "server.message.m4cd205e7d07a",
+    "source": "rTorrent will not pause torrents when they meet the seed criteria. Chaptarr can remove torrents after seeding is done only when Remove Completed is enabled and the torrent is not protected by Preserve torrents in client or Post-Import Category. After importing it will also set \"{value0}\" as an rTorrent view, which can be used in rTorrent scripts to customize behavior.",
+    "parameters": [
+      {
+        "name": "value0"
+      }
+    ],
+    "patterns": [],
+    "explicitOnly": true
   },
   {
     "id": "server.message.m4d3e6de749b4",
@@ -2000,6 +2033,13 @@
     ]
   },
   {
+    "id": "server.message.m566bae95cfdb",
+    "source": "This indexer supports ebook searches only. Configured URLs remain in the order you enter them.",
+    "parameters": [],
+    "patterns": [],
+    "explicitOnly": true
+  },
+  {
     "id": "server.message.m57a345f27938",
     "source": "Incorrect ApiKey",
     "parameters": [],
@@ -2098,7 +2138,9 @@
     "source": "Converting to M4B - {value0}%",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{progress}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -2222,6 +2264,23 @@
     "patterns": [
       "Indexer feed is not supported: {value0}"
     ]
+  },
+  {
+    "id": "server.message.m621dd0308bef",
+    "source": "User Class: {value0} (Standard member); unsatisfied torrents: {value1}/{value2}",
+    "parameters": [
+      {
+        "name": "value0"
+      },
+      {
+        "name": "value1"
+      },
+      {
+        "name": "value2"
+      }
+    ],
+    "patterns": [],
+    "explicitOnly": true
   },
   {
     "id": "server.message.m623b1093a9c9",
@@ -2538,6 +2597,13 @@
     ]
   },
   {
+    "id": "server.message.m73172a5045d6",
+    "source": "Books from your Hardcover lists and reading statuses will be matched by title and author name against your configured metadata source.",
+    "parameters": [],
+    "patterns": [],
+    "explicitOnly": true
+  },
+  {
     "id": "server.message.m736b5fe15618",
     "source": "This logical field proved the pinned edition title.",
     "parameters": [],
@@ -2643,13 +2709,19 @@
     "source": "No enabled {value0} download client is configured. {value1} Add and enable a {value2}-capable download client, then retry.",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{requestedProtocolLabel}",
+        "kind": "dynamic-data"
       },
       {
-        "name": "value1"
+        "name": "value1",
+        "sourceToken": "{alternateClients}",
+        "kind": "dynamic-data"
       },
       {
-        "name": "value2"
+        "name": "value2",
+        "sourceToken": "{requestedProtocolLabel}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -2742,7 +2814,9 @@
     "source": "Input file does not exist: {value0}",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{file}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -3230,7 +3304,9 @@
     "source": "M4B conversion failed: {value0}",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{ex.Message}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -3336,7 +3412,9 @@
     "source": "m4b-tool failed with exit code {value0}.",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{toolResult.ExitCode}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -3416,7 +3494,9 @@
     "source": "Indexer specified download client does not exist for {value0}",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{indexer.Name}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -3522,13 +3602,19 @@
     "source": "Converted M4B duration looks wrong. Source duration is about {value0} but output is {value1}; allowed difference is {value2}.",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{FormatDuration(expectedDuration)}",
+        "kind": "dynamic-data"
       },
       {
-        "name": "value1"
+        "name": "value1",
+        "sourceToken": "{FormatDuration(outputDuration)}",
+        "kind": "dynamic-data"
       },
       {
-        "name": "value2"
+        "name": "value2",
+        "sourceToken": "{FormatDuration(allowedDifference)}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -3728,6 +3814,23 @@
     "patterns": [
       "Proxy is configured for indexers. Make sure these settings match your torrent client's proxy."
     ]
+  },
+  {
+    "id": "server.message.m9f7f2489aa05",
+    "source": "✓ VIP Member - Class: {value0}; unsatisfied torrents: {value1}/{value2}",
+    "parameters": [
+      {
+        "name": "value0"
+      },
+      {
+        "name": "value1"
+      },
+      {
+        "name": "value2"
+      }
+    ],
+    "patterns": [],
+    "explicitOnly": true
   },
   {
     "id": "server.message.m9fa2dc8d8674",
@@ -3974,10 +4077,14 @@
     "source": "Found {value0} enabled {value1} client(s).",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{result.Count}",
+        "kind": "dynamic-data"
       },
       {
-        "name": "value1"
+        "name": "value1",
+        "sourceToken": "{result.ProtocolLabel}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -4323,7 +4430,9 @@
     "source": "M4B conversion job failed: {value0}",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{ex.Message}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -4503,11 +4612,20 @@
     ]
   },
   {
+    "id": "server.message.mc6073db4b613",
+    "source": "Chaptarr will handle automatic removal of torrents based on the current seed criteria in Settings -> Indexers",
+    "parameters": [],
+    "patterns": [],
+    "explicitOnly": true
+  },
+  {
     "id": "server.message.mc63ea6c0320c",
     "source": "Converted M4B contains a {value0} stream that is not attached cover art",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{codecType}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -4878,6 +4996,17 @@
     ]
   },
   {
+    "id": "server.message.md4a741052e8b",
+    "source": "User Class: {value0} (Standard member)",
+    "parameters": [
+      {
+        "name": "value0"
+      }
+    ],
+    "patterns": [],
+    "explicitOnly": true
+  },
+  {
     "id": "server.message.md4bb98fe9185",
     "source": "Conversion was cancelled.",
     "parameters": [],
@@ -4945,11 +5074,24 @@
     ]
   },
   {
+    "id": "server.message.md6a7ade8523b",
+    "source": "✓ VIP Member - Class: {value0}",
+    "parameters": [
+      {
+        "name": "value0"
+      }
+    ],
+    "patterns": [],
+    "explicitOnly": true
+  },
+  {
     "id": "server.message.md764ed5e74b4",
     "source": "{value0} conversion was cancelled.",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{TargetQualityName}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -5077,6 +5219,13 @@
     ]
   },
   {
+    "id": "server.message.mddaec7220c51",
+    "source": "Connection succeeded, but MAM account status is unavailable or stale. Cached counts are not shown.",
+    "parameters": [],
+    "patterns": [],
+    "explicitOnly": true
+  },
+  {
     "id": "server.message.mdefc6fdd23a6",
     "source": "Profile type must be Audiobook or Ebook",
     "parameters": [],
@@ -5194,7 +5343,9 @@
     "source": "All download clients for {value0} are not available",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{downloadProtocol}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -5477,7 +5628,9 @@
     "source": "m4b-tool timed out after {value0}. The conversion was stopped.",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{TimeSpan.FromMilliseconds(toolResult.TimeoutMs):g}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [
@@ -5826,10 +5979,14 @@
     "source": "Converting to M4B - {value0} of {value1}",
     "parameters": [
       {
-        "name": "value0"
+        "name": "value0",
+        "sourceToken": "{currentStep}",
+        "kind": "dynamic-data"
       },
       {
-        "name": "value1"
+        "name": "value1",
+        "sourceToken": "{totalSteps}",
+        "kind": "dynamic-data"
       }
     ],
     "patterns": [

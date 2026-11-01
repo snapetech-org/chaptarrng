@@ -213,7 +213,11 @@ namespace Chaptarr.Api.V1.Indexers
                     ? ex.Message
                     : $"{ex.Message}: {detail}";
 
-                throw new NzbDroneClientException(HttpStatusCode.Conflict, $"Download client rejected release: {message}");
+                throw NzbDroneClientException.WithMessageId(
+                    HttpStatusCode.Conflict,
+                    $"Download client rejected release: {message}",
+                    "server.message.m6026247dc0f2",
+                    new { value0 = message });
             }
             catch (ReleaseDownloadException ex)
             {

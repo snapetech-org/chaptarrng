@@ -35,7 +35,7 @@ namespace NzbDrone.Core.Notifications.CustomScript
 
         public override string Link => "https://discord.gg/nqFGsGUug2";
 
-        public override ProviderMessage Message => new ProviderMessage("Testing will execute the script with the EventType set to Test, ensure your script handles this correctly", ProviderMessageType.Warning);
+        public override ProviderMessage Message => new ProviderMessage("Testing will execute the script with the EventType set to Test, ensure your script handles this correctly", ProviderMessageType.Warning, "server.message.m47f0922640fa");
 
         public override void OnGrab(GrabMessage message)
         {

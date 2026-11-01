@@ -222,7 +222,8 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
 
                     Definition.Message = new ProviderMessage(
                         "Connection succeeded, but MAM account status is unavailable or stale. Cached counts are not shown.",
-                        ProviderMessageType.Warning);
+                        ProviderMessageType.Warning,
+                        "server.message.mddaec7220c51");
                     return null;
                 }
 
@@ -230,16 +231,23 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
                 try
                 {
                     var cls = string.IsNullOrWhiteSpace(Settings.UserClass) ? "Unknown" : Settings.UserClass;
-                    var membership = Settings.IsVip
-                        ? $"\u2713 VIP Member - Class: {cls}"
-                        : $"User Class: {cls} (Standard member)";
-                    var slots = Settings.UnsatisfiedCount.HasValue && Settings.UnsatisfiedLimit.HasValue
-                        ? $"; unsatisfied torrents: {Settings.UnsatisfiedCount}/{Settings.UnsatisfiedLimit}"
-                        : string.Empty;
-                    var message = membership + slots;
+                    var hasSlotCounts = Settings.UnsatisfiedCount.HasValue && Settings.UnsatisfiedLimit.HasValue;
+                    var message = Settings.IsVip
+                        ? hasSlotCounts
+                            ? $"\u2713 VIP Member - Class: {cls}; unsatisfied torrents: {Settings.UnsatisfiedCount}/{Settings.UnsatisfiedLimit}"
+                            : $"\u2713 VIP Member - Class: {cls}"
+                        : hasSlotCounts
+                            ? $"User Class: {cls} (Standard member); unsatisfied torrents: {Settings.UnsatisfiedCount}/{Settings.UnsatisfiedLimit}"
+                            : $"User Class: {cls} (Standard member)";
+                    var messageId = Settings.IsVip
+                        ? hasSlotCounts ? "server.message.m9f7f2489aa05" : "server.message.md6a7ade8523b"
+                        : hasSlotCounts ? "server.message.m621dd0308bef" : "server.message.md4a741052e8b";
+                    object messageParameters = hasSlotCounts
+                        ? new { value0 = cls, value1 = Settings.UnsatisfiedCount.Value, value2 = Settings.UnsatisfiedLimit.Value }
+                        : new { value0 = cls };
 
                     // Attach to the temporary definition used during Test so the controller can surface it
-                    Definition.Message = new ProviderMessage(message, ProviderMessageType.Info);
+                    Definition.Message = new ProviderMessage(message, ProviderMessageType.Info, messageId, messageParameters);
                 }
                 catch { }
 

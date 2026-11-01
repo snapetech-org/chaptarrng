@@ -1,23 +1,23 @@
 # Fixed server and notification copy review
 
-The source catalog and caller reviews are recorded below. The current source snapshot contains 4,101 English IDs, with 1,146 missing direct values per target locale (13,752 cells across twelve locales). Translation generation and final headed Agentic VM acceptance remain queued. Agent review does not claim qualified native-speaker approval.
+The source catalog and caller reviews are recorded below. The current source snapshot contains 4,165 English IDs, with 1,210 missing direct values per target locale (14,520 cells across twelve locales). Translation generation and final headed Agentic VM acceptance remain queued. Agent review does not claim qualified native-speaker approval.
 
 ## Source coverage
 
-- Server/API, validation, operational progress, and persisted failure messages: 554 distinct messages and 736 unique source callers (746 template/branch bindings). One wholly dynamic Telegram exception/status template is excluded because it contains no application wording.
+- Server/API, validation, operational progress, provider test notices, and persisted failure messages: 618 distinct messages and 811 unique source callers (821 template/branch bindings). One wholly dynamic Telegram exception/status template is excluded because it contains no application wording.
 - Provider field labels/help/warnings: 409 mapped sources and 643 callers, with all 811 explicit schema attribute values resolving to catalog IDs.
 - Static provider dropdown labels and explanatory hints: 136 sources, 174 callers, 27 enum types, and 165 enum members. Numeric values, member identifiers, protocol `EnumMember` values, dynamic provider option names, and example hints stay unchanged.
 - Outbound human-readable headings, bodies, fields, tests and sensor names: 57 sources and 108 callers, plus two explicitly fingerprinted exclusions for the Proper release marker and retag metadata field names. Transport keys, event names, topics, paths, book/author titles and provider responses stay data.
 
 All seventeen authored loading messages also retain their original no-repeat variety behind stable IDs, with contributor/product names protected. The runtime fallback data is checked against its source inventory.
 
-The expanded source set has 4,101 English IDs, including 1,151 IDs beyond the 2,950-ID baseline. The current target catalogs have 2,955 direct values each and are missing 1,146 values apiece. Registries carry stable IDs, source fingerprints, exact caller lines/hashes, and protected literal rules. `check-localized-source-coverage.cjs` and `check-server-message-catalogs.cjs` reject stale sources, missing target values, unsafe paths and placeholder/protected-value changes. `--allow-pending` is a preparation check, not final translation acceptance.
+The expanded source set has 4,165 English IDs, including 1,215 IDs beyond the 2,950-ID baseline. The current target catalogs have 2,955 direct values each and are missing 1,210 values apiece. Registries carry stable IDs, source fingerprints, exact caller lines/hashes, and protected literal rules. `check-localized-source-coverage.cjs` and `check-server-message-catalogs.cjs` reject stale sources, missing target values, unsafe paths and placeholder/protected-value changes. `--allow-pending` is a preparation check, not final translation acceptance.
 
 ## Presentation callers
 
 `server-message-callers.json` fingerprints every introduced presentation boundary. Reviewed paths include:
 
-- Form result alerts, input help/errors/warnings, OAuth and enhanced-select validation. Multiple validation values are translated individually before joining.
+- Form result alerts, input help/errors/warnings, OAuth and enhanced-select validation. Multiple validation values are translated individually before joining. Provider test and import-list error boundaries accept only explicit trusted IDs; otherwise they render raw payloads as opaque data.
 - Provider notices for indexers, download clients, notifications and import lists; root-folder/list save failures; import-list synchronization preview/history; first-run authentication and Quickstart connection/Hardcover failures.
 - Backup/restore/settings alerts, author media moves, queue status/detail/popovers, pending imports, import-progress drawers/sidebar messages, health status and persisted history details.
 - Search-series fetch/save failure presentation and shared `getErrorMessage` consumers. Other search/action connectors retain raw server text until the sidebar or shared error renderer presents it.
@@ -84,7 +84,26 @@ outside the translation set. Exact callsites and source fingerprints are in
 `diagnostic-exception-wrapper-audit-20261031.json`; no native-speaker review is
 claimed.
 
-The current input now has 4,101 English IDs and 1,146 pending values per locale,
-or 13,752 target cells. All 17 new entries still need translation and review.
+At that diagnostic-wrapper checkpoint, the input had 4,101 English IDs and
+1,146 pending values per locale, or 13,752 target cells. All 17 new entries
+still needed translation and review.
 The Arabic whole-document RTL gate also remains in place until logical-layout
 safety and headed visual review are complete.
+
+## Provider-test source boundary follow-up
+
+The follow-up based on `c0aebe1e` carries a trusted message ID and opaque
+parameter through release-client rejection responses, then renders it in
+Interactive Search. Fixed app-authored `ProviderMessage` notices used by
+provider test forms now have stable explicit IDs. These entries are marked
+explicit-ID-only, so arbitrary provider strings cannot match their English
+sources. Import-list save/sync errors and provider payloads accept a trusted ID
+when present and otherwise render as opaque data. MAM user-class/count values
+and the configured rTorrent view stay dynamic parameters.
+
+This adds 11 source IDs and 12 bindings, with 132 target cells pending.
+`source-followup-20261101.json` binds the current complete missing-cell set to
+the English and target catalog hashes: 4,165 English IDs, 2,955 populated
+values per target locale, and 1,210 missing values per locale (14,520 cells).
+The source presentation ledger covers 76 boundaries across 35 files. Target
+catalogs remain unchanged. No semantic or native-speaker approval is claimed.
