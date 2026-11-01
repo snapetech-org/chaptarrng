@@ -24,14 +24,14 @@ function renderErrorDescriptor(error) {
     return null;
   }
 
-  if (error.isLocalized) {
-    return error.message;
-  }
-
   const translated = translateServerMessageById(error.messageId, error.messageParameters);
 
   if (translated) {
     return translated;
+  }
+
+  if (error.isLocalized) {
+    return error.message;
   }
 
   return error.message ? <BidiText lang="und">{error.message}</BidiText> : null;

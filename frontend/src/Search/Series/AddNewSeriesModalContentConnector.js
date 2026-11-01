@@ -31,10 +31,13 @@ function resolveErrorDescriptor(error) {
     return { message: error.message || translate('SeriesAddError'), isLocalized: true };
   }
 
-  const translated = translateServerMessageById(error?.messageId, error?.messageParameters);
-
-  if (translated) {
-    return { message: translated, isLocalized: true };
+  if (error?.messageId) {
+    return {
+      message: error.message || '',
+      messageId: error.messageId,
+      messageParameters: error.messageParameters,
+      isLocalized: true
+    };
   }
 
   if (typeof error?.message === 'string' && error.message) {
@@ -705,7 +708,9 @@ class AddNewSeriesModalContentConnector extends Component {
         id: `series-add-error-${Date.now()}`,
         name: 'SeriesAddError',
         message: renderedError.message,
-        messageMode: renderedError.isLocalized ? 'localized' : 'opaque',
+        messageId: renderedError.messageId,
+        messageParameters: renderedError.messageParameters,
+        messageMode: renderedError.messageId ? 'trusted' : renderedError.isLocalized ? 'localized' : 'opaque',
         type: 'error',
         hideAfter: 12
       });
