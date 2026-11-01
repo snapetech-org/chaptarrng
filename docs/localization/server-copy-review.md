@@ -108,12 +108,29 @@ values per target locale, and 1,210 missing values per locale (14,520 cells).
 The source presentation ledger covers 76 boundaries across 35 files. Target
 catalogs remain unchanged. No semantic or native-speaker approval is claimed.
 
-The settings-validation follow-up now carries existing trusted message IDs and
+The provider-validation follow-up carries existing trusted message IDs and
 opaque parameters through `NzbDroneValidationFailure`/`NzbDroneValidationState`,
-the validation error JSON, the settings selector, and the field-help renderer.
-Unkeyed server/provider values remain opaque. The Goodreads bookshelf `.NotEmpty()`
-rule still uses FluentValidation's default message; that library-generated
-message is not treated as an app-authored catalog source. OAuth UI timeout and
-popup errors carry local message keys from their fixed producer, while OAuth
-API messages require an explicit server ID or remain opaque. Option-provider
-fetch errors also remain opaque instead of being matched against app copy.
+the validation error JSON, the settings selector, and field-help rendering.
+It binds 65 provider-setting field callsites across 38 IDs and 196 provider
+`Test()` failure callsites across 133 IDs. Those groups have no overlapping
+callsites or IDs, for 261 distinct callsites and 171 distinct IDs. Of those,
+169 existing server-message IDs are absent in every target locale (169 cells
+per locale; 2,028 cells total); `AuthIncorrectCredentials` and
+`UsernameRequired` are already populated in the existing catalogs. Three
+additional shared host/URL validator callsites use existing IDs that are also
+absent in every target locale, bringing the complete source diff to 172 missing
+IDs (172 cells per locale; 2,064 total). All affected IDs were already in the
+pinned missing-cell set. No English source IDs or target-catalog values were
+added. Dynamic values such as exception text, seed thresholds, example URL
+paths, API-reported versions, and known system-folder paths remain parameters.
+Unkeyed server/provider values remain opaque. The Goodreads bookshelf
+`.NotEmpty()` rule still uses FluentValidation's default message; that
+library-generated message is not treated as an app-authored catalog source.
+OAuth UI timeout and popup errors carry local message keys from their fixed
+producer, while OAuth API messages require an explicit server ID or remain
+opaque. Option-provider fetch errors also remain opaque instead of being
+matched against app copy.
+
+`DownstreamException` responses preserve the producer's HTTP status code while
+retaining any trusted message ID and opaque parameters. Raw exception/provider
+output remains outside catalog matching.

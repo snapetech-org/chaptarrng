@@ -14,6 +14,7 @@ using NzbDrone.Core.Exceptions;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Common.Instrumentation;
+using NzbDrone.Core.Validation;
 
 namespace NzbDrone.Core.Indexers.MyAnonaMouse
 {
@@ -195,7 +196,7 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
                 if (firstRequest == null)
                 {
                     _logger.Trace("MAM_TEST_ERROR: No request generated");
-                    return new ValidationFailure(string.Empty, "Failed to generate test request. Check your settings.");
+                    return NzbDroneValidationFailure.ForMessage(string.Empty, "Failed to generate test request. Check your settings.", "server.message.m6a4ba853f563");
                 }
 
                 _logger.Trace("MAM_TEST_REQUEST: Testing JSON API connectivity (should use configured proxy if set)");
@@ -217,7 +218,7 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
                     _logger.Warn("MAM account status is unavailable or stale during test for indexer '{0}' ({1})", Definition.Name, ex.GetType().Name);
                     if (Settings.ProtectUnsatisfiedSlots)
                     {
-                        return new ValidationFailure(string.Empty, "MAM account status is unavailable or stale. Cannot verify unsatisfied-slot protection.");
+                        return NzbDroneValidationFailure.ForMessage(string.Empty, "MAM account status is unavailable or stale. Cannot verify unsatisfied-slot protection.", "server.message.m3a3a39354b92");
                     }
 
                     Definition.Message = new ProviderMessage(
@@ -260,10 +261,10 @@ namespace NzbDrone.Core.Indexers.MyAnonaMouse
 
                 if (ex.Message.Contains("403") || ex.Message.Contains("Forbidden"))
                 {
-                    return new ValidationFailure(string.Empty, "Authentication failed. Verify your mam_id is correct (found under Preferences > Security on MAM). If using a proxy, ensure it's configured in Settings > General > Proxy.");
+                    return NzbDroneValidationFailure.ForMessage(string.Empty, "Authentication failed. Verify your mam_id is correct (found under Preferences > Security on MAM). If using a proxy, ensure it's configured in Settings > General > Proxy.", "server.message.m8e5bd7c589bb");
                 }
 
-                return new ValidationFailure(string.Empty, $"Connection test failed: {ex.Message}");
+                return NzbDroneValidationFailure.ForMessage(string.Empty, $"Connection test failed: {ex.Message}", "server.message.m12f378d7ddc5", new { value0 = ex.Message });
             }
         }
 

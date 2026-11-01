@@ -1300,13 +1300,14 @@
     }
   },
   "registries": {
-    "docs/localization/server-message-sources.json": "eafa72ec590ea9fea5d2ff84c0b3927149f848536ea7c0fa659a6480162cb049",
+    "docs/localization/server-message-sources.json": "e00a584477c1a268408f49151716c2fe44a31f5a56154d94379129391acdec49",
     "docs/localization/server-message-callers.json": "78903b454a094e41fcf209ea6ec57a865965d697c00301897dd08e15c0083f3b",
     "docs/localization/followup-ui-sources.json": "696b4698ce70c4728364f7dd88e1cee7ed1e458bf388f0d89d8c1b677b8b4162",
     "frontend/src/Utilities/Localization/scheduled-task-labels.json": "6c92e998d0cee2eac0b4ddb350bf1daab1fba96809e37f2001fec8af12f93515",
     "frontend/src/Utilities/Localization/server-messages.json": "27b0961a2d1f3453473912725017441ee42e08e4e98d2435291f0a2e972ff389",
     "src/NzbDrone.Core/Localization/Core/en.json": "2717a9615b890afebf1c52cec5a344dcbee39ea1faf8ed0db96b81e14b10627f",
-    "docs/localization/source-message-hashes.json": "5ab53498b8131e22f0e93bc5556ec1df9e0cbbe45ae16beb058bd7215017ae26"
+    "docs/localization/source-message-hashes.json": "5ab53498b8131e22f0e93bc5556ec1df9e0cbbe45ae16beb058bd7215017ae26",
+    "docs/localization/server-copy-review.md": "3e821c2a07c2e186f4e569c42903576cf12898d0ffa0fdba5d82004827d0044c"
   },
   "sourceEvidence": [
     {
@@ -1331,8 +1332,8 @@
     },
     {
       "path": "docs/localization/server-copy-review.md",
-      "sha256": "218619d0e1ed579071318f5b10c743c55a1c22336a12a9ff6ed3c7a65b255783",
-      "description": "Settings-validation provenance, opaque provider errors, and source-boundary review"
+      "sha256": "3e821c2a07c2e186f4e569c42903576cf12898d0ffa0fdba5d82004827d0044c",
+      "description": "Provider validation provenance, opaque errors, and source-boundary review"
     }
   ],
   "boundaries": [

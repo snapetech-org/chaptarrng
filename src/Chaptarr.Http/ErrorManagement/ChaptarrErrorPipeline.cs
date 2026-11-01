@@ -42,6 +42,7 @@ namespace Chaptarr.Http.ErrorManagement
 
             if (exception is DownstreamException downstreamException)
             {
+                statusCode = downstreamException.StatusCode;
                 errorModel.MessageId = downstreamException.MessageId;
                 errorModel.MessageParameters = downstreamException.MessageParameters;
             }
