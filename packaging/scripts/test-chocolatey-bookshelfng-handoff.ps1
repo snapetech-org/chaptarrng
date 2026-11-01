@@ -201,6 +201,10 @@ try {
     throw 'The candidate package does not pin the exact Windows archive supplied to this handoff test.'
   }
 
+  $packageInstallScriptPath = Join-Path $workingDirectory 'candidate-chocolateyinstall.ps1'
+  [IO.File]::WriteAllText($packageInstallScriptPath, $packageMetadata.InstallScript, [Text.UTF8Encoding]::new($false))
+  & (Join-Path $PSScriptRoot 'test-chocolatey-migration-choice.ps1') -InstallScriptPath $packageInstallScriptPath
+
   & dotnet build $smokeProject --configuration Release --verbosity quiet
   if ($LASTEXITCODE -ne 0) { throw 'The Windows migration fixture could not be built for this handoff.' }
   $smokeExecutable = Get-ChildItem -LiteralPath (Join-Path $repoRoot 'distribution\windows\installer-net-smoke\bin\Release') -Filter 'ChaptarrNG.Installer.Smoke.exe' -File -Recurse |

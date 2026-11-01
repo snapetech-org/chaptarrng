@@ -1,20 +1,23 @@
+param(
+  [string] $InstallScriptPath = (Join-Path $PSScriptRoot '../legacy/chocolatey/tools/chocolateyinstall.ps1.in')
+)
+
 $ErrorActionPreference = 'Stop'
 
-$templatePath = Join-Path $PSScriptRoot '../legacy/chocolatey/tools/chocolateyinstall.ps1.in'
-$template = Get-Content -LiteralPath $templatePath -Raw
+$installScript = Get-Content -LiteralPath $InstallScriptPath -Raw
 $functionMatch = [regex]::Match(
-  $template,
+  $installScript,
   '(?ms)^function Confirm-BookshelfMigrationChoice \{\r?\n.*?^\}')
 if (-not $functionMatch.Success) {
-  throw 'Could not find Confirm-BookshelfMigrationChoice in the Chocolatey install template.'
+  throw 'Could not find Confirm-BookshelfMigrationChoice in the Chocolatey install script.'
 }
 . ([scriptblock]::Create($functionMatch.Value))
 
 $parseTokens = $null
 $parseErrors = $null
-$installAst = [System.Management.Automation.Language.Parser]::ParseInput($template, [ref] $parseTokens, [ref] $parseErrors)
+$installAst = [System.Management.Automation.Language.Parser]::ParseInput($installScript, [ref] $parseTokens, [ref] $parseErrors)
 if ($parseErrors.Count -gt 0) {
-  throw 'The Chocolatey install template contains PowerShell parse errors.'
+  throw 'The Chocolatey install script contains PowerShell parse errors.'
 }
 $utilityFunction = $installAst.Find({
     param($node)
@@ -48,6 +51,69 @@ function Assert-Condition {
   param([bool] $Condition, [string] $Message)
   if (-not $Condition) { throw $Message }
 }
+
+$installStatements = @($installAst.EndBlock.Statements)
+$parserStartIndex = -1
+$parserEndIndex = -1
+for ($index = 0; $index -lt $installStatements.Count; $index++) {
+  $statement = $installStatements[$index]
+  if ($parserStartIndex -lt 0 -and
+      $statement -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+      $statement.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+      $statement.Left.VariablePath.UserPath -eq 'packageParameters') {
+    $parserStartIndex = $index
+    continue
+  }
+  if ($parserStartIndex -ge 0 -and
+      $statement -is [System.Management.Automation.Language.IfStatementAst] -and
+      $statement.Extent.Text -match '(?s)\$packageParameters\s+-split') {
+    $parserEndIndex = $index
+    break
+  }
+}
+if ($parserStartIndex -lt 0 -or $parserEndIndex -lt $parserStartIndex) {
+  throw 'Could not isolate the packaged Chocolatey parameter parser.'
+}
+$parserStart = $installStatements[$parserStartIndex].Extent.StartOffset
+$parserEnd = $installStatements[$parserEndIndex].Extent.EndOffset
+$script:packageParameterParserText = $installScript.Substring($parserStart, $parserEnd - $parserStart) +
+  [Environment]::NewLine +
+  '[pscustomobject]@{ ProviderMode = $requestedProviderMode; MigrationMode = $requestedMigrationMode }'
+$choiceCalls = @($installAst.FindAll({
+      param($node)
+      $node -is [System.Management.Automation.Language.CommandAst] -and
+        $node.GetCommandName() -eq 'Confirm-BookshelfMigrationChoice'
+    }, $true))
+if ($choiceCalls.Count -ne 1 -or
+    $choiceCalls[0].Extent.Text -notmatch '(?is)-HasMigrationData\s+\$hasMigrationDataForChoice.*-Mode\s+\$requestedMigrationMode') {
+  throw 'The packaged Chocolatey install path does not wire parsed package parameters into the migration choice.'
+}
+
+function Invoke-PackageParameterParser {
+  param([AllowNull()][string] $Parameters)
+  $previousParameters = [Environment]::GetEnvironmentVariable('ChocolateyPackageParameters', 'Process')
+  try {
+    [Environment]::SetEnvironmentVariable('ChocolateyPackageParameters', $Parameters, 'Process')
+    return & ([scriptblock]::Create($script:packageParameterParserText))
+  } finally {
+    [Environment]::SetEnvironmentVariable('ChocolateyPackageParameters', $previousParameters, 'Process')
+  }
+}
+
+$defaultModes = Invoke-PackageParameterParser ''
+Assert-Condition ($defaultModes.MigrationMode -eq 'automatic') 'The packaged parser did not preserve automatic migration as the default.'
+$askModes = Invoke-PackageParameterParser '/MigrationMode=ask'
+Assert-Condition ($askModes.MigrationMode -eq 'ask') 'The packaged parser did not accept MigrationMode=ask.'
+$manualModes = Invoke-PackageParameterParser '/ProviderMode=Goodreads /MigrationMode=manual'
+Assert-Condition ($manualModes.ProviderMode -eq 'Goodreads' -and $manualModes.MigrationMode -eq 'manual') `
+  'The packaged parser did not preserve the selected provider and manual migration mode.'
+$duplicateModeRejected = $false
+try {
+  Invoke-PackageParameterParser '/MigrationMode=ask /migrationmode=manual' | Out-Null
+} catch {
+  $duplicateModeRejected = $_.Exception.Message -like '*specified more than once*'
+}
+Assert-Condition $duplicateModeRejected 'The packaged parser did not reject duplicate migration mode parameters.'
 
 $journalTestDirectory = Join-Path ([IO.Path]::GetTempPath()) ("bookshelfng-journal-fingerprint-{0}" -f [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $journalTestDirectory | Out-Null
@@ -109,10 +175,11 @@ function Invoke-ChoiceCase {
   $script:PromptResponse = $Response
   $stagingReached = $false
   $failure = $null
+  $parsedAskModes = Invoke-PackageParameterParser '/MigrationMode=ask'
   try {
     Confirm-BookshelfMigrationChoice `
       -HasMigrationData $true `
-      -Mode 'ask' `
+      -Mode $parsedAskModes.MigrationMode `
       -InputIsRedirected $false `
       -Prompt $testPrompt
     $stagingReached = $true
@@ -142,7 +209,7 @@ $script:PromptCalls = 0
 try {
   Confirm-BookshelfMigrationChoice `
     -HasMigrationData $true `
-    -Mode 'ask' `
+    -Mode $askModes.MigrationMode `
     -InputIsRedirected $true `
     -Prompt $testPrompt
   throw 'Ask mode unexpectedly accepted redirected input.'
@@ -154,16 +221,24 @@ Assert-Condition ($script:PromptCalls -eq 0) 'Ask mode prompted despite redirect
 $script:PromptCalls = 0
 Confirm-BookshelfMigrationChoice `
   -HasMigrationData $false `
-  -Mode 'ask' `
+  -Mode $askModes.MigrationMode `
   -InputIsRedirected $true `
   -Prompt $testPrompt
 Assert-Condition ($script:PromptCalls -eq 0) 'A fresh install prompted without BookshelfNG migration data.'
 
 $script:PromptCalls = 0
+Confirm-BookshelfMigrationChoice `
+  -HasMigrationData $true `
+  -Mode $defaultModes.MigrationMode `
+  -InputIsRedirected $false `
+  -Prompt $testPrompt
+Assert-Condition ($script:PromptCalls -eq 0) 'The default automatic migration path unexpectedly prompted.'
+
+$script:PromptCalls = 0
 try {
   Confirm-BookshelfMigrationChoice `
     -HasMigrationData $true `
-    -Mode 'manual' `
+    -Mode $manualModes.MigrationMode `
     -InputIsRedirected $false `
     -Prompt $testPrompt
   throw 'Manual mode unexpectedly accepted the package transition.'
@@ -203,4 +278,4 @@ try {
   Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Write-Host 'Chocolatey migration tests passed: No/empty cancel, explicit yes proceeds, journal file/directory fingerprints, utility output preserves exit codes, and failures exit without waiting for Enter.'
+Write-Host 'Chocolatey migration tests passed: packaged ask parameter parsing reaches the default-No prompt, explicit yes proceeds, manual defer and automatic default remain non-interactive, and journal/utility failure contracts hold.'
