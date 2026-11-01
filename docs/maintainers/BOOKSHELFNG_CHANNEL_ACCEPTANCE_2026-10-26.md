@@ -1181,3 +1181,44 @@ package and repository rollback, Cloudron and Unraid delivery, canonical
 Co-op Cloud recipe, package-feed/catalog delivery, representative operator
 data and recovery, and live provider/API behavior remain unaccepted. No
 readiness variables were enabled and no package or release was published.
+
+## Exact-head handoffs and Helm egress correction — 2026-11-01 01:16 UTC
+
+The current `main` head is `ee1d583cb7f4a58ceb0ae7ccb98cc169601cd236`.
+Its non-documentation tree matches the tested application source at
+`699b0a499c51617760e3b2809dc22e0a29a0e54b`. There are no open ChaptarrNG PRs
+and GitHub lists only the `main` branch. Queued validation for deleted PR
+branches and older main candidates was cancelled so current-source evidence
+can use the private JIT queue.
+
+Build `41255968485` at `699b0a49` passed PostgreSQL migration smoke; Linux,
+Windows, macOS, and Docker jobs remain queued. Current-head private-JIT runs
+were dispatched at `ee1d583c`: Chocolatey `.76` No/Yes/rollback
+`41260222596`, Fedora RPM No/Yes/rollback `41260224643`, channel contracts
+`41260226517`, standalone release assets `41260228325`, and macOS standalone
+installed handoff `41260230197`. Their required jobs are queued without
+runners; none is acceptance evidence yet.
+
+The pinned Helm run `41168121048` failed before the install script because the
+JIT proxy denied `dl.k8s.io`; it created no Kind cluster. Packer `main` now
+contains commit `dc258d562a47de0fea0e9fa677b5014114ff9be1`, which permits that
+exact host over HTTPS only and tests rejection of HTTP and lookalike hosts.
+Packer private-JIT validation `41260115705` is queued at that exact commit.
+The proxy change is not deployed: the shared broker still has active guests,
+so no broker restart or live policy cutover was attempted. Helm is not rerun
+until the allowlist change reaches the JIT guests. No production or external
+cluster is involved.
+
+An organization CodeQL audit covered all 65 accessible `snapetech-org`
+repositories: default setup is `not-configured` wherever GitHub exposes the
+code-scanning endpoint, and the remaining repositories report that Advanced
+Security is disabled. Code search found no `github/codeql-action` workflow
+invocation. ChaptarrNG's generated Actions registration remains listed by
+GitHub, but its configuration is `not-configured` and its most recent run was
+2026-10-22. This is not a current CodeQL scan.
+
+The global channel gate remains open. No release-readiness variables were
+enabled, and no release or package was published. Windows `.76`, Fedora RPM,
+macOS standalone, remaining installed-channel handoffs, external delivery,
+representative operator data, rollback, and live provider/API acceptance still
+need completed evidence.
