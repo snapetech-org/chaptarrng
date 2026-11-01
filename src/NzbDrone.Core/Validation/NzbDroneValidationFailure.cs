@@ -7,6 +7,8 @@ namespace NzbDrone.Core.Validation
         public bool IsWarning { get; set; }
         public string DetailedDescription { get; set; }
         public string InfoLink { get; set; }
+        public string MessageId { get; set; }
+        public object MessageParameters { get; set; }
 
         public NzbDroneValidationFailure(string propertyName, string error)
             : base(propertyName, error)
@@ -18,6 +20,15 @@ namespace NzbDrone.Core.Validation
         {
         }
 
+        public static NzbDroneValidationFailure ForMessage(string propertyName, string error, string messageId, object messageParameters = null)
+        {
+            return new NzbDroneValidationFailure(propertyName, error)
+            {
+                MessageId = messageId,
+                MessageParameters = messageParameters
+            };
+        }
+
         public NzbDroneValidationFailure(ValidationFailure validationFailure)
             : base(validationFailure.PropertyName, validationFailure.ErrorMessage, validationFailure.AttemptedValue)
         {
@@ -25,6 +36,8 @@ namespace NzbDrone.Core.Validation
             var state = validationFailure.CustomState as NzbDroneValidationState;
 
             IsWarning = state is { IsWarning: true };
+            MessageId = state?.MessageId;
+            MessageParameters = state?.MessageParameters;
         }
     }
 }

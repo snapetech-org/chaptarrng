@@ -107,3 +107,13 @@ the English and target catalog hashes: 4,165 English IDs, 2,955 populated
 values per target locale, and 1,210 missing values per locale (14,520 cells).
 The source presentation ledger covers 76 boundaries across 35 files. Target
 catalogs remain unchanged. No semantic or native-speaker approval is claimed.
+
+The settings-validation follow-up now carries existing trusted message IDs and
+opaque parameters through `NzbDroneValidationFailure`/`NzbDroneValidationState`,
+the validation error JSON, the settings selector, and the field-help renderer.
+Unkeyed server/provider values remain opaque. The Goodreads bookshelf `.NotEmpty()`
+rule still uses FluentValidation's default message; that library-generated
+message is not treated as an app-authored catalog source. OAuth UI timeout and
+popup errors carry local message keys from their fixed producer, while OAuth
+API messages require an explicit server ID or remain opaque. Option-provider
+fetch errors also remain opaque instead of being matched against app copy.

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "scope": "Presentation boundaries only; stores retain raw server messages and captured provider/user values stay data. See server-copy-review.md for complete caller review.",
+  "scope": "Message handling and presentation boundaries only; stores retain raw server messages and captured provider/user values stay data. See server-copy-review.md for complete caller review.",
   "counts": {
     "files": 35,
     "callsites": 76
@@ -128,27 +128,27 @@
     },
     {
       "file": "frontend/src/Components/Form/EnhancedSelectInput.js",
-      "line": 40,
-      "sourceLine": ".map((e) => translateServerMessage(e?.errorMessage))",
-      "sourceLineSha256": "6f295eb7472c4c00aabb8159505fe1a4607d2bf8f29a75ec1ad0d663391530fc"
+      "line": 39,
+      "sourceLine": ".map((e) => typeof e === 'string' ? e : e?.errorMessage || e?.message)",
+      "sourceLineSha256": "d0e71d7c9849251445e58ae9d0ece387547811386c33cdf2e8ce44a8644b5f13"
     },
     {
       "file": "frontend/src/Components/Form/EnhancedSelectInput.js",
-      "line": 43,
-      "sourceLine": "return messages.length ? messages.join(' ') : (translateServerMessage(error.responseText) || null);",
-      "sourceLineSha256": "528de446877fa01e6dea279e015f12e2fab622ba0d0c40879fe51f1fa4c9d842"
+      "line": 46,
+      "sourceLine": "return typeof error.responseText === 'string' && error.responseText.trim() ? error.responseText : null;",
+      "sourceLineSha256": "26792e97b30f54d46d7714c18dcf00cf3ab15b64cd055fc2ae70fcb07156caea"
     },
     {
       "file": "frontend/src/Components/Form/EnhancedSelectInput.js",
-      "line": 47,
-      "sourceLine": "return translateServerMessage(responseJSON.message || responseJSON.error || error.responseText) || null;",
-      "sourceLineSha256": "4cccff4e6a5b7a9a48c99888c8a4f4e56c31d7c4aa4ff928c2f5464a1bede63c"
+      "line": 54,
+      "sourceLine": "return [responseJSON.message, responseJSON.errorMessage, responseJSON.error, error.responseText]",
+      "sourceLineSha256": "4e8f107594674167900e4a1ae820515c78ba5e8accae1a1fb632fe8883bdadd8"
     },
     {
       "file": "frontend/src/Components/Form/EnhancedSelectInput.js",
-      "line": 50,
-      "sourceLine": "return translateServerMessage(error.responseText) || (error.status && error.statusText ? `${error.status} ${error.statusText}` : null);",
-      "sourceLineSha256": "0bbbd499be1b809edd01b3ba7b86aaca6a0a5f2b4a3e4874580c28b8c1b709c2"
+      "line": 583,
+      "sourceLine": "messageMode=\"opaque\"",
+      "sourceLineSha256": "267ccf433373d931a1e7b292982b6e85bd4c3d796dcc10ab76d75a8e1291f34d"
     },
     {
       "file": "frontend/src/Components/Form/Form.js",
@@ -170,69 +170,69 @@
     },
     {
       "file": "frontend/src/Components/Form/FormInputGroup.js",
-      "line": 267,
-      "sourceLine": "text={translateServerMessage(error.message)}",
-      "sourceLineSha256": "f2cf8deb1d180173334f2fc26c575908760dba65a97c36a6e1acab13f9254309"
+      "line": 266,
+      "sourceLine": "text={error.message}",
+      "sourceLineSha256": "f5cdad5d179af2fdf65ecd92d9f0e8a36bf3f0646a87b6e5f9d87dee9acacbaa"
     },
     {
       "file": "frontend/src/Components/Form/FormInputGroup.js",
       "line": 269,
-      "sourceLine": "tooltip={translateServerMessage(error.detailedMessage)}",
-      "sourceLineSha256": "34658f0a6a7458bb1af56a319197bd3ef8fd33b57f7b5b1096d1bdd4571291f9"
-    },
-    {
-      "file": "frontend/src/Components/Form/FormInputGroup.js",
-      "line": 283,
-      "sourceLine": "text={translateServerMessage(warning.message)}",
-      "sourceLineSha256": "64802984b43be8f75bb55aec675ad12d06d6ed570ced7a05c7a61f3fa4883d37"
+      "sourceLine": "messageMode={error.messageOrigin === 'server' ? 'opaque' : 'source'}",
+      "sourceLineSha256": "d1b6731cec3b9b5fcb234ec3d1fc3faaa63e50d8b921cf29ba909fa87a8b5b1d"
     },
     {
       "file": "frontend/src/Components/Form/FormInputGroup.js",
       "line": 285,
-      "sourceLine": "tooltip={translateServerMessage(warning.detailedMessage)}",
-      "sourceLineSha256": "d554a318a0ae182adff8bd233cb79dcac5045b4a099ca04c0c08423e5288752a"
+      "sourceLine": "text={warning.message}",
+      "sourceLineSha256": "f15cbc68eb7231de536548ef44fe38b9bbabbef7d235a470378b9310ec587baf"
+    },
+    {
+      "file": "frontend/src/Components/Form/FormInputGroup.js",
+      "line": 288,
+      "sourceLine": "messageMode={warning.messageOrigin === 'server' ? 'opaque' : 'source'}",
+      "sourceLineSha256": "c4e08d26fb88c418b5de782e7063b2ebe6d601947febf028e9cadf7c4f4428c8"
     },
     {
       "file": "frontend/src/Components/Form/FormInputHelpText.js",
-      "line": 32,
-      "sourceLine": "{translateServerMessage(text)}",
-      "sourceLineSha256": "ce890f9941b3a10206e7e5b6708d63d1e9dd79e2973c5a42a0822bb18b8ac24e"
+      "line": 44,
+      "sourceLine": "{translatedText}",
+      "sourceLineSha256": "33dc1daa8106d99a5ceadd88b572830dccdb2b261ff783c4ffbf36778cb1fe50"
     },
     {
       "file": "frontend/src/Components/Form/FormInputHelpText.js",
-      "line": 39,
-      "sourceLine": "title={translateServerMessage(tooltip)}",
-      "sourceLineSha256": "31d219f1bc3dd65e550b89666be73799907a5408b1708cea767ce3390d99b40a"
+      "line": 51,
+      "sourceLine": "title={translatedTooltip}",
+      "sourceLineSha256": "64b6234cfb2bc4648a8c5b03c829d9b5592ac97c7d3678b79f4e1acdb7be3197"
     },
     {
       "file": "frontend/src/Components/Form/FormInputHelpText.js",
-      "line": 53,
-      "sourceLine": "title={translateServerMessage(tooltip)}",
-      "sourceLineSha256": "31d219f1bc3dd65e550b89666be73799907a5408b1708cea767ce3390d99b40a"
+      "line": 65,
+      "sourceLine": "title={translatedTooltip}",
+      "sourceLineSha256": "64b6234cfb2bc4648a8c5b03c829d9b5592ac97c7d3678b79f4e1acdb7be3197"
     },
     {
       "file": "frontend/src/Components/Form/OAuthInput.js",
-      "line": 18,
-      "sourceLine": ".map((e) => translateServerMessage(e?.errorMessage))",
-      "sourceLineSha256": "6f295eb7472c4c00aabb8159505fe1a4607d2bf8f29a75ec1ad0d663391530fc"
+      "line": 17,
+      "sourceLine": ".map((failure, index) => typeof failure === 'string' ?",
+      "sourceLineSha256": "13096848dec39be5de62591c03547d2295bdf3577e5db3f79f2cd0e858da719f"
     },
     {
       "file": "frontend/src/Components/Form/OAuthInput.js",
-      "line": 21,
-      "sourceLine": "return messages.length ? messages.join(' ') : (translateServerMessage(error.responseText) || null);",
-      "sourceLineSha256": "528de446877fa01e6dea279e015f12e2fab622ba0d0c40879fe51f1fa4c9d842"
+      "line": 31,
+      "sourceLine": "return typeof error.responseText === 'string' && error.responseText.trim() ?",
+      "sourceLineSha256": "568b7158d1ee6fd9fc5c97d7fef892105e87e60ef15b4a357e4639b21535a698"
     },
     {
       "file": "frontend/src/Components/Form/OAuthInput.js",
-      "line": 25,
-      "sourceLine": "return translateServerMessage(responseJSON.message || error.responseText) || null;",
-      "sourceLineSha256": "332ec4fa638e6183a136b62dba7a702b5552e4e51acce4ec6d4d3c654ea89d85"
+      "line": 36,
+      "sourceLine": "if (typeof responseJSON === 'string' && responseJSON.trim()) {",
+      "sourceLineSha256": "e7091942190cc5f84465ed6f478a4b965de3ed171eb6580304e7d9a450989ea5"
     },
     {
       "file": "frontend/src/Components/Form/OAuthInput.js",
-      "line": 28,
-      "sourceLine": "return translateServerMessage(error.responseText) || null;",
-      "sourceLineSha256": "57deae359f55a2ee338fa0de4470c4297b9df6ed77e302d230bdd57818e010f2"
+      "line": 41,
+      "sourceLine": "const message = responseJSON.message || responseJSON.errorMessage || error.responseText;",
+      "sourceLineSha256": "e6beb3a9b5e758231d653e630b20165c7900ada9524acdd35e28594c87ea389c"
     },
     {
       "file": "frontend/src/Components/Page/Header/ImportProgressDrawerModal.js",

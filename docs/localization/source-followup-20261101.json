@@ -1300,8 +1300,8 @@
     }
   },
   "registries": {
-    "docs/localization/server-message-sources.json": "c7ed7be2c858751e6f3a42362173d59cf66ed560ce26aefb46b840a1e357891f",
-    "docs/localization/server-message-callers.json": "1efcca989bed4be7f672041b1fdcac2e96b75cc8884893cb874df5a9640ee4f2",
+    "docs/localization/server-message-sources.json": "eafa72ec590ea9fea5d2ff84c0b3927149f848536ea7c0fa659a6480162cb049",
+    "docs/localization/server-message-callers.json": "78903b454a094e41fcf209ea6ec57a865965d697c00301897dd08e15c0083f3b",
     "docs/localization/followup-ui-sources.json": "696b4698ce70c4728364f7dd88e1cee7ed1e458bf388f0d89d8c1b677b8b4162",
     "frontend/src/Utilities/Localization/scheduled-task-labels.json": "6c92e998d0cee2eac0b4ddb350bf1daab1fba96809e37f2001fec8af12f93515",
     "frontend/src/Utilities/Localization/server-messages.json": "27b0961a2d1f3453473912725017441ee42e08e4e98d2435291f0a2e972ff389",
@@ -1328,12 +1328,19 @@
       "path": "docs/localization/provider-message-source-audit-20261101.json",
       "sha256": "ca0530ebd3ab153e986d352a424795913b9c203b932ac25608b28e1b35b2f18d",
       "description": "11 app-authored provider message sources; targets remain empty"
+    },
+    {
+      "path": "docs/localization/server-copy-review.md",
+      "sha256": "218619d0e1ed579071318f5b10c743c55a1c22336a12a9ff6ed3c7a65b255783",
+      "description": "Settings-validation provenance, opaque provider errors, and source-boundary review"
     }
   ],
   "boundaries": [
     "All pending IDs and source texts are pinned to the English source catalog and server registry hashes above; all twelve target catalogs are hash-pinned and unchanged.",
     "The new provider-message IDs are explicit-ID-only and cannot be discovered by matching arbitrary remote message strings.",
     "New provider string parameters remain opaque isolated data. Remote/provider/API exception messages have no trusted IDs and remain untranslated.",
-    "Native-speaker semantic review remains separate from populated translation cells, placeholder checks, and source-boundary review."
+    "Native-speaker semantic review remains separate from populated translation cells, placeholder checks, and source-boundary review.",
+    "Import-list validation IDs now reach form fields through explicit IDs and opaque parameters; unkeyed FluentValidation defaults and provider responses remain opaque.",
+    "OAuth UI-generated errors use local message keys; API messages require explicit server IDs, while option-provider API failures stay opaque."
   ]
 }

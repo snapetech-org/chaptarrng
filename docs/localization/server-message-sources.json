@@ -991,9 +991,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelfImportListSettings.cs",
-          "line": 15,
-          "sourceLine": ".WithMessage(\"Goodreads user ID must be a numeric ID (or a profile URL containing it)\");",
-          "sourceLineSha256": "57517885f7459a4d77783e6680ee7bb5eded4318c4ac579993ce4dd2210fdf7c",
+          "line": 16,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m0a5e4e3a7626\"));",
+          "sourceLineSha256": "cd8af4d575ceab07a96f15d856d02ce9b1016e5b7706fc28d4f76748116909e0",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -1155,25 +1155,25 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 370,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\");",
-          "sourceLineSha256": "d5512c78896c755a9c5b9ddeb12d8e8551cc5b1491c9cd44c1c15426cc98dae4",
+          "line": 371,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\", \"server.message.m0df8751db78b\", new { value0 = rootFolder.Path, value1 = mediaType });",
+          "sourceLineSha256": "6e9c0a6fcf0800d4b40a2fc1c97c4ed21e695ccc49b8083e9e7a0b3179ad4457",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 199,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\");",
-          "sourceLineSha256": "d5512c78896c755a9c5b9ddeb12d8e8551cc5b1491c9cd44c1c15426cc98dae4",
+          "line": 204,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\", \"server.message.m0df8751db78b\", new { value0 = rootFolder.Path, value1 = mediaType });",
+          "sourceLineSha256": "6e9c0a6fcf0800d4b40a2fc1c97c4ed21e695ccc49b8083e9e7a0b3179ad4457",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 975,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\");",
-          "sourceLineSha256": "d5512c78896c755a9c5b9ddeb12d8e8551cc5b1491c9cd44c1c15426cc98dae4",
+          "line": 976,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} quality profile default\", \"server.message.m0df8751db78b\", new { value0 = rootFolder.Path, value1 = mediaType });",
+          "sourceLineSha256": "6e9c0a6fcf0800d4b40a2fc1c97c4ed21e695ccc49b8083e9e7a0b3179ad4457",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -2191,17 +2191,17 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 37,
-          "sourceLine": ".WithMessage(\"Select at least one media type to monitor\");",
-          "sourceLineSha256": "a51868ada1e63c8fc0fbf800b83190b68a585adc366760a696b9827a1536d8ac",
+          "line": 39,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m1f70cc839b57\"));",
+          "sourceLineSha256": "f345b0d3d260edf13bbaf99d891e0f11b5137702e59cf04129bcc75bc4f01bdb",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportListSettings.cs",
-          "line": 14,
-          "sourceLine": ".WithMessage(\"Select at least one media type to monitor\");",
-          "sourceLineSha256": "a51868ada1e63c8fc0fbf800b83190b68a585adc366760a696b9827a1536d8ac",
+          "line": 15,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m1f70cc839b57\"));",
+          "sourceLineSha256": "f345b0d3d260edf13bbaf99d891e0f11b5137702e59cf04129bcc75bc4f01bdb",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -2326,9 +2326,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/HttpImportListBase.cs",
-          "line": 216,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"No results were returned from your import list, please check your settings.\");",
-          "sourceLineSha256": "803bea5a85d9bce1bab9a787422b8b9caf4dc674121b08eab09a0874f4cfe020",
+          "line": 217,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"No results were returned from your import list, please check your settings.\", \"server.message.m21af9489276f\");",
+          "sourceLineSha256": "7ec0644400be9de04bceaad062d1816ecef60b78dd05778a8a8a37ccfa52611d",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -2535,9 +2535,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 211,
-          "sourceLine": "throw new BadRequestException(\"Goodreads did not return an account ID for the authenticated user.\");",
-          "sourceLineSha256": "0393f00b9e5dc5361bb725c6dfb6e3bb8c6ad62f0a30d76910a0ca1a26057d45",
+          "line": 212,
+          "sourceLine": "throw BadRequestException.WithMessageId(\"Goodreads did not return an account ID for the authenticated user.\", \"server.message.m262dfad1709a\");",
+          "sourceLineSha256": "e716793f2874ba31c4d791af4ffb09393f68593a4d7891a0cd943d9d4cf4c1ef",
           "category": "api-error",
           "surface": "server/API text; may be user-visible"
         },
@@ -2582,9 +2582,9 @@
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/ImportListBase.cs",
-          "line": 122,
-          "sourceLine": "failures.Add(new ValidationFailure(string.Empty, \"Test was aborted due to an error: \" + ex.Message));",
-          "sourceLineSha256": "427df744140dce7eebf225ddb0656cc992ada1f8fa20e2e9335fb371d20ba2fc",
+          "line": 126,
+          "sourceLine": "\"server.message.m2651c4cafa4d\",",
+          "sourceLineSha256": "bc0ef68b3ed27b9c00867c90ff6405b5c16ba9375df7e81a9d0c6efab8942a3b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
@@ -2850,9 +2850,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/HardcoverProxy.cs",
-          "line": 95,
-          "sourceLine": "return new ValidationFailure(nameof(settings.ApiKey), \"Invalid Hardcover API key\");",
-          "sourceLineSha256": "8a736f58e1521c8d63d021fced8c949ba941b8d56532b5795d1fe815a92df972",
+          "line": 96,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(settings.ApiKey), \"Invalid Hardcover API key\", \"server.message.m299a901c9c37\");",
+          "sourceLineSha256": "98af8b2eb607569f82c372d0f17370a6d2dd7145d1c59b400c7d1b65fd953b08",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -2899,9 +2899,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 859,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"No Hardcover API token is configured (set one on this import list or in Settings)\");",
-          "sourceLineSha256": "2bc2f5466fc24aa177d3d8d3adef4351cf5200b24445bef95b4f4fd5032a515c",
+          "line": 860,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"No Hardcover API token is configured (set one on this import list or in Settings)\", \"server.message.m2b0ea0852cd0\");",
+          "sourceLineSha256": "5559844066faa60c4070077cd99f519d0c8c519db84cca75c8bb4b9ae826a9f5",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -2931,9 +2931,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/HttpImportListBase.cs",
-          "line": 233,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list. \" + ex.Message);",
-          "sourceLineSha256": "348f56b5f843106c91b622077ad19e30840fdb3f49392892fab78c953b9a5501",
+          "line": 234,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to import list. \" + ex.Message, \"server.message.m2b42676aee32\", new { value0 = ex.Message });",
+          "sourceLineSha256": "4c4fb943ded649234f217eee300f19fab07c22a1a8f65cde85e0387cfb255fde",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -3350,9 +3350,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 899,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Could not retrieve Hardcover library data\");",
-          "sourceLineSha256": "9a038829996bec959796e7387642d09dccf834b3055ce6dfed869b823f6bfabb",
+          "line": 900,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Could not retrieve Hardcover library data\", \"server.message.m30241a539efa\");",
+          "sourceLineSha256": "8c4214c9963536350c31fa2b2e7265ff451b24a4214bb7233445c66bb2c09360",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -3398,25 +3398,25 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 343,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Root folder is required\");",
-          "sourceLineSha256": "42e12e67007a91397f3be5b21daeb925bbb11aaa0a437f3377b24ce5c9339b05",
+          "line": 344,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, \"Root folder is required\", \"server.message.m305661a25dbf\");",
+          "sourceLineSha256": "4dfc325c82c5cd8e860c1e82688e84ef34eee9f06149a77e2e77174e8192e4ab",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 172,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Root folder is required\");",
-          "sourceLineSha256": "42e12e67007a91397f3be5b21daeb925bbb11aaa0a437f3377b24ce5c9339b05",
+          "line": 177,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, \"Root folder is required\", \"server.message.m305661a25dbf\");",
+          "sourceLineSha256": "4dfc325c82c5cd8e860c1e82688e84ef34eee9f06149a77e2e77174e8192e4ab",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 948,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Root folder is required\");",
-          "sourceLineSha256": "42e12e67007a91397f3be5b21daeb925bbb11aaa0a437f3377b24ce5c9339b05",
+          "line": 949,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, \"Root folder is required\", \"server.message.m305661a25dbf\");",
+          "sourceLineSha256": "4dfc325c82c5cd8e860c1e82688e84ef34eee9f06149a77e2e77174e8192e4ab",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -4220,9 +4220,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 192,
-          "sourceLine": "throw new BadRequestException(\"Goodreads user ID must be numeric or a Goodreads profile URL containing a numeric ID.\");",
-          "sourceLineSha256": "f811fc4227be32b7ec2d9f643891d6581e1101aaa1ece9b19dea54b6781df15c",
+          "line": 193,
+          "sourceLine": "throw BadRequestException.WithMessageId(\"Goodreads user ID must be numeric or a Goodreads profile URL containing a numeric ID.\", \"server.message.m415b9b0835fe\");",
+          "sourceLineSha256": "c6307dd5782a8b3618f0829f14981656e03a8edf593706b13791ecc8853c4448",
           "category": "api-error",
           "surface": "server/API text; may be user-visible"
         }
@@ -4298,9 +4298,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Series/GoodreadsSeriesImportList.cs",
-          "line": 127,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.SeriesId), $\"Series {Settings.SeriesId} not found\");",
-          "sourceLineSha256": "d24a8e38d40bfecc0f8ca1f52d5966fded7121a9f2b32d080b2cd1d0f7362f20",
+          "line": 128,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.SeriesId), $\"Series {Settings.SeriesId} not found\", \"server.message.m42e93ada21fc\", new { value0 = Settings.SeriesId });",
+          "sourceLineSha256": "7a6e0c3269d3e4de5478f98ca3654424abc9524298640b84478163d15daacd9f",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -4473,17 +4473,17 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Chaptarr/ChaptarrV1Proxy.cs",
-          "line": 79,
-          "sourceLine": "return new ValidationFailure(string.Empty, $\"Unable to connect to import list: {ex.Message}. Check the log surrounding this error for details.\");",
-          "sourceLineSha256": "88b8d577e293dfb845e876875c14e0d990496521f3304fc10cbc392a530e4c8c",
+          "line": 80,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, $\"Unable to connect to import list: {ex.Message}. Check the log surrounding this error for details.\", \"server.message.m44eab1fb9fa7\", new { value0 = ex.Message });",
+          "sourceLineSha256": "3d5c5cc12ea605172cd0cb0a679db68f01094adcdd22001894e3d9f0534355d7",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Chaptarr/ChaptarrV1Proxy.cs",
-          "line": 84,
-          "sourceLine": "return new ValidationFailure(string.Empty, $\"Unable to connect to import list: {ex.Message}. Check the log surrounding this error for details.\");",
-          "sourceLineSha256": "88b8d577e293dfb845e876875c14e0d990496521f3304fc10cbc392a530e4c8c",
+          "line": 85,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, $\"Unable to connect to import list: {ex.Message}. Check the log surrounding this error for details.\", \"server.message.m44eab1fb9fa7\", new { value0 = ex.Message });",
+          "sourceLineSha256": "3d5c5cc12ea605172cd0cb0a679db68f01094adcdd22001894e3d9f0534355d7",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -4604,25 +4604,25 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 354,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\");",
-          "sourceLineSha256": "a08e0ee844fea12d3be7c38444d2e08687962e2b5f7a3d4a3867314cfd670999",
+          "line": 355,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\", \"server.message.m45461e168bdc\");",
+          "sourceLineSha256": "e4f57521035c362a67c378a798471519ba96b449b285c4cabc6cac1f5e3e9191",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 183,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\");",
-          "sourceLineSha256": "a08e0ee844fea12d3be7c38444d2e08687962e2b5f7a3d4a3867314cfd670999",
+          "line": 188,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\", \"server.message.m45461e168bdc\");",
+          "sourceLineSha256": "e4f57521035c362a67c378a798471519ba96b449b285c4cabc6cac1f5e3e9191",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 959,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\");",
-          "sourceLineSha256": "a08e0ee844fea12d3be7c38444d2e08687962e2b5f7a3d4a3867314cfd670999",
+          "line": 960,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, \"Selected root folder is Ebook-only; choose an Audiobook or Mixed root folder\", \"server.message.m45461e168bdc\");",
+          "sourceLineSha256": "e4f57521035c362a67c378a798471519ba96b449b285c4cabc6cac1f5e3e9191",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -4643,9 +4643,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 269,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.UserId), \"Could not retrieve Goodreads bookshelf. Check the user ID and that shelves are public.\");",
-          "sourceLineSha256": "61ae48af4a4ad42f36ce27242db03284c74ec4bc9e756957b663e28c95f9eda3",
+          "line": 270,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.UserId), \"Could not retrieve Goodreads bookshelf. Check the user ID and that shelves are public.\", \"server.message.m4588c1c26dfc\");",
+          "sourceLineSha256": "8cc011cec5c72a28188be1bac95af63b98ec76bf6398f4e8e47074c1851812e0",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -5185,9 +5185,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Series/GoodreadsSeriesImportList.cs",
-          "line": 130,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.SeriesId), $\"Could not get series data\");",
-          "sourceLineSha256": "c679a9b52dc372a7f6048d7186c5036454c17b0aa3dc5737224e1e8eda2ae187",
+          "line": 131,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.SeriesId), \"Could not get series data\", \"server.message.m4c93d9a5340f\");",
+          "sourceLineSha256": "fe667e78be436cc288e51fa2fd6914dca9824eb949972d85875433cc31b2544a",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -6870,9 +6870,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 64,
-          "sourceLine": "return new ValidationFailure(string.Empty, $\"Goodreads authentication error: {ex.Message}\");",
-          "sourceLineSha256": "4d95440dbcad3bc2d38d69334fd925f7f9bc0fb2acda1bc6eeca1cc08055f251",
+          "line": 65,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, $\"Goodreads authentication error: {ex.Message}\", \"server.message.m65fe7c1758c8\", new { value0 = ex.Message });",
+          "sourceLineSha256": "61bb20ba45276df053c82552f8136378bedce88a3727e3020feae081d2a1a0e2",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
@@ -7071,9 +7071,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 291,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.BookshelfIds), $\"Goodreads returned shelf '{actualShelf}' for requested shelf '{shelf}'. Verify the shelf name and that shelves are public.\");",
-          "sourceLineSha256": "227b644253e56a9d471ea727aaafe8a4b4f1981c9f44c8c95d9a0a91a149b061",
+          "line": 292,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.BookshelfIds), $\"Goodreads returned shelf '{actualShelf}' for requested shelf '{shelf}'. Verify the shelf name and that shelves are public.\", \"server.message.m6a53e8d74c29\", new { value0 = actualShelf, value1 = shelf });",
+          "sourceLineSha256": "88f43ea42a7a3d216ff4eb30cba2f255ca8854d4d686f7f29d6c5127020b1a11",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -7242,17 +7242,17 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 46,
-          "sourceLine": ".WithMessage(\"Audiobook root folder is required when monitoring audiobooks\");",
-          "sourceLineSha256": "96a5a129d982109abb9dfb3404c4e878b385ed07fdcb524f5940b340e563e8c8",
+          "line": 50,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m6d69cc1ffcc4\"));",
+          "sourceLineSha256": "19ff17ee1a6f1c1ea565aa96fc3e742ab4958d14122b0ffa2cd02349b30e81b2",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportListSettings.cs",
-          "line": 23,
-          "sourceLine": ".WithMessage(\"Audiobook root folder is required when monitoring audiobooks\");",
-          "sourceLineSha256": "96a5a129d982109abb9dfb3404c4e878b385ed07fdcb524f5940b340e563e8c8",
+          "line": 26,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m6d69cc1ffcc4\"));",
+          "sourceLineSha256": "19ff17ee1a6f1c1ea565aa96fc3e742ab4958d14122b0ffa2cd02349b30e81b2",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -7279,25 +7279,25 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 349,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\");",
-          "sourceLineSha256": "df170d1d63f5def9ae4d9960661f9c2f25aa5fd64dcac73eead7c23743081217",
+          "line": 350,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\", \"server.message.m6db923fcd485\", new { value0 = rootFolderPath });",
+          "sourceLineSha256": "3380a5ead6b753b20c058903548530080e70e27b96681a0a11fe0a071b59fece",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 178,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\");",
-          "sourceLineSha256": "df170d1d63f5def9ae4d9960661f9c2f25aa5fd64dcac73eead7c23743081217",
+          "line": 183,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\", \"server.message.m6db923fcd485\", new { value0 = rootFolderPath });",
+          "sourceLineSha256": "3380a5ead6b753b20c058903548530080e70e27b96681a0a11fe0a071b59fece",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 954,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\");",
-          "sourceLineSha256": "df170d1d63f5def9ae4d9960661f9c2f25aa5fd64dcac73eead7c23743081217",
+          "line": 955,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Root folder '{rootFolderPath}' is not configured in Chaptarr\", \"server.message.m6db923fcd485\", new { value0 = rootFolderPath });",
+          "sourceLineSha256": "3380a5ead6b753b20c058903548530080e70e27b96681a0a11fe0a071b59fece",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -7686,9 +7686,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Chaptarr/ChaptarrV1Proxy.cs",
-          "line": 75,
-          "sourceLine": "return new ValidationFailure(\"BaseUrl\", \"Chaptarr URL is invalid, are you missing a URL base?\");",
-          "sourceLineSha256": "e8c2b8f9fc1aaa6a57f89155332a74f3ee3d0681d7fa92889a157a6d99ee1619",
+          "line": 76,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"BaseUrl\", \"Chaptarr URL is invalid, are you missing a URL base?\", \"server.message.m760d3d8feb20\");",
+          "sourceLineSha256": "930555fddc984e84d12ac49beb2c00c6e7b893f0acc3dcef174e520c7fec14ba",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -7764,9 +7764,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelfImportListSettings.cs",
-          "line": 19,
-          "sourceLine": ".WithMessage(\"Goodreads user ID or existing OAuth credentials are required\");",
-          "sourceLineSha256": "f3d5a118b6068ffcf0ba8bbb95079dfea85d4fdddd645b981b8003a65d25215b",
+          "line": 21,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m77e713c55a04\"));",
+          "sourceLineSha256": "23745dd806b790c9d251813f35eadf9278239afcdf6755162ae74b28dd4ab8e9",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -8073,17 +8073,17 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 51,
-          "sourceLine": ".WithMessage(\"Ebook root folder is required when monitoring ebooks\");",
-          "sourceLineSha256": "6a6bf6c7c388f77568086c01d035fdbd0f78058578010a2b043a35ba6e74e20d",
+          "line": 56,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m7a3bf57a5ad5\"));",
+          "sourceLineSha256": "d449cd2e6b64d807b4b23741b6fa44f149a8609920d657d8418284d81afc04bf",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportListSettings.cs",
-          "line": 28,
-          "sourceLine": ".WithMessage(\"Ebook root folder is required when monitoring ebooks\");",
-          "sourceLineSha256": "6a6bf6c7c388f77568086c01d035fdbd0f78058578010a2b043a35ba6e74e20d",
+          "line": 32,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m7a3bf57a5ad5\"));",
+          "sourceLineSha256": "d449cd2e6b64d807b4b23741b6fa44f149a8609920d657d8418284d81afc04bf",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -8510,9 +8510,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 872,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Could not retrieve current Hardcover user\");",
-          "sourceLineSha256": "d94fe666d0f7026142304d51a5fe178eac32a2bb7fad793c14b0f0b637234508",
+          "line": 873,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Could not retrieve current Hardcover user\", \"server.message.m7d07b7873b14\");",
+          "sourceLineSha256": "4c746aa67ba9a1435b3e3d1c5f6b63a76d7e233652a7ca2e5865bdcdb7e29420",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -8754,9 +8754,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 277,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.BookshelfIds), $\"Goodreads shelf '{shelf}' was not found for this user. Verify the shelf name and that shelves are public.\");",
-          "sourceLineSha256": "395da415d6f70e5ef4050bde8e2a8cfe00b95730295aaff2272a88b23b22a83b",
+          "line": 278,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.BookshelfIds), $\"Goodreads shelf '{shelf}' was not found for this user. Verify the shelf name and that shelves are public.\", \"server.message.m7e14e7c3c085\", new { value0 = shelf });",
+          "sourceLineSha256": "8c2579427fa5240c49b8fcacac26662269caaa4c5e7fa458760128f241ce5b9b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -9017,9 +9017,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 283,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.UserId), \"Could not retrieve Goodreads bookshelf RSS feed. Check the user ID and that shelves are public.\");",
-          "sourceLineSha256": "200d34fb91f2064e6bf8c4df835edf50c2f1a85257256f4a4e9b4efb2a177869",
+          "line": 284,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.UserId), \"Could not retrieve Goodreads bookshelf RSS feed. Check the user ID and that shelves are public.\", \"server.message.m826b4cc6c84e\");",
+          "sourceLineSha256": "55f72e6c50acb20d79c9c75f415ae334da52b7c80a82d39e16098daf23fce9e2",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -9106,9 +9106,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Chaptarr/ChaptarrV1Proxy.cs",
-          "line": 69,
-          "sourceLine": "return new ValidationFailure(\"ApiKey\", \"API Key is invalid\");",
-          "sourceLineSha256": "e8ee5fc58cca842b0b7f3ec4041577360c26db6e8d099793cc0d8603405f8780",
+          "line": 70,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"ApiKey\", \"API Key is invalid\", \"server.message.m82fee98391f9\");",
+          "sourceLineSha256": "d28cb1fc6c998e3b37033d1148ad0e9ddd15b5a9e6ef9b801a86634718bb4c4b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
@@ -10139,9 +10139,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 80,
-          "sourceLine": "throw new BadRequestException(\"QueryParam callbackUrl invalid.\");",
-          "sourceLineSha256": "56c521eeba8919bae70369b6da72bae2ddd39cb13fbfe7d493b135f4525bc28c",
+          "line": 81,
+          "sourceLine": "throw BadRequestException.WithMessageId(\"QueryParam callbackUrl invalid.\", \"server.message.m90ee48cf606f\");",
+          "sourceLineSha256": "fcdc7e250d162e6c5c77c1f53a7dfbb46a107da4df805cda768cf0e818cab260",
           "category": "api-error",
           "surface": "server/API text; may be user-visible"
         },
@@ -10663,9 +10663,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 254,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.UserId), \"Goodreads user ID is required\");",
-          "sourceLineSha256": "6e6624cdba238e658c73a0b4547dc11b8c3694fe8492280104db521a0851f2df",
+          "line": 255,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.UserId), \"Goodreads user ID is required\", \"server.message.m9817bacf2fda\");",
+          "sourceLineSha256": "6b337c0fef493131542714aa920cee7dd998d45fbb8fa0d5397104ae1e9ffec3",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -11011,9 +11011,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Lists/GoodreadsListImportList.cs",
-          "line": 239,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.ListId), $\"List {Settings.ListId} not found\");",
-          "sourceLineSha256": "5298a5d73e2b2ba00ff9b7535530b2362eaad58ede4327de793225ea6164fa4d",
+          "line": 240,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.ListId), $\"List {Settings.ListId} not found\", \"server.message.m9d8a99c2333e\", new { value0 = Settings.ListId });",
+          "sourceLineSha256": "b89d4583714e70c2839bf1efaccb03e3a0e5388aaf0584f366ad0bf4d6be0d71",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -11223,49 +11223,49 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 299,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
-          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
+          "line": 300,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to import list, check the log for more details\", \"server.message.ma28fc67879dd\");",
+          "sourceLineSha256": "b38d89143c9c68174ca7dfbf66c08214ff35434b5c2d6fc2397fca917fb18a0b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 70,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
-          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
+          "line": 71,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to import list, check the log for more details\", \"server.message.ma28fc67879dd\");",
+          "sourceLineSha256": "b38d89143c9c68174ca7dfbf66c08214ff35434b5c2d6fc2397fca917fb18a0b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Lists/GoodreadsListImportList.cs",
-          "line": 248,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
-          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
+          "line": 249,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to import list, check the log for more details\", \"server.message.ma28fc67879dd\");",
+          "sourceLineSha256": "b38d89143c9c68174ca7dfbf66c08214ff35434b5c2d6fc2397fca917fb18a0b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Series/GoodreadsSeriesImportList.cs",
-          "line": 136,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
-          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
+          "line": 137,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to import list, check the log for more details\", \"server.message.ma28fc67879dd\");",
+          "sourceLineSha256": "b38d89143c9c68174ca7dfbf66c08214ff35434b5c2d6fc2397fca917fb18a0b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 904,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
-          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
+          "line": 905,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to import list, check the log for more details\", \"server.message.ma28fc67879dd\");",
+          "sourceLineSha256": "b38d89143c9c68174ca7dfbf66c08214ff35434b5c2d6fc2397fca917fb18a0b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/HttpImportListBase.cs",
-          "line": 239,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to import list, check the log for more details\");",
-          "sourceLineSha256": "7a9c2212d4a98b91886c76695942477fde0e14b10423165f587c834685cb5d80",
+          "line": 240,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to import list, check the log for more details\", \"server.message.ma28fc67879dd\");",
+          "sourceLineSha256": "b38d89143c9c68174ca7dfbf66c08214ff35434b5c2d6fc2397fca917fb18a0b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -11319,9 +11319,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/HardcoverProxy.cs",
-          "line": 103,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to Hardcover. Check logs for details.\");",
-          "sourceLineSha256": "117ffab4d4048d0444ccdab91a8e095f5a5cfc6d92193ac3cf76555137be84e3",
+          "line": 104,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to Hardcover. Check logs for details.\", \"server.message.ma3917978a8e1\");",
+          "sourceLineSha256": "a64d8f99e7f23d752bb037296ce991e3d3cadb24f6d2c6a934eaa076bccabb9e",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -12217,9 +12217,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 41,
-          "sourceLine": ".WithMessage(\"Import limit must be 0 or greater\");",
-          "sourceLineSha256": "20753e19e48bb399e44da568eca7b9856eadebd87bea0f48a47c85859d612206",
+          "line": 44,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mb2b9d54cbbeb\"));",
+          "sourceLineSha256": "00448ad85de0a2ceca52bde76859977ed3267c3462d83ebf61920e5528f96436",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -12340,9 +12340,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelfImportListSettings.cs",
-          "line": 27,
-          "sourceLine": ".WithMessage(\"Goodreads OAuth secret is required when an access token is configured\");",
-          "sourceLineSha256": "4e8b7220a90c1e10c5f999c0720f74ca8e7bd294ec1884b5416401ec33f43a41",
+          "line": 31,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mb505c36a7cb5\"));",
+          "sourceLineSha256": "ce3637604a7a4b82892a68823725786219a90822f31b2f417a43068eeb11dbba",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -12391,25 +12391,25 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 359,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\");",
-          "sourceLineSha256": "dc0db97ead9bd93acfde5d2680d68493215b4f77ff3e3eadd7433fe4583a2732",
+          "line": 360,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\", \"server.message.mb5750cd165f2\");",
+          "sourceLineSha256": "82c46b40f77427f0d2e5851f72fa88967a355f80e7da2eb14bd5c3d95f51cc09",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 188,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\");",
-          "sourceLineSha256": "dc0db97ead9bd93acfde5d2680d68493215b4f77ff3e3eadd7433fe4583a2732",
+          "line": 193,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\", \"server.message.mb5750cd165f2\");",
+          "sourceLineSha256": "82c46b40f77427f0d2e5851f72fa88967a355f80e7da2eb14bd5c3d95f51cc09",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 964,
-          "sourceLine": "return new ValidationFailure(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\");",
-          "sourceLineSha256": "dc0db97ead9bd93acfde5d2680d68493215b4f77ff3e3eadd7433fe4583a2732",
+          "line": 965,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, \"Selected root folder is Audiobook-only; choose an Ebook or Mixed root folder\", \"server.message.mb5750cd165f2\");",
+          "sourceLineSha256": "82c46b40f77427f0d2e5851f72fa88967a355f80e7da2eb14bd5c3d95f51cc09",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -13059,9 +13059,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 896,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Hardcover API token is invalid or expired\");",
-          "sourceLineSha256": "76885dd98a428be5c8fb53f358e9f02aec207ad258edaae005f9505b0c171a2d",
+          "line": 897,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Hardcover API token is invalid or expired\", \"server.message.mc17ea4dfb45f\");",
+          "sourceLineSha256": "7ed89a714652d72c1b90bf0c84a6c6fe443433223d2bd94bd7eea78fd66b26ea",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -13085,9 +13085,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportListSettings.cs",
-          "line": 18,
-          "sourceLine": ".WithMessage(\"Select at least one library section to import\");",
-          "sourceLineSha256": "c3d3c3ad138489d547903eb7797595f1da4c8c2846aee927e1c6ed0c345e3e34",
+          "line": 20,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mc1b539256890\"));",
+          "sourceLineSha256": "ce910b35c4c5c5451c3de9bfe70255bd81e03f14e28b1b889e320e1dd853afeb",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -13347,9 +13347,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/HttpImportListBase.cs",
-          "line": 227,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Import list feed is not supported: \" + ex.Message);",
-          "sourceLineSha256": "153991557959f25167cefebcccd99bfa4eb4e06c715855f8977a7b0954f186d0",
+          "line": 228,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Import list feed is not supported: \" + ex.Message, \"server.message.mc5e69abdf17a\", new { value0 = ex.Message });",
+          "sourceLineSha256": "43bfb9f8276bfdd3119c496207bfe4f7d28bc7cf8102e55ec8da6f7ace0d2658",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -13561,9 +13561,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 99,
-          "sourceLine": "throw new BadRequestException(\"QueryParam oauth_token invalid.\");",
-          "sourceLineSha256": "6cad1e2fa2d22f404d41ed08a45d81888c3a1956b8365202216be72c33f5ce2a",
+          "line": 100,
+          "sourceLine": "throw BadRequestException.WithMessageId(\"QueryParam oauth_token invalid.\", \"server.message.mc9032616fbb4\");",
+          "sourceLineSha256": "89bbe2e1cfc446a83d4a66fb5240f9f0185379130a6e11b62f0ca2335ddbf66b",
           "category": "api-error",
           "surface": "server/API text; may be user-visible"
         },
@@ -13649,9 +13649,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsImportListBase.cs",
-          "line": 104,
-          "sourceLine": "throw new BadRequestException(\"Missing requestTokenSecret.\");",
-          "sourceLineSha256": "54b57688eeba3a4180a1588c0e888c6c9cd363c451bbd9183a60db2455f79342",
+          "line": 105,
+          "sourceLine": "throw BadRequestException.WithMessageId(\"Missing requestTokenSecret.\", \"server.message.mc95460cab48b\");",
+          "sourceLineSha256": "425ae0c9d3a133de3cd63084da780c1c0803b0e09c17e8143f95b3c7ea8627d1",
           "category": "api-error",
           "surface": "server/API text; may be user-visible"
         },
@@ -14360,9 +14360,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 864,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Hardcover is not enabled (enable it in Settings or set an API token on this import list)\");",
-          "sourceLineSha256": "9f8c3c8e8e60d6ae49f50cf29f96904c135be9412a6806b33cc6a3200fa0b9b1",
+          "line": 865,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Hardcover is not enabled (enable it in Settings or set an API token on this import list)\", \"server.message.md339df0d44f9\");",
+          "sourceLineSha256": "9f76cad9f24d21f4e62d7344b172aec3dd1afaf7919d50b22262a60dfa1d164f",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -14530,9 +14530,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 261,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.BookshelfIds), \"At least one bookshelf is required\");",
-          "sourceLineSha256": "c771a0933d8e87ca6b82ad923ca022b90e3d0af03872f4e2127483c2283dd2b9",
+          "line": 262,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.BookshelfIds), \"At least one bookshelf is required\", \"server.message.md512ba71433e\");",
+          "sourceLineSha256": "a17e61ad3b9c55c9bfaaa09b267ebdc55fb3f024e3330948a2a47e19fcda7269",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -14564,25 +14564,25 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 375,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\");",
-          "sourceLineSha256": "832e7817360ba680d0c98a64b87a8ef5147bfcf7a6c8b8e7f492b0d8188a7564",
+          "line": 376,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\", \"server.message.md5295352b8ae\", new { value0 = rootFolder.Path, value1 = mediaType });",
+          "sourceLineSha256": "4ae7f21cce3211e3b0b4a89f0193b86f024e88b88f46df58a1e68218fb55bb59",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 204,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\");",
-          "sourceLineSha256": "832e7817360ba680d0c98a64b87a8ef5147bfcf7a6c8b8e7f492b0d8188a7564",
+          "line": 209,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\", \"server.message.md5295352b8ae\", new { value0 = rootFolder.Path, value1 = mediaType });",
+          "sourceLineSha256": "4ae7f21cce3211e3b0b4a89f0193b86f024e88b88f46df58a1e68218fb55bb59",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 980,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\");",
-          "sourceLineSha256": "832e7817360ba680d0c98a64b87a8ef5147bfcf7a6c8b8e7f492b0d8188a7564",
+          "line": 981,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Selected root folder '{rootFolder.Path}' is missing a {mediaType} metadata profile default\", \"server.message.md5295352b8ae\", new { value0 = rootFolder.Path, value1 = mediaType });",
+          "sourceLineSha256": "4ae7f21cce3211e3b0b4a89f0193b86f024e88b88f46df58a1e68218fb55bb59",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -14862,9 +14862,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelfImportListSettings.cs",
-          "line": 31,
-          "sourceLine": ".WithMessage($\"Refresh interval must be at least {GoodreadsBookshelfImportListSettings.MinimumRefreshIntervalMinutes} minutes\");",
-          "sourceLineSha256": "75d562127f2fd0c1d7928fdc796cc799102db4af3d9feac0780cad940c15c494",
+          "line": 37,
+          "sourceLine": "\"server.message.md91e67950f89\",",
+          "sourceLineSha256": "d63c45f5b7bb299c35c755713f051c9ab40b225083238b6f78090b985dd3446e",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -15022,9 +15022,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Lists/GoodreadsListImportList.cs",
-          "line": 242,
-          "sourceLine": "return new ValidationFailure(nameof(Settings.ListId), $\"Could not get list data\");",
-          "sourceLineSha256": "8ec6dec656abc4db367369648f6faf87f493d054338eae858f0e43458d81b78b",
+          "line": 243,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.ListId), \"Could not get list data\", \"server.message.mdca0d476f941\");",
+          "sourceLineSha256": "ee07913ac4912bd3ad0cd7f85d9024069647248921c6cd65332ffd270e0b39a4",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -15430,9 +15430,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/HardcoverProxy.cs",
-          "line": 98,
-          "sourceLine": "return new ValidationFailure(string.Empty, \"Unable to connect to Hardcover. Check URL/API key and logs for details.\");",
-          "sourceLineSha256": "67d3dca97c74358fbffc2747b77091e32a5368d2b81d9ff9d1410fdfa3dab733",
+          "line": 99,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to Hardcover. Check URL/API key and logs for details.\", \"server.message.me517fdaedf57\");",
+          "sourceLineSha256": "7dc3751cdb195bed95265b13be2c996a5cf9f827a67daec6f9c3cbc4ca1ed0a1",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -15793,9 +15793,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelfImportListSettings.cs",
-          "line": 23,
-          "sourceLine": ".WithMessage(\"Goodreads access token is required when an OAuth secret is configured\");",
-          "sourceLineSha256": "eefe9b865206e783602ab6591a42819f373b579e3bb9c87981be63f92b51544e",
+          "line": 26,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.meaa282596ccf\"));",
+          "sourceLineSha256": "012567eb204152e3de8eed57ffa853008b44b90cdd7cad8e6609c3a5a9f7a62f",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -16554,25 +16554,25 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/Bookshelf/GoodreadsBookshelf.cs",
-          "line": 365,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\");",
-          "sourceLineSha256": "91eff0b5bc15d361c765696ca252de1aee737fe11a4645c57523738d4b3557bc",
+          "line": 366,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\", \"server.message.mf2463602ee31\", new { value0 = rootFolder.Path, value1 = mediaType });",
+          "sourceLineSha256": "78c0ca3f6f8a080e054324e17f6cb625c5643449c7320765d03b3dd952a0a8e1",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Goodreads/GoodreadsDualMediaImportListSettings.cs",
-          "line": 194,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\");",
-          "sourceLineSha256": "91eff0b5bc15d361c765696ca252de1aee737fe11a4645c57523738d4b3557bc",
+          "line": 199,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\", \"server.message.mf2463602ee31\", new { value0 = rootFolder.Path, value1 = mediaType });",
+          "sourceLineSha256": "78c0ca3f6f8a080e054324e17f6cb625c5643449c7320765d03b3dd952a0a8e1",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/ImportLists/Hardcover/Library/HardcoverLibraryImportList.cs",
-          "line": 970,
-          "sourceLine": "return new ValidationFailure(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\");",
-          "sourceLineSha256": "91eff0b5bc15d361c765696ca252de1aee737fe11a4645c57523738d4b3557bc",
+          "line": 971,
+          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Selected root folder '{rootFolder.Path}' does not have {mediaType} defaults configured\", \"server.message.mf2463602ee31\", new { value0 = rootFolder.Path, value1 = mediaType });",
+          "sourceLineSha256": "78c0ca3f6f8a080e054324e17f6cb625c5643449c7320765d03b3dd952a0a8e1",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
