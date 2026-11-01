@@ -384,7 +384,7 @@ namespace NzbDrone.Core.Download.Clients.RTorrent
             {
                 _logger.Error(ex, "Failed to test rTorrent");
 
-                return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect to rTorrent", "server.message.mecf985c120fb")
+                return new NzbDroneValidationFailure("Host", "Unable to connect to rTorrent", "server.message.mecf985c120fb", null)
                 {
                     DetailedDescription = ex.Message
                 };

@@ -236,7 +236,7 @@ namespace NzbDrone.Core.Download.Clients.DownloadStation
 
                 if (downloadDir == null)
                 {
-                    return NzbDroneValidationFailure.ForMessage(nameof(Settings.TvDirectory), "No default destination", "server.message.m629e576013e4")
+                    return new NzbDroneValidationFailure(nameof(Settings.TvDirectory), "No default destination", "server.message.m629e576013e4", null)
                     {
                         DetailedDescription = $"You must login into your Diskstation as {Settings.Username} and manually set it up into DownloadStation settings under BT/HTTP/FTP/NZB -> Location."
                     };
@@ -253,7 +253,7 @@ namespace NzbDrone.Core.Download.Clients.DownloadStation
 
                     if (folderInfo.Additional == null)
                     {
-                        return NzbDroneValidationFailure.ForMessage(fieldName, $"Shared folder does not exist", "server.message.m3c9d3d8a7bc2")
+                        return new NzbDroneValidationFailure(fieldName, $"Shared folder does not exist", "server.message.m3c9d3d8a7bc2", null)
                         {
                             DetailedDescription = $"The Diskstation does not have a Shared Folder with the name '{sharedFolder}', are you sure you specified it correctly?"
                         };
@@ -261,7 +261,7 @@ namespace NzbDrone.Core.Download.Clients.DownloadStation
 
                     if (!folderInfo.IsDir)
                     {
-                        return NzbDroneValidationFailure.ForMessage(fieldName, $"Folder does not exist", "server.message.m4bbe30648055")
+                        return new NzbDroneValidationFailure(fieldName, $"Folder does not exist", "server.message.m4bbe30648055", null)
                         {
                             DetailedDescription = $"The folder '{downloadDir}' does not exist, it must be created manually inside the Shared Folder '{sharedFolder}'."
                         };
@@ -292,7 +292,7 @@ namespace NzbDrone.Core.Download.Clients.DownloadStation
             catch (DownloadClientAuthenticationException ex)
             {
                 _logger.Error(ex, "Unable to authenticate");
-                return NzbDroneValidationFailure.ForMessage("Username", "Authentication failure", "server.message.md83ae8fb37f8")
+                return new NzbDroneValidationFailure("Username", "Authentication failure", "server.message.md83ae8fb37f8", null)
                 {
                     DetailedDescription = $"Please verify your username and password. Also verify if the host running Chaptarr isn't blocked from accessing {Name} by WhiteList limitations in the {Name} configuration."
                 };
@@ -303,7 +303,7 @@ namespace NzbDrone.Core.Download.Clients.DownloadStation
 
                 if (ex.Status == WebExceptionStatus.ConnectFailure)
                 {
-                    return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect", "server.message.me40966162b11")
+                    return new NzbDroneValidationFailure("Host", "Unable to connect", "server.message.me40966162b11", null)
                     {
                         DetailedDescription = "Please verify the hostname and port."
                     };
@@ -315,7 +315,7 @@ namespace NzbDrone.Core.Download.Clients.DownloadStation
             {
                 _logger.Error(ex, "Error testing Torrent Download Station");
 
-                return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect to Usenet Download Station", "server.message.m9d7030ad5fa8")
+                return new NzbDroneValidationFailure("Host", "Unable to connect to Usenet Download Station", "server.message.m9d7030ad5fa8", null)
                 {
                     DetailedDescription = ex.Message
                 };

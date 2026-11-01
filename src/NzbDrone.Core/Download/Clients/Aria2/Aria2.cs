@@ -329,7 +329,7 @@ namespace NzbDrone.Core.Download.Clients.Aria2
             {
                 _logger.Error(ex, "Failed to test Aria2");
 
-                return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect to Aria2", "server.message.ma78299fc1030")
+                return new NzbDroneValidationFailure("Host", "Unable to connect to Aria2", "server.message.ma78299fc1030", null)
                 {
                     DetailedDescription = ex.Message
                 };

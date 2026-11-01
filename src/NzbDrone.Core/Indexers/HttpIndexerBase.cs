@@ -375,7 +375,7 @@ namespace NzbDrone.Core.Indexers
                 {
                     // An empty feed is not proof of a bad configuration (a narrow category filter can legitimately
                     // return nothing), so report it as a warning that "save anyway" can bypass.
-                    return NzbDroneValidationFailure.ForMessage(string.Empty, "Query successful, but no results in the configured categories were returned from your indexer. This may be an issue with the indexer or your indexer category settings.", "server.message.mca68744b8296")
+                    return new NzbDroneValidationFailure(string.Empty, "Query successful, but no results in the configured categories were returned from your indexer. This may be an issue with the indexer or your indexer category settings.", "server.message.mca68744b8296", null)
                     {
                         IsWarning = true
                     };

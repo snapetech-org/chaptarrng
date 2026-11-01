@@ -258,7 +258,7 @@ namespace NzbDrone.Core.Notifications.Plex.Server
                     };
                 }
 
-                return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect to Plex Media Server", "server.message.m62fb6085c79e")
+                return new NzbDroneValidationFailure("Host", "Unable to connect to Plex Media Server", "server.message.m62fb6085c79e", null)
                 {
                     DetailedDescription = ex.Message
                 };

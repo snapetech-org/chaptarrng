@@ -136,7 +136,7 @@ namespace NzbDrone.Core.Indexers.Torznab
                 Settings.BaseUrl.Contains("/torznab/all", StringComparison.InvariantCultureIgnoreCase) ||
                 Settings.BaseUrl.Contains("/api/v2.0/indexers/all/results/torznab", StringComparison.InvariantCultureIgnoreCase))
             {
-                return NzbDroneValidationFailure.ForMessage("ApiPath", "Jackett's all endpoint is not supported, please add indexers individually", "server.message.ma4a7539d1468")
+                return new NzbDroneValidationFailure("ApiPath", "Jackett's all endpoint is not supported, please add indexers individually", "server.message.ma4a7539d1468", null)
                 {
                     IsWarning = true,
                     DetailedDescription = "Jackett's all endpoint is not supported, please add indexers individually"

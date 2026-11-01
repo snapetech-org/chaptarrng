@@ -20,13 +20,16 @@ namespace NzbDrone.Core.Validation
         {
         }
 
+        public NzbDroneValidationFailure(string propertyName, string error, string messageId, object messageParameters)
+            : base(propertyName, error)
+        {
+            MessageId = messageId;
+            MessageParameters = messageParameters;
+        }
+
         public static NzbDroneValidationFailure ForMessage(string propertyName, string error, string messageId, object messageParameters = null)
         {
-            return new NzbDroneValidationFailure(propertyName, error)
-            {
-                MessageId = messageId,
-                MessageParameters = messageParameters
-            };
+            return new NzbDroneValidationFailure(propertyName, error, messageId, messageParameters);
         }
 
         public NzbDroneValidationFailure(ValidationFailure validationFailure)

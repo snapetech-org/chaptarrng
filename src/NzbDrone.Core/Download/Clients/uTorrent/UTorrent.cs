@@ -314,7 +314,7 @@ namespace NzbDrone.Core.Download.Clients.UTorrent
             catch (DownloadClientAuthenticationException ex)
             {
                 _logger.Error(ex, "Unable to authenticate");
-                return NzbDroneValidationFailure.ForMessage("Username", "Authentication failure", "server.message.md83ae8fb37f8")
+                return new NzbDroneValidationFailure("Username", "Authentication failure", "server.message.md83ae8fb37f8", null)
                 {
                     DetailedDescription = "Please verify your username and password."
                 };
@@ -324,7 +324,7 @@ namespace NzbDrone.Core.Download.Clients.UTorrent
                 _logger.Error(ex, "Unable to connect to uTorrent");
                 if (ex.Status == WebExceptionStatus.ConnectFailure)
                 {
-                    return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect", "server.message.me40966162b11")
+                    return new NzbDroneValidationFailure("Host", "Unable to connect", "server.message.me40966162b11", null)
                     {
                         DetailedDescription = "Please verify the hostname and port."
                     };
@@ -336,7 +336,7 @@ namespace NzbDrone.Core.Download.Clients.UTorrent
             {
                 _logger.Error(ex, "Failed to test uTorrent");
 
-                return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect to uTorrent", "server.message.m27001fadea37")
+                return new NzbDroneValidationFailure("Host", "Unable to connect to uTorrent", "server.message.m27001fadea37", null)
                 {
                     DetailedDescription = ex.Message
                 };

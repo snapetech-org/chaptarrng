@@ -285,7 +285,7 @@ namespace NzbDrone.Core.Download.Clients.Transmission
             catch (DownloadClientAuthenticationException ex)
             {
                 _logger.Error(ex, "Unable to authenticate");
-                return NzbDroneValidationFailure.ForMessage("Username", "Authentication failure", "server.message.md83ae8fb37f8")
+                return new NzbDroneValidationFailure("Username", "Authentication failure", "server.message.md83ae8fb37f8", null)
                 {
                     DetailedDescription = string.Format("Please verify your username and password. Also verify if the host running Chaptarr isn't blocked from accessing {0} by WhiteList limitations in the {0} configuration.", Name)
                 };
@@ -294,7 +294,7 @@ namespace NzbDrone.Core.Download.Clients.Transmission
             {
                 _logger.Error(ex, ex.Message);
 
-                return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect to Transmission", "server.message.m4abee5a92d01")
+                return new NzbDroneValidationFailure("Host", "Unable to connect to Transmission", "server.message.m4abee5a92d01", null)
                 {
                     DetailedDescription = ex.Message
                 };

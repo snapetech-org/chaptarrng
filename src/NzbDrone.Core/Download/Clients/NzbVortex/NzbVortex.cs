@@ -185,7 +185,7 @@ namespace NzbDrone.Core.Download.Clients.NzbVortex
             {
                 _logger.Error(ex, "Unable to connect to NZBVortex");
 
-                return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect to NZBVortex", "server.message.mea37f4df9a52")
+                return new NzbDroneValidationFailure("Host", "Unable to connect to NZBVortex", "server.message.mea37f4df9a52", null)
                 {
                     DetailedDescription = ex.Message
                 };
@@ -237,7 +237,7 @@ namespace NzbDrone.Core.Download.Clients.NzbVortex
             {
                 if (groups.FirstOrDefault(c => c.GroupName == category) == null)
                 {
-                    return NzbDroneValidationFailure.ForMessage(BookDownloadCategorySettings.GetCategoryFieldName(Settings, category), "Group does not exist", "server.message.m8a7981a2ced3")
+                    return new NzbDroneValidationFailure(BookDownloadCategorySettings.GetCategoryFieldName(Settings, category), "Group does not exist", "server.message.m8a7981a2ced3", null)
                     {
                         DetailedDescription = "The Group you entered doesn't exist in NzbVortex. Go to NzbVortex to create it."
                     };

@@ -321,7 +321,7 @@ namespace NzbDrone.Core.Download.Clients.Nzbget
             {
                 if (!categories.Any(v => v.Name == category))
                 {
-                    return NzbDroneValidationFailure.ForMessage(BookDownloadCategorySettings.GetCategoryFieldName(Settings, category), "Category does not exist", "server.message.m661c5d4d3f03")
+                    return new NzbDroneValidationFailure(BookDownloadCategorySettings.GetCategoryFieldName(Settings, category), "Category does not exist", "server.message.m661c5d4d3f03", null)
                     {
                         InfoLink = _proxy.GetBaseUrl(Settings),
                         DetailedDescription = "The Category you entered doesn't exist in NzbGet. Go to NzbGet to create it."
@@ -339,7 +339,7 @@ namespace NzbDrone.Core.Download.Clients.Nzbget
             var keepHistory = config.GetValueOrDefault("KeepHistory", "7");
             if (!int.TryParse(keepHistory, NumberStyles.None, CultureInfo.InvariantCulture, out var value) || value == 0)
             {
-                return NzbDroneValidationFailure.ForMessage(string.Empty, "NzbGet setting KeepHistory should be greater than 0", "server.message.m6b5f4e5a738f")
+                return new NzbDroneValidationFailure(string.Empty, "NzbGet setting KeepHistory should be greater than 0", "server.message.m6b5f4e5a738f", null)
                 {
                     InfoLink = _proxy.GetBaseUrl(Settings),
                     DetailedDescription = "NzbGet setting KeepHistory is set to 0. Which prevents Chaptarr from seeing completed downloads."
@@ -347,7 +347,7 @@ namespace NzbDrone.Core.Download.Clients.Nzbget
             }
             else if (value > 25000)
             {
-                return NzbDroneValidationFailure.ForMessage(string.Empty, "NzbGet setting KeepHistory should be less than 25000", "server.message.m453c42aa8de5")
+                return new NzbDroneValidationFailure(string.Empty, "NzbGet setting KeepHistory should be less than 25000", "server.message.m453c42aa8de5", null)
                 {
                     InfoLink = _proxy.GetBaseUrl(Settings),
                     DetailedDescription = "NzbGet setting KeepHistory is set too high."

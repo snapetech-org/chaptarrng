@@ -385,7 +385,7 @@ namespace NzbDrone.Core.Download.Clients.Sabnzbd
 
                 if (rawVersion.Equals("develop", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    return NzbDroneValidationFailure.ForMessage("Version", "Sabnzbd develop version, assuming version 3.0.0 or higher.", "server.message.m2e3799b32682")
+                    return new NzbDroneValidationFailure("Version", "Sabnzbd develop version, assuming version 3.0.0 or higher.", "server.message.m2e3799b32682", null)
                     {
                         IsWarning = true,
                         DetailedDescription = "Chaptarr may not be able to support new features added to SABnzbd when running develop versions."
@@ -407,7 +407,7 @@ namespace NzbDrone.Core.Download.Clients.Sabnzbd
             catch (Exception ex)
             {
                 _logger.Error(ex, ex.Message);
-                return NzbDroneValidationFailure.ForMessage("Host", "Unable to connect to SABnzbd", "server.message.m580ff695754e")
+                return new NzbDroneValidationFailure("Host", "Unable to connect to SABnzbd", "server.message.m580ff695754e", null)
                 {
                     DetailedDescription = ex.Message
                 };
@@ -443,7 +443,7 @@ namespace NzbDrone.Core.Download.Clients.Sabnzbd
             var config = _proxy.GetConfig(Settings);
             if (config.Misc.pre_check && !HasVersion(1, 1))
             {
-                return NzbDroneValidationFailure.ForMessage("", "Disable 'Check before download' option in Sabnbzd", "server.message.m783307436ce0")
+                return new NzbDroneValidationFailure("", "Disable 'Check before download' option in Sabnbzd", "server.message.m783307436ce0", null)
                 {
                     InfoLink = _proxy.GetBaseUrl(Settings, "config/switches/"),
                     DetailedDescription = "Using Check before download affects Chaptarr ability to track new downloads. Also Sabnzbd recommends 'Abort jobs that cannot be completed' instead since it's more effective."
@@ -474,7 +474,7 @@ namespace NzbDrone.Core.Download.Clients.Sabnzbd
 
                 if (category == null)
                 {
-                    return NzbDroneValidationFailure.ForMessage(pair.Field, "Category does not exist", "server.message.m661c5d4d3f03")
+                    return new NzbDroneValidationFailure(pair.Field, "Category does not exist", "server.message.m661c5d4d3f03", null)
                     {
                         InfoLink = _proxy.GetBaseUrl(Settings, "config/categories/"),
                         DetailedDescription = "The Category you entered doesn't exist in Sabnzbd. Go to Sabnzbd to create it."
@@ -483,7 +483,7 @@ namespace NzbDrone.Core.Download.Clients.Sabnzbd
 
                 if (category.Dir.EndsWith("*"))
                 {
-                    return NzbDroneValidationFailure.ForMessage(pair.Field, "Enable Job folders", "server.message.m72a9cf77e4de")
+                    return new NzbDroneValidationFailure(pair.Field, "Enable Job folders", "server.message.m72a9cf77e4de", null)
                     {
                         InfoLink = _proxy.GetBaseUrl(Settings, "config/categories/"),
                         DetailedDescription = "Chaptarr prefers each download to have a separate folder. With * appended to the Folder/Path Sabnzbd will not create these job folders. Go to Sabnzbd to fix it."
@@ -492,7 +492,7 @@ namespace NzbDrone.Core.Download.Clients.Sabnzbd
 
                 if (config.Misc.enable_tv_sorting && ContainsCategory(config.Misc.tv_categories, pair.Value))
                 {
-                    return NzbDroneValidationFailure.ForMessage(pair.Field, "Disable TV Sorting", "server.message.mcd62354c7d7b")
+                    return new NzbDroneValidationFailure(pair.Field, "Disable TV Sorting", "server.message.mcd62354c7d7b", null)
                     {
                         InfoLink = _proxy.GetBaseUrl(Settings, "config/sorting/"),
                         DetailedDescription = "You must disable Sabnzbd TV Sorting for the category Chaptarr uses to prevent import issues. Go to Sabnzbd to fix it."
@@ -501,7 +501,7 @@ namespace NzbDrone.Core.Download.Clients.Sabnzbd
 
                 if (config.Misc.enable_movie_sorting && ContainsCategory(config.Misc.movie_categories, pair.Value))
                 {
-                    return NzbDroneValidationFailure.ForMessage(pair.Field, "Disable Movie Sorting", "server.message.m2bf18c3eddf8")
+                    return new NzbDroneValidationFailure(pair.Field, "Disable Movie Sorting", "server.message.m2bf18c3eddf8", null)
                     {
                         InfoLink = _proxy.GetBaseUrl(Settings, "config/sorting/"),
                         DetailedDescription = "You must disable Sabnzbd Movie Sorting for the category Chaptarr uses to prevent import issues. Go to Sabnzbd to fix it."
@@ -510,7 +510,7 @@ namespace NzbDrone.Core.Download.Clients.Sabnzbd
 
                 if (config.Misc.enable_date_sorting && ContainsCategory(config.Misc.date_categories, pair.Value))
                 {
-                    return NzbDroneValidationFailure.ForMessage(pair.Field, "Disable Date Sorting", "server.message.m42d5ddf06dd0")
+                    return new NzbDroneValidationFailure(pair.Field, "Disable Date Sorting", "server.message.m42d5ddf06dd0", null)
                     {
                         InfoLink = _proxy.GetBaseUrl(Settings, "config/sorting/"),
                         DetailedDescription = "You must disable Sabnzbd Date Sorting for the category Chaptarr uses to prevent import issues. Go to Sabnzbd to fix it."
