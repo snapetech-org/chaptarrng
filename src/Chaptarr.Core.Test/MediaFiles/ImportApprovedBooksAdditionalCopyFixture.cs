@@ -3030,8 +3030,9 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
         }
 
-        [Test]
-        public void should_check_free_space_at_converted_destination_before_conversion()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void should_check_free_space_at_converted_destination_before_conversion(bool stageProviderChapters)
         {
             var tempPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-space-{Guid.NewGuid():N}.mp3");
             var destinationDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-destination-{Guid.NewGuid():N}");
@@ -3086,6 +3087,18 @@ namespace Chaptarr.Core.Test.MediaFiles
                     ForeignEditionId = "az:B0746T3XVR-audiobook"
                 };
 
+                var mediaInfo = new StubMediaInfoExtractor();
+                mediaInfo.Durations[tempPath] = TimeSpan.FromMinutes(20);
+                if (stageProviderChapters)
+                {
+                    edition.DurationSeconds = 1200;
+                    edition.Chapters = new List<EditionChapter>
+                    {
+                        new() { Title = "Opening", StartOffsetMs = 0, LengthMs = 300000 },
+                        new() { Title = "Chapter 1", StartOffsetMs = 300000, LengthMs = 900000 }
+                    };
+                }
+
                 var conversion = new FailingM4bConversionService();
                 var mover = new StubMoveBookFiles
                 {
@@ -3094,7 +3107,7 @@ namespace Chaptarr.Core.Test.MediaFiles
 
                 var diskProvider = DispatchProxy.Create<IDiskProvider, DiskProviderProxy>();
                 var diskProxy = (DiskProviderProxy)(object)diskProvider;
-                diskProxy.AvailableSpace = 1;
+                diskProxy.AvailableSpace = stageProviderChapters ? 100L * 1024 * 1024 + 3 * 1024 - 1 : 1;
 
                 var configService = DispatchProxy.Create<IConfigService, ConfigServiceProxy>();
                 ((ConfigServiceProxy)(object)configService).MinimumFreeSpaceWhenImporting = 100;
@@ -3102,7 +3115,7 @@ namespace Chaptarr.Core.Test.MediaFiles
                 var service = new ImportApprovedBooks(
                     new StubMediaFileService(),
                     new StubMetadataTagService(),
-                    Proxy<IMediaInfoExtractor>(),
+                    mediaInfo,
                     Proxy<IAuthorService>(),
                     Proxy<IBookService>(),
                     CreateEditionService(new List<Edition> { edition }),
@@ -5042,15 +5055,23 @@ namespace Chaptarr.Core.Test.MediaFiles
             {
                 const string downloadId = "ready-tail-conversion-download";
                 var (_, author, book, edition) = CreateAudiobookConversionGraph(93);
+                edition.DurationSeconds = 1200;
+                edition.Chapters = new List<EditionChapter>
+                {
+                    new() { Title = "Opening", StartOffsetMs = 0, LengthMs = 300000 },
+                    new() { Title = "Chapter 1", StartOffsetMs = 300000, LengthMs = 900000 }
+                };
                 var (bookService, _) = CreateBookService(new List<Book> { book });
                 var mediaFiles = new StubMediaFileService();
                 var mover = new StubMoveBookFiles { DestinationPath = destinationPath };
                 var conversion = new SuccessfulM4bConversionService();
                 var jobs = new RecordingConversionJobService();
+                var mediaInfo = new StubMediaInfoExtractor();
+                mediaInfo.Durations[sourcePath] = TimeSpan.FromMinutes(20);
                 var service = new ImportApprovedBooks(
                     mediaFiles,
                     new StubMetadataTagService(),
-                    new StubMediaInfoExtractor(),
+                    mediaInfo,
                     Proxy<IAuthorService>(),
                     bookService,
                     CreateEditionService(new List<Edition> { edition }),
@@ -5094,6 +5115,14 @@ namespace Chaptarr.Core.Test.MediaFiles
                 Assert.That(firstResults.Single().Result, Is.EqualTo(ImportResultType.Pending));
                 Assert.That(jobs.Request, Is.Not.Null);
                 var request = jobs.Request;
+                request.ConversionInputFiles = service.CreateProviderChapterSidecarInputs(
+                    Path.Combine(request.WorkFolder, "copy-fallback"),
+                    new[] { sourcePath },
+                    request.TagOptions,
+                    book,
+                    (_, _) => throw new IOException("Operation not supported")).ToList();
+                Assert.That(request.TagOptions.ProviderChapterCount, Is.EqualTo(2));
+                Assert.That(File.ReadAllText(request.ConversionInputFiles.Single()), Is.EqualTo("fake mp3"));
                 Directory.CreateDirectory(request.WorkFolder);
                 File.WriteAllText(request.OutputPath, "converted m4b");
                 var manifest = new ConversionArtifactManifest

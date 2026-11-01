@@ -36,6 +36,7 @@ namespace NzbDrone.Core.MediaFiles
         private const string ArtifactManifestFileName = "conversion-artifact.json";
         private static readonly TimeSpan LeaseTimeout = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan SchedulerPollInterval = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan SchedulerErrorBackoff = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan QueueCoalesceDelay = TimeSpan.FromMilliseconds(100);
         private static readonly TimeSpan CompletedRetention = TimeSpan.FromDays(7);
         private readonly object _sync = new();
@@ -326,9 +327,9 @@ namespace NzbDrone.Core.MediaFiles
         {
             var waitHandles = new[] { _signal, _shutdown.Token.WaitHandle };
 
-            try
+            while (!_shutdown.IsCancellationRequested)
             {
-                while (!_shutdown.IsCancellationRequested)
+                try
                 {
                     var signalled = WaitHandle.WaitAny(waitHandles, SchedulerPollInterval);
                     if (signalled == 1 || _shutdown.IsCancellationRequested)
@@ -344,15 +345,28 @@ namespace NzbDrone.Core.MediaFiles
                     RecoverExpiredLeases();
                     DispatchQueuedJobs();
                 }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    // The scheduler thread is only started from ApplicationStartedEvent. If an
+                    // iteration error escapes this loop, queued conversions remain stranded until
+                    // the process restarts. Keep the scheduler alive, but back off so persistent
+                    // faults do not produce a tight retry loop.
+                    _logger.Error(ex, "Detached audiobook conversion scheduler iteration failed");
+                    if (!_shutdown.Token.WaitHandle.WaitOne(SchedulerErrorBackoff))
+                    {
+                        // The signal that woke the failed iteration has already been consumed.
+                        // Wake the next pass after backoff so existing queued work does not wait
+                        // another full scheduler poll interval before retrying.
+                        _signal.Set();
+                    }
+                }
             }
-            catch (OperationCanceledException)
-            {
-                _logger.Debug("Detached audiobook conversion scheduler stopped");
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Detached audiobook conversion scheduler failed");
-            }
+
+            _logger.Debug("Detached audiobook conversion scheduler stopped");
         }
 
         private int GetActiveCount()

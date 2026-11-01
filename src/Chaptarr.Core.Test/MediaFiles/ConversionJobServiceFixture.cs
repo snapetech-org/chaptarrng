@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using NLog;
@@ -175,6 +176,30 @@ namespace Chaptarr.Core.Test.MediaFiles
                 }
 
                 throw new NotImplementedException($"Unexpected command queue call: {targetMethod?.Name}");
+            }
+        }
+
+        private class ThrowOnceNonCompletedRepositoryProxy : DispatchProxy
+        {
+            public IConversionJobRepository Inner { get; set; }
+            public int FailOnNonCompletedCall { get; set; }
+
+            private int _nonCompletedCalls;
+
+            public int NonCompletedCalls => Volatile.Read(ref _nonCompletedCalls);
+
+            protected override object Invoke(MethodInfo targetMethod, object[] args)
+            {
+                if (targetMethod?.Name == nameof(IConversionJobRepository.NonCompleted))
+                {
+                    var call = Interlocked.Increment(ref _nonCompletedCalls);
+                    if (call == FailOnNonCompletedCall)
+                    {
+                        throw new InvalidOperationException("Synthetic transient conversion repository failure");
+                    }
+                }
+
+                return targetMethod.Invoke(Inner, args);
             }
         }
 
@@ -1098,6 +1123,108 @@ namespace Chaptarr.Core.Test.MediaFiles
             }
             finally
             {
+                SqliteConnection.ClearAllPools();
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void scheduler_should_back_off_then_retry_after_transient_iteration_failure()
+        {
+            var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-job-scheduler-retry-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+            var request = CreateRequest(tempDir, "scheduler-retry-download");
+            var repository = CreateRepository(Path.Combine(tempDir, "jobs.db"));
+            var throwingRepository = DispatchProxy.Create<IConversionJobRepository, ThrowOnceNonCompletedRepositoryProxy>();
+            var repositoryProxy = (ThrowOnceNonCompletedRepositoryProxy)(object)throwingRepository;
+            repositoryProxy.Inner = repository;
+            repositoryProxy.FailOnNonCompletedCall = 2; // Reconcile is first; fail the first scheduler iteration.
+
+            var converter = new TokenRecordingConversionService();
+            var service = CreateService(throwingRepository, converter);
+
+            try
+            {
+                service.Enqueue(request);
+                service.Handle(new ApplicationStartedEvent());
+                Assert.That(
+                    SpinWait.SpinUntil(() => repositoryProxy.NonCompletedCalls >= 2, TimeSpan.FromSeconds(2)),
+                    Is.True,
+                    "The scheduler did not reach the injected transient iteration failure.");
+
+                var retryTimer = Stopwatch.StartNew();
+                Assert.That(
+                    SpinWait.SpinUntil(() => converter.OptionsByDownloadId.ContainsKey(request.DownloadId), TimeSpan.FromSeconds(4)),
+                    Is.False,
+                    "The scheduler retried before its error backoff elapsed.");
+                Assert.That(
+                    SpinWait.SpinUntil(() => converter.OptionsByDownloadId.ContainsKey(request.DownloadId), TimeSpan.FromSeconds(3)),
+                    Is.True,
+                    "A transient scheduler failure stranded queued conversion work.");
+                retryTimer.Stop();
+                Assert.That(retryTimer.Elapsed, Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(4)));
+
+                converter.Release.Set();
+                Assert.That(
+                    SpinWait.SpinUntil(
+                        () => repository.FindByDownloadId(request.DownloadId)?.Status == ConversionJobStatus.ReadyToImport,
+                        TimeSpan.FromSeconds(2)),
+                    Is.True);
+            }
+            finally
+            {
+                service.Handle(new ApplicationShutdownRequested());
+                converter.Release.Set();
+                SqliteConnection.ClearAllPools();
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void scheduler_shutdown_should_cancel_error_backoff_promptly()
+        {
+            var tempDir = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"conversion-job-scheduler-shutdown-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+            var repository = CreateRepository(Path.Combine(tempDir, "jobs.db"));
+            var throwingRepository = DispatchProxy.Create<IConversionJobRepository, ThrowOnceNonCompletedRepositoryProxy>();
+            var repositoryProxy = (ThrowOnceNonCompletedRepositoryProxy)(object)throwingRepository;
+            repositoryProxy.Inner = repository;
+            repositoryProxy.FailOnNonCompletedCall = 2;
+
+            var service = CreateService(throwingRepository, new UnusedConversionService());
+            Task scheduler = null;
+
+            try
+            {
+                service.Handle(new ApplicationStartedEvent());
+                Assert.That(
+                    SpinWait.SpinUntil(() => repositoryProxy.NonCompletedCalls >= 2, TimeSpan.FromSeconds(2)),
+                    Is.True,
+                    "The scheduler did not reach the injected transient iteration failure.");
+
+                Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                scheduler = (Task)typeof(ConversionJobService)
+                    .GetField("_scheduler", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .GetValue(service);
+                Assert.That(scheduler, Is.Not.Null);
+                Assert.That(scheduler.IsCompleted, Is.False, "The scheduler should remain alive while backing off from an iteration error.");
+
+                var shutdownTimer = Stopwatch.StartNew();
+                service.Handle(new ApplicationShutdownRequested());
+                shutdownTimer.Stop();
+
+                Assert.That(SpinWait.SpinUntil(() => scheduler.IsCompleted, TimeSpan.FromSeconds(1)), Is.True);
+                Assert.That(shutdownTimer.Elapsed, Is.LessThan(TimeSpan.FromSeconds(2)), "Shutdown should wake the scheduler's error backoff wait.");
+            }
+            finally
+            {
+                service.Handle(new ApplicationShutdownRequested());
                 SqliteConnection.ClearAllPools();
                 if (Directory.Exists(tempDir))
                 {

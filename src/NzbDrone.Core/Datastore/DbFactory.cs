@@ -47,6 +47,11 @@ namespace NzbDrone.Core.Datastore
             Dapper.SqlMapper.AddTypeHandler(typeof(DateTime), new SqliteUtcDateTimeHandler());
             Dapper.SqlMapper.AddTypeHandler(typeof(DateTime?), new SqliteNullableUtcDateTimeHandler());
 
+            // SQLite NUMERIC columns can return INTEGER or REAL values per row. Use a
+            // runtime parser so Dapper's first-row deserializer does not assume one type.
+            Dapper.SqlMapper.AddTypeHandler(typeof(decimal), new SqliteDecimalHandler());
+            Dapper.SqlMapper.AddTypeHandler(typeof(decimal?), new SqliteNullableDecimalHandler());
+
             if (TableMapping.Mapper.TableMap.Count == 0)
             {
                 TableMapping.Map();
