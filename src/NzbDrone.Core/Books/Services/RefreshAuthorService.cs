@@ -2336,6 +2336,14 @@ namespace NzbDrone.Core.Books
                     continue;
                 }
 
+                // The folder walker only applies exclusions below its starting folder, so evidence rooted inside
+                // an excluded download-client seed directory would otherwise scan all of it.
+                if (DiskScanService.ExcludedSubFoldersRegex.IsMatch(rootFolder.Path.GetRelativePath(candidate) + Path.DirectorySeparatorChar))
+                {
+                    _logger.Debug("[FLOW-DEBUG] RESCAN-EVIDENCE-SKIP: Ignoring '{0}' because it is inside an excluded folder.", candidate);
+                    continue;
+                }
+
                 boundedCandidates.Add(candidate);
             }
 
