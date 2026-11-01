@@ -66,6 +66,7 @@ namespace Chaptarr.Http.ErrorManagement
             {
                 _logger.DebugSafe(clientException, "Client error during request {0} {1}: {2}", context.Request.Method, context.Request.Path, clientException.Message);
                 statusCode = clientException.StatusCode;
+                errorModel.MessageId = clientException.MessageId;
             }
             else if (exception is ModelNotFoundException)
             {

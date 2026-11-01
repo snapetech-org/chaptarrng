@@ -4,6 +4,7 @@ import { translateWithFallback } from 'Utilities/String/translate';
 
 const { compileServerMessageMatchers, matchServerMessage } = serverMessageMatching;
 const matchers = compileServerMessageMatchers(serverMessages);
+const serverMessagesById = new Map(serverMessages.map((message) => [message.id, message]));
 const retainedFileMarker = ' Converted file retained at: ';
 const toolOutputMarker = ' Tool output: ';
 const readableM4bSuffix = ' A readable converted M4B was produced but will not be imported because m4b-tool reported a failure.';
@@ -34,6 +35,34 @@ function translateMatch(match) {
   }));
 
   return translateWithFallback(match.id, match.source, tokens);
+}
+
+export function translateServerMessageById(messageId, parameters = {}) {
+  const message = serverMessagesById.get(messageId);
+
+  if (!message || !parameters || typeof parameters !== 'object' || Array.isArray(parameters)) {
+    return null;
+  }
+
+  const allowedParameters = new Set((message.parameters || []).map(({ name }) => name));
+  const tokens = {};
+
+  Object.entries(parameters).forEach(([name, value]) => {
+    if (!allowedParameters.has(name) || value == null) {
+      return;
+    }
+
+    if (typeof value === 'string' && value && !(value.startsWith('\u2068') && value.endsWith('\u2069'))) {
+      tokens[name] = `\u2068${value}\u2069`;
+      return;
+    }
+
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      tokens[name] = value;
+    }
+  });
+
+  return translateWithFallback(message.id, message.source, tokens);
 }
 
 function translateAlternateDownloadClients(match) {
