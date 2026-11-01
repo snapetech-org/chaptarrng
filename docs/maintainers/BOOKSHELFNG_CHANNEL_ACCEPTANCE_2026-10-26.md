@@ -1130,7 +1130,7 @@ production provider/API behavior, and current-head private-JIT validation are
 still unaccepted. No packages were published and no release readiness gates
 were enabled.
 
-## Direct-main reliability and exact-head queue update — 2026-11-01 00:20 UTC
+## Direct-main reliability and exact-head queue update — 2026-11-01 00:21 UTC
 
 The current application head is `699b0a499c51617760e3b2809dc22e0a29a0e54b`.
 Commit `6f73cd0d` filters excluded folders from bounded author rescans. Commit
@@ -1163,6 +1163,16 @@ other repositories, Windows group 11 had no runners, and the only idle Mac was
 a persistent ARM64 runner that does not match the required route. No shared
 runner was restarted or changed. This run builds and tests; it does not publish
 an image or create a production cluster.
+
+Current-head package contracts also passed locally: legacy channel contracts
+passed **23/23**; release-note parser tests passed **7/7**; and the release-note
+preview rendered the new conversion fix fragment. The container-platform
+candidate test built and checksum-verified the `0.9.978` candidate bundle,
+checked Cloudron, Co-op Cloud, Unraid, catalog, and StartOS contracts, and
+passed StartOS install, TypeScript check, and build. That test uses a sentinel
+image digest and deletes its generated bundle on success; it does not validate
+the published image digest or establish channel delivery, installed rollback,
+or operator acceptance.
 
 The current public release remains ChaptarrNG `0.9.977`; the current public
 Chocolatey listings remain BookshelfNG `0.4.21.76` and ChaptarrNG `0.9.973`.
