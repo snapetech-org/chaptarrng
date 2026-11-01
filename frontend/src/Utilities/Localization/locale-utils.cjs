@@ -2,7 +2,6 @@ const RTL_LANGUAGES = new Set([
   'ar', 'ckb', 'dv', 'fa', 'he', 'khw', 'ks', 'ku', 'ps', 'sd', 'ug', 'ur', 'yi'
 ]);
 const RTL_SCRIPTS = new Set(['adlm', 'arab', 'hebr', 'nkoo', 'rohg', 'syrc', 'thaa']);
-const RTL_DOCUMENT_LAYOUT_REVIEW_REQUIRED = new Set(['ar']);
 
 function normalizeLocaleTag(locale) {
   return String(locale || 'en').replace(/_/g, '-').trim() || 'en';
@@ -21,11 +20,6 @@ function getDirectionForLocale(locale) {
 }
 
 function getDocumentDirectionForLocale(locale) {
-  const language = normalizeLocaleTag(locale).split('-')[0].toLowerCase();
-  if (RTL_DOCUMENT_LAYOUT_REVIEW_REQUIRED.has(language)) {
-    return 'ltr';
-  }
-
   return getDirectionForLocale(locale);
 }
 
