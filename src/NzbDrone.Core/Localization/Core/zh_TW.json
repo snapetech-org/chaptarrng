@@ -2950,7 +2950,7 @@
   "ui.backup.encryptedDownloadFailed": "無法建立加密備份。",
   "ui.language.inheritedFallbackNotice": "未翻譯的標籤會使用英文，直到新增翻譯為止。",
   "notification.field.links": "連結",
-  "notification.heading.renamed": "更名",
+  "notification.heading.renamed": "已重新命名",
   "notification.sensor.health": "系統健康",
   "notification.sensor.missingBooks": "缺少的書",
   "notification.sensor.queue": "佇列",

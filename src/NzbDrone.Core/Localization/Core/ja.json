@@ -2952,7 +2952,7 @@
   "notification.field.links": "リンク",
   "notification.heading.renamed": "名前変更",
   "notification.sensor.health": "ヘルス",
-  "notification.sensor.missingBooks": "欠落書籍",
+  "notification.sensor.missingBooks": "見つからない本",
   "notification.sensor.queue": "キュー",
   "notification.body.applicationUpdated": "Chaptarr {previous} から {current} まで更新",
   "notification.body.authorRemovedWithFiles": "著者が削除され、すべてのファイルが削除されました。",

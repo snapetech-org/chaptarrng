@@ -3038,7 +3038,7 @@
   "provider.field.f100fa980fa39": "أضف بادئة إلى عنوان URL الخاص بـ NZBGet، مثل: http://[host]:[port]/[urlBase]/jsonrpc",
   "provider.field.f106db5facb2e": "سيتم عرضها على موقع Goodreads",
   "provider.field.f121925ef23c3": "ملف تعريف الجودة المستخدم عند استيراد الكتب الصوتية من Hardcover.",
-  "provider.field.f1240054e2040": "URLs",
+  "provider.field.f1240054e2040": "عناوين URL",
   "provider.field.f12af4c995bd9": "العنوان الإلكتروني الكامل RSS التي تنتجها IPTorrents، باستخدام الفئات التي اخترتها فقط (HD، SD، x264، إلخ ...)",
   "provider.field.f130b15afdee4": "يضيف بادئة إلى عنوان RPC URL الخاص بـ Transmission، مثل http://[host]:[port]/[urlBase]/rpc, والقيمة الافتراضية هي '/transmission/'.",
   "provider.field.f14f23b87f76a": "أشر إلى هذا المستخدم في التغريدات المرسلة",

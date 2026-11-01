@@ -2949,7 +2949,7 @@
   "UseSelectedMetadataSource": "Gunakan katalog yang dipilih",
   "ui.backup.encryptedDownloadFailed": "Tidak dapat membuat cadangan terenkripsi.",
   "ui.language.inheritedFallbackNotice": "Label yang belum diterjemahkan menggunakan bahasa Inggris hingga terjemahan ditambahkan.",
-  "notification.field.links": "Taut",
+  "notification.field.links": "Tautan",
   "notification.heading.renamed": "Berganti nama",
   "notification.sensor.health": "Kesehatan",
   "notification.sensor.missingBooks": "Buku Hilang",

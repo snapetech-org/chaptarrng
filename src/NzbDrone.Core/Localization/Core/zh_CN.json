@@ -2950,7 +2950,7 @@
   "ui.backup.encryptedDownloadFailed": "无法创建加密备份。",
   "ui.language.inheritedFallbackNotice": "未翻译的标签将暂时显示为英文，直至添加翻译。",
   "notification.field.links": "链接",
-  "notification.heading.renamed": "更名",
+  "notification.heading.renamed": "已重命名",
   "notification.sensor.health": "健康状态",
   "notification.sensor.missingBooks": "缺失书籍",
   "notification.sensor.queue": "队列",
