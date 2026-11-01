@@ -1228,3 +1228,38 @@ enabled, and no release or package was published. Windows `.76`, Fedora RPM,
 macOS standalone, remaining installed-channel handoffs, external delivery,
 representative operator data, rollback, and live provider/API acceptance still
 need completed evidence.
+
+## Packaged Chocolatey prompt coverage and current queue — 2026-11-01 01:30 UTC
+
+ChaptarrNG commit `659a94fc01acde95c5b20183deaa11d6724507ff` extends the
+Chocolatey migration-choice contract to extract `tools/chocolateyinstall.ps1`
+from the built candidate `.nupkg`. It exercises the packaged parameter parser,
+checks that the installer passes the parsed mode to the migration-choice gate,
+and runs mocked default-No and explicit-Yes responses alongside the manual
+defer and automatic default cases. `git diff --check` passed; no local build,
+test, or scan ran under the private-JIT-only policy.
+
+Focused Windows run
+[`41261304264`](https://github.com/snapetech-org/chaptarrng/actions/runs/41261304264)
+was dispatched at that exact head with `windows_chocolatey_only=true`. Its
+required `build (windows-x64)` job remains queued without a runner, so the new
+packaged-script contract and the `.76` installed No/Yes/rollback handoff are
+not yet acceptance evidence. The previous same-purpose queued run
+`41260222596` was cancelled after confirming it had no started job.
+
+The live organization runner list still shows the registered `packer` Windows
+runner offline; there is no compatible Windows x64 JIT runner online. Current
+Packer main is `b6ce6cbc5ab37a436b4ba2b6bc1fb0a8c0cb8dca`, which keeps
+`kspls0` excluded pending storage remediation. A read-only check on `kspls0`
+found `/var/lib/gha-jit/jobs` on its root NVMe filesystem and no separate
+`/mnt/disks/scratch` mount. Its raw capacity report is not broker-admissible
+capacity. The old C0/slot-owner handoff gate is retired in current Packer
+policy; broker deployment still requires zero active JIT guests and zero busy
+JIT runner registrations.
+
+No release readiness variables were enabled and no package, feed, or external
+channel was published. StartOS, Cloudron, Unraid, Co-op Cloud, remaining
+package-feed/catalog delivery, Fedora RPM, macOS standalone, representative
+operator-data rollback, and live provider/API acceptance remain open. The
+earlier pinned Helm acceptance run failed before its install script and
+created no ephemeral Kind cluster or production cluster.
