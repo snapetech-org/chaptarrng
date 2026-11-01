@@ -1184,8 +1184,10 @@ readiness variables were enabled and no package or release was published.
 
 ## Exact-head handoffs and Helm egress correction — 2026-11-01 01:16 UTC
 
-The current `main` head is `ee1d583cb7f4a58ceb0ae7ccb98cc169601cd236`.
-Its non-documentation tree matches the tested application source at
+The current application/workflow source head is
+`ee1d583cb7f4a58ceb0ae7ccb98cc169601cd236`; report-only commit
+`b18f5d9e529324cec2bfdcae1b3ff42749733afb` records this status. The source
+tree matches the tested application source at
 `699b0a499c51617760e3b2809dc22e0a29a0e54b`. There are no open ChaptarrNG PRs
 and GitHub lists only the `main` branch. Queued validation for deleted PR
 branches and older main candidates was cancelled so current-source evidence
