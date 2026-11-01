@@ -1129,3 +1129,45 @@ external package/channel delivery, representative operator-data recovery,
 production provider/API behavior, and current-head private-JIT validation are
 still unaccepted. No packages were published and no release readiness gates
 were enabled.
+
+## Direct-main reliability and exact-head queue update — 2026-11-01 00:20 UTC
+
+The current application head is `699b0a499c51617760e3b2809dc22e0a29a0e54b`.
+Commit `6f73cd0d` filters excluded folders from bounded author rescans. Commit
+`699b0a49` makes detached conversion scheduling retry after transient
+iteration failures, maps SQLite `INTEGER`/`REAL`/`NULL` values consistently
+for nullable decimal progress, and preserves provider chapter metadata when a
+filesystem rejects symlinks by staging source copies after a space check.
+Partial staging is removed and a failed fallback fails the conversion instead
+of silently dropping the chapter data.
+
+The combined exact-source focused Core run passed **109 tests, skipped 11, and
+failed zero**. It covered the author rescan scope, conversion scheduling,
+SQLite decimal row ordering, provider chapter fallback/cleanup, and conversion
+import paths. The 11 skips require installed FFmpeg behavior or an external
+crash-worker setup. The passing result is retained at
+`/mnt/disks/scratch/task-worktrees/chaptarrng-direct-main-integrations-20261031/results-combined/combined-regressions.trx`.
+The full Core test project then passed **4,961 tests, skipped 29, and failed
+zero** against the same source SHA; its TRX result is retained at
+`/mnt/disks/scratch/task-worktrees/chaptarrng-direct-main-integrations-20261031/results-full/release-core-699b0a49.trx`.
+The commit hook's Semgrep scan found zero findings. These are source-level
+checks, not Windows package, installed-channel, or operator-data acceptance.
+
+Exact-head private build run
+[41255968485](https://github.com/snapetech-org/chaptarrng/actions/runs/41255968485)
+was dispatched against this SHA with `action=ci` and `runner_pool=private`.
+At 00:20 UTC its Linux x64, Windows x64, macOS Intel, PostgreSQL migration,
+and Docker build jobs were all queued and none had started. GitHub's live
+runner API showed no compatible free ephemeral JIT: Linux guests were busy on
+other repositories, Windows group 11 had no runners, and the only idle Mac was
+a persistent ARM64 runner that does not match the required route. No shared
+runner was restarted or changed. This run builds and tests; it does not publish
+an image or create a production cluster.
+
+The current public release remains ChaptarrNG `0.9.977`; the current public
+Chocolatey listings remain BookshelfNG `0.4.21.76` and ChaptarrNG `0.9.973`.
+The `.76` private Windows No/Yes/rollback handoff, `.978` bridge, StartOS
+package and repository rollback, Cloudron and Unraid delivery, canonical
+Co-op Cloud recipe, package-feed/catalog delivery, representative operator
+data and recovery, and live provider/API behavior remain unaccepted. No
+readiness variables were enabled and no package or release was published.
