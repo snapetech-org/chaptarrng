@@ -20,8 +20,8 @@ namespace NzbDrone.Core.Notifications.Twitter
 
             RuleFor(c => c.DirectMessage).Equal(true)
                                          .WithMessage("Using Direct Messaging is recommended, or use a private account.")
-                                         .WithState(_ => NzbDroneValidationState.ForMessage("server.message.mefbca50c53e7"))
-                                         .AsWarning();
+                                         .AsWarning()
+                                         .WithState(_ => NzbDroneValidationState.ForMessage("server.message.mefbca50c53e7", isWarning: true));
 
             RuleFor(c => c.AuthorizeNotification).Empty()
                                                  .When(c => c.AccessToken.IsNullOrWhiteSpace() || c.AccessTokenSecret.IsNullOrWhiteSpace())
