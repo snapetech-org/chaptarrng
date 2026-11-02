@@ -1,6 +1,6 @@
 # Fixed server and notification copy review
 
-The source catalog and caller reviews are recorded below. The current source snapshot contains 4,165 English IDs, with 1,210 missing direct values per target locale (14,520 cells across twelve locales). Translation generation and final headed Agentic VM acceptance remain queued. Agent review does not claim qualified native-speaker approval.
+The source catalog and caller reviews are recorded below. At ChaptarrNG PR #190 head `45e8e228433da1ed107ff7825652d6d1d903e5ea` (tree `d25870b289a16d3a827e827f9c5d136349f06b78`), the English source catalog and each of twelve direct target catalogs contain 4,165 IDs, with zero missing or extra keys and zero blank values. The 14,520 target cells identified at the provider-test source-boundary checkpoint have since been populated and dispositioned in hash-pinned semantic reviews: 6,304 accepted unchanged, 8,216 corrected, and zero held. Exact-current-head headed browser review and qualified native-speaker approval remain outstanding; agent review does not claim native-speaker approval.
 
 ## Source coverage
 
@@ -11,7 +11,7 @@ The source catalog and caller reviews are recorded below. The current source sna
 
 All seventeen authored loading messages also retain their original no-repeat variety behind stable IDs, with contributor/product names protected. The runtime fallback data is checked against its source inventory.
 
-The expanded source set has 4,165 English IDs, including 1,215 IDs beyond the 2,950-ID baseline. The current target catalogs have 2,955 direct values each and are missing 1,210 values apiece. Registries carry stable IDs, source fingerprints, exact caller lines/hashes, and protected literal rules. `check-localized-source-coverage.cjs` and `check-server-message-catalogs.cjs` reject stale sources, missing target values, unsafe paths and placeholder/protected-value changes. `--allow-pending` is a preparation check, not final translation acceptance.
+The expanded source set has 4,165 English IDs, including 1,215 IDs beyond the 2,950-ID baseline. At current PR head, each target catalog has 4,165 direct values with zero missing or extra IDs and zero blank values. Registries carry stable IDs, source fingerprints, exact caller lines/hashes, and protected literal rules. `check-localized-source-coverage.cjs` and `check-server-message-catalogs.cjs` reject stale sources, missing target values, unsafe paths and placeholder/protected-value changes. `--allow-pending` is a preparation check, not final translation acceptance.
 
 ## Presentation callers
 
