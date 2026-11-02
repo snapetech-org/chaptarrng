@@ -80,8 +80,8 @@ namespace NzbDrone.Core.Notifications.Mailgun
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Unable to send test message though Mailgun.");
-                failures.Add(NzbDroneValidationFailure.ForMessage("", "Unable to send test message though Mailgun.", "server.message.m843e64bf5198"));
+                _logger.Error(ex, "Unable to send a test message through Mailgun.");
+                failures.Add(NzbDroneValidationFailure.ForMessage("", "Unable to send a test message through Mailgun.", "server.message.m843e64bf5198"));
             }
 
             return new ValidationResult(failures);

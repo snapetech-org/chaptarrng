@@ -443,7 +443,7 @@ namespace NzbDrone.Core.Download.Clients.Sabnzbd
             var config = _proxy.GetConfig(Settings);
             if (config.Misc.pre_check && !HasVersion(1, 1))
             {
-                return new NzbDroneValidationFailure("", "Disable 'Check before download' option in Sabnbzd", "server.message.m783307436ce0", null)
+                return new NzbDroneValidationFailure("", "Disable the 'Check before download' option in SABnzbd.", "server.message.m783307436ce0", null)
                 {
                     InfoLink = _proxy.GetBaseUrl(Settings, "config/switches/"),
                     DetailedDescription = "Using Check before download affects Chaptarr ability to track new downloads. Also Sabnzbd recommends 'Abort jobs that cannot be completed' instead since it's more effective."

@@ -4,6 +4,14 @@ ChaptarrNG release notes highlight user-facing changes and operating guidance.
 Each release combines curated entries from release-notes/ with technical
 history grouped from conventional commits.
 
+## [Unreleased]
+
+### User-facing changes
+
+#### Fixed
+
+- Correct the SABnzbd and Mailgun English validation messages and apply the reviewed W650–W699 catalog corrections across all 12 direct locales.
+
 ## [0.9.977](https://github.com/snapetech-org/chaptarrng/compare/v0.9.976..v0.9.977) - 2026-10-18
 
 ### User-facing changes
