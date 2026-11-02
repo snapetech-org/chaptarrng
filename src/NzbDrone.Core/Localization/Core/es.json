@@ -2148,7 +2148,7 @@
   "TrackTitle": "Título de pista",
   "Type": "Tipo",
   "UILanguage": "Lenguaje de UI",
-  "UILanguageHelpText": "Idioma que Chaptarr usará para la interfaz",
+  "UILanguageHelpText": "Idioma que Chaptarr usará para la interfaz.",
   "UILanguageHelpTextWarning": "Recargar el Navegador",
   "UISettings": "Ajustes del UI",
   "UISettingsSummary": "Calendario, fecha y opciones para personas con discapacidad visual",
