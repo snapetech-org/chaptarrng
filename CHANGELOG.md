@@ -11,6 +11,7 @@ history grouped from conventional commits.
 #### Fixed
 
 - Correct the SABnzbd and Mailgun English validation messages and apply the reviewed W650–W699 catalog corrections across all 12 direct locales.
+- Improve 205 cross-reviewed translations across all 12 direct locales with wording matched to application context (W700–W749).
 
 ## [0.9.977](https://github.com/snapetech-org/chaptarrng/compare/v0.9.976..v0.9.977) - 2026-10-18
 
