@@ -2,6 +2,12 @@
 
 The source catalog and caller reviews are recorded below. At ChaptarrNG PR #190 head `45e8e228433da1ed107ff7825652d6d1d903e5ea` (tree `d25870b289a16d3a827e827f9c5d136349f06b78`), the English source catalog and each of twelve direct target catalogs contain 4,165 IDs, with zero missing or extra keys and zero blank values. The 14,520 target cells identified at the provider-test source-boundary checkpoint have since been populated and dispositioned in hash-pinned semantic reviews: 6,304 accepted unchanged, 8,216 corrected, and zero held. Exact-current-head headed browser review and qualified native-speaker approval remain outstanding; agent review does not claim native-speaker approval.
 
+## Exact-head semantic reconciliation — 2026-11-02
+
+At PR head `b296df8ed6f590cdbb9f163445c9a0bdb16e5fac` (tree `dbb379e405045170d0cc5cbdb0f647fcca13f390`), an exact source/target hash reattestation reconciled all 63 cells marked uncertain in semantic-review v4: 41 correction decisions and 22 accepted current values, with zero unresolved. Twenty of the accepted values were checked against the final source-copy follow-up. The same review reconciled all 38 no-op proposals: 36 accepted unchanged and two corrections applied (the Arabic URL field label and Hindi MAM status message), with zero held. A separate read-only cross-review confirmed all 101 current source/target hash pairs.
+
+All twelve direct catalogs at that head contain 4,165 nonblank entries and match the English key set exactly. Full cell dispositions and hashes are in [`exact-head-semantic-reconciliation-20261102.json`](exact-head-semantic-reconciliation-20261102.json) (SHA-256 `c4305fb85cdb0c9156240bb2c131a3d2915a027e21721dca97257c35d1496f55`). This is agent semantic review, not qualified native-speaker approval. Current-head headed-browser review remains outstanding.
+
 ## Source coverage
 
 - Server/API, validation, operational progress, provider test notices, and persisted failure messages: 618 distinct messages and 811 unique source callers (821 template/branch bindings). One wholly dynamic Telegram exception/status template is excluded because it contains no application wording.
