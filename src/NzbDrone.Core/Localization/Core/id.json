@@ -2813,7 +2813,7 @@
   "EuropeanaApiKey": "Kunci API Europeana",
   "EuropeanaSourceHelp": "Cari catatan Europeana. Kunci API Europeana diperlukan.",
   "ExperienceMode": "Pengalaman",
-  "ExperienceModeHelpText": "Simple menjaga tugas perpustakaan sehari-hari tetap terlihat dan memindahkan halaman serta kontrol yang jarang digunakan ke tempat yang tidak mengganggu. Advanced menampilkan setiap area navigasi. Saat Anda beralih ke Advanced, pengaturan tambahan diaktifkan; setiap bilah alat pengaturan memungkinkan Anda menyembunyikannya lagi. Beralih mode hanya mengubah antarmuka, bukan perpustakaan atau konfigurasi layanan Anda; gunakan tombol header atau pilih mode di sini.",
+  "ExperienceModeHelpText": "Sederhana menjaga tugas perpustakaan sehari-hari tetap terlihat dan menyingkirkan halaman serta kontrol yang jarang digunakan. Lanjutan menampilkan semua area navigasi. Saat Anda beralih ke mode Lanjutan, pengaturan tambahan diaktifkan; setiap bilah alat pengaturan memungkinkan Anda menyembunyikannya kembali. Peralihan mode hanya mengubah antarmuka, bukan perpustakaan atau konfigurasi layanan Anda; gunakan tombol di bagian atas atau pilih mode di sini.",
   "ExportEncryptedBackup": "Buat Cadangan Terenkripsi",
   "FillMissingAuthorRoots": "Isi akar yang hilang",
   "FormatAddRequiresCatalogIdsHelpText": "Buku ini dan penulisnya memerlukan ID katalog. Gunakan Muat Ulang pada buku ini dan pada halaman penulis, lalu kembali ke sini.",
