@@ -58,5 +58,18 @@
   "repository_cell_evidence_overlap": 0,
   "native_speaker_approval": false,
   "headed_browser_review": false,
-  "tests_builds_scans_ci_workflows_releases_tags_merges": false
+  "agent_dispatched_workflows": false,
+  "pre_push_validation": {
+    "invoked_once_during_git_push": true,
+    "hook_path": ".githooks/pre-push",
+    "command": "bash packaging/scripts/test-publish-image-aliases.sh",
+    "host": "kspld0",
+    "private_ephemeral_jit": false,
+    "rerun": false,
+    "reported_output": [
+      "ChaptarrNG and BookshelfNG retirement release-readiness gates passed.",
+      "Single standard image alias contract tests passed."
+    ]
+  },
+  "other_builds_scans_ci_release_tags_merges": false
 }
