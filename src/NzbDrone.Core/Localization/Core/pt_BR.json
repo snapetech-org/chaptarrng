@@ -4089,7 +4089,7 @@
   "server.message.mefa23f5263d3": "Nenhum ano de publicação utilizável foi encontrado nos metadados disponíveis para correspondência.",
   "server.message.mefbca50c53e7": "Recomenda-se a utilização de mensagens diretas ou a utilização de uma conta privada.",
   "server.message.mf00a39f5e266": "O tempo limite do m4b-tool expirou após {value0}. A conversão foi interrompida.",
-  "server.message.mf00d6bc38ae8": "Não pode conter '', '//', ou começar/fim com '/'",
+  "server.message.mf00d6bc38ae8": "O valor não pode conter '\\' nem '//', nem começar ou terminar com '/'.",
   "server.message.mf12e387b46e1": "Os metadados RanobeDB estão disponíveis apenas para eBooks.",
   "server.message.mf156eb300353": "Deve ser único",
   "server.message.mf1f9651ad657": "O m4b-tool relatou uma falha após produzir um M4B legível. O arquivo foi mantido para inspeção.",

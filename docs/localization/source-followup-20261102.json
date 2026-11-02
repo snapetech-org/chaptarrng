@@ -84,7 +84,7 @@
           "lineSha256": "de39d4f4982e6a7131198aa4ce43718796164307437e1625e70216d236147661"
         }
       ],
-      "translationHandling": "W850 primary and independent cross-review held all twelve locale cells because the English catalog omitted the forbidden backslash. Corrected the English source to match the exact four existing validators under the stable ID; keep the twelve targets held until fresh exact-head review explicitly preserves backslash, //, and leading/trailing slash constraints."
+      "translationHandling": "After correcting the English source under the existing stable ID, fresh exact-head primary review and independent cross-review accepted corrections in ar, de, es, fr, id, ja, ko, pt_BR, vi, zh_CN, and zh_TW. Each target prohibits backslash and // and forbids leading/trailing /. Hindi remains held pending a suitable reviewed translation; no native-speaker approval is claimed."
     }
   ],
   "sourceMessageHashSnapshot": "docs/localization/source-message-hashes.json",

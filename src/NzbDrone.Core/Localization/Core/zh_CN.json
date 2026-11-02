@@ -4089,7 +4089,7 @@
   "server.message.mefa23f5263d3": "在可用于匹配的元数据中没有找到可用的出版年份。",
   "server.message.mefbca50c53e7": "建议使用直接消息，或使用私人账号。",
   "server.message.mf00a39f5e266": "m4b-tool 在 {value0} 后超时。转换已停止。",
-  "server.message.mf00d6bc38ae8": "不能包含“”,“//”,或以“/”开始/结束",
+  "server.message.mf00d6bc38ae8": "值不能包含“\\”或“//”，也不能以“/”开头或结尾。",
   "server.message.mf12e387b46e1": "RanobeDB 元数据仅适用于 eBooks。",
   "server.message.mf156eb300353": "应该是独一无二的",
   "server.message.mf1f9651ad657": "m4b-tool 生成可读取的 M4B 后报告失败。该文件已保留以供检查。",

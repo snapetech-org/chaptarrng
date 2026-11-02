@@ -4089,7 +4089,7 @@
   "server.message.mefa23f5263d3": "照合に使えるメタデータに、利用可能な出版年は見つかりませんでした。",
   "server.message.mefbca50c53e7": "Direct Messaging を使用するか、プライベートアカウントを使用することをお勧めします。",
   "server.message.mf00a39f5e266": "m4b-tool は {value0} 後にタイムアウトしました。変換は停止されました。",
-  "server.message.mf00d6bc38ae8": "'', '//', または '/' を含めたり、'/' で始まったり終わったりすることはできません。",
+  "server.message.mf00d6bc38ae8": "値に「\\」や「//」を含めたり、「/」で始まったり終わったりすることはできません。",
   "server.message.mf12e387b46e1": "RanobeDB メタデータは eBooks のみで利用できます。",
   "server.message.mf156eb300353": "ユニークでなければならない",
   "server.message.mf1f9651ad657": "m4b-tool は読み取り可能な M4B を生成した後に失敗を報告しました。ファイルは確認用に保持されました。",

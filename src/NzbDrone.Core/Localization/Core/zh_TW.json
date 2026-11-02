@@ -4089,7 +4089,7 @@
   "server.message.mefa23f5263d3": "在可用於比對的中繼資料中沒有找到可用的出版年份。",
   "server.message.mefbca50c53e7": "建議使用直接訊息，或使用私人帳戶。",
   "server.message.mf00a39f5e266": "m4b-tool 在 {value0} 後逾時。轉換已停止。",
-  "server.message.mf00d6bc38ae8": "不能包含“”,“//”,或以“/”開始/結束",
+  "server.message.mf00d6bc38ae8": "值不得包含「\\」或「//」，也不得以「/」開頭或結尾。",
   "server.message.mf12e387b46e1": "RanobeDB 中繼資料僅適用於 eBooks。",
   "server.message.mf156eb300353": "應該是獨一無二的",
   "server.message.mf1f9651ad657": "m4b-tool 產生可讀取的 M4B 後回報失敗。該檔案已保留以供檢查。",

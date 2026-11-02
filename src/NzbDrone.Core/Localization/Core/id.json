@@ -4089,7 +4089,7 @@
   "server.message.mefa23f5263d3": "Tidak ditemukan tahun terbit yang dapat digunakan dalam metadata yang bisa dicocokkan.",
   "server.message.mefbca50c53e7": "Menggunakan Direct Messaging disarankan, atau menggunakan akun pribadi.",
   "server.message.mf00a39f5e266": "m4b-tool kehabisan waktu setelah {value0}. Konversi dihentikan.",
-  "server.message.mf00d6bc38ae8": "Tidak bisa mengandung '', '//', atau mulai/akhir dengan '/'",
+  "server.message.mf00d6bc38ae8": "Nilai tidak boleh mengandung '\\' atau '//', dan tidak boleh diawali atau diakhiri dengan '/'.",
   "server.message.mf12e387b46e1": "Metadata RanobeDB hanya tersedia untuk eBooks.",
   "server.message.mf156eb300353": "harus unik",
   "server.message.mf1f9651ad657": "m4b-tool melaporkan kegagalan setelah membuat M4B yang dapat dibaca. File disimpan untuk diperiksa.",

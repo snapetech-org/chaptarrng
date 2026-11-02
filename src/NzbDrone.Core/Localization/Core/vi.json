@@ -4089,7 +4089,7 @@
   "server.message.mefa23f5263d3": "Không tìm thấy năm xuất bản có thể sử dụng trong siêu dữ liệu dùng để đối chiếu.",
   "server.message.mefbca50c53e7": "Bạn nên dùng tin nhắn trực tiếp hoặc dùng một tài khoản riêng tư.",
   "server.message.mf00a39f5e266": "m4b-tool hết thời gian chờ sau {value0}. Quá trình chuyển đổi đã dừng.",
-  "server.message.mf00d6bc38ae8": "Không thể chứa '', '//', hoặc bắt đầu / kết thúc với '/'",
+  "server.message.mf00d6bc38ae8": "Giá trị không được chứa '\\' hoặc '//', cũng không được bắt đầu hoặc kết thúc bằng '/'.",
   "server.message.mf12e387b46e1": "RanobeDB metadata chỉ có sẵn cho eBooks.",
   "server.message.mf156eb300353": "Tên phải là duy nhất.",
   "server.message.mf1f9651ad657": "m4b-tool báo lỗi sau khi tạo M4B có thể đọc được. Tệp được giữ lại để kiểm tra.",
