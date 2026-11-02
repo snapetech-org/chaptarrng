@@ -25,5 +25,13 @@
   "nativeSpeakerApproval": false,
   "postApplyBrowserReview": false,
   "testsBuildsCiRun": false,
-  "releasesTagsMerges": false
+  "releasesTagsMerges": false,
+  "preCommitSemgrep": {
+    "scanner": "Semgrep Community Edition",
+    "ruleset": "p/default",
+    "stagedEvidenceBuilderFiles": 2,
+    "rulesRun": 290,
+    "findings": 0,
+    "productSourceScanned": false
+  }
 }
