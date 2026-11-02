@@ -1,7 +1,7 @@
 {
   "version": 1,
   "baseHead": "4701933a50d367406fd6749c4baaf4befee22129",
-  "state": "Exact-source corrections for two reviewed English typos; stable source IDs, locale keys, placeholders, and caller bindings are retained.",
+  "state": "Exact-source corrections for three reviewed English typos; stable source IDs, locale keys, placeholders, and caller bindings are retained. The third correction aligns the qBittorrent category validation catalog with all four pinned callers; its 12 locale targets remain held for fresh review.",
   "entries": [
     {
       "sourceId": "server.message.m783307436ce0",
@@ -48,8 +48,45 @@
         }
       ],
       "translationHandling": "W654 translations use the verified product spelling SABnzbd; W695 target values already express the intended through-Mailgun meaning and were accepted unchanged."
+    },
+    {
+      "sourceId": "server.message.mf00d6bc38ae8",
+      "sourceFile": "src/NzbDrone.Core/Localization/Core/en.json",
+      "oldSourceText": "Can not contain '', '//', or start/end with '/'",
+      "oldSourceTextSha256": "f00d6bc38ae8d8287c51f0dd680c3be77f307a21ff98f0fe4b37a78a573dcb9d",
+      "newSourceText": "Can not contain '\\', '//', or start/end with '/'",
+      "newSourceTextSha256": "a49f6f46ac43b970cc69960dbd472ad87bd94245781ac3d2cb22f035cd1709ff",
+      "sourceFingerprintBefore": "4458d0721df2c7e25ceeeb675c3db8220d6c16b58432ab7ed1d254164887c29e",
+      "sourceFingerprintAfter": "b8d6ba97590d01a9263544cce8796ec371d0e2e112ea97d3b0f3dae5416336a0",
+      "callerFile": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrentSettings.cs",
+      "callerFileSha256Before": "b49b22a665285ad708641ae215353e834bb78c02298b7b92e1d8979d75b6070f",
+      "callerFileSha256After": "b49b22a665285ad708641ae215353e834bb78c02298b7b92e1d8979d75b6070f",
+      "callerOccurrencesChanged": 0,
+      "postEditCallerOccurrences": [
+        {
+          "line": 27,
+          "lineText": "RuleFor(c => c.AudiobookCategory).Matches(@\"^([^\\\\\\/](\\/?[^\\\\\\/])*)?$\").WithMessage(@\"Can not contain '\\', '//', or start/end with '/'\")",
+          "lineSha256": "bbfd3dbeed8c3da6cab20829a857a99135a4d3741094e0fa641578ce10985feb"
+        },
+        {
+          "line": 29,
+          "lineText": "RuleFor(c => c.EbookCategory).Matches(@\"^([^\\\\\\/](\\/?[^\\\\\\/])*)?$\").WithMessage(@\"Can not contain '\\', '//', or start/end with '/'\")",
+          "lineSha256": "a9fbc5509b2b7532f901539a4131a942e81493e32362cb30d710cb1942c6501b"
+        },
+        {
+          "line": 31,
+          "lineText": "RuleFor(c => c.AudiobookImportedCategory).Matches(@\"^([^\\\\\\/](\\/?[^\\\\\\/])*)?$\").WithMessage(@\"Can not contain '\\', '//', or start/end with '/'\")",
+          "lineSha256": "f0d4d45df8f132c5427e0d44f964a0ea5dc3bde69a348680d28e0c62453ea9a5"
+        },
+        {
+          "line": 33,
+          "lineText": "RuleFor(c => c.EbookImportedCategory).Matches(@\"^([^\\\\\\/](\\/?[^\\\\\\/])*)?$\").WithMessage(@\"Can not contain '\\', '//', or start/end with '/'\")",
+          "lineSha256": "de39d4f4982e6a7131198aa4ce43718796164307437e1625e70216d236147661"
+        }
+      ],
+      "translationHandling": "W850 primary and independent cross-review held all twelve locale cells because the English catalog omitted the forbidden backslash. Corrected the English source to match the exact four existing validators under the stable ID; keep the twelve targets held until fresh exact-head review explicitly preserves backslash, //, and leading/trailing slash constraints."
     }
   ],
   "sourceMessageHashSnapshot": "docs/localization/source-message-hashes.json",
-  "sourceMessageHashSnapshotSha256": "7c21ed396c1340c77b5635f2f5c1e6f966bf4342b03052397d39997c7920747b"
+  "sourceMessageHashSnapshotSha256": "f13e8b8db5ec55fb2228bd8462f3f842373c86f6349ea3a400b98ec6d8d6468d"
 }

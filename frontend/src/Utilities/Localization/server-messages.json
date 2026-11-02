@@ -5639,10 +5639,10 @@
   },
   {
     "id": "server.message.mf00d6bc38ae8",
-    "source": "Can not contain '', '//', or start/end with '/'",
+    "source": "Can not contain '\\', '//', or start/end with '/'",
     "parameters": [],
     "patterns": [
-      "Can not contain '', '//', or start/end with '/'"
+      "Can not contain '\\', '//', or start/end with '/'"
     ]
   },
   {

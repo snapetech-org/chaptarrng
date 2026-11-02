@@ -16341,14 +16341,14 @@
     },
     {
       "id": "server.message.mf00d6bc38ae8",
-      "source": "Can not contain '', '//', or start/end with '/'",
-      "sourceFingerprint": "4458d0721df2c7e25ceeeb675c3db8220d6c16b58432ab7ed1d254164887c29e",
+      "source": "Can not contain '\\', '//', or start/end with '/'",
+      "sourceFingerprint": "b8d6ba97590d01a9263544cce8796ec371d0e2e112ea97d3b0f3dae5416336a0",
       "parameters": [],
       "patterns": [
-        "Can not contain '', '//', or start/end with '/'"
+        "Can not contain '\\', '//', or start/end with '/'"
       ],
       "sourceTemplates": [
-        "Can not contain '', '//', or start/end with '/'"
+        "Can not contain '\\', '//', or start/end with '/'"
       ],
       "callsites": [
         {

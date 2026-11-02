@@ -3838,7 +3838,7 @@
   "server.message.mef88db258a46": "Test failed: {value0}",
   "server.message.mef9fc1a32869": "Version 0.7.0+ is required, but found: {value0}",
   "server.message.mefbca50c53e7": "Using Direct Messaging is recommended, or use a private account.",
-  "server.message.mf00d6bc38ae8": "Can not contain '', '//', or start/end with '/'",
+  "server.message.mf00d6bc38ae8": "Can not contain '\\', '//', or start/end with '/'",
   "server.message.mf12e387b46e1": "RanobeDB metadata is available for eBooks only.",
   "server.message.mf156eb300353": "Should be unique",
   "server.message.mf21cf7728117": "No response received from metadata server",
