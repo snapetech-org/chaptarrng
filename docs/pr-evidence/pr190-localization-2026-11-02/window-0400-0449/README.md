@@ -6,4 +6,4 @@ Final dispositions were 488 accept-current, 53 correction proposals, 47 refineme
 
 The 12 held cells are ordinal 447, “Failed to import author: {value0}”. The nearby API validation path interpolates arbitrary exception text and does not use the localized key, so the source remains held. W399 boundary targets and caller references were reattested.
 
-Primary and cross-review packets, exact apply plan, readback, and checksums are retained here. Qualified native-speaker and current-head browser review remain outstanding. No tests, builds, scans, CI, workflow changes, releases, tags, or merges were performed for this window.
+Primary and cross-review packets, exact apply plan, readback, and checksums are retained here. Qualified native-speaker and current-head browser review remain outstanding. No tests, builds, or CI were run. The commit-time Semgrep Community Edition hook scanned three staged evidence-builder Python files with p/default (290 rules; zero findings); it did not scan product source. No workflow changes, releases, tags, or merges were made.
