@@ -882,7 +882,7 @@
   "GoodreadsImportListBookshelfRequired": "कम से कम एक बुकशेल्फ़ चुनें.",
   "GoodreadsImportListUserIdRequired": "Goodreads उपयोगकर्ता ID की आवश्यकता है।",
   "Grab": "लपकना",
-  "GrabID": "ग्रैब ID",
+  "GrabID": "डाउनलोड ID",
   "GrabRelease": "पकड़ो रिलीज",
   "GrabReleaseMessageText": "Chaptarr यह निर्धारित करने में असमर्थ था कि किस लेखक और पुस्तक के लिए यह रिलीज थी। Chaptarr इस रिलीज को स्वचालित रूप से आयात करने में असमर्थ हो सकता है। क्या आप '{0}' को ग्रैब करना चाहते हैं?",
   "GrabSelected": "अभी डाउनलोड करें",

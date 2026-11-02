@@ -882,7 +882,7 @@
   "GoodreadsImportListBookshelfRequired": "책장을 하나 이상 선택하세요.",
   "GoodreadsImportListUserIdRequired": "Goodreads 사용자 ID가 필요합니다.",
   "Grab": "가져오기",
-  "GrabID": "가져오기 ID",
+  "GrabID": "다운로드 ID",
   "GrabRelease": "릴리스 가져오기",
   "GrabReleaseMessageText": "Chaptarr은 이 릴리스가 어떤 저자와 책에 해당하는지 결정할 수 없었습니다. Chaptarr은 이 릴리스를 자동으로 가져올 수 없을 수 있습니다. '{0}'을(를) 가져오시겠습니까?",
   "GrabSelected": "지금 다운로드",
