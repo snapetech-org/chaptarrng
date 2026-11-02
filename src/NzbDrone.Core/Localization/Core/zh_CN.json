@@ -3127,7 +3127,7 @@
   "provider.field.f4e1f49a9c8ae": "事件",
   "provider.field.f4e9aecfd3b92": "可选：从此列表导入电子书时应用的标签。",
   "provider.field.f506f4a07818c": "服务器 URL",
-  "provider.field.f50daa23e691a": "Goodreads系列 ID",
+  "provider.field.f50daa23e691a": "Goodreads 系列 ID",
   "provider.field.f512a785c521b": "接收者的群组 ID / 电话号码",
   "provider.field.f515ca00fdbc1": "Freeleech Wedges",
   "provider.field.f5165e5321550": "启用此选项后，可以使用 MailGun 的 EU 端点。",
