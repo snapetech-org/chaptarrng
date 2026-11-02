@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Alert from 'Components/Alert';
+import BidiText from 'Components/BidiText';
 import Icon from 'Components/Icon';
 import Label from 'Components/Label';
 import Button from 'Components/Link/Button';
@@ -13,10 +14,47 @@ import ModalHeader from 'Components/Modal/ModalHeader';
 import { icons, kinds, sizes } from 'Helpers/Props';
 import stripHtml from 'Utilities/String/stripHtml';
 import translate from 'Utilities/String/translate';
-import translateServerMessage from 'Utilities/String/translateServerMessage';
+import { translateServerMessageById } from 'Utilities/String/translateServerMessage';
 import AddAuthorOptionsForm from '../Common/AddAuthorOptionsForm.js';
 import { getMissingAddFormatSetup } from '../Common/addFormatSetup.cjs';
 import styles from './AddNewSeriesModalContent.css';
+
+function renderErrorDescriptor(error) {
+  if (!error) {
+    return null;
+  }
+
+  const translated = translateServerMessageById(error.messageId, error.messageParameters);
+
+  if (translated) {
+    return translated;
+  }
+
+  if (error.isLocalized) {
+    return error.message;
+  }
+
+  return error.message ? <BidiText lang="und">{error.message}</BidiText> : null;
+}
+
+function renderApiError(error) {
+  if (!error) {
+    return null;
+  }
+
+  const response = typeof error === 'object' ? error.responseJSON : null;
+  const message = typeof error === 'string' ? error : typeof response === 'string' ? response :
+    response && (response.message || response.errorMessage || response.ErrorMessage || response.error) ||
+    error.responseText;
+  const translated = translateServerMessageById(response?.messageId, response?.messageParameters);
+
+  if (translated) {
+    return translated;
+  }
+
+  return typeof message === 'string' && message ? <BidiText lang="und">{message}</BidiText> :
+    (typeof error.message === 'string' && error.message ? <BidiText lang="und">{error.message}</BidiText> : null);
+}
 
 function normalizeDefaultMediaType(value, allowBoth) {
   const normalized = (value ?? '').trim().toLowerCase();
@@ -383,9 +421,9 @@ class AddNewSeriesModalContent extends Component {
                 </div>
               )}
 
-              {fetchError && <Alert kind={kinds.WARNING}>{translateServerMessage(fetchError)}</Alert>}
+              {fetchError && <Alert kind={kinds.WARNING}>{renderErrorDescriptor(fetchError)}</Alert>}
 
-              {addError && <Alert kind={kinds.DANGER}>{addError}</Alert>}
+              {addError && <Alert kind={kinds.DANGER}>{renderErrorDescriptor(addError)}</Alert>}
 
               {hasBooks && (
                 <div className={styles.booksSection}>
@@ -498,7 +536,7 @@ class AddNewSeriesModalContent extends Component {
               {error && (
                 <Alert kind={kinds.DANGER}>
                   {translate('SeriesAddError')}
-                  {translateServerMessage(error.message || error)}
+                  {renderApiError(error)}
                 </Alert>
               )}
             </div>
@@ -528,12 +566,22 @@ AddNewSeriesModalContent.propTypes = {
   primaryWorkCount: PropTypes.number,
   isAdding: PropTypes.bool.isRequired,
   isAddingSeries: PropTypes.bool,
-  addError: PropTypes.string,
+  addError: PropTypes.shape({
+    message: PropTypes.string,
+    isLocalized: PropTypes.bool,
+    messageId: PropTypes.string,
+    messageParameters: PropTypes.object
+  }),
   error: PropTypes.object,
   isFetching: PropTypes.bool.isRequired,
   isSavingDefaultMediaType: PropTypes.bool,
   seriesDetails: PropTypes.object,
-  fetchError: PropTypes.string,
+  fetchError: PropTypes.shape({
+    message: PropTypes.string,
+    isLocalized: PropTypes.bool,
+    messageId: PropTypes.string,
+    messageParameters: PropTypes.object
+  }),
   defaultMediaType: PropTypes.string,
   rootFoldersPopulated: PropTypes.bool,
   rootFoldersFetching: PropTypes.bool,

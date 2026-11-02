@@ -1,10 +1,11 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
+import BidiText from 'Components/BidiText';
 import Icon from 'Components/Icon';
 import { icons } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
-import translateServerMessage from 'Utilities/String/translateServerMessage';
+import translateServerMessage, { translateServerMessageById } from 'Utilities/String/translateServerMessage';
 import ImportProgressMessage from './ImportProgressMessage';
 import styles from './Message.css';
 
@@ -51,6 +52,9 @@ function Message(props) {
   const {
     name,
     message,
+    messageMode,
+    messageId,
+    messageParameters,
     type,
     progress,
     counters,
@@ -175,7 +179,11 @@ function Message(props) {
       </div>
 
       <div className={styles.text}>
-        {translateServerMessage(message)}
+        {messageMode === 'opaque' ?
+          <BidiText lang="und">{message}</BidiText> :
+          messageMode === 'trusted' ?
+            (translateServerMessageById(messageId, messageParameters) || <BidiText lang="und">{message}</BidiText>) :
+            messageMode === 'localized' ? message : translateServerMessage(message)}
       </div>
     </div>
   );
@@ -185,6 +193,9 @@ Message.propTypes = {
   id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   name: PropTypes.string.isRequired,
   message: PropTypes.string.isRequired,
+  messageMode: PropTypes.oneOf(['source', 'localized', 'opaque', 'trusted']),
+  messageId: PropTypes.string,
+  messageParameters: PropTypes.object,
   type: PropTypes.string.isRequired,
   progress: PropTypes.number,
   counters: PropTypes.object,
@@ -200,7 +211,8 @@ Message.propTypes = {
 };
 
 Message.defaultProps = {
-  clickable: false
+  clickable: false,
+  messageMode: 'source'
 };
 
 export default Message;
