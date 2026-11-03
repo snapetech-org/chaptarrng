@@ -4031,7 +4031,7 @@
   "server.message.md530e10017b2": "Không tạo được tệp M4B đã chuyển đổi.",
   "server.message.md657eda9fd8b": "Định dạng phiên bản tương ứng với loại tệp được phát hiện.",
   "server.message.md6a7ade8523b": "✓ Thành viên VIP - Hạng: {value0}",
-  "server.message.md764ed5e74b4": "{value0} chuyển đổi đã bị hủy.",
+  "server.message.md764ed5e74b4": "Quá trình chuyển đổi sang {value0} đã bị hủy.",
   "server.message.md7cf291e278c": "Không thể gửi tin nhắn thử nghiệm. Phản hồi từ API: {value0}",
   "server.message.md83ae8fb37f8": "Xác thực thất bại.",
   "server.message.md8e066a1133c": "m4b-tool không trả về kết quả thực thi.",

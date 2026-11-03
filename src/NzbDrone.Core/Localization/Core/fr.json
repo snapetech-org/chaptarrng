@@ -4031,7 +4031,7 @@
   "server.message.md530e10017b2": "Le fichier M4B converti n’a pas été créé.",
   "server.message.md657eda9fd8b": "Le format de l’édition correspond au type de fichier détecté.",
   "server.message.md6a7ade8523b": "✓ Membre VIP – classe : {value0}",
-  "server.message.md764ed5e74b4": "{value0} conversion a été annulée.",
+  "server.message.md764ed5e74b4": "La conversion vers {value0} a été annulée.",
   "server.message.md7cf291e278c": "Impossible d’envoyer le message de test. Réponse de l’API : {value0}",
   "server.message.md83ae8fb37f8": "Échec de l’authentification.",
   "server.message.md8e066a1133c": "m4b-tool n'a renvoyé aucun résultat d'exécution.",

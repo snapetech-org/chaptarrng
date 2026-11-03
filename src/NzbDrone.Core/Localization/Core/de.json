@@ -4031,7 +4031,7 @@
   "server.message.md530e10017b2": "Die konvertierte M4B-Datei wurde nicht erstellt.",
   "server.message.md657eda9fd8b": "Das Format der Ausgabe entspricht dem erkannten Dateityp.",
   "server.message.md6a7ade8523b": "✓ VIP-Mitglied – Klasse: {value0}",
-  "server.message.md764ed5e74b4": "M4B-Konvertierung von {value0} wurde abgebrochen.",
+  "server.message.md764ed5e74b4": "Die Konvertierung zu {value0} wurde abgebrochen.",
   "server.message.md7cf291e278c": "Testnachricht konnte nicht gesendet werden. Antwort der API: {value0}",
   "server.message.md83ae8fb37f8": "Authentifizierungsfehler",
   "server.message.md8e066a1133c": "m4b-tool gab kein Prozessergebnis zurück",

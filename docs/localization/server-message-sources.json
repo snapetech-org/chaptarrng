@@ -14698,9 +14698,7 @@
           "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
         }
       ],
-      "protectedLiterals": [
-        "M4B"
-      ]
+      "protectedLiterals": []
     },
     {
       "id": "server.message.md7cf291e278c",
