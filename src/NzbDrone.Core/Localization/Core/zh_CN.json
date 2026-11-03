@@ -3986,7 +3986,7 @@
   "server.message.mc462c3fca43d": "暂存文件夹中缺少已完成的文件。",
   "server.message.mc5cf1e747783": "组必须有 ID",
   "server.message.mc5e69abdf17a": "不支持导入列表订阅源：{value0}",
-  "server.message.mc6073db4b613": "Chaptarr 将根据 设置 → 索引器 中的当前做种条件自动移除种子。",
+  "server.message.mc6073db4b613": "Chaptarr 将根据“设置 → 索引器”中的当前做种条件自动移除种子。",
   "server.message.mc63ea6c0320c": "转换后的 M4B 包含一个 {value0} 流，但该流没有作为封面图附加。",
   "server.message.mc700e6bf21f6": "Calibre 书库已配置为根文件夹。",
   "server.message.mc76459e52a3e": "无法连接: {value0}",

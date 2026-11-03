@@ -4022,7 +4022,7 @@
   "server.message.md3369b86b4dd": "Không tìm thấy sách có ID {value0}.",
   "server.message.md339df0d44f9": "Hardcover chưa được bật. Hãy bật Hardcover trong Cài đặt hoặc đặt token API cho danh sách nhập này.",
   "server.message.md4447ebc7318": "Không thể tìm được cuốn sách được yêu cầu",
-  "server.message.md4a741052e8b": "Lớp người dùng: {value0} (thành viên tiêu chuẩn)",
+  "server.message.md4a741052e8b": "Hạng người dùng: {value0} (thành viên tiêu chuẩn)",
   "server.message.md4bb98fe9185": "Chuyển đổi đã bị hủy bỏ.",
   "server.message.md4d56753c34d": "Không thể xóa API token",
   "server.message.md4fffc46dcc4": "Không thể thêm sách: kết quả đã chọn không có ID nhà cung cấp ổn định ở cấp tác phẩm.",

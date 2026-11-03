@@ -3694,7 +3694,7 @@
   "server.message.m4bbe30648055": "La carpeta no existe.",
   "server.message.m4c39fed9b779": "No se pudo importar el autor del proveedor.",
   "server.message.m4c93d9a5340f": "No se pudieron obtener los datos de la serie.",
-  "server.message.m4cd205e7d07a": "rTorrent no pausará los torrents cuando cumplan los criterios de seed. Chaptarr solo podrá eliminarlos cuando termine el seeding si está activado «Eliminar completado» y el torrent no está protegido por «Preservar torrents en el cliente» ni por «Categoría tras la importación». Después de la importación, también establecerá «{value0}» como una vista de rTorrent, que se puede usar en scripts de rTorrent para personalizar el comportamiento.",
+  "server.message.m4cd205e7d07a": "rTorrent no pausará los torrents cuando cumplan los criterios de compartición. Chaptarr solo podrá eliminarlos cuando termine la compartición si está activado «Eliminar completado» y el torrent no está protegido por «Preservar torrents en el cliente» ni por «Categoría tras la importación». Después de la importación, también establecerá «{value0}» como vista de rTorrent, que se puede usar en scripts de rTorrent para personalizar el comportamiento.",
   "server.message.m4d3e6de749b4": "La conversión no pudo escribir ni renombrar archivos en la carpeta de conversión. Comprueba la propiedad y los permisos de la carpeta de destino.",
   "server.message.m4d485e3d4216": "El cuerpo de solicitud no puede estar vacío",
   "server.message.m4d53a6152d2c": "Previsualiza el traslado antes de iniciarlo.",

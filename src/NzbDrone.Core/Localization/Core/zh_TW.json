@@ -3986,7 +3986,7 @@
   "server.message.mc462c3fca43d": "暫存資料夾中缺少已完成的檔案。",
   "server.message.mc5cf1e747783": "組必須有 ID",
   "server.message.mc5e69abdf17a": "不支援匯入清單訂閱來源：{value0}",
-  "server.message.mc6073db4b613": "Chaptarr 將根據 設定 → 索引器 中的目前做種條件自動移除種子。",
+  "server.message.mc6073db4b613": "Chaptarr 將根據「設定 → 索引器」中的目前做種條件自動移除種子。",
   "server.message.mc63ea6c0320c": "轉換後的 M4B 包含一個 {value0} 串流，但該串流並未作為封面圖片附加。",
   "server.message.mc700e6bf21f6": "Calibre 書庫已設定為根資料夾。",
   "server.message.mc76459e52a3e": "無法連接: {value0}",
