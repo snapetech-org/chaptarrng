@@ -39,15 +39,25 @@ function translateMatch(match) {
 
 export function translateServerMessageById(messageId, parameters = {}) {
   const message = serverMessagesById.get(messageId);
+  // Missing parameter bags are valid only for descriptors without tokens.
+  const normalizedParameters = parameters === null &&
+    (!message || !message.parameters || message.parameters.length === 0)
+    ? {}
+    : parameters;
 
-  if (!message || !parameters || typeof parameters !== 'object' || Array.isArray(parameters)) {
+  if (
+    !message ||
+    !normalizedParameters ||
+    typeof normalizedParameters !== 'object' ||
+    Array.isArray(normalizedParameters)
+  ) {
     return null;
   }
 
   const allowedParameters = new Set((message.parameters || []).map(({ name }) => name));
   const tokens = {};
 
-  Object.entries(parameters).forEach(([name, value]) => {
+  Object.entries(normalizedParameters).forEach(([name, value]) => {
     if (!allowedParameters.has(name) || value == null) {
       return;
     }
