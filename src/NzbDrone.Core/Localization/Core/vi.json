@@ -3670,7 +3670,7 @@
   "server.message.m4410286171ba": "qBittorrent đang báo cáo lỗi",
   "server.message.m44eab1fb9fa7": "Không thể kết nối với danh sách nhập: {value0}. Hãy kiểm tra nhật ký xung quanh lỗi này để biết thêm chi tiết.",
   "server.message.m451006253bc3": "Không thể lấy danh sách torrent: {value0}",
-  "server.message.m453c42aa8de5": "NzbGet cài đặt KeepHistory nên nhỏ hơn 25000",
+  "server.message.m453c42aa8de5": "Cài đặt KeepHistory của NzbGet phải nhỏ hơn 25000.",
   "server.message.m45461e168bdc": "Thư mục gốc đã chọn chỉ dành cho sách điện tử; hãy chọn thư mục gốc dành cho sách nói hoặc thư mục hỗn hợp.",
   "server.message.m4588c1c26dfc": "Không thể lấy kệ sách Goodreads. Hãy kiểm tra ID người dùng và đảm bảo các kệ sách ở chế độ công khai.",
   "server.message.m45d06dda48d1": "Host phải hợp lệ và không được chứa http://.",

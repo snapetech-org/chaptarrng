@@ -3670,7 +3670,7 @@
   "server.message.m4410286171ba": "qBittorrent está relatando um erro",
   "server.message.m44eab1fb9fa7": "Não foi possível conectar à lista de importação: {value0}. Consulte os registros próximos a este erro para obter mais detalhes.",
   "server.message.m451006253bc3": "Não foi possível obter a lista de torrents: {value0}",
-  "server.message.m453c42aa8de5": "NzbGet configuração KeepHistory deve ser menor que 25000",
+  "server.message.m453c42aa8de5": "A configuração KeepHistory do NzbGet deve ser inferior a 25000.",
   "server.message.m45461e168bdc": "A pasta raiz selecionada é exclusiva para e-books; selecione uma pasta raiz para audiolivros ou de tipo misto.",
   "server.message.m4588c1c26dfc": "Não foi possível recuperar a estante do Goodreads. Verifique o ID do usuário e se as estantes são públicas.",
   "server.message.m45d06dda48d1": "O host deve ser válido e não pode incluir http://.",

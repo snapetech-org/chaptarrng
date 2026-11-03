@@ -3670,7 +3670,7 @@
   "server.message.m4410286171ba": "qBittorrent يبلغ عن خطأ",
   "server.message.m44eab1fb9fa7": "تعذّر الاتصال بقائمة الاستيراد: {value0}. راجع السجلات المحيطة بهذا الخطأ لمعرفة التفاصيل.",
   "server.message.m451006253bc3": "فشل في الحصول على قائمة التورنت: {value0}",
-  "server.message.m453c42aa8de5": "NzbGet إعداد KeepHistory ينبغي أن يكون أقل من 25000",
+  "server.message.m453c42aa8de5": "يجب أن يكون إعداد KeepHistory في NzbGet أقل من 25000.",
   "server.message.m45461e168bdc": "مجلد الجذر المحدد مخصص للكتب الإلكترونية فقط؛ اختر مجلدًا جذريًا للكتب الصوتية أو للمحتوى المختلط.",
   "server.message.m4588c1c26dfc": "تعذّر استرداد رفوف Goodreads. تحقّق من معرّف المستخدم (ID) ومن أن الرفوف عامة.",
   "server.message.m45d06dda48d1": "يجب أن يكون مضيفًا صالحًا دون http://",

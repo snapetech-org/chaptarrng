@@ -3670,7 +3670,7 @@
   "server.message.m4410286171ba": "qBittorrent 오류를 보고하고 있습니다.",
   "server.message.m44eab1fb9fa7": "가져오기 목록에 연결할 수 없습니다: {value0}. 자세한 내용은 이 오류 전후의 로그를 확인하세요.",
   "server.message.m451006253bc3": "토렌트 목록을 가져오지 못했습니다: {value0}",
-  "server.message.m453c42aa8de5": "NzbGet 설정 KeepHistory는 25000보다 작아야합니다.",
+  "server.message.m453c42aa8de5": "NzbGet의 KeepHistory 설정은 25000보다 작아야 합니다.",
   "server.message.m45461e168bdc": "선택한 루트 폴더는 전자책 전용입니다. 오디오북 또는 혼합 미디어용 루트 폴더를 선택하세요.",
   "server.message.m4588c1c26dfc": "Goodreads 책장을 가져올 수 없습니다. 사용자 ID와 책장이 공개되어 있는지 확인하세요.",
   "server.message.m45d06dda48d1": "http:// 없이 유효한 호스트여야 합니다.",

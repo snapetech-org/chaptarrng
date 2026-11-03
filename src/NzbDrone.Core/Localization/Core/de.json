@@ -3670,7 +3670,7 @@
   "server.message.m4410286171ba": "qBittorrent berichtet über einen Fehler",
   "server.message.m44eab1fb9fa7": "Verbindung zur Importliste nicht möglich: {value0}. Weitere Informationen finden Sie in den Protokolleinträgen zu diesem Fehler.",
   "server.message.m451006253bc3": "Die Torrent-Liste konnte nicht abgerufen werden: {value0}",
-  "server.message.m453c42aa8de5": "NzbGet Setup KeepHistory sollte weniger als 25000 sein",
+  "server.message.m453c42aa8de5": "Die KeepHistory-Einstellung von NzbGet muss unter 25000 liegen.",
   "server.message.m45461e168bdc": "Der ausgewählte Stammordner ist nur für E-Books vorgesehen; wählen Sie einen Hörbuch- oder gemischten Stammordner.",
   "server.message.m4588c1c26dfc": "Das Goodreads-Bücherregal konnte nicht abgerufen werden. Prüfen Sie die Benutzer-ID und ob die Regale öffentlich sind.",
   "server.message.m45d06dda48d1": "Der Host muss ohne http:// gültig sein.",

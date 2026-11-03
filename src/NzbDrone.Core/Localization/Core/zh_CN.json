@@ -3670,7 +3670,7 @@
   "server.message.m4410286171ba": "qBittorrent 报告错误",
   "server.message.m44eab1fb9fa7": "无法连接到导入列表：{value0}。请查看此错误附近的日志以了解详情。",
   "server.message.m451006253bc3": "未能获取种子列表：{value0}",
-  "server.message.m453c42aa8de5": "NzbGet 设置 KeepHistory 应该低于 25000",
+  "server.message.m453c42aa8de5": "NzbGet 的 KeepHistory 设置应低于 25000。",
   "server.message.m45461e168bdc": "所选根文件夹仅用于电子书；请选择用于有声书或混合媒体的根文件夹。",
   "server.message.m4588c1c26dfc": "无法获取 Goodreads 书架。请检查用户 ID，并确认书架已设为公开。",
   "server.message.m45d06dda48d1": "必须是有效的主机，且不能包含 http://",

@@ -3670,7 +3670,7 @@
   "server.message.m4410286171ba": "qBittorrentはエラーを報告しています。",
   "server.message.m44eab1fb9fa7": "インポートリストに接続できません: {value0}。詳細は、このエラー前後のログを確認してください。",
   "server.message.m451006253bc3": "トレントのリストを取得できなかった: {value0}",
-  "server.message.m453c42aa8de5": "NzbGet 設定 KeepHistory は 25000 より少ない必要があります。",
+  "server.message.m453c42aa8de5": "NzbGet の KeepHistory 設定は 25000 未満である必要があります。",
   "server.message.m45461e168bdc": "選択したルートフォルダーは電子書籍専用です。有声書または混合メディア用のルートフォルダーを選択してください。",
   "server.message.m4588c1c26dfc": "Goodreads の本棚を取得できません。ユーザー ID と、本棚が公開設定になっていることを確認してください。",
   "server.message.m45d06dda48d1": "ホストは http:// なしで有効である必要があります。",

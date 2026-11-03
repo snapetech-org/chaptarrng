@@ -3670,7 +3670,7 @@
   "server.message.m4410286171ba": "qBittorrent rapporte une erreur",
   "server.message.m44eab1fb9fa7": "Impossible de se connecter à la liste d’importation : {value0}. Consultez les entrées du journal autour de cette erreur pour plus de détails.",
   "server.message.m451006253bc3": "Échec de la récupération de la liste des torrents : {value0}",
-  "server.message.m453c42aa8de5": "NzbGet réglage KeepHistory devrait être inférieur à 25000",
+  "server.message.m453c42aa8de5": "Le paramètre KeepHistory de NzbGet doit être inférieur à 25000.",
   "server.message.m45461e168bdc": "Le dossier racine sélectionné est réservé aux livres numériques ; choisissez un dossier racine pour livres audio ou pour les deux formats.",
   "server.message.m4588c1c26dfc": "Impossible de récupérer l’étagère Goodreads. Vérifiez l’ID utilisateur et que les étagères sont publiques.",
   "server.message.m45d06dda48d1": "L’hôte doit être valide et ne pas inclure http://.",

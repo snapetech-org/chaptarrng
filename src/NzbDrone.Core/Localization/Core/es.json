@@ -3670,7 +3670,7 @@
   "server.message.m4410286171ba": "qBittorrent está reportando un error",
   "server.message.m44eab1fb9fa7": "No se pudo conectar a la lista de importación: {value0}. Consulta las entradas del registro alrededor de este error para obtener más detalles.",
   "server.message.m451006253bc3": "No se pudo obtener la lista de torrents: {value0}",
-  "server.message.m453c42aa8de5": "NzbGet configuración KeepHistory debe ser menos que 25000",
+  "server.message.m453c42aa8de5": "La opción KeepHistory de NzbGet debe ser inferior a 25000.",
   "server.message.m45461e168bdc": "La carpeta raíz seleccionada es solo para libros electrónicos; elige una carpeta raíz para audiolibros o de tipo mixto.",
   "server.message.m4588c1c26dfc": "No se pudo recuperar la estantería de Goodreads. Comprueba el ID de usuario y que las estanterías sean públicas.",
   "server.message.m45d06dda48d1": "debe ser host válido sin http://",
