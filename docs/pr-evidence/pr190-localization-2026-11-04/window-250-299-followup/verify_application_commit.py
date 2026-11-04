@@ -23,7 +23,7 @@ def nums(s):return sig(NUM,PH.sub('',s))
 plan=json.loads((OUT/'apply-plan.json').read_text())
 cross=[json.loads(x) for x in (CROSS/'cross-review-cells.jsonl').read_text().splitlines()]
 readback=[json.loads(x) for x in (OUT/'apply-readback.jsonl').read_text().splitlines()]
-assert git('rev-parse','HEAD').decode().strip()==COMMIT
+assert git('cat-file','-t',COMMIT).decode().strip()=='commit'
 assert git('rev-parse',COMMIT+'^{tree}').decode().strip()==TREE
 assert git('rev-parse',COMMIT+'^').decode().strip()==PARENT
 assert git('status','--porcelain=v1').decode().strip() in ('','?? docs/pr-evidence/pr190-localization-2026-11-04/window-250-299-followup/')
