@@ -167,7 +167,7 @@
   "AudioFileMetadata": "Gravar metadados em arquivos de áudio",
   "Audiobook": "audiolivro",
   "AudiobookConversion": "Conversão de audiolivros",
-  "AudiobookConversionAudioChannelsHelpText": "Mantenha os canais de áudio de origem, ou force audiolivros de palavras faladas a mono para arquivos menores.",
+  "AudiobookConversionAudioChannelsHelpText": "Mantenha os canais de áudio de origem ou converta os audiolivros narrados para mono para reduzir o tamanho dos arquivos.",
   "AudiobookConversionConcurrentConversionsHelpText": "Número de conversões M4B que o Chaptarr pode executar ao mesmo tempo. A maioria dos usuários deve manter isso em 1; valores mais altos usam mais CPU e podem tornar cada conversão mais lenta.",
   "AudiobookConversionMaxBitrateHelpText": "Taxa máxima de bits de saída preferida. O Chaptarr não codificará acima deste valor e não aumentará a taxa de bits de fontes com taxa menor quando a opção de não aumentar estiver ativada.",
   "AudiobookConversionMaxCpuThreadsHelpText": "Núcleos de CPU máximos que o Chaptarr pode usar para conversão de audiolivros. Valores mais altos podem concluir grandes conversões de múltiplos arquivos mais rápido, mas podem deixar o resto do sistema mais ocupado.",

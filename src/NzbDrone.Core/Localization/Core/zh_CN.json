@@ -190,7 +190,7 @@
   "AudiobooksOnly": "仅限有声书",
   "AuthBasic": "基础（浏览器弹出对话框）",
   "AuthForm": "表单（登录页面）",
-  "AuthOidc": "OpenID 连接 (SSO)",
+  "AuthOidc": "OpenID Connect (SSO)",
   "AuthPlex": "Plex",
   "Authentication": "认证",
   "AuthenticationMethod": "认证方式",
