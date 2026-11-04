@@ -16,6 +16,7 @@ history grouped from conventional commits.
 - Correct 229 cross-reviewed localization cells across all 12 direct locales in W750–W799, including localized Bookshelf and Author Editor labels and software import-limit wording.
 
 - Apply 149 cross-reviewed translation corrections and refinements across all 12 locale catalogs (W50–W99).
+- Apply 42 cross-reviewed translation corrections and refinements across all 12 locale catalogs (W100–W149).
 ## [0.9.977](https://github.com/snapetech-org/chaptarrng/compare/v0.9.976..v0.9.977) - 2026-10-18
 
 ### User-facing changes
