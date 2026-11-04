@@ -28,7 +28,7 @@
   "Adopt": "采用",
   "AdoptExistingTorrent": "采用现有种子",
   "AdoptExistingTorrentMessageText": "{0} ChaptarrNG 可以跟踪此种子，并在下载完成后导入其中的文件。不会再次启动下载。要采用它吗？",
-  "Actions": "动作",
+  "Actions": "操作",
   "Activity": "活动",
   "Add": "添加",
   "AddAllToLibrary": "全部添加到库",

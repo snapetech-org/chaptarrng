@@ -10,6 +10,7 @@ history grouped from conventional commits.
 
 #### Fixed
 
+- Apply 38 context-matched translation corrections across 11 locales, including AudioBookShelf library labels, torrent adoption prompts, and author-folder help.
 - Correct the SABnzbd and Mailgun English validation messages and apply the reviewed W650–W699 catalog corrections across all 12 direct locales.
 - Improve 205 cross-reviewed translations across all 12 direct locales with wording matched to application context (W700–W749).
 - Correct 229 cross-reviewed localization cells across all 12 direct locales in W750–W799, including localized Bookshelf and Author Editor labels and software import-limit wording.
