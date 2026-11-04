@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
@@ -183,11 +184,14 @@ test('macOS and FreeBSD standalone archives include the optional, recoverable Bo
     'standalone acceptance cleanup closes the controlling PTY so macOS can deliver hangup to its shell');
 });
 
-test('macOS installed handoff acceptance is manually dispatched and publication-free', () => {
+test('macOS installed handoff acceptance supports hosted and private runners without publication', () => {
   const workflow = read('.github/workflows/bookshelfng-standalone-macos-acceptance.yml');
 
   assert.match(workflow, /^  workflow_dispatch:$/m);
+  assert.match(workflow, /default: public[\s\S]*?options: \[public, private\]/);
   assert.match(workflow, /rid: osx-x64[\s\S]*?architecture: X64[\s\S]*?rid: osx-arm64[\s\S]*?architecture: ARM64/);
+  assert.match(workflow, /'macos-15-intel'/);
+  assert.match(workflow, /'macos-15'/);
   assert.match(workflow, /"group":"private-apple-builds","labels":\["self-hosted","macOS","X64","private-apple"/);
   assert.match(workflow, /"group":"private-apple-builds","labels":\["self-hosted","macOS","ARM64","private-apple"/);
   assert.match(workflow, /build-standalone\.sh "\$version" "\$\{\{ matrix\.rid \}\}"/);
@@ -199,14 +203,105 @@ test('macOS installed handoff acceptance is manually dispatched and publication-
   assert.doesNotMatch(workflow, /upload-artifact|gh release (create|upload)|docker push/);
 });
 
-test('Helm handoff workflow runs its pinned Ruby contract on private JIT without requiring Docker', () => {
+test('Helm handoff workflow supports hosted and private runners for its pinned Ruby contract', () => {
   const workflow = read('.github/workflows/helm-handoff.yml');
+  const installedHandoff = read('scripts/test_bookshelfng_helm_install_handoff.sh');
 
+  assert.match(workflow, /default: public[\s\S]*?options:[\s\S]*?- public[\s\S]*?- private/);
+  assert.match(workflow, /'ubuntu-24\.04'/);
+  assert.match(workflow, /"group":"ng-shared-main-jit"/);
+  assert.match(workflow, /RUNNER_POOL: \$\{\{ inputs\.runner_pool \}\}/);
+  assert.match(installedHandoff, /if \[\[ "\$RUNNER_POOL" == "public" \]\][\s\S]*?unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy/);
+  assert.match(installedHandoff, /elif \[\[ "\$RUNNER_POOL" == "private" && "\$BUILDKIT_EGRESS_PROXY" == "http:\/\/10\.0\.2\.100:3128" \]\]/);
+  assert.match(installedHandoff, /--target chaptarrng-standard/);
+  assert.doesNotMatch(installedHandoff, /--target bookshelf-(?:softcover|hardcover)/);
   assert.match(workflow, /Prepare writable Ruby tool cache[\s\S]*?sudo install -d .*\/opt\/hostedtoolcache[\s\S]*?test -w \/opt\/hostedtoolcache[\s\S]*?ruby\/setup-ruby@824c0e29fdfc7d689c191c27acc969d2d04b7dd8/);
   assert.match(workflow, /ruby-version: "3\.4"/);
   assert.match(workflow, /BOOKSHELFNG_REFERENCE_CHART: \$\{\{ github\.workspace \}\}\/bookshelfng-reference\/charts\/bookshelfng/);
   assert.match(workflow, /run: ruby scripts\/test_bookshelfng_helm_handoff\.rb/);
   assert.doesNotMatch(workflow, /docker run|ruby:3\.4-bookworm/);
+});
+
+test('Helm installed handoff extracts Buildx digests from both Docker push formats', () => {
+  const installedHandoff = read('scripts/test_bookshelfng_helm_install_handoff.sh');
+  const awkProgram = installedHandoff.match(/awk '([^']+)' \\\n    "\$EVIDENCE_DIR\/docker-push\.log"/)?.[1];
+  assert.ok(awkProgram, 'the installed handoff must retain its Docker push digest parser');
+
+  const digest = `sha256:${'a'.repeat(64)}`;
+  for (const pushOutput of [
+    `digest: ${digest}`,
+    `candidate-f46bd718: digest: ${digest} size: 6187`,
+  ]) {
+    const result = spawnSync('awk', [awkProgram], { input: `${pushOutput}\n`, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), digest);
+  }
+});
+
+test('Helm .76 zero-replica bootstrap lets its delayed-binding claim reach the seed pod', () => {
+  const installedHandoff = read('scripts/test_bookshelfng_helm_install_handoff.sh');
+  const installLegacy = installedHandoff.match(/install_legacy\(\) \{([\s\S]*?)\n\}/)?.[1];
+  assert.ok(installLegacy, 'the pinned BookshelfNG bootstrap install must remain explicit');
+  assert.match(installLegacy, /--set replicaCount=0/);
+  assert.doesNotMatch(installLegacy, /--wait/);
+  assert.match(installedHandoff, /kubectl apply -f "\$EVIDENCE_DIR\/seed-pod\.yaml"[\s\S]*?kubectl wait --for=jsonpath='\{\.status\.phase\}'=Succeeded pod\/bookshelfng-seed/);
+});
+
+test('Helm candidate upgrade consumes helper arguments before forwarding Helm flags', () => {
+  const installedHandoff = read('scripts/test_bookshelfng_helm_install_handoff.sh');
+  const upgradeCandidate = installedHandoff.match(/upgrade_candidate\(\) \{([\s\S]*?)\n\}/)?.[1];
+  assert.ok(upgradeCandidate, 'the candidate upgrade helper must remain explicit');
+  assert.match(upgradeCandidate, /local mode="\$1" replicas="\$2"\s+shift 2[\s\S]*?helm upgrade/);
+  assert.match(upgradeCandidate, /bookshelfMigration\.mode=\$mode[\s\S]*?"\$@"/);
+});
+
+test('Helm automatic migration restarts the deferred candidate without replacing its PVC', () => {
+  const installedHandoff = read('scripts/test_bookshelfng_helm_install_handoff.sh');
+  const manualMode = installedHandoff.indexOf('log "Manual mode preserved schema 158, config, and canary."');
+  const scaleDown = installedHandoff.indexOf('upgrade_candidate manual 0 --wait --timeout 15m', manualMode);
+  const automaticMode = installedHandoff.indexOf('upgrade_candidate automatic 1 --wait --timeout 30m', scaleDown);
+  assert.ok(manualMode >= 0 && scaleDown > manualMode && automaticMode > scaleDown,
+    'manual defer must be proven before stopping the unready pod and restarting in automatic mode');
+  assert.match(installedHandoff.slice(scaleDown, automaticMode), /wait_stopped bookshelfng-0[\s\S]*?assert_pvc_identity/,
+    'the deferred candidate must stop without replacing its persistent claim');
+});
+
+test('Helm fixture seeder can initialize the chart’s fresh root-owned PVC', () => {
+  const installedHandoff = read('scripts/test_bookshelfng_helm_install_handoff.sh');
+  const seedPod = installedHandoff.match(/cat > "\$EVIDENCE_DIR\/seed-pod\.yaml" <<YAML\n([\s\S]*?)\nYAML/)?.[1];
+  assert.ok(seedPod, 'the installed handoff must define its populated BookshelfNG seed pod');
+  assert.match(seedPod, /securityContext:[\s\S]*runAsUser: 0[\s\S]*runAsGroup: 0/);
+  assert.doesNotMatch(seedPod, /fsGroup:/);
+  assert.ok(
+    seedPod.includes(String.raw`test "\$(sqlite3 -readonly /config/readarr.db 'PRAGMA integrity_check;')" = ok`),
+    'seed database checks must expand inside the pod, after the unquoted YAML heredoc is evaluated'
+  );
+  assert.match(installedHandoff, /kubectl describe pod bookshelfng-seed[\s\S]*fixture-seed-failed\.log/);
+});
+
+test('Helm handoff fingerprints the restored legacy claim with root access and captures pod diagnostics', () => {
+  const installedHandoff = read('scripts/test_bookshelfng_helm_install_handoff.sh');
+  const snapshotPod = installedHandoff.match(/cat > "\$EVIDENCE_DIR\/snapshot-pod\.yaml" <<YAML\n([\s\S]*?)\nYAML/)?.[1];
+  assert.ok(snapshotPod, 'the installed handoff must define its stopped-source snapshot pod');
+  assert.match(snapshotPod, /securityContext:[\s\S]*runAsUser: 0[\s\S]*runAsGroup: 0/);
+  assert.doesNotMatch(snapshotPod, /fsGroup:/);
+  assert.match(installedHandoff, /kubectl describe pod bookshelfng-snapshot[\s\S]*snapshot-pod-failed\.log/);
+  assert.equal(
+    (snapshotPod.match(/\\\$\(/g) ?? []).length,
+    4,
+    'snapshot SQLite and fingerprint substitutions must expand in the pod, after the unquoted YAML heredoc is evaluated'
+  );
+  assert.match(
+    installedHandoff,
+    /kubectl apply -f "\$EVIDENCE_DIR\/snapshot-pod\.yaml"[\s\S]*?kubectl wait --for=jsonpath='\{\.status\.phase\}'=Succeeded pod\/bookshelfng-snapshot/,
+    'the one-shot snapshot pod must be awaited by its Succeeded phase, not Ready condition'
+  );
+});
+
+test('Docker headless Ask harness gives migration startup time and reports early exits', () => {
+  const dockerCompatibility = read('packaging/scripts/test-docker-bookshelf-compatibility-defaults.sh');
+  assert.match(dockerCompatibility, /timeout --signal=TERM --kill-after=2 5 sh/);
+  assert.match(dockerCompatibility, /did not write its deferral marker within five seconds/);
 });
 
 test('Flatpak keeps the installed app ID and BookshelfNG sandbox data directory', () => {
@@ -241,6 +336,25 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.ok(sourceVerifierStart >= 0 && migrationVerifierStart > sourceVerifierStart,
     'BookshelfNG source verifier could not be isolated for contract checks');
   const sourceVerifier = smoke.slice(sourceVerifierStart, migrationVerifierStart);
+  assert.match(smoke, /nativeDatabase is null[\s\S]*?GetBookshelfDataCanary\(databasePath\)[\s\S]*?GetNativeChaptarrDataCanary\(databasePath\)/,
+    'the Windows canary command must read BookshelfNG and native ChaptarrNG databases using their respective schemas');
+  assert.match(smoke, /void VerifyChaptarrDatabase\([\s\S]*?GetNativeChaptarrDataCanary\(databasePath\)/,
+    'retained native migration targets must be checked with native-schema canaries');
+  assert.match(smoke, /string GetNativeChaptarrDataCanary\([\s\S]*?SELECT Name FROM Authors[\s\S]*?SELECT Title FROM Editions WHERE Id = 40[\s\S]*?SELECT Path FROM BookFiles WHERE Id = 51/,
+    'native migration canaries must cover author, edition, and file records without BookshelfNG-only tables');
+  const migrationBlockStart = installer.indexOf('if ($hasMigrationData -and -not $alreadyMigrated) {');
+  const deferredRecoveryStart = installer.indexOf('if ($hadService -and $hasMigrationData -and -not $wasRunning) {', migrationBlockStart);
+  assert.ok(migrationBlockStart >= 0 && deferredRecoveryStart > migrationBlockStart,
+    'Chocolatey migration preflight and application block could not be isolated');
+  const migrationBlock = installer.slice(migrationBlockStart, deferredRecoveryStart);
+  const previewIndex = migrationBlock.indexOf('$previewExit = Invoke-BookshelfUtility');
+  const applyIndex = migrationBlock.indexOf('$migrationExit = Invoke-BookshelfUtility');
+  assert.ok(previewIndex >= 0 && applyIndex > previewIndex,
+    'Chocolatey must apply migration only after its read-only preview passes');
+  assert.match(migrationBlock, /\$migrationArguments = @\([\s\S]*?'-migrate-bookshelf'[\s\S]*?'-confirm-bookshelf-service-stopped'[\s\S]*?"-data=\$dataDir"/,
+    'Chocolatey must run the explicit conversion with the stopped-service guard against the selected data path');
+  assert.match(migrationBlock, /migrationDatabaseMutationMayHaveStarted = \$true[\s\S]*?if \(\$mergeSqliteSources\) \{ \$migrationArguments \+= '-merge-bookshelf-databases' \}/,
+    'Chocolatey rollback must cover conversion and preserve the opt-in dual-database path');
   const manualAcceptanceStart = handoff.indexOf('$manualResult = Invoke-Chocolatey');
   const manualAutomaticStart = handoff.indexOf('$env:CHAPTARRNG_TEST_ARCHIVE_PATH = $ArchivePath', manualAcceptanceStart);
   assert.ok(manualAcceptanceStart >= 0 && manualAutomaticStart > manualAcceptanceStart,
@@ -249,13 +363,37 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
 
   assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironment'/);
   assert.match(installer, /Get-BookshelfServiceEnvironment 'AppEnvironmentExtra'/);
+  assert.match(installer, /function ConvertTo-WindowsNativeArgument[\s\S]*?function Invoke-BookshelfNssm[\s\S]*?Start-Process -FilePath \$nssm\.Source -ArgumentList \$argumentLine -Wait -PassThru -NoNewWindow/,
+    'Chocolatey must preserve embedded quote characters when it calls NSSM from Windows PowerShell');
+  assert.match(installer, /function Set-BookshelfServiceSetting[\s\S]*?Invoke-BookshelfNssm -Arguments @\('set', 'BookshelfNG', \$Name, \$Value\)/,
+    'Chocolatey must use the quoted native-argument wrapper when restoring service settings');
+  assert.match(installer, /function Set-BookshelfServiceEnvironment[\s\S]*?Invoke-BookshelfNssm -Arguments \$arguments/,
+    'Chocolatey must use the same native-argument wrapper for service environment settings');
   assert.match(installer, /MigrationEnvironment = @\(\$effectiveEnvironment\)/);
   assert.match(installer, /schtasks\.exe \/Create/);
   assert.match(installer, /HealthUrl = \$healthUrl/);
   assert.match(installer, /OldAppEnvironmentExtra = @\(\$oldAppEnvironmentExtra\)/);
   assert.match(installer, /Get-EffectiveExtraEnvironment/);
   assert.match(installer, /targetDatabaseExit = Invoke-BookshelfUtility/);
+  assert.match(installer, /BookshelfNG migration failed with exit code \$migrationExit/);
   assert.match(installer, /BookshelfSource = -not \$alreadyMigrated/);
+  assert.match(installer, /\[string\[\]\] \$sqliteSourceNames = @\(\)\s*if \(-not \$postgresSourceForChoice\) \{\s*\$sqliteSourceNames = \[string\[\]\] @\(Get-BookshelfSqliteDatabaseNames \$dataDir\)\s*\}/,
+    'Chocolatey must preserve a one-item SQLite source-name array before indexing its first element');
+  const backupDiscoveryStart = installer.indexOf('function Get-BookshelfSqliteBackupFiles');
+  const backupDiscoveryEnd = installer.indexOf('\nfunction Test-HasPopulatedSqliteDatabaseFamily', backupDiscoveryStart);
+  assert.ok(backupDiscoveryStart >= 0 && backupDiscoveryEnd > backupDiscoveryStart,
+    'Chocolatey SQLite rollback backup discovery helper could not be isolated');
+  const backupDiscovery = installer.slice(backupDiscoveryStart, backupDiscoveryEnd);
+  assert.match(backupDiscovery, /Get-ChildItem -LiteralPath \$DataDirectory -File -Force/,
+    'Chocolatey must enumerate the chosen data directory directly so retained backups are visible');
+  assert.doesNotMatch(backupDiscovery, /-Filter/,
+    'Chocolatey rollback backup discovery must not rely on provider-specific filename filtering');
+  for (const databaseName of ['readarr.db', 'audioarr.db', 'chaptarr.db']) {
+    assert.ok(backupDiscovery.includes(`${databaseName}.bookshelfng-backup-`),
+      `Chocolatey rollback backup discovery must recognize ${databaseName} snapshots`);
+  }
+  assert.match(installer, /Get-BookshelfSqliteBackupFiles -DataDirectory \$dataDir/,
+    'Chocolatey must use the tested backup discovery helper before and after migration');
   assert.match(installer, /URLBASE/);
   assert.match(installer, /<EventTrigger>/);
   assert.match(installer, /CHAPTARRNG_TEST_FAIL_HANDOFF/);
@@ -294,6 +432,59 @@ test('Chocolatey deferred service upgrades retain both NSSM environments and rec
   assert.match(recovery, /ChaptarrNG database was preserved/);
   assert.match(choiceTest, /\$global:LASTEXITCODE = 0/,
     'the test resets its intentionally nonzero utility result before the PowerShell runner exits');
+});
+
+test('Chocolatey migration fingerprints do not depend on Get-FileHash module autoloading', () => {
+  const install = read('packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in');
+  const recovery = read('packaging/legacy/chocolatey/tools/bookshelfng-startup-recovery.ps1');
+
+  for (const script of [install, recovery]) {
+    assert.match(script, /function Get-BookshelfFileSha256[\s\S]*?\[Security\.Cryptography\.SHA256\]::Create\(\)/);
+    assert.doesNotMatch(script, /Get-FileHash/);
+  }
+});
+
+test('Chocolatey installed handoff passes local archive inputs to nested scripts and restores machine state', () => {
+  const installedHandoff = read('packaging/scripts/test-chocolatey-bookshelfng-handoff.ps1');
+  for (const name of [
+    'CHAPTARRNG_TEST_ARCHIVE_PATH',
+    'CHAPTARRNG_TEST_FAIL_HANDOFF',
+    'CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS',
+  ]) {
+    assert.match(installedHandoff, new RegExp(`GetEnvironmentVariable\\('${name}', 'Machine'\\)`));
+    assert.match(installedHandoff, new RegExp(`SetEnvironmentVariable\\('${name}',[\\s\\S]*?'Machine'\\)`));
+  }
+
+  const automaticRunStart = installedHandoff.indexOf('$automaticResult = Invoke-Chocolatey');
+  const automaticSetupStart = installedHandoff.lastIndexOf('  $env:CHAPTARRNG_TEST_ARCHIVE_PATH = $ArchivePath', automaticRunStart);
+  const automaticRunEnd = installedHandoff.indexOf('if ($automaticResult.ExitCode', automaticRunStart);
+  assert.ok(automaticSetupStart >= 0 && automaticRunEnd > automaticRunStart,
+    'Chocolatey automatic update fixture could not be isolated');
+  const automaticRun = installedHandoff.slice(automaticSetupStart, automaticRunEnd);
+  for (const name of [
+    'CHAPTARRNG_TEST_ARCHIVE_PATH',
+    'CHAPTARRNG_TEST_FAIL_HANDOFF',
+    'CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS',
+  ]) {
+    assert.match(automaticRun, new RegExp(`GetEnvironmentVariable\\('${name}', 'Machine'\\)`));
+    assert.match(automaticRun, new RegExp(`SetEnvironmentVariable\\('${name}',[\\s\\S]*?'Machine'\\)`));
+  }
+  assert.match(automaticRun, /SetEnvironmentVariable\('CHAPTARRNG_TEST_FAIL_HANDOFF', \$null, 'Machine'\)/,
+    'automatic migration must expose the candidate archive while keeping failure injection disabled');
+});
+
+test('focused Windows Chocolatey failures retain installed-handoff diagnostics', () => {
+  const workflow = read('.github/workflows/build.yml');
+  const stage = workflow.match(/- name: Stage failed Windows Chocolatey handoff diagnostics([\s\S]*?)(?=\n    - name:)/)?.[1];
+  const upload = workflow.match(/- name: Upload failed Windows Chocolatey handoff diagnostics([\s\S]*?)(?=\n    - name:)/)?.[1];
+  assert.ok(stage, 'the focused Chocolatey workflow must stage failed installed-handoff state');
+  assert.ok(upload, 'the focused Chocolatey workflow must upload failed installed-handoff state');
+  assert.match(stage, /failure\(\)[\s\S]*?inputs\.windows_chocolatey_only == true/);
+  assert.match(stage, /Copy-Item -LiteralPath \$handoffDirectory[\s\S]*?Copy-Item -LiteralPath \$programDataDirectory/);
+  assert.match(upload, /failure\(\)[\s\S]*?inputs\.windows_chocolatey_only == true/);
+  assert.match(upload, /\$\{\{ runner\.temp \}\}\/bookshelfng-windows-installed-handoff-/);
+  assert.doesNotMatch(upload, /chocolatey-bookshelfng-handoff-|ProgramData/);
+  assert.match(upload, /if-no-files-found: warn/);
 });
 
 test('Windows standalone migration installer is opt-in and Close defers handoff', () => {
@@ -349,6 +540,18 @@ test('catalog Compose handoff keeps the BookshelfNG container and named volumes'
     assert.match(sample, new RegExp(`^${key}=`, 'm'),
       `catalog .env.sample documents legacy ${key}`);
   }
+});
+
+test('SeerrNG migration smoke blocks external provider egress', () => {
+  const compose = read('integration/seerrng-smoke.compose.yml');
+  const readme = read('integration/README.md');
+
+  assert.match(compose, /metadata-mock:[\s\S]*request\.url\.startsWith\('\/api\/v5\/author'\)/);
+  assert.match(compose, /Author:\s*null/);
+  assert.match(compose, /METADATA_URL: http:\/\/metadata-mock:8765/);
+  assert.match(compose, /networks:\n\s+default:\n\s+internal: true/);
+  assert.match(compose, /CHAPTARR__SERVER__PORT:\s+"8789"/);
+  assert.match(readme, /network is internal, so the containers can reach each other but cannot contact\n+public providers or other external services/);
 });
 
 test('Co-op Cloud handoff keeps stack volumes and uses the standard ChaptarrNG image', () => {
@@ -531,6 +734,8 @@ test('Windows release uses private Packer and verifies the BookshelfNG handoff a
   assert.match(legacyInstaller, /CHAPTARRNG_TEST_ARCHIVE_PATH/);
   assert.match(buildWorkflow, /windows_chocolatey_only:[\s\S]*?type: boolean[\s\S]*?default: false/);
   assert.match(build, /inputs\.windows_chocolatey_only[\s\S]*?fromJSON\('\["windows-x64"\]'\)/);
+  assert.match(build, /name: Check translation calls and locale catalogs\n      if: inputs\.windows_chocolatey_only != true/);
+  assert.match(build, /name: Test locale formatting and RTL CSS\n      if: inputs\.windows_chocolatey_only != true/);
   assert.match(buildWorkflow, /postgres-migrations:[\s\S]*?inputs\.windows_chocolatey_only/);
   assert.match(buildWorkflow, /docker-image-build:[\s\S]*?inputs\.windows_chocolatey_only/);
   assert.match(buildWorkflow, /rpm_bridge_only:[\s\S]*?type: boolean[\s\S]*?default: false/);
@@ -541,7 +746,7 @@ test('Windows release uses private Packer and verifies the BookshelfNG handoff a
   assert.match(rpmAcceptance, /test-build-bookshelfng-rpm-bridge\.sh/);
   assert.match(rpmAcceptance, /name: Upload Fedora 44 RPM migration evidence[\s\S]*?if: always\(\)[\s\S]*?actions\/upload-artifact@/);
   const rpmHarness = read('packaging/scripts/test-build-bookshelfng-rpm-bridge.sh');
-  assert.match(rpmHarness, /Docker CLI is missing from the private JIT guest/);
+  assert.match(rpmHarness, /Docker CLI is missing from the runner/);
   assert.match(rpmHarness, /docker version --format/);
   assert.match(rpmHarness, /RPM bridge package transaction passed; evidence kept/);
   assert.match(buildWorkflow, /channel_contracts_only:[\s\S]*?type: boolean[\s\S]*?default: false/);
@@ -552,6 +757,8 @@ test('Windows release uses private Packer and verifies the BookshelfNG handoff a
   assert.match(channelContracts, /gha-\{0\}-channel-contracts/);
   assert.match(channelContracts, /ref: \$\{\{ github\.sha \}\}/);
   assert.match(channelContracts, /node --test packaging\/scripts\/test-bookshelf-legacy-channels\.mjs/);
+  assert.match(channelContracts, /Test Docker BookshelfNG migration supervisor and single image[\s\S]*?TASK_SCRATCH_DIR: \$\{\{ runner\.temp \}\}\/chaptarrng-docker-compatibility-[\s\S]*?test-docker-bookshelf-compatibility-defaults\.sh/);
+  assert.match(channelContracts, /Upload Docker compatibility failure evidence[\s\S]*?if: failure\(\)[\s\S]*?actions\/upload-artifact@/);
   assert.match(build, /Test Chocolatey BookshelfNG \.76 to exact candidate handoff[\s\S]*?github\.event_name == 'workflow_dispatch'[\s\S]*?test-chocolatey-bookshelfng-handoff\.ps1/);
 });
 
@@ -637,6 +844,10 @@ test('Linux and Windows VM jobs execute package-specific migration-choice checks
   assert.match(buildJob, /name: Test BookshelfNG AUR migration choice[\s\S]*?if: matrix\.platform == 'linux-x64'[\s\S]*?test-bookshelfng-aur-choice\.sh/);
   assert.match(buildJob, /name: Test candidate BookshelfNG RPM bridge package[\s\S]*?if: matrix\.platform == 'linux-x64'[\s\S]*?test-build-bookshelfng-rpm-bridge\.sh/);
   assert.match(buildJob, /name: Test Chocolatey BookshelfNG migration choice[\s\S]*?if: matrix\.platform == 'windows-x64'[\s\S]*?test-chocolatey-migration-choice\.ps1/);
+  assert.match(buildJob, /name: Stage failed Windows Chocolatey handoff diagnostics[\s\S]*?Copy-Item -LiteralPath \$handoffDirectory[\s\S]*?Copy-Item -LiteralPath \$programDataDirectory/,
+    'Windows handoff diagnostics must be staged under one artifact root');
+  assert.match(buildJob, /name: Upload failed Windows Chocolatey handoff diagnostics[\s\S]*?path: \$\{\{ runner\.temp \}\}\/bookshelfng-windows-installed-handoff-\$\{\{ github\.run_id \}\}/,
+    'Windows handoff diagnostics upload must use the staged single-root directory');
   assert.match(read('packaging/scripts/test-build-bookshelfng-deb-bridge.sh'), /bookshelfng-ask-headless\.log[\s\S]*?no terminal is available/);
   assert.match(read('packaging/scripts/test-build-bookshelfng-rpm-bridge.sh'), /ask-headless\.log[\s\S]*?no terminal is available/);
   assert.match(read('packaging/scripts/test-bookshelfng-aur-choice.sh'), /ask-headless\.log[\s\S]*?No terminal is available/);

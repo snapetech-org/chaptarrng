@@ -15,12 +15,21 @@ KIND_NODE_IMAGE=kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a26
 RELEASE_NAME=bookshelfng
 NAMESPACE=default
 
-[[ "${BUILDKIT_EGRESS_PROXY:-}" == "http://10.0.2.100:3128" ]] || {
-    printf 'A trusted-main private JIT proxy is required for the installed Helm build.\n' >&2
+RUNNER_POOL="${RUNNER_POOL:-}"
+BUILDKIT_EGRESS_PROXY="${BUILDKIT_EGRESS_PROXY:-}"
+if [[ "$RUNNER_POOL" == "public" ]]; then
+    [[ -z "$BUILDKIT_EGRESS_PROXY" ]] || {
+        printf 'The public hosted route must use direct egress, without the private JIT proxy.\n' >&2
+        exit 1
+    }
+    unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
+elif [[ "$RUNNER_POOL" == "private" && "$BUILDKIT_EGRESS_PROXY" == "http://10.0.2.100:3128" ]]; then
+    export HTTP_PROXY="$BUILDKIT_EGRESS_PROXY" HTTPS_PROXY="$BUILDKIT_EGRESS_PROXY"
+    export http_proxy="$BUILDKIT_EGRESS_PROXY" https_proxy="$BUILDKIT_EGRESS_PROXY"
+else
+    printf 'Select the explicit public hosted pool or the trusted-main private JIT proxy route.\n' >&2
     exit 1
-}
-export HTTP_PROXY="$BUILDKIT_EGRESS_PROXY" HTTPS_PROXY="$BUILDKIT_EGRESS_PROXY"
-export http_proxy="$BUILDKIT_EGRESS_PROXY" https_proxy="$BUILDKIT_EGRESS_PROXY"
+fi
 export NO_PROXY=localhost,127.0.0.1 no_proxy=localhost,127.0.0.1
 
 mkdir -p "$EVIDENCE_DIR"
@@ -94,6 +103,15 @@ assert_pvc_identity() {
     require test "$actual_uid" = "$SOURCE_PVC_UID"
 }
 
+require_sql_count() {
+    local description="$1" expected="$2" sql="$3" actual
+    actual="$(pod_exec sqlite3 -readonly /config/readarr.db "$sql")"
+    if [[ "$actual" != "$expected" ]]; then
+        log "FAILED populated fixture assertion: $description expected=$expected actual=$actual SQL=$sql"
+        return 1
+    fi
+}
+
 pod_logical_hash() {
     pod_exec /bin/sh -ec '
       sqlite3 -readonly /config/readarr.db ".dump" > /tmp/bookshelfng-source.sql
@@ -139,18 +157,20 @@ assert_source_file_hashes() {
 }
 
 install_legacy() {
+    # The zero-replica bootstrap intentionally leaves a WaitForFirstConsumer
+    # claim pending until the fixture seed pod mounts it below.
     helm upgrade --install "$RELEASE_NAME" "$REFERENCE_CHART" \
         --namespace "$NAMESPACE" --create-namespace \
         --set replicaCount=0 \
         --set-string "image.repository=$LEGACY_IMAGE_REPOSITORY" \
         --set-string image.tag=hardcover-v0.4.21.76 \
         --set-string image.digest="$LEGACY_IMAGE_DIGEST" \
-        --set image.pullPolicy=IfNotPresent \
-        --wait --timeout 10m
+        --set image.pullPolicy=IfNotPresent
 }
 
 upgrade_candidate() {
     local mode="$1" replicas="$2"
+    shift 2
     helm upgrade "$RELEASE_NAME" "$ROOT/charts/bookshelfng" \
         --namespace "$NAMESPACE" --reuse-values \
         --set bookshelfMigration.confirmed=true \
@@ -165,25 +185,30 @@ upgrade_candidate() {
 }
 
 assert_migrated_fixture() {
-    local sql='/config/readarr.db'
-    require test "$(pod_exec sqlite3 -readonly "$sql" \
-        "SELECT COUNT(*) FROM Books WHERE Id=30 AND MediaType=0 AND AudiobookMonitored=1 AND ForeignEditionId='hc:audio-40';")" = 1
-    require test "$(pod_exec sqlite3 -readonly "$sql" \
-        'SELECT COUNT(*) FROM Books WHERE Id=31 AND MediaType=1 AND EbookMonitored=0 AND ForeignEditionId IS NULL;')" = 1
-    require test "$(pod_exec sqlite3 -readonly "$sql" \
-        "SELECT COUNT(*) FROM Editions WHERE Id=40 AND BookId=30 AND HardcoverEditionId='audio-40' AND NarratorNames='[\"A Narrator\"]';")" = 1
-    require test "$(pod_exec sqlite3 -readonly "$sql" \
-        "SELECT COUNT(*) FROM Editions WHERE Id=41 AND BookId=31 AND OpenLibraryEditionId='ol:OL123M';")" = 1
-    require test "$(pod_exec sqlite3 -readonly "$sql" \
-        "SELECT COUNT(*) FROM BookFiles WHERE Id=50 AND Path='/library/Fixture Author/book.m4b' AND LastRemoteSearchTime='2026-01-04T05:06:07Z';")" = 1
-    require test "$(pod_exec sqlite3 -readonly "$sql" \
-        "SELECT COUNT(*) FROM BookFiles WHERE Id=51 AND MediaType='ebook' AND Path='/library/Fixture Author/book.epub';")" = 1
-    require test "$(pod_exec sqlite3 -readonly "$sql" \
-        "SELECT COUNT(*) FROM SeriesBookLink WHERE SeriesId=70 AND BookId IN (30,31);")" = 2
-    require test "$(pod_exec sqlite3 -readonly "$sql" \
-        "SELECT COUNT(*) FROM DownloadClients WHERE Id=109 AND Settings LIKE '%legacy-audio%' AND Settings LIKE '%legacy-ebooks%';")" = 1
-    require test "$(pod_exec sqlite3 -readonly "$sql" \
-        "SELECT COUNT(*) FROM Config WHERE Key='FixtureSetting' AND Value='preserved';")" = 1
+    log "Checking converted edition provider identity and narrator values:"
+    pod_exec sqlite3 -readonly -header -column /config/readarr.db \
+        'SELECT Id, BookId, ForeignEditionId, HardcoverEditionId, OpenLibraryEditionId, Narrator, quote(NarratorNames) AS NarratorNames, json_array_length(NarratorNames) AS NarratorCount, json_extract(NarratorNames, "$[0]") AS FirstNarrator FROM Editions WHERE Id IN (40,41) ORDER BY Id;' \
+        | tee "$EVIDENCE_DIR/migrated-editions.txt"
+    require_sql_count 'audiobook book identity, monitoring, and selected edition' 1 \
+        "SELECT COUNT(*) FROM Books WHERE Id=30 AND MediaType=0 AND AudiobookMonitored=1 AND ForeignEditionId='hc:audio-40';"
+    require_sql_count 'ebook book identity and unselected edition state' 1 \
+        'SELECT COUNT(*) FROM Books WHERE Id=31 AND MediaType=1 AND EbookMonitored=0 AND ForeignEditionId IS NULL;'
+    require_sql_count 'audiobook edition Hardcover provider identity' 1 \
+        "SELECT COUNT(*) FROM Editions WHERE Id=40 AND BookId=30 AND HardcoverEditionId='audio-40';"
+    require_sql_count 'audiobook edition narrator value' 1 \
+        "SELECT COUNT(*) FROM Editions WHERE Id=40 AND BookId=30 AND json_valid(NarratorNames) AND json_array_length(NarratorNames)=1 AND json_extract(NarratorNames, '\$[0]')='A Narrator';"
+    require_sql_count 'ebook edition provider identity' 1 \
+        "SELECT COUNT(*) FROM Editions WHERE Id=41 AND BookId=31 AND OpenLibraryEditionId='ol:OL123M';"
+    require_sql_count 'audiobook file path and catalog-search timestamp' 1 \
+        "SELECT COUNT(*) FROM BookFiles WHERE Id=50 AND Path='/library/Fixture Author/book.m4b' AND LastRemoteSearchTime='2026-01-04T05:06:07Z';"
+    require_sql_count 'ebook file path and media type' 1 \
+        "SELECT COUNT(*) FROM BookFiles WHERE Id=51 AND MediaType='ebook' AND Path='/library/Fixture Author/book.epub';"
+    require_sql_count 'series membership split across both media rows' 2 \
+        'SELECT COUNT(*) FROM SeriesBookLink WHERE SeriesId=70 AND BookId IN (30,31);'
+    require_sql_count 'download-client media categories' 1 \
+        "SELECT COUNT(*) FROM DownloadClients WHERE Id=109 AND Settings LIKE '%legacy-audio%' AND Settings LIKE '%legacy-ebooks%';"
+    require_sql_count 'saved custom configuration value' 1 \
+        "SELECT COUNT(*) FROM Config WHERE Key='FixtureSetting' AND Value='preserved';"
 }
 
 test -d "$REFERENCE_CHART"
@@ -233,7 +258,7 @@ YAML
 
 candidate_tag="candidate-${GITHUB_SHA:-local}"
 candidate_tagged_image="localhost:${REGISTRY_PORT}/chaptarrng:${candidate_tag}"
-log "Building ChaptarrNG at ${GITHUB_SHA:-local} as the pinned Hardcover compatibility image"
+log "Building ChaptarrNG at ${GITHUB_SHA:-local} as the standard image; the chart selects Hardcover mode"
 docker build --platform linux/amd64 --file "$ROOT/Dockerfile.cross" \
     --build-arg "HTTP_PROXY=${BUILDKIT_EGRESS_PROXY}" \
     --build-arg "HTTPS_PROXY=${BUILDKIT_EGRESS_PROXY}" \
@@ -241,9 +266,9 @@ docker build --platform linux/amd64 --file "$ROOT/Dockerfile.cross" \
     --build-arg "https_proxy=${BUILDKIT_EGRESS_PROXY}" \
     --build-arg NO_PROXY=localhost,127.0.0.1 \
     --build-arg no_proxy=localhost,127.0.0.1 \
-    --target bookshelf-hardcover --tag "$candidate_tagged_image" "$ROOT"
+    --target chaptarrng-standard --tag "$candidate_tagged_image" "$ROOT"
 docker push "$candidate_tagged_image" 2>&1 | tee "$EVIDENCE_DIR/docker-push.log"
-CANDIDATE_DIGEST="$(awk '$1 == "digest:" && $2 ~ /^sha256:[0-9a-f]{64}$/ { print $2 }' \
+CANDIDATE_DIGEST="$(awk '$1 == "digest:" { digest=$2 } $2 == "digest:" { digest=$3 } END { print digest }' \
     "$EVIDENCE_DIR/docker-push.log" | tail -n 1)"
 [[ "$CANDIDATE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
 CANDIDATE_IMAGE="localhost:${REGISTRY_PORT}/chaptarrng@${CANDIDATE_DIGEST}"
@@ -265,10 +290,10 @@ metadata:
 spec:
   restartPolicy: Never
   securityContext:
-    runAsUser: 10001
-    runAsGroup: 10001
-    fsGroup: 10001
-    fsGroupChangePolicy: OnRootMismatch
+    # The chart starts as root and normalizes PUID/PGID ownership. Match that
+    # bootstrap here so the seed can initialize a fresh root-owned local-path PVC.
+    runAsUser: 0
+    runAsGroup: 0
   containers:
     - name: seed
       image: ${CANDIDATE_IMAGE}
@@ -276,15 +301,22 @@ spec:
       command: ["/bin/sh", "-ec"]
       args:
         - |
+          printf 'Seed identity: '
+          id
+          stat -c 'config mount: mode=%a owner=%u:%g type=%F' /config
+          grep ' /config ' /proc/mounts || true
+          test -w /config
+          : > /config/.bookshelfng-seed-write-check
+          rm -f /config/.bookshelfng-seed-write-check
           sqlite3 /config/readarr.db < /fixture/schema.sql
           sqlite3 /config/readarr.db < /fixture/populated.sql
           printf '%s\\n' '<?xml version="1.0" encoding="utf-8"?><Config><BindAddress>0.0.0.0</BindAddress><Port>8787</Port><EnableSsl>False</EnableSsl><UrlBase></UrlBase><LaunchBrowser>False</LaunchBrowser></Config>' > /config/config.xml
           printf '%s\\n' 'helm-handoff-canary=preserve-me' > /config/channel-test-canary.txt
-          test "$(sqlite3 -readonly /config/readarr.db 'PRAGMA integrity_check;')" = ok
-          test "$(sqlite3 -readonly /config/readarr.db 'SELECT MAX(Version) FROM VersionInfo;')" = 158
-          test "$(sqlite3 -readonly /config/readarr.db 'SELECT COUNT(*) > 0 FROM Authors;')" = 1
-          test "$(sqlite3 -readonly /config/readarr.db 'SELECT COUNT(*) > 0 FROM Books;')" = 1
-          test "$(sqlite3 -readonly /config/readarr.db 'SELECT COUNT(*) > 0 FROM Editions;')" = 1
+          test "\$(sqlite3 -readonly /config/readarr.db 'PRAGMA integrity_check;')" = ok
+          test "\$(sqlite3 -readonly /config/readarr.db 'SELECT MAX(Version) FROM VersionInfo;')" = 158
+          test "\$(sqlite3 -readonly /config/readarr.db 'SELECT COUNT(*) > 0 FROM Authors;')" = 1
+          test "\$(sqlite3 -readonly /config/readarr.db 'SELECT COUNT(*) > 0 FROM Books;')" = 1
+          test "\$(sqlite3 -readonly /config/readarr.db 'SELECT COUNT(*) > 0 FROM Editions;')" = 1
           echo 'Populated BookshelfNG schema 158 fixture seeded with config and canary.'
       volumeMounts:
         - name: config
@@ -301,7 +333,15 @@ spec:
         name: bookshelfng-schema-fixture
 YAML
 kubectl apply -f "$EVIDENCE_DIR/seed-pod.yaml"
-kubectl wait --for=condition=Succeeded pod/bookshelfng-seed -n "$NAMESPACE" --timeout=5m
+if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/bookshelfng-seed -n "$NAMESPACE" --timeout=5m; then
+    kubectl describe pod bookshelfng-seed -n "$NAMESPACE" 2>&1 \
+        | tee "$EVIDENCE_DIR/seed-pod-describe.txt" || true
+    kubectl get pod bookshelfng-seed -n "$NAMESPACE" -o yaml \
+        > "$EVIDENCE_DIR/seed-pod-status.yaml" 2>&1 || true
+    kubectl logs pod/bookshelfng-seed -n "$NAMESPACE" --all-containers=true 2>&1 \
+        | tee "$EVIDENCE_DIR/fixture-seed-failed.log" || true
+    exit 1
+fi
 kubectl logs -n "$NAMESPACE" pod/bookshelfng-seed | tee "$EVIDENCE_DIR/fixture-seed.log"
 kubectl delete pod bookshelfng-seed -n "$NAMESPACE" --wait=true
 SOURCE_PVC_UID="$(kubectl get pvc bookshelfng-config -n "$NAMESPACE" -o jsonpath='{.metadata.uid}')"
@@ -330,9 +370,10 @@ metadata:
 spec:
   restartPolicy: Never
   securityContext:
-    runAsUser: 10001
-    runAsGroup: 10001
-    fsGroup: 10001
+    # BookshelfNG owns the installed claim using its configured Linux user;
+    # inspect the stopped source as root without changing its ownership.
+    runAsUser: 0
+    runAsGroup: 0
   containers:
     - name: snapshot
       image: ${CANDIDATE_IMAGE}
@@ -341,11 +382,11 @@ spec:
       args:
         - |
           sqlite3 -readonly /config/readarr.db 'PRAGMA integrity_check;' | grep -Fx ok
-          test "$(sqlite3 -readonly /config/readarr.db 'SELECT MAX(Version) FROM VersionInfo;')" = 158
+          test "\$(sqlite3 -readonly /config/readarr.db 'SELECT MAX(Version) FROM VersionInfo;')" = 158
           sqlite3 -readonly /config/readarr.db .dump > /tmp/readarr-source.sql
-          printf 'SOURCE_SQL_DUMP_SHA256=%s\\n' "$(sha256sum /tmp/readarr-source.sql | cut -d' ' -f1)"
-          printf 'CONFIG_SHA256=%s\\n' "$(sha256sum /config/config.xml | cut -d' ' -f1)"
-          printf 'CANARY_SHA256=%s\\n' "$(sha256sum /config/channel-test-canary.txt | cut -d' ' -f1)"
+          printf 'SOURCE_SQL_DUMP_SHA256=%s\\n' "\$(sha256sum /tmp/readarr-source.sql | cut -d' ' -f1)"
+          printf 'CONFIG_SHA256=%s\\n' "\$(sha256sum /config/config.xml | cut -d' ' -f1)"
+          printf 'CANARY_SHA256=%s\\n' "\$(sha256sum /config/channel-test-canary.txt | cut -d' ' -f1)"
           grep -Fx 'helm-handoff-canary=preserve-me' /config/channel-test-canary.txt
       volumeMounts:
         - name: config
@@ -356,7 +397,15 @@ spec:
         claimName: bookshelfng-config
 YAML
 kubectl apply -f "$EVIDENCE_DIR/snapshot-pod.yaml"
-kubectl wait --for=condition=Succeeded pod/bookshelfng-snapshot -n "$NAMESPACE" --timeout=5m
+if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/bookshelfng-snapshot -n "$NAMESPACE" --timeout=5m; then
+    kubectl describe pod bookshelfng-snapshot -n "$NAMESPACE" 2>&1 \
+        | tee "$EVIDENCE_DIR/snapshot-pod-describe.txt" || true
+    kubectl get pod bookshelfng-snapshot -n "$NAMESPACE" -o yaml \
+        > "$EVIDENCE_DIR/snapshot-pod-status.yaml" 2>&1 || true
+    kubectl logs pod/bookshelfng-snapshot -n "$NAMESPACE" --all-containers=true 2>&1 \
+        | tee "$EVIDENCE_DIR/snapshot-pod-failed.log" || true
+    exit 1
+fi
 snapshot_output="$(kubectl logs -n "$NAMESPACE" pod/bookshelfng-snapshot)"
 printf '%s\n' "$snapshot_output" | tee "$EVIDENCE_DIR/source-before-handoff.txt"
 SOURCE_SQL_DUMP_SHA256="$(sed -n 's/^SOURCE_SQL_DUMP_SHA256=//p' <<< "$snapshot_output")"
@@ -374,6 +423,11 @@ assert_pvc_identity
 assert_source_file_hashes "$SOURCE_SQL_DUMP_SHA256" "$CONFIG_SHA256" "$CANARY_SHA256"
 test "$(pod_exec sqlite3 -readonly /config/readarr.db 'SELECT MAX(Version) FROM VersionInfo;')" = 158
 log "Manual mode preserved schema 158, config, and canary."
+
+log "Stopping the deferred candidate while keeping the same Helm claim before switching to automatic mode"
+upgrade_candidate manual 0 --wait --timeout 15m
+wait_stopped bookshelfng-0
+assert_pvc_identity
 
 log "Choosing automatic migration against the same installed Helm release and persistent volume"
 upgrade_candidate automatic 1 --wait --timeout 30m
@@ -412,15 +466,29 @@ helm rollback "$RELEASE_NAME" "$legacy_revision" -n "$NAMESPACE" --wait --timeou
 kubectl rollout status -n "$NAMESPACE" statefulset/bookshelfng --timeout=15m
 assert_ping bookshelfng-after-rollback
 assert_pvc_identity
-test "$(kubectl exec -n "$NAMESPACE" bookshelfng-0 -c bookshelfng -- sqlite3 -readonly /config/readarr.db 'PRAGMA integrity_check;')" = ok
-test "$(kubectl exec -n "$NAMESPACE" bookshelfng-0 -c bookshelfng -- sqlite3 -readonly /config/readarr.db 'SELECT MAX(Version) FROM VersionInfo;')" = 158
-test "$(pod_logical_hash)" = "$SOURCE_SQL_DUMP_SHA256"
-test "$(pod_file_hash /config/config.xml)" = "$CONFIG_SHA256"
-test "$(pod_file_hash /config/channel-test-canary.txt)" = "$CANARY_SHA256"
-grep -Fxq 'helm-handoff-canary=preserve-me' < <(kubectl exec -n "$NAMESPACE" bookshelfng-0 -c bookshelfng -- cat /config/channel-test-canary.txt)
+kubectl scale statefulset/bookshelfng -n "$NAMESPACE" --replicas=0 --timeout=5m
+wait_stopped bookshelfng-0
+kubectl apply -f "$EVIDENCE_DIR/snapshot-pod.yaml"
+if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/bookshelfng-snapshot -n "$NAMESPACE" --timeout=5m; then
+    kubectl describe pod bookshelfng-snapshot -n "$NAMESPACE" 2>&1 \
+        | tee "$EVIDENCE_DIR/rollback-snapshot-pod-describe.txt" || true
+    kubectl logs pod/bookshelfng-snapshot -n "$NAMESPACE" --all-containers=true 2>&1 \
+        | tee "$EVIDENCE_DIR/rollback-snapshot-pod-failed.log" || true
+    exit 1
+fi
+rollback_snapshot_output="$(kubectl logs -n "$NAMESPACE" pod/bookshelfng-snapshot)"
+printf '%s\n' "$rollback_snapshot_output" | tee "$EVIDENCE_DIR/source-after-rollback.txt"
+RESTORED_SQL_DUMP_SHA256="$(sed -n 's/^SOURCE_SQL_DUMP_SHA256=//p' <<< "$rollback_snapshot_output")"
+RESTORED_CONFIG_SHA256="$(sed -n 's/^CONFIG_SHA256=//p' <<< "$rollback_snapshot_output")"
+RESTORED_CANARY_SHA256="$(sed -n 's/^CANARY_SHA256=//p' <<< "$rollback_snapshot_output")"
+test "$RESTORED_SQL_DUMP_SHA256" = "$SOURCE_SQL_DUMP_SHA256"
+test "$RESTORED_CONFIG_SHA256" = "$CONFIG_SHA256"
+test "$RESTORED_CANARY_SHA256" = "$CANARY_SHA256"
+kubectl delete pod bookshelfng-snapshot -n "$NAMESPACE" --wait=true
 
-printf 'RESULT=PASS\nBOOKSHELFNG_IMAGE=%s@%s\nCHAPTARRNG_IMAGE=%s\nSOURCE_PVC_UID=%s\nSOURCE_SQL_DUMP_SHA256=%s\nCONFIG_SHA256=%s\nCANARY_SHA256=%s\nROLLBACK_REVISION=%s\n' \
+printf 'RESULT=PASS\nBOOKSHELFNG_IMAGE=%s@%s\nCHAPTARRNG_IMAGE=%s\nSOURCE_PVC_UID=%s\nSOURCE_SQL_DUMP_SHA256=%s\nRESTORED_SQL_DUMP_SHA256=%s\nCONFIG_SHA256=%s\nRESTORED_CONFIG_SHA256=%s\nCANARY_SHA256=%s\nRESTORED_CANARY_SHA256=%s\nROLLBACK_REVISION=%s\n' \
     "docker.io/snapetech/bookshelfng" "$LEGACY_IMAGE_DIGEST" "$CANDIDATE_IMAGE" \
-    "$SOURCE_PVC_UID" "$SOURCE_SQL_DUMP_SHA256" "$CONFIG_SHA256" "$CANARY_SHA256" "$legacy_revision" \
+    "$SOURCE_PVC_UID" "$SOURCE_SQL_DUMP_SHA256" "$RESTORED_SQL_DUMP_SHA256" "$CONFIG_SHA256" "$RESTORED_CONFIG_SHA256" \
+    "$CANARY_SHA256" "$RESTORED_CANARY_SHA256" "$legacy_revision" \
     | tee "$EVIDENCE_DIR/acceptance-result.txt"
 log "Installed Helm No/Yes, populated-data, health, backup, chart-restore, and BookshelfNG recovery acceptance passed."

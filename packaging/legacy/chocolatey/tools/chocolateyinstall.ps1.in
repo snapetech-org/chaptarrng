@@ -181,6 +181,26 @@ function Get-BookshelfSqliteDatabaseNames {
   return $result
 }
 
+function Get-BookshelfSqliteBackupFiles {
+  param([Parameter(Mandatory = $true)] [string] $DataDirectory)
+  $prefixes = @(
+    'readarr.db.bookshelfng-backup-',
+    'audioarr.db.bookshelfng-backup-',
+    'chaptarr.db.bookshelfng-backup-'
+  )
+
+  return @(Get-ChildItem -LiteralPath $DataDirectory -File -Force -ErrorAction SilentlyContinue | Where-Object {
+    $name = $_.Name
+    if (-not $name.EndsWith('.db', [StringComparison]::OrdinalIgnoreCase)) { return $false }
+
+    foreach ($prefix in $prefixes) {
+      if ($name.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+
+    return $false
+  })
+}
+
 function Test-HasPopulatedSqliteDatabaseFamily {
   param([Parameter(Mandatory = $true)] [string] $DatabasePath)
   if ((Test-Path -LiteralPath $DatabasePath -PathType Leaf) -and
@@ -341,17 +361,59 @@ function Invoke-BookshelfUtility {
   }
 }
 
+function ConvertTo-WindowsNativeArgument {
+  param([AllowNull()][string] $Value)
+  if ($null -eq $Value) { return '""' }
+  if ($Value -notmatch '[\s"]') { return $Value }
+
+  $builder = New-Object System.Text.StringBuilder
+  [void] $builder.Append([char] 34)
+  $backslashCount = 0
+  foreach ($character in $Value.ToCharArray()) {
+    if ($character -eq [char] 92) {
+      $backslashCount++
+      continue
+    }
+    if ($character -eq [char] 34) {
+      if ($backslashCount -gt 0) {
+        [void] $builder.Append(('\' * (($backslashCount * 2) + 1)))
+      } else {
+        [void] $builder.Append('\')
+      }
+      [void] $builder.Append([char] 34)
+    } else {
+      if ($backslashCount -gt 0) { [void] $builder.Append(('\' * $backslashCount)) }
+      [void] $builder.Append($character)
+    }
+    $backslashCount = 0
+  }
+  if ($backslashCount -gt 0) { [void] $builder.Append(('\' * ($backslashCount * 2))) }
+  [void] $builder.Append([char] 34)
+  return $builder.ToString()
+}
+
+function Invoke-BookshelfNssm {
+  param([Parameter(Mandatory = $true)][string[]] $Arguments)
+  $argumentLine = (@($Arguments | ForEach-Object { ConvertTo-WindowsNativeArgument $_ }) -join ' ')
+  $process = Start-Process -FilePath $nssm.Source -ArgumentList $argumentLine -Wait -PassThru -NoNewWindow
+  try {
+    return [int] $process.ExitCode
+  } finally {
+    $process.Dispose()
+  }
+}
+
 function Set-BookshelfServiceSetting {
   param(
     [Parameter(Mandatory = $true)] [string] $Name,
     [Parameter(Mandatory = $true)] [AllowEmptyString()] [AllowNull()] [string] $Value
   )
   if ([string]::IsNullOrEmpty($Value)) {
-    & $nssm.Source reset BookshelfNG $Name
+    $exitCode = Invoke-BookshelfNssm -Arguments @('reset', 'BookshelfNG', $Name)
   } else {
-    & $nssm.Source set BookshelfNG $Name $Value
+    $exitCode = Invoke-BookshelfNssm -Arguments @('set', 'BookshelfNG', $Name, $Value)
   }
-  if ($LASTEXITCODE -ne 0) { throw "NSSM could not set BookshelfNG $Name." }
+  if ($exitCode -ne 0) { throw "NSSM could not set BookshelfNG $Name (exit code $exitCode)." }
 }
 
 function Set-BookshelfServiceEnvironment {
@@ -364,8 +426,8 @@ function Set-BookshelfServiceEnvironment {
   } else {
     $arguments = @('reset', 'BookshelfNG', $Setting)
   }
-  & $nssm.Source @arguments | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw 'NSSM could not update the BookshelfNG service environment.' }
+  $exitCode = Invoke-BookshelfNssm -Arguments $arguments
+  if ($exitCode -ne 0) { throw "NSSM could not update the BookshelfNG service environment (exit code $exitCode)." }
 }
 
 function Test-BookshelfPostgresSource {
@@ -426,6 +488,22 @@ function Write-BookshelfHandoffManifest {
   if ($LASTEXITCODE -ne 0) { throw 'Could not protect the Windows migration recovery record.' }
 }
 
+function Get-BookshelfFileSha256 {
+  param([string] $LiteralPath)
+
+  $algorithm = [Security.Cryptography.SHA256]::Create()
+  try {
+    $stream = [IO.File]::OpenRead($LiteralPath)
+    try {
+      return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '').ToLowerInvariant()
+    } finally {
+      $stream.Dispose()
+    }
+  } finally {
+    $algorithm.Dispose()
+  }
+}
+
 function Get-BookshelfJournalFingerprint {
   param([string] $Path)
 
@@ -448,7 +526,7 @@ function Get-BookshelfJournalFingerprint {
     if (($before.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
       throw "Migration fingerprint '$Path' changed to a symbolic link or reparse point."
     }
-    $hash = (Get-FileHash -LiteralPath $rootItem.FullName -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+    $hash = Get-BookshelfFileSha256 -LiteralPath $rootItem.FullName
     $after = Get-Item -LiteralPath $rootItem.FullName -Force -ErrorAction Stop
     if (($after.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
         $after.Length -ne $before.Length -or
@@ -478,7 +556,7 @@ function Get-BookshelfJournalFingerprint {
     if (($before.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
       throw "Migration fingerprint '$Path' contains a symbolic link or reparse point."
     }
-    $hash = (Get-FileHash -LiteralPath $filePath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+    $hash = Get-BookshelfFileSha256 -LiteralPath $filePath
     $after = Get-Item -LiteralPath $filePath -Force -ErrorAction Stop
     if (($after.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
         $after.Length -ne $before.Length -or
@@ -712,7 +790,10 @@ foreach ($overrideName in $serverOverrides.Keys) {
 $dataDir = [IO.Path]::GetFullPath($dataDir)
 $hadApp = Test-Path -LiteralPath $appDir
 $postgresSourceForChoice = Test-BookshelfPostgresSource $serviceEnvironment
-$sqliteSourceNames = if ($postgresSourceForChoice) { @() } else { @(Get-BookshelfSqliteDatabaseNames $dataDir) }
+[string[]] $sqliteSourceNames = @()
+if (-not $postgresSourceForChoice) {
+  $sqliteSourceNames = [string[]] @(Get-BookshelfSqliteDatabaseNames $dataDir)
+}
 $preMergedNativeDatabase = $false
 if ($sqliteSourceNames.Count -gt 1 -and -not $postgresSourceForChoice) {
   $nativeDatabase = Join-Path $dataDir 'chaptarr.db'
@@ -784,12 +865,7 @@ if ($hadService) {
 }
 
 Complete-PriorBookshelfHandoff
-$backupNamesBefore = @()
-if ($mergeSqliteSources) {
-  $backupNamesBefore = @(Get-ChildItem -LiteralPath $dataDir -Filter 'chaptarr.db.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue | ForEach-Object Name)
-} elseif ($sqliteSourceName) {
-  $backupNamesBefore = @(Get-ChildItem -LiteralPath $dataDir -Filter "$sqliteSourceName.bookshelfng-backup-*.db" -File -ErrorAction SilentlyContinue | ForEach-Object Name)
-}
+$backupNamesBefore = @(Get-BookshelfSqliteBackupFiles -DataDirectory $dataDir | ForEach-Object Name)
 $configPath = Join-Path $dataDir 'config.xml'
 if (Test-Path -LiteralPath $configPath) {
   try {
@@ -865,7 +941,7 @@ try {
     if (-not (Test-Path -LiteralPath $testArchivePath -PathType Leaf)) {
       throw 'The private Windows acceptance archive path does not identify a file.'
     }
-    $testArchiveHash = (Get-FileHash -LiteralPath $testArchivePath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+    $testArchiveHash = Get-BookshelfFileSha256 -LiteralPath $testArchivePath
     if ($testArchiveHash -ne '__ARCHIVE_SHA256__') {
       throw 'The private Windows acceptance archive checksum does not match this package candidate.'
     }
@@ -950,6 +1026,22 @@ try {
     }
     Write-SharedMigrationJournal -FingerprintName 'source-config' -FingerprintPath (Join-Path $dataDir 'config.xml')
     Write-SharedMigrationJournal -FingerprintName 'target-artifact' -FingerprintPath (Join-Path $stageDir 'bin\Chaptarr.Console.exe')
+
+    # The service's normal startup can migrate the Chaptarr schema in place,
+    # but it cannot perform the BookshelfNG data conversion. Apply that
+    # conversion explicitly while every source client is stopped, before the
+    # candidate service starts against the target database.
+    $migrationDatabaseMutationMayHaveStarted = $true
+    $migrationArguments = @(
+      '-migrate-bookshelf',
+      '-confirm-bookshelf-service-stopped',
+      "-data=$dataDir"
+    )
+    if ($mergeSqliteSources) { $migrationArguments += '-merge-bookshelf-databases' }
+    $migrationExit = Invoke-BookshelfUtility $previewConsole $migrationArguments $effectiveEnvironment
+    if ($migrationExit -ne 0) {
+      throw "BookshelfNG migration failed with exit code $migrationExit. The installer will attempt to restore the retained source database."
+    }
   }
 
   if ($hadService -and $hasMigrationData -and -not $wasRunning) {
@@ -1159,9 +1251,17 @@ try {
         Write-Warning "PostgreSQL migration may have started, but its independent restore backup or utility is unavailable. Keep the BookshelfNG service stopped; inspect the retained database backup at $postgresBackupDirectory."
       }
     } elseif ($sqliteSourceExisted) {
-      $backupPrefix = if ($rollbackSqliteDatabaseName) { "$rollbackSqliteDatabaseName.bookshelfng-backup-*.db" } else { 'readarr.db.bookshelfng-backup-*.db' }
-      $newDatabaseBackup = Get-ChildItem -LiteralPath $dataDir -Filter $backupPrefix -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -notin $backupNamesBefore } |
+      $backupDatabaseName = if ($rollbackSqliteDatabaseName) { $rollbackSqliteDatabaseName } else { 'readarr.db' }
+      $backupPrefix = "$backupDatabaseName.bookshelfng-backup-"
+      $allDatabaseBackupsAfter = @(Get-BookshelfSqliteBackupFiles -DataDirectory $dataDir)
+      $databaseBackupsAfter = @($allDatabaseBackupsAfter | Where-Object {
+        $_.Name.StartsWith($backupPrefix, [StringComparison]::OrdinalIgnoreCase)
+      })
+      $newDatabaseBackup = $databaseBackupsAfter |
+        Where-Object {
+          $_.Name -notin $backupNamesBefore -and
+          ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0
+        } |
         Sort-Object LastWriteTimeUtc -Descending |
         Select-Object -First 1
       if ($newDatabaseBackup) {
@@ -1210,7 +1310,10 @@ try {
         }
       } else {
         $databaseRollbackSafe = $false
-        Write-Warning 'Migration may have started, but no new SQLite source backup was found. Keep the BookshelfNG service stopped and inspect the retained database before recovery.'
+        $backupNamesAfter = @($databaseBackupsAfter | ForEach-Object Name) -join ', '
+        $allBackupNamesAfter = @($allDatabaseBackupsAfter | ForEach-Object Name) -join ', '
+        $backupNamesBeforeSummary = @($backupNamesBefore) -join ', '
+        Write-Warning "Migration may have started, but no new SQLite source backup was found (data directory: [$dataDir]; source database: [$backupDatabaseName]; matching backups after migration: [$backupNamesAfter]; all BookshelfNG backups after migration: [$allBackupNamesAfter]; before migration: [$backupNamesBeforeSummary]). Keep the BookshelfNG service stopped and inspect the retained database before recovery."
       }
     } else {
       try {

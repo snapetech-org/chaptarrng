@@ -1,4 +1,4 @@
-# ng-runner-policy: private-jit-only-v1
+# ng-runner-policy: trusted-hosted-or-private-jit-v1
 # packer-windows-jit-v1
 name: Build ChaptarrNG
 run-name: >-
@@ -29,16 +29,18 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Admit this workflow to the private JIT broker
+        description: Run trusted CI or a release validation
         required: true
         type: choice
         options:
           - ci
       runner_pool:
-        description: Select the private ephemeral JIT pool
+        description: Select compatible GitHub-hosted or private JIT runners
         required: true
         type: choice
+        default: public
         options:
+          - public
           - private
       windows_chocolatey_only:
         description: Run only the Windows Chocolatey BookshelfNG migration acceptance
@@ -56,7 +58,7 @@ on:
         type: boolean
         default: false
       channel_contracts_only:
-        description: Run only the private-JIT legacy distribution contract suite
+        description: Run only the legacy distribution and runner contract suite
         required: false
         type: boolean
         default: false
@@ -73,9 +75,9 @@ on:
         required: false
         type: string
 
-# Build validation runs from a main-branch private dispatch or an exact release
-# tag passed through the main-branch reusable workflow call. Trusted owner PRs
-# use a metadata-only private-JIT route.
+# Build validation runs from an explicit main-branch hosted/private dispatch or
+# an exact release tag passed through the main-branch reusable workflow call.
+# Trusted owner PRs use a metadata-only private-JIT route.
 concurrency:
   group: build-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && 'metadata' || 'code' }}
   cancel-in-progress: false
@@ -152,7 +154,7 @@ jobs:
       (
         github.ref == 'refs/heads/main' &&
         inputs.action == 'ci' &&
-        inputs.runner_pool == 'private' &&
+        (inputs.runner_pool == 'private' || inputs.runner_pool == 'public') &&
         inputs.pr_number == '' &&
         inputs.runner_policy_only != true &&
         inputs.rpm_bridge_only != true &&
@@ -164,9 +166,16 @@ jobs:
         inputs.release_tag != '' &&
         inputs.release_sha != ''
       )
-    # Each platform requests private capacity. Missing native JIT routes remain
-    # queued until their runner group and workflow access are verified.
-    runs-on: ${{ matrix.platform == 'windows-x64' && fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-{1}-build"]}}', github.run_id, strategy.job-index)) || matrix.platform == 'macos-intel' && fromJSON(format('{{"group":"private-apple-builds","labels":["self-hosted","macOS","X64","private-apple","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-{1}-build"]}}', github.run_id, strategy.job-index)) || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id)) }}
+    # Public CI uses native x64 hosted runners. The explicit private route stays
+    # available for jobs that need the JIT environment or exact runner receipt.
+    runs-on: >-
+      ${{ inputs.runner_pool == 'public' &&
+          (matrix.platform == 'windows-x64' && 'windows-2025' ||
+           matrix.platform == 'macos-intel' && 'macos-15-intel' ||
+           'ubuntu-24.04') ||
+          (matrix.platform == 'windows-x64' && fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-{1}-build"]}}', github.run_id, strategy.job-index)) ||
+           matrix.platform == 'macos-intel' && fromJSON(format('{{"group":"private-apple-builds","labels":["self-hosted","macOS","X64","private-apple","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-{1}-build"]}}', github.run_id, strategy.job-index)) ||
+           fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id))) }}
     strategy:
       fail-fast: false
       matrix:
@@ -231,7 +240,7 @@ jobs:
         TASK_SCRATCH_DIR: ${{ runner.temp }}
       run: bash packaging/scripts/test-bookshelfng-journal-fingerprint.sh
 
-    - name: Test private runner policy
+    - name: Test workflow runner policy
       if: matrix.platform == 'linux-x64'
       run: python3 scripts/test_workflow_runner_policy.py
 
@@ -378,9 +387,11 @@ jobs:
       run: yarn install --frozen-lockfile --network-timeout 120000
 
     - name: Check translation calls and locale catalogs
+      if: inputs.windows_chocolatey_only != true
       run: yarn check-translations && yarn check-localization
 
     - name: Test locale formatting and RTL CSS
+      if: inputs.windows_chocolatey_only != true
       run: yarn test-localization
 
     - name: Verify bundled asset URLs remain same-origin
@@ -577,20 +588,6 @@ jobs:
       shell: pwsh
       run: ./distribution/windows/installer-net-smoke/CleanupServiceRoundTrip.ps1 -ManifestPath $env:CHAPTARR_SERVICE_ROUNDTRIP_CLEANUP_MANIFEST
 
-    - name: Remove temporary Windows installer payload
-      if: always() && matrix.platform == 'windows-x64'
-      shell: pwsh
-      run: |
-        $payload = Join-Path $PWD 'distribution/windows/installer-net/Payload/Chaptarr.payload.zip'
-        if (Test-Path -LiteralPath $payload) {
-          Remove-Item -LiteralPath $payload -Force
-        }
-        $payloadDirectory = Split-Path -Parent $payload
-        if ((Test-Path -LiteralPath $payloadDirectory) -and
-            -not (Get-ChildItem -LiteralPath $payloadDirectory -Force | Select-Object -First 1)) {
-          Remove-Item -LiteralPath $payloadDirectory -Force
-        }
-
     - name: Test Windows service preserves its selected data directory
       if: matrix.platform == 'windows-x64'
       shell: pwsh
@@ -619,6 +616,50 @@ jobs:
         if (-not (Get-ChildItem -LiteralPath $archiveDirectory -Force | Select-Object -First 1)) {
           Remove-Item -LiteralPath $archiveDirectory -Force
         }
+
+    - name: Stage failed Windows Chocolatey handoff diagnostics
+      if: >-
+        failure() && matrix.platform == 'windows-x64' &&
+        github.event_name == 'workflow_dispatch' &&
+        inputs.windows_chocolatey_only == true
+      shell: pwsh
+      run: |
+        $artifactDirectory = Join-Path $env:RUNNER_TEMP 'bookshelfng-windows-installed-handoff-${{ github.run_id }}'
+        New-Item -ItemType Directory -Force -Path $artifactDirectory | Out-Null
+        $handoffDirectory = Join-Path $env:RUNNER_TEMP 'chocolatey-bookshelfng-handoff-${{ github.run_id }}'
+        if (Test-Path -LiteralPath $handoffDirectory) {
+          Copy-Item -LiteralPath $handoffDirectory -Destination (Join-Path $artifactDirectory 'runner-temp') -Recurse -Force
+        }
+        $programDataDirectory = Join-Path $env:ProgramData 'BookshelfNG'
+        if (Test-Path -LiteralPath $programDataDirectory) {
+          Copy-Item -LiteralPath $programDataDirectory -Destination (Join-Path $artifactDirectory 'programdata') -Recurse -Force
+        }
+
+    - name: Upload failed Windows Chocolatey handoff diagnostics
+      if: >-
+        failure() && matrix.platform == 'windows-x64' &&
+        github.event_name == 'workflow_dispatch' &&
+        inputs.windows_chocolatey_only == true
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: bookshelfng-windows-installed-handoff-${{ github.run_id }}
+        path: ${{ runner.temp }}/bookshelfng-windows-installed-handoff-${{ github.run_id }}
+        if-no-files-found: warn
+        retention-days: 30
+
+    - name: Remove temporary Windows installer payload
+      if: always() && matrix.platform == 'windows-x64'
+      shell: pwsh
+      run: |
+        $payload = Join-Path $PWD 'distribution/windows/installer-net/Payload/Chaptarr.payload.zip'
+        if (Test-Path -LiteralPath $payload) {
+          Remove-Item -LiteralPath $payload -Force
+        }
+        $payloadDirectory = Split-Path -Parent $payload
+        if ((Test-Path -LiteralPath $payloadDirectory) -and
+            -not (Get-ChildItem -LiteralPath $payloadDirectory -Force | Select-Object -First 1)) {
+          Remove-Item -LiteralPath $payloadDirectory -Force
+        }
     
     - name: Upload artifacts
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -633,11 +674,11 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       inputs.action == 'ci' &&
-      inputs.runner_pool == 'private' &&
+      (inputs.runner_pool == 'private' || inputs.runner_pool == 'public') &&
       inputs.rpm_bridge_only == true &&
       inputs.pr_number == '' &&
       github.ref == 'refs/heads/main'
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-rpm-bridge-acceptance"]}}', github.run_id)) }}
+    runs-on: ${{ inputs.runner_pool == 'public' && 'ubuntu-24.04' || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-rpm-bridge-acceptance"]}}', github.run_id)) }}
     timeout-minutes: 90
     permissions:
       contents: read
@@ -670,11 +711,11 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       inputs.action == 'ci' &&
-      inputs.runner_pool == 'private' &&
+      (inputs.runner_pool == 'private' || inputs.runner_pool == 'public') &&
       inputs.channel_contracts_only == true &&
       inputs.pr_number == '' &&
       github.ref == 'refs/heads/main'
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-channel-contracts"]}}', github.run_id)) }}
+    runs-on: ${{ inputs.runner_pool == 'public' && 'ubuntu-24.04' || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-channel-contracts"]}}', github.run_id)) }}
     timeout-minutes: 20
     permissions:
       contents: read
@@ -699,15 +740,29 @@ jobs:
     - name: Test stable release and Debian publication contracts
       run: bash packaging/scripts/test-bookshelfng-deb-publish-gate.sh
 
-    - name: Test private runner policy
+    - name: Test workflow runner policy
       run: python3 scripts/test_workflow_runner_policy.py
+
+    - name: Test Docker BookshelfNG migration supervisor and single image
+      env:
+        TASK_SCRATCH_DIR: ${{ runner.temp }}/chaptarrng-docker-compatibility-${{ github.run_id }}-${{ github.run_attempt }}
+      run: bash packaging/scripts/test-docker-bookshelf-compatibility-defaults.sh
+
+    - name: Upload Docker compatibility failure evidence
+      if: failure()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: chaptarrng-docker-compatibility-${{ github.run_id }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/chaptarrng-docker-compatibility-${{ github.run_id }}-${{ github.run_attempt }}
+        if-no-files-found: ignore
+        retention-days: 7
 
   postgres-migrations:
     if: >-
       (
         github.ref == 'refs/heads/main' &&
         inputs.action == 'ci' &&
-        inputs.runner_pool == 'private' &&
+        (inputs.runner_pool == 'private' || inputs.runner_pool == 'public') &&
         inputs.pr_number == '' &&
         inputs.windows_chocolatey_only != true &&
         inputs.rpm_bridge_only != true &&
@@ -720,7 +775,7 @@ jobs:
         inputs.release_tag != '' &&
         inputs.release_sha != ''
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-postgres-migrations"]}}', github.run_id)) }}
+    runs-on: ${{ inputs.runner_pool == 'public' && 'ubuntu-24.04' || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-postgres-migrations"]}}', github.run_id)) }}
     services:
       postgres:
         image: postgres:16
@@ -755,10 +810,16 @@ jobs:
 
     - name: Install PostgreSQL client
       shell: bash
+      env:
+        RUNNER_POOL: ${{ inputs.runner_pool }}
       run: |
         set -euo pipefail
+        if [[ "$RUNNER_POOL" == "public" ]]; then
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-16
+        fi
         if [[ ! -x /usr/lib/postgresql/16/bin/pg_dump || ! -x /usr/lib/postgresql/16/bin/pg_restore ]]; then
-          echo 'PostgreSQL 16 client binaries must be installed by the private JIT broker before this job starts.' >&2
+          echo 'PostgreSQL 16 client binaries are required for the migration smoke.' >&2
           exit 1
         fi
         # Match the service's major version. A newer pg_dump emits settings
@@ -845,7 +906,7 @@ jobs:
       (
         github.ref == 'refs/heads/main' &&
         inputs.action == 'ci' &&
-        inputs.runner_pool == 'private' &&
+        (inputs.runner_pool == 'private' || inputs.runner_pool == 'public') &&
         inputs.pr_number == '' &&
         inputs.windows_chocolatey_only != true &&
         inputs.rpm_bridge_only != true &&
@@ -858,9 +919,9 @@ jobs:
         inputs.release_tag != '' &&
         inputs.release_sha != ''
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-docker-image-build"]}}', github.run_id)) }}
+    runs-on: ${{ inputs.runner_pool == 'public' && 'ubuntu-24.04' || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-docker-image-build"]}}', github.run_id)) }}
     env:
-      BUILDKIT_EGRESS_PROXY: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'http://10.0.2.100:3128' || '' }}
+      BUILDKIT_EGRESS_PROXY: ${{ inputs.runner_pool == 'private' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'http://10.0.2.100:3128' || '' }}
     permissions:
       contents: read
     steps:

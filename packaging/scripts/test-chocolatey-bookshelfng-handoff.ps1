@@ -96,6 +96,12 @@ function Get-NssmSetting {
   return $value
 }
 
+function Format-RedactedServiceSetting {
+  param([AllowNull()][string] $Value)
+  if ($null -eq $Value) { return '<null>' }
+  return [regex]::Replace($Value, '(?i)(?<name>api(?:[-_]?key)|password|token|secret)(?<separator>\s*[:=]\s*|\s+)(?<value>"[^"]*"|''[^'']*''|\S+)', '${name}${separator}<redacted>')
+}
+
 function Wait-BookshelfService {
   param([int] $TimeoutSeconds = 90)
   $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
@@ -135,7 +141,7 @@ function Invoke-MigrationFixture {
   param([Parameter(Mandatory = $true)][string[]] $Arguments)
   $output = @(& $script:smokeExecutable @Arguments 2>&1)
   if ($LASTEXITCODE -ne 0) {
-    throw "The Windows migration fixture command failed: $($output -join "`n")"
+    throw "The Windows migration fixture command failed ($($Arguments -join ' ')): $($output -join "`n")"
   }
   return @($output | ForEach-Object { $_.ToString() })
 }
@@ -286,7 +292,7 @@ try {
   if ((Get-MigrationCanary) -ne $canaryBeforeManual -or -not (Test-Path -LiteralPath $legacyDatabase -PathType Leaf)) {
     throw 'Manual defer changed the seeded BookshelfNG records or removed readarr.db.'
   }
-  $sourceBackupsAfterManual = @(Get-ChildItem -LiteralPath $legacyDataDirectory -Filter '*.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue)
+  $sourceBackupsAfterManual = @(Get-ChildItem -LiteralPath $legacyDataDirectory -Filter '*.bookshelfng-backup-*.db' -File -Force -ErrorAction SilentlyContinue)
   if ($sourceBackupsAfterManual.Count -gt 0) {
     throw 'Manual defer created a BookshelfNG source backup before migration was accepted.'
   }
@@ -304,9 +310,20 @@ try {
   $env:CHAPTARRNG_TEST_ARCHIVE_PATH = $ArchivePath
   $env:CHAPTARRNG_TEST_FAIL_HANDOFF = 'after-migration-health'
   $env:CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS = '600'
+  $previousMachineArchivePath = [Environment]::GetEnvironmentVariable('CHAPTARRNG_TEST_ARCHIVE_PATH', 'Machine')
+  $previousMachineHandoffFailure = [Environment]::GetEnvironmentVariable('CHAPTARRNG_TEST_FAIL_HANDOFF', 'Machine')
+  $previousMachineHandoffTimeout = [Environment]::GetEnvironmentVariable('CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS', 'Machine')
   try {
+    # Chocolatey can run package scripts in a nested PowerShell process. Make
+    # the disposable acceptance inputs visible there, then restore machine state.
+    [Environment]::SetEnvironmentVariable('CHAPTARRNG_TEST_ARCHIVE_PATH', $ArchivePath, 'Machine')
+    [Environment]::SetEnvironmentVariable('CHAPTARRNG_TEST_FAIL_HANDOFF', 'after-migration-health', 'Machine')
+    [Environment]::SetEnvironmentVariable('CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS', '600', 'Machine')
     $rollbackResult = Invoke-Chocolatey @('upgrade', 'bookshelfng', '--version', $Version, '--source', $candidateSource, '--yes', '--no-progress', '--force', '--params', "'/ProviderMode=Goodreads'")
   } finally {
+    [Environment]::SetEnvironmentVariable('CHAPTARRNG_TEST_ARCHIVE_PATH', $previousMachineArchivePath, 'Machine')
+    [Environment]::SetEnvironmentVariable('CHAPTARRNG_TEST_FAIL_HANDOFF', $previousMachineHandoffFailure, 'Machine')
+    [Environment]::SetEnvironmentVariable('CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS', $previousMachineHandoffTimeout, 'Machine')
     Remove-Item Env:\CHAPTARRNG_TEST_ARCHIVE_PATH -ErrorAction SilentlyContinue
     Remove-Item Env:\CHAPTARRNG_TEST_FAIL_HANDOFF -ErrorAction SilentlyContinue
     Remove-Item Env:\CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS -ErrorAction SilentlyContinue
@@ -319,16 +336,35 @@ try {
   if ((Get-InstalledPackageVersion 'bookshelfng') -ne $BookshelfVersion) {
     throw 'Chocolatey did not retain the public BookshelfNG package version after the injected rollback.'
   }
-  $serviceAfterRollback = Get-CimInstance -ClassName Win32_Service -Filter "Name='BookshelfNG'" -ErrorAction Stop
-  if (-not $serviceAfterRollback -or $serviceAfterRollback.State -ne 'Running' -or
+  $serviceRecoveryWaitFailure = $null
+  try { Wait-BookshelfService | Out-Null }
+  catch { $serviceRecoveryWaitFailure = $_.Exception.Message }
+  $serviceAfterRollback = Get-CimInstance -ClassName Win32_Service -Filter "Name='BookshelfNG'" -ErrorAction SilentlyContinue
+  if ($serviceRecoveryWaitFailure -or -not $serviceAfterRollback -or $serviceAfterRollback.State -ne 'Running' -or
       $serviceAfterRollback.StartName -ne $serviceStartNameBeforeManual -or
       $serviceAfterRollback.StartMode -ne $serviceStartModeBeforeManual) {
-    throw 'The injected migration failure did not restore and restart the original BookshelfNG service.'
+    $actualState = if ($serviceAfterRollback) { $serviceAfterRollback.State } else { '<missing>' }
+    $actualStartName = if ($serviceAfterRollback) { $serviceAfterRollback.StartName } else { '<missing>' }
+    $actualStartMode = if ($serviceAfterRollback) { $serviceAfterRollback.StartMode } else { '<missing>' }
+    $rollbackOutputTail = @($rollbackResult.Output | Select-Object -Last 40) -join "`n"
+    throw "The injected migration failure did not restore and restart the original BookshelfNG service. Actual state=$actualState, start name=$actualStartName, start mode=$actualStartMode; expected start name=$serviceStartNameBeforeManual and start mode=$serviceStartModeBeforeManual. Wait error=$serviceRecoveryWaitFailure. Chocolatey output tail:`n$rollbackOutputTail"
   }
-  if ((Get-NssmSetting 'Application') -ne $applicationBeforeManual -or
-      (Get-NssmSetting 'AppParameters') -ne $parametersBeforeManual -or
-      (Get-NssmSetting 'AppDirectory') -ne $directoryBeforeManual) {
-    throw 'The injected migration failure did not restore the original BookshelfNG service paths and parameters.'
+  $applicationAfterRollback = Get-NssmSetting 'Application'
+  $parametersAfterRollback = Get-NssmSetting 'AppParameters'
+  $directoryAfterRollback = Get-NssmSetting 'AppDirectory'
+  $serviceSettingsChanged = @(
+    ($applicationAfterRollback -ne $applicationBeforeManual),
+    ($parametersAfterRollback -ne $parametersBeforeManual),
+    ($directoryAfterRollback -ne $directoryBeforeManual)
+  ) -contains $true
+  if ($serviceSettingsChanged) {
+    $expectedApplication = Format-RedactedServiceSetting $applicationBeforeManual
+    $actualApplication = Format-RedactedServiceSetting $applicationAfterRollback
+    $expectedParameters = Format-RedactedServiceSetting $parametersBeforeManual
+    $actualParameters = Format-RedactedServiceSetting $parametersAfterRollback
+    $expectedDirectory = Format-RedactedServiceSetting $directoryBeforeManual
+    $actualDirectory = Format-RedactedServiceSetting $directoryAfterRollback
+    throw "The injected migration failure did not restore the original BookshelfNG service paths and parameters. Expected Application=[$expectedApplication], AppParameters=[$expectedParameters], AppDirectory=[$expectedDirectory]; actual Application=[$actualApplication], AppParameters=[$actualParameters], AppDirectory=[$actualDirectory]."
   }
   if ((Get-FileHash -LiteralPath $applicationBeforeManual -Algorithm SHA256).Hash -ne $applicationHashBeforeManual) {
     throw 'The injected migration failure changed the original BookshelfNG executable.'
@@ -352,10 +388,22 @@ try {
 
   $env:CHAPTARRNG_TEST_ARCHIVE_PATH = $ArchivePath
   $env:CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS = '600'
+  $previousMachineArchivePath = [Environment]::GetEnvironmentVariable('CHAPTARRNG_TEST_ARCHIVE_PATH', 'Machine')
+  $previousMachineHandoffFailure = [Environment]::GetEnvironmentVariable('CHAPTARRNG_TEST_FAIL_HANDOFF', 'Machine')
+  $previousMachineHandoffTimeout = [Environment]::GetEnvironmentVariable('CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS', 'Machine')
   try {
+    # Chocolatey may elevate its package script, and service recovery runs as
+    # LocalSystem; expose the local archive and timeout while disabling failure injection.
+    [Environment]::SetEnvironmentVariable('CHAPTARRNG_TEST_ARCHIVE_PATH', $ArchivePath, 'Machine')
+    [Environment]::SetEnvironmentVariable('CHAPTARRNG_TEST_FAIL_HANDOFF', $null, 'Machine')
+    [Environment]::SetEnvironmentVariable('CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS', '600', 'Machine')
     $automaticResult = Invoke-Chocolatey @('upgrade', 'bookshelfng', '--version', $Version, '--source', $candidateSource, '--yes', '--no-progress', '--force', '--params', "'/ProviderMode=Goodreads'")
   } finally {
+    [Environment]::SetEnvironmentVariable('CHAPTARRNG_TEST_ARCHIVE_PATH', $previousMachineArchivePath, 'Machine')
+    [Environment]::SetEnvironmentVariable('CHAPTARRNG_TEST_FAIL_HANDOFF', $previousMachineHandoffFailure, 'Machine')
+    [Environment]::SetEnvironmentVariable('CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS', $previousMachineHandoffTimeout, 'Machine')
     Remove-Item Env:\CHAPTARRNG_TEST_ARCHIVE_PATH -ErrorAction SilentlyContinue
+    Remove-Item Env:\CHAPTARRNG_TEST_FAIL_HANDOFF -ErrorAction SilentlyContinue
     Remove-Item Env:\CHAPTARR_BOOKSHELF_HANDOFF_TIMEOUT_SECONDS -ErrorAction SilentlyContinue
   }
   if ($automaticResult.ExitCode -ne 0) { throw "The automatic Chocolatey bridge update failed: $($automaticResult.Output -join "`n")" }
@@ -399,7 +447,7 @@ try {
   if ((Get-MigrationCanary) -ne $canaryBeforeManual) {
     throw 'The ChaptarrNG candidate changed the migrated author, book, edition, file, path, or setting canary after startup.'
   }
-  $retainedBackup = Get-ChildItem -LiteralPath $legacyDataDirectory -Filter '*.bookshelfng-backup-*.db' -File -ErrorAction SilentlyContinue |
+  $retainedBackup = Get-ChildItem -LiteralPath $legacyDataDirectory -Filter '*.bookshelfng-backup-*.db' -File -Force -ErrorAction SilentlyContinue |
     Select-Object -First 1
   if (-not $retainedBackup) { throw 'The automatic Chocolatey handoff did not retain a BookshelfNG source database backup.' }
 
