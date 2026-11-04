@@ -272,7 +272,7 @@
   "BlocklistReleases": "ブラックリストリリース",
   "Book": "本",
   "BookAvailableButMissing": "書籍は利用可能ですが、欠落しています",
-  "BookCount": "ブックカウント",
+  "BookCount": "書籍数",
   "BookEditor": "ブックエディタ",
   "BookFileCount": "ファイル数",
   "BookFilesCountMessage": "書籍ファイルなし",

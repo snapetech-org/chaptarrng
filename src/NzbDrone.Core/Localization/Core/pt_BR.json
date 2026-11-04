@@ -257,7 +257,7 @@
   "BackupRetentionHelpText": "Backups automáticos anteriores ao período de retenção serão excluídos automaticamente",
   "Backups": "Backups",
   "BackupsContainUnencryptedCredentials": "Os backups completos incluem credenciais. Sem um arquivo secreto montado configurado através de CHAPTARR_BACKUP_ENCRYPTION_KEY_FILE, eles são armazenados como arquivos ZIP simples. O backup do Quickstart Settings continua sendo uma exportação criptografada por senha.",
-  "BindAddress": "Vincular endereço",
+  "BindAddress": "Endereço de escuta",
   "BindAddressHelpText": "Endereço IP válido, localhost ou '*' para todas as interfaces",
   "BindAddressHelpTextWarning": "Requer reiniciar para ter efeito",
   "Blocklist": "Lista de bloqueio",

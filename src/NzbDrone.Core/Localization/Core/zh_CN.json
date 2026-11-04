@@ -263,7 +263,7 @@
   "Blocklist": "黑名单",
   "BlocklistAndSearch": "黑名单和搜索",
   "BlocklistAndSearchHint": "列入黑名单后开始一次搜索替换",
-  "BlocklistAndSearchMultipleHint": "列入黑名单后开始多次搜索替换",
+  "BlocklistAndSearchMultipleHint": "将这些项目列入黑名单后，开始搜索替代资源。",
   "BlocklistMultipleOnlyHint": "无需搜索替换的黑名单",
   "BlocklistOnly": "仅限黑名单",
   "BlocklistOnlyHint": "仅使用黑名单，不搜索替换资源",
