@@ -21,6 +21,6 @@ Product commit `dcc23d31` consists only of those 12 locale JSON files. This evid
 
 ## Validation and delivery
 
-The candidate-free, primary, blind, cross-review, root-review, application, and full-window readback manifests and verifiers are included beside their ledgers. `delivery/` records the original PR body, appended suffix, expected body, live API readback, and prefix proof. GitHub returned the exact prepared body: 64,252 original bytes remained the exact prefix of the 65,273-byte open, draft PR body. `SHA256SUMS.txt` covers every file in this directory except itself.
+The candidate-free, primary, blind, cross-review, root-review, application, and full-window readback manifests and verifiers are included beside their ledgers. `delivery/` records the original PR body, appended suffix, expected body, live API readback, prefix proof, and automatic Actions run. GitHub returned the exact prepared body: 64,252 original bytes remained the exact prefix of the 65,273-byte open, draft PR body. Automatic run `41966481886` completed with all 10 jobs skipped; no build or test ran. `SHA256SUMS.txt` covers every file in this directory except itself.
 
 No tests, builds, scans, CI dispatches, workflow edits, merges, releases, or tags were performed for this window. Git hooks are disabled only as a command-scoped override for the authorized commit and push; no persistent Git configuration was changed.
