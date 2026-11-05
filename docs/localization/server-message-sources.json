@@ -3990,6 +3990,29 @@
       "protectedLiterals": []
     },
     {
+      "id": "server.message.m3a79390fb21e",
+      "source": "NzbGet setting KeepHistory must not exceed 25000",
+      "sourceFingerprint": "06241759e7f6ea0f05177b31017f0edd0d9929a73aea7f93daa275dc5b474191",
+      "parameters": [],
+      "patterns": [
+        "NzbGet setting KeepHistory must not exceed 25000"
+      ],
+      "sourceTemplates": [
+        "NzbGet setting KeepHistory must not exceed 25000"
+      ],
+      "callsites": [
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs",
+          "line": 350,
+          "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"NzbGet setting KeepHistory must not exceed 25000\", \"server.message.m3a79390fb21e\", null)",
+          "sourceLineSha256": "21dff3dda05dad07e17a7f4c26e2b9ffeb8cf29cbc818a9ce84406b3db914da3",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        }
+      ],
+      "protectedLiterals": []
+    },
+    {
       "id": "server.message.m3adf1dd9c9f2",
       "source": "Invalid Url: '{value0}'",
       "sourceFingerprint": "4c041d2df63865b267e2c4bee11e63d6d1cb43ad1584a27c463566806163e34c",
@@ -4665,29 +4688,6 @@
           "line": 357,
           "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Failed to get the list of torrents: \" + ex.Message, \"server.message.m451006253bc3\", new { value0 = ex.Message });",
           "sourceLineSha256": "e4e4a3b981449339182256adc828812e69ff7cf35f6ab7264e71d9b8b8a3bd34",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        }
-      ],
-      "protectedLiterals": []
-    },
-    {
-      "id": "server.message.m453c42aa8de5",
-      "source": "NzbGet setting KeepHistory should be less than 25000",
-      "sourceFingerprint": "b9965b7f2313db009dd5ef1cc5a6a37993f0afe0be339aa0b62a1c2784f9270f",
-      "parameters": [],
-      "patterns": [
-        "NzbGet setting KeepHistory should be less than 25000"
-      ],
-      "sourceTemplates": [
-        "NzbGet setting KeepHistory should be less than 25000"
-      ],
-      "callsites": [
-        {
-          "file": "src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs",
-          "line": 350,
-          "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"NzbGet setting KeepHistory should be less than 25000\", \"server.message.m453c42aa8de5\", null)",
-          "sourceLineSha256": "426be92331a5aa57b67df35ea65e0a61d3638a288a670bc4e677309ca32d6cfd",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -18288,6 +18288,24 @@
         "sha256": "a96fa988d971c839bed3cecc7fec62f8652e21ead59fa0abfb24c8c3b920e052"
       },
       "method": "Reconciled PR-side source-bound localization wrappers with the merged main callsites, refreshed exact source-line hashes, and rechecked source changes against the English catalog. No new message IDs or target cells were generated."
+    },
+    {
+      "id": "20261105-nzbget-keep-history-inclusive-limit",
+      "baseHead": "c01c3974a01dfcab6a1aa09401c66d412bc88e60",
+      "newMessages": 0,
+      "newSourceBindings": 0,
+      "newUniqueCallsites": 0,
+      "sourceIds": [
+        "server.message.m3a79390fb21e"
+      ],
+      "replacedSourceIds": [
+        "server.message.m453c42aa8de5"
+      ],
+      "inputEvidence": {
+        "file": "docs/pr-evidence/pr190-localization-2026-11-05/w561-keep-history-inclusive-limit/root-adjudication/summary.json",
+        "sha256": "1ae6f91ba731984b3186e43b8eda66d62387f924af86c02acc504e61c363e672"
+      },
+      "method": "Corrected the KeepHistory validation source copy to state its inclusive maximum. The value > 25000 predicate and existing validation callsite remain unchanged; the fingerprinted source ID and all twelve reviewed locale keys/values were replaced together."
     }
   ]
 }

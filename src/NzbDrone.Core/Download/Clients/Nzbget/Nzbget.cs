@@ -347,7 +347,7 @@ namespace NzbDrone.Core.Download.Clients.Nzbget
             }
             else if (value > 25000)
             {
-                return new NzbDroneValidationFailure(string.Empty, "NzbGet setting KeepHistory should be less than 25000", "server.message.m453c42aa8de5", null)
+                return new NzbDroneValidationFailure(string.Empty, "NzbGet setting KeepHistory must not exceed 25000", "server.message.m3a79390fb21e", null)
                 {
                     InfoLink = _proxy.GetBaseUrl(Settings),
                     DetailedDescription = "NzbGet setting KeepHistory is set too high."

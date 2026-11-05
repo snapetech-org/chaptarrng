@@ -1,0 +1,49 @@
+{
+  "repository": "snapetech-org/chaptarrng",
+  "pullRequest": 190,
+  "head": "c01c3974a01dfcab6a1aa09401c66d412bc88e60",
+  "tree": "55ea7696f4981fc56a774f38be477f89e454a7a3",
+  "window": "W561",
+  "currentSourceId": "server.message.m453c42aa8de5",
+  "proposedSourceId": "server.message.m3a79390fb21e",
+  "currentEnglish": "NzbGet setting KeepHistory should be less than 25000",
+  "proposedEnglish": "NzbGet setting KeepHistory must not exceed 25000",
+  "currentEnglishSha256": "453c42aa8de536feb62fa62896136529ab6d16edf996511f0fb44b037ba2dc1f",
+  "proposedEnglishSha256": "3a79390fb21e5a7e7e4ea479d3d5f2643862a645f76312b3f107817fde29c5b4",
+  "primaryChecksumListSha256": "01301a3db5fbc34141bfc1694ead4395d3697c6e53f745051c9447bee06fe729",
+  "primaryManifestSha256": "a38c00b81803d7cacd9b3fcc83e2f052ad9ebcfdd6820b4f064f9206b664c226",
+  "blindChecksumListSha256": "4d01e902228956c16dd41f12a8c32683492d42a7600892bedb85f209fd92a756",
+  "blindManifestSha256": "0716aec896144ce770c83e6a0a43bc28b66e6d5ab4bfb1bbc4b4987ef56f4821",
+  "caller": {
+    "path": "src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs",
+    "fileSha256": "637b63deba408a62402ee9532b72202fa81034d0374de6d331cc24b9ab3cf32c",
+    "gitBlob": "a3a899a8b318a9739e03c7b34eea630b8ef418d1",
+    "predicateLine": 348,
+    "predicate": "value > 25000",
+    "currentMessageLine": 350,
+    "currentMessageId": "server.message.m453c42aa8de5",
+    "currentConditionText": "NzbGet setting KeepHistory should be less than 25000",
+    "value25000Accepted": true,
+    "valuesAbove25000Rejected": true,
+    "primaryContextSha256": "8b2ea641372c1a044241240918ad60ee4b64e04d604979a207c7d0449b1f61e1",
+    "blindContextWindowSha256": "cd5e270bb926a64ef7f37feb0102e5e198c1e51fffa85e11bdb53b0062642aa1"
+  },
+  "inputPaths": {
+    "primary": "/mnt/disks/scratch/task-scratch/chaptarrng-w561-nzbget-keep-history-primary-review-20261105",
+    "blind": "/mnt/disks/scratch/task-scratch/chaptarrng-w561-independent-blind-review-20261105"
+  },
+  "proposalComparisonsByLocale": {
+    "es": "primary",
+    "zh-CN": "both-agree",
+    "hi": "both-agree",
+    "de": "blind",
+    "ja": "blind",
+    "fr": "blind",
+    "pt-BR": "primary",
+    "ar": "primary",
+    "ko": "both-agree",
+    "zh-TW": "both-agree",
+    "vi": "primary",
+    "id": "both-agree"
+  }
+}

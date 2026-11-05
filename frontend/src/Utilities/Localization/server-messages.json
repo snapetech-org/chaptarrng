@@ -1359,6 +1359,14 @@
     ]
   },
   {
+    "id": "server.message.m3a79390fb21e",
+    "source": "NzbGet setting KeepHistory must not exceed 25000",
+    "parameters": [],
+    "patterns": [
+      "NzbGet setting KeepHistory must not exceed 25000"
+    ]
+  },
+  {
     "id": "server.message.m3adf1dd9c9f2",
     "source": "Invalid Url: '{value0}'",
     "parameters": [
@@ -1593,14 +1601,6 @@
     ],
     "patterns": [
       "Failed to get the list of torrents: {value0}"
-    ]
-  },
-  {
-    "id": "server.message.m453c42aa8de5",
-    "source": "NzbGet setting KeepHistory should be less than 25000",
-    "parameters": [],
-    "patterns": [
-      "NzbGet setting KeepHistory should be less than 25000"
     ]
   },
   {

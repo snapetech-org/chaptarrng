@@ -10,6 +10,8 @@ history grouped from conventional commits.
 
 #### Fixed
 
+- Correct the NzbGet KeepHistory message to include the accepted 25000 limit and update its translations across all 12 direct locales.
+
 - Apply 38 context-matched translation corrections across 11 locales, including AudioBookShelf library labels, torrent adoption prompts, and author-folder help.
 - Correct the SABnzbd and Mailgun English validation messages and apply the reviewed W650–W699 catalog corrections across all 12 direct locales.
 - Improve 205 cross-reviewed translations across all 12 direct locales with wording matched to application context (W700–W749).
