@@ -3,8 +3,9 @@ from __future__ import annotations
 import collections, hashlib, json, subprocess, sys
 from pathlib import Path
 OUT=Path(__file__).resolve().parent
-P=Path('/mnt/disks/scratch/task-scratch/chaptarrng-w561-nzbget-keep-history-primary-review-20261105')
-B=Path('/mnt/disks/scratch/task-scratch/chaptarrng-w561-independent-blind-review-20261105')
+P=OUT.parent/'primary-review'
+B=OUT.parent/'blind-review'
+REPO=Path(__file__).resolve().parents[5]
 HEAD='c01c3974a01dfcab6a1aa09401c66d412bc88e60'; TREE='55ea7696f4981fc56a774f38be477f89e454a7a3'
 EXPECTED=['es','zh-CN','hi','de','ja','fr','pt-BR','ar','ko','zh-TW','vi','id']
 BLIND_LOCALE={'zh-CN':'zh_CN','zh-TW':'zh_TW','pt-BR':'pt_BR'}
@@ -47,11 +48,8 @@ def main():
     if (caller.get('file'),caller.get('fileSha256'),caller.get('gitBlob'),caller.get('conditionLine'),caller.get('conditionText'),caller.get('messageLine'))!=('src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs','637b63deba408a62402ee9532b72202fa81034d0374de6d331cc24b9ab3cf32c','a3a899a8b318a9739e03c7b34eea630b8ef418d1',348,'            else if (value > 25000)',350): fail('primary caller predicate pin')
     if (bc.get('path'),bc.get('fileSha256'),bc.get('gitBlob'),bc.get('predicateLine'),bc.get('branchPredicate'),bc.get('validationKeyLine'))!=('src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs',caller.get('fileSha256'),caller.get('gitBlob'),348,'value > 25000',350): fail('blind caller predicate pin')
     if not caller.get('value25000Accepted') or not caller.get('valuesAbove25000Rejected') or not bc.get('behavior','').find('exactly 25000 does not enter this error branch')>=0: fail('inclusive predicate conclusion')
-    worktree=Path(sr['worktree'])
-    for args,expected in [(('rev-parse','HEAD'),HEAD),(('rev-parse','HEAD^{tree}'),TREE),(('status','--porcelain=v1'),'')]:
-        actual=subprocess.check_output(['git','-C',str(worktree),*args],text=True).strip()
-        if actual!=expected: fail('product worktree '+args[0])
-    path=caller['file']; content=subprocess.check_output(['git','-C',str(worktree),'show',f'HEAD:{path}'])
+    if subprocess.check_output(['git','-C',str(REPO),'rev-parse',f'{HEAD}^{{tree}}'],text=True).strip()!=TREE: fail('pinned review commit/tree unavailable')
+    path=caller['file']; content=subprocess.check_output(['git','-C',str(REPO),'show',f'{HEAD}:{path}'])
     blob=hashlib.sha1(b'blob '+str(len(content)).encode()+b'\0'+content).hexdigest()
     lines=content.decode('utf-8').splitlines()
     if sha(content)!=caller['fileSha256'] or blob!=caller['gitBlob'] or lines[347].strip()!='else if (value > 25000)' or CURRENT_EN not in lines[349] or CURRENT_ID not in lines[349]: fail('live source/caller content')
@@ -96,5 +94,5 @@ def main():
         listed[n]=h
     actual={x.relative_to(OUT).as_posix() for x in OUT.rglob('*') if x.is_file() and x.name!='SHA256SUMS.txt'}
     if actual!=set(listed): fail('output checksum coverage')
-    print(json.dumps({'result':'PASS','head':HEAD,'tree':TREE,'window':'W561','cells':12,'englishDecision':'accept inclusive “must not exceed 25000”','currentSourceId':CURRENT_ID,'prospectiveNewSourceId':PROPOSED_ID,'callerPredicate':'value > 25000','primaryBlindIdentical':matches,'primaryBlindDifferent':12-matches,'finalChoices':dict(choices),'corrections':12,'requiredLiteralsPreserved':True,'nativeSpeakerApproval':False,'inputVerifiers':'PASS','worktreeClean':True,'checksumEntries':len(listed)},ensure_ascii=False,sort_keys=True,indent=2))
+    print(json.dumps({'result':'PASS','head':HEAD,'tree':TREE,'window':'W561','cells':12,'englishDecision':'accept inclusive “must not exceed 25000”','currentSourceId':CURRENT_ID,'prospectiveNewSourceId':PROPOSED_ID,'callerPredicate':'value > 25000','primaryBlindIdentical':matches,'primaryBlindDifferent':12-matches,'finalChoices':dict(choices),'corrections':12,'requiredLiteralsPreserved':True,'nativeSpeakerApproval':False,'inputVerifiers':'PASS','portablePinnedGitObject':True,'checksumEntries':len(listed)},ensure_ascii=False,sort_keys=True,indent=2))
 if __name__=='__main__': main()

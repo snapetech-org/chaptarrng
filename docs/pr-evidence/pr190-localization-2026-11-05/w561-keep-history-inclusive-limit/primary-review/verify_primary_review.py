@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 import collections,hashlib,json,pathlib,subprocess
-OUT=pathlib.Path('/mnt/disks/scratch/task-scratch/chaptarrng-w561-nzbget-keep-history-primary-review-20261105')
-REPO=pathlib.Path('/home/keith/Documents/code/.task-worktrees/localization-20261105/chaptarrng-w500')
+OUT=pathlib.Path(__file__).resolve().parent
+REPO=pathlib.Path(__file__).resolve().parents[5]
 HEAD='c01c3974a01dfcab6a1aa09401c66d412bc88e60'; TREE='55ea7696f4981fc56a774f38be477f89e454a7a3'; BRANCH='codex/chaptarrng-localization-complete-20261031'
 CODE='src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs'; LOCDIR='src/NzbDrone.Core/Localization/Core'
 OLD_ID='server.message.m453c42aa8de5'; OLD_EN='NzbGet setting KeepHistory should be less than 25000'
@@ -14,6 +14,7 @@ def sha(b):
 def rj(p):return json.loads(pathlib.Path(p).read_text(encoding='utf-8'))
 def rjl(p):return [json.loads(x) for x in pathlib.Path(p).read_text(encoding='utf-8').splitlines() if x.strip()]
 def git(*args):return subprocess.check_output(['git','-C',str(REPO),*args],text=True).strip()
+def git_bytes(spec):return subprocess.check_output(['git','-C',str(REPO),'show',spec])
 def main():
  sums=OUT/'SHA256SUMS.txt'; listed={}
  for line in sums.read_text(encoding='utf-8').splitlines():
@@ -22,27 +23,27 @@ def main():
   listed[n]=h
  actual={p.relative_to(OUT).as_posix() for p in OUT.rglob('*') if p.is_file() and p!=sums}
  if actual!=set(listed):raise SystemExit('output checksum coverage')
- if git('rev-parse','HEAD')!=HEAD or git('rev-parse','HEAD^{tree}')!=TREE or git('branch','--show-current')!=BRANCH or git('status','--porcelain=v1','--untracked-files=all'):raise SystemExit('worktree pin/clean')
+ if git('rev-parse',f'{HEAD}^{{tree}}')!=TREE:raise SystemExit('pinned review commit/tree unavailable')
  sr=rj(OUT/'source-review.json'); summary=rj(OUT/'summary.json'); manifest=rj(OUT/'manifest.json'); rows=rjl(OUT/'locale-translations.jsonl')
  if (sr.get('head'),sr.get('tree'),sr.get('branch'))!=(HEAD,TREE,BRANCH):raise SystemExit('source review pin')
  sk=sr.get('sourceKey',{})
  if (sk.get('currentId'),sk.get('currentText'),sk.get('proposedId'),sk.get('proposedText'),sk.get('proposedTextFullSha256'))!=(OLD_ID,OLD_EN,NEW_ID,NEW_EN,NEW_SHA):raise SystemExit('source text/key')
  if sha(NEW_EN)!=NEW_SHA or NEW_ID!='server.message.m'+NEW_SHA[:12] or sr.get('semanticDecision')!='accept-proposed-wording':raise SystemExit('proposed English id/decision')
- codepath=REPO/CODE; raw=codepath.read_bytes(); lines=raw.decode('utf-8').splitlines(keepends=True); caller=sr['callerEvidence']
+ raw=git_bytes(f'{HEAD}:{CODE}'); lines=raw.decode('utf-8').splitlines(keepends=True); caller=sr['callerEvidence']
  snippet=''.join(lines[338:353])
- if sha(raw)!=caller.get('fileSha256') or git('rev-parse',f'HEAD:{CODE}')!=caller.get('gitBlob') or sha(snippet)!=caller.get('contextSha256'):raise SystemExit('caller file/context hash')
+ if sha(raw)!=caller.get('fileSha256') or git('rev-parse',f'{HEAD}:{CODE}')!=caller.get('gitBlob') or sha(snippet)!=caller.get('contextSha256'):raise SystemExit('caller file/context hash')
  if (caller.get('lineRange'),caller.get('conditionLine'),caller.get('messageLine'))!=([339,353],348,350):raise SystemExit('caller line pins')
  if lines[347].rstrip('\n')!='            else if (value > 25000)' or lines[349].rstrip('\n')!=caller.get('currentFailureCall'):raise SystemExit('caller validation semantics')
  if 'server.message.m453c42aa8de5' not in lines[349] or 'should be less than 25000' not in lines[349]:raise SystemExit('current failure source binding')
  if not caller.get('value25000Accepted') or not caller.get('valuesAbove25000Rejected'):raise SystemExit('boundary interpretation')
- en=json.loads((REPO/f'{LOCDIR}/en.json').read_text(encoding='utf-8'))
+ en=json.loads(git_bytes(f'{HEAD}:{LOCDIR}/en.json'))
  if en.get(OLD_ID)!=OLD_EN or sha(OLD_EN)!=sk.get('currentTextSha256'):raise SystemExit('current English catalog binding')
  expected=set(EXPECTED); got={(r.get('locale'),pathlib.Path(r.get('catalogLocaleFile','')).stem) for r in rows}
  if got!=expected or len(rows)!=12:raise SystemExit('locale coverage')
  for r in rows:
-  locale=r['locale']; rel=r['catalogLocaleFile']; p=REPO/rel; d=json.loads(p.read_text(encoding='utf-8'))
+  locale=r['locale']; rel=r['catalogLocaleFile']; catalog=git_bytes(f'{HEAD}:{rel}'); d=json.loads(catalog)
   if d.get(OLD_ID)!=r.get('oldTarget') or sha(r['oldTarget'])!=r.get('oldTargetSha256'):raise SystemExit('old target binding '+locale)
-  if sha(p.read_bytes())!=r.get('catalogFileSha256') or git('rev-parse',f'HEAD:{rel}')!=r.get('catalogGitBlob'):raise SystemExit('locale file pin '+locale)
+  if sha(catalog)!=r.get('catalogFileSha256') or git('rev-parse',f'{HEAD}:{rel}')!=r.get('catalogGitBlob'):raise SystemExit('locale file pin '+locale)
   if r.get('currentSourceId')!=OLD_ID or r.get('proposedSourceId')!=NEW_ID or r.get('proposedEnglishSource')!=NEW_EN or r.get('proposedEnglishSourceSha256')!=NEW_SHA:raise SystemExit('locale source binding '+locale)
   t=r.get('proposedTarget','')
   if r.get('proposedTargetSha256')!=sha(t) or any(x not in t for x in ('NzbGet','KeepHistory','25000')):raise SystemExit('proposal hash/literals '+locale)

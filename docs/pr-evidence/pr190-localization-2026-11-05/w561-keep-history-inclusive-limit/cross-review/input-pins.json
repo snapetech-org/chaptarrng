@@ -10,10 +10,10 @@
   "proposedEnglish": "NzbGet setting KeepHistory must not exceed 25000",
   "currentEnglishSha256": "453c42aa8de536feb62fa62896136529ab6d16edf996511f0fb44b037ba2dc1f",
   "proposedEnglishSha256": "3a79390fb21e5a7e7e4ea479d3d5f2643862a645f76312b3f107817fde29c5b4",
-  "primaryChecksumListSha256": "01301a3db5fbc34141bfc1694ead4395d3697c6e53f745051c9447bee06fe729",
-  "primaryManifestSha256": "a38c00b81803d7cacd9b3fcc83e2f052ad9ebcfdd6820b4f064f9206b664c226",
-  "blindChecksumListSha256": "4d01e902228956c16dd41f12a8c32683492d42a7600892bedb85f209fd92a756",
-  "blindManifestSha256": "0716aec896144ce770c83e6a0a43bc28b66e6d5ab4bfb1bbc4b4987ef56f4821",
+  "primaryChecksumListSha256": "d3f72270e5e5a9c428b8d1f3f8401eb7ff75ee1a7cc12db23c4962a086109da5",
+  "primaryManifestSha256": "81e6e7fe436c9620743dbeaaf22bb416fb19f80a7f917a701d93929cee3be9dc",
+  "blindChecksumListSha256": "646fba281e0ac10be541cae9d4190fcb43767e7ebbc73984e05bbd18c6a9514e",
+  "blindManifestSha256": "ca4b3f4bb9f51ddba5643100fbaf2eed0ddbc12feefb8e11bb647e17bb3ce3b8",
   "caller": {
     "path": "src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs",
     "fileSha256": "637b63deba408a62402ee9532b72202fa81034d0374de6d331cc24b9ab3cf32c",
@@ -29,8 +29,8 @@
     "blindContextWindowSha256": "cd5e270bb926a64ef7f37feb0102e5e198c1e51fffa85e11bdb53b0062642aa1"
   },
   "inputPaths": {
-    "primary": "/mnt/disks/scratch/task-scratch/chaptarrng-w561-nzbget-keep-history-primary-review-20261105",
-    "blind": "/mnt/disks/scratch/task-scratch/chaptarrng-w561-independent-blind-review-20261105"
+    "primary": "../primary-review/",
+    "blind": "../blind-review/"
   },
   "proposalComparisonsByLocale": {
     "es": "primary",
