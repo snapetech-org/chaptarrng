@@ -22,14 +22,28 @@
   ],
   "manualTestsBuildsScans": 0,
   "manualCiDispatches": 0,
-  "automaticGitHubAction": {
-    "runId": 41948520500,
-    "event": "pull_request_target",
-    "conclusion": "skipped",
-    "checkRunCount": 10,
-    "checkConclusions": [
-      "skipped"
-    ],
-    "commitStatusCount": 0
-  }
+  "automaticGitHubActions": [
+    {
+      "runId": 41948520500,
+      "head": "4688c998d92c821bbc1464ea4640c90615a69327",
+      "event": "pull_request_target",
+      "conclusion": "skipped",
+      "checkRunCount": 10,
+      "checkConclusions": [
+        "skipped"
+      ],
+      "commitStatusCount": 0
+    },
+    {
+      "runId": 41952452511,
+      "head": "9e140498caaad4d5957b0ef16ce659fe77fcebf3",
+      "event": "pull_request_target",
+      "conclusion": "skipped",
+      "checkRunCount": 10,
+      "checkConclusions": [
+        "skipped"
+      ],
+      "commitStatusCount": 0
+    }
+  ]
 }
