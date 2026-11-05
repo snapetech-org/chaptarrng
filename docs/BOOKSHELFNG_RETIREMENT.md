@@ -2,9 +2,11 @@
 
 ## Current status — 2026-11-04 UTC
 
-At code head `d3a67c58`, BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977`
-remain the latest public releases; the local `0.9.978` candidate is
-unpublished. Public GitHub-hosted runners are authorized again for trusted
+At application-code head `d3a67c58`; later main commits are runner policy,
+acceptance-workflow, test, and documentation updates. BookshelfNG `0.4.21.76`
+and ChaptarrNG `v0.9.977` remain the latest public releases; the local `0.9.978`
+candidate is unpublished. Public GitHub-hosted
+runners are authorized again for trusted
 build and validation jobs; private ephemeral JIT remains available. See
 [`AGENTS.md`](../AGENTS.md) for the current runner policy.
 
@@ -46,6 +48,32 @@ assertion was corrected. The previous current-source Helm installed handoff
 passed populated migration, provider-ID/narrator mapping, health and database
 checks, retained source backup, chart rollback Job, and BookshelfNG recovery
 with matching database, configuration, and canary fingerprints.
+
+**Exact-head hosted handoffs (2026-11-04):** Fedora 44 RPM acceptance
+[#41844640426](https://github.com/snapetech-org/chaptarrng/actions/runs/41844640426)
+passed at repository head `a64669b2`, covering the installed `.76` package's
+headless/manual/automatic choices, migration, health checks, SELinux checks,
+and rollback. The Helm installed handoff
+[#41844474750](https://github.com/snapetech-org/chaptarrng/actions/runs/41844474750)
+also passed at `a64669b2`: it exercised a populated schema-158 fixture,
+manual defer, automatic conversion, retained source backup, the chart restore
+Job, and BookshelfNG recovery with matching database, configuration, and
+canary fingerprints. These runs used the public hosted runner route; application
+code remains at `d3a67c58`, with the intervening `a64669b2` commit recording
+runner and CodeQL policy only.
+
+The current macOS standalone acceptance
+[#41844474525](https://github.com/snapetech-org/chaptarrng/actions/runs/41844474525)
+passed on Intel at `a64669b2`, including archive verification and No, headless
+Manual, Yes, health, source backup, and failed-start rollback. The ARM64 job
+was canceled twice after 15 minutes queued without a runner assignment, with no
+test steps started. The workflow now accepts an architecture selector so the
+next validation can target ARM64 without rebuilding the passing Intel archive.
+ARM64-only run
+[#41851491849](https://github.com/snapetech-org/chaptarrng/actions/runs/41851491849)
+at `4643daf2` expanded exactly one job on the explicit private Apple route but
+remains queued without a runner; no test step has started. These are runner
+capacity results, not product-test failures.
 
 Keep BookshelfNG operational. Representative SQLite/PostgreSQL operator-data
 migration and rollback, real media, live provider fulfillment, every installed

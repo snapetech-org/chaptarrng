@@ -72,7 +72,7 @@ namespace Chaptarr.Api.V1.Books
 
         protected BookResource MapToResource(Book book, bool includeAuthor)
         {
-            var stats = _authorStatisticsService.AuthorStatistics(book.AuthorId)
+            var stats = GetAuthorStatistics(book.AuthorId)
                 ?.BookStatistics
                 ?.FirstOrDefault(x => x.BookId == book.Id);
 
@@ -121,7 +121,7 @@ namespace Chaptarr.Api.V1.Books
                 }
             }
 
-            var resolvedStatsByBookId = statsByBookId ?? BuildBookStatisticsById(_authorStatisticsService.AuthorStatistics());
+            var resolvedStatsByBookId = statsByBookId ?? BuildBookStatisticsById(GetAuthorStatistics());
 
             // Convert books to resources. Statistics are passed before mapping so narrator gating can
             // use file counts even when lean list endpoints intentionally skip BookFiles hydration.
@@ -168,6 +168,7 @@ namespace Chaptarr.Api.V1.Books
                 .ToList();
             resource.Id = mapping.SourceId;
             resource.LocalBookId = mapping.SourceId.ToString(global::System.Globalization.CultureInfo.InvariantCulture);
+            ProjectLegacyBookshelfCoverImageUrls(resource, mapping.SourceId);
             resource.MediaType = null;
             resource.AudiobookMonitored = null;
             resource.EbookMonitored = null;
@@ -182,7 +183,7 @@ namespace Chaptarr.Api.V1.Books
             if (sourceWorkBooks.Count > 1)
             {
                 var targetIds = sourceWorkBooks.Select(book => book.Id).ToHashSet();
-                var stats = _authorStatisticsService.AuthorStatistics(sourceWorkBooks[0].AuthorId)
+                var stats = GetAuthorStatistics(sourceWorkBooks[0].AuthorId)
                     ?.BookStatistics
                     ?.Where(value => targetIds.Contains(value.BookId))
                     .ToList() ?? new List<BookStatistics>();
@@ -253,6 +254,7 @@ namespace Chaptarr.Api.V1.Books
                 ProjectLegacyAuthorMetadataIdentity(resource, rows[0].AuthorId, legacyMetadataIdByAuthorId);
                 resource.Id = legacyId;
                 resource.LocalBookId = legacyId.ToString(global::System.Globalization.CultureInfo.InvariantCulture);
+                ProjectLegacyBookshelfCoverImageUrls(resource, legacyId);
                 resource.MediaType = null;
                 resource.AudiobookMonitored = null;
                 resource.EbookMonitored = null;
@@ -295,6 +297,17 @@ namespace Chaptarr.Api.V1.Books
             }
 
             return projected;
+        }
+
+        private static void ProjectLegacyBookshelfCoverImageUrls(BookResource resource, int legacyBookId)
+        {
+            foreach (var image in resource?.Images ?? new List<MediaCover>())
+            {
+                // BookshelfNG clients use the persisted legacy cover path. Keep that URL in
+                // the compatibility projection so existing config-mounted cover files remain
+                // available across migration, even when Chaptarr has not indexed the cover yet.
+                image.Url = $"/MediaCover/Books/{legacyBookId}/cover.jpg";
+            }
         }
 
         private void ProjectLegacyAuthorMetadataIdentity(BookResource resource, int authorId)
@@ -383,7 +396,28 @@ namespace Chaptarr.Api.V1.Books
 
         private void FetchAndLinkBookStatistics(BookResource resource)
         {
-            LinkAuthorStatistics(resource, _authorStatisticsService.AuthorStatistics(resource.AuthorId));
+            LinkAuthorStatistics(resource, GetAuthorStatistics(resource.AuthorId));
+        }
+
+        protected List<AuthorStatistics> GetAuthorStatistics(string mediaType = null)
+        {
+            if (string.IsNullOrWhiteSpace(mediaType) &&
+                HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                return _authorStatisticsService.BookshelfAuthorStatistics();
+            }
+
+            return _authorStatisticsService.AuthorStatistics(mediaType);
+        }
+
+        private AuthorStatistics GetAuthorStatistics(int authorId)
+        {
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                return _authorStatisticsService.BookshelfAuthorStatistics(authorId);
+            }
+
+            return _authorStatisticsService.AuthorStatistics(authorId);
         }
 
         private void LinkAuthorStatistics(List<BookResource> resources, List<AuthorStatistics> authorStatistics)

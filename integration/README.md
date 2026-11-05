@@ -1,5 +1,77 @@
 # Integration smoke tests
 
+## BookshelfNG API differential smoke
+
+The bookshelfng-api-differential Compose file starts the digest-pinned public
+BookshelfNG 0.4.21.76 image beside the ChaptarrNG image built from the current
+checkout. It seeds separate expanded schema-158 fixtures, replaces placeholder
+provider IDs with valid numeric Hardcover and typed Open Library identities,
+normalizes the fixture generator's current-time migration timestamps, and
+verifies the two data fixtures are byte identical before adding a valid
+schema-158 BookshelfNG migration profile to the target. This makes ChaptarrNG
+serve the same compatibility mode used by an installed migrated database. It
+compares legacy API lists and detail routes, then exercises focused monitoring
+and deletion writes. The script records
+the source image digest and image ID,
+target commit and image ID, source database hash, per-case response hashes, and
+JSON mismatch paths. Legacy fields, saved values, selector values, and collection
+identity must remain equivalent; ChaptarrNG-only fields and records are reported
+as additive. Objects with IDs are matched by ID and provider fields by name.
+Provider schema entries are matched by stable implementation name, with missing
+implementations kept visible and schema ordering reported as presentation
+evidence instead of comparing shifted entries by array position.
+Provider labels, help, hints, links, control types, and display order are counted
+and reported separately because ChaptarrNG uses its own provider forms. The
+BookshelfNG compatibility API projects DirectDownload URLs back to the legacy
+ordered array shape; array order and contents remain strict while the native
+ChaptarrNG UI keeps its newline-delimited text control. Source collection order
+is still checked. Secret-valued response fields are compared as empty or
+present and are never written into the report.
+
+Run it with an empty task-owned directory. The generated database, config,
+library placeholders, and sanitized report stay under that directory. The
+comparator runs in a pinned Node container on the same internal network, so
+the app ports are not exposed and the services have no outbound network path.
+The script removes only its uniquely named containers and network when it exits.
+
+    export BOOKSHELFNG_DIFFERENTIAL_WORK_DIR=/path/to/task-scratch/bookshelfng-api-differential
+    export BOOKSHELFNG_SOURCE_IMAGE=docker.io/snapetech/bookshelfng@sha256:40a53ac528b6789ca78686b4303bb6c436cd191cd813f915ea171d72b47a8c38
+    export CHAPTARRNG_TARGET_COMMIT="$(git rev-parse HEAD)"
+    bash integration/run-bookshelfng-api-differential.sh
+
+The workflow dispatch defaults to a GitHub-hosted Ubuntu runner and retains an
+explicit private JIT option. The read comparison covers authors, books, series,
+files, history, roots, profiles, indexers, download clients, and notifications,
+including author/book detail and book-file lookups. The isolated read-only
+sweep also covers blocklist and paged books/history, settings and provider
+schemas, import lists, wanted and queue state, release profiles, tags, system
+status, and route inventory. The source BookshelfNG `v0.4.21.76` OpenAPI
+document declares 236 method/path pairs; the target OpenAPI document declares
+334 and contains every source pair, with 98 target-only pairs. This is route
+declaration evidence only. The write cases still cover only a small part of
+the mutation surface. The suite remains synthetic and partial; it does not
+establish all mutation or command semantics, provider fulfillment,
+representative operator data, media decoding, rollback, or installed-channel
+acceptance.
+
+The Node contract comparator is mounted read-only beside the runner. Its
+focused checks are in `test-bookshelfng-api-contract.mjs`; the workflow runs
+them before building the disposable services. Review both mismatches and
+additive differences in the report. Additive API output still needs an
+old-client compatibility review even when it does not fail the source-contract
+comparison.
+
+The differential also sends two legacy writes to both isolated copies: it
+disables monitoring for a seeded work and deletes a mixed-format work without
+deleting files. It compares the write responses and readback state, including
+that one legacy delete removes both ChaptarrNG format rows. This is a focused
+mutation smoke, not coverage of every BookshelfNG API operation or command.
+
+For local triage, `CHAPTARRNG_DIFFERENTIAL_SKIP_BUILD=true` may reuse an
+already-built image only when `HEAD` matches the requested commit and all
+application build inputs are clean. `BOOKSHELFNG_DIFFERENTIAL_DEBUG_VALUES=true`
+adds bounded, sanitized scalar values to the report; it is off by default.
+
 The SeerrNG smoke stack builds the ChaptarrNG candidate, seeds a disposable
 BookshelfNG migration-158 SQLite fixture, and starts ChaptarrNG on an isolated
 Compose network. The app listens on port 8789 for the SeerrNG probe. The default

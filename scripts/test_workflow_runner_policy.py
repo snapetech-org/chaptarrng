@@ -101,6 +101,8 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             "build.yml",
             "helm-handoff.yml",
             "bookshelfng-standalone-macos-acceptance.yml",
+            "standalone-asset-validation.yml",
+            "bookshelfng-api-differential.yml",
         }
         for workflow_path in sorted(workflow_dir.glob("*.yml")):
             source = workflow_path.read_text(encoding="utf-8")
@@ -133,6 +135,64 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
                         r"self-hosted|group|fromJSON",
                         f"{workflow_path}: {line}",
                     )
+
+    def test_bookshelfng_differential_uses_runner_temp_in_step_context(self) -> None:
+        path = WORKFLOW.parent / "bookshelfng-api-differential.yml"
+        source = path.read_text(encoding="utf-8")
+        differential = job_block(source, "differential-smoke")
+        job_environment = differential.split("    steps:", 1)[0]
+        self.assertNotIn("runner.temp", job_environment)
+        run_start = source.index(
+            "      - name: Run read/write API differential against identical disposable fixtures"
+        )
+        upload_start = source.index(
+            "      - name: Upload sanitized differential results and startup logs",
+            run_start,
+        )
+        run_step = source[run_start:upload_start]
+        self.assertIn("BOOKSHELFNG_DIFFERENTIAL_WORK_DIR: ${{ runner.temp }}", run_step)
+        self.assertIn(
+            "path: ${{ runner.temp }}/bookshelfng-api-differential-${{ github.run_id }}/evidence/",
+            source,
+        )
+
+    def test_bookshelfng_differential_mounts_contract_comparator_in_isolated_runner(self) -> None:
+        integration = WORKFLOW.parents[2] / "integration"
+        runner = (integration / "run-bookshelfng-api-differential.sh").read_text(encoding="utf-8")
+        compose = (integration / "bookshelfng-api-differential.compose.yml").read_text(encoding="utf-8")
+        self.assertIn("export BOOKSHELFNG_API_CONTRACT_SCRIPT=", runner)
+        self.assertIn("${BOOKSHELFNG_API_CONTRACT_SCRIPT:?", compose)
+        self.assertIn("target: /harness/bookshelfng-api-contract.mjs", compose)
+
+    def test_standalone_asset_validation_allows_trusted_public_runners(self) -> None:
+        path = WORKFLOW.parent / "standalone-asset-validation.yml"
+        source = path.read_text(encoding="utf-8")
+        self.assertTrue(
+            source.startswith("# ng-runner-policy: trusted-hosted-or-private-jit-v1"),
+            path.name,
+        )
+        self.assertIn("default: public", event_block(source, "workflow_dispatch"))
+
+        for job_name in (
+            "verify-runtime-pack-install",
+            "frontend",
+            "extra-platform-runtimes",
+            "extra-standalone",
+            "standalone",
+        ):
+            job = job_block(source, job_name)
+            self.assertIn("inputs.runner_pool == 'public'", job, job_name)
+            self.assertIn("inputs.runner_pool == 'private'", job, job_name)
+            self.assertIn("'ubuntu-24.04'", job, job_name)
+            self.assertIn('"group":"ng-shared-main-jit"', job, job_name)
+
+    def test_macos_handoff_runs_do_not_serialize_public_and_private_pools(self) -> None:
+        path = WORKFLOW.parent / "bookshelfng-standalone-macos-acceptance.yml"
+        source = path.read_text(encoding="utf-8")
+        self.assertIn(
+            "group: bookshelfng-standalone-macos-acceptance-${{ github.ref }}-${{ inputs.runner_pool }}-${{ inputs.architecture }}",
+            source,
+        )
 
     def test_windows_release_jobs_use_the_private_packer_route(self) -> None:
         windows_release_jobs = (
@@ -406,6 +466,11 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
                 (WORKFLOW.parent / "standalone-asset-validation.yml").read_text(encoding="utf-8"),
             ),
             (
+                WORKFLOW.parent / "bookshelfng-api-differential.yml",
+                "ci",
+                (WORKFLOW.parent / "bookshelfng-api-differential.yml").read_text(encoding="utf-8"),
+            ),
+            (
                 WORKFLOW.parent / "trivy-filesystem.yml",
                 "scan",
                 (WORKFLOW.parent / "trivy-filesystem.yml").read_text(encoding="utf-8"),
@@ -415,7 +480,13 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             dispatch = event_block(source, "workflow_dispatch")
             if path.name == "helm-handoff.yml":
                 self.assertNotRegex(source, r"(?m)^  push:")
-            pool_options = ("public", "private") if path.name in {"build.yml", "helm-handoff.yml"} else ("private",)
+            public_routes = {
+                "build.yml",
+                "helm-handoff.yml",
+                "standalone-asset-validation.yml",
+                "bookshelfng-api-differential.yml",
+            }
+            pool_options = ("public", "private") if path.name in public_routes else ("private",)
             for field, options in (("action", (action,)), ("runner_pool", pool_options)):
                 input_match = re.search(
                     rf"(?ms)^      {field}:\n(?P<body>.*?)(?=^      [A-Za-z0-9_-]+:|\Z)",
@@ -431,7 +502,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
                         rf"(?m)^          - {re.escape(option)}$",
                         f"{path.name}: {field}",
                     )
-                if path.name in {"build.yml", "helm-handoff.yml"} and field == "runner_pool":
+                if path.name in public_routes and field == "runner_pool":
                     self.assertIn("default: public", input_body, f"{path.name}: {field}")
 
             run_name = source.split("run-name:", 1)[1].split("\non:", 1)[0]

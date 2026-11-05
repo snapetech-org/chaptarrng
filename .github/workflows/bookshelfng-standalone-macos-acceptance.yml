@@ -1,6 +1,6 @@
 # ng-runner-policy: trusted-hosted-or-private-jit-v1
 name: BookshelfNG standalone macOS handoff acceptance
-run-name: ${{ format('action:{0}:pool:{1}', inputs.action, inputs.runner_pool) }}
+run-name: ${{ format('action:{0}:pool:{1}:arch:{2}', inputs.action, inputs.runner_pool, inputs.architecture) }}
 
 on:
   workflow_dispatch:
@@ -16,18 +16,27 @@ on:
         type: choice
         default: public
         options: [public, private]
+      architecture:
+        description: Run both architectures or retry one native architecture
+        required: true
+        type: choice
+        default: all
+        options: [all, x64, arm64]
 
 permissions:
   contents: read
 
 concurrency:
-  group: bookshelfng-standalone-macos-acceptance-${{ github.ref }}
+  group: bookshelfng-standalone-macos-acceptance-${{ github.ref }}-${{ inputs.runner_pool }}-${{ inputs.architecture }}
   cancel-in-progress: false
 
 jobs:
   installed-handoff:
     name: BookshelfNG .76 to current ${{ matrix.rid }} archive
-    if: github.ref == 'refs/heads/main' && inputs.action == 'ci' && (inputs.runner_pool == 'private' || inputs.runner_pool == 'public')
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.action == 'ci' &&
+      (inputs.runner_pool == 'private' || inputs.runner_pool == 'public')
     runs-on: >-
       ${{ inputs.runner_pool == 'public' &&
           (matrix.architecture == 'X64' && 'macos-15-intel' || 'macos-15') ||
@@ -36,16 +45,16 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      matrix:
-        include:
-        - rid: osx-x64
-          architecture: X64
-          predecessor_version: 0.4.21.76
-          predecessor_sha256: 4f660a1367e28c01660c2e082c4f1778f652cca34affc0dba55d3f47ef67f747
-        - rid: osx-arm64
-          architecture: ARM64
-          predecessor_version: 0.4.21.76
-          predecessor_sha256: d964bb1146b6c9e313758a967815f53f8d9aa45314bc30cfa55e96bb299433ce
+      matrix: >-
+        ${{
+          fromJSON(
+            inputs.architecture == 'all' &&
+            '{"include":[{"rid":"osx-x64","architecture":"X64","predecessor_version":"0.4.21.76","predecessor_sha256":"4f660a1367e28c01660c2e082c4f1778f652cca34affc0dba55d3f47ef67f747"},{"rid":"osx-arm64","architecture":"ARM64","predecessor_version":"0.4.21.76","predecessor_sha256":"d964bb1146b6c9e313758a967815f53f8d9aa45314bc30cfa55e96bb299433ce"}]}' ||
+            inputs.architecture == 'x64' &&
+            '{"include":[{"rid":"osx-x64","architecture":"X64","predecessor_version":"0.4.21.76","predecessor_sha256":"4f660a1367e28c01660c2e082c4f1778f652cca34affc0dba55d3f47ef67f747"}]}' ||
+            '{"include":[{"rid":"osx-arm64","architecture":"ARM64","predecessor_version":"0.4.21.76","predecessor_sha256":"d964bb1146b6c9e313758a967815f53f8d9aa45314bc30cfa55e96bb299433ce"}]}'
+          )
+        }}
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:

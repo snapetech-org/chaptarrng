@@ -125,28 +125,39 @@ check_deferred_container_stops_promptly() {
   process_group="$(ps -o pgid= -p "$supervisor_pid" | tr -d '[:space:]')"
   test -n "$process_group"
 
-  (
-    sleep 5
-    kill -KILL -- "-$process_group" 2>/dev/null || true
-  ) &
-  watchdog_pid=$!
-
-  for _ in {1..50}; do
+  for _ in {1..100}; do
     if grep -Fq 'BookshelfNG migration is deferred' "$test_root/deferred-stop.log"; then
       break
     fi
     if ! kill -0 "$supervisor_pid" 2>/dev/null; then
       wait "$supervisor_pid" || true
       cat "$test_root/deferred-stop.log" >&2
-      kill "$watchdog_pid" 2>/dev/null || true
-      wait "$watchdog_pid" 2>/dev/null || true
       return 1
     fi
     sleep 0.1
   done
 
-  grep -Fq 'BookshelfNG migration is deferred' "$test_root/deferred-stop.log"
+  if ! grep -Fq 'BookshelfNG migration is deferred' "$test_root/deferred-stop.log"; then
+    echo 'Deferred supervisor did not reach Ask mode within ten seconds.' >&2
+    cat "$test_root/deferred-stop.log" >&2
+    kill -TERM "$supervisor_pid" 2>/dev/null || true
+    (
+      sleep 5
+      kill -KILL -- "-$process_group" 2>/dev/null || true
+    ) &
+    watchdog_pid=$!
+    wait "$supervisor_pid" 2>/dev/null || true
+    kill "$watchdog_pid" 2>/dev/null || true
+    wait "$watchdog_pid" 2>/dev/null || true
+    return 1
+  fi
+
   kill -TERM "$supervisor_pid"
+  (
+    sleep 5
+    kill -KILL -- "-$process_group" 2>/dev/null || true
+  ) &
+  watchdog_pid=$!
   if wait "$supervisor_pid"; then
     status=0
   else
@@ -391,6 +402,14 @@ run_case 'ask mode without a terminal records deferral and does not start Chapta
   set -euo pipefail
   data_dir="$1/ask-no-terminal"
   mkdir -p "$data_dir"
+  stub_bin="$1/ask-bin"
+  mkdir -p "$stub_bin"
+  cat > "$stub_bin/dotnet" <<"SH"
+#!/bin/sh
+# This case tests the headless Ask decision, not the migration-status command.
+exit 1
+SH
+  chmod 0755 "$stub_bin/dotnet"
   printf "synthetic BookshelfNG database\n" > "$data_dir/readarr.db"
   app_started="$1/ask-app-started"
   app="$1/ask-app"
@@ -401,7 +420,7 @@ run_case 'ask mode without a terminal records deferral and does not start Chapta
   export CHAPTARR_COMPAT_DATA_DIR="$data_dir"
   export CHAPTARR_CONFIG_FILE="$data_dir/config.xml"
   export BOOKSHELFNG_MIGRATION_MODE=ask
-  if timeout --signal=TERM --kill-after=2 5 sh "$2" "$app" > "$1/ask.log" 2>&1; then
+  if PATH="$stub_bin:$PATH" timeout --signal=TERM --kill-after=2 5 sh "$2" "$app" > "$1/ask.log" 2>&1; then
     status=0
   else
     status=$?
