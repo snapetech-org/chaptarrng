@@ -130,6 +130,14 @@
           "sourceLineSha256": "a2c6afc5f3f361eb8bd237c91177ee0d56cc4d8147469804d97f8348f7e6d9ff",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Grimmory/GrimmorySettings.cs",
+          "line": 20,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"UsernameRequired\"));",
+          "sourceLineSha256": "7d5a00065451390f65c0d80837f10458b537e7c65294b01b9344450a0d1080de",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": []
@@ -321,6 +329,14 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/DownloadStationSettings.cs",
+          "line": 34,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m006b305414e1\"));",
+          "sourceLineSha256": "626e5719da1cea998965f9fc0f8cc29537e74adc62b426533ed50f5a381405d4",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/DownloadStationSettings.cs",
           "line": 38,
           "sourceLine": ".WithMessage(\"Cannot use Category and Directory\")",
           "sourceLineSha256": "ba696cb43567f06491116b27f90b3c6dfe953d1124b7dcfc79d76d5b8afb42aa",
@@ -329,9 +345,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/DownloadStationSettings.cs",
+          "line": 39,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m006b305414e1\"));",
+          "sourceLineSha256": "626e5719da1cea998965f9fc0f8cc29537e74adc62b426533ed50f5a381405d4",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/DownloadStationSettings.cs",
           "line": 43,
           "sourceLine": ".WithMessage(\"Cannot use Category and Directory\")",
           "sourceLineSha256": "ba696cb43567f06491116b27f90b3c6dfe953d1124b7dcfc79d76d5b8afb42aa",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/DownloadStationSettings.cs",
+          "line": 44,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m006b305414e1\"));",
+          "sourceLineSha256": "626e5719da1cea998965f9fc0f8cc29537e74adc62b426533ed50f5a381405d4",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
@@ -345,6 +377,14 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionSettings.cs",
+          "line": 28,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m006b305414e1\"));",
+          "sourceLineSha256": "626e5719da1cea998965f9fc0f8cc29537e74adc62b426533ed50f5a381405d4",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionSettings.cs",
           "line": 32,
           "sourceLine": ".WithMessage(\"Cannot use Category and Directory\")",
           "sourceLineSha256": "ba696cb43567f06491116b27f90b3c6dfe953d1124b7dcfc79d76d5b8afb42aa",
@@ -353,9 +393,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionSettings.cs",
+          "line": 33,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m006b305414e1\"));",
+          "sourceLineSha256": "626e5719da1cea998965f9fc0f8cc29537e74adc62b426533ed50f5a381405d4",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionSettings.cs",
           "line": 37,
           "sourceLine": ".WithMessage(\"Cannot use Category and Directory\")",
           "sourceLineSha256": "ba696cb43567f06491116b27f90b3c6dfe953d1124b7dcfc79d76d5b8afb42aa",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionSettings.cs",
+          "line": 38,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m006b305414e1\"));",
+          "sourceLineSha256": "626e5719da1cea998965f9fc0f8cc29537e74adc62b426533ed50f5a381405d4",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -577,6 +633,14 @@
           "sourceLineSha256": "88ded0a693b67336e79f8196e9272213aec37d797d6518b3396b701ef76bca55",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/MqttGateway/MqttGatewaySettings.cs",
+          "line": 31,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m05b73e4fe269\")).When(c => c.PublishHomeAssistantDiscovery);",
+          "sourceLineSha256": "c2cad4735f56d29f3246dbd51336b96549c86b541c44c72b983875a7f7680c95",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": [
@@ -634,9 +698,17 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Download/Clients/rTorrent/RTorrent.cs",
-          "line": 376,
+          "line": 378,
           "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"rTorrent version should be at least 0.9.0. Version reported is {0}\", version)",
           "sourceLineSha256": "0aff94f4a4969ed42cb9858e10e80438dc7fe0b822c0f712a44a46e638cf8b15",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/rTorrent/RTorrent.cs",
+          "line": 380,
+          "sourceLine": "MessageId = \"server.message.m06254ce94096\",",
+          "sourceLineSha256": "dc416c43e848d6679cf3c53f6af1607eef06a97fe66ce0a22f01dead5d0320ba",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -689,8 +761,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 671,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"qBittorrent is configured to remove torrents when they reach their Share Ratio Limit\", \"server.message.m064256735f51\")",
-          "sourceLineSha256": "f1cdd11486043ea3cdf60be447eade57505585a0fb7f0c0924a365e2182110cb",
+          "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"qBittorrent is configured to remove torrents when they reach their Share Ratio Limit\", \"server.message.m064256735f51\", null)",
+          "sourceLineSha256": "0c338c534e1b44a7d6d0c23a571ea6c2b590e83e14ac971d057f5d57bafe85d4",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -1043,8 +1115,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 480,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"UseSsl\", \"Verify SSL settings\", \"server.message.m0b40b0984817\")",
-          "sourceLineSha256": "cb6c9f528276f4eaf672ef879935d396692d2a6a494719bc3b2b4d6b7bad0126",
+          "sourceLine": "return new NzbDroneValidationFailure(\"UseSsl\", \"Verify SSL settings\", \"server.message.m0b40b0984817\", null)",
+          "sourceLineSha256": "fe95da56c4cb4a401de4509a7282b74d6e969d632ccf02a97acfd44e7babec70",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -1068,8 +1140,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 651,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Category\", \"Category is not supported\", \"server.message.m0b8f5729c27f\")",
-          "sourceLineSha256": "5426b96092633eea2d5234135c5d50c8113019c6ec16cbb3e41c9023c623e701",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Category\", \"Category is not supported\", \"server.message.m0b8f5729c27f\", null)",
+          "sourceLineSha256": "291619adc31ba20b1737c3abb8a427fff66c755f9ad631128fc536748ca5a669",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -1091,8 +1163,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 573,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(field, \"Label plugin not activated\", \"server.message.m0bd4ca44f88d\")",
-          "sourceLineSha256": "ac4fd243a2c387cc5a01941bf976986396d16f26a75ff99c1209e43ddeb47335",
+          "sourceLine": "return new NzbDroneValidationFailure(field, \"Label plugin not activated\", \"server.message.m0bd4ca44f88d\", null)",
+          "sourceLineSha256": "52ff8f05510ba9d7b5508faa03da4b0b86a3be63736c85774018af3d5e199a3c",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -1194,7 +1266,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1412,
+          "line": 1421,
           "sourceLine": "return BadRequest(\"Page size must be between 1 and 1000\");",
           "sourceLineSha256": "fda3f798b3239125c89796ce9820fcf7a294a995b4fe8719bf49bfe158c4f3b7",
           "category": "direct-api-result",
@@ -1466,7 +1538,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Notifications/Plex/Server/PlexServer.cs",
-          "line": 228,
+          "line": 240,
           "sourceLine": "throw new BadRequestException(\"QueryParam pinId invalid.\");",
           "sourceLineSha256": "2ead9f0be70da6694d7043127b4fd53e89e8ce4fb087b685e851e38a80d43801",
           "category": "api-error",
@@ -1728,6 +1800,14 @@
           "sourceLineSha256": "05cce884aebd4a798308bd210c890db0dcb5decbc666b2ec3d266b94c729f66a",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Apprise/AppriseSettings.cs",
+          "line": 39,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m17a00dbb4f2a\"));",
+          "sourceLineSha256": "bec858783956a9b8db307b943f3fd249d70ef9e1244b127294f09dde0e0d6b9c",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": []
@@ -1848,16 +1928,16 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 499,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Connection refused\", \"server.message.m1a28032cdce5\")",
-          "sourceLineSha256": "05fb7cf21c089b3b3b8eaac5561b749e0130ab27131ff8c835b3e4c3792488ce",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Connection refused\", \"server.message.m1a28032cdce5\", null)",
+          "sourceLineSha256": "f6d4bf2152cf3095b6bda81df02e9997e93ea58391cbd3ff36251e40152f2514",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 523,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Connection refused\", \"server.message.m1a28032cdce5\")",
-          "sourceLineSha256": "05fb7cf21c089b3b3b8eaac5561b749e0130ab27131ff8c835b3e4c3792488ce",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Connection refused\", \"server.message.m1a28032cdce5\", null)",
+          "sourceLineSha256": "f6d4bf2152cf3095b6bda81df02e9997e93ea58391cbd3ff36251e40152f2514",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -1883,14 +1963,6 @@
         "Successfully deleted series variant {variantId}"
       ],
       "callsites": [
-        {
-          "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 359,
-          "sourceLine": "return Ok(new ApiMessageResource { Message = $\"Successfully deleted series variant {variantId}\" });",
-          "sourceLineSha256": "453e8c968962c4fe7abde9d9962dfd19fe0f23dd5aec99332a5ffce05c6ce57a",
-          "category": "api-message-resource",
-          "surface": "server/API text; may be user-visible"
-        },
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
           "line": 359,
@@ -2168,7 +2240,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 459,
+          "line": 460,
           "sourceLine": "new ValidationFailure(\"ForeignEditionId\",",
           "sourceLineSha256": "52eafbf5434ed110e81cd0d829267c24dbcf77c791b30b5de2ce6753a173a9a1",
           "category": "validation-failure",
@@ -2640,8 +2712,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/uTorrent/UTorrent.cs",
           "line": 339,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to uTorrent\", \"server.message.m27001fadea37\")",
-          "sourceLineSha256": "32fa8dab436c13f896b5d2995a407e23bf65e8b4cbad498dceddc5a06cdd7364",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to uTorrent\", \"server.message.m27001fadea37\", null)",
+          "sourceLineSha256": "82058b1b7b4a64e439d544170d3591b8e565d2c071dc89d2ad2d9783ab909d37",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -2694,8 +2766,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 545,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unknown error\", \"server.message.m27c2ccd962c2\")",
-          "sourceLineSha256": "a53c58bc7d7af49b1feee7c7f42361e10a75309ef35f8f3e9c0fbc0bd8a0c13b",
+          "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"Unknown error\", \"server.message.m27c2ccd962c2\", null)",
+          "sourceLineSha256": "3eaf67ebb6e70ef3b9dca94a4306e5534958fa83a569bc797a6d2e6445484b01",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -2989,8 +3061,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Sabnzbd/Sabnzbd.cs",
           "line": 504,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(pair.Field, \"Disable Movie Sorting\", \"server.message.m2bf18c3eddf8\")",
-          "sourceLineSha256": "aea82827bf4df455457453ecfe70c1a7f1ee01f0a4f70eb8cee7ec8701d45002",
+          "sourceLine": "return new NzbDroneValidationFailure(pair.Field, \"Disable Movie Sorting\", \"server.message.m2bf18c3eddf8\", null)",
+          "sourceLineSha256": "fc64225ef18d24172160afad1080d92ba1fc8016f99553251a2091a7cf75d9b1",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -3138,8 +3210,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Sabnzbd/Sabnzbd.cs",
           "line": 388,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Version\", \"Sabnzbd develop version, assuming version 3.0.0 or higher.\", \"server.message.m2e3799b32682\")",
-          "sourceLineSha256": "8e17dcaf543a660b1f1ed4acd13012522defd525c2d190dc8875e3fc0b2606e8",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Version\", \"Sabnzbd develop version, assuming version 3.0.0 or higher.\", \"server.message.m2e3799b32682\", null)",
+          "sourceLineSha256": "4b9c8851ba0805adccc38bc703763a6a415d481e0f4ca6c6dedd56fff425b05c",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -3186,6 +3258,14 @@
           "line": 27,
           "sourceLine": "RuleFor(c => c.Arguments).Empty().WithMessage(\"Arguments are no longer supported for custom scripts\")",
           "sourceLineSha256": "5645aa942811f312aaf52076e12af1792d959527d10946992ea3a0a9971a116b",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/CustomScript/CustomScriptSettings.cs",
+          "line": 28,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m2ebae1c36a6c\"));",
+          "sourceLineSha256": "951e3daf28172a3bb559d7f9ffab5deba71c4b700795387db1d83ffe632ee957",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -3375,7 +3455,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1691,
+          "line": 1729,
           "sourceLine": "return StatusCode(502, \"Failed to download selected photo\");",
           "sourceLineSha256": "b1c630af29c0af3348d48cfef6130f44063d816b3aed32b6f143696b6aeca059",
           "category": "direct-api-result",
@@ -3559,7 +3639,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1622,
+          "line": 1631,
           "sourceLine": "return BadRequest(\"No media type is configured (audiobook/ebook). Configure at least one root folder + quality profile for this instance.\");",
           "sourceLineSha256": "af7f003aaf2576b377f5ccfaa5a3e5f266a1a477b2f9b90f8899b126208a6bb5",
           "category": "direct-api-result",
@@ -3605,7 +3685,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Books/Services/AuthorService.cs",
-          "line": 1154,
+          "line": 1155,
           "sourceLine": "new ValidationFailure(nameof(Author.SyncMonitoredAcrossFormats), \"Sync monitored across formats requires both audiobook and ebook root folders to be configured for this author.\")",
           "sourceLineSha256": "5285a88c4ed406e94ec0172438c963f29c7b1474ac2d6b5d9422e0cf6b18d67b",
           "category": "validation-failure",
@@ -3677,7 +3757,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Indexers/Newznab/Newznab.cs",
-          "line": 152,
+          "line": 158,
           "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Indexer does not support required search parameters\", \"server.message.m35c921a37b2e\");",
           "sourceLineSha256": "8b7f3c6801dbd90db695dbb28153d79e584c11f9733e92172ae542336c35d622",
           "category": "validation-failure",
@@ -3772,6 +3852,14 @@
         },
         {
           "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
+          "line": 32,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m36ff1c2553cc\", new { value0 = seedRatioMinimum }, isWarning: true));",
+          "sourceLineSha256": "953d180b0ea53192aaf70b21f382954cd01d6fd6e911c63853ff3d373e2956bb",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
           "line": 40,
           "sourceLine": ".WithMessage($\"Under {seedTimeMinimum} leads to H&R\")",
           "sourceLineSha256": "9f81f2fba9c6f0670a8f562c10655e579fde59b33b33d801aa3113679ba7598c",
@@ -3780,9 +3868,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
+          "line": 41,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m36ff1c2553cc\", new { value0 = seedTimeMinimum }, isWarning: true));",
+          "sourceLineSha256": "4c621fc74b856d4e0c05384e4898aa341633e5e6a8488ff1db37f7e152d7b113",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
           "line": 49,
           "sourceLine": ".WithMessage($\"Under {discographySeedTimeMinimum} leads to H&R\")",
           "sourceLineSha256": "2e0b1b2b917b5ca320ee87c93678c8d06ff40469b22f27a2b9bb439e30d41808",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
+          "line": 50,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m36ff1c2553cc\", new { value0 = discographySeedTimeMinimum }, isWarning: true));",
+          "sourceLineSha256": "81366fe77d6720f398e27ef6e085977868fa482e53f73a759d5ca622b2ec1280",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -3975,24 +4079,24 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
           "line": 464,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Shared folder does not exist\", \"server.message.m3c9d3d8a7bc2\")",
-          "sourceLineSha256": "86b29c7451b80f673450046253c95c041c741e5df3d3807a43477c440eff328a",
+          "sourceLine": "return new NzbDroneValidationFailure(fieldName, $\"Shared folder does not exist\", \"server.message.m3c9d3d8a7bc2\", null)",
+          "sourceLineSha256": "3eed203e7a6ba5d4114f43c7667e566faf2e2a2003810bc48aa284340b267282",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
           "line": 499,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(pair.Field, $\"Shared folder does not exist\", \"server.message.m3c9d3d8a7bc2\")",
-          "sourceLineSha256": "c04f8ad22158b505a3a84cd274a16affed890a6a5f4f43db5ae9a36e8fa38831",
+          "sourceLine": "return new NzbDroneValidationFailure(pair.Field, $\"Shared folder does not exist\", \"server.message.m3c9d3d8a7bc2\", null)",
+          "sourceLineSha256": "f8b57a01ffe9b5f93697e79f153c72971886efd14695815424d7af7253071975",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/UsenetDownloadStation.cs",
           "line": 256,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Shared folder does not exist\", \"server.message.m3c9d3d8a7bc2\")",
-          "sourceLineSha256": "86b29c7451b80f673450046253c95c041c741e5df3d3807a43477c440eff328a",
+          "sourceLine": "return new NzbDroneValidationFailure(fieldName, $\"Shared folder does not exist\", \"server.message.m3c9d3d8a7bc2\", null)",
+          "sourceLineSha256": "3eed203e7a6ba5d4114f43c7667e566faf2e2a2003810bc48aa284340b267282",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -4270,8 +4374,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Sabnzbd/Sabnzbd.cs",
           "line": 513,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(pair.Field, \"Disable Date Sorting\", \"server.message.m42d5ddf06dd0\")",
-          "sourceLineSha256": "4950d8f7e785110b5082d4620eb07af3f8d5c353e3771267b0ceb2d2600a2003",
+          "sourceLine": "return new NzbDroneValidationFailure(pair.Field, \"Disable Date Sorting\", \"server.message.m42d5ddf06dd0\", null)",
+          "sourceLineSha256": "95294eed6029acb303df12f42b5f6b8a627d89f0c2a1929d753c52cc3d33a697",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -4550,7 +4654,7 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/rTorrent/RTorrent.cs",
-          "line": 405,
+          "line": 407,
           "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Failed to get the list of torrents: \" + ex.Message, \"server.message.m451006253bc3\", new { value0 = ex.Message });",
           "sourceLineSha256": "e4e4a3b981449339182256adc828812e69ff7cf35f6ab7264e71d9b8b8a3bd34",
           "category": "validation-failure",
@@ -4582,8 +4686,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs",
           "line": 350,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"NzbGet setting KeepHistory should be less than 25000\", \"server.message.m453c42aa8de5\")",
-          "sourceLineSha256": "9ef7596042b7a70934166d46ba13839ae2e10a8f6b56371850fc7c6055d3f102",
+          "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"NzbGet setting KeepHistory should be less than 25000\", \"server.message.m453c42aa8de5\", null)",
+          "sourceLineSha256": "426be92331a5aa57b67df35ea65e0a61d3638a288a670bc4e677309ca32d6cfd",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -4671,6 +4775,14 @@
           "line": 35,
           "sourceLine": ".WithMessage(\"must be valid Host without http://\")",
           "sourceLineSha256": "16f3623f9fe05ddc09033f58af17ab721dcb60898e61d7d12714781a50e149eb",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/RuleBuilderExtensions.cs",
+          "line": 36,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m45d06dda48d1\"));",
+          "sourceLineSha256": "078229ab051f3055e2ce7b46fd46b512377ad0340daa86e378aa620d62fdf7c4",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -4960,8 +5072,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionBase.cs",
           "line": 297,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to Transmission\", \"server.message.m4abee5a92d01\")",
-          "sourceLineSha256": "aa4909e2ca72ad28b2d63118efd6f1a787a06838172d9b8aeaf4d62abdf5c5f8",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to Transmission\", \"server.message.m4abee5a92d01\", null)",
+          "sourceLineSha256": "72329aee5ee44e9ad8accdfe03731176893fc4558d2b1a11af189633f6ecac58",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -5090,7 +5202,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 89,
+          "line": 93,
           "sourceLine": ".WithMessage(\"Must be a valid absolute URL\")",
           "sourceLineSha256": "d97668288d8535d101f51a0f901d3f916ed18526f52ff1ac93cde2305ae758cd",
           "category": "validation-message",
@@ -5116,24 +5228,24 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
           "line": 472,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Folder does not exist\", \"server.message.m4bbe30648055\")",
-          "sourceLineSha256": "94920b83bb3a393add58afc77f44b0d6a5d085974477d1b7d63587e2a26faffd",
+          "sourceLine": "return new NzbDroneValidationFailure(fieldName, $\"Folder does not exist\", \"server.message.m4bbe30648055\", null)",
+          "sourceLineSha256": "84a052ddf5dbe65b8c82e35bf0f796140ef976057853742c7d86c4b443d4938a",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
           "line": 507,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(pair.Field, $\"Folder does not exist\", \"server.message.m4bbe30648055\")",
-          "sourceLineSha256": "8b63c113f92e282b320c69cb5b9cfb0916aa3554e10cf0b69436690f46dcb34b",
+          "sourceLine": "return new NzbDroneValidationFailure(pair.Field, $\"Folder does not exist\", \"server.message.m4bbe30648055\", null)",
+          "sourceLineSha256": "8b2a905cd989e617851c5f7ddb50dd7e10cb67edad07d85e30c512476875d7c3",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/UsenetDownloadStation.cs",
           "line": 264,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(fieldName, $\"Folder does not exist\", \"server.message.m4bbe30648055\")",
-          "sourceLineSha256": "94920b83bb3a393add58afc77f44b0d6a5d085974477d1b7d63587e2a26faffd",
+          "sourceLine": "return new NzbDroneValidationFailure(fieldName, $\"Folder does not exist\", \"server.message.m4bbe30648055\", null)",
+          "sourceLineSha256": "84a052ddf5dbe65b8c82e35bf0f796140ef976057853742c7d86c4b443d4938a",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
@@ -5211,7 +5323,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Download/Clients/rTorrent/RTorrent.cs",
-          "line": 146,
+          "line": 148,
           "sourceLine": "public override ProviderMessage Message => new ProviderMessage($\"rTorrent will not pause torrents when they meet the seed criteria. Chaptarr can remove torrents after seeding is done only when Remove Completed is enabled and the torrent is not protected by Preserve torrents in client or Post-Import Category. After importing it will also set \\\"{_imported_view}\\\" as an rTorrent view, which can be used in rTorrent scripts to customize behavior.\", ProviderMessageType.Info, \"server.message.m4cd205e7d07a\", new { value0 = _imported_view });",
           "sourceLineSha256": "ec9e98f5b0873648cafba5df6dd78a0c1dfa35505ef2a34c59916f1f95c103e2",
           "category": "provider-test-message",
@@ -5573,7 +5685,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 163,
+          "line": 171,
           "sourceLine": "\"Unable to parse books in the release\",",
           "sourceLineSha256": "6d4945dd06f41b7fa41253bee6db70c91f5073d57a4947dbcf4b27c0d2691dda",
           "category": "api-error",
@@ -5692,6 +5804,14 @@
           "sourceLineSha256": "d7db6bed8f72050133a8ecc604a3eecfce04c2e2ea51f97ee6dc973de25834a1",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Plex/Server/PlexServerSettings.cs",
+          "line": 14,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m5269a817943e\"));",
+          "sourceLineSha256": "91ef5d269ac3af78ac408ac6869e19279bac48cf6603cb0a3cf17ea9fe5b5dfa",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": [
@@ -5715,6 +5835,14 @@
           "line": 130,
           "sourceLine": "ErrorMessage = \"selectedBooks must include foreignAuthorId values\",",
           "sourceLineSha256": "b3c9ce27e12571cf0cccc9e88d36e2bcede645e2313ccf20a35521c3310cd5bc",
+          "category": "api-error-resource",
+          "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
+          "line": 131,
+          "sourceLine": "MessageId = \"server.message.m52a644e8b0f9\"",
+          "sourceLineSha256": "c75182aedbe90fd311b3eeaa6e5cb67b63e8702e033e407c525e81acde658a61",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
         }
@@ -5768,7 +5896,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1755,
+          "line": 1793,
           "sourceLine": "Message = \"Image downloaded successfully\"",
           "sourceLineSha256": "61e06447da181ff32740b8a82919d35b0f37210840d78fcdf9eef2f9aba06ae3",
           "category": "api-message-resource",
@@ -5814,7 +5942,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1742,
+          "line": 1780,
           "sourceLine": "return BadRequest(new ApiErrorResource { Error = \"Image not found in author metadata\" });",
           "sourceLineSha256": "a37149445a94bfa703059f21d2af6d552d3de8c1915169a468d64cb261d430d3",
           "category": "api-response-resource",
@@ -5868,7 +5996,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1763,
+          "line": 1801,
           "sourceLine": "Message = \"Image download in progress\"",
           "sourceLineSha256": "9806dcd8e96e83074b7cc8486f8cc2682d8a2384ce1c54b21076ff4454f32427",
           "category": "api-message-resource",
@@ -5894,6 +6022,14 @@
           "line": 107,
           "sourceLine": "ErrorMessage = \"Invalid selectedMediaType (expected 'audiobook' or 'ebook')\",",
           "sourceLineSha256": "d2681e6ba039608bcd69f4ce62d10efe53a40cd13651c473325953be9510e0d9",
+          "category": "api-error-resource",
+          "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
+          "line": 108,
+          "sourceLine": "MessageId = \"server.message.m55acf0a44748\"",
+          "sourceLineSha256": "1711663e8548cf93358deadc0538fbcc23441058ccd28cee1bde179226a6bb26",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
         }
@@ -5983,8 +6119,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Sabnzbd/Sabnzbd.cs",
           "line": 410,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to SABnzbd\", \"server.message.m580ff695754e\")",
-          "sourceLineSha256": "d3f6bd41e5668da277595e3ad7dc40daac6900c9f6893552edbfa27eda813cba",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to SABnzbd\", \"server.message.m580ff695754e\", null)",
+          "sourceLineSha256": "ecef4fcdeff9ae3db497ed3d427250f317dd8505224607216ad228b185ae8066",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -6095,8 +6231,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 512,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Connection failed\", \"server.message.m596c52f1eb65\")",
-          "sourceLineSha256": "22ace516edf46589c0ff236c1b80fa043c4a40fdc71c0345dedf4bbef200885f",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Connection failed\", \"server.message.m596c52f1eb65\", null)",
+          "sourceLineSha256": "e4ecbbb66384eefac15ffbb36154d9d64eca2d98b21b1211f601173707a2e19d",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -6171,7 +6307,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1777,
+          "line": 1815,
           "sourceLine": "Message = \"Failed to download image\"",
           "sourceLineSha256": "fb3b4b234e59ac41c0efcb72df554380373c8c992dc0621bd0cb6d0dc58ccee4",
           "category": "api-message-resource",
@@ -6384,6 +6520,14 @@
           "sourceLineSha256": "0fdf3584000adb8a8dbd1ab59134870700bc86ccce06c5ab32d7be1118e0a03a",
           "category": "release-grab-error",
           "surface": "Interactive release result error body and download tooltip; stable app text is keyed, captured download-client detail remains a dynamic value"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
+          "line": 219,
+          "sourceLine": "\"server.message.m6026247dc0f2\",",
+          "sourceLineSha256": "da26b6d64b011bc357b4806efbef089974690a34c9e1c0a0d2c83d43d2e11a4f",
+          "category": "release-grab-error",
+          "surface": "Interactive release result error body and download tooltip; values remain raw"
         }
       ],
       "protectedLiterals": []
@@ -6480,6 +6624,14 @@
           "line": 18,
           "sourceLine": ".WithMessage(\"Username must not be empty.\")",
           "sourceLineSha256": "cb0aec7449535609600c37815d4a0334e231e01adf61fc0a629effb59347017e",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Hadouken/HadoukenSettings.cs",
+          "line": 19,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m61760b3f62ff\"));",
+          "sourceLineSha256": "f4c28e1aabb02c5a2a04ec39b42b21b066adf19a3ac9371bd9f3369c3ef15417",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -6622,8 +6774,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
           "line": 562,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to Torrent Download Station\", \"server.message.m623b1093a9c9\")",
-          "sourceLineSha256": "a3796f1850370a881c56b3229e2238c67dd5f98f590ff7fa32c8d793aab08e88",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to Torrent Download Station\", \"server.message.m623b1093a9c9\", null)",
+          "sourceLineSha256": "77646b48a4e8affb822406e3c3c088dc044aacdb77348eaed32731d7466ab733",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -6647,16 +6799,16 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
           "line": 448,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.TvDirectory), \"No default destination\", \"server.message.m629e576013e4\")",
-          "sourceLineSha256": "7624376036b04b059fe9728739c8f6c093d70df6a7663ce64309d6cb92d18ecb",
+          "sourceLine": "return new NzbDroneValidationFailure(nameof(Settings.TvDirectory), \"No default destination\", \"server.message.m629e576013e4\", null)",
+          "sourceLineSha256": "7a45398204dbc2ab3e64250bd1c9c3195f2ebd1be0ecbd18d0ae9ced49aececa",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/UsenetDownloadStation.cs",
           "line": 239,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.TvDirectory), \"No default destination\", \"server.message.m629e576013e4\")",
-          "sourceLineSha256": "7624376036b04b059fe9728739c8f6c093d70df6a7663ce64309d6cb92d18ecb",
+          "sourceLine": "return new NzbDroneValidationFailure(nameof(Settings.TvDirectory), \"No default destination\", \"server.message.m629e576013e4\", null)",
+          "sourceLineSha256": "7a45398204dbc2ab3e64250bd1c9c3195f2ebd1be0ecbd18d0ae9ced49aececa",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -6678,8 +6830,8 @@
         {
           "file": "src/NzbDrone.Core/Notifications/Plex/Server/PlexServerService.cs",
           "line": 261,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to Plex Media Server\", \"server.message.m62fb6085c79e\")",
-          "sourceLineSha256": "eeb6ece1a264bdb15293b3bc5257c2efa03f3cc1d56c806bc6f56690f05094e8",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to Plex Media Server\", \"server.message.m62fb6085c79e\", null)",
+          "sourceLineSha256": "6284ddec7248c18ff9c9ca0a82432a4ce2282bea26463cb3c56992190ea3b501",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -6705,6 +6857,14 @@
           "line": 26,
           "sourceLine": ".WithMessage(\"Library mappings are invalid\")",
           "sourceLineSha256": "31629b5abdcb41e63ada2f4f15bf042df0e02a240d3e6aae1532fdd02e84c698",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/AudioBookShelf/AudioBookShelfSettings.cs",
+          "line": 27,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m63cf73c14226\"));",
+          "sourceLineSha256": "b39ab83e5a4596864e1bbaac127138f34f188de1818d6bdae1135c62b0352389",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -6778,8 +6938,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 660,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(QBittorrentSettings.AudiobookCategory), \"Category is recommended\", \"server.message.m648eddf3f253\")",
-          "sourceLineSha256": "1bc00e6d30b0b0bdc64ba005153db8c893c8cba0b4d80b289d03408f7875cbff",
+          "sourceLine": "return new NzbDroneValidationFailure(nameof(QBittorrentSettings.AudiobookCategory), \"Category is recommended\", \"server.message.m648eddf3f253\", null)",
+          "sourceLineSha256": "480d37246167acb36b30391a3e197495fc1aa1de5995d58b9c25d31b3cb4980d",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -6808,6 +6968,14 @@
         },
         {
           "file": "src/NzbDrone.Core/Notifications/Apprise/AppriseSettings.cs",
+          "line": 20,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m64f4a104ceb4\"));",
+          "sourceLineSha256": "42046da9588623343b7625a275d93625a8722a3b49db7d6d7ab5becf8b21bdd8",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Apprise/AppriseSettings.cs",
           "line": 28,
           "sourceLine": ".WithMessage(\"Use either Configuration Key or Stateless URLs\")",
           "sourceLineSha256": "774f19b6593b3c9ebf5d23c1f0a0bf958496c9eac4b8d3183371341804c72ffb",
@@ -6816,9 +6984,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Notifications/Apprise/AppriseSettings.cs",
+          "line": 29,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m64f4a104ceb4\"));",
+          "sourceLineSha256": "42046da9588623343b7625a275d93625a8722a3b49db7d6d7ab5becf8b21bdd8",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Apprise/AppriseSettings.cs",
           "line": 33,
           "sourceLine": ".WithMessage(\"Use either Configuration Key or Stateless URLs\")",
           "sourceLineSha256": "774f19b6593b3c9ebf5d23c1f0a0bf958496c9eac4b8d3183371341804c72ffb",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Apprise/AppriseSettings.cs",
+          "line": 34,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m64f4a104ceb4\"));",
+          "sourceLineSha256": "42046da9588623343b7625a275d93625a8722a3b49db7d6d7ab5becf8b21bdd8",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -6904,16 +7088,16 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs",
           "line": 324,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(BookDownloadCategorySettings.GetCategoryFieldName(Settings, category), \"Category does not exist\", \"server.message.m661c5d4d3f03\")",
-          "sourceLineSha256": "64c97b84401d320691249b55ba078fce22c779a29494997fd1a2e49303a33ba9",
+          "sourceLine": "return new NzbDroneValidationFailure(BookDownloadCategorySettings.GetCategoryFieldName(Settings, category), \"Category does not exist\", \"server.message.m661c5d4d3f03\", null)",
+          "sourceLineSha256": "6c2dd8526c16f402303f145f59f7fedbd4a7ce2a7949ce7e39b28cc99392bbcb",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Sabnzbd/Sabnzbd.cs",
           "line": 477,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(pair.Field, \"Category does not exist\", \"server.message.m661c5d4d3f03\")",
-          "sourceLineSha256": "c6a473aa14928f476e687a756558d34501fa2933623b5af85a137ce46c0296ed",
+          "sourceLine": "return new NzbDroneValidationFailure(pair.Field, \"Category does not exist\", \"server.message.m661c5d4d3f03\", null)",
+          "sourceLineSha256": "567665ae9f603d285922a6a6420dcb6ba2ff797f409adf5d46b6cf192c8417ab",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -6987,7 +7171,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/ProviderControllerBase.cs",
-          "line": 126,
+          "line": 130,
           "sourceLine": "throw new BadRequestException(\"ids must be provided\");",
           "sourceLineSha256": "60a4770f0a91e2b155bbd972ea823b81107efcdeec99c36fcedd6bfa863a097f",
           "category": "api-error",
@@ -7097,8 +7281,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Nzbget/Nzbget.cs",
           "line": 342,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"NzbGet setting KeepHistory should be greater than 0\", \"server.message.m6b5f4e5a738f\")",
-          "sourceLineSha256": "ee4317a7e6f0d2a43cde6d0391a6be64f3496eb548eaa646ae8f92d2475804d0",
+          "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"NzbGet setting KeepHistory should be greater than 0\", \"server.message.m6b5f4e5a738f\", null)",
+          "sourceLineSha256": "56852e23dd23f31b19023c2b24ee7f743b7057430239d9672822a669d3a1bb95",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -7149,8 +7333,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 641,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unsupported client version\", \"server.message.m6c1fa02a292a\")",
-          "sourceLineSha256": "ae0032924d8c2e0857aea7fd8c1a3650612126bea60d3a987e30150e43e5155b",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unsupported client version\", \"server.message.m6c1fa02a292a\", null)",
+          "sourceLineSha256": "27bc456ea718987a4a77846012d76f316ca286898f008d16b896bbe6612b6c41",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -7418,7 +7602,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 382,
+          "line": 383,
           "sourceLine": "new ValidationFailure(\"ForeignEditionId\", \"Invalid edition ID format. Expected 'provider:id' or '0'\")",
           "sourceLineSha256": "812dc17bff15527e30946b46eb9f379a2860078c289885c8742a5058fba338bd",
           "category": "validation-failure",
@@ -7442,16 +7626,16 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 605,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(pair.Field, \"Configuration of label failed\", \"server.message.m712918a2c28f\")",
-          "sourceLineSha256": "c6ff3aa0c8536df91702cc2b1a7254856e70a3c7dce4c6aebe106e61304484d3",
+          "sourceLine": "return new NzbDroneValidationFailure(pair.Field, \"Configuration of label failed\", \"server.message.m712918a2c28f\", null)",
+          "sourceLineSha256": "c62273fd1277918017a0165dcaba1e994bc1b9eb40936d488336bcff6a94525b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 753,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(pair.Field, \"Configuration of label failed\", \"server.message.m712918a2c28f\")",
-          "sourceLineSha256": "c6ff3aa0c8536df91702cc2b1a7254856e70a3c7dce4c6aebe106e61304484d3",
+          "sourceLine": "return new NzbDroneValidationFailure(pair.Field, \"Configuration of label failed\", \"server.message.m712918a2c28f\", null)",
+          "sourceLineSha256": "c62273fd1277918017a0165dcaba1e994bc1b9eb40936d488336bcff6a94525b",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -7477,6 +7661,14 @@
           "sourceLineSha256": "340f94fec02d6dd2f3f4193e4196989c532bf1eb14ace71008149231968864ab",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
+          "line": 92,
+          "sourceLine": "MessageId = \"server.message.m7132fb6d87f4\"",
+          "sourceLineSha256": "a23b84f325322c9d3369fabdc51cae7bb81d9ead8a097a4bee38cac6060e25e0",
+          "category": "api-error-resource",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": []
@@ -7496,8 +7688,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Sabnzbd/Sabnzbd.cs",
           "line": 486,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(pair.Field, \"Enable Job folders\", \"server.message.m72a9cf77e4de\")",
-          "sourceLineSha256": "4b9ea970e274eb827da1c5a451ed58f8b7e465940092c67ca5ab12819e446f52",
+          "sourceLine": "return new NzbDroneValidationFailure(pair.Field, \"Enable Job folders\", \"server.message.m72a9cf77e4de\", null)",
+          "sourceLineSha256": "5ac8e9fadeac4490086302bd1ff4d53d8f47b644c31ba43cc86731760cf4d243",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -7599,6 +7791,14 @@
           "sourceLineSha256": "3b80247ad280ed58f739f9ba804ac559671bd85b558e54e6488ba4616904f31c",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Twitter/TwitterSettings.cs",
+          "line": 29,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m750a8cd4307a\"));",
+          "sourceLineSha256": "0a0c91dd9c5a11666b291bb199519bf08bd3def0eba7cd2d452c9b8aeb0da854",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": []
@@ -7640,7 +7840,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 104,
+          "line": 108,
           "sourceLine": ".WithMessage(\"Must match Password\");",
           "sourceLineSha256": "e8019bebf36f35df782dfd8e0651629ee7dbc5d7651251a2980ef0da974e944c",
           "category": "validation-message",
@@ -7801,7 +8001,7 @@
           "sourceLine": "job.Message = $\"Converting to M4B ({tokenBudget} CPU thread{(tokenBudget == 1 ? string.Empty : \"s\")})\";",
           "sourceLineSha256": "8a8cad3c83e1b57a5d484e42bc665da003dfe6974531e085eae156dd355cb97a",
           "category": "operational-message",
-          "surface": "Persisted queue conversion message translated by QueueStatusCell/QueueRow at existing server-message presentation boundaries; dynamic data tokens remain intact."
+          "surface": "Server-owned queue/proxy/import/naming status, error, or notification text consumed by project UI"
         }
       ],
       "normalizationNote": "The app-authored English singular/plural suffix is consumed as fixed grammar, not exposed as dynamic data; the CPU count is preserved unchanged.",
@@ -7811,21 +8011,21 @@
     },
     {
       "id": "server.message.m783307436ce0",
-      "source": "Disable 'Check before download' option in Sabnbzd",
-      "sourceFingerprint": "789a0357c2f94fe0d4f2cece8c35dca6590517e0afb03fdf4dbf7c09a805351a",
+      "source": "Disable the 'Check before download' option in SABnzbd.",
+      "sourceFingerprint": "632b66e54d0ad074520dc12d9f24fc02de5c9d43bc5aad5e68755ebbe4674886",
       "parameters": [],
       "patterns": [
-        "Disable 'Check before download' option in Sabnbzd"
+        "Disable the 'Check before download' option in SABnzbd."
       ],
       "sourceTemplates": [
-        "Disable 'Check before download' option in Sabnbzd"
+        "Disable the 'Check before download' option in SABnzbd."
       ],
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Download/Clients/Sabnzbd/Sabnzbd.cs",
           "line": 446,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"\", \"Disable 'Check before download' option in Sabnbzd\", \"server.message.m783307436ce0\")",
-          "sourceLineSha256": "e4cd21e1f6095814f01f25850759e4438d997502dd7f000ebf5c77cdfae28802",
+          "sourceLine": "return new NzbDroneValidationFailure(\"\", \"Disable the 'Check before download' option in SABnzbd.\", \"server.message.m783307436ce0\", null)",
+          "sourceLineSha256": "cad7a1aef4858b28a410c101e40c6fcbb078fa74d13fa397f74aab2faec60b7e",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -7987,6 +8187,14 @@
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
         {
+          "file": "src/NzbDrone.Core/Download/Clients/NzbVortex/NzbVortexSettings.cs",
+          "line": 20,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m794b67a4d3b9\"));",
+          "sourceLineSha256": "32f57b8abf3a5397017fe24c04f5dc3e34c8177bfe016cb277381ac4256cbe3e",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
           "file": "src/NzbDrone.Core/Notifications/AudioBookShelf/AudioBookShelfSettings.cs",
           "line": 21,
           "sourceLine": "RuleFor(c => c.ApiKey).NotEmpty().WithMessage(\"API Key is required\")",
@@ -7995,10 +8203,26 @@
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
         {
+          "file": "src/NzbDrone.Core/Notifications/AudioBookShelf/AudioBookShelfSettings.cs",
+          "line": 22,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m794b67a4d3b9\"));",
+          "sourceLineSha256": "32f57b8abf3a5397017fe24c04f5dc3e34c8177bfe016cb277381ac4256cbe3e",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
           "file": "src/NzbDrone.Core/Notifications/EmbyJellyfin/EmbyJellyfinSettings.cs",
           "line": 23,
           "sourceLine": "RuleFor(c => c.ApiKey).NotEmpty().WithMessage(\"API Key is required\")",
           "sourceLineSha256": "89bf81f0a6ada63584feca1a1e346e8836e571153e0ce0a90f5b066a9cd50fbe",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/EmbyJellyfin/EmbyJellyfinSettings.cs",
+          "line": 24,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m794b67a4d3b9\"));",
+          "sourceLineSha256": "32f57b8abf3a5397017fe24c04f5dc3e34c8177bfe016cb277381ac4256cbe3e",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -8053,6 +8277,14 @@
           "line": 23,
           "sourceLine": ".WithMessage(\"Invalid directory\")",
           "sourceLineSha256": "ac83d4ae1779d2e3cdaf10e112b9b386aeb715b7018008536db344580242b93f",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/DownloadStationSettings.cs",
+          "line": 24,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m79dd817b4295\"));",
+          "sourceLineSha256": "7ca5ea6e14bb914345fb1b681f379454d16da678a496f06b6bac977103018361",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -8133,7 +8365,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 310,
+          "line": 311,
           "sourceLine": "new ValidationFailure(\"ForeignIds\", \"foreignBookId and foreignAuthorId are required\")",
           "sourceLineSha256": "763595a6f2c2de0d4dd513b97b90a1899b9d1e774d9de3ba492ebe8d12cde113",
           "category": "validation-failure",
@@ -8161,6 +8393,14 @@
           "line": 21,
           "sourceLine": "RuleFor(c => c.Password).NotEmpty().WithMessage(\"Password is required\")",
           "sourceLineSha256": "13d822a377f30b4278baec3f24632c86c72db26635b0c562d5bb4292c3a05e1d",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Grimmory/GrimmorySettings.cs",
+          "line": 22,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m7aeae1412484\"));",
+          "sourceLineSha256": "1543b594314885c346c5b643f69be8f6959a7aef1912ee88c3cd62cdc8039f40",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -8301,7 +8541,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 121,
+          "line": 125,
           "sourceLine": ".WithMessage(\"Proxy mode must be Disabled, IndexerOnly, or ProxyEverything\");",
           "sourceLineSha256": "29421e573deaf2adfedfa8b5b6533ed78858586739f3e3fc7b92ebf75cc0c7de",
           "category": "validation-message",
@@ -8309,7 +8549,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 564,
+          "line": 576,
           "sourceLine": "throw new BadRequestException(\"Proxy mode must be Disabled, IndexerOnly, or ProxyEverything\");",
           "sourceLineSha256": "8ccc39c6148f7b10c9864cd1e37a4ee08aa922b82a978ea9b620da75c9b1b468",
           "category": "api-error",
@@ -8565,6 +8805,14 @@
           "sourceLineSha256": "35ae53441e3330f50f04b779395b43881dce88829c196fe5c8c3da3da2617766",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Grimmory/GrimmorySettings.cs",
+          "line": 27,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m7d3d73f7deeb\"));",
+          "sourceLineSha256": "f587f23f27e83928ddaceff47e64f9b5e932b557632ed2813901b1118c90bdba",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": []
@@ -8661,6 +8909,14 @@
           "line": 321,
           "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"Aria2 version should be at least 1.34.0. Version reported is {0}\", version)",
           "sourceLineSha256": "19b99c7427505250552262e072c7c57f0ba0d71a55f919304bf561a3a5274f5c",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Aria2/Aria2.cs",
+          "line": 323,
+          "sourceLine": "MessageId = \"server.message.m7de0a09b7503\",",
+          "sourceLineSha256": "6ddc323127a463b899f338609476d262e7c4b3bc0d5dbb94c0928ae4ce1de6b6",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -8899,6 +9155,14 @@
           "sourceLineSha256": "bf2e24096f002e81a7ba1415989fc451e3c65f3015c6ffa3480e7f6f4f2d2d93",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/MqttGateway/MqttGatewaySettings.cs",
+          "line": 27,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m80830c01b9f4\"));",
+          "sourceLineSha256": "25ec098ed4c27602be3ffc382f331c730f006e5920d33aa8b261d22017a8a233",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": [
@@ -8968,6 +9232,14 @@
           "line": 22,
           "sourceLine": ".WithMessage(\"Password must not be empty.\")",
           "sourceLineSha256": "5460f39b6fcc033e449355ef51d202906c7a81f0b620960d74b05489ebbdf0a0",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Hadouken/HadoukenSettings.cs",
+          "line": 23,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m81fa19be5293\"));",
+          "sourceLineSha256": "0e97f73bb3ae1ee501a27fee8dde3d8fadc0b652df683064f82eadc7f040d994",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -9196,7 +9468,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1688,
+          "line": 1726,
           "sourceLine": "return BadRequest(\"Selected photo is a provider placeholder\");",
           "sourceLineSha256": "abc652ae20b036a9223089d52ef8e53c79b2040aa6a96291fa5dcbd0b95ad8e5",
           "category": "direct-api-result",
@@ -9207,21 +9479,21 @@
     },
     {
       "id": "server.message.m843e64bf5198",
-      "source": "Unable to send test message though Mailgun.",
-      "sourceFingerprint": "e59d9a092b649ccbe6d901e6a7346fb3383d8a742bdf81fb8e14a56c36b10613",
+      "source": "Unable to send a test message through Mailgun.",
+      "sourceFingerprint": "366d91002fd688da9f705ec11d13cc0f6e7eed606f505f14e046cb41912d8bf1",
       "parameters": [],
       "patterns": [
-        "Unable to send test message though Mailgun."
+        "Unable to send a test message through Mailgun."
       ],
       "sourceTemplates": [
-        "Unable to send test message though Mailgun."
+        "Unable to send a test message through Mailgun."
       ],
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Notifications/Mailgun/Mailgun.cs",
           "line": 84,
-          "sourceLine": "failures.Add(NzbDroneValidationFailure.ForMessage(\"\", \"Unable to send test message though Mailgun.\", \"server.message.m843e64bf5198\"));",
-          "sourceLineSha256": "f62cf04ea52bf55f73b634bae2d7964bb3384c19b8068ca1f5539b0014b4e5e9",
+          "sourceLine": "failures.Add(NzbDroneValidationFailure.ForMessage(\"\", \"Unable to send a test message through Mailgun.\", \"server.message.m843e64bf5198\"));",
+          "sourceLineSha256": "495179e561155b011e315593b2c171a2c0f75d7d6343715ac28574f2607c45dd",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -9274,6 +9546,14 @@
           "sourceLineSha256": "d0617c2b756fd635da6f85d4b7c47ac1072101166ca63e54b268b686cfcf0b41",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
+          "line": 68,
+          "sourceLine": "MessageId = \"server.message.m8500a62118c5\"",
+          "sourceLineSha256": "d15ae1d9f4373e6c546c8e9df2a1778966ba42d29e111f3126e2fd6a795254ff",
+          "category": "api-error-resource",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": []
@@ -9317,7 +9597,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 124,
+          "line": 128,
           "sourceLine": ".WithMessage(\"Proxy type must be Http, Socks4, or Socks5\");",
           "sourceLineSha256": "dc08283609d821af87810521e711226930ad53dff512c571527cb4cdc218a8a8",
           "category": "validation-message",
@@ -9325,7 +9605,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 569,
+          "line": 581,
           "sourceLine": "throw new BadRequestException(\"Proxy type must be Http, Socks4, or Socks5\");",
           "sourceLineSha256": "8a28ee18191365998c585838362d731c502968ad1fbe42952033246f506740e7",
           "category": "api-error",
@@ -9372,7 +9652,7 @@
         },
         {
           "file": "src/NzbDrone.Core/Indexers/Newznab/Newznab.cs",
-          "line": 158,
+          "line": 164,
           "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Unable to connect to indexer, check the log for more details\", \"server.message.m85babf48e233\");",
           "sourceLineSha256": "588df4e92245535f53508ffb2e2de806f7f768e1adbd274be614dcb2a7dc3f40",
           "category": "validation-failure",
@@ -9488,7 +9768,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 93,
+          "line": 97,
           "sourceLine": ".WithMessage(\"Must use https:// unless the provider is running on localhost\")",
           "sourceLineSha256": "9b32eab177f52c7b3e877c0284b0bef4da3d03a335960455f1395065791a27a8",
           "category": "validation-message",
@@ -9665,7 +9945,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 114,
+          "line": 118,
           "sourceLine": ".Must((resource, path) => IsValidSslCertificate(resource)).WithMessage(\"Invalid SSL certificate file or password\")",
           "sourceLineSha256": "ab1ba2ef6037bb9c6d0216cc5f2c310f6f76717282055a674a8709bf7bba9c71",
           "category": "validation-message",
@@ -9691,8 +9971,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/NzbVortex/NzbVortex.cs",
           "line": 240,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(BookDownloadCategorySettings.GetCategoryFieldName(Settings, category), \"Group does not exist\", \"server.message.m8a7981a2ced3\")",
-          "sourceLineSha256": "259f671556ea0ee9b38806fbc0281e7d964fe8e3d93ce0140890d25822514ed4",
+          "sourceLine": "return new NzbDroneValidationFailure(BookDownloadCategorySettings.GetCategoryFieldName(Settings, category), \"Group does not exist\", \"server.message.m8a7981a2ced3\", null)",
+          "sourceLineSha256": "0407fa4524aafb01dda6fa6ec6949b81b2c44ae7b0d48913dca98840be438af1",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -9928,9 +10208,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/DelugeSettings.cs",
+          "line": 17,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m8d1c33f25092\"));",
+          "sourceLineSha256": "20ee5ffb3a73792f10f180ac4440c4121b09fbaffefca5c286b608ce64eaaf3f",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Deluge/DelugeSettings.cs",
           "line": 18,
           "sourceLine": "RuleFor(c => c.EbookCategory).Matches(\"^[-a-z0-9]*$\").WithMessage(\"Allowed characters a-z, 0-9 and -\")",
           "sourceLineSha256": "c0dd8bbbc142e0817121c39e2dc09c5aba1105e6410e56608adf9d410765f5bb",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Deluge/DelugeSettings.cs",
+          "line": 19,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m8d1c33f25092\"));",
+          "sourceLineSha256": "20ee5ffb3a73792f10f180ac4440c4121b09fbaffefca5c286b608ce64eaaf3f",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
@@ -9944,9 +10240,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/DelugeSettings.cs",
+          "line": 21,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m8d1c33f25092\"));",
+          "sourceLineSha256": "20ee5ffb3a73792f10f180ac4440c4121b09fbaffefca5c286b608ce64eaaf3f",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Deluge/DelugeSettings.cs",
           "line": 22,
           "sourceLine": "RuleFor(c => c.EbookImportedCategory).Matches(\"^[-a-z0-9]*$\").WithMessage(\"Allowed characters a-z, 0-9 and -\")",
           "sourceLineSha256": "342c43a2bfd0be9568fe3acd12811665365ea7ff6ebd4690eabde844116d0ae8",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Deluge/DelugeSettings.cs",
+          "line": 23,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m8d1c33f25092\"));",
+          "sourceLineSha256": "20ee5ffb3a73792f10f180ac4440c4121b09fbaffefca5c286b608ce64eaaf3f",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
@@ -9955,6 +10267,14 @@
           "line": 23,
           "sourceLine": ".WithMessage(\"Allowed characters a-z, 0-9 and -\")",
           "sourceLineSha256": "13ae520b940f07658eb297fad76cb2c3d8563d67d909635502db8ec0d8c19fde",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Apprise/AppriseSettings.cs",
+          "line": 24,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.m8d1c33f25092\"));",
+          "sourceLineSha256": "20ee5ffb3a73792f10f180ac4440c4121b09fbaffefca5c286b608ce64eaaf3f",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -10163,7 +10483,7 @@
         },
         {
           "file": "src/NzbDrone.Core/Notifications/Plex/Server/PlexServer.cs",
-          "line": 215,
+          "line": 227,
           "sourceLine": "throw new BadRequestException(\"QueryParam callbackUrl invalid.\");",
           "sourceLineSha256": "56c521eeba8919bae70369b6da72bae2ddd39cb13fbfe7d493b135f4525bc28c",
           "category": "api-error",
@@ -10323,7 +10643,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1476,
+          "line": 1485,
           "sourceLine": "return BadRequest($\"authorIds must contain between 1 and {MaxBookshelfAuthorIds} author IDs\");",
           "sourceLineSha256": "741bddd36af9722ec52ea7d4ea8b2d18803fe1d3fd5a933529a40a744d0658ad",
           "category": "direct-api-result",
@@ -10591,6 +10911,14 @@
           "sourceLineSha256": "35d1d2182e24337a247854b2a0486b5740819f3ece0d2af54f0c82c0fa4f6870",
           "category": "api-error-resource",
           "surface": "server/API text; may be user-visible"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Series/AddSeriesController.cs",
+          "line": 81,
+          "sourceLine": "MessageId = \"server.message.m96982c5f8302\"",
+          "sourceLineSha256": "6f3848a4f4810aad1eb32be9c7b0dbf4f66aed5195069eeb4d15aba9ed832256",
+          "category": "api-error-resource",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": []
@@ -10608,18 +10936,18 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Books/Services/AuthorService.cs",
-          "line": 1004,
-          "sourceLine": "failures.Add(new ValidationFailure(propertyName, \"Selected root folder is not configured. Add it in Settings → Media Management.\"));",
-          "sourceLineSha256": "48ba1c5dc74062acef0edd5424675b70bc9b02f3b4071ff67ea33fa40f7fb995",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
           "line": 655,
           "sourceLine": "new ValidationFailure(\"RootFolder\", \"Selected root folder is not configured. Add it in Settings → Media Management.\")",
           "sourceLineSha256": "9d148bd5d4bb6abe68b990acd543e3a46fcf59b2e81b33848e8a89b6d19682a4",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/Books/Services/AuthorService.cs",
+          "line": 1005,
+          "sourceLine": "failures.Add(new ValidationFailure(propertyName, \"Selected root folder is not configured. Add it in Settings → Media Management.\"));",
+          "sourceLineSha256": "48ba1c5dc74062acef0edd5424675b70bc9b02f3b4071ff67ea33fa40f7fb995",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -10688,7 +11016,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1648,
+          "line": 1657,
           "sourceLine": "return BadRequest(\"Cannot add book: missing upstream provider book/work ID (Hardcover/Goodreads/OpenLibrary/GoogleBooks).\");",
           "sourceLineSha256": "eb925b55d7c6a0d1ed15073aa52fc48f0d1383bcfeb62799c2966431cc574f37",
           "category": "direct-api-result",
@@ -10696,7 +11024,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1683,
+          "line": 1692,
           "sourceLine": "return BadRequest(\"Cannot add book: missing upstream provider book/work ID (Hardcover/Goodreads/OpenLibrary/GoogleBooks).\");",
           "sourceLineSha256": "eb925b55d7c6a0d1ed15073aa52fc48f0d1383bcfeb62799c2966431cc574f37",
           "category": "direct-api-result",
@@ -10704,7 +11032,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1749,
+          "line": 1758,
           "sourceLine": "return BadRequest(\"Cannot add book: missing upstream provider book/work ID (Hardcover/Goodreads/OpenLibrary/GoogleBooks).\");",
           "sourceLineSha256": "eb925b55d7c6a0d1ed15073aa52fc48f0d1383bcfeb62799c2966431cc574f37",
           "category": "direct-api-result",
@@ -10981,8 +11309,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/UsenetDownloadStation.cs",
           "line": 318,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to Usenet Download Station\", \"server.message.m9d7030ad5fa8\")",
-          "sourceLineSha256": "5455a18223165f871641dd379046f17f6a4f912f85e7337a39d7f9d3ce1b6b1f",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to Usenet Download Station\", \"server.message.m9d7030ad5fa8\", null)",
+          "sourceLineSha256": "aa01c607b6c158171ae5ce9f7ee242eb760785001c9268724e7fe221073ffe6a",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -11293,10 +11621,26 @@
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
         {
+          "file": "src/NzbDrone.Core/Indexers/Newznab/NewznabSettings.cs",
+          "line": 61,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.ma38b3893e50f\"));",
+          "sourceLineSha256": "9d13dfde2acc33c595fe0ec3621601e0ef0d8982c9f8ffea1cdf08cdb74316c4",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
           "file": "src/NzbDrone.Core/Indexers/Torznab/TorznabSettings.cs",
           "line": 50,
           "sourceLine": "RuleFor(c => c.NarratorMetadataBaseUrl).Must(IsValidRootUrlOrEmpty).WithMessage(\"must be valid URL that starts with http(s)://\")",
           "sourceLineSha256": "5e5e29a208b5936692c7098c90993a4140b72835aadf3e03db470ffc1fb7b7a5",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Indexers/Torznab/TorznabSettings.cs",
+          "line": 51,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.ma38b3893e50f\"));",
+          "sourceLineSha256": "9d13dfde2acc33c595fe0ec3621601e0ef0d8982c9f8ffea1cdf08cdb74316c4",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -11375,9 +11719,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/DownloadStationSettings.cs",
+          "line": 27,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.ma4556afba7bb\"));",
+          "sourceLineSha256": "14a84945ef82889091db99cd0eebd0544f455ccaa84dd93deaf871a8be0f47d6",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/DownloadStationSettings.cs",
           "line": 28,
           "sourceLine": "RuleFor(c => c.EbookCategory).Matches(@\"^\\.?[-a-z]*$\", RegexOptions.IgnoreCase).WithMessage(\"Allowed characters a-z and -\")",
           "sourceLineSha256": "4bfc5e1fcae9177577bfb7d540a7277c886e2226d6d2d5b91647a624251f59b6",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/DownloadStationSettings.cs",
+          "line": 29,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.ma4556afba7bb\"));",
+          "sourceLineSha256": "14a84945ef82889091db99cd0eebd0544f455ccaa84dd93deaf871a8be0f47d6",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
@@ -11391,9 +11751,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionSettings.cs",
+          "line": 21,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.ma4556afba7bb\"));",
+          "sourceLineSha256": "14a84945ef82889091db99cd0eebd0544f455ccaa84dd93deaf871a8be0f47d6",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionSettings.cs",
           "line": 22,
           "sourceLine": "RuleFor(c => c.EbookCategory).Matches(@\"^\\.?[-a-z]*$\", RegexOptions.IgnoreCase).WithMessage(\"Allowed characters a-z and -\")",
           "sourceLineSha256": "4bfc5e1fcae9177577bfb7d540a7277c886e2226d6d2d5b91647a624251f59b6",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionSettings.cs",
+          "line": 23,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.ma4556afba7bb\"));",
+          "sourceLineSha256": "14a84945ef82889091db99cd0eebd0544f455ccaa84dd93deaf871a8be0f47d6",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -11440,8 +11816,8 @@
         {
           "file": "src/NzbDrone.Core/Indexers/Torznab/Torznab.cs",
           "line": 139,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"ApiPath\", \"Jackett's all endpoint is not supported, please add indexers individually\", \"server.message.ma4a7539d1468\")",
-          "sourceLineSha256": "5cae82cd460731c38f0f1c1940451e616a38815c08e4105d2f630f80126b27c4",
+          "sourceLine": "return new NzbDroneValidationFailure(\"ApiPath\", \"Jackett's all endpoint is not supported, please add indexers individually\", \"server.message.ma4a7539d1468\", null)",
+          "sourceLineSha256": "eaa11465bb745b6e7589e870fc138552481cbe964373ad6ee720993f487c8cd5",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -11514,8 +11890,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 702,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to qBittorrent\", \"server.message.ma5add25e2d2b\")",
-          "sourceLineSha256": "0a0b1657592b45ee5f1e03df77f0eb92a352f87b5f669b26e06289be1a14144b",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to qBittorrent\", \"server.message.ma5add25e2d2b\", null)",
+          "sourceLineSha256": "0c332811f3a85a96d0bd9ff7fecee9469c4fa3e48eadbaf18722ed2162cb5e29",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -11623,8 +11999,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Aria2/Aria2.cs",
           "line": 332,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to Aria2\", \"server.message.ma78299fc1030\")",
-          "sourceLineSha256": "52f8e285e15142a8dfcff0f90d9ec58f628729fbfc539f65f867c7efb1d74f78",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to Aria2\", \"server.message.ma78299fc1030\", null)",
+          "sourceLineSha256": "c1d79eef79e2dde4d4195d04a742fab6517f3b203012b4fe01d15d7812fa1307",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -11936,6 +12312,14 @@
           "line": 45,
           "sourceLine": ".WithMessage(\"must be a valid URL that starts with http:// or https://\")",
           "sourceLineSha256": "d50375a8eb5372eaa859fa7e6508b0c41efb388c3e208b0a6e15ef78267e2f3b",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/RuleBuilderExtensions.cs",
+          "line": 46,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.maef426d77944\"));",
+          "sourceLineSha256": "979c4485da569b34fb1e984698ce95c08d826e4628095207d1add383a6202064",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -12292,7 +12676,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1677,
+          "line": 1715,
           "sourceLine": "return BadRequest(\"Photo not found\");",
           "sourceLineSha256": "ecf868e51ef7995870ecc504d204187c5c15793e7a237dae4c88720372863fe8",
           "category": "direct-api-result",
@@ -12511,7 +12895,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 261,
+          "line": 295,
           "sourceLine": "\"An authorId is required when searching for a series pack\",",
           "sourceLineSha256": "093235e0c416d138edee6f183b8c28051f1d0f6a30d4b3ab0190b7309c7cf546",
           "category": "api-error",
@@ -12660,7 +13044,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 2585,
+          "line": 2594,
           "sourceLine": "return BadRequest(\"EditionId is required\");",
           "sourceLineSha256": "cb0d38e687b93edd458d5bbeed5b1db975752b921d97ccfd20041303a41f0b7a",
           "category": "direct-api-result",
@@ -12729,7 +13113,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1730,
+          "line": 1768,
           "sourceLine": "return BadRequest(new ApiErrorResource { Error = \"ImageUrl is required\" });",
           "sourceLineSha256": "de040de6050ac69e574e24c85684f5429f61f691feaa21a3397ae6ef35c584f6",
           "category": "api-response-resource",
@@ -12907,6 +13291,14 @@
           "sourceLineSha256": "60a802b8d1284f707f0430965f1f12c9afc6ffbe91eb0e9054cf13c303b64ee0",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/EmbyJellyfin/EmbyJellyfinSettings.cs",
+          "line": 17,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mbd726c6fbe70\"));",
+          "sourceLineSha256": "87aad7ca44c0d165667f2b86376b78290d3ef4700fda2c2ca565868d7a046544",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": [
@@ -12928,7 +13320,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1946,
+          "line": 1955,
           "sourceLine": "new ValidationFailure(",
           "sourceLineSha256": "9a7b6bcc91b8133e7cc8bc770fd340ba9f08c6f7ea0a7df417d95247c98c50b1",
           "category": "validation-failure",
@@ -13108,7 +13500,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 402,
+          "line": 403,
           "sourceLine": "new ValidationFailure(\"ForeignBookId\", \"RanobeDB release IDs identify editions. Use an rn: work ID for foreignBookId.\")",
           "sourceLineSha256": "ba453dca9f9e8d178b263dff59c3827334a3f51a33bf069c8ba257500478dfea",
           "category": "validation-failure",
@@ -13221,6 +13613,14 @@
           "line": 51,
           "sourceLine": "return ruleBuilder.Matches(@\"^(?!\\/?https?://[-_a-z0-9.]+)\", RegexOptions.IgnoreCase).WithMessage($\"Must be a valid URL path (ie: '{example}')\")",
           "sourceLineSha256": "3bc100b5a6f9ed8dbe4ac09cb2bb421159efa539b1e16a58cb38cb5dd42dcd18",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Validation/RuleBuilderExtensions.cs",
+          "line": 52,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mc3b239e3eb56\", new { value0 = example }));",
+          "sourceLineSha256": "a5738734e321a35857c213f549763824397eaee5359f33829892452f73d53c39",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -13496,6 +13896,14 @@
           "sourceLineSha256": "762a8e7abd3946eebe2dd8780d82755bb152c14a2c0beb3400c0dd9d81b8f763",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/CustomScript/CustomScriptSettings.cs",
+          "line": 21,
+          "sourceLine": "\"server.message.mc78af077e86e\",",
+          "sourceLineSha256": "a02fe2127372e3816d3139ee10bf7315af5b1710d2a638425e16d58435306531",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": [],
@@ -13735,8 +14143,8 @@
         {
           "file": "src/NzbDrone.Core/Indexers/HttpIndexerBase.cs",
           "line": 378,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(string.Empty, \"Query successful, but no results in the configured categories were returned from your indexer. This may be an issue with the indexer or your indexer category settings.\", \"server.message.mca68744b8296\")",
-          "sourceLineSha256": "f92fd745db2e35b8c04a4eee511c739577f18da485d77851ebb04fff235211e2",
+          "sourceLine": "return new NzbDroneValidationFailure(string.Empty, \"Query successful, but no results in the configured categories were returned from your indexer. This may be an issue with the indexer or your indexer category settings.\", \"server.message.mca68744b8296\", null)",
+          "sourceLineSha256": "7420c72571bbbde7cc7c6fdbf17f824550390c8b161c8eb4a7d6c479e882986f",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -14029,8 +14437,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Sabnzbd/Sabnzbd.cs",
           "line": 495,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(pair.Field, \"Disable TV Sorting\", \"server.message.mcd62354c7d7b\")",
-          "sourceLineSha256": "60554e68ea83ca323b9f56fdb6ee00e5252ba4d2f3e2aa60213752ec9f4366c7",
+          "sourceLine": "return new NzbDroneValidationFailure(pair.Field, \"Disable TV Sorting\", \"server.message.mcd62354c7d7b\", null)",
+          "sourceLineSha256": "f194d9267a682bdd2e008e0b17837c3d0f75728c399e6e2d6af20d4e7a6901bf",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -14228,10 +14636,26 @@
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
         {
+          "file": "src/NzbDrone.Core/Notifications/CalibreContentServer/CalibreContentServerSettings.cs",
+          "line": 14,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.md0cc5efbe5e0\"));",
+          "sourceLineSha256": "86a216b0b546cc790313db314acc8e77cafc48abeb9152fcc10be864f19104de",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
           "file": "src/NzbDrone.Core/Notifications/Grimmory/GrimmorySettings.cs",
           "line": 16,
           "sourceLine": "RuleFor(c => c.Url).NotEmpty().WithMessage(\"URL cannot be empty\")",
           "sourceLineSha256": "8f0d9fdad530d058d1b00f8888a4a5c9f433b668aef582358363232d11fe41eb",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Grimmory/GrimmorySettings.cs",
+          "line": 17,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.md0cc5efbe5e0\"));",
+          "sourceLineSha256": "86a216b0b546cc790313db314acc8e77cafc48abeb9152fcc10be864f19104de",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -14746,40 +15170,40 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
           "line": 539,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\")",
-          "sourceLineSha256": "2054d3a31f7f5cb768645cd5748749562e6699141a6a0ce5a554297aede68cca",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\", null)",
+          "sourceLineSha256": "ca546b82524bfa7837d8ef2ef68ab65a581f6c64ebdc2eb512200ba0c0c32820",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/UsenetDownloadStation.cs",
           "line": 295,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\")",
-          "sourceLineSha256": "2054d3a31f7f5cb768645cd5748749562e6699141a6a0ce5a554297aede68cca",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\", null)",
+          "sourceLineSha256": "ca546b82524bfa7837d8ef2ef68ab65a581f6c64ebdc2eb512200ba0c0c32820",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 680,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\")",
-          "sourceLineSha256": "2054d3a31f7f5cb768645cd5748749562e6699141a6a0ce5a554297aede68cca",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\", null)",
+          "sourceLineSha256": "ca546b82524bfa7837d8ef2ef68ab65a581f6c64ebdc2eb512200ba0c0c32820",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Transmission/TransmissionBase.cs",
           "line": 288,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\")",
-          "sourceLineSha256": "2054d3a31f7f5cb768645cd5748749562e6699141a6a0ce5a554297aede68cca",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\", null)",
+          "sourceLineSha256": "ca546b82524bfa7837d8ef2ef68ab65a581f6c64ebdc2eb512200ba0c0c32820",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/uTorrent/UTorrent.cs",
           "line": 317,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\")",
-          "sourceLineSha256": "2054d3a31f7f5cb768645cd5748749562e6699141a6a0ce5a554297aede68cca",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Username\", \"Authentication failure\", \"server.message.md83ae8fb37f8\", null)",
+          "sourceLineSha256": "ca546b82524bfa7837d8ef2ef68ab65a581f6c64ebdc2eb512200ba0c0c32820",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -14958,7 +15382,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 392,
+          "line": 393,
           "sourceLine": "new ValidationFailure(\"ForeignEditionId\", $\"Invalid edition ID. Expected {ProviderIdValidator.ValidPrefixesDisplay} with an alphanumeric id.\")",
           "sourceLineSha256": "79429004190f556b347b77948829353dc25cc429f88dfbbbeade744227b48c81",
           "category": "validation-failure",
@@ -15044,8 +15468,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Hadouken/Hadouken.cs",
           "line": 178,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to Hadouken\", \"server.message.mdd0fed37bc8b\")",
-          "sourceLineSha256": "3088020f69f245a1a804f4244043ed9c030497833d0b07f370dc021ef915da05",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to Hadouken\", \"server.message.mdd0fed37bc8b\", null)",
+          "sourceLineSha256": "d28235fdf468814f6cc6dcb68eb45833ff9a97db3e722eb62c41877f0d38f37f",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -15087,20 +15511,20 @@
       ],
       "callsites": [
         {
-          "file": "src/Chaptarr.Api.V1/Profiles/Quality/QualityProfileResource.cs",
-          "line": 129,
-          "sourceLine": "throw new BadRequestException(\"Profile type must be Audiobook or Ebook\");",
-          "sourceLineSha256": "4c9dcc111f37dfbda057ce0f11ce38bdc80838fbcba5b86bb1a2632930a59d2f",
-          "category": "api-error",
-          "surface": "server/API text; may be user-visible"
-        },
-        {
           "file": "src/Chaptarr.Api.V1/Profiles/Quality/QualityProfileController.cs",
           "line": 29,
           "sourceLine": ".WithMessage(\"Profile type must be Audiobook or Ebook\");",
           "sourceLineSha256": "90f632dd9ba4dba5f8bd6b84a93f3fe8dcba303eedc61a327721d3b467953c22",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Profiles/Quality/QualityProfileResource.cs",
+          "line": 129,
+          "sourceLine": "throw new BadRequestException(\"Profile type must be Audiobook or Ebook\");",
+          "sourceLineSha256": "4c9dcc111f37dfbda057ce0f11ce38bdc80838fbcba5b86bb1a2632930a59d2f",
+          "category": "api-error",
+          "surface": "server/API text; may be user-visible"
         }
       ],
       "protectedLiterals": [
@@ -15235,6 +15659,14 @@
         },
         {
           "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
+          "line": 14,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.me3d343200bdd\", isWarning: true));",
+          "sourceLineSha256": "90b2f7c077d71e5a4990fd7cc7b0cf2da12686e395ab409c53c8ca9124f51b2d",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
           "line": 18,
           "sourceLine": ".AsWarning().WithMessage(\"Should be greater than zero\")",
           "sourceLineSha256": "687185f51836723603760da661160bccd5075ed4e1054071010a0610a38de129",
@@ -15243,9 +15675,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
+          "line": 19,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.me3d343200bdd\", isWarning: true));",
+          "sourceLineSha256": "90b2f7c077d71e5a4990fd7cc7b0cf2da12686e395ab409c53c8ca9124f51b2d",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
           "line": 23,
           "sourceLine": ".AsWarning().WithMessage(\"Should be greater than zero\")",
           "sourceLineSha256": "687185f51836723603760da661160bccd5075ed4e1054071010a0610a38de129",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Indexers/SeedCriteriaSettings.cs",
+          "line": 24,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.me3d343200bdd\", isWarning: true));",
+          "sourceLineSha256": "90b2f7c077d71e5a4990fd7cc7b0cf2da12686e395ab409c53c8ca9124f51b2d",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -15335,48 +15783,48 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 475,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\")",
-          "sourceLineSha256": "6132b291ca0b19991c0896b9b45c2f5762b2e02ce7d18607cd52bc316f6db79d",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\", null)",
+          "sourceLineSha256": "559f839b5aa0e3e60c6328540218ddc7ff2006ed08c479305a4a855ffaafcc85",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 536,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\")",
-          "sourceLineSha256": "6132b291ca0b19991c0896b9b45c2f5762b2e02ce7d18607cd52bc316f6db79d",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\", null)",
+          "sourceLineSha256": "559f839b5aa0e3e60c6328540218ddc7ff2006ed08c479305a4a855ffaafcc85",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/TorrentDownloadStation.cs",
           "line": 550,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\")",
-          "sourceLineSha256": "6132b291ca0b19991c0896b9b45c2f5762b2e02ce7d18607cd52bc316f6db79d",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\", null)",
+          "sourceLineSha256": "559f839b5aa0e3e60c6328540218ddc7ff2006ed08c479305a4a855ffaafcc85",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/DownloadStation/UsenetDownloadStation.cs",
           "line": 306,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\")",
-          "sourceLineSha256": "6132b291ca0b19991c0896b9b45c2f5762b2e02ce7d18607cd52bc316f6db79d",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\", null)",
+          "sourceLineSha256": "559f839b5aa0e3e60c6328540218ddc7ff2006ed08c479305a4a855ffaafcc85",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 690,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\")",
-          "sourceLineSha256": "6132b291ca0b19991c0896b9b45c2f5762b2e02ce7d18607cd52bc316f6db79d",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\", null)",
+          "sourceLineSha256": "559f839b5aa0e3e60c6328540218ddc7ff2006ed08c479305a4a855ffaafcc85",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/uTorrent/UTorrent.cs",
           "line": 327,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\")",
-          "sourceLineSha256": "6132b291ca0b19991c0896b9b45c2f5762b2e02ce7d18607cd52bc316f6db79d",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect\", \"server.message.me40966162b11\", null)",
+          "sourceLineSha256": "559f839b5aa0e3e60c6328540218ddc7ff2006ed08c479305a4a855ffaafcc85",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -15512,18 +15960,18 @@
       ],
       "callsites": [
         {
-          "file": "src/NzbDrone.Core/Books/Services/AuthorService.cs",
-          "line": 1011,
-          "sourceLine": "failures.Add(new ValidationFailure(propertyName, $\"Selected root folder is not configured for {expected}.\"));",
-          "sourceLineSha256": "69dad0df103fa962450f78754663f82778793be358fe306672805fc1a4219e42",
-          "category": "validation-failure",
-          "surface": "Validation result/message returned to client settings or API consumer"
-        },
-        {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
           "line": 664,
           "sourceLine": "new ValidationFailure(\"RootFolder\", $\"Selected root folder is not configured for {expected}.\")",
           "sourceLineSha256": "df7a63fa1ad8c5e0d37cc685045eebf501df8e66ebe90bc59bade88c6735b5c3",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/Books/Services/AuthorService.cs",
+          "line": 1012,
+          "sourceLine": "failures.Add(new ValidationFailure(propertyName, $\"Selected root folder is not configured for {expected}.\"));",
+          "sourceLineSha256": "69dad0df103fa962450f78754663f82778793be358fe306672805fc1a4219e42",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -15573,7 +16021,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1718,
+          "line": 1727,
           "sourceLine": "return BadRequest($\"Invalid mediaType parameter: '{requestedMediaType}'. Valid values are: audiobook, ebook\");",
           "sourceLineSha256": "a3b01c7b29542048ac87e21608a39c9547eaa0a45a01db4f4ee9608abbeb459c",
           "category": "direct-api-result",
@@ -15661,6 +16109,14 @@
           "sourceLineSha256": "3c646c498d44ccfa7f720537a6994c076fbb4aa0509e0707fde65c5fd8751acb",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Join/JoinSettings.cs",
+          "line": 14,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.me929c2679b71\"));",
+          "sourceLineSha256": "a66e885fe15db66a9c9ff5ed7c268eaa840d30055c86f01bf70ed8a3f832f398",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": []
@@ -15707,6 +16163,14 @@
           "sourceLineSha256": "23d4be1915982044d0941a4da98776305f69ac2cf6f08071d96b94271e67950e",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Plex/Server/PlexServerSettings.cs",
+          "line": 20,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mea00d26cbf7a\"));",
+          "sourceLineSha256": "03a70d4481aa8d042718f6cf37d8811722ca0a5f2eae807df9018054dc0493c5",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": [
@@ -15728,16 +16192,16 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 506,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Invalid hostname\", \"server.message.mea3737f42d3c\")",
-          "sourceLineSha256": "c61f7f50e55ac16c0382dc9a1c70e7f11fcb6c26c5ac4708ce051dc7587c1a85",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Invalid hostname\", \"server.message.mea3737f42d3c\", null)",
+          "sourceLineSha256": "a109cb3a5e05fbf667715b3a407de56fcc326a45c46e491194993292e9a58247",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 530,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Invalid hostname\", \"server.message.mea3737f42d3c\")",
-          "sourceLineSha256": "c61f7f50e55ac16c0382dc9a1c70e7f11fcb6c26c5ac4708ce051dc7587c1a85",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Invalid hostname\", \"server.message.mea3737f42d3c\", null)",
+          "sourceLineSha256": "a109cb3a5e05fbf667715b3a407de56fcc326a45c46e491194993292e9a58247",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -15759,8 +16223,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/NzbVortex/NzbVortex.cs",
           "line": 188,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to NZBVortex\", \"server.message.mea37f4df9a52\")",
-          "sourceLineSha256": "f811f949816f4788a092bbc43be54fb20f05da83f97209c5a5c0f9d755b9d62b",
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to NZBVortex\", \"server.message.mea37f4df9a52\", null)",
+          "sourceLineSha256": "73fd27f6110926a311381dbf6ac93d8d13439e6321dd11d71f72a76355d2f6d2",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
@@ -15965,7 +16429,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1417,
+          "line": 1426,
           "sourceLine": "return BadRequest(\"Offset must be non-negative\");",
           "sourceLineSha256": "f62ab8c603fcffbb253b3685801ed755527fc2e7b30df1ffd6204576e5f5b711",
           "category": "direct-api-result",
@@ -16041,6 +16505,14 @@
           "sourceLineSha256": "e71d9025afdba60db64074eae882866f2f2b50ca538a7fd0e03152b5e017ad91",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Telegram/TelegramSettings.cs",
+          "line": 16,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mec341ea80e66\"));",
+          "sourceLineSha256": "d9d02979cde9c3058230e36f43e52ce9a478f3e03a9f2f1fe48577ec285864c2",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": []
@@ -16085,8 +16557,8 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/Deluge/Deluge.cs",
           "line": 485,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"UseSsl\", \"Unable to connect through SSL\", \"server.message.mecf5ccdf0093\")",
-          "sourceLineSha256": "9f715474e4176a510d92a663ce7d0f9e323bbfd401ccfe9e67106ccaa3f9ab6d",
+          "sourceLine": "return new NzbDroneValidationFailure(\"UseSsl\", \"Unable to connect through SSL\", \"server.message.mecf5ccdf0093\", null)",
+          "sourceLineSha256": "b8a5ba9223c73b3ef71b7dc1e757f2aa015b58e073053b784162bb51717c43b0",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -16109,9 +16581,9 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Download/Clients/rTorrent/RTorrent.cs",
-          "line": 387,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(\"Host\", \"Unable to connect to rTorrent\", \"server.message.mecf985c120fb\")",
-          "sourceLineSha256": "16f85387cd24bc29b31ec3b57c93ca32f07d3c792991784376efa51234d809e6",
+          "line": 389,
+          "sourceLine": "return new NzbDroneValidationFailure(\"Host\", \"Unable to connect to rTorrent\", \"server.message.mecf985c120fb\", null)",
+          "sourceLineSha256": "dece483af48e8ec8e455eebf7efaa47fe671fa1483a4cc1e78ea8520bfa0229e",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -16187,6 +16659,14 @@
           "sourceLineSha256": "39b5510b9f7ac79b2c1a34f01685a1d80735550acb19bc45a994446d38818a1c",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/Hadouken/Hadouken.cs",
+          "line": 167,
+          "sourceLine": "\"Old Hadouken client with unsupported API, need 5.1 or higher\", \"server.message.meead9b01a49a\");",
+          "sourceLineSha256": "373e91076037d85982f9496121c7fbfad670f6b98beee3afc5fbc57876e86cff",
+          "category": "validation-failure",
+          "surface": "Validation result/message returned to client settings or API consumer"
         }
       ],
       "protectedLiterals": [
@@ -16214,7 +16694,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 555,
+          "line": 567,
           "sourceLine": "Message = $\"Test failed: {ex.Message}\"",
           "sourceLineSha256": "d87ea56b980957186de90e4ff2d390cd8e4ef92546d95438942c8e49bb0596c6",
           "category": "api-message-resource",
@@ -16359,9 +16839,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrentSettings.cs",
+          "line": 28,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mf00d6bc38ae8\"));",
+          "sourceLineSha256": "251ab00d448317844ecb537d24be01337422852a7c1c322c5312ebc68312e6fe",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrentSettings.cs",
           "line": 29,
           "sourceLine": "RuleFor(c => c.EbookCategory).Matches(@\"^([^\\\\\\/](\\/?[^\\\\\\/])*)?$\").WithMessage(@\"Can not contain '\\', '//', or start/end with '/'\")",
           "sourceLineSha256": "a9fbc5509b2b7532f901539a4131a942e81493e32362cb30d710cb1942c6501b",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrentSettings.cs",
+          "line": 30,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mf00d6bc38ae8\"));",
+          "sourceLineSha256": "251ab00d448317844ecb537d24be01337422852a7c1c322c5312ebc68312e6fe",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
@@ -16375,9 +16871,25 @@
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrentSettings.cs",
+          "line": 32,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mf00d6bc38ae8\"));",
+          "sourceLineSha256": "251ab00d448317844ecb537d24be01337422852a7c1c322c5312ebc68312e6fe",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrentSettings.cs",
           "line": 33,
           "sourceLine": "RuleFor(c => c.EbookImportedCategory).Matches(@\"^([^\\\\\\/](\\/?[^\\\\\\/])*)?$\").WithMessage(@\"Can not contain '\\', '//', or start/end with '/'\")",
           "sourceLineSha256": "de39d4f4982e6a7131198aa4ce43718796164307437e1625e70216d236147661",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrentSettings.cs",
+          "line": 34,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mf00d6bc38ae8\"));",
+          "sourceLineSha256": "251ab00d448317844ecb537d24be01337422852a7c1c322c5312ebc68312e6fe",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
@@ -16398,7 +16910,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 410,
+          "line": 411,
           "sourceLine": "new ValidationFailure(\"MediaType\", \"RanobeDB metadata is available for eBooks only.\")",
           "sourceLineSha256": "4e11b27c0b30363c751136dd860a54c318b0aa4aa19809153c36407c0c0ba635",
           "category": "validation-failure",
@@ -16720,16 +17232,16 @@
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 781,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.RecentTvPriority), \"Queueing not enabled\", \"server.message.mf4433d3129ba\") { DetailedDescription = \"Torrent Queueing is not enabled in your qBittorrent settings. Enable it in qBittorrent or select 'Last' as priority.\" };",
-          "sourceLineSha256": "515fb3e2cd8578e4e2124a043a5c8a7689d579a1af04d95409b26d5b60d5c8da",
+          "sourceLine": "return new NzbDroneValidationFailure(nameof(Settings.RecentTvPriority), \"Queueing not enabled\", \"server.message.mf4433d3129ba\", null) { DetailedDescription = \"Torrent Queueing is not enabled in your qBittorrent settings. Enable it in qBittorrent or select 'Last' as priority.\" };",
+          "sourceLineSha256": "1da2147df95df1e1b36bf8dc25ed26b0650fc1db1d8cb38c47b61aca4ce26c89",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         },
         {
           "file": "src/NzbDrone.Core/Download/Clients/QBittorrent/QBittorrent.cs",
           "line": 785,
-          "sourceLine": "return NzbDroneValidationFailure.ForMessage(nameof(Settings.OlderTvPriority), \"Queueing not enabled\", \"server.message.mf4433d3129ba\") { DetailedDescription = \"Torrent Queueing is not enabled in your qBittorrent settings. Enable it in qBittorrent or select 'Last' as priority.\" };",
-          "sourceLineSha256": "43897c96d2f5c50efa577c5f61375e780156382ed43d5b32958b5437068c482e",
+          "sourceLine": "return new NzbDroneValidationFailure(nameof(Settings.OlderTvPriority), \"Queueing not enabled\", \"server.message.mf4433d3129ba\", null) { DetailedDescription = \"Torrent Queueing is not enabled in your qBittorrent settings. Enable it in qBittorrent or select 'Last' as priority.\" };",
+          "sourceLineSha256": "eab11176d70933178f467f0c2584b89ae98ef9e67cfe51e7e48d7b6185b20fb0",
           "category": "validation-failure",
           "surface": "Validation result/message returned to client settings or API consumer"
         }
@@ -16750,7 +17262,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1725,
+          "line": 1763,
           "sourceLine": "return NotFound(new ApiErrorResource { Error = \"Author not found\" });",
           "sourceLineSha256": "1a230685230b43c0d660066c8376bc47a33a659f02188a88ee65f26e98dd8d52",
           "category": "api-response-resource",
@@ -16906,6 +17418,14 @@
           "sourceLineSha256": "b4e37414028bdf1682f3c8ed52829fa51476a5a061f1acdac1fc454d5a4be939",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
+        },
+        {
+          "file": "src/NzbDrone.Core/Notifications/Ntfy/NtfySettings.cs",
+          "line": 22,
+          "sourceLine": ".WithState(_ => NzbDroneValidationState.ForMessage(\"server.message.mf600936551d1\"));",
+          "sourceLineSha256": "744f840843ad92f6f787f77244811db1797c3405debfd149edc1b5c18d72e06c",
+          "category": "validation-message",
+          "surface": "FluentValidation error response; validation errors are returned to the client UI"
         }
       ],
       "protectedLiterals": []
@@ -17009,19 +17529,19 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1784,
-          "sourceLine": "return StatusCode(500, new ApiErrorResource { Error = \"Internal server error\" });",
-          "sourceLineSha256": "5d741de959df79116c013133d9306170f7a9d82d95f8de837095fa10694bf815",
-          "category": "api-response-resource",
-          "surface": "Explicit API error/message response serialized for the client UI"
-        },
-        {
-          "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1710,
+          "line": 1748,
           "sourceLine": "return StatusCode(500, \"Internal server error\");",
           "sourceLineSha256": "9d51f0b0bbebda442c680a04c178d58f77b5670debc2239fa152badc680bec5f",
           "category": "direct-api-result",
           "surface": "String body from an MVC API result; the caller may display it"
+        },
+        {
+          "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
+          "line": 1822,
+          "sourceLine": "return StatusCode(500, new ApiErrorResource { Error = \"Internal server error\" });",
+          "sourceLineSha256": "5d741de959df79116c013133d9306170f7a9d82d95f8de837095fa10694bf815",
+          "category": "api-response-resource",
+          "surface": "Explicit API error/message response serialized for the client UI"
         }
       ],
       "protectedLiterals": []
@@ -17088,7 +17608,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Config/HostConfigController.cs",
-          "line": 117,
+          "line": 121,
           "sourceLine": "SharedValidator.RuleFor(c => c.Branch).NotEmpty().WithMessage(\"Branch name is required, 'main' is the default\");",
           "sourceLineSha256": "249e9bb1954287e06efd85b2717d15385a3ef0f987ef62554d6344389ff968cf",
           "category": "validation-message",
@@ -17458,7 +17978,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Notifications/Telegram/TelegramService.cs",
-          "line": 66,
+          "line": 67,
           "sourceLine": "return new ValidationFailure(\"Connection\", $\"{webException.Status.ToString()}: {webException.Message}\");",
           "sourceLineSha256": "fa48abed96cef817433600586e27c9a198af0f77958050559c7ef8d7d19a3725",
           "category": "validation-failure",
@@ -17469,14 +17989,14 @@
   ],
   "counts": {
     "originalTemplates": 618,
-    "sourceOccurrences": 812,
+    "sourceOccurrences": 878,
     "translatableMessages": 618,
     "knownExistingCatalogKeys": 6,
     "newCatalogKeys": 612,
-    "sourceCallsites": 811,
+    "sourceCallsites": 877,
     "excludedTemplates": 1,
     "rawInputSourceOccurrences": 680,
-    "sourceBindings": 821
+    "sourceBindings": 886
   },
   "sourceBaseHead": "ece16c4bd953e4ae77d7473c8b01871bf1d8c8ff",
   "normalizations": [
@@ -17713,6 +18233,61 @@
         "sha256": "ca0530ebd3ab153e986d352a424795913b9c203b932ac25608b28e1b35b2f18d"
       },
       "method": "Bounded provider-test notice audit; fixed app-authored ProviderMessage sources are explicit-ID-only, while external API and provider values remain opaque."
+    },
+    {
+      "id": "20261105-main-sync",
+      "baseHead": "2df031b2e138e67d63182ff3d3fad0cde2a1cccf",
+      "newMessages": 0,
+      "newSourceBindings": 66,
+      "newUniqueCallsites": 66,
+      "sourceIds": [
+        "UsernameRequired",
+        "server.message.m006b305414e1",
+        "server.message.m05b73e4fe269",
+        "server.message.m06254ce94096",
+        "server.message.m17a00dbb4f2a",
+        "server.message.m2ebae1c36a6c",
+        "server.message.m36ff1c2553cc",
+        "server.message.m45d06dda48d1",
+        "server.message.m5269a817943e",
+        "server.message.m52a644e8b0f9",
+        "server.message.m55acf0a44748",
+        "server.message.m6026247dc0f2",
+        "server.message.m61760b3f62ff",
+        "server.message.m63cf73c14226",
+        "server.message.m64f4a104ceb4",
+        "server.message.m7132fb6d87f4",
+        "server.message.m750a8cd4307a",
+        "server.message.m794b67a4d3b9",
+        "server.message.m79dd817b4295",
+        "server.message.m7aeae1412484",
+        "server.message.m7d3d73f7deeb",
+        "server.message.m7de0a09b7503",
+        "server.message.m80830c01b9f4",
+        "server.message.m81fa19be5293",
+        "server.message.m8500a62118c5",
+        "server.message.m8d1c33f25092",
+        "server.message.m96982c5f8302",
+        "server.message.ma38b3893e50f",
+        "server.message.ma4556afba7bb",
+        "server.message.maef426d77944",
+        "server.message.mbd726c6fbe70",
+        "server.message.mc3b239e3eb56",
+        "server.message.mc78af077e86e",
+        "server.message.md0cc5efbe5e0",
+        "server.message.me3d343200bdd",
+        "server.message.me929c2679b71",
+        "server.message.mea00d26cbf7a",
+        "server.message.mec341ea80e66",
+        "server.message.meead9b01a49a",
+        "server.message.mf00d6bc38ae8",
+        "server.message.mf600936551d1"
+      ],
+      "inputEvidence": {
+        "file": "docs/pr-evidence/pr190-localization-2026-11-05/main-sync-2026-11-05/main-inventory-pin.json",
+        "sha256": "a96fa988d971c839bed3cecc7fec62f8652e21ead59fa0abfb24c8c3b920e052"
+      },
+      "method": "Reconciled PR-side source-bound localization wrappers with the merged main callsites, refreshed exact source-line hashes, and rechecked source changes against the English catalog. No new message IDs or target cells were generated."
     }
   ]
 }

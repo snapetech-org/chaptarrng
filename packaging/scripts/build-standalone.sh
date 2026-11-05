@@ -62,6 +62,7 @@ if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
   restore_sources=(
     "-p:RestoreConfigFile=$custom_nuget_config"
     "-p:RuntimeFrameworkVersion=10.0.12"
+    "-p:ChaptarrExtraPlatformRuntimePacks=true"
   )
 fi
 
@@ -111,6 +112,8 @@ if [[ "$rid" == linux-* || "$rid" == osx-* ]]; then
   mkdir -p "$bundle/scripts"
   install -m 0755 scripts/bookshelfng-to-chaptarrng.sh \
     "$bundle/scripts/bookshelfng-to-chaptarrng.sh"
+  install -m 0755 scripts/capture-bookshelf-metadata-env.py \
+    "$bundle/scripts/capture-bookshelf-metadata-env.py"
 fi
 
 if [[ "$rid" == osx-* || "$rid" == freebsd-x64 ]]; then

@@ -2698,10 +2698,10 @@
   },
   {
     "id": "server.message.m783307436ce0",
-    "source": "Disable 'Check before download' option in Sabnbzd",
+    "source": "Disable the 'Check before download' option in SABnzbd.",
     "parameters": [],
     "patterns": [
-      "Disable 'Check before download' option in Sabnbzd"
+      "Disable the 'Check before download' option in SABnzbd."
     ]
   },
   {
@@ -3237,10 +3237,10 @@
   },
   {
     "id": "server.message.m843e64bf5198",
-    "source": "Unable to send test message though Mailgun.",
+    "source": "Unable to send a test message through Mailgun.",
     "parameters": [],
     "patterns": [
-      "Unable to send test message though Mailgun."
+      "Unable to send a test message through Mailgun."
     ]
   },
   {

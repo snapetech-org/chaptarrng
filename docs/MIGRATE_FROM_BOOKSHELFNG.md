@@ -1,15 +1,17 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-> **Current status (2026-11-04; application head `6614d55c`):** BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977` remain the latest public releases; the local `0.9.978` candidate remains unpublished. Trusted validation may use compatible public GitHub-hosted runners under [`AGENTS.md`](../AGENTS.md); private ephemeral JIT is also available.
->
-> Full public Build [41913869433](https://github.com/snapetech-org/chaptarrng/actions/runs/41913869433) passed on application head `b7c542e5`, including Linux, Windows, macOS Intel, PostgreSQL migration smoke, Docker, Windows installer, and Chocolatey handoff. Fedora RPM [41915888461](https://github.com/snapetech-org/chaptarrng/actions/runs/41915888461), standalone macOS Intel [41914844476](https://github.com/snapetech-org/chaptarrng/actions/runs/41914844476), and installed Helm [41914852490](https://github.com/snapetech-org/chaptarrng/actions/runs/41914852490) handoffs passed on the same application code. Public standalone ARM64 handoff [41916855989](https://github.com/snapetech-org/chaptarrng/actions/runs/41916855989) passed on descendant `7e9fbcf2`, whose changes were test/docs only. Exact-head Build [41919631600](https://github.com/snapetech-org/chaptarrng/actions/runs/41919631600) on `7f39b52b` completed with Docker, PostgreSQL, macOS, and Windows passing, including the Windows Chocolatey handoff; Linux alone failed on a stale policy-test label assertion. Commit `5308d7f9` corrected the assertion, and the policy suite passes 21/21 locally. Exact-head public Build [41925573068](https://github.com/snapetech-org/chaptarrng/actions/runs/41925573068) passed on `6614d55c`: Linux, macOS Intel, Windows, PostgreSQL migrations, and Docker succeeded, including the Windows installer upgrade/rollback, selected data-directory, and Chocolatey `.76` handoff checks.
->
-> Read-only API differential [41914066690](https://github.com/snapetech-org/chaptarrng/actions/runs/41914066690) passed 31/31 cases on the expanded synthetic schema-158 fixture. Read/write run [41916683513](https://github.com/snapetech-org/chaptarrng/actions/runs/41916683513) exposed a `/api/v1/book/editor` response mismatch, fixed in `7f39b52b`; exact-head run [41919639403](https://github.com/snapetech-org/chaptarrng/actions/runs/41919639403) then passed 35/35 cases, including monitoring and mixed-format deletion writes and readbacks. A broader run [41921091303](https://github.com/snapetech-org/chaptarrng/actions/runs/41921091303) added legacy author bulk monitoring and exposed a response mismatch in metadata ID, ebook quality-profile ID, and provider ID. Commit `6614d55c` fixes that projection and adds a regression fixture; the full Core suite passed 4,976, skipped 29, and failed 0. Exact-head API differential [41922942122](https://github.com/snapetech-org/chaptarrng/actions/runs/41922942122) passed 37/37 cases with zero strict mismatches, including all three writes and readbacks. It reported 741 additive target properties and 251 provider-presentation differences. The harness is still a subset of all 236 shared route/method pairs and command behavior.
->
-> A local Release Console rehearsal on application head `8d902d26` passed preview, apply, migration check, restore preview, and explicit rollback on an expanded synthetic schema-158 fixture. Preview preserved the source; apply produced schema 125 with clean integrity and foreign-key checks; rollback restored the source backup byte-for-byte and retained the ChaptarrNG target. Details and the API regression evidence are in the [fixture evidence](maintainers/BOOKSHELFNG_MIGRATION_FIXTURE_EVIDENCE.md).
->
-> This is not 100% parity or cutover acceptance. Keep BookshelfNG running and backed up. Representative operator-data acceptance, live provider and media fulfillment, SeerrNG fulfillment, exhaustive unchanged-client routes/mutations/commands, remaining installed-channel and external-feed acceptance, and final operator acceptance remain open. No release, migration bridge, or production cutover is authorized by these candidate tests.
+## Current status — 2026-11-05
 
+> **Current status — application candidate `8a9908b1`.** The candidate is unpublished. [BookshelfNG 0.4.21.76](https://github.com/snapetech-org/bookshelfng/releases/tag/v0.4.21.76) and [ChaptarrNG v0.9.977](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977) remain the latest public releases. Public hosted runners are authorized for trusted validation; private JIT remains available. See [AGENTS.md](../AGENTS.md).
+>
+> Migration preserves existing provider settings and materializes the predecessor defaults only where saved properties are absent. Explicit values, including null/empty values, are retained. Migrated Plex settings expose the existing global Update Library switch in both the native UI API and compatibility API; fresh native installations keep their event-control behavior. The focused importer suite passes 101/101 and the Plex/API suite 34/34. Real HTTP probes verify retained login, incorrect/missing credential rejection, API-key requirements, native/legacy Plex readback, and masked-secret preservation.
+>
+> The latest completed strict API differential on application `02071e40` [42004027317](https://github.com/snapetech-org/chaptarrng/actions/runs/42004027317) has 90 cases: 80 pass, 7 strict failures, 1 inconclusive source error, and 2 expected policy differences. Valid paged reads, indexer flags and all three write/readback cases pass. The missing Plex global field is repaired. Remaining differences include product/runtime identity, localized presentation, provider defaults/catalogs, secure password responses and added capabilities. They remain recorded as strict failures. One BookshelfNG paged request returns 500 for an author without monitored editions; three valid page requests are tested independently.
+>
+> Installed Linux systemd No/Yes, health, source retention and forced post-conversion rollback passed at `8dcd4900`. The restored source and displaced target both pass database integrity and foreign-key checks. Current-source hosted build, archives and installed channel results are tracked in the [acceptance matrix](maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md); earlier evidence retains its original revision and scope.
+>
+> Both current operator SQLite snapshots passed isolated conversion/check/rollback. Repeat conversion after the author-metadata repair preserves all managed author arrays; real-file readers and range downloads pass for eight formats. See the [bounded operator rehearsal](maintainers/BOOKSHELFNG_OPERATOR_REHEARSAL_2026-11-05.md). Hosted [42005003595](https://github.com/snapetech-org/chaptarrng/actions/runs/42005003595) passes all ten archives and synthetic ebook/audiobook acquisition through the deployed SeerrNG adapter and real local qBittorrent, including import, history, restart and content/source-backup integrity. Actual SeerrNG cover methods also pass on an isolated synthetic networked fixture. Live providers, broader media write/recovery, full SeerrNG web request/approval fulfillment, headed UI, external update/feed delivery and production acceptance remain open. All three headed desktop slots are quarantined for other tasks' artifact-export recovery. Keep BookshelfNG operational and backed up. Candidate checks do not authorize publication, migration-bridge activation, cutover or retirement.
+>
 > **Historical source-path audit snapshot (2026-10-31):** The ledger compares
 > BookshelfNG `1bd7f2dc` to ChaptarrNG
 > `main` target `fa55ffab` (application source `bd589312`): 1,174 changed paths,
@@ -383,6 +385,24 @@ newer image; published `.977` does not support that identity conversion. The
 source packaging workflow includes the helper in Linux x64 and arm64
 standalone archives. The published `.977` archives do not contain this newer
 bootstrap. No new release or cutover is authorized by this source change.
+
+Container metadata defaults need a separate capture before removing the old
+container. `snapshot --source-container NAME` verifies that container's `/config`
+mount, then writes a private `.metadata.env` beside the appdata archive, plus
+source image/container hashes. It captures only `METADATA_URL`, including values
+inherited from the source image, and does not print the URL. The optional capture
+requires Python 3. Pass the resulting file to preview/apply with
+`--metadata-env-file /absolute/path/to/captured.metadata.env`; a working copy can
+use the original capture without pretending it is the live container mount.
+Preview/apply can also capture directly with `--source-container` when using the
+original appdata directory. Keep these files private with the backups.
+
+Conversion retains this runtime fallback independently of saved metadata URL
+settings. Saved Chaptarr values still take precedence, followed by the current
+`METADATA_URL`, then the captured source fallback. With no source environment,
+the verified BookshelfNG `.76` binary default is retained for migrated data;
+fresh Chaptarr installations retain their own default. Preserve the other source
+runtime environment settings separately, as described in the channel runbooks.
 
 The Add New page carries over the BookshelfNG “search as you type” choice when
 you open ChaptarrNG from the same browser origin. If you move to a different

@@ -26,6 +26,16 @@ namespace Chaptarr.Core.Test.Http
             Assert.That(json.RootElement.GetProperty(nameof(EditionResource.Title)).GetString(), Is.EqualTo("Project Hail Mary"));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void author_index_should_use_format_monitoring_without_a_legacy_work_override(bool legacy)
+        {
+            var book = new Book { Monitored = true, MediaType = BookMediaType.Ebook, EbookMonitored = false };
+            var context = legacy ? new Chaptarr.Http.Middleware.ReadarrFacadeContext("hc", null, "/api", isBookshelfCompatibility: true) : null;
+
+            Assert.That(book.ToAuthorIndexResource(15, context).Monitored, Is.False);
+        }
+
         [Test]
         public void author_resource_should_preserve_the_legacy_embedded_book_shape_without_cycles()
         {
@@ -60,7 +70,7 @@ namespace Chaptarr.Core.Test.Http
                 NextBook = nextBook
             };
 
-            var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+            var options = NzbDrone.Common.Serializer.STJson.GetSerializerSettings();
             using var json = JsonDocument.Parse(JsonSerializer.Serialize(resource, options));
             var serializedBook = json.RootElement.GetProperty("nextBook");
 
@@ -79,7 +89,7 @@ namespace Chaptarr.Core.Test.Http
             Assert.That(serializedBook.EnumerateObject().Select(property => property.Name), Is.EquivalentTo(new[]
             {
                 "id", "authorMetadataId", "foreignBookId", "foreignEditionId", "titleSlug", "title",
-                "releaseDate", "links", "genres", "relatedBooks", "ratings", "lastSearchTime", "cleanTitle",
+                "links", "genres", "relatedBooks", "ratings", "cleanTitle",
                 "monitored", "anyEditionOk", "lastInfoSync", "added", "addOptions", "authorMetadata", "author",
                 "editions", "bookFiles", "seriesLinks"
             }));

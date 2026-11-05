@@ -28,7 +28,9 @@ namespace NzbDrone.Core.Download.Clients.RTorrent
         private readonly IRTorrentProxy _proxy;
         private readonly IRTorrentDirectoryValidator _rTorrentDirectoryValidator;
         private readonly IDownloadSeedConfigProvider _downloadSeedConfigProvider;
-        private readonly string _imported_view = string.Concat(BuildInfo.AppName.ToLower(), "_imported");
+        private string _imported_view => _configService.BookshelfNGDatabaseMigrated
+            ? "readarr_imported"
+            : string.Concat(BuildInfo.AppName.ToLowerInvariant(), "_imported");
 
         public RTorrent(IRTorrentProxy proxy,
                         ITorrentFileInfoReader torrentFileInfoReader,

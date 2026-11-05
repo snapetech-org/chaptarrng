@@ -6,6 +6,7 @@ using Chaptarr.Api.V1.Books;
 using Chaptarr.Http.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
 using NLog;
 using NUnit.Framework;
 using NzbDrone.Core.Books;
@@ -18,6 +19,100 @@ namespace Chaptarr.Core.Test.Api
     [TestFixture]
     public class EditionCatalogResourceFixture
     {
+        [TestCase(true)]
+        [TestCase(false)]
+        public void missing_work_catalog_should_preserve_the_legacy_empty_response(bool legacy)
+        {
+            var identities = new Mock<IBookshelfLegacyIdentityMapService>();
+            identities.Setup(service => service.ResolveBookIds(It.IsAny<IEnumerable<int>>(), null))
+                .Returns(new List<int> { 999 });
+            identities.Setup(service => service.GetMappingsByTargetIds("Edition", It.IsAny<IEnumerable<int>>()))
+                .Returns(new List<BookshelfLegacyIdentityMapEntry>());
+            var editions = new Mock<IEditionService>();
+            editions.Setup(service => service.GetEditionsByBook(It.IsAny<IEnumerable<int>>()))
+                .Returns(new List<Edition>());
+            var controller = new BookController(
+                null, new Mock<IBookService>().Object, null, editions.Object, null, null, null, null, null,
+                new Mock<IMediaCoverProxy>().Object, null, null, null, null, null, null, null, null, null, null,
+                bookshelfLegacyIdentityMapService: identities.Object)
+            {
+                ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+            };
+            controller.HttpContext.Items[ReadarrFacadeContext.ItemKey] =
+                new ReadarrFacadeContext("hc", null, string.Empty, isBookshelfCompatibility: legacy);
+
+            var result = controller.GetEditionCatalog(999);
+
+            if (legacy)
+            {
+                Assert.That(result.Value, Is.Empty);
+            }
+            else
+            {
+                Assert.That(result.Result, Is.TypeOf<NotFoundResult>());
+            }
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void legacy_catalog_should_include_both_formats_and_project_split_edition_ids_once(bool filesAlreadyLoaded)
+        {
+            var books = new Mock<IBookService>();
+            books.Setup(service => service.GetBook(20)).Returns(new Book { Id = 20 });
+            var identities = new Mock<IBookshelfLegacyIdentityMapService>();
+            identities.Setup(service => service.ResolveBookIds(It.IsAny<IEnumerable<int>>(), null))
+                .Returns(new List<int> { 20, 21 });
+            identities.Setup(service => service.GetMappingsByTargetIds("Edition", It.IsAny<IEnumerable<int>>()))
+                .Returns(new List<BookshelfLegacyIdentityMapEntry>
+                {
+                    new() { SourceId = 16, TargetId = 16, MediaType = 0 },
+                    new() { SourceId = 16, TargetId = 116, MediaType = 1 },
+                    new() { SourceId = 17, TargetId = 17, MediaType = 1 }
+                });
+            var editions = new List<Edition>
+            {
+                new() { Id = 16, BookId = 20, Title = "Audio", ForeignEditionId = "hc:3006", Monitored = true },
+                new() { Id = 17, BookId = 21, Title = "Ebook", IsEbook = true, ForeignEditionId = "hc:3007" },
+                new() { Id = 116, BookId = 21, Title = "Audio", IsEbook = true }
+            };
+            editions[0].BookFiles = filesAlreadyLoaded ? new List<BookFile> { new() { EditionId = 16 } } : null;
+            editions[0].Images = new List<CoreMediaCover>
+            {
+                new(MediaCoverTypes.Cover, "https://covers.example/audio.jpg")
+                {
+                    RemoteUrl = "https://original.example/audio.jpg"
+                }
+            };
+            var editionService = new Mock<IEditionService>();
+            editionService.Setup(service => service.GetEditionsByBook(It.IsAny<int>()))
+                .Returns<int>(id => editions.Where(edition => edition.BookId == id).ToList());
+            editionService.Setup(service => service.GetEditionsByBook(It.IsAny<IEnumerable<int>>()))
+                .Returns(editions);
+            var files = new Mock<IMediaFileService>();
+            files.Setup(service => service.GetFilesByBook(It.IsAny<int>()))
+                .Returns<int>(id => id == 21 ? new List<BookFile> { new() { EditionId = 116 } } : new List<BookFile>());
+            var coverProxy = new Mock<IMediaCoverProxy>();
+            var controller = new BookController(
+                null, books.Object, null, editionService.Object, null, null, null, files.Object, null,
+                coverProxy.Object, null, null, null, null, null, null, null, null, null, null,
+                bookshelfLegacyIdentityMapService: identities.Object)
+            {
+                ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+            };
+            controller.HttpContext.Items[ReadarrFacadeContext.ItemKey] =
+                new ReadarrFacadeContext("hc", null, string.Empty, isBookshelfCompatibility: true);
+
+            var catalog = controller.GetEditionCatalog(10).Value;
+
+            Assert.That(catalog.Select(edition => edition.EditionId), Is.EqualTo(new[] { 16, 17 }));
+            Assert.That(catalog.Select(edition => edition.ForeignEditionId), Is.EqualTo(new[] { "3006", "3007" }));
+            Assert.That(catalog.Select(edition => edition.IsEbook), Is.EqualTo(new[] { false, true }));
+            Assert.That(catalog[0].Owned, Is.EqualTo(filesAlreadyLoaded));
+            Assert.That(catalog[0].ImageUrl, Is.EqualTo("https://original.example/audio.jpg"));
+            files.Verify(service => service.GetFilesByBook(It.IsAny<int>()), Times.Never);
+            coverProxy.Verify(service => service.ProxyRemoteUrls(It.IsAny<IEnumerable<CoreMediaCover>>()), Times.Never);
+        }
+
         private class BookServiceProxy : DispatchProxy
         {
             protected override object Invoke(MethodInfo targetMethod, object[] args)

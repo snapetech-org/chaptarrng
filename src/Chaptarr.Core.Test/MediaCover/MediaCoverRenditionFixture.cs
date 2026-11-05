@@ -1044,6 +1044,9 @@ namespace Chaptarr.Core.Test.MediaCover
             Assert.That(MediaCoverRendition.GetOriginalPath(Path.Combine(folder, rendition)), Is.EqualTo(Path.Combine(folder, original)));
         }
 
+        [TestCase("/MediaCover/Books/12/cover")]
+        [TestCase("/MediaCover/12/poster?lastWrite=1234")]
+        [TestCase("cover")]
         [TestCase("/MediaCover/Books/12/cover-250.jpeg?lastWrite=1234")]
         [TestCase("/MediaCover/Books/12/cover-250.jfif")]
         [TestCase("/MediaCover/Books/12/cover-250.webp")]
@@ -1052,6 +1055,8 @@ namespace Chaptarr.Core.Test.MediaCover
             Assert.That(MediaCoverRendition.IsSupportedImagePath(path), Is.True);
         }
 
+        [TestCase("/MediaCover/Books/config/cover")]
+        [TestCase("/MediaCover/Books/12/../config/cover")]
         [TestCase("/MediaCover/Books/12/cover-metadata.json")]
         [TestCase("/MediaCover/Books/12/readme.txt")]
         [TestCase("/MediaCover/Books/12/no-extension")]
@@ -1060,19 +1065,21 @@ namespace Chaptarr.Core.Test.MediaCover
             Assert.That(MediaCoverRendition.IsSupportedImagePath(path), Is.False);
         }
 
-        [Test]
-        public void books_page_jpeg_rendition_request_should_fall_back_to_the_real_original()
+        [TestCase("Books/12", "cover")]
+        [TestCase("12", "poster")]
+        public void page_jpeg_rendition_request_should_fall_back_to_the_real_original(string folder, string filename)
         {
             var appFolder = DispatchProxy.Create<IAppFolderInfo, AppFolderProxy>();
             ((AppFolderProxy)(object)appFolder).AppDataFolder = ConfigRoot;
             var diskProvider = DispatchProxy.Create<IDiskProvider, DiskProviderProxy>();
             var disk = (DiskProviderProxy)(object)diskProvider;
-            disk.ExistingPaths.Add(Path.Combine(ConfigRoot, "MediaCover", "Books", "12", "cover.jpeg"));
+            var original = Path.Combine(ConfigRoot, "MediaCover", folder.Replace('/', Path.DirectorySeparatorChar), filename + ".jpeg");
+            disk.ExistingPaths.Add(original);
             var mapper = new MediaCoverMapper(appFolder, diskProvider, LogManager.GetCurrentClassLogger());
 
-            var mapped = mapper.Map("/MediaCover/Books/12/cover-500.jpeg");
+            var mapped = mapper.Map("/MediaCover/" + folder + "/" + filename + "-500.jpeg");
 
-            Assert.That(mapped, Is.EqualTo(Path.Combine(ConfigRoot, "MediaCover", "Books", "12", "cover.jpeg")));
+            Assert.That(mapped, Is.EqualTo(original));
             Assert.That(mapper.CanHandle("/MediaCover/Books/12/cover-metadata.json"), Is.False);
         }
 

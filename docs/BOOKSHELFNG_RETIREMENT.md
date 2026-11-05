@@ -1,6 +1,60 @@
 # BookshelfNG retirement status
 
-## Current status — 2026-11-04 UTC
+## Current status — 2026-11-05 UTC
+
+The unpublished candidate now includes schema-126 migration identity indexes. Public hosted runners are
+authorized for trusted validation; CodeQL remains disabled.
+
+Fresh, consistent snapshots of both running BookshelfNG `.76` instances have now
+passed isolated conversion, migration checks and rollback. Original source
+services and media were not changed. The first real-data comparison exposed an
+author-metadata reset; `53d76bcc` repairs it, and repeat conversions preserve
+images, links, aliases and genres for all 1,379 and 1,400 managed authors. All
+101 importer fixtures pass. `bd23e039` additionally preserves legacy work release
+dates, selected-edition page counts and file-based percentage responses; 64
+focused book/API checks pass. Packaged runtime comparisons confirm those response repairs. The legacy
+edition catalog also retains all source editions, original cover URLs and the
+predecessor ownership-loading semantics. See the [operator rehearsal](maintainers/BOOKSHELFNG_OPERATOR_REHEARSAL_2026-11-05.md).
+
+Read-only real-media checks pass for EPUB, KEPUB, AZW3, MOBI, PDF, MP3, M4B and
+M4A; authenticated range downloads match original bytes. This establishes bounded
+read acceptance, not acquisition, write/import or failure-recovery acceptance.
+The two installations retain separate ports, API keys and accounts.
+
+Full public Build [42031944612](https://github.com/snapetech-org/chaptarrng/actions/runs/42031944612)
+and all ten standalone archives
+[42031945553](https://github.com/snapetech-org/chaptarrng/actions/runs/42031945553)
+passed at schema-126 candidate `833d6d63`. The strict API run
+[42031944507](https://github.com/snapetech-org/chaptarrng/actions/runs/42031944507)
+also passed with explicit, independently verified runtime/security dispositions;
+its source-side invalid paged fixture remains inconclusive.
+
+A subsequent comparison of every managed author, work and file in both real
+snapshots found additional response differences missed by the synthetic sample.
+The compatibility fixes preserve raw narrator text, every series label, original
+titles, empty unselected-edition metadata, null embedded relations, combined work
+monitoring, source author image lists and unmapped audio quality weights.
+Unscoped split works prefer the monitored edition retaining the source provider
+identity. Legacy cover URLs retain their extension, URL base and last-write token;
+known extensionless cached image names are supported without accepting arbitrary
+extensionless files. The 267 focused API/importer regressions pass; a new packaged full-library
+comparison is still required before claiming these gaps closed.
+
+The full SeerrNG user/approval/acquisition/scan/restart rehearsal now audits database
+identity, duplicates and orphaned identifiers. It exposed client defects repaired
+in [SeerrNG PR 527](https://github.com/snapetech-org/seerrng/pull/527), whose trusted
+owner CI [42028627704](https://github.com/snapetech-org/seerrng/actions/runs/42028627704)
+passed; the repair is merged as `7b013338`. Both format rehearsals pass with the explicitly identified unpublished
+test image; the unchanged deployed client is not claimed repaired.
+
+Live-provider fulfillment, headed UI, remaining installed and external distribution
+acceptance, and production acceptance remain open. Desktop Pool v2 acquisition
+still times out; no headed UI pass is claimed. Publication, bridge activation,
+cutover and retirement remain unauthorized. Revision-specific results are recorded
+in the [operator rehearsal](maintainers/BOOKSHELFNG_OPERATOR_REHEARSAL_2026-11-05.md)
+and [channel acceptance matrix](maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
+
+## Historical checkpoint — 2026-11-04 UTC
 
 At application-code head `d3a67c58`; later main commits are runner policy,
 acceptance-workflow, test, and documentation updates. BookshelfNG `0.4.21.76`

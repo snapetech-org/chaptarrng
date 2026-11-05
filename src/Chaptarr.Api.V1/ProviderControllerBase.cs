@@ -52,13 +52,13 @@ namespace Chaptarr.Api.V1
             return ToResource(definition);
         }
 
-        private TProviderResource ToResource(TProviderDefinition definition)
+        protected virtual TProviderResource ToResource(TProviderDefinition definition)
         {
             var resource = _resourceMapper.ToResource(definition);
             if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
             {
                 ProviderResourceCompatibilityProjection.ProjectBookshelfLegacyProviderIdentity(resource);
-                ProviderResourceCompatibilityProjection.ProjectBookshelfLegacyFields(resource);
+                ProviderResourceCompatibilityProjection.ProjectBookshelfLegacyFields(resource, definition.Settings);
             }
 
             return resource;
@@ -191,12 +191,22 @@ namespace Chaptarr.Api.V1
                 }
             }
 
+            ApplyResourceSettings(providerResource, definition);
+
             if (validate && (definition.Enable || forceValidate))
             {
                 Validate(definition, includeWarnings);
             }
 
             return definition;
+        }
+
+        protected virtual void ApplyResourceSettings(TProviderResource resource, TProviderDefinition definition)
+        {
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                ProviderResourceCompatibilityProjection.ApplyBookshelfLegacySettings(resource, definition.Settings);
+            }
         }
 
         [RestDeleteById]
@@ -232,6 +242,15 @@ namespace Chaptarr.Api.V1
                 providerResource.Presets = presetDefinitions
                     .Select(ToResource)
                     .ToList();
+
+                if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+                {
+                    ProviderResourceCompatibilityProjection.ProjectBookshelfLegacyTemplateDefaults(providerResource);
+                    foreach (var preset in providerResource.Presets)
+                    {
+                        ProviderResourceCompatibilityProjection.ProjectBookshelfLegacyTemplateDefaults(preset);
+                    }
+                }
 
                 result.Add(providerResource);
             }

@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Chaptarr.Http;
 using Chaptarr.Http.REST;
+using Chaptarr.Http.Middleware;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
@@ -58,7 +59,10 @@ namespace Chaptarr.Api.V1.Config
             SharedValidator.RuleFor(c => c.Port).ValidPort();
 
             SharedValidator.RuleFor(c => c.UrlBase).ValidUrlBase();
-            SharedValidator.RuleFor(c => c.InstanceName).ContainsChaptarr().When(c => c.InstanceName.IsNotNullOrWhiteSpace());
+            SharedValidator.RuleFor(c => c.InstanceName).ContainsChaptarr()
+                           .When(c => c.InstanceName.IsNotNullOrWhiteSpace() &&
+                                      !(HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true &&
+                                        c.InstanceName.Contains("Readarr", StringComparison.OrdinalIgnoreCase)));
 
             SharedValidator.RuleFor(c => c.Username).NotEmpty().When(c => c.AuthenticationMethod == AuthenticationType.Basic ||
                                                                           c.AuthenticationMethod == AuthenticationType.Forms);
@@ -170,6 +174,10 @@ namespace Chaptarr.Api.V1.Config
         {
             var resource = HostConfigResourceMapper.ToResource(_configFileProvider, _configService);
             resource.Id = 1;
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                resource.InstanceName = _configFileProvider.GetBookshelfInstanceName();
+            }
 
             var user = _userService.FindUser();
 
@@ -335,6 +343,10 @@ namespace Chaptarr.Api.V1.Config
             // Return the updated configuration to show any normalization that occurred
             var updatedResource = HostConfigResourceMapper.ToResource(_configFileProvider, _configService);
             updatedResource.Id = 1;
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                updatedResource.InstanceName = _configFileProvider.GetBookshelfInstanceName();
+            }
 
             var user = _userService.FindUser();
             updatedResource.Username = user?.Username ?? string.Empty;

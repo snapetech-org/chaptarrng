@@ -543,10 +543,10 @@ namespace NzbDrone.Core.Datastore
                 if (metadata.TryGetValue(field, out var value)) values[field] = value;
             }
 
-            SetIfPresent(values, "Aliases", "[]");
-            SetIfPresent(values, "Images", "[]");
-            SetIfPresent(values, "Links", "[]");
-            SetIfPresent(values, "Genres", "[]");
+            foreach (var field in new[] { "Aliases", "Images", "Links", "Genres" })
+            {
+                SetIfPresent(values, field, PreserveJsonArrayOrEmpty(GetValue(metadata, field)));
+            }
         }
 
         private static Dictionary<int, BookMap> ImportBooks(
@@ -728,7 +728,8 @@ namespace NzbDrone.Core.Datastore
 
                 var primaryMediaType = mediaState.PreferredMediaType ?? mediaState.MediaTypes.Min();
                 var foreignEditionId = NormalizeSourceId(GetString(row, "ForeignEditionId"), "edition");
-                var narrator = GetString(row, "Narrator")?.Trim();
+                var sourceNarrator = GetString(row, "Narrator");
+                var narrator = sourceNarrator?.Trim();
                 var targetByMediaType = new Dictionary<int, EditionTargetMap>();
 
                 foreach (var mediaType in mediaState.MediaTypes.OrderBy(x => x))
@@ -763,7 +764,7 @@ namespace NzbDrone.Core.Datastore
                     values["ForeignEditionId"] = targetForeignEditionId;
                     SetIfPresent(values, "ReadingFormatId", readingFormatId);
                     SetProviderColumns(values, "Edition", targetForeignEditionId);
-                    SetIfPresent(values, "Narrator", mediaType == 0 ? narrator : null);
+                    SetIfPresent(values, "Narrator", isPrimary ? sourceNarrator : mediaType == 0 ? narrator : null);
                     if (!isPrimary)
                     {
                         SetIfPresent(values, "Format", mediaType == 1 ? "Ebook" : "Audiobook");
@@ -1588,6 +1589,7 @@ namespace NzbDrone.Core.Datastore
                 EnsureAllSourceValuesMapped(row, targetColumns, "Indexers");
                 var values = Intersect(row, targetColumns);
                 CheckProviderSettingsCompatibility(row, values, CompatibleIndexerContracts, unsupported);
+                ApplyBookshelfProviderDefaults("Indexers", row, values);
 
                 // These are implementation capabilities, not user preferences. The runtime
                 // provider factory recalculates them from the installed Chaptarr provider.
@@ -1646,9 +1648,55 @@ namespace NzbDrone.Core.Datastore
             IReadOnlyDictionary<string, object> sourceRow,
             IDictionary<string, object> targetRow)
         {
-            if (!string.Equals(table, "DownloadClients", StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(GetString(sourceRow, "Implementation"), "QBittorrent", StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(GetString(sourceRow, "ConfigContract"), nameof(QBittorrentSettings), StringComparison.OrdinalIgnoreCase))
+            var contract = (GetString(sourceRow, "ConfigContract") ?? string.Empty).ToLowerInvariant();
+            var defaults = new Dictionary<string, JToken>(StringComparer.OrdinalIgnoreCase);
+            if (table.Equals("DownloadClients", StringComparison.OrdinalIgnoreCase))
+            {
+                var category = contract switch
+                {
+                    "delugesettings" or "qbittorrentsettings" or "rtorrentsettings" or "utorrentsettings" => "readarr",
+                    "nzbgetsettings" or "nzbvortexsettings" or "sabnzbdsettings" => "Readarr",
+                    _ => null
+                };
+                if (category != null)
+                {
+                    defaults["musicCategory"] = category;
+                }
+
+                if (contract == "hadoukensettings")
+                {
+                    defaults["category"] = "readarr-music";
+                }
+                else if (contract == "floodsettings")
+                {
+                    defaults["tags"] = new JArray("readarr");
+                }
+
+                // These public predecessor defaults were the effective credentials only
+                // when the source omitted the property. Never replace explicit values,
+                // including null/empty, or apply them to a new native configuration.
+                if (contract == "delugesettings")
+                {
+                    defaults["password"] = "deluge";
+                }
+                else if (contract == "nzbgetsettings")
+                {
+                    defaults["password"] = "tegbzn6789";
+                }
+            }
+            else if (table.Equals("Indexers", StringComparison.OrdinalIgnoreCase) && contract == "myanonamousesettings")
+            {
+                defaults["baseUrl"] = "https://www.myanonamouse.net/";
+                defaults["mamId"] = string.Empty;
+                defaults["searchType"] = 0;
+                defaults["searchInSeries"] = false;
+            }
+            else if (table.Equals("Notifications", StringComparison.OrdinalIgnoreCase) && contract == "plexserversettings")
+            {
+                defaults["useSsl"] = false;
+            }
+
+            if (defaults.Count == 0)
             {
                 return;
             }
@@ -1664,13 +1712,18 @@ namespace NzbDrone.Core.Datastore
                 return;
             }
 
-            // BookshelfNG's QBittorrentSettings constructor defaults its legacy category to "readarr".
-            // The ChaptarrNG-native default is "chaptarr", so persist the source default when the
-            // legacy database omitted the property instead of changing category routing on migration.
-            if (!settings.Properties().Any(property =>
-                    property.Name.Equals(nameof(QBittorrentSettings.MusicCategory), StringComparison.OrdinalIgnoreCase)))
+            var changed = false;
+            foreach (var value in defaults)
             {
-                settings["musicCategory"] = "readarr";
+                if (settings.Property(value.Key, StringComparison.OrdinalIgnoreCase) == null)
+                {
+                    settings[value.Key] = value.Value;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
                 SetIfPresent(targetRow, "Settings", settings.ToString(Formatting.None));
             }
         }
@@ -2130,6 +2183,7 @@ namespace NzbDrone.Core.Datastore
             const string bookshelfMigrationOutcomeKey = "bookshelfngmigrationoutcome";
             const string legacyMetadataSourceKey = "metadatasource";
             const string chaptarrMetadataServerUrlKey = "metadataserverurl";
+            const string bookshelfMetadataFallbackKey = "bookshelfngmetadataserverurlfallback";
             const string chaptarrGitHubUpdatesKey = "usegithubupdates";
 
             var configRows = ReadRows(source, "Config").ToList();
@@ -2157,6 +2211,7 @@ namespace NzbDrone.Core.Datastore
             var bookshelfMigrationOutcomeRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfMigrationOutcomeKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var legacyMetadataSourceRows = configRows.Where(row => string.Equals(GetString(row, "Key"), legacyMetadataSourceKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrMetadataServerUrlRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrMetadataServerUrlKey, StringComparison.OrdinalIgnoreCase)).ToList();
+            var bookshelfMetadataFallbackRows = configRows.Where(row => string.Equals(GetString(row, "Key"), bookshelfMetadataFallbackKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var chaptarrGitHubUpdatesRows = configRows.Where(row => string.Equals(GetString(row, "Key"), chaptarrGitHubUpdatesKey, StringComparison.OrdinalIgnoreCase)).ToList();
             var autoInitializeAuthorPathsRows = configRows
                 .Where(row => string.Equals(GetString(row, "Key"), "AutoInitializeFormatSpecificAuthorPaths", StringComparison.OrdinalIgnoreCase))
@@ -2190,7 +2245,7 @@ namespace NzbDrone.Core.Datastore
                 throw new InvalidDataException("BookshelfNG config contains duplicate compatibility profile settings; conversion stopped before promotion.");
             }
 
-            if (legacyMetadataSourceRows.Count > 1 || chaptarrMetadataServerUrlRows.Count > 1)
+            if (legacyMetadataSourceRows.Count > 1 || chaptarrMetadataServerUrlRows.Count > 1 || bookshelfMetadataFallbackRows.Count > 1)
             {
                 throw new InvalidDataException("BookshelfNG config contains duplicate metadata-server settings; conversion stopped before promotion.");
             }
@@ -2474,7 +2529,25 @@ namespace NzbDrone.Core.Datastore
                 hardcoverModeDisposition = $"BookshelfNG's effective {sourceProviderDialect} runtime mode was copied to ChaptarrNG HardcoverEnabled";
             }
 
-            var metadataServerUrlDisposition = "no saved metadata-server URL was present; ChaptarrNG's configured environment or default URL applies";
+            if (bookshelfMetadataFallbackRows.Count == 0)
+            {
+                var inheritedMetadataUrl = Environment.GetEnvironmentVariable("METADATA_URL");
+                var fallback = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["Key"] = "BookshelfNGMetadataServerUrlFallback",
+                    ["Value"] = string.IsNullOrWhiteSpace(inheritedMetadataUrl)
+                        ? ConfigService.BookshelfMetadataServerDefault
+                        : inheritedMetadataUrl
+                };
+                if (target is NpgsqlConnection && targetColumns.ContainsKey("Id"))
+                {
+                    fallback["Id"] = checked(++nextGeneratedConfigId);
+                }
+
+                configRows.Add(fallback);
+            }
+
+            var metadataServerUrlDisposition = "no saved metadata-server URL was present; the inherited source environment or verified BookshelfNG binary default was retained as a separate fallback";
             var legacyMetadataSource = legacyMetadataSourceRows.SingleOrDefault();
             var chaptarrMetadataServerUrl = chaptarrMetadataServerUrlRows.SingleOrDefault();
             if (chaptarrMetadataServerUrl != null && !string.IsNullOrWhiteSpace(GetString(chaptarrMetadataServerUrl, "Value")))
@@ -2663,6 +2736,7 @@ namespace NzbDrone.Core.Datastore
                     NotificationMappedSourceColumns);
                 var values = Intersect(row, targetColumns);
                 CheckProviderSettingsCompatibility(row, values, NotificationContracts, unsupported);
+                ApplyBookshelfProviderDefaults("Notifications", row, values);
                 if (!row.ContainsKey("OnBookRetag"))
                 {
                     SetIfPresent(values, "OnBookRetag", GetValue(row, "OnTrackRetag") ?? false);

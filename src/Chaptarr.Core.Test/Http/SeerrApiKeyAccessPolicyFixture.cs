@@ -11,6 +11,16 @@ namespace Chaptarr.Core.Test.Http
     [TestFixture]
     public class SeerrApiKeyAccessPolicyFixture
     {
+        private const string ProxyHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+        [TestCase("GET", "/MediaCoverProxy/" + ProxyHash + "/cover.jpg", true)]
+        [TestCase("GET", "/MediaCoverProxy/" + ProxyHash + "/poster.webp", true)]
+        [TestCase("POST", "/MediaCoverProxy/" + ProxyHash + "/cover.jpg", false)]
+        [TestCase("GET", "/MediaCoverProxy/short/cover.jpg", false)]
+        [TestCase("GET", "/MediaCoverProxy/" + ProxyHash + "/config.xml", false)]
+        [TestCase("GET", "/MediaCoverProxy/" + ProxyHash + "/cover.svg", false)]
+        [TestCase("GET", "/MediaCoverProxy/" + ProxyHash + "/../cover.jpg", false)]
+        [TestCase("GET", "/MediaCoverProxy/" + ProxyHash + "/cover.jpg/other", false)]
         [TestCase("GET", "/api/v1/system/capabilities", true)]
         [TestCase("GET", "/api/v1/system/health", false)]
         [TestCase("GET", "/api/v1/book/paged", true)]
@@ -23,6 +33,12 @@ namespace Chaptarr.Core.Test.Http
         [TestCase("GET", "/api/v1/MediaCover/author/21/poster.webp", true)]
         [TestCase("GET", "/MediaCover/21/cover.jpg", true)]
         [TestCase("GET", "/MediaCover/author/21/poster.jpg", true)]
+        [TestCase("GET", "/MediaCover/Books/21/cover.jpg", true)]
+        [TestCase("GET", "/api/v1/MediaCover/book/21/cover.jpg", true)]
+        [TestCase("GET", "/MediaCover/Books/0/cover.jpg", false)]
+        [TestCase("GET", "/MediaCover/Books/21/config.xml", false)]
+        [TestCase("GET", "/MediaCover/Books/21/../config.xml", false)]
+        [TestCase("POST", "/MediaCover/Books/21/cover.jpg", false)]
         [TestCase("GET", "/readarr/hc/ebook/api/v1/book/paged", true)]
         [TestCase("GET", "/readarr/gr/audiobook/api/v1/book/21", true)]
         [TestCase("POST", "/api/v1/book", true)]

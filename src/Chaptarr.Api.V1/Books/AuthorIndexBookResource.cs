@@ -66,10 +66,15 @@ namespace Chaptarr.Api.V1.Books
 
         // Keep the legacy lazy-loaded relation contracts. These remain null in the
         // author index response, matching BookshelfNG's unloaded-navigation behavior.
+        [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.Never)]
         public LazyLoaded<AuthorMetadata> AuthorMetadata { get; set; }
+        [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.Never)]
         public LazyLoaded<CoreAuthor> Author { get; set; }
+        [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.Never)]
         public LazyLoaded<List<Edition>> Editions { get; set; }
+        [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.Never)]
         public LazyLoaded<List<BookFile>> BookFiles { get; set; }
+        [global::System.Text.Json.Serialization.JsonIgnore(Condition = global::System.Text.Json.Serialization.JsonIgnoreCondition.Never)]
         public LazyLoaded<List<SeriesBookLink>> SeriesLinks { get; set; }
     }
 

@@ -168,7 +168,8 @@ namespace Chaptarr.Api.V1.Books
                 return false;
             })
 		                         .WithMessage("At least one quality profile must be selected");
-	            PostValidator.RuleFor(s => s.Author.MetadataProfileId).SetValidator(metadataProfileExistsValidator);
+	            PostValidator.RuleFor(s => s.Author.MetadataProfileId).SetValidator(metadataProfileExistsValidator)
+                             .When(s => s.Author != null);
 	            PostValidator.RuleFor(s => s.Author.AudiobookQualityProfileId)
 	                         .SetValidator(qualityProfileExistsValidator)
 	                         .When(s => s.Author?.AudiobookQualityProfileId.HasValue == true && s.Author.AudiobookQualityProfileId.Value > 0);
@@ -182,9 +183,9 @@ namespace Chaptarr.Api.V1.Books
 	                         .SetValidator(metadataProfileExistsValidator)
 	                         .When(s => s.Author?.EbookMetadataProfileId.HasValue == true && s.Author.EbookMetadataProfileId.Value > 0);
             PostValidator.RuleFor(s => s.Author.AudiobookRootFolderPath).IsValidPath()
-		                         .When(s => s.Author.Path.IsNullOrWhiteSpace() && !s.Author.AudiobookRootFolderPath.IsNullOrWhiteSpace());
+		                         .When(s => s.Author != null && s.Author.Path.IsNullOrWhiteSpace() && !s.Author.AudiobookRootFolderPath.IsNullOrWhiteSpace());
             PostValidator.RuleFor(s => s.Author.EbookRootFolderPath).IsValidPath()
-	                         .When(s => s.Author.Path.IsNullOrWhiteSpace() && !s.Author.EbookRootFolderPath.IsNullOrWhiteSpace());
+	                         .When(s => s.Author != null && s.Author.Path.IsNullOrWhiteSpace() && !s.Author.EbookRootFolderPath.IsNullOrWhiteSpace());
             PostValidator.RuleFor(s => s.Author.RootFolderPath).IsValidPath()
                              .When(s => s.Author != null && s.Author.Path.IsNullOrWhiteSpace() && !s.Author.RootFolderPath.IsNullOrWhiteSpace());
 	        }
@@ -1054,28 +1055,8 @@ namespace Chaptarr.Api.V1.Books
                 return 0;
             }
 
-            var monitoredBookIds = _editionService.GetEditionsByBook(books.Select(book => book.Id))
-                .Where(edition => edition?.Monitored == true)
-                .Select(edition => edition.BookId)
-                .ToHashSet();
-
-            return SelectLegacyPrimaryBookId(books, monitoredBookIds);
-        }
-
-        private static int SelectLegacyPrimaryBookId(IReadOnlyCollection<Book> books, IReadOnlySet<int> monitoredBookIds)
-        {
-            var monitored = books.Where(book => monitoredBookIds.Contains(book.Id)).ToList();
-            if (monitored.Count > 0)
-            {
-                return monitored.OrderBy(book => book.MediaType).ThenBy(book => book.Id).First().Id;
-            }
-
-            return books
-                .OrderByDescending(book => book.HasFiles)
-                .ThenBy(book => book.MediaType)
-                .ThenBy(book => book.Id)
-                .First()
-                .Id;
+            var editions = _editionService.GetEditionsByBook(books.Select(book => book.Id));
+            return new BookshelfLegacyBookSelector(editions).Select(books);
         }
 
         private Book ResolveBookForApi(int sourceId, string mediaType = null)
@@ -1272,6 +1253,12 @@ namespace Chaptarr.Api.V1.Books
         [HttpGet("{id:int}/editions/catalog")]
         public ActionResult<List<EditionCatalogResource>> GetEditionCatalog(int id, [FromQuery] string mediaType = null)
         {
+            var facadeContext = HttpContext?.GetReadarrFacadeContext();
+            if (facadeContext?.IsBookshelfCompatibility == true && string.IsNullOrWhiteSpace(mediaType))
+            {
+                return GetBookshelfEditionCatalog(ResolveBookIdsForApi(new[] { id }), facadeContext);
+            }
+
             var book = ResolveBookForApi(id, mediaType);
             if (book == null)
             {
@@ -1286,14 +1273,39 @@ namespace Chaptarr.Api.V1.Books
             var ownedEditionIds = (_mediaFileService.GetFilesByBook(id) ?? new List<NzbDrone.Core.MediaFiles.BookFile>())
                 .Select(file => file.EditionId)
                 .ToHashSet();
-            var facadeContext = HttpContext?.GetReadarrFacadeContext();
-
             var catalog = editions
                 .OrderByDescending(edition => edition.Monitored)
                 .ThenBy(edition => edition.Title)
                 .Select(edition => edition.ToCatalogResource(ownedEditionIds.Contains(edition.Id), facadeContext))
                 .ToList();
             return catalog;
+        }
+
+        private List<EditionCatalogResource> GetBookshelfEditionCatalog(List<int> bookIds, ReadarrFacadeContext facadeContext)
+        {
+            var editions = _editionService.GetEditionsByBook(bookIds);
+            var mappings = _bookshelfLegacyIdentityMapService?.GetMappingsByTargetIds("Edition", editions.Select(edition => edition.Id))
+                .GroupBy(mapping => mapping.TargetId)
+                .ToDictionary(group => group.Key, group => group.First().SourceId)
+                ?? new Dictionary<int, int>();
+            // One source edition can gain a synthetic sibling during format separation.
+            // The unscoped legacy work still exposes its original edition exactly once.
+            return editions
+                .GroupBy(edition => mappings.GetValueOrDefault(edition.Id, edition.Id))
+                .Select(group =>
+                {
+                    var original = group.OrderByDescending(edition => edition.Id == group.Key)
+                        .ThenBy(edition => edition.Id)
+                        .First();
+                    // Bookshelf's catalog reports only already-loaded ownership and
+                    // original cover URLs; native catalogs hydrate/proxy explicitly.
+                    var resource = original.ToCatalogResource(original.BookFiles?.Any() == true, facadeContext);
+                    resource.EditionId = group.Key;
+                    return resource;
+                })
+                .OrderByDescending(edition => edition.Monitored)
+                .ThenBy(edition => edition.Title)
+                .ToList();
         }
 
         [HttpGet("buckets")]
@@ -1362,10 +1374,7 @@ namespace Chaptarr.Api.V1.Books
                     .GroupBy(mapping => mapping.TargetId)
                     .ToDictionary(group => group.Key, group => group.First())
                     ?? new Dictionary<int, BookshelfLegacyIdentityMapEntry>();
-                var monitoredEditionBookIds = _editionService.GetEditionsByBook(allBooks.Select(book => book.Id))
-                    .Where(edition => edition?.Monitored == true)
-                    .Select(edition => edition.BookId)
-                    .ToHashSet();
+                var legacySelector = new BookshelfLegacyBookSelector(_editionService.GetEditionsByBook(allBooks.Select(book => book.Id)));
 
                 var legacyGroups = allBooks
                     .GroupBy(book => legacyMappings.TryGetValue(book.Id, out var mapping)
@@ -1374,7 +1383,7 @@ namespace Chaptarr.Api.V1.Books
                     .Select(group =>
                     {
                         var rows = group.ToList();
-                        var primaryBookId = SelectLegacyPrimaryBookId(rows, monitoredEditionBookIds);
+                        var primaryBookId = legacySelector.Select(rows);
                         return new
                         {
                             LegacyId = group.Key.Id,

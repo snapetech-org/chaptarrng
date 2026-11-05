@@ -189,7 +189,7 @@ namespace Chaptarr.Api.V1.Books
                     .ToList() ?? new List<BookStatistics>();
                 if (stats.Count > 0)
                 {
-                    resource.Statistics = CombineLegacyBookStatistics(stats).ToResource();
+                    resource.Statistics = CombineLegacyBookStatistics(stats).ToResource(bookshelfCompatibility: true);
                     resource.HasFiles = resource.Statistics.BookFileCount > 0;
                 }
             }
@@ -219,12 +219,8 @@ namespace Chaptarr.Api.V1.Books
                 .ToDictionary(group => group.Key, group => group.First().SourceId);
             var resourcesByTargetId = resources.ToDictionary(resource => resource.Id);
             var rowsByLegacyId = new Dictionary<int, List<Book>>();
-            var monitoredEditionBookIds = _editionService == null
-                ? new HashSet<int>()
-                : _editionService.GetEditionsByBook(books.Select(book => book.Id))
-                    .Where(edition => edition?.Monitored == true)
-                    .Select(edition => edition.BookId)
-                    .ToHashSet();
+            var legacySelector = new BookshelfLegacyBookSelector(
+                _editionService?.GetEditionsByBook(books.Select(book => book.Id)) ?? new List<Edition>());
 
             foreach (var book in books)
             {
@@ -245,7 +241,7 @@ namespace Chaptarr.Api.V1.Books
 
             foreach (var (legacyId, rows) in rowsByLegacyId)
             {
-                var primaryBookId = SelectLegacyPrimaryBookId(rows, monitoredEditionBookIds);
+                var primaryBookId = legacySelector.Select(rows);
                 if (!resourcesByTargetId.TryGetValue(primaryBookId, out var resource))
                 {
                     continue;
@@ -268,7 +264,7 @@ namespace Chaptarr.Api.V1.Books
                     .ToList();
                 if (stats.Count > 0)
                 {
-                    resource.Statistics = CombineLegacyBookStatistics(stats).ToResource();
+                    resource.Statistics = CombineLegacyBookStatistics(stats).ToResource(bookshelfCompatibility: true);
                     resource.HasFiles = resource.Statistics.BookFileCount > 0;
                 }
 
@@ -299,14 +295,11 @@ namespace Chaptarr.Api.V1.Books
             return projected;
         }
 
-        private static void ProjectLegacyBookshelfCoverImageUrls(BookResource resource, int legacyBookId)
+        private void ProjectLegacyBookshelfCoverImageUrls(BookResource resource, int legacyBookId)
         {
-            foreach (var image in resource?.Images ?? new List<MediaCover>())
+            if (resource != null)
             {
-                // BookshelfNG clients use the persisted legacy cover path. Keep that URL in
-                // the compatibility projection so existing config-mounted cover files remain
-                // available across migration, even when Chaptarr has not indexed the cover yet.
-                image.Url = $"/MediaCover/Books/{legacyBookId}/cover.jpg";
+                _coverMapper.ConvertToBookshelfLocalUrls(legacyBookId, MediaCoverEntity.Book, resource.Images);
             }
         }
 
@@ -360,31 +353,6 @@ namespace Chaptarr.Api.V1.Books
             };
         }
 
-        private static int SelectLegacyPrimaryBookId(IReadOnlyCollection<Book> rows, IReadOnlySet<int> monitoredEditionBookIds)
-        {
-            if (rows == null || rows.Count == 0)
-            {
-                return 0;
-            }
-
-            var monitoredRows = rows.Where(book => monitoredEditionBookIds.Contains(book.Id)).ToList();
-            if (monitoredRows.Count > 0)
-            {
-                return monitoredRows
-                    .OrderBy(book => book.MediaType)
-                    .ThenBy(book => book.Id)
-                    .First()
-                    .Id;
-            }
-
-            return rows
-                .OrderByDescending(book => book.HasFiles)
-                .ThenBy(book => book.MediaType)
-                .ThenBy(book => book.Id)
-                .First()
-                .Id;
-        }
-
         protected static IReadOnlyDictionary<int, BookStatistics> BuildBookStatisticsById(IEnumerable<AuthorStatistics> authorStatistics)
         {
             return authorStatistics?
@@ -429,7 +397,7 @@ namespace Chaptarr.Api.V1.Books
                 // For multi-edition resources, statistics are already set in ToResourceForEdition
                 if (book.Statistics == null && bookStatsDict.TryGetValue(book.Id, out var stats))
                 {
-                    book.Statistics = stats.ToResource();
+                    book.Statistics = stats.ToResource(HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true);
                 }
 
                 if (book.Statistics != null)
@@ -445,7 +413,7 @@ namespace Chaptarr.Api.V1.Books
             {
                 var dictBookStats = authorStatistics.BookStatistics.ToDictionary(v => v.BookId);
 
-                resource.Statistics = dictBookStats.GetValueOrDefault(resource.Id).ToResource();
+                resource.Statistics = dictBookStats.GetValueOrDefault(resource.Id).ToResource(HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true);
                 if (resource.Statistics != null)
                 {
                     resource.HasFiles = resource.Statistics.BookFileCount > 0;
@@ -455,6 +423,11 @@ namespace Chaptarr.Api.V1.Books
 
         private void MapCoversToLocal(params BookResource[] books)
         {
+            if (HttpContext?.GetReadarrFacadeContext()?.IsBookshelfCompatibility == true)
+            {
+                return;
+            }
+
             foreach (var bookResource in books)
             {
                 _coverMapper.ConvertToLocalUrls(bookResource.Id, MediaCoverEntity.Book, bookResource.Images);

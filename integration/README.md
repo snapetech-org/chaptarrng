@@ -13,13 +13,20 @@ source database with SQLite's online backup API, copies its generated
 BookshelfNG migration profile to the target. Runtime-seeded defaults and saved
 source settings therefore participate in the comparison. This makes ChaptarrNG
 serve the same compatibility mode used by an installed migrated database. It
-compares legacy API lists and detail routes, then exercises focused monitoring
+seeds a valid synthetic legacy password hash and copies the source's required
+Basic authentication configuration. Separate UI-root HTTP probes send no API
+key and check the retained login, wrong-password rejection, and missing-credential
+rejection. A separate API probe checks that Basic credentials do not replace an
+API key. Credentials and Authorization headers are excluded from the report.
+It compares legacy API lists and detail routes, then exercises focused monitoring
 and deletion writes. The script records
 the source image digest and image ID,
 target commit and image ID, source database hash, per-case response hashes, and
 JSON mismatch paths. Legacy fields, saved values, selector values, and collection
 identity must remain equivalent; ChaptarrNG-only fields and records are reported
-as additive. Objects with IDs are matched by ID and provider fields by name.
+as additive. Objects with IDs are matched by ID, provider fields by name, and
+provider presets by name. Adding a preset does not shift comparisons for old
+presets; removing an old preset or changing its saved field values still fails.
 Provider schema entries are matched by stable implementation name, with missing
 implementations kept visible and schema ordering reported as presentation
 evidence instead of comparing shifted entries by array position.
@@ -63,6 +70,18 @@ them before building the disposable services. Review both mismatches and
 additive differences in the report. Additive API output still needs an
 old-client compatibility review even when it does not fail the source-contract
 comparison.
+
+Two narrowly verified differences remain distinct from matching responses.
+Stored host password hashes stay private: this difference is accepted only when
+the target's unchanged GET/PUT settings flow succeeds and the original password
+still authenticates while an incorrect password is rejected afterward. Actual
+status facts (application/version, schema, build/start time, runtime, OS, startup
+path and optional source-package provenance) must pass explicit type/value rules
+and match a separate native API request. Instance names, authentication, URL
+bases and all unlisted fields remain strict. Every original mismatch path/value
+and its reason stays in the report as `expected-policy-difference`; these cases
+are not counted as matching responses. Unknown, malformed or unconfirmed
+changes fail. A source HTTP 500 remains inconclusive rather than a parity pass.
 
 The differential also sends two legacy writes to both isolated copies: it
 disables monitoring for a seeded work and deletes a mixed-format work without

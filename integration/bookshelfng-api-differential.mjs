@@ -5,7 +5,10 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
+  annotateProviderMismatchDetails,
   compareResponses,
+  classifySystemDeploymentDifferences,
+  hasVerifiedHostSettingsAuthentication,
   normalizeProviderApiResponse,
   sanitizeApiResponse,
 } from "./bookshelfng-api-contract.mjs";
@@ -70,10 +73,10 @@ function providerSchemaOrderDifferencePaths(source, target) {
     : ["/provider-schema-order"];
 }
 
-async function getJson(baseUrl, apiKey, path) {
+async function getJson(baseUrl, apiKey, path, native = false) {
   try {
     const response = await fetch(baseUrl + path, {
-      headers: { "X-Api-Key": apiKey },
+      headers: { "X-Api-Key": apiKey, ...(native ? { "X-ChaptarrNG-Client": "native" } : {}) },
       signal: AbortSignal.timeout(30_000),
     });
     if (!response.ok) {
@@ -153,6 +156,78 @@ async function waitForPing(baseUrl, name) {
 
 const results = [];
 
+async function compareBasicAuthentication(caseId, password, expectedStatus, path = "/") {
+  const headers = password === null ? {} : {
+    Authorization: "Basic " + Buffer.from("fixture-user:" + password).toString("base64"),
+  };
+  async function probe(baseUrl) {
+    try {
+      const response = await fetch(path === "/" ? new URL("/", baseUrl) : baseUrl + path, {
+        headers,
+        redirect: "manual",
+        signal: AbortSignal.timeout(30_000),
+      });
+      await response.arrayBuffer();
+      return { status: response.status, error: null };
+    } catch (error) {
+      return { status: 0, error: error instanceof Error ? error.name : "request-failed" };
+    }
+  }
+  const [source, target] = await Promise.all([probe(sourceUrl), probe(targetUrl)]);
+  const passed = source.status === expectedStatus && target.status === expectedStatus;
+  results.push({
+    caseId, method: "GET", path, expectedStatus,
+    sourceStatus: source.status, targetStatus: target.status,
+    sourceError: source.error, targetError: target.error,
+    sourceSha256: null, targetSha256: null,
+    mismatchPaths: passed ? [] : ["/httpStatus"],
+    mismatchDetails: passed ? [] : [{ path: "/httpStatus", kind: "authentication-status-difference", expectedStatus, sourceStatus: source.status, targetStatus: target.status }],
+    additivePaths: [], additiveDetails: [],
+    providerPresentationDifferenceCount: 0, providerPresentationDifferencePaths: [],
+    result: passed ? "pass" : "fail",
+  });
+}
+
+async function verifyHostConfigReadback() {
+  // Raw secrets remain only in memory while exercising an unchanged client's
+  // GET/PUT flow. Reports contain only sanitized hashes and mismatch paths.
+  let before;
+  let savedStatus = 0;
+  let comparison = { mismatchPaths: ["/request"], mismatchDetails: [], additivePaths: [], additiveDetails: [] };
+  let secretsHidden = false;
+  try {
+    const headers = { "X-Api-Key": targetKey };
+    const response = await fetch(targetUrl + "/config/host", { headers, signal: AbortSignal.timeout(30_000) });
+    assert.equal(response.status, 200);
+    before = await response.json();
+    secretsHidden = before.password === "" && before.passwordConfirmation === "";
+    const saved = await fetch(targetUrl + "/config/host/1", {
+      method: "PUT", headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify(before), signal: AbortSignal.timeout(30_000),
+    });
+    savedStatus = saved.status;
+    await saved.arrayBuffer();
+    const after = await getJson(targetUrl, targetKey, "/config/host");
+    comparison = compareResponses(sanitizeApiResponse(before), after.value);
+  } catch {
+    // Never serialize the request body, credential values or exception details.
+  }
+  const passed = secretsHidden && savedStatus === 202 && comparison.mismatchPaths.length === 0;
+  results.push({
+    caseId: "host-config.target-readback", method: "PUT", path: "/config/host/1",
+    sourceStatus: null, targetStatus: savedStatus,
+    sourceSha256: null, targetSha256: before ? sha256(sanitizeApiResponse(before)) : null,
+    mismatchPaths: passed ? [] : comparison.mismatchPaths.concat(secretsHidden ? [] : ["/password-visibility"], savedStatus === 202 ? [] : ["/httpStatus"]),
+    mismatchDetails: comparison.mismatchDetails,
+    additivePaths: comparison.additivePaths, additiveDetails: comparison.additiveDetails,
+    providerPresentationDifferenceCount: 0, providerPresentationDifferencePaths: [],
+    passwordWriteOnly: secretsHidden,
+    result: passed ? "pass" : "fail",
+  });
+  await compareBasicAuthentication("authentication.legacy-password-after-settings-save", "fixture-password", 200);
+  await compareBasicAuthentication("authentication.wrong-password-after-settings-save", "incorrect-fixture-password", 401);
+}
+
 async function compare(caseId, path, providerResource = false, expectedTargetStatus = null) {
   const [source, target] = await Promise.all([
     getJson(sourceUrl, sourceKey, path),
@@ -201,7 +276,9 @@ async function compare(caseId, path, providerResource = false, expectedTargetSta
       additiveDetails: [],
     };
   }
-  const mismatchDetails = comparison.mismatchDetails;
+  const mismatchDetails = providerResource
+    ? annotateProviderMismatchDetails(comparison.mismatchDetails, target.value)
+    : comparison.mismatchDetails;
   const mismatchPaths = comparison.mismatchPaths;
   const additiveDetails = comparison.additiveDetails;
   const additivePaths = comparison.additivePaths;
@@ -237,6 +314,20 @@ async function compare(caseId, path, providerResource = false, expectedTargetSta
             ? "pass"
             : "fail",
   };
+  if (caseId === "system.status" && source.status === 200 && target.status === 200) {
+    const native = await getJson(targetUrl, targetKey, path, true);
+    result.deploymentFactDifferences = native.status === 200
+      ? classifySystemDeploymentDifferences(source.value, target.value, native.value) : [];
+    const confirmed = new Set(result.deploymentFactDifferences.map((item) => item.path));
+    if (result.result === "fail" && mismatchPaths.length > 0 && mismatchPaths.every((item) => confirmed.has(item))) {
+      result.result = "expected-policy-difference";
+      result.expectedPolicyDifference = "Only replacement deployment facts differ; each is confirmed by the native API. Original strict differences remain recorded.";
+    }
+  }
+  if (caseId === "host-config.list" && source.value?.password === "<redacted-present>" &&
+      target.value?.password === "" && mismatchPaths.length === 1 && mismatchPaths[0] === "/password") {
+    result.pendingPasswordSecurityDifference = true;
+  }
   results.push(result);
   return { source, target };
 }
@@ -296,6 +387,11 @@ async function compareMutation(caseId, method, path, body) {
 const cases = [
   ["authors.list", "/author"],
   ["books.list", "/book"],
+  ["books.editions.mixed", "/book/30/editions/catalog"],
+  ["books.editions.audiobook", "/book/31/editions/catalog"],
+  ["books.editions.ebook", "/book/32/editions/catalog"],
+  ["books.editions.empty", "/book/33/editions/catalog"],
+  ["books.editions.missing", "/book/999999/editions/catalog"],
   ["series.list", "/series"],
   ["history.list", "/history"],
   ["root-folders.list", "/rootFolder"],
@@ -310,10 +406,13 @@ const cases = [
   // and provider-backed searches in separately controlled acceptance tests.
   ["blocklist.page", "/blocklist?page=1&pageSize=25"],
   ["books.paged", "/book/paged?offset=0&pageSize=25"],
+  ["books.paged.first", "/book/paged?offset=0&pageSize=1"],
+  ["books.paged.second", "/book/paged?offset=1&pageSize=1"],
+  ["books.paged.unaligned", "/book/paged?offset=1&pageSize=2"],
   ["calendar.list", "/calendar"],
   ["custom-filters.list", "/customfilter"],
   ["custom-formats.list", "/customformat"],
-  ["custom-formats.schema", "/customformat/schema"],
+  ["custom-formats.schema", "/customformat/schema", true],
   ["delay-profiles.list", "/delayprofile"],
   ["development-config.list", "/config/development"],
   ["download-clients.schema", "/downloadclient/schema", true],
@@ -358,6 +457,11 @@ await Promise.all([
   waitForPing(targetUrl, "ChaptarrNG"),
 ]);
 
+await compareBasicAuthentication("authentication.legacy-password", "fixture-password", 200);
+await compareBasicAuthentication("authentication.wrong-password", "incorrect-fixture-password", 401);
+await compareBasicAuthentication("authentication.missing-credentials", null, 401);
+await compareBasicAuthentication("authentication.api-requires-key", "fixture-password", 401, "/system/status");
+
 for (const [caseId, path, providerResource = false, expectedTargetStatus = null] of cases) {
   const { source, target } = await compare(caseId, path, providerResource, expectedTargetStatus);
   if (
@@ -371,6 +475,16 @@ for (const [caseId, path, providerResource = false, expectedTargetStatus = null]
       }
     }
   }
+}
+
+await verifyHostConfigReadback();
+const passwordFlowVerified = hasVerifiedHostSettingsAuthentication(results);
+for (const result of results) {
+  if (result.pendingPasswordSecurityDifference && passwordFlowVerified) {
+    result.result = "expected-policy-difference";
+    result.expectedPolicyDifference = "Stored password hashes are write-only. The unchanged GET/PUT flow and original-password/wrong-password authentication are verified after saving.";
+  }
+  delete result.pendingPasswordSecurityDifference;
 }
 
 const authorsResult = results.find((result) => result.caseId === "authors.list");
@@ -497,7 +611,8 @@ const report = {
     providerFields: "matched by name; select options matched by value",
     providerPresentation: "labels, hints, help, links, control type, and display order are reported separately; persisted field values and option values remain strict",
     directDownloadUrls: "ordered legacy tag arrays remain strict; the target compatibility API must project the same array shape",
-    secretFields: "compared as empty or present, never recorded",
+    secretFields: "compared as empty or present, never recorded; host hash concealment requires successful settings readback and authentication proofs",
+    deploymentFacts: "explicit typed status facts independently confirmed through the native API; all strict differences remain recorded",
   },
   debugValues: includeDebugValues,
   caseCount: results.length,
