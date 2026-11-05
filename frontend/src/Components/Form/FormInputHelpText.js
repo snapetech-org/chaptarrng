@@ -1,10 +1,12 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
+import BidiText from 'Components/BidiText';
 import Icon from 'Components/Icon';
 import Link from 'Components/Link/Link';
 import { icons } from 'Helpers/Props';
-import translateServerMessage from 'Utilities/String/translateServerMessage';
+import translateServerMessage, { translateServerMessageById } from 'Utilities/String/translateServerMessage';
+import translate from 'Utilities/String/translate';
 import styles from './FormInputHelpText.css';
 
 function FormInputHelpText(props) {
@@ -12,12 +14,22 @@ function FormInputHelpText(props) {
     className,
     id,
     text,
+    messageKey,
+    messageId,
+    messageParameters,
+    messageMode,
     link,
     tooltip,
     isError,
     isWarning,
     isCheckInput
   } = props;
+  const translatedById = messageId ? translateServerMessageById(messageId, messageParameters) : null;
+  const translatedText = messageKey ?
+    translate(messageKey, messageParameters) :
+    translatedById ||
+    (messageMode === 'opaque' || messageId ? <BidiText lang="und">{text}</BidiText> : translateServerMessage(text));
+  const translatedTooltip = messageMode === 'opaque' && tooltip ? `\u2068${tooltip}\u2069` : translateServerMessage(tooltip);
 
   return (
     <div
@@ -29,14 +41,14 @@ function FormInputHelpText(props) {
         isCheckInput && styles.isCheckInput
       )}
     >
-      {translateServerMessage(text)}
+      {translatedText}
 
       {
         link ?
           <Link
             className={styles.link}
             to={link}
-            title={translateServerMessage(tooltip)}
+            title={translatedTooltip}
           >
             <Icon
               name={icons.EXTERNAL_LINK}
@@ -50,7 +62,7 @@ function FormInputHelpText(props) {
           <Icon
             containerClassName={styles.details}
             name={icons.INFO}
-            title={translateServerMessage(tooltip)}
+            title={translatedTooltip}
           /> :
           null
       }
@@ -62,6 +74,10 @@ FormInputHelpText.propTypes = {
   className: PropTypes.string.isRequired,
   id: PropTypes.string,
   text: PropTypes.string.isRequired,
+  messageKey: PropTypes.string,
+  messageId: PropTypes.string,
+  messageParameters: PropTypes.object,
+  messageMode: PropTypes.oneOf(['source', 'opaque']),
   link: PropTypes.string,
   tooltip: PropTypes.string,
   isError: PropTypes.bool,

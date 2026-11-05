@@ -4,6 +4,19 @@ ChaptarrNG release notes highlight user-facing changes and operating guidance.
 Each release combines curated entries from release-notes/ with technical
 history grouped from conventional commits.
 
+## [Unreleased]
+
+### User-facing changes
+
+#### Fixed
+
+- Apply 38 context-matched translation corrections across 11 locales, including AudioBookShelf library labels, torrent adoption prompts, and author-folder help.
+- Correct the SABnzbd and Mailgun English validation messages and apply the reviewed W650–W699 catalog corrections across all 12 direct locales.
+- Improve 205 cross-reviewed translations across all 12 direct locales with wording matched to application context (W700–W749).
+- Correct 229 cross-reviewed localization cells across all 12 direct locales in W750–W799, including localized Bookshelf and Author Editor labels and software import-limit wording.
+
+- Apply 149 cross-reviewed translation corrections and refinements across all 12 locale catalogs (W50–W99).
+- Apply 42 cross-reviewed translation corrections and refinements across all 12 locale catalogs (W100–W149).
 ## [0.9.977](https://github.com/snapetech-org/chaptarrng/compare/v0.9.976..v0.9.977) - 2026-10-18
 
 ### User-facing changes
