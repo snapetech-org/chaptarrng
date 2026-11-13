@@ -19,6 +19,81 @@ history grouped from conventional commits.
 
 - Apply 149 cross-reviewed translation corrections and refinements across all 12 locale catalogs (W50–W99).
 - Apply 42 cross-reviewed translation corrections and refinements across all 12 locale catalogs (W100–W149).
+
+## [0.9.1000](https://github.com/snapetech-org/chaptarrng/compare/v0.9.999..v0.9.1000) - 2026-11-10
+
+### Backup restore recovery
+
+- Reject a BookshelfNG backup before staging when its saved SSL certificate path is unavailable on the target. The running ChaptarrNG installation stays available and the upload explains the issue.
+- If another restore-time startup error occurs after staging, restore the previous database and configuration and start ChaptarrNG once with that previous data. Keep the failed restore evidence and log the cause.
+
+## [0.9.995](https://github.com/snapetech-org/chaptarrng/compare/v0.9.994..v0.9.995) - 2026-11-09
+
+### Release fixes
+
+- Correct the security release-note fragment so the release generator can assemble the full, validated notes after all platform checks pass.
+- Include the latest Chocolatey package metadata corrections for ChaptarrNG and the BookshelfNG migration bridge.
+
+This release includes the fixes staged under 0.9.991 through 0.9.994, which were held after release validation or preparation failures.
+
+## [0.9.994](https://github.com/snapetech-org/chaptarrng/compare/v0.9.993..v0.9.994) - 2026-11-09
+
+### Release fixes
+
+- Keep the native M4B recovery harness and archive signature verifier compatible with the Python shipped on public Linux runners. Use streaming SHA-256 while retaining bounded memory use; apply the same fix to Windows standalone handoff checks.
+
+This release includes the fixes staged under 0.9.991 through 0.9.993, which were held after release validation failures.
+
+## [0.9.993](https://github.com/snapetech-org/chaptarrng/compare/v0.9.992..v0.9.993) - 2026-11-09
+
+### Release fixes
+
+- Use Ubuntu 24.04-compatible signing arguments for the BookshelfNG Launchpad source package. Signed source and binary package acceptance passes.
+- Restore the Docker build against the repository's complete runtime lock files, then publish each target architecture. Local build stages pass for amd64, arm64, and arm/v7.
+- Refresh the Windows migration installer core lock file for its self-contained win-x64 publish. Strict locked restore now accepts the pinned linker dependency.
+
+This release includes the fixes staged under 0.9.991 and 0.9.992; those tags were held after release validation found packaging, Docker, and Windows installer build failures.
+
+## [0.9.992](https://github.com/snapetech-org/chaptarrng/compare/v0.9.991..v0.9.992) - 2026-11-09
+
+### Release fixes
+
+- Correct the pinned Playwright Chromium platform key in the multi-platform Docker build. The x64 and ARM64 browser stages now build successfully.
+- Keep Chromium system dependency installation on the explicitly selected public runner route, and update the release contract to match that route.
+
+This release also includes the 0.9.991 fixes; that tag was held before publication when release validation found the Docker build failure.
+
+## [0.9.991](https://github.com/snapetech-org/chaptarrng/compare/v0.9.990..v0.9.991) - 2026-11-09
+
+### Fixes
+
+- Register both update-package providers explicitly so Linux x86 standalone installs can start after a BookshelfNG migration. The installed No, Manual, Yes, and forced-rollback handoff now passes with the corrected x86 build.
+- Restore browser session credentials after authentication changes and restarts, while preserving scoped calendar subscriptions.
+- Include the application and supply-chain security audit fixes merged after 0.9.990.
+
+### Release validation
+
+- Require installed migration and forced-rollback acceptance for Linux, macOS, and Windows standalone archives before publishing a release.
+
+## [0.9.990](https://github.com/snapetech-org/chaptarrng/compare/v0.9.988..v0.9.990) - 2026-11-09
+
+### Release infrastructure
+
+- Remove the already-tested Windows migration-installer payload before the isolated Chocolatey handoff test stages its own verified candidate, preserving the test's refusal to overwrite unknown payloads.
+
+## [0.9.988](https://github.com/snapetech-org/chaptarrng/compare/v0.9.987..v0.9.988) - 2026-11-09
+
+### Release infrastructure
+
+- Build Playwright browser assets on the hosted builder architecture so the multi-platform image can include the documented arm/v7 fallback without requiring a nonexistent arm/v7 Node 26 image.
+- Align release-contract tests with the current pinned Ruby setup action and the hosted/public Discord announcement route.
+
+## [0.9.987](https://github.com/snapetech-org/chaptarrng/compare/v0.9.986..v0.9.987) - 2026-11-09
+
+### Upstream source attribution
+
+- Publicly credit all 305 Chaptarr issues and pull requests captured by ChaptarrNG’s historical audit. The [source ledger](UPSTREAM_ATTRIBUTION.md) links every originating record and upstream author, preserves implemented, validation-pending, external-blocker, withdrawn, not-applicable, and unreviewed dispositions, and makes clear that those people contributed to Chaptarr, not directly to this fork.
+
 ## [0.9.977](https://github.com/snapetech-org/chaptarrng/compare/v0.9.976..v0.9.977) - 2026-10-18
 
 ### User-facing changes

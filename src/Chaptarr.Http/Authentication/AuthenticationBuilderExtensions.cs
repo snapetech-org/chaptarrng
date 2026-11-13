@@ -60,6 +60,8 @@ namespace Chaptarr.Http.Authentication
 
         public static AuthenticationBuilder AddAppAuthentication(this IServiceCollection services)
         {
+            services.AddSingleton<IInitialSetupTokenService, InitialSetupTokenService>();
+            services.AddSingleton<IUiSessionTokenService, UiSessionTokenService>();
             services.AddOptions<CookieAuthenticationOptions>(AuthenticationType.Forms.ToString())
                 .Configure<IConfigFileProvider>((options, configFileProvider) =>
                 {
@@ -420,6 +422,28 @@ namespace Chaptarr.Http.Authentication
                 });
 
             return services.AddAuthentication()
+                .AddScheme<AuthenticationSchemeOptions, InitialSetupAuthenticationHandler>(InitialSetupAuthenticationHandler.SchemeName, _ => { })
+                .AddCookie(InitialSetupAuthenticationHandler.CookieSchemeName, options =>
+                {
+                    options.Cookie.Name = "ChaptarrInitialSetup";
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(15);
+                    options.SlidingExpiration = false;
+                    options.Events.OnValidatePrincipal = context =>
+                    {
+                        var requestServices = context.HttpContext.RequestServices;
+                        var stamp = context.Principal?.FindFirst(AuthStampClaim)?.Value;
+                        if (!requestServices.GetRequiredService<IInitialSetupTokenService>().IsRequired ||
+                            stamp.IsNullOrWhiteSpace() || stamp != requestServices.GetRequiredService<IConfigFileProvider>().AuthCookieStamp)
+                        {
+                            context.RejectPrincipal();
+                        }
+
+                        return System.Threading.Tasks.Task.CompletedTask;
+                    };
+                })
                 .AddNone(AuthenticationType.None.ToString())
                 .AddExternal(AuthenticationType.External.ToString())
                 .AddBasic(AuthenticationType.Basic.ToString())
@@ -464,7 +488,13 @@ namespace Chaptarr.Http.Authentication
 
                         if (config == null)
                         {
-                            return AuthenticationType.None.ToString();
+                            return InitialSetupAuthenticationHandler.SchemeName;
+                        }
+
+                        if (context.RequestServices.GetRequiredService<IInitialSetupTokenService>().IsRequired)
+                        {
+                            context.RequestServices.GetRequiredService<IInitialSetupTokenService>().EnsureToken();
+                            return InitialSetupAuthenticationHandler.SchemeName;
                         }
 
                         if (config.AuthenticationMethodIsMisconfigured)
@@ -724,9 +754,8 @@ namespace Chaptarr.Http.Authentication
 
         private static string GetMisconfiguredAuthenticationScheme(HttpContext context, IConfigFileProvider configFileProvider)
         {
-            return TrustedNetworkPolicy.IsLocalOrTrusted(context, configFileProvider)
-                ? AuthenticationType.None.ToString()
-                : "API";
+            // Recovery requires the owner's API credential even on a trusted network.
+            return "API";
         }
 
         private static HashSet<string> ParseCsvToSet(string raw)

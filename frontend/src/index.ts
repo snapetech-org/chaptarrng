@@ -1,5 +1,7 @@
-import 'Styles/globals.css';
 import { applyDocumentLocale } from 'Utilities/Localization/locale';
+import refreshUiSession from 'Utilities/refreshUiSession';
+
+import 'Styles/globals.css';
 import './polyfills';
 import './index.css';
 
@@ -172,6 +174,21 @@ async function start() {
   const response = await fetch(initializeUrl);
 
   window.Chaptarr = await response.json();
+
+  // Refresh the short-lived browser credential without exposing the integration API key.
+  const refreshSession = async () => {
+    if (document.visibilityState !== 'visible') {
+      return;
+    }
+
+    try {
+      await refreshUiSession();
+    } catch {
+      // Normal API handling reports disconnected/expired sessions.
+    }
+  };
+  window.setInterval(refreshSession, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', refreshSession);
 
   /* eslint-disable no-undef, @typescript-eslint/ban-ts-comment */
   // @ts-ignore 2304

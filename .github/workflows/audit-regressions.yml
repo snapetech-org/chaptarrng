@@ -1,0 +1,83 @@
+# ng-runner-policy: trusted-hosted-or-private-jit-v1
+name: Audit regressions
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: audit-regressions-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regressions:
+    if: github.ref == 'refs/heads/main'
+    # Browser acceptance needs an unprivileged-user-namespace-capable host.
+    # Do not disable Ubuntu 24.04's system-wide AppArmor protections to run it.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
+        with:
+          global-json-file: global.json
+      - name: Validate workflow expressions and runner contexts
+        run: bash scripts/check-workflow-syntax.sh
+      - name: Install pinned acceptance tools
+        run: bash scripts/setup-acceptance-python.sh
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 26.13.1
+      - name: Restore locked dependencies and compile regressions
+        run: |
+          npm install --global npm@12.2.2 yarn@1.22.22
+          yarn install --frozen-lockfile
+          dotnet restore src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --locked-mode --disable-parallel -m:1
+          dotnet build src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --no-restore -m:1
+          dotnet restore src/NzbDrone.Console/Chaptarr.Console.csproj --locked-mode --disable-parallel -m:1
+          dotnet build src/NzbDrone.Console/Chaptarr.Console.csproj --no-restore -m:1
+      - name: Exercise actual first-run HTTP authentication
+        run: |
+          python3 integration/test-audit-auth-startup.py --app _output/net10.0/Chaptarr.dll --log "$RUNNER_TEMP/audit-auth-startup.log"
+          python3 integration/test-audit-auth-startup.py --app _output/net10.0/Chaptarr.dll --log "$RUNNER_TEMP/audit-oidc-startup.log" --misconfigured-oidc
+      - name: Install isolated browser dependencies
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap ripgrep
+          driver=./_tests/net10.0/.playwright
+          PW_LANG_NAME=csharp "$driver/node/linux-x64/node" "$driver/package/cli.js" install --with-deps --no-shell chromium
+      - name: Verify real sandboxed Chromium before the full suite
+        env:
+          DIRECT_DOWNLOAD_REQUIRE_PLAYWRIGHT: 'true'
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
+          DEBUG: pw:browser
+        run: dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --no-build --no-restore -m:1 --filter 'FullyQualifiedName~DirectDownloadPlaywrightBrowserFixture' --logger 'trx;LogFileName=audit-browser.trx'
+      - name: Run full backend regressions
+        run: dotnet test src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --no-build --no-restore -m:1 --filter 'FullyQualifiedName!~DirectDownloadPlaywrightBrowserFixture' --logger 'trx;LogFileName=audit-regressions.trx'
+      - name: Run frontend, localization and scanner-policy checks
+        run: |
+          set -euo pipefail
+          yarn typecheck
+          yarn test-localization
+          # Keep discovery in the foreground so missing rg or an empty test set fails.
+          rg --files frontend -g '*.test.cjs' > "$RUNNER_TEMP/frontend-tests.txt"
+          mapfile -t frontend_tests < "$RUNNER_TEMP/frontend-tests.txt"
+          test "${#frontend_tests[@]}" -gt 0
+          node --test "${frontend_tests[@]}" packaging/scripts/test-bookshelf-legacy-channels.mjs scripts/release-notes.test.mjs scripts/post-discord-announcement.test.mjs scripts/test-patched-deepmerge.mjs
+          python3 scripts/test-security-scan-discovery.py
+          python3 scripts/test-audit-policy.py
+          python3 scripts/test-postgres-test-results.py
+          python3 packaging/scripts/test_release_update_bundles.py
+          python3 scripts/test_workflow_runner_policy.py
+      - name: Retain regression evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: audit-regressions-${{ github.sha }}
+          path: src/Chaptarr.Core.Test/TestResults/*.trx
+          if-no-files-found: warn
+          retention-days: 14

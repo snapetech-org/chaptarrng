@@ -41,7 +41,7 @@ names = []
 images = {
     'app': 'docker.io/snapetech/bookshelfng@sha256:40a53ac528b6789ca78686b4303bb6c436cd191cd813f915ea171d72b47a8c38',
     'seerr': args.seerr_image,
-    'node': 'node:22-alpine',
+    'node': prefix + '-node-fixture',
     'qbittorrent': args.qbittorrent_image,
 }
 
@@ -63,7 +63,7 @@ security = ['--user', f'{os.getuid()}:{os.getgid()}', '--cap-drop', 'ALL', '--se
 
 def start_stack():
     options = ['--network', 'none', '--tmpfs', '/run/readarr-temp:rw,nosuid,nodev,size=256m,mode=1777', *security,
-               '-e', 'HARDCOVER=true', '-e', 'HARDCOVER_NATIVE=', '-e', 'METADATA_URL=http://127.0.0.1:8980',
+               '-e', 'HARDCOVER=true', '-e', 'HARDCOVER_NATIVE=false', '-e', 'METADATA_URL=http://127.0.0.1:8980',
                '-e', 'CHAPTARR__AUTH__SEERRAPIKEY=synthetic-e2e-restricted-key-20261105']
     for source, target, readonly in [(root / 'config', '/config', False), (root / 'library', '/library', False),
                                      (root / 'downloads', '/downloads', False), (candidate, '/candidate', True)]:
@@ -118,6 +118,12 @@ command(['python3', fixtures / 'prepare.py', root, args.media_type, args.profile
 source_hash = logical_database_hash(root / 'config/readarr.db')
 shutil.copyfile(fixtures / 'provider.mjs', root / 'provider/server.mjs')
 for key, image in images.items():
+    if key == 'node':
+        command(['docker', 'build', '--file', repo / 'integration/Dockerfile.node-fixture',
+                 '--build-arg', 'NODE_VERSION=22.23.5',
+                 '--build-arg', 'NODE_SHA256=c54118104acc524633b5abe106bbf44a53126ec8b4e5fa105cb92b5d7de8a1a1',
+                 '--tag', image, repo], 'build-node-fixture.log', 300)
+        continue
     available = subprocess.run(['docker', 'image', 'inspect', image], capture_output=True)
     if available.returncode:
         command(['docker', 'pull', image], f'pull-{key}.log', 300)
@@ -125,11 +131,11 @@ for key, image in images.items():
     'commit': command(['git', '-C', repo, 'rev-parse', 'HEAD']).strip(),
     'candidate': str(candidate), 'candidateExecutableSha256': hashlib.sha256((candidate / 'Chaptarr').read_bytes()).hexdigest(),
     'candidateAssemblySha256': {file.name: hashlib.sha256(file.read_bytes()).hexdigest() for file in sorted(candidate.glob('*.dll'))},
-    'harnessDirty': bool(command(['git', '-C', repo, 'status', '--porcelain', '--', 'integration/acquisition', 'integration/run-acquisition-smoke.py']).strip()),
-    'requestMode': args.request_mode, 'profileIdSpace': args.profile_id_space,
+    'harnessDirty': bool(command(['git', '-C', repo, 'status', '--porcelain', '--', 'integration/acquisition', 'integration/run-acquisition-smoke.py', 'integration/Dockerfile.node-fixture']).strip()),
+    'requestMode': args.request_mode, 'profileIdSpace': args.profile_id_space, 'fixtureMetadataMode': 'hardcover-v5-proxy',
     'declaredSeerrSourceRevision': args.seerr_source_revision,
     'harnessSourceSha256': {str(file.relative_to(repo)): hashlib.sha256(file.read_bytes()).hexdigest()
-                            for file in [Path(__file__).resolve(), *sorted(fixtures.glob('*'))] if file.is_file()},
+                            for file in [Path(__file__).resolve(), repo / 'integration/Dockerfile.node-fixture', *sorted(fixtures.glob('*'))] if file.is_file()},
     'images': images,
     'imageIds': {key: command(['docker', 'image', 'inspect', '--format', '{{.Id}}', value]).strip() for key, value in images.items()},
 }, indent=2))
@@ -153,6 +159,7 @@ try:
     if args.request_mode == 'seerr-web':
         seerr('web-verify.mjs', 'seerr-web-restart.log', '--restart')
     command(['python3', fixtures / 'verify-content.py', root], 'restart-content.log')
+    seerr('new-author-profile.mjs', 'new-author-profile.log')
     stop_stack('restarted')
     command(['python3', fixtures / 'verify-profile-settings.py', root, 'restart'], 'restart-profile-settings.log')
     if args.request_mode == 'seerr-web':
@@ -167,7 +174,8 @@ try:
             assert connection.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
             assert connection.execute('PRAGMA foreign_key_check').fetchall() == []
             assert connection.execute('SELECT MAX(Version) FROM VersionInfo').fetchone()[0] == version
-    (root / 'result.json').write_text(json.dumps({'mediaType': args.media_type, 'requestMode': args.request_mode, 'profileIdSpace': args.profile_id_space, 'seerrWebRequestAndApproval': args.request_mode == 'seerr-web', 'migration': True, 'seerrAdapterRequest': True, 'qBittorrentTransfer': True, 'import': True, 'restartAvailability': True, 'contentPreserved': True}))
+    (root / 'result.json').write_text(json.dumps({'mediaType': args.media_type, 'requestMode': args.request_mode, 'profileIdSpace': args.profile_id_space, 'seerrWebRequestAndApproval': args.request_mode == 'seerr-web', 'migration': True, 'seerrAdapterRequest': True, 'qBittorrentTransfer': True, 'import': True, 'restartAvailability': True, 'contentPreserved': True, 'newAuthorProfileHandoff': True}))
     print('PASS: migration, Seerr', args.request_mode, 'request, real local torrent transfer,', args.media_type, 'import and restart availability. Evidence:', root)
 finally:
     stop_stack('final-run')
+    subprocess.run(['docker', 'image', 'rm', images['node']], capture_output=True)

@@ -1,0 +1,9 @@
+{
+  "version": "2.103.3",
+  "source": "https://github.com/cli/cli/tree/63837fb778d6a39f02be0ce76ff89f2bc8d74bdc",
+  "source_commit": "63837fb778d6a39f02be0ce76ff89f2bc8d74bdc",
+  "source_sha256": "1a64dc5be667fa8c6458c0e639292ee1a5e215854705db267882e1bcf865b335",
+  "go_version": "1.27.4",
+  "golang_x_net": "v0.62.0",
+  "golang_x_net_sum": "18ELalfM5+XNRwzM2nYqXsZQ9ByS1uhj2O/U7+5jqRY="
+}

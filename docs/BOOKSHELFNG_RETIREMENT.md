@@ -1,5 +1,118 @@
 # BookshelfNG retirement status
 
+## Current status — 2026-11-08 UTC
+
+[ChaptarrNG v0.9.986](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.986)
+is public with ten checksummed standalone archives and the standard container
+image. Its [release run](https://github.com/snapetech-org/chaptarrng/actions/runs/42515404591)
+passed native Linux, Windows, macOS, PostgreSQL, Docker, the archive builders
+and final publication. The [package distribution retry](https://github.com/snapetech-org/chaptarrng/actions/runs/42523595619)
+passed ChaptarrNG AUR and Chocolatey publication. The public
+[COPR `0.9.986-1` build](https://copr.fedorainfracloud.org/coprs/slskdn/chaptarrng/build/11288368/)
+also succeeded.
+
+The application and data-migration qualification at `b5c25742` below remains
+the installed and operator-data evidence for the release payload. The later
+release changes are versioning, workflow, packaging and test-harness changes;
+they do not replace that installed acceptance. Legacy BookshelfNG package
+bridges remain disabled, and no production installation was migrated or
+retired by publishing this release. Keep the source backup and use explicit
+preview, apply and rollback for each installation. External catalogs and
+production cutover still require their own channel and operator acceptance.
+
+Exact published-archive [installed acceptance](https://github.com/snapetech-org/chaptarrng/actions/runs/42524674959)
+passed No, headless Manual, Yes with retained source backup, and forced-failure
+rollback with restored predecessor health for Linux x64, ARM64, both musl
+variants, and x86. The evidence records candidate SHA `665e89a7` and archive
+hashes in the [channel matrix](maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
+A second [hosted run](https://github.com/snapetech-org/chaptarrng/actions/runs/42525035012)
+on kernel `7.0.0-1017-azure` passed four targets on its first attempt; the
+published BookshelfNG x86 predecessor intermittently crashed before the Yes
+case, after No and Manual had passed. Its isolated x86 retry passed every
+case with the 32 bit candidate executable. Keep both results; the source-only
+emulated-host failure is not a ChaptarrNG migration or rollback failure, but
+it limits claims about the old x86 binary on that host.
+
+The dated sections below are historical checkpoints, including their earlier
+statements about the then-latest public version.
+
+## Historical status — 2026-11-07 UTC
+
+Application and data-migration qualification is complete at exact head
+`b5c25742`. Public Build run
+[42308704533](https://github.com/snapetech-org/chaptarrng/actions/runs/42308704533)
+passed Linux, Windows, macOS, PostgreSQL and Docker. Public standalone run
+[42308701409](https://github.com/snapetech-org/chaptarrng/actions/runs/42308701409)
+passed all ten archives and every enabled native installed-handoff job. Its
+Linux x86 archive has SHA-256
+`822962e3e412186e687f44aa91e63da542a01fee4bfe512cfa7761cc27c1207d`;
+native 32-bit acceptance passed No, headless Manual, interactive Yes, migrated
+health and retained-source-backup checks, forced-failure rollback, and restored
+BookshelfNG health. The recovery utility now builds its complete service
+collection before resolving a command, eliminating the incomplete-container
+startup race found by repeated x86 rollback.
+
+No known application or data-migration parity defect remains open. This is
+sufficient technical evidence for a ChaptarrNG `0.9.978` release candidate; it
+does not itself publish one. The stable tag does not yet exist and repository
+variables `CHAPTARRNG_RELEASE_READY` and `BOOKSHELFNG_RELEASE_READY` remain
+unset, so the release workflow is intentionally fail-closed. Publishing the
+ChaptarrNG release, publishing old-identity bridges or third-party feed/catalog
+updates, migrating production installations, and retiring BookshelfNG remain
+separate owner/operator decisions. The latter actions are not implied by a
+ChaptarrNG application release.
+
+## Historical status — 2026-11-06 UTC
+
+The source and migration candidate is now internally qualified as the
+BookshelfNG replacement at application head `5a96ccf6`. Two frozen operator
+libraries passed fresh preview, conversion, target health, restore preview and
+rollback. Across 88,405 author, work and file response records there are no
+missing, extra or duplicate identities and no source-value differences. Source
+user columns, authentication hashes, provider settings, author metadata, all
+56,058 files, logical tables and SQLite sequences are preserved; rollback
+restores the retained source database bytes. The source installations and
+production media were not changed.
+
+The complete Seerr ebook and audiobook cases pass request, approval, local
+torrent acquisition, import, scan, restart and database-identity audits with the
+identified repaired Seerr client. Nonempty saved-indexer responses and native
+metadata refresh pass bounded live capture plus offline source/target replay.
+The source's third indexer remains HTTP 410 and both source download-client
+connections remain HTTP 502; those pre-existing external-service failures are
+recorded rather than represented as successful live grabs. Real-media reads
+cover EPUB, KEPUB, AZW3, MOBI, PDF, MP3, M4B and M4A. Actual rename/restart
+comparison covers the seven mapped formats available in the operator snapshots;
+no mapped M4A rename case is claimed. Whole-product M4B hard-kill recovery also
+passes with the pinned real-tool image.
+
+Headed Chrome acceptance covers migrated login, the populated Both-format
+library, format badges, book details, files and import history, narrow responsive
+layout, and an imported generic quality-profile name save, full reload, reopen
+and restore with complete database-row comparison. The frontend inputs are
+unchanged by the later backend profile, runtime and build-isolation corrections.
+Generic legacy quality-profile create, read, update, delete, restart and rollback
+also pass SQLite, PostgreSQL and source/candidate HTTP differential coverage.
+
+The Linux x86 runtime failure is corrected. The final native `linux/386`
+installed case passes No, headless Manual, Yes, health, retained source backup
+and forced-failure automatic rollback using archive SHA-256
+`f8e8748258bbe566ca09c5ebc027e06924ae83eba45eecdc62e6d5f0c055d78c`.
+Standalone restore and intermediates are task-local, and packaging rejects a
+runtime whose main or updater `libcoreclr.so` does not match the selected custom
+runtime package. The exact evidence and correction are in the
+[operator rehearsal](maintainers/BOOKSHELFNG_OPERATOR_REHEARSAL_2026-11-05.md).
+
+No known application or data-migration parity defect remains open. This does
+not mean every external distribution has delivered the candidate. Feed/catalog
+publication, signing and maintainer acceptance for StartOS, Cloudron, Unraid,
+Co-op Cloud and third-party catalogs; legacy package-feed authorization; pinned
+or offline operator delivery; explicit production migration; and final cutover
+remain separate operational decisions. Release and migration-bridge gates stay
+closed until those actions are intentionally authorized. BookshelfNG remains
+operational and no package, alias, bridge or production installation was changed
+by this qualification.
+
 ## Current status — 2026-11-05 UTC
 
 The unpublished candidate now includes schema-126 migration identity indexes. Public hosted runners are
@@ -37,8 +150,16 @@ monitoring, source author image lists and unmapped audio quality weights.
 Unscoped split works prefer the monitored edition retaining the source provider
 identity. Legacy cover URLs retain their extension, URL base and last-write token;
 known extensionless cached image names are supported without accepting arbitrary
-extensionless files. The 267 focused API/importer regressions pass; a new packaged full-library
-comparison is still required before claiming these gaps closed.
+extensionless files. The focused API/importer regressions pass, and packaged `6f40dbf9` now
+matches every managed author, work and file across both snapshots: 88,405 records
+with zero field mismatches, missing, extra or duplicate IDs. Additional new-add
+profile handoff checks pass in both full Seerr format workflows, including
+post-restart database audits. All 23,981 cached image URLs return HTTP 200 and
+match retained source bytes, including the four TIFF originals. Full Build
+[42049556701](https://github.com/snapetech-org/chaptarrng/actions/runs/42049556701),
+strict API [42049562786](https://github.com/snapetech-org/chaptarrng/actions/runs/42049562786)
+and ten archives [42049568015](https://github.com/snapetech-org/chaptarrng/actions/runs/42049568015)
+pass at harness revision `5a9965ee` with application code `6f40dbf9`.
 
 The full SeerrNG user/approval/acquisition/scan/restart rehearsal now audits database
 identity, duplicates and orphaned identifiers. It exposed client defects repaired
@@ -1621,11 +1742,13 @@ BookshelfNG's in-app updater checks the Readarr-owned update service, which
 Snapetech cannot redirect. No single server-side change can move every pinned,
 offline, third-party, or manually installed copy automatically.
 
-## Retirement acceptance
+## Retirement acceptance (historical checklist; see current status above)
 
 BookshelfNG is not ready to retire solely because the converter and a
-ChaptarrNG release exist. No new ChaptarrNG release or legacy redirect is
-authorized while these gates remain open. The remaining work is:
+ChaptarrNG release exist. The checklist below records earlier channel and
+cutover gaps at their original dates. The ChaptarrNG release is now public;
+legacy redirects and production retirement remain gated. The historical
+remaining work was:
 
 1. Close each BookshelfNG feature row with behavioral and converted-data
    evidence, or record an explicit maintainer decision to retire that behavior.

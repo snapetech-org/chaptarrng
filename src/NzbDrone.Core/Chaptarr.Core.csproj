@@ -1,4 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <None Include="$(ChaptarrRootDir)Tools/browser-sandbox.sh" Link="Tools/browser-sandbox.sh" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
   <PropertyGroup>
     <TargetFrameworks>net10.0</TargetFrameworks>
   </PropertyGroup>
@@ -12,7 +15,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
-    <PackageReference Include="FluentMigrator.Runner" />
+    <PackageReference Include="FluentMigrator.Runner.Core" />
     <PackageReference Include="FluentMigrator.Runner.SQLite" />
     <PackageReference Include="FluentMigrator.Runner.Postgres" />
     <PackageReference Include="FluentValidation" />

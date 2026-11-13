@@ -64,11 +64,13 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("contains(github.event.pull_request.labels.*.name, 'pool:private')", release_notes)
 
         build = job_block(source, "build")
+        release_tag_step = step_block(build, "Verify exact release tag source")
+        self.assertIn("shell: bash", release_tag_step)
         for token in (
             "github.ref == 'refs/heads/main'",
             "inputs.action == 'ci'",
             "inputs.action == 'publish'",
-            "inputs.runner_pool == 'private'",
+            "(inputs.runner_pool == 'private' || inputs.runner_pool == 'public')",
             "inputs.release_tag != ''",
             "inputs.release_sha != ''",
             "inputs.release_sha || github.sha",
@@ -83,7 +85,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("inputs.runner_pool == 'public'", build)
         self.assertIn("'windows-2025'", build)
         self.assertIn("'macos-15-intel'", build)
-        self.assertIn("'ubuntu-24.04'", build)
+        self.assertIn("'ubuntu-22.04'", build)
         self.assertIn('"group":"ng-shared-main-jit"', build)
         self.assertIn('"ng-shared-main-chaptarrng"', build)
         self.assertIn('"ng-main-run-{0}"', build)
@@ -99,10 +101,16 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         workflow_dir = WORKFLOW.parent
         hosted_routes = {
             "build.yml",
+            "release.yml",
             "helm-handoff.yml",
             "bookshelfng-standalone-macos-acceptance.yml",
             "standalone-asset-validation.yml",
+            "published-installed-handoff.yml",
             "bookshelfng-api-differential.yml",
+            "security.yml",
+            "semgrep-community.yml",
+            "trivy-filesystem.yml",
+            "discord-announcement.yml",
         }
         for workflow_path in sorted(workflow_dir.glob("*.yml")):
             source = workflow_path.read_text(encoding="utf-8")
@@ -114,11 +122,34 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
                     "inputs.runner_pool == 'public'" in line
                     or line.rstrip().endswith("runs-on: >-")
                 ):
+                    if "inputs.runner_pool == 'public'" in line:
+                        self.assertRegex(source, r"ubuntu-|windows-|macos-", str(workflow_path))
                     self.assertIn("fromJSON", source, str(workflow_path))
                     continue
+                if workflow_path.name == "release.yml" and line.strip() == "runs-on: windows-2025":
+                    self.assertIn("inputs.runner_pool == 'public'", job_block(source, "windows-migration-installer"))
+                    continue
+                if workflow_path.name == "release-distribution.yml" and line.strip() == "runs-on: windows-2025":
+                    self.assertIn("inputs.runner_pool == 'public'", source)
+                    continue
+                if workflow_path.name in {"release.yml", "release-distribution.yml", "docker-publish.yml"} and line.strip() == "runs-on: ubuntu-24.04":
+                    continue
+                if workflow_path.name in {"published-installed-handoff.yml", "native-audit-acceptance.yml", "release.yml"}:
+                    if line.strip() == "runs-on: ubuntu-24.04":
+                        continue
+                    if line.strip() == "runs-on: ${{ matrix.runner }}":
+                        job_name = {
+                            "published-installed-handoff.yml": "installed-linux",
+                            "native-audit-acceptance.yml": "installed",
+                            "release.yml": "installed-release-linux",
+                        }[workflow_path.name]
+                        installed = job_block(source, job_name)
+                        self.assertIn("runner: ubuntu-24.04-arm", installed)
+                        self.assertIn("runner: ubuntu-24.04", installed)
+                        continue
                 self.assertNotRegex(
                     line,
-                    r"runs-on:.*\b(?:ubuntu-latest|ubuntu-[0-9]|windows-latest|macos-[0-9])",
+                    r"runs-on:.*\b(?:ubuntu-latest|windows-latest|macos-latest)",
                     str(workflow_path),
                 )
                 self.assertNotRegex(
@@ -126,6 +157,8 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
                     r"\|\|\s*['\"]?(?:ubuntu-|windows-latest|macos-[0-9])|\|\|\s*matrix\.os",
                     str(workflow_path),
                 )
+                if re.search(r"runs-on:\s+(?:ubuntu-[0-9]|windows-[0-9]|macos-[0-9])", line):
+                    continue
                 if line.rstrip().endswith("runs-on:"):
                     block = "\n".join(lines[index : index + 3])
                     self.assertIn("group:", block, str(workflow_path))
@@ -135,6 +168,63 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
                         r"self-hosted|group|fromJSON",
                         f"{workflow_path}: {line}",
                     )
+
+    def test_release_builders_use_public_runners_without_changing_gates(self) -> None:
+        release = (WORKFLOW.parent / "release.yml").read_text(encoding="utf-8")
+        docker = (WORKFLOW.parent / "docker-publish.yml").read_text(encoding="utf-8")
+        distribution = (WORKFLOW.parent / "release-distribution.yml").read_text(encoding="utf-8")
+        for source in (release, distribution):
+            self.assertNotIn('"group":"ng-shared-main-jit"', source)
+            self.assertNotIn("inputs.runner_pool == 'private'", source)
+            self.assertIn("inputs.runner_pool == 'public'", source)
+        for name in ("platform-runtime-packs", "standalone-assets", "rpm-source"):
+            job = job_block(release, name)
+            self.assertIn("runs-on: ubuntu-24.04", job, name)
+            self.assertIn("Verify checked-out release source", job, name)
+        self.assertIn("sudo apt-get install --yes --no-install-recommends rpm", job_block(release, "rpm-source"))
+        for name in ("require-release-readiness", "build-and-push"):
+            self.assertIn("runs-on: ubuntu-24.04", job_block(docker, name), name)
+        self.assertIn("needs: require-release-readiness", job_block(docker, "build-and-push"))
+        installed = job_block(release, "installed-release-linux")
+        for rid in ("linux-x64", "linux-arm64", "linux-musl-x64", "linux-musl-arm64", "linux-x86"):
+            self.assertIn(f"rid: {rid}", installed)
+        self.assertIn("test-bookshelf-standalone-handoff.py", installed)
+        desktop = job_block(release, "installed-release-desktop")
+        for rid in ("osx-x64", "osx-arm64", "win-x64", "win-x86"):
+            self.assertIn(f"rid: {rid}", desktop)
+        for runner in ("macos-15-intel", "macos-26", "windows-2022"):
+            self.assertIn(f"runner: {runner}", desktop)
+        self.assertNotIn("runner: macos-14\n", desktop)
+        self.assertIn("test-bookshelf-standalone-handoff.py", desktop)
+        self.assertIn("integration/standalone-handoff/windows.py", desktop)
+        self.assertIn("needs: [preflight, release, docker, standalone-assets, installed-release-linux, installed-release-desktop, rpm-source, windows-migration-installer, legacy-desktop-candidates]", job_block(release, "publish-release"))
+        self.assertIn("needs.installed-release-linux.result == 'success'", job_block(release, "publish-release"))
+        self.assertIn("needs.installed-release-desktop.result == 'success'", job_block(release, "publish-release"))
+
+    def test_published_installed_handoff_uses_exact_release_assets(self) -> None:
+        source = (WORKFLOW.parent / "published-installed-handoff.yml").read_text(encoding="utf-8")
+        preflight = job_block(source, "preflight")
+        installed = job_block(source, "installed-linux")
+        for token in (
+            "github.ref == 'refs/heads/main'",
+            "fetch-depth: 0",
+            'git merge-base --is-ancestor "$sha" refs/remotes/origin/main',
+            ".isDraft == false and .isPrerelease == false",
+        ):
+            self.assertIn(token, preflight)
+        for rid in ("linux-x64", "linux-arm64", "linux-musl-x64", "linux-musl-arm64", "linux-x86"):
+            self.assertIn(f"rid: {rid}", installed)
+        for token in (
+            "ref: ${{ needs.preflight.outputs.sha }}",
+            'gh release download "$RELEASE_TAG"',
+            'sha256sum --check "$candidate.sha256"',
+            "PREDECESSOR_SHA256",
+            "test-bookshelf-standalone-handoff.py",
+            "--candidate-revision \"$RELEASE_SHA\"",
+            "uname -r > \"$RUNNER_TEMP/standalone-handoff/kernel-release.txt\"",
+        ):
+            self.assertIn(token, installed)
+        self.assertNotIn("build-standalone.sh", installed)
 
     def test_bookshelfng_differential_uses_runner_temp_in_step_context(self) -> None:
         path = WORKFLOW.parent / "bookshelfng-api-differential.yml"
@@ -186,6 +276,15 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             self.assertIn("'ubuntu-24.04'", job, job_name)
             self.assertIn('"group":"ng-shared-main-jit"', job, job_name)
 
+    def test_standalone_installed_handoff_mounts_the_source_library_fixture(self) -> None:
+        source = (WORKFLOW.parent / "standalone-asset-validation.yml").read_text(encoding="utf-8")
+        installed = step_block(source, "Exercise installed archive and export evidence after consumers exit")
+        self.assertIn('fixture_library="$RUNNER_TEMP/standalone-handoff/library"', installed)
+        self.assertIn('mkdir -p "$fixture_library/Fixture Author/Ebooks"', installed)
+        self.assertIn('"$fixture_library/Fixture Author/Audiobooks"', installed)
+        self.assertIn('-v "$fixture_library:/library"', installed)
+        self.assertIn('--exclude-legacy-x86-mam-indexer', installed)
+
     def test_macos_handoff_runs_do_not_serialize_public_and_private_pools(self) -> None:
         path = WORKFLOW.parent / "bookshelfng-standalone-macos-acceptance.yml"
         source = path.read_text(encoding="utf-8")
@@ -194,7 +293,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             source,
         )
 
-    def test_windows_release_jobs_use_the_private_packer_route(self) -> None:
+    def test_windows_release_jobs_use_explicit_compatible_routes(self) -> None:
         windows_release_jobs = (
             ("release.yml", "windows-migration-installer", "windows-migration-installer"),
             ("release-distribution.yml", "build-chocolatey", "build-chocolatey"),
@@ -206,6 +305,9 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
             runner_match = re.search(r"(?m)^    runs-on: (?P<runner>[^\n]+)$", job)
             self.assertIsNotNone(runner_match, f"{workflow_name}:{job_name}")
             runner = runner_match.group("runner").replace("\\", "")
+            if workflow_name in ("release.yml", "release-distribution.yml"):
+                self.assertEqual(runner, "windows-2025")
+                continue
             self.assertIn('"group":"packer-windows"', runner)
             self.assertIn('"on-demand"', runner)
             self.assertIn('"ChaptarrNG"', runner)
@@ -227,15 +329,11 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("inputs.runner_pool == 'public'", job_block(build, "build"))
         for workflow_name in ("release.yml", "release-distribution.yml"):
             source = (WORKFLOW.parent / workflow_name).read_text(encoding="utf-8")
+            policy = "trusted-hosted-or-private-jit-v1"
             self.assertTrue(
                 source.startswith(
-                    "# ng-runner-policy: private-jit-only-v1\n# packer-windows-jit-v1"
+                    f"# ng-runner-policy: {policy}\n# packer-windows-jit-v1"
                 ),
-                workflow_name,
-            )
-            self.assertNotRegex(
-                source,
-                r"(?m)^\s*runs-on:\s*(?:ubuntu-latest|ubuntu-[0-9]+|windows-latest|macos-[0-9]+)",
                 workflow_name,
             )
 
@@ -243,7 +341,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         source = (WORKFLOW.parent / "release.yml").read_text(encoding="utf-8")
         self.assertNotRegex(source, r"(?m)^  push:")
         dispatch = event_block(source, "workflow_dispatch")
-        for field, value in (("action", "publish"), ("runner_pool", "private")):
+        for field, value in (("action", "publish"), ("runner_pool", "public")):
             input_match = re.search(
                 rf"(?ms)^      {field}:\n(?P<body>.*?)(?=^      [A-Za-z0-9_-]+:|\Z)",
                 dispatch,
@@ -261,7 +359,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         for token in (
             "github.ref == 'refs/heads/main'",
             "inputs.action == 'publish'",
-            "inputs.runner_pool == 'private'",
+            "inputs.runner_pool == 'public'",
             "RELEASE_TAG: ${{ inputs.release_tag }}",
             'TAG_VERSION="$(git show "$TAG:package.json"',
             'git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main',
@@ -273,7 +371,7 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         validate = job_block(source, "validate")
         for token in (
             "action: publish",
-            "runner_pool: private",
+            "runner_pool: public",
             "release_tag: ${{ needs.preflight.outputs.release_tag }}",
             "release_sha: ${{ needs.preflight.outputs.release_sha }}",
         ):
@@ -283,12 +381,15 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("ref: ${{ needs.preflight.outputs.release_sha }}", release)
         self.assertIn("EXPECTED_RELEASE_SHA: ${{ needs.preflight.outputs.release_sha }}", release)
         self.assertIn("RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}", release)
+        self.assertIn("--full-output \"$full_changelog\"", release)
+        self.assertIn("--max-length 120000", release)
+        self.assertIn('gh release upload "$TAG" "$full_changelog" --clobber', release)
 
         windows = job_block(source, "windows-migration-installer")
         for token in (
             "github.ref == 'refs/heads/main'",
             "inputs.action == 'publish'",
-            "inputs.runner_pool == 'private'",
+            "inputs.runner_pool == 'public'",
             "needs: [preflight, release, standalone-assets]",
         ):
             self.assertIn(token, windows)
@@ -296,16 +397,24 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         publisher = job_block(source, "publish-release")
         self.assertIn("EXPECTED_RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}", publisher)
         self.assertIn('"$RELEASE_TAG" != "$EXPECTED_RELEASE_TAG"', publisher)
+        for token in (
+            "always()",
+            "needs.standalone-assets.result == 'success'",
+            "needs.rpm-source.result == 'success'",
+            "needs.windows-migration-installer.result",
+            "needs.legacy-desktop-candidates.result",
+        ):
+            self.assertIn(token, publisher)
 
         packages = job_block(source, "publish-packages")
         self.assertIn("action: publish", packages)
-        self.assertIn("runner_pool: private", packages)
+        self.assertIn("runner_pool: public", packages)
 
-    def test_distribution_dispatch_requires_main_private_publish_route(self) -> None:
+    def test_distribution_dispatch_requires_main_public_publish_route(self) -> None:
         source = (WORKFLOW.parent / "release-distribution.yml").read_text(encoding="utf-8")
         self.assertNotRegex(source, r"(?m)^  push:")
         dispatch = event_block(source, "workflow_dispatch")
-        for field, value in (("action", "publish"), ("runner_pool", "private")):
+        for field, value in (("action", "publish"), ("runner_pool", "public")):
             input_match = re.search(
                 rf"(?ms)^      {field}:\n(?P<body>.*?)(?=^      [A-Za-z0-9_-]+:|\Z)",
                 dispatch,
@@ -322,10 +431,11 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertNotIn("inputs.tag", run_name)
 
         target = job_block(source, "release-target")
+        self.assertIn("fetch-depth: 0", target)
         for token in (
             "github.ref == 'refs/heads/main'",
             "inputs.action == 'publish'",
-            "inputs.runner_pool == 'private'",
+            "inputs.runner_pool == 'public'",
             "EVENT_NAME: ${{ github.event_name }}",
             "ACTION: ${{ inputs.action }}",
             "RUNNER_POOL: ${{ inputs.runner_pool }}",
@@ -333,14 +443,19 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         ):
             self.assertIn(token, target)
 
-        self.assertIn("needs: [release-target]", job_block(source, "credentials"))
+        credentials = job_block(source, "credentials")
+        self.assertIn("needs: [release-target]", credentials)
+        self.assertLess(
+            credentials.index("actions/checkout@"),
+            credentials.index("packaging/scripts/validate-release-publisher-config.sh publishers"),
+        )
         for name in ("build-chocolatey", "publish-chocolatey"):
             job = job_block(source, name)
             for token in (
                 "github.ref == 'refs/heads/main'",
                 "inputs.action == 'publish'",
-                "inputs.runner_pool == 'private'",
-                '"group":"packer-windows"',
+                "inputs.runner_pool == 'public'",
+                "runs-on: windows-2025",
             ):
                 self.assertIn(token, job)
 
@@ -485,6 +600,9 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
                 "helm-handoff.yml",
                 "standalone-asset-validation.yml",
                 "bookshelfng-api-differential.yml",
+                "security.yml",
+                "semgrep-community.yml",
+                "trivy-filesystem.yml",
             }
             pool_options = ("public", "private") if path.name in public_routes else ("private",)
             for field, options in (("action", (action,)), ("runner_pool", pool_options)):
@@ -571,13 +689,22 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
         self.assertIn("inputs.channel_contracts_only != true", job_block(source, "postgres-migrations"))
         self.assertIn("inputs.channel_contracts_only != true", job_block(source, "docker-image-build"))
 
-    def test_security_scans_use_private_jit_without_hosted_fallback(self) -> None:
+    def test_security_scans_use_explicit_trusted_hosted_or_private_routes(self) -> None:
         workflow_dir = WORKFLOW.parent
         self.assertFalse((workflow_dir / "codeql.yml").exists())
         self.assertFalse((workflow_dir / "codeql.yml.disabled").exists())
         self.assertFalse((workflow_dir.parent / "codeql").exists())
         for path in workflow_dir.glob("*.yml"):
             self.assertNotIn("github/codeql-action/", path.read_text(encoding="utf-8"), path.name)
+        for workflow_name, job_name in (("security.yml", "trivy"), ("trivy-filesystem.yml", "trivy"), ("semgrep-community.yml", "semgrep")):
+            source = (workflow_dir / workflow_name).read_text(encoding="utf-8")
+            scan = job_block(source, job_name)
+            self.assertIn("github.event_name == 'workflow_dispatch'", scan)
+            self.assertIn("inputs.action == 'scan'", scan)
+            self.assertIn("github.ref == 'refs/heads/main'", scan)
+            self.assertIn("(inputs.runner_pool == 'public' || inputs.runner_pool == 'private')", scan)
+            self.assertIn("inputs.runner_pool == 'public' && 'ubuntu-24.04' || fromJSON", scan)
+            self.assertNotIn("pull_request_target:", source)
         workflow_name = "semgrep-community.yml"
         source = (workflow_dir / workflow_name).read_text(encoding="utf-8")
         job = job_block(source, "semgrep")
@@ -605,13 +732,14 @@ class WorkflowRunnerPolicyTests(unittest.TestCase):
     def test_postgres_restore_uses_client_matching_server_major(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         migrations = job_block(source, "postgres-migrations")
-        self.assertIn("image: postgres:16", migrations)
-        self.assertIn("sudo apt-get install -y postgresql-client-16", migrations)
-        self.assertIn("if [[ \"$RUNNER_POOL\" == \"public\" ]]", migrations)
-        self.assertIn("PostgreSQL 16 client binaries are required for the migration smoke.", migrations)
-        self.assertIn('postgres:16 "$tool" "$@"', migrations)
-        self.assertIn("/usr/lib/postgresql/16/bin", migrations)
-        self.assertIn("GITHUB_PATH", migrations)
+        self.assertIn("image: postgres:16-bookworm@sha256:", migrations)
+        self.assertIn("CHAPTARRNG_POSTGRES_IMAGE: postgres:16-bookworm@sha256:", migrations)
+        self.assertIn("bash scripts/setup-postgres-test-tools.sh", migrations)
+        tools = (WORKFLOW.parents[2] / "scripts/setup-postgres-test-tools.sh").read_text()
+        self.assertIn('"$CHAPTARRNG_POSTGRES_IMAGE" "$tool" "$@"', tools)
+        self.assertIn("GITHUB_PATH", tools)
+        self.assertIn("Chaptarr__Postgres__MainDb: acceptance-main", migrations)
+        self.assertIn("CHAPTARRNG_KEEP_POSTGRES_EVIDENCE: 'true'", migrations)
 
     def test_frontend_build_runs_after_tests_and_before_publish(self) -> None:
         build = job_block(WORKFLOW.read_text(encoding="utf-8"), "build")

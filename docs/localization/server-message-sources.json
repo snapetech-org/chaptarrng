@@ -1266,7 +1266,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1421,
+          "line": 1425,
           "sourceLine": "return BadRequest(\"Page size must be between 1 and 1000\");",
           "sourceLineSha256": "fda3f798b3239125c89796ce9820fcf7a294a995b4fe8719bf49bfe158c4f3b7",
           "category": "direct-api-result",
@@ -1695,7 +1695,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 237,
+          "line": 251,
           "sourceLine": "Message = $\"Set preferred narrator '{request.Narrator}' for series {seriesId}\",",
           "sourceLineSha256": "f508e0bdd611144782695b5babff74375d267357e6fa9f5c12bde262d89c3e63",
           "category": "api-message-resource",
@@ -1965,7 +1965,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 359,
+          "line": 373,
           "sourceLine": "return Ok(new ApiMessageResource { Message = $\"Successfully deleted series variant {variantId}\" });",
           "sourceLineSha256": "453e8c968962c4fe7abde9d9962dfd19fe0f23dd5aec99332a5ffce05c6ce57a",
           "category": "api-response-resource",
@@ -3286,7 +3286,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 90,
+          "line": 91,
           "sourceLine": "\"Couldn't find requested release in cache, try searching again\",",
           "sourceLineSha256": "fb67e17d5518760ab9fcc982fe0cea74b41bf5979700f043d0da6167233ac996",
           "category": "api-error",
@@ -3455,7 +3455,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1729,
+          "line": 1755,
           "sourceLine": "return StatusCode(502, \"Failed to download selected photo\");",
           "sourceLineSha256": "b1c630af29c0af3348d48cfef6130f44063d816b3aed32b6f143696b6aeca059",
           "category": "direct-api-result",
@@ -3639,7 +3639,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1631,
+          "line": 1635,
           "sourceLine": "return BadRequest(\"No media type is configured (audiobook/ebook). Configure at least one root folder + quality profile for this instance.\");",
           "sourceLineSha256": "af7f003aaf2576b377f5ccfaa5a3e5f266a1a477b2f9b90f8899b126208a6bb5",
           "category": "direct-api-result",
@@ -4448,7 +4448,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 231,
+          "line": 245,
           "sourceLine": "return StatusCode(500, new ApiErrorResource { Error = \"Failed to apply narrator to all books in series\" });",
           "sourceLineSha256": "c199074e267682b6925ad47cecf9a8e3ed23bfe00a7d3bc0fbfe99606ab7abab",
           "category": "api-response-resource",
@@ -5127,7 +5127,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 309,
+          "line": 310,
           "sourceLine": "\"A bookId, authorId, or seriesId is required for interactive search\",",
           "sourceLineSha256": "b4df88d8d3a9c7188bbb91abdc0d6fc4337b019132fc7001495f7eb29da84b91",
           "category": "api-error",
@@ -5669,7 +5669,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 123,
+          "line": 124,
           "sourceLine": "\"Unable to parse books in the release\",",
           "sourceLineSha256": "6d4945dd06f41b7fa41253bee6db70c91f5073d57a4947dbcf4b27c0d2691dda",
           "category": "api-error",
@@ -5677,7 +5677,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 163,
+          "line": 164,
           "sourceLine": "\"Unable to parse books in the release\",",
           "sourceLineSha256": "6d4945dd06f41b7fa41253bee6db70c91f5073d57a4947dbcf4b27c0d2691dda",
           "category": "api-error",
@@ -5685,7 +5685,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 171,
+          "line": 172,
           "sourceLine": "\"Unable to parse books in the release\",",
           "sourceLineSha256": "6d4945dd06f41b7fa41253bee6db70c91f5073d57a4947dbcf4b27c0d2691dda",
           "category": "api-error",
@@ -5896,7 +5896,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1793,
+          "line": 1819,
           "sourceLine": "Message = \"Image downloaded successfully\"",
           "sourceLineSha256": "61e06447da181ff32740b8a82919d35b0f37210840d78fcdf9eef2f9aba06ae3",
           "category": "api-message-resource",
@@ -5942,7 +5942,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1780,
+          "line": 1806,
           "sourceLine": "return BadRequest(new ApiErrorResource { Error = \"Image not found in author metadata\" });",
           "sourceLineSha256": "a37149445a94bfa703059f21d2af6d552d3de8c1915169a468d64cb261d430d3",
           "category": "api-response-resource",
@@ -5996,7 +5996,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1801,
+          "line": 1827,
           "sourceLine": "Message = \"Image download in progress\"",
           "sourceLineSha256": "9806dcd8e96e83074b7cc8486f8cc2682d8a2384ce1c54b21076ff4454f32427",
           "category": "api-message-resource",
@@ -6307,7 +6307,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1815,
+          "line": 1841,
           "sourceLine": "Message = \"Failed to download image\"",
           "sourceLineSha256": "fb3b4b234e59ac41c0efcb72df554380373c8c992dc0621bd0cb6d0dc58ccee4",
           "category": "api-message-resource",
@@ -6515,7 +6515,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 216,
+          "line": 217,
           "sourceLine": "throw NzbDroneClientException.WithMessageId(",
           "sourceLineSha256": "0fdf3584000adb8a8dbd1ab59134870700bc86ccce06c5ab32d7be1118e0a03a",
           "category": "release-grab-error",
@@ -6523,11 +6523,11 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 219,
+          "line": 220,
           "sourceLine": "\"server.message.m6026247dc0f2\",",
           "sourceLineSha256": "da26b6d64b011bc357b4806efbef089974690a34c9e1c0a0d2c83d43d2e11a4f",
           "category": "release-grab-error",
-          "surface": "Interactive release result error body and download tooltip; values remain raw"
+          "surface": "Interactive release result error body and download tooltip; stable app text is keyed, captured download-client detail remains a dynamic value"
         }
       ],
       "protectedLiterals": []
@@ -9468,7 +9468,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1726,
+          "line": 1752,
           "sourceLine": "return BadRequest(\"Selected photo is a provider placeholder\");",
           "sourceLineSha256": "abc652ae20b036a9223089d52ef8e53c79b2040aa6a96291fa5dcbd0b95ad8e5",
           "category": "direct-api-result",
@@ -9993,7 +9993,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 213,
+          "line": 227,
           "sourceLine": "return BadRequest(new ApiErrorResource { Error = \"Narrator name is required\" });",
           "sourceLineSha256": "5076bc90632d6d69fa885cdfa798b9df97d9005fa624259f3d00c9f6b8cc245b",
           "category": "api-response-resource",
@@ -10643,7 +10643,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1485,
+          "line": 1489,
           "sourceLine": "return BadRequest($\"authorIds must contain between 1 and {MaxBookshelfAuthorIds} author IDs\");",
           "sourceLineSha256": "741bddd36af9722ec52ea7d4ea8b2d18803fe1d3fd5a933529a40a744d0658ad",
           "category": "direct-api-result",
@@ -11016,7 +11016,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1657,
+          "line": 1661,
           "sourceLine": "return BadRequest(\"Cannot add book: missing upstream provider book/work ID (Hardcover/Goodreads/OpenLibrary/GoogleBooks).\");",
           "sourceLineSha256": "eb925b55d7c6a0d1ed15073aa52fc48f0d1383bcfeb62799c2966431cc574f37",
           "category": "direct-api-result",
@@ -11024,7 +11024,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1692,
+          "line": 1696,
           "sourceLine": "return BadRequest(\"Cannot add book: missing upstream provider book/work ID (Hardcover/Goodreads/OpenLibrary/GoogleBooks).\");",
           "sourceLineSha256": "eb925b55d7c6a0d1ed15073aa52fc48f0d1383bcfeb62799c2966431cc574f37",
           "category": "direct-api-result",
@@ -11032,7 +11032,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1758,
+          "line": 1762,
           "sourceLine": "return BadRequest(\"Cannot add book: missing upstream provider book/work ID (Hardcover/Goodreads/OpenLibrary/GoogleBooks).\");",
           "sourceLineSha256": "eb925b55d7c6a0d1ed15073aa52fc48f0d1383bcfeb62799c2966431cc574f37",
           "category": "direct-api-result",
@@ -11216,7 +11216,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 83,
+          "line": 87,
           "sourceLine": "return NotFound(new ApiErrorResource { Error = \"series not found\" });",
           "sourceLineSha256": "e0f55c4fa2e55eb7eaa41615d778a16a262506f135743da084f8fd00703ce044",
           "category": "api-response-resource",
@@ -12676,7 +12676,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1715,
+          "line": 1741,
           "sourceLine": "return BadRequest(\"Photo not found\");",
           "sourceLineSha256": "ecf868e51ef7995870ecc504d204187c5c15793e7a237dae4c88720372863fe8",
           "category": "direct-api-result",
@@ -12887,7 +12887,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 261,
+          "line": 262,
           "sourceLine": "\"An authorId is required when searching for a series pack\",",
           "sourceLineSha256": "093235e0c416d138edee6f183b8c28051f1d0f6a30d4b3ab0190b7309c7cf546",
           "category": "api-error",
@@ -12895,7 +12895,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 295,
+          "line": 296,
           "sourceLine": "\"An authorId is required when searching for a series pack\",",
           "sourceLineSha256": "093235e0c416d138edee6f183b8c28051f1d0f6a30d4b3ab0190b7309c7cf546",
           "category": "api-error",
@@ -13044,7 +13044,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 2594,
+          "line": 2629,
           "sourceLine": "return BadRequest(\"EditionId is required\");",
           "sourceLineSha256": "cb0d38e687b93edd458d5bbeed5b1db975752b921d97ccfd20041303a41f0b7a",
           "category": "direct-api-result",
@@ -13113,7 +13113,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1768,
+          "line": 1794,
           "sourceLine": "return BadRequest(new ApiErrorResource { Error = \"ImageUrl is required\" });",
           "sourceLineSha256": "de040de6050ac69e574e24c85684f5429f61f691feaa21a3397ae6ef35c584f6",
           "category": "api-response-resource",
@@ -13320,7 +13320,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1955,
+          "line": 1959,
           "sourceLine": "new ValidationFailure(",
           "sourceLineSha256": "9a7b6bcc91b8133e7cc8bc770fd340ba9f08c6f7ea0a7df417d95247c98c50b1",
           "category": "validation-failure",
@@ -13672,7 +13672,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 225,
+          "line": 226,
           "sourceLine": "throw new NzbDroneClientException(HttpStatusCode.Conflict, $\"Getting release from indexer failed: {ex.Message}\");",
           "sourceLineSha256": "2c5850ea517242364ee3faf365cd77ea8bd7540e8f5e2e33b3c2807153608165",
           "category": "release-grab-error",
@@ -13695,7 +13695,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/Download/Clients/Direct/DirectDownloadClientTransfer.cs",
-          "line": 228,
+          "line": 229,
           "sourceLine": "state.Message = \"Completed file is missing from the staging folder.\";",
           "sourceLineSha256": "5c8918ade478cd64ff65edee5c8f244d8421bb62325583ea47c25ba89c08c333",
           "category": "operational-message",
@@ -14386,7 +14386,7 @@
       "callsites": [
         {
           "file": "src/NzbDrone.Core/MetadataSource/Hardcover/HardcoverMetadataProxy.cs",
-          "line": 1515,
+          "line": 1546,
           "sourceLine": "throw new BadRequestException($\"Invalid Hardcover {type} id: {value}\");",
           "sourceLineSha256": "c4f9ceeef971ea6d5bcd53fbf6280877db621683230c305f056b70fa3110b7c8",
           "category": "api-error",
@@ -14810,7 +14810,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 107,
+          "line": 108,
           "sourceLine": "\"Unable to find the requested book\",",
           "sourceLineSha256": "8d7fc0287719270565361a805a4cb3fe7b4aeed5b6def16ba8492702047dc974",
           "category": "api-error",
@@ -14818,7 +14818,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 149,
+          "line": 150,
           "sourceLine": "\"Unable to find the requested book\",",
           "sourceLineSha256": "8d7fc0287719270565361a805a4cb3fe7b4aeed5b6def16ba8492702047dc974",
           "category": "api-error",
@@ -14826,7 +14826,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 325,
+          "line": 326,
           "sourceLine": "\"Unable to find the requested book\",",
           "sourceLineSha256": "8d7fc0287719270565361a805a4cb3fe7b4aeed5b6def16ba8492702047dc974",
           "category": "api-error",
@@ -14834,7 +14834,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 432,
+          "line": 433,
           "sourceLine": "\"Unable to find the requested book\",",
           "sourceLineSha256": "8d7fc0287719270565361a805a4cb3fe7b4aeed5b6def16ba8492702047dc974",
           "category": "api-error",
@@ -15512,9 +15512,9 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Profiles/Quality/QualityProfileController.cs",
-          "line": 29,
-          "sourceLine": ".WithMessage(\"Profile type must be Audiobook or Ebook\");",
-          "sourceLineSha256": "90f632dd9ba4dba5f8bd6b84a93f3fe8dcba303eedc61a327721d3b467953c22",
+          "line": 34,
+          "sourceLine": ".WithMessage(\"Profile type must be Audiobook or Ebook\")",
+          "sourceLineSha256": "f9e9c9c3fac6fb060e9ba3e4a1e1e73918ab50f9506389096095981d44a6cb71",
           "category": "validation-message",
           "surface": "FluentValidation error response; validation errors are returned to the client UI"
         },
@@ -15546,7 +15546,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 71,
+          "line": 75,
           "sourceLine": "return BadRequest(new ApiErrorResource { Error = \"title is required\" });",
           "sourceLineSha256": "3eae450fefae89b5ff60647e2ba87df2bcecc01f3c7b1c6e112aa893dc62ae67",
           "category": "api-response-resource",
@@ -16021,7 +16021,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1727,
+          "line": 1731,
           "sourceLine": "return BadRequest($\"Invalid mediaType parameter: '{requestedMediaType}'. Valid values are: audiobook, ebook\");",
           "sourceLineSha256": "a3b01c7b29542048ac87e21608a39c9547eaa0a45a01db4f4ee9608abbeb459c",
           "category": "direct-api-result",
@@ -16429,7 +16429,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Books/BookController.cs",
-          "line": 1426,
+          "line": 1430,
           "sourceLine": "return BadRequest(\"Offset must be non-negative\");",
           "sourceLineSha256": "f62ab8c603fcffbb253b3685801ed755527fc2e7b30df1ffd6204576e5f5b711",
           "category": "direct-api-result",
@@ -17262,7 +17262,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1763,
+          "line": 1789,
           "sourceLine": "return NotFound(new ApiErrorResource { Error = \"Author not found\" });",
           "sourceLineSha256": "1a230685230b43c0d660066c8376bc47a33a659f02188a88ee65f26e98dd8d52",
           "category": "api-response-resource",
@@ -17390,7 +17390,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Indexers/ReleaseController.cs",
-          "line": 134,
+          "line": 135,
           "sourceLine": "\"Unable to find matching author and books\",",
           "sourceLineSha256": "1fcec02fc3a67e30c1858f9da10b368ffc63b3c500033813c8dd9d50b129fa28",
           "category": "api-error",
@@ -17529,7 +17529,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1748,
+          "line": 1774,
           "sourceLine": "return StatusCode(500, \"Internal server error\");",
           "sourceLineSha256": "9d51f0b0bbebda442c680a04c178d58f77b5670debc2239fa152badc680bec5f",
           "category": "direct-api-result",
@@ -17537,7 +17537,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Author/AuthorController.cs",
-          "line": 1822,
+          "line": 1848,
           "sourceLine": "return StatusCode(500, new ApiErrorResource { Error = \"Internal server error\" });",
           "sourceLineSha256": "5d741de959df79116c013133d9306170f7a9d82d95f8de837095fa10694bf815",
           "category": "api-response-resource",
@@ -17747,7 +17747,7 @@
       "callsites": [
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 126,
+          "line": 140,
           "sourceLine": "return NotFound($\"Series with id {seriesId} not found\");",
           "sourceLineSha256": "c42d851555eec3eada89f5f19a5ece3f760fcb0330c1e878f43605e9270b689e",
           "category": "direct-api-result",
@@ -17755,7 +17755,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 172,
+          "line": 186,
           "sourceLine": "return NotFound($\"Series with id {seriesId} not found\");",
           "sourceLineSha256": "c42d851555eec3eada89f5f19a5ece3f760fcb0330c1e878f43605e9270b689e",
           "category": "direct-api-result",
@@ -17763,7 +17763,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 221,
+          "line": 235,
           "sourceLine": "return NotFound($\"Series with id {seriesId} not found\");",
           "sourceLineSha256": "c42d851555eec3eada89f5f19a5ece3f760fcb0330c1e878f43605e9270b689e",
           "category": "direct-api-result",
@@ -17771,7 +17771,7 @@
         },
         {
           "file": "src/Chaptarr.Api.V1/Series/SeriesController.cs",
-          "line": 256,
+          "line": 270,
           "sourceLine": "return NotFound($\"Series with id {seriesId} not found\");",
           "sourceLineSha256": "c42d851555eec3eada89f5f19a5ece3f760fcb0330c1e878f43605e9270b689e",
           "category": "direct-api-result",

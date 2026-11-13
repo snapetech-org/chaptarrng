@@ -1284,6 +1284,9 @@ namespace Chaptarr.Api.V1.Books
         private List<EditionCatalogResource> GetBookshelfEditionCatalog(List<int> bookIds, ReadarrFacadeContext facadeContext)
         {
             var editions = _editionService.GetEditionsByBook(bookIds);
+            var ownedEditionIds = (_mediaFileService?.GetFilesByBooks(bookIds) ?? new List<NzbDrone.Core.MediaFiles.BookFile>())
+                .Select(file => file.EditionId)
+                .ToHashSet();
             var mappings = _bookshelfLegacyIdentityMapService?.GetMappingsByTargetIds("Edition", editions.Select(edition => edition.Id))
                 .GroupBy(mapping => mapping.TargetId)
                 .ToDictionary(group => group.Key, group => group.First().SourceId)
@@ -1297,9 +1300,10 @@ namespace Chaptarr.Api.V1.Books
                     var original = group.OrderByDescending(edition => edition.Id == group.Key)
                         .ThenBy(edition => edition.Id)
                         .First();
-                    // Bookshelf's catalog reports only already-loaded ownership and
-                    // original cover URLs; native catalogs hydrate/proxy explicitly.
-                    var resource = original.ToCatalogResource(original.BookFiles?.Any() == true, facadeContext);
+                    // Ownership comes from the batched file lookup (Edition.BookFiles is not
+                    // normally loaded); a synthetic sibling's file still marks the original edition owned.
+                    // Cover URLs stay original; native catalogs hydrate/proxy explicitly.
+                    var resource = original.ToCatalogResource(original.BookFiles?.Any() == true || group.Any(edition => ownedEditionIds.Contains(edition.Id)), facadeContext);
                     resource.EditionId = group.Key;
                     return resource;
                 })
@@ -2059,7 +2063,19 @@ namespace Chaptarr.Api.V1.Books
 		                return;
 		            }
 
-		            var rootFolders = _rootFolderService.All() ?? new List<RootFolder>();
+            var facadeContext = HttpContext?.GetReadarrFacadeContext();
+            if (facadeContext?.AcceptsBookshelfLegacyBookIds == true)
+            {
+                var profileIds = new[] { author.QualityProfileId, author.AudiobookQualityProfileId, author.EbookQualityProfileId }
+                    .Where(id => id.HasValue).Select(id => id.Value);
+                var mappings = _bookshelfLegacyIdentityMapService?.GetMappings("QualityProfile", profileIds);
+                BookMediaType? profileMediaType = wantAudiobook == wantEbook
+                    ? null
+                    : wantAudiobook ? BookMediaType.Audiobook : BookMediaType.Ebook;
+                AuthorResourceMapper.MapBookshelfQualityProfileIds(author, mappings, profileMediaType);
+            }
+
+            var rootFolders = _rootFolderService.All() ?? new List<RootFolder>();
 
 		            RootFolder rootFolderByPath = null;
 		            if (!string.IsNullOrWhiteSpace(author.RootFolderPath))
@@ -2328,8 +2344,11 @@ namespace Chaptarr.Api.V1.Books
                 return NotFound();
             }
 
+            using var operation = DatabaseAtomicOperation.Begin();
             bookResource.Id = targetBookId;
-            var book = _bookService.GetBook(bookResource.Id);
+            // Copy the stored state without walking the loaded entity graph: editions point back
+            // at their book, so a plain JsonClone loops for every book that has editions.
+            var book = DetachedEntityClone.Clone(_bookService.GetBook(bookResource.Id));
             if (book == null)
             {
                 return NotFound();
@@ -2339,6 +2358,21 @@ namespace Chaptarr.Api.V1.Books
             if (facadeContext?.IsBookshelfCompatibility == true)
             {
                 ResolveBookshelfLegacyEditionIds(bookResource.Editions, book);
+            }
+
+            if (bookResource.Editions != null)
+            {
+                var owned = (book.Editions ?? new List<Edition>()).ToDictionary(e => e.Id);
+                var seen = new HashSet<int>();
+                foreach (var submitted in bookResource.Editions)
+                {
+                    if (submitted == null || submitted.Id <= 0 || !seen.Add(submitted.Id) ||
+                        !owned.TryGetValue(submitted.Id, out var stored) || stored.BookId != book.Id ||
+                        stored.IsEbook != (book.MediaType == BookMediaType.Ebook))
+                    {
+                        throw new ValidationException("Every submitted edition must belong to this book and media type, with no duplicates.");
+                    }
+                }
             }
 
             var wasMonitoredForFacadeMediaType = facadeContext != null &&
@@ -2398,6 +2432,7 @@ namespace Chaptarr.Api.V1.Books
                 _bookService.SetMonitored(sourceWorkIds, bookResource.Monitored);
             }
 
+            operation.Complete();
             if (beforeMonitoredEditionId != afterMonitoredEditionId)
             {
                 EnsureBookCover(model.Id, "editionSwitch");

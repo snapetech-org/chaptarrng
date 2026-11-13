@@ -1,4 +1,4 @@
-# ng-runner-policy: private-jit-only-v1
+# ng-runner-policy: trusted-hosted-or-private-jit-v1
 # packer-windows-jit-v1
 name: Release
 run-name: >-
@@ -11,17 +11,17 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Admit this release workflow to the private JIT broker
+        description: Publish a validated release from main
         required: true
         type: choice
         options:
           - publish
       runner_pool:
-        description: Select the private ephemeral JIT pool
+        description: Select the authorized public runner pool
         required: true
         type: choice
         options:
-          - private
+          - public
       release_tag:
         description: Exact existing stable release tag to validate and build
         required: true
@@ -40,9 +40,9 @@ jobs:
       github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/main' &&
       inputs.action == 'publish' &&
-      inputs.runner_pool == 'private' &&
+      inputs.runner_pool == 'public' &&
       inputs.release_tag != ''
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-preflight"]}}', github.run_id)) }}
+    runs-on: ubuntu-24.04
     outputs:
       release_requested: ${{ steps.release-request.outputs.release_requested }}
       release_tag: ${{ steps.release-request.outputs.release_tag }}
@@ -66,8 +66,8 @@ jobs:
       run: |
         set -euo pipefail
         TAG="$RELEASE_TAG"
-        if [[ "$GITHUB_REF" != refs/heads/main || "$ACTION" != publish || "$RUNNER_POOL" != private ]]; then
-          echo 'Releases require a main-branch workflow dispatch with action=publish and pool=private.' >&2
+        if [[ "$GITHUB_REF" != refs/heads/main || "$ACTION" != publish || "$RUNNER_POOL" != public ]]; then
+          echo 'Releases require a main-branch workflow dispatch with action=publish and pool=public.' >&2
           exit 1
         fi
         if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -108,7 +108,10 @@ jobs:
       if: steps.release-request.outputs.release_requested == 'true'
       env:
         DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
-      run: bash packaging/scripts/validate-release-publisher-config.sh discord
+        DISCORD_CHANGELOG_WEBHOOK: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK }}
+      run: |
+        bash packaging/scripts/validate-release-publisher-config.sh discord
+        node scripts/inspect-discord-destination.mjs --require-chaptarrng-destination
 
   validate:
     if: needs.preflight.outputs.release_requested == 'true'
@@ -121,25 +124,35 @@ jobs:
       pull-requests: read
     with:
       action: publish
-      runner_pool: private
+      runner_pool: public
       release_tag: ${{ needs.preflight.outputs.release_tag }}
       release_sha: ${{ needs.preflight.outputs.release_sha }}
 
+  security:
+    if: needs.preflight.outputs.release_requested == 'true'
+    needs: preflight
+    uses: ./.github/workflows/security-gate.yml
+    permissions:
+      contents: read
+      statuses: write
+    with:
+      ref: ${{ needs.preflight.outputs.release_sha }}
+
   release:
-    needs: [preflight, validate]
+    needs: [preflight, validate, security]
     if: >-
       (
         github.event_name != 'workflow_dispatch' ||
         (
           github.ref == 'refs/heads/main' &&
           inputs.action == 'publish' &&
-          inputs.runner_pool == 'private'
+          inputs.runner_pool == 'public'
         )
       ) &&
       (
         needs.preflight.outputs.release_requested == 'true'
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-release"]}}', github.run_id)) }}
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     outputs:
@@ -160,11 +173,11 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        node-version: 26.12.1
+        node-version: 26.13.1
         package-manager-cache: false
 
     - name: Install git-cliff
-      uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+      uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2.89.1
       with:
         tool: git-cliff
 
@@ -246,13 +259,17 @@ jobs:
         }
 
         current_changelog="$RUNNER_TEMP/chaptarrng-current-changelog.md"
+        full_changelog="$RUNNER_TEMP/chaptarrng-${TAG}-full-changelog.md"
         git-cliff --config .github/cliff.toml --tag "$TAG" "$PREVIOUS_TAG..$SOURCE_SHA" \
           --output "$current_changelog"
         node scripts/assemble-release-notes.mjs \
           --previous-tag "$PREVIOUS_TAG" \
           --head "$SOURCE_SHA" \
           --changelog "$current_changelog" \
-          --output "$current_changelog"
+          --output "$current_changelog" \
+          --full-output "$full_changelog" \
+          --max-length 120000 \
+          --overflow-asset-name "chaptarrng-${TAG}-full-changelog.md"
         grep -Eq '^## \[?[0-9]+\.[0-9]+\.[0-9]+' "$current_changelog" || {
           echo "Generated changelog is missing its release heading."
           exit 1
@@ -300,7 +317,9 @@ jobs:
       run: |
         set -euo pipefail
         notes="$RUNNER_TEMP/chaptarrng-release-notes.md"
+        full_changelog="$RUNNER_TEMP/chaptarrng-${TAG}-full-changelog.md"
         printf '%s\n' "$RELEASE_BODY" > "$notes"
+        test -s "$full_changelog"
 
         if gh release view "$TAG" >/dev/null 2>&1; then
           if [[ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" == "true" ]]; then
@@ -319,6 +338,7 @@ jobs:
             --draft \
             --verify-tag
         fi
+        gh release upload "$TAG" "$full_changelog" --clobber
 
   # Images publish here and nowhere else, so merging PRs never ships an update.
   docker:
@@ -346,13 +366,13 @@ jobs:
         (
           github.ref == 'refs/heads/main' &&
           inputs.action == 'publish' &&
-          inputs.runner_pool == 'private'
+          inputs.runner_pool == 'public'
         )
       ) &&
       (
         vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true'
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-dispatch-legacy-ghcr"]}}', github.run_id)) }}
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -388,13 +408,13 @@ jobs:
         (
           github.ref == 'refs/heads/main' &&
           inputs.action == 'publish' &&
-          inputs.runner_pool == 'private'
+          inputs.runner_pool == 'public'
         )
       ) &&
       (
         true
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-jit-linux-22-04","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-platform-runtime-packs"]}}', github.run_id)) }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     permissions:
       contents: read
@@ -409,18 +429,17 @@ jobs:
         EXPECTED_RELEASE_SHA: ${{ needs.release.outputs.sha }}
       run: bash packaging/scripts/verify-release-source-sha.sh
 
-    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+    - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
       env:
         DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
       with:
         dotnet-version: |
-          10.0.110
-          10.0.111
-          10.0.403
+          10.0.115
+          10.0.404
 
     - name: Build pinned extra-platform runtime packs
       env:
-        DOTNETVERSION: 10.0.403
+        DOTNETVERSION: 10.0.404
         DOTNET_ROOT: ${{ runner.temp }}/dotnet
         PLATFORM_RUNTIME_WORK_DIR: ${{ runner.temp }}/chaptarrng-platform-runtime-work
         PLATFORM_RUNTIME_PACKS_OUTPUT: ${{ runner.temp }}/chaptarrng-platform-runtime-packs
@@ -442,19 +461,21 @@ jobs:
         (
           github.ref == 'refs/heads/main' &&
           inputs.action == 'publish' &&
-          inputs.runner_pool == 'private'
+          inputs.runner_pool == 'public'
         )
       ) &&
       (
         true
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-{1}-standalone-assets"]}}', github.run_id, strategy.job-index)) }}
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         rid: [linux-x64, linux-arm64, linux-musl-x64, linux-musl-arm64, osx-x64, osx-arm64, win-x64, win-x86, linux-x86, freebsd-x64]
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
@@ -466,24 +487,30 @@ jobs:
         EXPECTED_RELEASE_SHA: ${{ needs.release.outputs.sha }}
       run: bash packaging/scripts/verify-release-source-sha.sh
 
+    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+      with:
+        go-version: 1.27.4
+        check-latest: false
+        cache: false
+
     - name: Setup Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        node-version: 26.12.1
+        node-version: 26.13.1
         package-manager-cache: false
 
     - name: Build frontend
       run: |
-        npm install --global yarn@1.22.22
+        npm install --global npm@12.2.2 yarn@1.22.22
         yarn install --frozen-lockfile
         yarn build
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
       env:
         DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
       with:
-        dotnet-version: 10.0.403
+        dotnet-version: 10.0.404
 
     - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       if: ${{ matrix.rid == 'linux-x86' || matrix.rid == 'freebsd-x64' }}
@@ -495,7 +522,7 @@ jobs:
       env:
         CUSTOM_RUNTIME_PACKS_DIR: ${{ runner.temp }}/platform-runtime-packs/packages
         DOTNET_ROOT: ${{ runner.temp }}/dotnet
-        DOTNETVERSION: 10.0.403
+        DOTNETVERSION: 10.0.404
         VERSION: ${{ needs.release.outputs.version }}
         RID: ${{ matrix.rid }}
       run: bash packaging/scripts/build-standalone.sh "$VERSION" "$RID" "$RUNNER_TEMP/release-assets"
@@ -523,12 +550,266 @@ jobs:
         fi
         (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$asset.sha256")
 
+    - name: Bind release version to the verified source
+      env:
+        VERSION: ${{ needs.release.outputs.version }}
+        SOURCE_SHA: ${{ needs.release.outputs.sha }}
+      run: jq -n --arg version "$VERSION" --arg source "$SOURCE_SHA" '{version:$version,sourceCommit:$source}' > "$RUNNER_TEMP/release-predicate.json"
+
+    - name: Attest standalone release artifacts
+      id: attest
+      uses: actions/attest@badbb428b0055a04f53d6ce00bda98cf1c04e56e
+      with:
+        subject-path: ${{ runner.temp }}/release-assets/*
+        predicate-type: https://github.com/snapetech-org/chaptarrng/release/v1
+        predicate-path: ${{ runner.temp }}/release-predicate.json
+
+    - name: Attach verification bundle to each archive
+      env:
+        BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+      run: |
+        set -euo pipefail
+        for asset in "$RUNNER_TEMP"/release-assets/*.tar.gz "$RUNNER_TEMP"/release-assets/*.zip; do
+          [[ -f "$asset" ]] || continue
+          cp "$BUNDLE" "$asset.sigstore.json"
+        done
+
+    - uses: ./.github/actions/setup-github-cli
+
+    - name: Verify the update bundle with the updater trust policy
+      env:
+        VERSION: ${{ needs.release.outputs.version }}
+        SOURCE_SHA: ${{ needs.release.outputs.sha }}
+        RID: ${{ matrix.rid }}
+      run: python3 packaging/scripts/verify-release-update-bundles.py "$RUNNER_TEMP/release-assets" "$VERSION" "$SOURCE_SHA" --runtime-id "$RID"
+
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: chaptarrng-standalone-${{ matrix.rid }}
         path: ${{ runner.temp }}/release-assets/*
         retention-days: 7
         if-no-files-found: error
+
+  installed-release-linux:
+    name: Validate ${{ matrix.rid }} installed migration and rollback before publication
+    needs: [release, standalone-assets]
+    timeout-minutes: 40
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            runner: ubuntu-24.04
+            flavor: glibc
+            predecessor_sha256: a490b90bfcc608a40844d5c3ce09f3cc95b767e3fbea93c71401b33326ab30f2
+          - rid: linux-arm64
+            runner: ubuntu-24.04-arm
+            flavor: glibc
+            predecessor_sha256: 1aeca17ed8cd8ed862e7d88ef334fda825fe796832cbfbf7e66e8d102fee4d03
+          - rid: linux-musl-x64
+            runner: ubuntu-24.04
+            flavor: musl
+            predecessor_sha256: f0d8983f72663fcb5ccbeb4758bc4adcb1e9d5d19ed57c62e91a0409b3500bba
+          - rid: linux-musl-arm64
+            runner: ubuntu-24.04-arm
+            flavor: musl
+            predecessor_sha256: 95968365c66772193c53264831dd1ef7ff6954ebdbd26e423b1cd777ddf3caad
+          - rid: linux-x86
+            runner: ubuntu-24.04
+            flavor: x86
+            predecessor_sha256: 1c6f2ecf34d5c39358c8a3d1b2ab165b0de5f59501c44e11353fb897199fd9b1
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ needs.release.outputs.sha }}
+        persist-credentials: false
+    - name: Verify checked-out release source
+      env:
+        EXPECTED_RELEASE_SHA: ${{ needs.release.outputs.sha }}
+      run: bash packaging/scripts/verify-release-source-sha.sh
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: chaptarrng-standalone-${{ matrix.rid }}
+        path: ${{ runner.temp }}/standalone-candidate
+    - name: Download and verify predecessor and candidate
+      env:
+        VERSION: ${{ needs.release.outputs.version }}
+        RID: ${{ matrix.rid }}
+        PREDECESSOR_SHA256: ${{ matrix.predecessor_sha256 }}
+      run: |
+        set -euo pipefail
+        candidate="ChaptarrNG-${VERSION}-${RID}.tar.gz"
+        predecessor="BookshelfNG-v0.4.21.76-${RID}.tar.gz"
+        (cd "$RUNNER_TEMP/standalone-candidate" && sha256sum --check "$candidate.sha256")
+        mkdir -p "$RUNNER_TEMP/standalone-predecessor"
+        curl --fail --location --retry 3 --retry-all-errors \
+          "https://github.com/snapetech-org/bookshelfng/releases/download/v0.4.21.76/$predecessor" \
+          --output "$RUNNER_TEMP/standalone-predecessor/$predecessor"
+        printf '%s  %s\n' "$PREDECESSOR_SHA256" "$RUNNER_TEMP/standalone-predecessor/$predecessor" | sha256sum --check -
+    - name: Exercise installed migration and forced rollback
+      env:
+        RID: ${{ matrix.rid }}
+        FLAVOR: ${{ matrix.flavor }}
+        VERSION: ${{ needs.release.outputs.version }}
+        RELEASE_SHA: ${{ needs.release.outputs.sha }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$RUNNER_TEMP/standalone-handoff/work"
+        predecessor="BookshelfNG-v0.4.21.76-${RID}.tar.gz"
+        candidate="ChaptarrNG-${VERSION}-${RID}.tar.gz"
+        if [[ "$FLAVOR" == glibc ]]; then
+          TMPDIR="$RUNNER_TEMP/standalone-handoff/work" python3 packaging/scripts/test-bookshelf-standalone-handoff.py \
+            "$RUNNER_TEMP/standalone-predecessor/$predecessor" \
+            "$RUNNER_TEMP/standalone-candidate/$candidate" \
+            --output "$RUNNER_TEMP/standalone-handoff/evidence" --candidate-revision "$RELEASE_SHA" --runtime-id "$RID" \
+            2>&1 | tee "$RUNNER_TEMP/standalone-handoff/acceptance.log"
+        else
+          image="chaptarrng-release-handoff-${RID}:$GITHUB_RUN_ID"
+          docker_platform=()
+          fixture_options=()
+          fixture_library="$RUNNER_TEMP/standalone-handoff/library"
+          mkdir -p "$fixture_library/Fixture Author/Ebooks" "$fixture_library/Fixture Author/Audiobooks"
+          if [[ "$FLAVOR" == x86 ]]; then
+            docker_platform=(--platform linux/386)
+            fixture_options=(--preinitialized-source-auxiliary-databases --exclude-legacy-x86-mam-indexer)
+          fi
+          docker build "${docker_platform[@]}" -t "$image" -f "integration/standalone-handoff/Dockerfile.$FLAVOR" integration/standalone-handoff
+          docker run "${docker_platform[@]}" --rm --network none --user "$(id -u):$(id -g)" \
+            --cap-drop ALL --security-opt no-new-privileges --pids-limit 512 --memory 6g --cpus 2 \
+            -e TMPDIR=/work/work -v "$PWD:/repo:ro" \
+            -v "$RUNNER_TEMP/standalone-predecessor:/predecessor:ro" \
+            -v "$RUNNER_TEMP/standalone-candidate:/candidate:ro" \
+            -v "$fixture_library:/library" \
+            -v "$RUNNER_TEMP/standalone-handoff:/work" \
+            "$image" "/predecessor/$predecessor" "/candidate/$candidate" \
+            --output /work/evidence --candidate-revision "$RELEASE_SHA" --runtime-id "$RID" "${fixture_options[@]}" \
+            2>&1 | tee "$RUNNER_TEMP/standalone-handoff/acceptance.log"
+        fi
+    - name: Record runner kernel
+      if: always()
+      run: |
+        mkdir -p "$RUNNER_TEMP/standalone-handoff"
+        uname -r > "$RUNNER_TEMP/standalone-handoff/kernel-release.txt"
+    - name: Retain installed handoff evidence
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: release-installed-${{ matrix.rid }}
+        path: |
+          ${{ runner.temp }}/standalone-handoff/acceptance.log
+          ${{ runner.temp }}/standalone-handoff/evidence/**
+          ${{ runner.temp }}/standalone-handoff/kernel-release.txt
+        retention-days: 30
+        if-no-files-found: warn
+
+  installed-release-desktop:
+    name: Validate ${{ matrix.rid }} installed migration and rollback before publication
+    needs: [release, standalone-assets]
+    timeout-minutes: 40
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: osx-x64
+            runner: macos-15-intel
+            extension: tar.gz
+            predecessor_sha256: 4f660a1367e28c01660c2e082c4f1778f652cca34affc0dba55d3f47ef67f747
+          - rid: osx-arm64
+            # Explicit native ARM64 route; macos-14 was retired on 2026-11-02.
+            runner: macos-26
+            extension: tar.gz
+            predecessor_sha256: d964bb1146b6c9e313758a967815f53f8d9aa45314bc30cfa55e96bb299433ce
+          - rid: win-x64
+            runner: windows-2022
+            extension: zip
+            predecessor_sha256: d31cc96dddffad5cc9b20e68f55862cb7107033aedae733f185aa73f50a6d67d
+          - rid: win-x86
+            runner: windows-2022
+            extension: zip
+            predecessor_sha256: b80df3211eecb208c54645a9fda17019a5322764a91b2abb5d177cc67beb7be8
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      contents: read
+    env:
+      HARDCOVER: 'false'
+      HARDCOVER_NATIVE: 'false'
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ needs.release.outputs.sha }}
+        persist-credentials: false
+    - name: Verify checked-out release source
+      env:
+        EXPECTED_RELEASE_SHA: ${{ needs.release.outputs.sha }}
+      run: bash packaging/scripts/verify-release-source-sha.sh
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: chaptarrng-standalone-${{ matrix.rid }}
+        path: ${{ runner.temp }}/standalone-candidate
+    - name: Download and verify predecessor and candidate
+      env:
+        VERSION: ${{ needs.release.outputs.version }}
+        RID: ${{ matrix.rid }}
+        EXTENSION: ${{ matrix.extension }}
+        PREDECESSOR_SHA256: ${{ matrix.predecessor_sha256 }}
+      run: |
+        set -euo pipefail
+        candidate="ChaptarrNG-${VERSION}-${RID}.${EXTENSION}"
+        predecessor="BookshelfNG-v0.4.21.76-${RID}.${EXTENSION}"
+        mkdir -p "$RUNNER_TEMP/standalone-predecessor"
+        curl --fail --location --retry 3 --retry-all-errors --max-time 300 \
+          "https://github.com/snapetech-org/bookshelfng/releases/download/v0.4.21.76/$predecessor" \
+          --output "$RUNNER_TEMP/standalone-predecessor/$predecessor"
+        checksum=(shasum -a 256)
+        if command -v sha256sum >/dev/null; then checksum=(sha256sum); fi
+        printf '%s  %s\n' "$PREDECESSOR_SHA256" "$RUNNER_TEMP/standalone-predecessor/$predecessor" | "${checksum[@]}" --check -
+        (cd "$RUNNER_TEMP/standalone-candidate" && "${checksum[@]}" --check "$candidate.sha256")
+    - name: Exercise installed migration and forced rollback
+      env:
+        RID: ${{ matrix.rid }}
+        EXTENSION: ${{ matrix.extension }}
+        VERSION: ${{ needs.release.outputs.version }}
+        RELEASE_SHA: ${{ needs.release.outputs.sha }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$RUNNER_TEMP/standalone-handoff/work"
+        predecessor="$RUNNER_TEMP/standalone-predecessor/BookshelfNG-v0.4.21.76-${RID}.${EXTENSION}"
+        candidate="$RUNNER_TEMP/standalone-candidate/ChaptarrNG-${VERSION}-${RID}.${EXTENSION}"
+        if [[ "$RID" == win-* ]]; then
+          python integration/standalone-handoff/windows.py "$predecessor" "$candidate" \
+            --output "$RUNNER_TEMP/standalone-handoff/evidence" --runtime-id "$RID" --candidate-revision "$RELEASE_SHA" \
+            2>&1 | tee "$RUNNER_TEMP/standalone-handoff/acceptance.log"
+        else
+          TMPDIR="$RUNNER_TEMP/standalone-handoff/work" python packaging/scripts/test-bookshelf-standalone-handoff.py \
+            "$predecessor" "$candidate" \
+            --output "$RUNNER_TEMP/standalone-handoff/evidence" --candidate-revision "$RELEASE_SHA" \
+            2>&1 | tee "$RUNNER_TEMP/standalone-handoff/acceptance.log"
+        fi
+    - name: Record runner kernel
+      if: always()
+      run: |
+        mkdir -p "$RUNNER_TEMP/standalone-handoff"
+        uname -r > "$RUNNER_TEMP/standalone-handoff/kernel-release.txt"
+    - name: Retain installed handoff evidence
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: release-installed-${{ matrix.rid }}
+        path: |
+          ${{ runner.temp }}/standalone-handoff/acceptance.log
+          ${{ runner.temp }}/standalone-handoff/evidence/**
+          ${{ runner.temp }}/standalone-handoff/kernel-release.txt
+        retention-days: 30
+        if-no-files-found: warn
 
   windows-migration-installer:
     name: Build BookshelfNG Windows migration installer
@@ -537,8 +818,8 @@ jobs:
       github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/main' &&
       inputs.action == 'publish' &&
-      inputs.runner_pool == 'private'
-    runs-on: ${{ fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-windows-migration-installer"]}}', github.run_id)) }}
+      inputs.runner_pool == 'public'
+    runs-on: windows-2025
     permissions:
       contents: read
     steps:
@@ -553,11 +834,11 @@ jobs:
       shell: bash
       run: bash packaging/scripts/verify-release-source-sha.sh
 
-    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+    - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
       env:
         DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
       with:
-        dotnet-version: 10.0.403
+        dotnet-version: 10.0.404
 
     - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
@@ -603,13 +884,13 @@ jobs:
         (
           github.ref == 'refs/heads/main' &&
           inputs.action == 'publish' &&
-          inputs.runner_pool == 'private'
+          inputs.runner_pool == 'public'
         )
       ) &&
       (
         always() && needs.release.result == 'success' && needs.standalone-assets.result == 'success'
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-legacy-desktop-candidates"]}}', github.run_id)) }}
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -629,13 +910,15 @@ jobs:
         name: chaptarrng-standalone-linux-x64
         path: ${{ runner.temp }}/linux-x64
 
-    - name: Verify desktop candidate tools were installed by the private JIT broker
+    - name: Install desktop candidate tools
       if: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
       run: |
         set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install --yes --no-install-recommends flatpak flatpak-builder curl
         for tool in flatpak flatpak-builder curl; do
           command -v "$tool" >/dev/null 2>&1 || {
-            echo "$tool must be installed by the private JIT broker before this job starts." >&2
+            echo "$tool must be installed before building desktop candidates." >&2
             exit 1
           }
         done
@@ -697,13 +980,13 @@ jobs:
         (
           github.ref == 'refs/heads/main' &&
           inputs.action == 'publish' &&
-          inputs.runner_pool == 'private'
+          inputs.runner_pool == 'public'
         )
       ) &&
       (
         true
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-rpm-source"]}}', github.run_id)) }}
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -722,13 +1005,12 @@ jobs:
         name: chaptarrng-standalone-linux-x64
         path: ${{ runner.temp }}/linux-x64
 
-    - name: Verify RPM tools were installed by the private JIT broker
+    - name: Install RPM build tools
       run: |
         set -euo pipefail
-        command -v rpmbuild >/dev/null 2>&1 || {
-          echo 'RPM tools must be installed by the private JIT broker before this job starts.' >&2
-          exit 1
-        }
+        sudo apt-get update
+        sudo apt-get install --yes --no-install-recommends rpm
+        command -v rpmbuild
 
     - name: Build both package identities from the same ChaptarrNG release asset
       env:
@@ -751,20 +1033,30 @@ jobs:
         if-no-files-found: error
 
   publish-release:
-    needs: [preflight, release, docker, standalone-assets, rpm-source, windows-migration-installer, legacy-desktop-candidates]
+    needs: [preflight, release, docker, standalone-assets, installed-release-linux, installed-release-desktop, rpm-source, windows-migration-installer, legacy-desktop-candidates]
     if: >-
+      always() &&
+      needs.preflight.result == 'success' &&
+      needs.release.result == 'success' &&
+      needs.docker.result == 'success' &&
+      needs.standalone-assets.result == 'success' &&
+      needs.installed-release-linux.result == 'success' &&
+      needs.installed-release-desktop.result == 'success' &&
+      needs.rpm-source.result == 'success' &&
+      (needs.windows-migration-installer.result == 'success' || needs.windows-migration-installer.result == 'skipped') &&
+      (needs.legacy-desktop-candidates.result == 'success' || needs.legacy-desktop-candidates.result == 'skipped') &&
       (
         github.event_name != 'workflow_dispatch' ||
         (
           github.ref == 'refs/heads/main' &&
           inputs.action == 'publish' &&
-          inputs.runner_pool == 'private'
+          inputs.runner_pool == 'public'
         )
       ) &&
       (
         true
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-publish-release"]}}', github.run_id)) }}
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -835,6 +1127,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: ${{ needs.release.outputs.tag }}
         VERSION: ${{ needs.release.outputs.version }}
+        SOURCE_SHA: ${{ needs.release.outputs.sha }}
         LEGACY_BRIDGE_ENABLED: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
       run: |
         set -euo pipefail
@@ -877,6 +1170,7 @@ jobs:
           (cd "$RUNNER_TEMP/release-assets" && sha256sum --check "$container_candidates.sha256")
           tar -tzf "$RUNNER_TEMP/release-assets/$container_candidates" >/dev/null
         fi
+        python3 packaging/scripts/verify-release-update-bundles.py "$RUNNER_TEMP/release-assets" "$VERSION" "$SOURCE_SHA"
         mapfile -d '' release_files < <(find "$RUNNER_TEMP/release-assets" -mindepth 1 -maxdepth 1 -type f -print0)
         ((${#release_files[@]} > 0))
         gh release upload "$TAG" "${release_files[@]}" --clobber
@@ -911,7 +1205,7 @@ jobs:
       packages: write
     with:
       action: publish
-      runner_pool: private
+      runner_pool: public
       tag: ${{ needs.release.outputs.tag }}
       version: ${{ needs.release.outputs.version }}
       legacy_bridge_enabled: ${{ vars.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true' && vars.CHAPTARRNG_RELEASE_READY == 'true' && vars.BOOKSHELFNG_RELEASE_READY == 'true' }}
@@ -931,17 +1225,18 @@ jobs:
         (
           github.ref == 'refs/heads/main' &&
           inputs.action == 'publish' &&
-          inputs.runner_pool == 'private'
+          inputs.runner_pool == 'public'
         )
       ) &&
       (
         true
       )
-    runs-on: ${{ fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-announce-discord"]}}', github.run_id)) }}
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     env:
       DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+      DISCORD_CHANGELOG_WEBHOOK: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK }}
       ANNOUNCEMENT_TITLE: ChaptarrNG ${{ needs.release.outputs.tag }} release notes
       ANNOUNCEMENT_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.release.outputs.tag }}
       ANNOUNCEMENT_BODY: ${{ needs.release.outputs.release_body }}
@@ -961,15 +1256,27 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        node-version: 26.12.1
+        node-version: 26.13.1
         package-manager-cache: false
 
     - name: Check Discord destination
       run: |
         if [[ -z "$DISCORD_RELEASE_WEBHOOK" ]]; then
-          echo "::error::Add the DISCORD_RELEASE_WEBHOOK repository secret using the same webhook configured for SeerrNG."
+          echo "::error::Add the owner-selected ChaptarrNG release-channel webhook as the DISCORD_RELEASE_WEBHOOK repository secret."
           exit 1
         fi
 
-    - name: Send Discord announcement
-      run: node scripts/post-discord-announcement.mjs
+    - name: Check out the workflow revision's Discord tools
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ github.sha }}
+        path: .discord-release-tools
+        sparse-checkout: |
+          scripts/post-discord-announcement.mjs
+          scripts/chaptarrng-discord-destination.mjs
+          scripts/discord-release-notes.mjs
+        sparse-checkout-cone-mode: false
+        persist-credentials: false
+
+    - name: Send Discord changelog and project link
+      run: node .discord-release-tools/scripts/post-discord-announcement.mjs

@@ -27,10 +27,13 @@ using NzbDrone.Common.Instrumentation;
 using NzbDrone.Common.Instrumentation.Extensions;
 using NzbDrone.Common.Options;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Datastore.Extensions;
 using NzbDrone.Core.Http;
 using NzbDrone.Core.Lifecycle;
 using NzbDrone.Core.Messaging.Events;
+using NzbDrone.Core.RemotePathMappings;
+using NzbDrone.Core.Update;
 // using NzbDrone.Core.MetadataSource.Hardcover; // Removed - using V5 API via BookInfoProxy
 using NzbDrone.Core.Books.Services;
 using NzbDrone.Core.Organizer;
@@ -51,8 +54,58 @@ namespace NzbDrone.Host
             "Chaptarr.Http"
         };
 
+        // RegisterMany scans nested implementation types, including the private
+        // DirectDownloadClient.NoopRemotePathMappingService used only as a local
+        // constructor fallback. When it wins DI resolution, mapping APIs silently
+        // return defaults (issue #199). Bind the real persistence-backed service
+        // explicitly, after assembly scanning, for both interactive and utility hosts.
+        internal static void RegisterRealRemotePathMappingService(IContainer container)
+        {
+            container.Register<IRemotePathMappingService, RemotePathMappingService>(
+                Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        }
+
+        internal static void RegisterUpdatePackageProviders(IContainer container)
+        {
+            container.Register<IGitHubUpdatePackageProvider, GitHubUpdatePackageProvider>(
+                Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+            container.Register<IUpdatePackageProvider, UpdatePackageProvider>(
+                Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        }
+
         public static void Start(string[] args, Action<IHostBuilder> trayCallback = null)
         {
+            var restoreAttempted = false;
+            var restoreCommitted = false;
+            var previousDatabaseExisted = false;
+            IAppFolderInfo restoredFolders = null;
+
+            try
+            {
+                StartAttempt(args, trayCallback,
+                    (folders, hadDatabase) =>
+                    {
+                        restoreAttempted = true;
+                        previousDatabaseExisted = hadDatabase;
+                        restoredFolders = folders;
+                    },
+                    () => restoreCommitted = true);
+            }
+            catch (Exception ex) when (restoreAttempted && !restoreCommitted && previousDatabaseExisted &&
+                                       restoredFolders != null &&
+                                       !FullRestoreBundle.HasIncompleteRestore(restoredFolders) &&
+                                       File.Exists(restoredFolders.GetDatabase()))
+            {
+                Logger.Error(ex, "Backup restore failed during startup. The previous database and configuration were restored; starting ChaptarrNG with the previous data.");
+                SqliteConnection.ClearAllPools();
+                StartAttempt(args, trayCallback, null, null);
+            }
+        }
+
+        private static void StartAttempt(string[] args, Action<IHostBuilder> trayCallback,
+                                         Action<IAppFolderInfo, bool> onRestoreAttempted, Action onRestoreCommitted)
+        {
+            IAppFolderInfo restoreFolders = null;
             try
             {
                 PdfSharpLicense.SetAgplLicense();
@@ -67,6 +120,16 @@ namespace NzbDrone.Host
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
                 var appMode = GetApplicationMode(startupContext);
+                if (appMode == ApplicationModes.Service || appMode == ApplicationModes.Interactive)
+                {
+                    restoreFolders = new AppFolderInfo(startupContext);
+                    var previousDatabaseExisted = File.Exists(restoreFolders.GetDatabase());
+                    FullRestoreBundle.Prepare(restoreFolders);
+                    if (FullRestoreBundle.IsPrepared(restoreFolders))
+                    {
+                        onRestoreAttempted?.Invoke(restoreFolders, previousDatabaseExisted);
+                    }
+                }
                 var config = GetConfiguration(startupContext);
 
                 switch (appMode)
@@ -75,7 +138,7 @@ namespace NzbDrone.Host
                         {
                             Logger.Debug("Service selected");
 
-                            CreateConsoleHostBuilder(args, startupContext).UseWindowsService().Build().Run();
+                            RunHostWithRestoreCommit(CreateConsoleHostBuilder(args, startupContext).UseWindowsService(), restoreFolders, onRestoreCommitted);
                             break;
                         }
 
@@ -89,45 +152,46 @@ namespace NzbDrone.Host
                                 trayCallback(builder);
                             }
 
-                            builder.Build().Run();
+                            RunHostWithRestoreCommit(builder, restoreFolders, onRestoreCommitted);
                             break;
                         }
 
                     // Utility mode
                     default:
                         {
-                            new HostBuilder()
-                                .UseServiceProviderFactory(new DryIocServiceProviderFactory(new Container(rules => rules.WithNzbDroneRules())))
-                                .ConfigureContainer<IContainer>(c =>
-                                {
-                                    c.AutoAddServices(Bootstrap.ASSEMBLIES)
-                                        .RegisterHttpClients()
-                                        .AddIndexerProxyProvider()
-                                        .AddNzbDroneLogger()
-                                        .AddDatabase()
-                                        .AddFuzzyMatchingServices()
-                                        .AddImportServices()
-                                        .AddNamingPatternServices()
-                                        // .AddHardcoverServices() // Removed - using V5 API via BookInfoProxy
-                                        .AddStartupContext(startupContext)
-                                        .Resolve<UtilityModeRouter>()
-                                        .Route(appMode);
-                                })
-                                .ConfigureServices(services =>
-                                {
-                                    services.AddLogging(logging =>
-                                    {
-                                        logging.ClearProviders();
-                                        logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
-                                        logging.AddNLog();
-                                    });
-                                    services.Configure<PostgresOptions>(config.GetSection("Chaptarr:Postgres"));
-                                    services.Configure<AppOptions>(config.GetSection("Chaptarr:App"));
-                                    services.Configure<AuthOptions>(config.GetSection("Chaptarr:Auth"));
-                                    services.Configure<ServerOptions>(config.GetSection("Chaptarr:Server"));
-                                    services.Configure<LogOptions>(config.GetSection("Chaptarr:Log"));
-                                    services.Configure<UpdateOptions>(config.GetSection("Chaptarr:Update"));
-                                }).Build();
+                            var utilityServices = new ServiceCollection();
+                            utilityServices.AddLogging(logging =>
+                            {
+                                logging.ClearProviders();
+                                logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
+                                logging.AddNLog();
+                            });
+                            utilityServices.Configure<PostgresOptions>(config.GetSection("Chaptarr:Postgres"));
+                            utilityServices.Configure<AppOptions>(config.GetSection("Chaptarr:App"));
+                            utilityServices.Configure<AuthOptions>(config.GetSection("Chaptarr:Auth"));
+                            utilityServices.Configure<ServerOptions>(config.GetSection("Chaptarr:Server"));
+                            utilityServices.Configure<LogOptions>(config.GetSection("Chaptarr:Log"));
+                            utilityServices.Configure<UpdateOptions>(config.GetSection("Chaptarr:Update"));
+
+                            var utilityFactory = new DryIocServiceProviderFactory(
+                                new Container(rules => rules.WithNzbDroneRules()));
+                            using var utilityContainer = utilityFactory.CreateBuilder(utilityServices);
+                            utilityContainer.AutoAddServices(Bootstrap.ASSEMBLIES)
+                                .RegisterHttpClients()
+                                .AddIndexerProxyProvider()
+                                .AddNzbDroneLogger()
+                                .AddDatabase()
+                                .AddFuzzyMatchingServices()
+                                .AddImportServices()
+                                .AddNamingPatternServices()
+                                // .AddHardcoverServices() // Removed - using V5 API via BookInfoProxy
+                                .AddStartupContext(startupContext);
+
+                            RegisterRealRemotePathMappingService(utilityContainer);
+                            RegisterUpdatePackageProviders(utilityContainer);
+
+                            var utilityProvider = utilityFactory.CreateServiceProvider(utilityContainer);
+                            utilityProvider.GetRequiredService<IUtilityModeRouter>().Route(appMode);
 
                             break;
                         }
@@ -146,11 +210,32 @@ namespace NzbDrone.Host
                 Logger.Info(ex.Message);
                 LogManager.Configuration = null;
             }
+            finally
+            {
+                if (restoreFolders != null && FullRestoreBundle.IsPrepared(restoreFolders))
+                {
+                    // Includes host/configuration failures before DbFactory can own rollback.
+                    SqliteConnection.ClearAllPools();
+                    FullRestoreBundle.Rollback(restoreFolders);
+                }
+            }
 
             // Make sure there are no lingering database connections
             GC.Collect();
             GC.WaitForPendingFinalizers();
             NpgsqlConnection.ClearAllPools();
+        }
+
+        private static void RunHostWithRestoreCommit(IHostBuilder builder, IAppFolderInfo folders, Action onRestoreCommitted)
+        {
+            using var host = builder.Build();
+            using var registration = host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStarted
+                .Register(() =>
+                {
+                    FullRestoreBundle.CommitAfterStartup(folders);
+                    onRestoreCommitted?.Invoke();
+                });
+            host.Run();
         }
 
         public static IHostBuilder CreateConsoleHostBuilder(string[] args, StartupContext context)
@@ -211,8 +296,11 @@ namespace NzbDrone.Host
                         .AddImportServices()
                         .AddNamingPatternServices()
                         // .AddHardcoverServices() // Removed - using V5 API via BookInfoProxy
-                        .AddStartupContext(context)
-                        .Resolve<IEventAggregator>().PublishEvent(new ApplicationStartingEvent());
+                        .AddStartupContext(context);
+
+                    RegisterRealRemotePathMappingService(c);
+                    RegisterUpdatePackageProviders(c);
+                    c.Resolve<IEventAggregator>().PublishEvent(new ApplicationStartingEvent());
                 })
                 .ConfigureServices(services =>
                 {

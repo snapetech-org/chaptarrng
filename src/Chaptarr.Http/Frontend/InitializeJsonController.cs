@@ -1,9 +1,11 @@
 using System.Globalization;
+using Chaptarr.Http.Authentication;
 using Chaptarr.Http.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Common;
 using NzbDrone.Common.EnvironmentInfo;
+using NzbDrone.Core.Authentication;
 using NzbDrone.Core.Configuration;
 
 namespace Chaptarr.Http.Frontend
@@ -14,10 +16,14 @@ namespace Chaptarr.Http.Frontend
     public class InitializeJsonController : Controller
     {
         private readonly IConfigFileProvider _configFileProvider;
+        private readonly IUiSessionTokenService _tokens;
+        private readonly IInitialSetupTokenService _setupTokens;
 
-        public InitializeJsonController(IConfigFileProvider configFileProvider)
+        public InitializeJsonController(IConfigFileProvider configFileProvider, IUiSessionTokenService tokens, IInitialSetupTokenService setupTokens)
         {
             _configFileProvider = configFileProvider;
+            _tokens = tokens;
+            _setupTokens = setupTokens;
         }
 
         [HttpGet("/initialize.json")]
@@ -30,7 +36,7 @@ namespace Chaptarr.Http.Frontend
             var model = new InitializeJsonResource
             {
                 ApiRoot = $"{urlBase}/api/v1",
-                ApiKey = _configFileProvider.ApiKey,
+                ApiKey = _tokens.Issue(HttpContext),
                 Release = BuildInfo.Release,
                 Version = BuildInfo.Version.ToString(),
                 BuildTime = BuildInfo.BuildDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture),
@@ -39,6 +45,7 @@ namespace Chaptarr.Http.Frontend
                 Branch = _configFileProvider.Branch.ToLowerInvariant(),
                 UserHash = HashUtil.AnonymousToken(),
                 UrlBase = urlBase,
+                SetupRequired = _setupTokens.IsRequired,
                 IsProduction = RuntimeInfo.IsProduction
             };
 
@@ -57,6 +64,7 @@ namespace Chaptarr.Http.Frontend
             public string Branch { get; set; }
             public string UserHash { get; set; }
             public string UrlBase { get; set; }
+            public bool SetupRequired { get; set; }
             public bool IsProduction { get; set; }
         }
     }

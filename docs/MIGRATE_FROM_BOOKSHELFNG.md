@@ -1,6 +1,17 @@
 # Move a BookshelfNG installation to ChaptarrNG
 
-## Current status — 2026-11-05
+## Current status — 2026-11-08
+
+[ChaptarrNG v0.9.986](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.986)
+is public. The standard release includes the qualified BookshelfNG migration
+and rollback path; the legacy BookshelfNG package bridges are still disabled.
+Preview and back up each source installation before applying migration, and
+verify the migrated service before retiring the source. Publishing the release
+did not migrate any production installation or enable automatic legacy package
+identity handoff. The dated acceptance notes below retain their original
+revision and scope.
+
+## Historical qualification snapshot — 2026-11-05
 
 > **Current status — application candidate `8a9908b1`.** The candidate is unpublished. [BookshelfNG 0.4.21.76](https://github.com/snapetech-org/bookshelfng/releases/tag/v0.4.21.76) and [ChaptarrNG v0.9.977](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977) remain the latest public releases. Public hosted runners are authorized for trusted validation; private JIT remains available. See [AGENTS.md](../AGENTS.md).
 >
@@ -566,6 +577,15 @@ The fixture uses the complete migration history expected in a BookshelfNG
 schema-158 database. This is hosted synthetic validation, not operator-data
 acceptance. The source-candidate path is not available in `.977` and must not
 be used for production cutover while the retirement gates remain open.
+
+Starting with `v0.9.1000`, a restore upload is rejected before staging if the
+backup enables SSL but its saved certificate path is unavailable on the target.
+Mount or copy the certificate at that path, then upload the original backup
+again. If another restore-time startup failure occurs, ChaptarrNG restores its
+previous database and configuration and starts once with that previous data.
+Inspect the startup error and the retained `restore-in-progress.failed-*`
+directory before retrying; a healthy prior installation does not mean the
+backup was imported.
 
 Current `main` also accepts raw `.db` and `.xml` backup uploads through the
 same restore endpoint. The `.xml` suffix is a legacy filename; the uploaded

@@ -20,6 +20,7 @@ using NzbDrone.Core.MediaFiles.BookImport.Services;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.MediaFiles.TagExtraction;
 using NzbDrone.Core.Messaging.Events;
+using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.RootFolders;
@@ -1227,7 +1228,8 @@ namespace NzbDrone.Core.MediaFiles
                     continue;
                 }
 
-                if (IsSameRecording(expectedEdition, matchedEdition))
+                if (IsSameRecording(expectedEdition, matchedEdition) &&
+                    TryRetargetToExpectedEdition(localBook, matchedBook, expectedEdition))
                 {
                     // Providers list one recording several times (Audible regions, Hardcover and
                     // Goodreads copies), and uploads rarely say which listing they are. Files that
@@ -1236,12 +1238,54 @@ namespace NzbDrone.Core.MediaFiles
                         "Import matched edition {0} instead of grabbed edition {1}; same narration and language, accepting",
                         matchedEdition.Id,
                         expectedEdition.Id);
+                    RetargetToExpectedEdition(localBook, matchedBook, expectedEdition);
+                    continue;
+                }
+
+                // File metadata can identify the pinned provider edition even when the title matcher
+                // selected a same-book sibling listing. Only use this evidence within the same book;
+                // an embedded ISBN must never retarget a file across library books.
+                if (expectedEdition.IsEbook && matchedEdition.IsEbook &&
+                    HasExactExpectedEditionIsbn(localBook, expectedEdition) &&
+                    TryRetargetToExpectedEdition(localBook, matchedBook, expectedEdition))
+                {
+                    _logger.Debug("Import matched a different listing with the grabbed edition ISBN {0}; retargeting to edition {1}",
+                        expectedEdition.Isbn13 ?? expectedEdition.Isbn10, expectedEdition.Id);
+                    continue;
+                }
+
+                if (IsEquivalentEbookTitle(expectedEdition, matchedEdition) &&
+                    TryRetargetToExpectedEdition(localBook, matchedBook, expectedEdition))
+                {
+                    _logger.Debug("Import matched equivalent ebook edition {0} instead of grabbed edition {1}; accepting", matchedEdition.Id, expectedEdition.Id);
+                    RetargetToExpectedEdition(localBook, matchedBook, expectedEdition);
                     continue;
                 }
 
                 decision.Reject(new Rejection(
-                    $"Completed download was grabbed for edition '{expectedEdition.Title}', but import matched edition '{matchedEdition.Title}'. Chaptarr could not verify the expected edition."));
+                    $"Completed download was grabbed for edition {FormatEditionLabel(expectedEdition)}, but import matched edition {FormatEditionLabel(matchedEdition)}. Chaptarr could not verify the expected edition."));
             }
+        }
+
+        // The edition gate above only accepts another listing of a strict (pinned) book when it is
+        // the same recording or the same ebook text as the grabbed edition. Import it as the grabbed
+        // edition: leaving the sibling on the decision makes ImportApprovedBooks treat it as a
+        // conflict with the pinned edition, clone the book row, and the completed-download strict
+        // verification then fails because the file landed on the clone instead of the grabbed book.
+        internal static void RetargetToExpectedEdition(LocalBook localBook, Book matchedBook, Edition expectedEdition)
+        {
+            if (localBook == null || matchedBook == null || expectedEdition == null ||
+                expectedEdition.Id <= 0 || expectedEdition.BookId != matchedBook.Id)
+            {
+                return;
+            }
+
+            if (expectedEdition.Book == null)
+            {
+                expectedEdition.Book = matchedBook;
+            }
+
+            localBook.Edition = expectedEdition;
         }
 
         internal static bool IsSameRecording(Edition expected, Edition matched)
@@ -1258,6 +1302,73 @@ namespace NzbDrone.Core.MediaFiles
                    !string.IsNullOrWhiteSpace(matchedLanguage) &&
                    string.Equals(expectedLanguage, matchedLanguage, StringComparison.OrdinalIgnoreCase) &&
                    BookService.HaveSameNarration(expected, matched);
+        }
+
+        internal static bool IsEquivalentEbookTitle(Edition expected, Edition matched)
+        {
+            if (expected == null || matched == null || !expected.IsEbook || !matched.IsEbook)
+            {
+                return false;
+            }
+
+            var expectedLanguage = EditionMetadataProfileFilter.NormalizeLanguageBucket(expected.Language);
+            var matchedLanguage = EditionMetadataProfileFilter.NormalizeLanguageBucket(matched.Language);
+            if (string.IsNullOrWhiteSpace(expectedLanguage) ||
+                string.IsNullOrWhiteSpace(matchedLanguage) ||
+                !string.Equals(expectedLanguage, matchedLanguage, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var expectedTitle = ReleaseTitleMatchScorer.TryGetGenericNovelBaseTitle(expected.Title, out var expectedBase)
+                ? expectedBase : expected.Title;
+            var matchedTitle = ReleaseTitleMatchScorer.TryGetGenericNovelBaseTitle(matched.Title, out var matchedBase)
+                ? matchedBase : matched.Title;
+
+            var expectedTokens = ReleaseTitleMatchScorer.Tokenize(expectedTitle);
+            var matchedTokens = ReleaseTitleMatchScorer.Tokenize(matchedTitle);
+            return expectedTokens.Count > 0 && expectedTokens.SequenceEqual(matchedTokens, StringComparer.OrdinalIgnoreCase);
+        }
+
+        internal static bool HasExactExpectedEditionIsbn(LocalBook localBook, Edition expectedEdition)
+        {
+            if (localBook?.RawTags?.AllTags == null || expectedEdition == null)
+            {
+                return false;
+            }
+
+            var expectedIsbns = new[] { expectedEdition.Isbn10, expectedEdition.Isbn13 }
+                .Select(UnmappedCatalogSuggestionHelper.NormalizeCatalogIsbn)
+                .Where(isbn => isbn != null)
+                .ToHashSet(StringComparer.Ordinal);
+            if (expectedIsbns.Count == 0)
+            {
+                return false;
+            }
+
+            var isbnTagNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "ISBN", "ISBN13", "ISBN10", "ISBN-13", "ISBN-10", "ISBN_13", "ISBN_10"
+            };
+
+            return localBook.RawTags.AllTags
+                .Where(pair => isbnTagNames.Contains(pair.Key))
+                .SelectMany(pair => pair.Value ?? new List<string>())
+                .Select(UnmappedCatalogSuggestionHelper.NormalizeCatalogIsbn)
+                .Any(isbn => isbn != null && expectedIsbns.Contains(isbn));
+        }
+
+        internal static bool TryRetargetToExpectedEdition(LocalBook localBook, Book matchedBook, Edition expectedEdition)
+        {
+            if (localBook?.Book == null || matchedBook == null || expectedEdition == null || expectedEdition.Id <= 0 ||
+                localBook.Edition == null || localBook.Edition.IsEbook != expectedEdition.IsEbook || matchedBook.Id <= 0 ||
+                localBook.Book.Id != matchedBook.Id || expectedEdition.BookId != matchedBook.Id)
+            {
+                return false;
+            }
+
+            HydrateEditionForImport(localBook, expectedEdition);
+            return true;
         }
 
         private Edition ResolveExpectedTrackedEdition(Book book, DownloadClientItem downloadClientItem)
@@ -1867,15 +1978,39 @@ namespace NzbDrone.Core.MediaFiles
                 .Where(IsSupportedArchive)
                 .ToList();
 
-            foreach (var archive in archives)
+            if (archives.Count == 0)
             {
-                try
+                return;
+            }
+
+            // Publish one complete payload only after every archive succeeds. A failure leaves no
+            // visible media for this or the next import scan to mistake for a complete download.
+            var parent = Path.GetDirectoryName(directoryInfo.FullName.TrimEnd(Path.DirectorySeparatorChar));
+            var stage = Path.Combine(parent, ".chaptarr-import-" + Guid.NewGuid().ToString("N"));
+            var target = Path.Combine(directoryInfo.FullName, "chaptarr-extracted");
+            try
+            {
+                if (OperatingSystem.IsWindows())
                 {
-                    _archiveService.Extract(archive, directoryInfo.FullName);
+                    Directory.CreateDirectory(stage);
                 }
-                catch (Exception e)
+                else
                 {
-                    _logger.Warn(e, "Failed to extract archive during import: {0}", archive);
+                    Directory.CreateDirectory(stage, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                }
+
+                for (var i = 0; i < archives.Count; i++)
+                {
+                    _archiveService.Extract(archives[i], Path.Combine(stage, i.ToString(System.Globalization.CultureInfo.InvariantCulture)), ArchiveExtractionOptions.Media);
+                }
+
+                Directory.Move(stage, target);
+            }
+            finally
+            {
+                if (Directory.Exists(stage))
+                {
+                    Directory.Delete(stage, true);
                 }
             }
         }

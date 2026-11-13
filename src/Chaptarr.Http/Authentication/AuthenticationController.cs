@@ -8,6 +8,7 @@ using System.Xml;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using NLog;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
@@ -31,6 +32,26 @@ namespace Chaptarr.Http.Authentication
             _configFileProvider = configFileProvider;
             _appFolderInfo = appFolderInfo;
             _logger = logger;
+        }
+
+        [HttpPost("setup")]
+        [Consumes("application/x-www-form-urlencoded")]
+        [RequestSizeLimit(4096)]
+        public async Task<IActionResult> Setup([FromServices] IInitialSetupTokenService tokens, [FromForm] string setupToken)
+        {
+            if (!tokens.IsRequired)
+            {
+                return NotFound();
+            }
+
+            if (!tokens.Validate(setupToken?.Trim()))
+            {
+                return Redirect("~/login?setupFailed=true");
+            }
+
+            var principal = InitialSetupAuthenticationHandler.CreatePrincipal(_configFileProvider.AuthCookieStamp);
+            await HttpContext.SignInAsync(InitialSetupAuthenticationHandler.CookieSchemeName, principal);
+            return Redirect("~/");
         }
 
         [HttpPost("login")]
@@ -91,12 +112,14 @@ namespace Chaptarr.Http.Authentication
         [HttpGet("logout")]
         public async Task<IActionResult> Logout()
         {
+            HttpContext.RequestServices.GetRequiredService<IUiSessionTokenService>().Revoke(HttpContext);
             _authService.Logout(HttpContext);
             // If multiple UI auth cookies exist (e.g., local fallback while Plex/OIDC is primary),
             // sign out of all cookie schemes so "Logout" consistently clears access.
             await HttpContext.SignOutAsync(AuthenticationType.Forms.ToString());
             await HttpContext.SignOutAsync(AuthenticationType.Oidc.ToString());
             await HttpContext.SignOutAsync(AuthenticationType.Plex.ToString());
+            await HttpContext.SignOutAsync(InitialSetupAuthenticationHandler.CookieSchemeName);
             return Redirect(_configFileProvider.UrlBase + "/");
         }
     }

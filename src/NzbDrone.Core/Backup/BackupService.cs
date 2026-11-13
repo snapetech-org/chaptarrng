@@ -281,7 +281,7 @@ namespace NzbDrone.Core.Backup
                 {
                     _diskProvider.EnsureFolder(temporaryPath);
                     RestrictTempFolder(temporaryPath);
-                    _archiveService.Extract(backupFileName, temporaryPath);
+                    _archiveService.Extract(backupFileName, temporaryPath, ArchiveExtractionOptions.Backup);
 
                     var files = _diskProvider.GetFiles(temporaryPath, false).ToList();
                     var databaseFile = files.FirstOrDefault(file =>
@@ -299,12 +299,14 @@ namespace NzbDrone.Core.Backup
                     var configFile = files.FirstOrDefault(file =>
                         Path.GetFileName(file).Equals("Config.xml", StringComparison.InvariantCultureIgnoreCase));
 
-                    if (configFile != null)
+                    try
                     {
-                        _diskProvider.MoveFile(configFile, _appFolderInfo.GetConfigPath(), true);
+                        FullRestoreBundle.Stage(_appFolderInfo, databaseFile, configFile);
                     }
-
-                    _diskProvider.MoveFile(databaseFile, _appFolderInfo.GetDatabaseRestore(), true);
+                    catch (InvalidDataException ex)
+                    {
+                        throw new RestoreBackupFailedException(HttpStatusCode.BadRequest, "Unable to restore backup: {0}", ex.Message);
+                    }
                     return;
                 }
                 finally

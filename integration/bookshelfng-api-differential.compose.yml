@@ -43,7 +43,7 @@ services:
       - isolated
 
   differential:
-    image: node:26.12.1-bookworm-slim@sha256:28147155d47dc31abe0a46e0d12b59b2fb3d0a2dcc5dc65fce76a074180b16fe
+    image: node:26.13.1-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1
     user: "${TEST_PUID:?Set the host UID for disposable bind mounts}:${TEST_PGID:?Set the host GID for disposable bind mounts}"
     command: ["node", "/harness/bookshelfng-api-differential.mjs"]
     environment:
@@ -66,6 +66,10 @@ services:
       - type: bind
         source: ${BOOKSHELFNG_API_CONTRACT_SCRIPT:?Set the read-only contract comparator path}
         target: /harness/bookshelfng-api-contract.mjs
+        read_only: true
+      - type: bind
+        source: ${BOOKSHELFNG_QUALITY_PROFILE_LIFECYCLE_SCRIPT:?Set the read-only profile lifecycle script path}
+        target: /harness/bookshelfng-quality-profile-lifecycle.mjs
         read_only: true
       - type: bind
         source: ${BOOKSHELFNG_DIFFERENTIAL_EVIDENCE:?Set the differential evidence directory}

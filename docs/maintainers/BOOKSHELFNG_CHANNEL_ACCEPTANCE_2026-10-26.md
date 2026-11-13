@@ -1,5 +1,55 @@
 # BookshelfNG channel acceptance — 2026-10-26
 
+## Current release and channel state — 2026-11-08
+
+[ChaptarrNG v0.9.986](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.986)
+is public. [Release run 42515404591](https://github.com/snapetech-org/chaptarrng/actions/runs/42515404591)
+passed native validation, all ten standalone archives, the standard image,
+and final asset publication. [Distribution run 42523595619](https://github.com/snapetech-org/chaptarrng/actions/runs/42523595619)
+passed ChaptarrNG AUR and Chocolatey publication. Public AUR lists
+`chaptarrng-bin 0.9.986-1`, and the public
+[COPR build 11288368](https://copr.fedorainfracloud.org/coprs/slskdn/chaptarrng/build/11288368/)
+reports `chaptarrng 0.9.986-1` succeeded. The Chocolatey publisher job passed;
+public index propagation was not independently verified. Legacy BookshelfNG
+package identities, external catalogs and production cutover remain separate
+gates; the migration bridge was disabled for this release. The dated sections
+below are historical evidence and may describe earlier publication status.
+The public standard image `ghcr.io/snapetech-org/chaptarrng:0.9.986` resolves
+to OCI index digest
+`sha256:5d295630d3120109c73616cb34c939264b10ad5c42ebdc6813bb149ab825e2ed`.
+
+The [published-archive installed run](https://github.com/snapetech-org/chaptarrng/actions/runs/42524674959)
+passed No, headless Manual, Yes with source retention, target health, and
+forced-failure rollback with restored source health on five Linux RIDs. The
+same release tag `v0.9.986` and commit `665e89a7` supplied every archive.
+The follow-up [run 42525035012](https://github.com/snapetech-org/chaptarrng/actions/runs/42525035012)
+recorded kernel `7.0.0-1017-azure`: four targets passed first attempt; the
+immutable BookshelfNG x86 predecessor exited before Yes in the first x86
+attempt, after No and Manual passed. The x86 failed-job retry passed all four
+cases. This is retained as an intermittent source-runtime/emulation finding,
+not attributed to the target package. x86 used preinitialized source
+auxiliary databases and excluded the unsupported legacy MAM indexer; the
+candidate executable was 32 bit ELF machine 3, even though the Python harness
+reported a 64 bit host process.
+
+| Published `.986` archive | SHA-256 | Installed result |
+| --- | --- | --- |
+| `linux-x64` | `8af5e4d148de231725e7b3f4daa0c272003e30f1b4274a77bab4e46b858bf21e` | Pass |
+| `linux-arm64` | `bef23cec42511c9c2a3b132ba6e2619bf582b0a093581d797ea2740dc3f5dd0d` | Pass |
+| `linux-musl-x64` | `1c80b65f472fa74957a662a8fb75b61795ca100ba73ddc4b59c71e09db1dd8a3` | Pass |
+| `linux-musl-arm64` | `a3e779beb6808428b9a373a6cb8b82c43d864f72a464935df7273a8d85b68ac0` | Pass |
+| `linux-x86` | `19e5254b91940c5521403f501126c91341ff0a2ff36e74fc185912f733874db3` | Pass; source-only hosted flake retained |
+
+The old identity feeds remain unbridged in a live 2026-11-08 check. Public
+[AUR `bookshelfng-bin`](https://aur.archlinux.org/packages/bookshelfng-bin)
+still lists `0.4.21.71-1`. The two latest public
+[BookshelfNG COPR builds](https://copr.fedorainfracloud.org/coprs/slskdn/bookshelfng/build/11165173/)
+failed before recording a source version; no `0.9.986` old-identity RPM is
+present. These feed states do not affect the standard ChaptarrNG release, but
+they prevent a claim that every existing package identity has a working
+automatic upgrade path. Keep the bridge disabled until the old channel
+publishers and installed handoff are accepted.
+
 ## Runner-policy update — 2026-11-03
 
 The entries below record evidence and runner policy as of their dated
@@ -8,6 +58,104 @@ trusted jobs may use compatible public runners or private ephemeral JIT.
 Earlier instructions in this report to replay on private JIT are superseded;
 runner choice does not close installed-channel, external-delivery, or operator
 acceptance gates.
+
+## Latest verification — 2026-11-05
+
+Application-code `6f40dbf9`, full-server harness `5a9965ee`, and packaging
+`bba3ae3f` remain unpublished. Full Build
+[42049556701](https://github.com/snapetech-org/chaptarrng/actions/runs/42049556701),
+strict API [42049562786](https://github.com/snapetech-org/chaptarrng/actions/runs/42049562786),
+and all ten archives [42049568015](https://github.com/snapetech-org/chaptarrng/actions/runs/42049568015)
+pass at `5a9965ee`. The strict run retains the documented source-error and verified
+runtime/security dispositions; it does not turn them into exact matches.
+
+Both fresh populated migrations and rollbacks pass again. Every managed author,
+work and file in both real snapshots matches its predecessor API response:
+88,405 records, zero field differences and no missing, extra or duplicate IDs.
+All 23,981 cached image URLs return HTTP 200 with the original source bytes,
+including TIFF originals. These bulk image checks use the explicitly recorded
+test-only rate limit and cooldowns. Both full Seerr web format workflows pass
+request, approval, transfer, import, scan, restart, identity and profile audits
+with the identified repaired client test image. Source/native new-author profile
+inputs and legacy readback also pass. This does not claim the unchanged deployed
+Seerr image repaired or authorize publishing its merged client fix.
+
+The native musl x64 archive test exposed missing generic handoff launchers in
+Linux bundles. `bba3ae3f` adds the guarded launcher/supervisor/journal to all Linux
+RIDs, preserving the glibc systemd bootstrap. Against the checksum-pinned public
+`.76` musl predecessor, No, headless Manual, Yes, schema-126 health, retained source
+backup, injected failure and healthy source rollback now pass. File identities,
+Unicode paths, values above 4 GiB and part values remain intact. Evidence:
+`/var/tmp/chaptarrng-native-standalone-20261105/musl-x64-wide-files-bba3ae3f/`.
+The earlier HDD run timed out while migrations progressed and remains retained;
+the SSD run closes that test without changing the application timeout.
+
+Native retained-archive follow-up uses producer
+[42071881875](https://github.com/snapetech-org/chaptarrng/actions/runs/42071881875)
+at `750c3158` (application `6f40dbf9`, portable supervisor fix `f26fa1bc`). All ten
+archive jobs succeed. Native Linux glibc x64/ARM64 and musl x64/ARM64 pass installed
+No/Manual/Yes, target health, file preservation, injected failure and source
+rollback. The earlier glibc failures exposed `/bin/sh` rejecting the supervisor's
+`kill -- -PGID` syntax; the portable correction passes both full installed checks
+and real process-group TERM/KILL tests. `AGENTS.md` records that boundary.
+
+Retained consumer
+[42072757567](https://github.com/snapetech-org/chaptarrng/actions/runs/42072757567)
+passes Windows x64, Windows x86, macOS x64 and native macOS ARM64. Windows now explicitly selects the
+source backup whose logical contents match the predecessor. macOS tests the
+cross-built release archive without replacing or re-signing it. The earlier
+ARM64 job was cancelled before allocation; the new run closes that gate. GitHub
+acknowledged an Actions-start incident after several dispatches returned 500/502;
+these infrastructure outcomes are not runtime acceptance.
+
+The exact retained `750c3158` FreeBSD archive passes all four installed cases in a
+new isolated FreeBSD 15.1-p6 VM, including wide/Unicode file values and rollback.
+The public `.76` predecessor needs libiconv and OpenSSL ABI 17 in this guest.
+A separate migrated-target launch with caller runtime overrides removed confirms
+that the packaged launcher selects OpenSSL/SQLite and serves `/ping` successfully.
+Evidence is retained under
+`/var/tmp/chaptarrng-native-standalone-20261105/freebsd/` on `kspld0`.
+
+Fresh source-built producer
+[42074073639](https://github.com/snapetech-org/chaptarrng/actions/runs/42074073639)
+at `e3ad5bab` succeeds for all ten archives and all five installed Linux jobs,
+including native x86. Retained consumer
+[42086393906](https://github.com/snapetech-org/chaptarrng/actions/runs/42086393906)
+passes Windows x64/x86 and macOS x64/native ARM64 against those rebuilt payloads.
+The exact rebuilt FreeBSD archive also passes all four installed cases in the
+isolated FreeBSD VM. These give installed handoff passes across all ten runtime
+targets; the Linux x86 host discrepancy below remains unresolved.
+
+The Unix x86 runtime's delegate return-buffer helper used EDI/ESI instead of
+managed ECX/EDX arguments. `e3ad5bab` applies an exact-source guarded correction
+and qualifies the built runtime with four million nullable-return/validation
+checks before producer success. The public `.76` x86 predecessor needs explicitly
+recorded, checksum-pinned schema-158 auxiliary fixtures for the existing-installation
+baseline; fresh auxiliary initialization remains a source limitation.
+
+The unchanged x86 archive additionally passes No/Manual/Yes, schema-126 health,
+wide/Unicode file preservation, retained backup, injected failure, rollback and
+restored source health in an independent Debian 12 VM (kernel `6.1.0-54`). Its
+SHA-256 is `d547254d21fb9f1eba72a2ec8a86720865f14594f37dcebb953e1a736d57c30b`.
+ELF32 and application architecture establish native x86 execution; the harness
+manifest's `processPointerBits` describes Python and is 64 in that guest.
+
+On the desktop's Arch kernel `7.2.11`, the same target still fails first startup
+with missing DryIoc registrations. A container diagnostic without seccomp filtering
+also fails. Single-CPU and unrestricted-resource container diagnostics crash the
+original BookshelfNG binary before target acceptance; a 1-GiB container still
+fails target startup. The first native-host diagnostic mixed Arch's loader with
+Debian libraries and its SIGFPE is excluded. A corrected task-owned diagnostic
+changes only the extracted apphosts' ELF interpreter to the matching Debian
+loader and passes the full suite. This modified diagnostic is not canonical
+archive acceptance. The container discrepancy remains unresolved; it does not
+establish a kernel defect or a passing target in that environment. The source-built
+runtime differs from the earlier instruction-corrected diagnostic only in build
+metadata, so a source rebuild alone did not eliminate this host failure.
+Evidence is retained under
+`/var/tmp/chaptarrng-native-standalone-20261105/` on `kspld0`, including both VM
+passes and desktop failures. Headed UI still lacks Desktop Pool capacity;
+publication, external channel acceptance and production cutover remain separate.
 
 ## Current campaign — 2026-11-05
 

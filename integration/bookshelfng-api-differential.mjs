@@ -13,6 +13,8 @@ import {
   sanitizeApiResponse,
 } from "./bookshelfng-api-contract.mjs";
 
+import { runQualityProfileLifecycle } from "./bookshelfng-quality-profile-lifecycle.mjs";
+
 const sourceUrl = (
   process.env.BOOKSHELFNG_API_URL ?? "http://127.0.0.1:18787/api/v1"
 ).replace(/\/+$/, "");
@@ -527,6 +529,16 @@ if (
   }
 }
 
+await runQualityProfileLifecycle({
+  // The source normalizer creates and deletes profile 127 before migration.
+  minimumNewProfileId: 128,
+  sourceRequest: (method, path, body) => method === "GET"
+    ? getJson(sourceUrl, sourceKey, path) : requestJson(sourceUrl, sourceKey, method, path, body),
+  targetRequest: (method, path, body, native = false) => method === "GET"
+    ? getJson(targetUrl, targetKey, path, native) : requestJson(targetUrl, targetKey, method, path, body),
+  onCase: (result) => results.push(result),
+});
+
 // Exercise legacy write contracts against the two isolated copies. The
 // monitoring edit verifies the old work ID still addresses its migrated
 // audiobook, and the delete verifies one old mixed-format ID removes both
@@ -613,6 +625,7 @@ const report = {
     directDownloadUrls: "ordered legacy tag arrays remain strict; the target compatibility API must project the same array shape",
     secretFields: "compared as empty or present, never recorded; host hash concealment requires successful settings readback and authentication proofs",
     deploymentFacts: "explicit typed status facts independently confirmed through the native API; all strict differences remain recorded",
+    missingProfileDiagnostics: "404 status, exact profile ID/message and all public fields remain strict; source-only internal exception descriptions are recorded as explicit diagnostic-redaction policy differences",
   },
   debugValues: includeDebugValues,
   caseCount: results.length,

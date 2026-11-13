@@ -5,6 +5,9 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <ErrorOnDuplicatePublishOutputFiles>true</ErrorOnDuplicatePublishOutputFiles>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
+    <NuGetLockFilePath Condition="'$(ChaptarrStandaloneLockRoot)'!=''">$(ChaptarrStandaloneLockRoot)/$(MSBuildProjectName).lock.json</NuGetLockFilePath>
     <!-- Allow Linux/macOS tools to restore projects with Windows-specific target frameworks. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
 
@@ -44,8 +47,10 @@
   <PropertyGroup>
     <Configuration Condition="'$(Configuration)'==''">Release</Configuration>
     <!-- Centralize intermediate and default outputs -->
-    <BaseIntermediateOutputPath>$(ChaptarrRootDir)_temp\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
-    <IntermediateOutputPath>$(ChaptarrRootDir)_temp\obj\$(MSBuildProjectName)\$(Configuration)\</IntermediateOutputPath>
+    <ChaptarrIntermediateRoot Condition="'$(ChaptarrStandaloneIntermediateRoot)'!=''">$(ChaptarrStandaloneIntermediateRoot)</ChaptarrIntermediateRoot>
+    <ChaptarrIntermediateRoot Condition="'$(ChaptarrIntermediateRoot)'==''">$(ChaptarrRootDir)_temp\obj</ChaptarrIntermediateRoot>
+    <BaseIntermediateOutputPath>$(ChaptarrIntermediateRoot)\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(ChaptarrIntermediateRoot)\$(MSBuildProjectName)\$(Configuration)\</IntermediateOutputPath>
     <OutputPath>$(ChaptarrRootDir)_temp\bin\$(Configuration)\$(MSBuildProjectName)\</OutputPath>
 
     <!-- Output to _output and _tests respectively -->
@@ -76,8 +81,8 @@
     <Copyright>Copyright 2017-$([System.DateTime]::Now.ToString('yyyy')) chaptarr.com (GNU General Public v3)</Copyright>
 
     <!-- Chaptarr Development Version -->
-    <AssemblyVersion>0.9.978.0</AssemblyVersion>
-    <AssemblyFileVersion>0.9.978.0</AssemblyFileVersion>
+    <AssemblyVersion>0.9.1000.0</AssemblyVersion>
+    <AssemblyFileVersion>0.9.1000.0</AssemblyFileVersion>
     <AssemblyInformationalVersion>0.9.976-chaptarr-dev</AssemblyInformationalVersion>
     <AssemblyConfiguration>$(Configuration)-chaptarr-dev</AssemblyConfiguration>
     <NeutralLanguage>en</NeutralLanguage>

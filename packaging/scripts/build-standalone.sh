@@ -27,9 +27,9 @@ if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
     exit 2
   }
   for package in \
-    "Microsoft.NETCore.App.Host.${rid}.10.0.12.nupkg" \
-    "Microsoft.NETCore.App.Runtime.${rid}.10.0.12.nupkg" \
-    "Microsoft.AspNetCore.App.Runtime.${rid}.10.0.12.nupkg"; do
+    "Microsoft.NETCore.App.Host.${rid}.10.0.15.nupkg" \
+    "Microsoft.NETCore.App.Runtime.${rid}.10.0.15.nupkg" \
+    "Microsoft.AspNetCore.App.Runtime.${rid}.10.0.15.nupkg"; do
     [[ -s "$runtime_packs/$package" ]] || {
       echo "Missing custom runtime package: $runtime_packs/$package" >&2
       exit 2
@@ -55,14 +55,23 @@ bundle="$work/ChaptarrNG"
 mkdir -p "$bundle"
 
 if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
+  # The custom packs intentionally retain the framework's official version. A
+  # shared NuGet cache may already contain a different build with the same
+  # package ID/version, so restore these archives into an isolated cache.
+  export NUGET_PACKAGES="$work/nuget-packages"
   custom_nuget_config="$work/platform-runtime.NuGet.config"
   python3 packaging/scripts/create-standalone-nuget-config.py \
     "$runtime_packs" src/NuGet.config "$custom_nuget_config" "$rid"
-  # The custom Linux x86 and FreeBSD runtime packs are pinned to 10.0.12.
+  # The custom Linux x86 and FreeBSD runtime packs are pinned to 10.0.15.
   restore_sources=(
+    "--artifacts-path"
+    "$work/artifacts"
+    "-p:ChaptarrStandaloneIntermediateRoot=$work/obj"
     "-p:RestoreConfigFile=$custom_nuget_config"
-    "-p:RuntimeFrameworkVersion=10.0.12"
+    "-p:RuntimeFrameworkVersion=10.0.15"
     "-p:ChaptarrExtraPlatformRuntimePacks=true"
+    "-p:ChaptarrStandaloneLockRoot=$work/locks"
+    "-p:RestoreLockedMode=false"
   )
 fi
 
@@ -74,14 +83,32 @@ if [[ "$rid" == freebsd-x64 ]]; then
   restore_sources+=("-p:EnableWindowsTargeting=false")
 fi
 
+restore_standalone_project() {
+  local project="$1"
+  if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
+    dotnet restore "$project" -p:Configuration=Release -p:RuntimeIdentifier="$rid" \
+      -p:SelfContained=true -p:UseAppHost=true --disable-parallel -m:1 "${restore_sources[@]}"
+  else
+    dotnet restore "$project" -p:Configuration=Release -p:RuntimeIdentifier="$rid" \
+      -p:SelfContained=true -p:UseAppHost=true --locked-mode --disable-parallel -m:1
+  fi
+}
+
+restore_standalone_project src/NzbDrone.Console/Chaptarr.Console.csproj
+restore_standalone_project src/NzbDrone.Update/Chaptarr.Update.csproj
+if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
+  # Verify before executing dependency-provided compilation/publish targets.
+  python3 packaging/scripts/verify-platform-locks.py src "$work/locks"
+fi
+
 publish_standalone_project() {
   # Bash 3.2 (the system Bash on supported macOS runners) treats expansion of
   # an empty array as an unset variable under nounset. Only expand this array
   # for the RIDs that populate it.
   if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
-    dotnet publish "$@" "${restore_sources[@]}"
+    dotnet publish "$@" --no-restore "${restore_sources[@]}"
   else
-    dotnet publish "$@"
+    dotnet publish "$@" --no-restore
   fi
 }
 
@@ -103,9 +130,39 @@ publish_standalone_project src/NzbDrone.Update/Chaptarr.Update.csproj \
   --verbosity minimal \
   --output "$bundle/Chaptarr.Update"
 
+if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
+  python3 - \
+    "$runtime_packs/Microsoft.NETCore.App.Runtime.${rid}.10.0.15.nupkg" \
+    "$bundle/libcoreclr.so" \
+    "$bundle/Chaptarr.Update/libcoreclr.so" <<'PY'
+import hashlib
+from pathlib import Path
+import sys
+import zipfile
+
+package = Path(sys.argv[1])
+runtime_paths = [Path(value) for value in sys.argv[2:]]
+rid = package.name.removeprefix("Microsoft.NETCore.App.Runtime.").removesuffix(".10.0.15.nupkg")
+member = f"runtimes/{rid}/native/libcoreclr.so"
+with zipfile.ZipFile(package) as package_zip:
+    expected = hashlib.sha256(package_zip.read(member)).hexdigest()
+
+for runtime_path in runtime_paths:
+    actual = hashlib.sha256(runtime_path.read_bytes()).hexdigest()
+    if actual != expected:
+        raise SystemExit(
+            f"Published runtime {runtime_path} does not match the selected custom runtime package"
+        )
+PY
+fi
+
 mkdir -p "$bundle/UI"
+if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
+  python3 packaging/scripts/verify-platform-locks.py src "$work/locks"
+fi
 cp -a _output/UI/. "$bundle/UI/"
 cp LICENSE "$bundle/LICENSE"
+python3 packaging/scripts/install-update-verifier.py "$rid" "$bundle/Tools"
 test -s "$bundle/UI/index.html"
 
 if [[ "$rid" == linux-* || "$rid" == osx-* ]]; then
@@ -116,7 +173,7 @@ if [[ "$rid" == linux-* || "$rid" == osx-* ]]; then
     "$bundle/scripts/capture-bookshelf-metadata-env.py"
 fi
 
-if [[ "$rid" == osx-* || "$rid" == freebsd-x64 ]]; then
+if [[ "$rid" == linux-* || "$rid" == osx-* || "$rid" == freebsd-x64 ]]; then
   handoff_dir="$bundle/scripts/bookshelfng-handoff"
   mkdir -p "$handoff_dir"
   install -m 0755 scripts/bookshelfng-standalone-launch.sh \
@@ -135,17 +192,29 @@ fi
 asset="ChaptarrNG-${version}-${rid}"
 if [[ "$rid" == win-* ]]; then
   archive="$output/${asset}.zip"
-  python3 - "$bundle" "$archive" <<'PY'
+  staged_archive="$work/${asset}.zip"
+  python3 - "$bundle" "$staged_archive" "$rid" <<'PY'
 import pathlib
 import sys
 import zipfile
 
 root = pathlib.Path(sys.argv[1])
 archive = pathlib.Path(sys.argv[2])
+rid = sys.argv[3]
 with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output_zip:
     for path in sorted(root.rglob("*")):
+        if path.name == "libSkiaSharp.pdb":
+            continue
         output_zip.write(path, path.relative_to(root).as_posix())
+
+if rid == "win-x64":
+    # Both Chocolatey packages download this ZIP. Leave room below the scanner limit.
+    budget = 190_000_000
+    size = archive.stat().st_size
+    if size > budget:
+        raise SystemExit(f"{archive.name} is {size:,} bytes, above the Chocolatey budget of {budget:,} bytes.")
 PY
+  mv -f -- "$staged_archive" "$archive"
 else
   archive="$output/${asset}.tar.gz"
   if [[ "$(uname -s)" == Darwin ]]; then

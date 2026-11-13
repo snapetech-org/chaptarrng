@@ -36,7 +36,7 @@ const React = {
   }
 };
 
-function loadComponent(componentPath, moduleMocks) {
+function loadComponent(componentPath, moduleMocks, exportName = 'default', globals = {}) {
   const filePath = path.join(__dirname, componentPath);
   const source = fs.readFileSync(filePath, 'utf8');
   const { code } = transformSync(source, {
@@ -57,6 +57,7 @@ function loadComponent(componentPath, moduleMocks) {
   });
 
   const sandbox = {
+    ...globals,
     exports: {},
     require(moduleName) {
       return moduleMocks.get(moduleName) || { __esModule: true, default: moduleName };
@@ -64,7 +65,7 @@ function loadComponent(componentPath, moduleMocks) {
   };
 
   vm.runInNewContext(code, sandbox, { filename: filePath });
-  return sandbox.exports.default;
+  return sandbox.exports[exportName];
 }
 
 function findElements(element, predicate, matches = []) {
@@ -212,6 +213,158 @@ test('manual import failure announces the error, retries, and prevents stale imp
   assert.equal(retries, 1);
   assert.equal(findElements(output, (element) => element.type === 'Table').length, 0);
   assert.equal(importButton.props.isDisabled, true);
+});
+
+test('manual import previews settle through jQuery callbacks and ignore an older request', () => {
+  const requests = [];
+  const dispatched = [];
+  const action = (type) => (payload) => ({ type, payload });
+  const defaultExport = (value) => ({ __esModule: true, default: value });
+  const handlers = loadComponent('Store/Actions/interactiveImportActions.js', new Map([
+    ['redux-actions', { createAction: action }],
+    ['redux-batched-actions', { batchActions: action('batch') }],
+    ['Helpers/Props', { sortDirections: { ASCENDING: 'ascending' } }],
+    ['Store/thunks', { createThunk: action, handleThunks: (value) => value }],
+    ['./baseActions', { set: action('set'), update: action('update') }],
+    ['./Creators/createFetchHandler', defaultExport(() => {})],
+    ['./Creators/createHandleActions', defaultExport(() => {})],
+    ['./Creators/Reducers/createSetClientSideCollectionSortReducer', defaultExport(() => {})],
+    ['Utilities/createAjaxRequest', defaultExport((options) => {
+      const callbacks = {};
+      const preview = { options, callbacks, aborted: false };
+      requests.push(preview);
+
+      // The real AJAX helper returns a jQuery Deferred with no Promise.finally().
+      const request = {
+        done(callback) { callbacks.done = callback; return this; },
+        fail(callback) { callbacks.fail = callback; return this; },
+        always(callback) { callbacks.always = callback; return this; }
+      };
+
+      return { request, abortRequest: () => { preview.aborted = true; } };
+    })]
+  ]), 'actionHandlers');
+  const fetchItems = handlers['interactiveImport/fetchInteractiveImportItems'];
+  const dispatch = (value) => dispatched.push(value);
+  fetchItems(null, { folder: '/first' }, dispatch);
+  fetchItems(null, { folder: '/second' }, dispatch);
+
+  const [first, second] = requests;
+  assert.equal(first.aborted, true);
+  assert.equal(second.options.url, '/manualimport');
+  first.callbacks.done([{ path: '/first/stale.epub' }]);
+  first.callbacks.always();
+  assert.equal(dispatched.length, 2);
+
+  const file = { path: '/second/book.epub' };
+  second.callbacks.done([file]);
+  second.callbacks.always();
+  assert.equal(dispatched.at(-1).payload[0].payload.data[0], file);
+  assert.equal(dispatched.at(-1).payload[1].payload.isPopulated, true);
+
+  fetchItems(null, { downloadId: 'tracked' }, dispatch);
+  const last = requests.at(-1);
+  const error = { message: 'Preview unavailable' };
+  last.callbacks.fail(error);
+  last.callbacks.always();
+  assert.equal(second.aborted, false);
+  assert.equal(dispatched.at(-1).payload.error, error);
+  assert.equal(dispatched.at(-1).payload.isFetching, false);
+});
+
+test('manual import uses the real AJAX wrapper and jQuery Deferred for success, retry and cancellation', async() => {
+  const originalWindow = global.window;
+  const window = {
+    document: {},
+    setTimeout,
+    Chaptarr: { apiRoot: '/books/api/v1', apiKey: 'test-api-key' },
+    XMLHttpRequest: class XMLHttpRequest {}
+  };
+  global.window = window;
+
+  try {
+    await import('jquery/src/deferred.js');
+    const { jQuery } = await import('jquery/src/core.js');
+    const createDeferred = jQuery.Deferred;
+    const requests = [];
+    const dispatched = [];
+    const action = (type) => (payload) => ({ type, payload });
+    const defaultExport = (value) => ({ __esModule: true, default: value });
+    const createAjaxRequest = loadComponent('Utilities/createAjaxRequest.js', new Map([
+      ['jquery', defaultExport({
+        Deferred: createDeferred,
+        ajax(options) {
+          const deferred = createDeferred();
+          const xhr = options.xhr();
+          xhr.abort = () => deferred.reject(xhr, 'abort', 'abort');
+          requests.push({ options, deferred, xhr });
+          return deferred.promise();
+        }
+      })],
+      ['./refreshUiSession', defaultExport(() => assert.fail('A master-key fixture must not refresh a UI session'))]
+    ]), 'default', { window });
+    const handlers = loadComponent('Store/Actions/interactiveImportActions.js', new Map([
+      ['redux-actions', { createAction: action }],
+      ['redux-batched-actions', { batchActions: action('batch') }],
+      ['Helpers/Props', { sortDirections: { ASCENDING: 'ascending' } }],
+      ['Store/thunks', { createThunk: action, handleThunks: (value) => value }],
+      ['./baseActions', { set: action('set'), update: action('update') }],
+      ['./Creators/createFetchHandler', defaultExport(() => {})],
+      ['./Creators/createHandleActions', defaultExport(() => {})],
+      ['./Creators/Reducers/createSetClientSideCollectionSortReducer', defaultExport(() => {})],
+      ['Utilities/createAjaxRequest', defaultExport((options) => {
+        const result = createAjaxRequest(options);
+        requests.at(-1).completion = new Promise((resolve) => result.request.always(() => resolve()));
+        assert.equal(typeof result.request.finally, 'undefined');
+        return result;
+      })]
+    ]), 'actionHandlers');
+    const fetchItems = handlers['interactiveImport/fetchInteractiveImportItems'];
+    const cancelFetch = handlers['interactiveImport/cancelFetchInteractiveImportItems'];
+    const dispatch = (value) => dispatched.push(value);
+    const file = { id: 1, path: '/incoming/book.epub' };
+
+    fetchItems(null, { folder: '/incoming' }, dispatch);
+    const folderRequest = requests.at(-1);
+    assert.equal(folderRequest.options.url, '/books/api/v1/manualimport');
+    assert.equal(folderRequest.options.headers['X-ChaptarrNG-Client'], 'native');
+    folderRequest.deferred.resolve([file]);
+    await folderRequest.completion;
+    assert.equal(dispatched.at(-1).payload[0].payload.data[0], file);
+    assert.equal(dispatched.at(-1).payload[1].payload.isFetching, false);
+    assert.equal(dispatched.at(-1).payload[1].payload.isPopulated, true);
+
+    fetchItems(null, { downloadId: 'tracked-download' }, dispatch);
+    const failedRequest = requests.at(-1);
+    assert.equal(failedRequest.options.data.downloadId, 'tracked-download');
+    failedRequest.xhr.status = 500;
+    failedRequest.deferred.reject(failedRequest.xhr, 'error', 'Preview unavailable');
+    await failedRequest.completion;
+    assert.equal(dispatched.at(-1).payload.error, failedRequest.xhr);
+    assert.equal(dispatched.at(-1).payload.isFetching, false);
+    assert.equal(dispatched.at(-1).payload.isPopulated, false);
+
+    fetchItems(null, { downloadId: 'tracked-download' }, dispatch);
+    const retryRequest = requests.at(-1);
+    retryRequest.deferred.resolve([file]);
+    await retryRequest.completion;
+    assert.equal(dispatched.at(-1).payload[1].payload.error, null);
+    assert.equal(dispatched.at(-1).payload[1].payload.isPopulated, true);
+
+    fetchItems(null, { folder: '/cancelled' }, dispatch);
+    const cancelledRequest = requests.at(-1);
+    const dispatchCount = dispatched.length;
+    cancelFetch();
+    await cancelledRequest.completion;
+    assert.equal(cancelledRequest.xhr.aborted, true);
+    assert.equal(dispatched.length, dispatchCount);
+  } finally {
+    if (originalWindow === undefined) {
+      delete global.window;
+    } else {
+      global.window = originalWindow;
+    }
+  }
 });
 
 function fileBrowserMocks() {

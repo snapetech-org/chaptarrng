@@ -8,7 +8,7 @@ A Snapetech-maintained Chaptarr fork for audiobook and eBook libraries.
 
 [![License](https://img.shields.io/github/license/snapetech-org/chaptarrng)](https://github.com/snapetech-org/chaptarrng/blob/main/LICENSE)
 [![.NET 10 LTS](https://img.shields.io/badge/.NET-10%20LTS-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/en-us/platform/support/policy)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/nqFGsGUug2)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/5PyXBfvS6T)
 
 </div>
 
@@ -27,6 +27,21 @@ The application continues to identify itself as `Chaptarr` through its Readarr-c
 For local MCP access, see the [SnapeTech MCP integration guide](docs/integrations/snapetech-mcp.md).
 
 ### BookshelfNG migration status
+
+**Current status: 2026-11-08 UTC.** [ChaptarrNG v0.9.986](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.986)
+is the latest public release. Its [public release run](https://github.com/snapetech-org/chaptarrng/actions/runs/42515404591)
+passed native Linux, Windows, macOS, PostgreSQL and Docker validation, all ten
+standalone archive builds, and release publication. A separate
+[package distribution retry](https://github.com/snapetech-org/chaptarrng/actions/runs/42523595619)
+passed ChaptarrNG AUR and Chocolatey publication; the
+[COPR `0.9.986-1` build](https://copr.fedorainfracloud.org/coprs/slskdn/chaptarrng/build/11288368/)
+also succeeded. The legacy BookshelfNG package bridges remain disabled. Existing
+BookshelfNG installations should follow the [preview, backup, migration and
+rollback guide](docs/MIGRATE_FROM_BOOKSHELFNG.md) before changing production
+service or package identities.
+
+The dated qualification notes below record the evidence available before this
+release. References to `v0.9.977` as the latest release are historical.
 
 **Status checked: 2026-11-05 UTC.** The unpublished candidate now includes
 schema-126 indexes for large-library migration identity lookups. BookshelfNG `0.4.21.76` and ChaptarrNG `v0.9.977` remain the latest

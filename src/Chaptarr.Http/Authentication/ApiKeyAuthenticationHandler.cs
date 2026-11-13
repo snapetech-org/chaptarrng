@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using NzbDrone.Common.Options;
 using NzbDrone.Core.Configuration;
 
@@ -77,6 +78,13 @@ namespace Chaptarr.Http.Authentication
                 }
             }
 
+            // Calendar clients need a stable URL credential with read-only feed scope.
+            if (Request.Query.TryGetValue("calendarToken", out var calendarToken))
+            {
+                var token = calendarToken.FirstOrDefault();
+                return token?.StartsWith("cal_", StringComparison.Ordinal) == true ? token : null;
+            }
+
             // Backward compatible: query-string token support.
             if ((!string.Equals(Options.QueryName, "apikey", StringComparison.OrdinalIgnoreCase) || _allowApiKeyQuery) &&
                 Request.Query.TryGetValue(Options.QueryName, out var queryValue))
@@ -97,6 +105,18 @@ namespace Chaptarr.Http.Authentication
             }
 
             var providedBytes = Encoding.UTF8.GetBytes(providedApiKey);
+            if (providedApiKey.StartsWith("cal_", StringComparison.Ordinal))
+            {
+                return CalendarFeedCredential.Validate(Request, providedApiKey, _apiKey)
+                    ? CreateSuccess("calendar")
+                    : AuthenticateResult.Fail("The calendar credential cannot access this endpoint.");
+            }
+
+            if (providedApiKey.StartsWith("ui_", StringComparison.Ordinal) &&
+                Context.RequestServices.GetRequiredService<IUiSessionTokenService>().Validate(Context, providedApiKey))
+            {
+                return CreateSuccess("full");
+            }
             if (providedBytes.Length == _apiKeyBytes.Length &&
                 CryptographicOperations.FixedTimeEquals(providedBytes, _apiKeyBytes))
             {

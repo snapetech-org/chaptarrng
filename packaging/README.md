@@ -1,13 +1,17 @@
 # Native package channels
 
-Status checked 2026-10-26. ChaptarrNG [`v0.9.977`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
+Status checked 2026-11-10. ChaptarrNG [`v0.9.995`](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.995)
 is the latest published release; [main](https://github.com/snapetech-org/chaptarrng/tree/main) includes candidate-only
 BookshelfNG migration and package-bridge tooling. GitHub Release archives are the payload for
 native packages; the standard ChaptarrNG container is built separately from
 the same application source and migration code. Package recipes add service
 and filesystem integration. See the
-[ChaptarrNG v0.9.977 release](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.977)
+[ChaptarrNG v0.9.995 release](https://github.com/snapetech-org/chaptarrng/releases/tag/v0.9.995)
 for the published archives, checksums, and source RPMs.
+
+For exact-current release evidence, environment requirements and outstanding
+installed-package checks, use the [2026-11-10 package acceptance handoff](../docs/maintainers/PACKAGE_ACCEPTANCE_HANDOFF_2026-11-10.md).
+Older dated acceptance sections below describe historical candidate versions.
 
 The current local candidate has passed the installed and runtime rehearsals
 listed in the [channel acceptance matrix](../docs/maintainers/BOOKSHELFNG_CHANNEL_ACCEPTANCE_2026-10-26.md).
@@ -181,8 +185,8 @@ ChaptarrNG `main` now skips those attributes when merging custom packs. The
 follow-up
 [39595241427](https://github.com/snapetech-org/chaptarrng/actions/runs/39595241427)
 reached pack collection but failed because it expected SDK 10.0.402 to include
-the pinned 10.0.12 reference packs. The source fix now packages the installed
-SDK reference-pack versions and pins custom-runtime publishing to 10.0.12. Its
+the pinned 10.0.15 reference packs. The source fix now packages the installed
+SDK reference-pack versions and pins custom-runtime publishing to 10.0.15. Its
 focused checks pass locally; hosted validation is pending. CI artifacts are
 temporary and do not publish assets. These archives are not public until a later
 release is approved. Keep
@@ -190,6 +194,14 @@ BookshelfNG in service until the full migration and channel acceptance gates
 close.
 Keep the BookshelfNG installation in service until a replacement channel is
 validated or that platform is explicitly retired.
+
+As of 2026-11-12, standalone runtime pins have moved to .NET 10.0.15 and SDK
+10.0.404 to include the current security servicing release. The FreeBSD packs
+are source-built from the pinned .NET VMR v10.0.115 commit and digest-pinned
+FreeBSD cross-build image in
+`packaging/scripts/build-extra-platform-runtime-packs.sh`; the obsolete
+v10.0.113 archive is no longer consumed. Native installed acceptance is still
+required before publishing a FreeBSD archive.
 
 BookshelfNG's built-in updater cannot discover the first ChaptarrNG release.
 Manual macOS and FreeBSD installs therefore need a one-time download of the

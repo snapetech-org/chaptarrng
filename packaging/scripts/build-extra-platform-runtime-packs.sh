@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly runtime_tag="v10.0.12"
-readonly runtime_sdk="10.0.110"
-readonly aspnet_sdk="10.0.111"
-readonly app_sdk="${DOTNETVERSION:-10.0.403}"
+readonly runtime_tag="v10.0.15"
+readonly runtime_sdk="10.0.115"
+readonly aspnet_sdk="10.0.115"
+readonly app_sdk="${DOTNETVERSION:-10.0.404}"
 readonly cross_image="mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-x86@sha256:ecc9c107cd33f8303cba2280eb1537f045acaa88fc0f00780ea6232d19e942b8"
-readonly freebsd_archive_url="https://github.com/Thefrank/dotnet-freebsd-crossbuild/releases/download/v10.0.112-amd64-freebsd-14/Private.SourceBuilt.Artifacts.10.0.112-servicing.26422.108.freebsd-x64.tar.gz"
-readonly freebsd_archive_sha256="7e032c2024cfb17ac3bb27ab8d35234a6e74f5ede16e66ca8420bcf66028d978"
+readonly freebsd_vmr_tag="v10.0.115"
+readonly freebsd_vmr_commit="8e0f8ed2312954727f8919d7d1c2f78b483b4ee7"
+readonly freebsd_vmr_image="mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-freebsd-14-amd64@sha256:4ca96ef731e1466924d62d0fb6d2649cfc117bd98faedede5879ba98530e219b"
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 work_root="${PLATFORM_RUNTIME_WORK_DIR:?Set PLATFORM_RUNTIME_WORK_DIR to a task-scoped scratch directory}"
@@ -15,7 +16,9 @@ output_root="${PLATFORM_RUNTIME_PACKS_OUTPUT:?Set PLATFORM_RUNTIME_PACKS_OUTPUT 
 dotnet_root="${DOTNET_ROOT:-$(dirname "$(readlink -f "$(command -v dotnet)")")}"
 runtime_repo="$work_root/runtime"
 aspnet_repo="$work_root/aspnetcore"
+freebsd_vmr_repo="$work_root/dotnet-vmr"
 runtime_shipping="$runtime_repo/artifacts/packages/Release/Shipping"
+freebsd_vmr_shipping="$freebsd_vmr_repo/artifacts/packages/Release/Shipping"
 
 die() {
     echo "$*" >&2
@@ -90,6 +93,34 @@ clone_sources() {
     git -C "$aspnet_repo" submodule update --init --depth 1
 }
 
+build_freebsd_runtime_packs() {
+    local official_build_id
+    official_build_id="$(get_official_build_id)"
+
+    git clone --depth 1 --branch "$freebsd_vmr_tag" https://github.com/dotnet/dotnet.git "$freebsd_vmr_repo"
+    local actual_commit
+    actual_commit="$(git -C "$freebsd_vmr_repo" rev-parse HEAD)"
+    [ "$actual_commit" = "$freebsd_vmr_commit" ] || die "FreeBSD VMR tag resolved to unexpected commit $actual_commit"
+
+    docker run --rm --init \
+        --mount "type=bind,src=$freebsd_vmr_repo,dst=/vmr" \
+        --workdir /vmr \
+        "$freebsd_vmr_image" \
+        bash -lc "ROOTFS_DIR=/crossrootfs/x64 ./build.sh --prep --configuration Release --target-os freebsd --target-arch x64 --target-rid freebsd-x64 --source-build --clean-while-building -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true -p:BundleCrossgen2=true --ci --official-build-id $official_build_id"
+
+    local package
+    for package in \
+        runtime/Microsoft.NETCore.App.Host.freebsd-x64.10.0.15.nupkg \
+        runtime/Microsoft.NETCore.App.Runtime.freebsd-x64.10.0.15.nupkg \
+        aspnetcore/Microsoft.AspNetCore.App.Runtime.freebsd-x64.10.0.15.nupkg; do
+        [ -s "$freebsd_vmr_shipping/$package" ] || die "The pinned .NET VMR source build did not produce $package"
+    done
+
+    local runtime_archive
+    runtime_archive="$(find "$freebsd_vmr_repo/artifacts/assets/Release/Runtime" -type f -name 'dotnet-runtime-10.0.15-freebsd-x64.tar.gz' -print -quit)"
+    [ -n "$runtime_archive" ] && [ -s "$runtime_archive" ] || die "The pinned .NET VMR source build did not produce the FreeBSD .NET 10.0.15 runtime archive"
+}
+
 patch_runtime_sources() {
     python3 - "$runtime_repo" <<'PY'
 from pathlib import Path
@@ -119,6 +150,102 @@ def add_rid_attributes(content):
     return re.sub(r'<(?:KnownFrameworkReference|KnownAppHostPack)\s+Include="Microsoft\.NETCore\.App"[\s\S]*?/>', update, content)
 
 edit("eng/targetingpacks.targets", add_rid_attributes)
+# Unix x86 uses ECX/EDX for managed this/return-buffer arguments, matching
+# i386/asmhelpers.asm. The upstream .S worker swaps callee-saved EDI/ESI,
+# corrupting closed static delegates that return structs (including nullable
+# doubles in compiled property accessors). Keep this patch scoped to the
+# version-pinned runtime source and qualify the resulting runtime by execution.
+worker = root / "src/coreclr/vm/i386/asmhelpers.S"
+old_worker = """//edi -This pointer
+//esi -ReturnBuffer
+LEAF_ENTRY ThisPtrRetBufPrecodeWorker, _TEXT
+    mov  eax, [eax + ThisPtrRetBufPrecodeData__Target]
+    // Use XOR swap technique to set avoid the need to spill to the stack
+    xor edi, esi
+    xor esi, edi
+    xor edi, esi
+    jmp eax
+LEAF_END ThisPtrRetBufPrecodeWorker, _TEXT"""
+new_worker = old_worker.replace("//edi -This pointer", "//ecx -This pointer").replace(
+    "//esi -ReturnBuffer", "//edx -ReturnBuffer").replace(
+    "xor edi, esi", "xor ecx, edx").replace("xor esi, edi", "xor edx, ecx")
+worker_source = worker.read_text()
+if worker_source.count(old_worker) != 1:
+    raise SystemExit("Unrecognized Unix x86 delegate return-buffer worker; review the runtime patch")
+worker.write_text(worker_source.replace(old_worker, new_worker, 1))
+
+# Unix x86 EH funclets can enumerate the same movable stack slot once from the
+# funclet and again from its parent. The promotion pass tolerates that duplicate,
+# but the relocation pass must update the slot only once. Keep the correction
+# architecture-scoped and fail closed if the pinned runtime source changes.
+gc_enum = root / "src/coreclr/vm/gcenv.ee.common.cpp"
+old_double_reporting = """void CheckDoubleReporting(GCCONTEXT *pCtx, Object **ppObj, uint32_t flags)
+{
+    if (((flags & GC_CALL_PINNED) == 0) && pCtx->sc->promotion)
+    {
+        if (pCtx->pScannedSlots == NULL)
+        {
+            pCtx->pScannedSlots = new (nothrow) SetSHash<Object**, PtrSetSHashTraits<Object**> >();
+            if (pCtx->pScannedSlots == NULL)
+            {
+                return;
+            }
+        }
+        _ASSERTE_ALL_BUILDS(pCtx->pScannedSlots->Lookup(ppObj) == NULL);
+        pCtx->pScannedSlots->AddNoThrow(ppObj);
+    }
+}"""
+new_double_reporting = """bool CheckDoubleReporting(GCCONTEXT *pCtx, Object **ppObj, uint32_t flags)
+{
+    bool shouldTrack = (flags & GC_CALL_PINNED) == 0;
+#if !defined(TARGET_UNIX) || !defined(TARGET_X86)
+    shouldTrack = shouldTrack && pCtx->sc->promotion;
+#endif
+    if (shouldTrack)
+    {
+        if (pCtx->pScannedSlots == NULL)
+        {
+            pCtx->pScannedSlots = new (nothrow) SetSHash<Object**, PtrSetSHashTraits<Object**> >();
+            if (pCtx->pScannedSlots == NULL)
+            {
+                return false;
+            }
+        }
+        bool isDuplicate = pCtx->pScannedSlots->Lookup(ppObj) != NULL;
+        if (g_pConfig->GetCheckDoubleReporting())
+        {
+            _ASSERTE_ALL_BUILDS(!isDuplicate);
+        }
+        if (isDuplicate)
+        {
+            return true;
+        }
+        pCtx->pScannedSlots->AddNoThrow(ppObj);
+    }
+
+    return false;
+}"""
+old_enum_call = """    if (g_pConfig->GetCheckDoubleReporting())
+    {
+        CheckDoubleReporting(pCtx, ppObj, flags);
+    }"""
+new_enum_call = """#if defined(TARGET_UNIX) && defined(TARGET_X86)
+    // Relocating a duplicate movable slot twice corrupts its updated reference.
+    if (CheckDoubleReporting(pCtx, ppObj, flags))
+    {
+        return;
+    }
+#else
+    if (g_pConfig->GetCheckDoubleReporting())
+    {
+        CheckDoubleReporting(pCtx, ppObj, flags);
+    }
+#endif"""
+gc_enum_source = gc_enum.read_text()
+if gc_enum_source.count(old_double_reporting) != 1 or gc_enum_source.count(old_enum_call) != 1:
+    raise SystemExit("Unrecognized GC root enumeration source; review the Unix x86 EH correction")
+gc_enum.write_text(gc_enum_source.replace(old_double_reporting, new_double_reporting, 1).replace(
+    old_enum_call, new_enum_call, 1))
 edit("eng/Subsets.props", lambda s: re.sub(r'^.*crossgen-corelib\.proj.*\n', "", s, flags=re.MULTILINE))
 edit("eng/Subsets.props", lambda s: s.replace(
     "Condition=\"'$(RuntimeFlavor)' != 'Mono' and ('$(TargetsMobile)' != 'true' and '$(TargetsLinuxBionic)' != 'true')\" Include=\"$(InstallerProjectRoot)pkg\\sfx\\Microsoft.NETCore.App\\Microsoft.NETCore.App.Crossgen2.sfxproj\"",
@@ -179,7 +306,7 @@ if 'Microsoft.NETCore.App.Runtime.linux-x86' not in text:
 dependencies.write_text(text)
 PY
     sed -i '/dnceng\/internal/d' "$aspnet_repo/NuGet.config"
-    dotnet nuget add source "$runtime_shipping" --name chaptarr-linux-x86-runtime --configfile "$aspnet_repo/NuGet.config"
+    "$dotnet_root/dotnet" nuget add source "$runtime_shipping" --name chaptarr-linux-x86-runtime --configfile "$aspnet_repo/NuGet.config"
 }
 
 build_linux_x86_aspnetcore() {
@@ -218,52 +345,35 @@ verify_sha256() {
 }
 
 collect_platform_artifacts() {
-    local freebsd_archive="$work_root/freebsd-source-built.tar.gz"
     local runtime_archive
-    local freebsd_runtime_path
     local freebsd_runtime_archive
 
     mkdir -p "$output_root/packages" "$output_root/runtimes" "$output_root/sdk/sdk" "$output_root/sdk/packs"
 
     for package in \
-        Microsoft.NETCore.App.Host.linux-x86.10.0.12.nupkg \
-        Microsoft.NETCore.App.Runtime.linux-x86.10.0.12.nupkg; do
+        Microsoft.NETCore.App.Host.linux-x86.10.0.15.nupkg \
+        Microsoft.NETCore.App.Runtime.linux-x86.10.0.15.nupkg; do
         [ -s "$runtime_shipping/$package" ] || die "The .NET runtime build did not produce $package"
         cp "$runtime_shipping/$package" "$output_root/packages/"
     done
 
     local aspnet_package
-    aspnet_package="$(find "$aspnet_repo/artifacts/packages/Release/Shipping" -maxdepth 1 -type f -name 'Microsoft.AspNetCore.App.Runtime.linux-x86.10.0.12.nupkg' -print -quit)"
+    aspnet_package="$(find "$aspnet_repo/artifacts/packages/Release/Shipping" -maxdepth 1 -type f -name 'Microsoft.AspNetCore.App.Runtime.linux-x86.10.0.15.nupkg' -print -quit)"
     [ -n "$aspnet_package" ] || die "ASP.NET Core did not produce the Linux x86 runtime pack"
     cp "$aspnet_package" "$output_root/packages/"
 
-    runtime_archive="$(find "$runtime_shipping" -maxdepth 1 -type f -name 'dotnet-runtime-10.0.12-linux-x86.tar.gz' -print -quit)"
+    runtime_archive="$(find "$runtime_shipping" -maxdepth 1 -type f -name 'dotnet-runtime-10.0.15-linux-x86.tar.gz' -print -quit)"
     [ -n "$runtime_archive" ] || die "The .NET runtime build did not produce the Linux x86 runtime archive"
     cp "$runtime_archive" "$output_root/runtimes/linux-x86-runtime.tar.gz"
 
-    curl --fail --location --retry 3 --silent --show-error --output "$freebsd_archive" "$freebsd_archive_url"
-    verify_sha256 "$freebsd_archive_sha256" "$freebsd_archive"
-    tar -xzf "$freebsd_archive" -C "$output_root/packages" \
-        Microsoft.NETCore.App.Host.freebsd-x64.10.0.12.nupkg \
-        Microsoft.NETCore.App.Runtime.freebsd-x64.10.0.12.nupkg \
-        Microsoft.AspNetCore.App.Runtime.freebsd-x64.10.0.12.nupkg
-    freebsd_runtime_path="$(
-      tar -tzf "$freebsd_archive" |
-        awk '
-          /^assets\/Release\/Runtime\/[^/]+\/dotnet-runtime-10\.0\.12-freebsd-x64\.tar\.gz$/ {
-            if (!found) first = $0
-            found = 1
-          }
-          END { if (found) print first }
-        '
-    )"
-    [ -n "$freebsd_runtime_path" ] || die "Pinned FreeBSD archive is missing its .NET runtime tarball"
-    tar -xzf "$freebsd_archive" -C "$work_root" "$freebsd_runtime_path"
-    freebsd_runtime_archive="$work_root/$freebsd_runtime_path"
+    cp "$freebsd_vmr_shipping/runtime/Microsoft.NETCore.App.Host.freebsd-x64.10.0.15.nupkg" "$output_root/packages/"
+    cp "$freebsd_vmr_shipping/runtime/Microsoft.NETCore.App.Runtime.freebsd-x64.10.0.15.nupkg" "$output_root/packages/"
+    cp "$freebsd_vmr_shipping/aspnetcore/Microsoft.AspNetCore.App.Runtime.freebsd-x64.10.0.15.nupkg" "$output_root/packages/"
+    freebsd_runtime_archive="$(find "$freebsd_vmr_repo/artifacts/assets/Release/Runtime" -type f -name 'dotnet-runtime-10.0.15-freebsd-x64.tar.gz' -print -quit)"
     cp "$freebsd_runtime_archive" "$output_root/runtimes/freebsd-x64-runtime.tar.gz"
 
     for rid in linux-x86 freebsd-x64; do
-        local source_package="$output_root/packages/Microsoft.AspNetCore.App.Runtime.$rid.10.0.12.nupkg"
+        local source_package="$output_root/packages/Microsoft.AspNetCore.App.Runtime.$rid.10.0.15.nupkg"
         local shared_folder="$work_root/aspnet-shared/$rid"
         mkdir -p "$shared_folder"
         unzip -q -j "$source_package" "runtimes/$rid/lib/net10.0/*" -d "$shared_folder"
@@ -278,14 +388,16 @@ collect_platform_artifacts() {
         cp -a "$dotnet_root/sdk-manifests/10.0.400" "$output_root/sdk/sdk-manifests/"
     fi
 
-    python3 -c 'from pathlib import Path; import sys; Path(sys.argv[1]).unlink(missing_ok=True)' "$freebsd_archive"
-    printf 'Platform runtime packs built from .NET %s and ASP.NET Core %s.\n' "$runtime_tag" "$runtime_tag" > "$output_root/BUILD-INFO.txt"
+    {
+        printf 'Platform runtime packs built from .NET %s and ASP.NET Core %s.\n' "$runtime_tag" "$runtime_tag"
+        printf 'FreeBSD VMR source: https://github.com/dotnet/dotnet/tree/%s (%s)\n' "$freebsd_vmr_tag" "$freebsd_vmr_commit"
+        printf 'FreeBSD source-build image: %s\n' "$freebsd_vmr_image"
+        printf 'FreeBSD official build ID: %s\n' "$(get_official_build_id)"
+    } > "$output_root/BUILD-INFO.txt"
+    (cd "$output_root" && find packages runtimes -type f -print0 | sort -z | xargs -0 sha256sum) > "$output_root/SHA256SUMS"
     cp "$repo_root/packaging/scripts/install-extra-platform-runtime-packs.sh" "$output_root/"
 }
 
-require_sdk "$runtime_sdk"
-require_sdk "$aspnet_sdk"
-require_sdk "$app_sdk"
 [[ "$work_root" != "$output_root" ]] || die "Runtime-pack work and output paths must be different"
 [[ "$work_root" = /* && "$output_root" = /* ]] || die "Runtime-pack work and output paths must be absolute"
 [[ ! -e "$work_root" ]] || die "Task-scoped runtime-pack work path already exists: $work_root"
@@ -294,6 +406,11 @@ command -v docker >/dev/null || die "Docker is required to build the Linux x86 r
 command -v python3 >/dev/null || die "Python 3 is required to patch the pinned .NET build metadata"
 command -v unzip >/dev/null || die "unzip is required to assemble the ASP.NET shared runtime"
 
+mkdir -p "$work_root"
+require_sdk "$runtime_sdk"
+require_sdk "$aspnet_sdk"
+require_sdk "$app_sdk"
+build_freebsd_runtime_packs
 clone_sources
 patch_sdk_runtime_ids "$runtime_sdk"
 patch_sdk_runtime_ids "$app_sdk"

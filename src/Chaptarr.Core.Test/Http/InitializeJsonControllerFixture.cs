@@ -5,8 +5,11 @@ using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
 using NUnit.Framework;
 using Chaptarr.Http.Frontend;
+using Chaptarr.Http.Authentication;
+using NzbDrone.Core.Authentication;
 using NzbDrone.Core.Configuration;
 
 namespace Chaptarr.Core.Test.Http
@@ -49,6 +52,7 @@ namespace Chaptarr.Core.Test.Http
                 var state = (ConfigFileProviderProxy)(object)proxy;
                 state.Values[nameof(IConfigFileProvider.UrlBase)] = urlBase;
                 state.Values[nameof(IConfigFileProvider.ApiKey)] = apiKey;
+                state.Values[nameof(IConfigFileProvider.AuthCookieStamp)] = "test-stamp";
                 state.Values[nameof(IConfigFileProvider.InstanceName)] = instanceName;
                 state.Values[nameof(IConfigFileProvider.Theme)] = theme;
                 state.Values[nameof(IConfigFileProvider.Branch)] = branch;
@@ -56,11 +60,13 @@ namespace Chaptarr.Core.Test.Http
             }
         }
 
-        [Test]
-        public void should_disable_cache_and_serialize_expected_initialize_shape()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void should_disable_cache_and_serialize_expected_initialize_shape(bool setupRequired)
         {
-            var controller = new InitializeJsonController(
-                ConfigFileProviderProxy.Create("/chaptarr", "api-key", "Library", "dark", "main"))
+            var config = ConfigFileProviderProxy.Create("/chaptarr", "api-key", "Library", "dark", "main");
+            var setupTokens = Mock.Of<IInitialSetupTokenService>(tokens => tokens.IsRequired == setupRequired);
+            var controller = new InitializeJsonController(config, new UiSessionTokenService(config), setupTokens)
             {
                 ControllerContext = new ControllerContext
                 {
@@ -79,11 +85,13 @@ namespace Chaptarr.Core.Test.Http
             var root = json.RootElement;
 
             Assert.That(root.GetProperty("ApiRoot").GetString(), Is.EqualTo("/chaptarr/api/v1"));
-            Assert.That(root.GetProperty("ApiKey").GetString(), Is.EqualTo("api-key"));
+            Assert.That(root.GetProperty("ApiKey").GetString(), Does.StartWith("ui_"));
+            Assert.That(root.GetProperty("ApiKey").GetString(), Is.Not.EqualTo("api-key"));
             Assert.That(root.GetProperty("InstanceName").GetString(), Is.EqualTo("Library"));
             Assert.That(root.GetProperty("Theme").GetString(), Is.EqualTo("dark"));
             Assert.That(root.GetProperty("Branch").GetString(), Is.EqualTo("main"));
             Assert.That(root.GetProperty("UrlBase").GetString(), Is.EqualTo("/chaptarr"));
+            Assert.That(root.GetProperty("SetupRequired").GetBoolean(), Is.EqualTo(setupRequired));
             Assert.That(root.GetProperty("UserHash").GetString(), Is.Not.Empty);
 
             var buildTime = root.GetProperty("BuildTime").GetString();

@@ -84,6 +84,33 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
         }
 
         [Test]
+        public void should_route_settings_only_hardcover_ids_to_native_catalog()
+        {
+            Environment.SetEnvironmentVariable("HARDCOVER", null);
+            _configService.Setup(x => x.MetadataCatalogSources).Returns("hardcover");
+            _configService.Setup(x => x.IsDefined("MetadataCatalogSources")).Returns(true);
+
+            Subject.IsNativeEnabled.Should().BeTrue();
+
+            Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", "false");
+            Subject.IsNativeEnabled.Should().BeFalse();
+
+            Environment.SetEnvironmentVariable("HARDCOVER_NATIVE", null);
+            Environment.SetEnvironmentVariable("HARDCOVER", "false");
+            Subject.IsNativeEnabled.Should().BeFalse();
+        }
+
+        [Test]
+        public void should_not_route_unselected_hardcover_ids_to_native_catalog()
+        {
+            Environment.SetEnvironmentVariable("HARDCOVER", null);
+            _configService.Setup(x => x.MetadataCatalogSources).Returns("metadata-api");
+            _configService.Setup(x => x.IsDefined("MetadataCatalogSources")).Returns(true);
+
+            Subject.IsNativeEnabled.Should().BeFalse();
+        }
+
+        [Test]
         public void should_fail_clearly_when_native_is_requested_without_token()
         {
             Environment.SetEnvironmentVariable("HARDCOVER_AUTH", null);
@@ -322,9 +349,11 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
 
             result.Works.Should().ContainSingle();
             result.Works[0].ForeignId.Should().Be(101);
+            result.Works[0].Books[0].ReadingFormatId.Should().Be(1);
             result.Works[0].Authors.Should().HaveCount(2);
             requests.Should().ContainSingle();
             var authorPayload = JObject.Parse(Encoding.UTF8.GetString(requests[0].ContentData));
+            authorPayload["query"].Value<string>().Should().Contain("reading_format_id");
             authorPayload["variables"]["limit"].Value<int>().Should().Be(50);
             authorPayload["variables"]["offset"].Value<int>().Should().Be(0);
         }
@@ -351,6 +380,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
 
             result.Works.Should().ContainSingle();
             result.Works[0].ForeignId.Should().Be(101);
+            result.Works[0].Books[0].ReadingFormatId.Should().Be(1);
         }
 
         private static string CreateAuthorResponse(bool mismatchedNestedAuthor = false)
@@ -486,6 +516,7 @@ namespace NzbDrone.Core.Test.MetadataSource.Hardcover
                         ""asin"": ""B000000001"",
                         ""isbn_13"": ""9780553293357"",
                         ""edition_format"": null,
+                        ""reading_format_id"": 1,
                         ""pages"": 255,
                         ""language"": { ""code3"": ""eng"" },
                         ""publisher"": { ""name"": ""Spectra"" },

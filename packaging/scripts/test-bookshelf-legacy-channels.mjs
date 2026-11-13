@@ -139,20 +139,53 @@ test('AppImage keeps its desktop identity, BookshelfNG data directory, and Chapt
   assert.match(appRun, /Replace this AppImage with a newer compatible build/);
 });
 
-test('macOS and FreeBSD standalone archives include the optional, recoverable BookshelfNG handoff', () => {
+test('Linux, macOS and FreeBSD standalone archives include the optional, recoverable BookshelfNG handoff', () => {
   const builder = read('packaging/scripts/build-standalone.sh');
+  const buildProps = read('src/Directory.Build.props');
+  const tagLibBuildProps = read('src/TagLibSharp/Directory.Build.props');
   const launcher = read('scripts/bookshelfng-standalone-launch.sh');
   const supervisor = read('packaging/legacy/desktop/bookshelfng-supervisor.sh');
   const migrationGuide = read('docs/MIGRATE_FROM_BOOKSHELFNG.md');
   const handoffTest = read('packaging/scripts/test-bookshelf-standalone-handoff.py');
 
-  assert.match(builder, /publish_standalone_project\(\)[\s\S]*?if \[\[ "\$rid" == linux-x86 \|\| "\$rid" == freebsd-x64 \]\][\s\S]*?dotnet publish "\$@" "\$\{restore_sources\[@\]\}"/,
-    'macOS Bash can publish standalone RIDs without expanding an empty array under nounset');
+  assert.match(builder, /publish_standalone_project\(\)[\s\S]*?if \[\[ "\$rid" == linux-x86 \|\| "\$rid" == freebsd-x64 \]\]; then\s+dotnet publish "\$@" --no-restore "\$\{restore_sources\[@\]\}"\s+else\s+dotnet publish "\$@" --no-restore\s+fi/,
+    'macOS Bash can publish ordinary standalone RIDs without expanding an empty array under nounset');
+  const publishWrapper = builder.match(/publish_standalone_project\(\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(publishWrapper, 'the publish wrapper must exist');
+  for (const rid of ['osx-arm64', 'linux-x64', 'linux-x86', 'freebsd-x64']) {
+    const script = `set -euo pipefail
+rid="$1"
+if [[ "$rid" == linux-x86 || "$rid" == freebsd-x64 ]]; then
+  restore_sources=("-p:ChaptarrStandaloneLockRoot=fixture locks")
+fi
+dotnet() { printf '%s\\n' "$@"; }
+${publishWrapper}
+publish_standalone_project "project with spaces.csproj" --output "output with spaces"
+`;
+    const result = spawnSync('bash', ['-c', script, 'publish-contract', rid], { encoding: 'utf8' });
+    assert.equal(result.status, 0, `${rid}: ${result.stderr}`);
+    const expected = ['publish', 'project with spaces.csproj', '--output', 'output with spaces', '--no-restore'];
+    if (rid === 'linux-x86' || rid === 'freebsd-x64') {
+      expected.push('-p:ChaptarrStandaloneLockRoot=fixture locks');
+    }
+    assert.deepEqual(result.stdout.trimEnd().split('\n'), expected,
+      `${rid} preserves argument boundaries and publishes only after the separately verified restore`);
+  }
+  assert.match(builder, /export NUGET_PACKAGES="\$work\/nuget-packages"/,
+    'extra-platform restores cannot reuse a same-version runtime from a shared NuGet cache');
+  assert.match(builder, /"--artifacts-path"\s+"\$work\/artifacts"/,
+    'extra-platform restore metadata cannot point repository intermediates at the temporary package cache');
+  assert.match(builder, /ChaptarrStandaloneIntermediateRoot=\$work\/obj/,
+    'repository-level intermediate output overrides remain inside the standalone task workspace');
+  assert.match(buildProps, /ChaptarrStandaloneIntermediateRoot[\s\S]*?ChaptarrIntermediateRoot[\s\S]*?MSBuildProjectName/);
+  assert.match(tagLibBuildProps, /ChaptarrStandaloneIntermediateRoot[\s\S]*?MSBuildProjectName/);
+  assert.match(builder, /Published runtime[\s\S]*?does not match the selected custom runtime package/,
+    'the published main and updater runtimes must match the selected runtime package');
   assert.match(builder, /if \[\[ "\$\(uname -s\)" == Darwin \]\][\s\S]*?tar -czf/,
     'macOS uses its supported BSD tar options');
   assert.match(builder, /elif command -v shasum[\s\S]*?shasum -a 256/,
     'macOS creates the candidate checksum with its system utility');
-  assert.ok(builder.includes('if [[ "$rid" == osx-* || "$rid" == freebsd-x64 ]]'));
+  assert.ok(builder.includes('if [[ "$rid" == linux-* || "$rid" == osx-* || "$rid" == freebsd-x64 ]]'));
   assert.match(builder, /bookshelfng-standalone-launch\.sh/);
   assert.match(builder, /bookshelfng-supervisor\.sh/);
   assert.match(launcher, /has_controlling_tty\(\) \{\s*\[ -t 0 \] && \( : <\/dev\/tty >\/dev\/tty \)/);
@@ -164,6 +197,9 @@ test('macOS and FreeBSD standalone archives include the optional, recoverable Bo
   assert.match(launcher, /Install the sqlite3 package/,
     'FreeBSD tells operators how to restore the SQLite runtime prerequisite');
   assert.match(launcher, /standalone-archive/);
+  assert.match(handoffTest, /"executableElfBits"/,
+    'installed evidence records application ELF architecture separately from the harness process');
+  assert.match(handoffTest, /"executableElfMachine"/);
   assert.match(migrationGuide, /bookshelfng-standalone-launch\.sh/);
   assert.match(migrationGuide, /running[\s\S]*Chaptarr[\s\S]*directly skips the optional handoff prompt/);
   assert.ok(supervisor.includes('if [ ! -x "$console" ]; then'));
@@ -218,7 +254,7 @@ test('Helm handoff workflow supports hosted and private runners for its pinned R
   assert.match(installedHandoff, /elif \[\[ "\$RUNNER_POOL" == "private" && "\$BUILDKIT_EGRESS_PROXY" == "http:\/\/10\.0\.2\.100:3128" \]\]/);
   assert.match(installedHandoff, /--target chaptarrng-standard/);
   assert.doesNotMatch(installedHandoff, /--target bookshelf-(?:softcover|hardcover)/);
-  assert.match(workflow, /Prepare writable Ruby tool cache[\s\S]*?sudo install -d .*\/opt\/hostedtoolcache[\s\S]*?test -w \/opt\/hostedtoolcache[\s\S]*?ruby\/setup-ruby@824c0e29fdfc7d689c191c27acc969d2d04b7dd8/);
+  assert.match(workflow, /Prepare writable Ruby tool cache[\s\S]*?sudo install -d .*\/opt\/hostedtoolcache[\s\S]*?test -w \/opt\/hostedtoolcache[\s\S]*?ruby\/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94/);
   assert.match(workflow, /ruby-version: "3\.4"/);
   assert.match(workflow, /BOOKSHELFNG_REFERENCE_CHART: \$\{\{ github\.workspace \}\}\/bookshelfng-reference\/charts\/bookshelfng/);
   assert.match(workflow, /run: ruby scripts\/test_bookshelfng_helm_handoff\.rb/);
@@ -512,7 +548,7 @@ test('Cloudron candidate preserves application ID, health endpoint, port, and mo
   assert.equal(manifest.httpPort, 8787);
   assert.equal(manifest.healthCheckPath, '/ping');
   assert.deepEqual(manifest.persistentDirs, ['/config', '/books', '/downloads']);
-  assert.match(dockerfile, /^FROM ghcr\.io\/snapetech-org\/chaptarrng:latest$/m);
+  assert.match(dockerfile, /^FROM ghcr\.io\/snapetech-org\/chaptarrng@sha256:__CHAPTARRNG_IMAGE_DIGEST__$/m);
   assert.match(dockerfile, /^CMD \["dotnet", "\/app\/Chaptarr\.dll", "-nobrowser", "-data=\/config"\]$/m,
     'the Cloudron wrapper restores the app command cleared by its replacement ENTRYPOINT');
   assert.match(dockerfile, /BOOKSHELFNG_MIGRATION_MODE=automatic/);
@@ -641,7 +677,9 @@ test('release builds and verifies desktop migration candidates only behind all r
   const guardedSteps = desktopJob.match(/^      if: .*vars\.CHAPTARRNG_MIGRATION_BRIDGE_ENABLED == 'true'.*vars\.CHAPTARRNG_RELEASE_READY == 'true'.*vars\.BOOKSHELFNG_RELEASE_READY == 'true'.*$/gm) ?? [];
   assert.equal(guardedSteps.length, 5, 'download, build, and upload steps all require every release gate');
   assert.match(desktopJob, /name: chaptarrng-bookshelfng-desktop-candidates/);
-  assert.match(publishJob, /needs: \[preflight, release, docker, standalone-assets, rpm-source, windows-migration-installer, legacy-desktop-candidates\]/);
+  assert.match(publishJob, /needs: \[preflight, release, docker, standalone-assets, installed-release-linux, installed-release-desktop, rpm-source, windows-migration-installer, legacy-desktop-candidates\]/);
+  assert.match(publishJob, /needs\.installed-release-linux\.result == 'success'/);
+  assert.match(publishJob, /needs\.installed-release-desktop\.result == 'success'/);
   assert.match(publishJob, /name: chaptarrng-bookshelfng-desktop-candidates/);
   assert.match(publishJob, /ChaptarrNG-\$\{VERSION\}-bookshelfng-x86_64\.AppImage/);
   assert.match(publishJob, /ChaptarrNG-\$\{VERSION\}-bookshelfng\.flatpak/);
@@ -674,8 +712,8 @@ test('Linux release jobs install the checksum-pinned ChaptarrNG GitHub CLI actio
 
   for (const name of ['release', 'dispatch-legacy-ghcr', 'publish-release']) {
     const job = readWorkflowJob(release, name);
-    assert.match(job, /ng-shared-main-jit/);
-    assert.ok(job.includes(action), `${name} installs the pinned GitHub CLI on its private runner`);
+    assert.match(job, /runs-on: ubuntu-24\.04/);
+    assert.ok(job.includes(action), `${name} installs the pinned GitHub CLI on its public runner`);
     assert.ok(job.indexOf(action) < job.search(/gh release|dispatch-ghcr-release-bridge\.sh/),
       `${name} installs the CLI before the first use`);
     if (name === 'dispatch-legacy-ghcr') {
@@ -687,13 +725,13 @@ test('Linux release jobs install the checksum-pinned ChaptarrNG GitHub CLI actio
 
   for (const name of ['release-target', 'build-legacy-ppa', 'build-aur']) {
     const job = readWorkflowJob(distribution, name);
-    assert.match(job, /ng-shared-main-jit/);
-    assert.ok(job.includes(action), `${name} installs the pinned GitHub CLI on its private runner`);
+    assert.match(job, /runs-on: ubuntu-24\.04/);
+    assert.ok(job.includes(action), `${name} installs the pinned GitHub CLI on its public runner`);
     assert.ok(job.indexOf(action) < job.search(/gh release/), `${name} installs the CLI before release operations`);
   }
 });
 
-test('Windows release uses private Packer and verifies the BookshelfNG handoff archive', () => {
+test('Windows release uses a hosted Windows runner and verifies the BookshelfNG handoff archive', () => {
   const workflow = read('.github/workflows/release-distribution.yml');
   const job = readWorkflowJob(workflow, 'build-chocolatey');
   const handoff = read('packaging/scripts/test-chocolatey-bookshelfng-handoff.ps1');
@@ -701,10 +739,7 @@ test('Windows release uses private Packer and verifies the BookshelfNG handoff a
   const build = readWorkflowJob(buildWorkflow, 'build');
   const legacyInstaller = read('packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in');
 
-  assert.match(job, /runs-on: \$\{\{ fromJSON\(format\(/);
-  assert.match(job, /"group":"packer-windows"/);
-  assert.match(job, /"labels":\["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-\{0\}-build-chocolatey"\]/);
-  assert.match(job, /github\.run_id/);
+  assert.match(job, /runs-on: windows-2025/);
   const downloadStep = job.indexOf('name: Download and verify the release archive');
   const packageStep = job.indexOf('name: Render and pack Chocolatey package');
   assert.ok(downloadStep >= 0 && downloadStep < packageStep,
@@ -787,6 +822,8 @@ test('interactive package migration choices default to No before conversion', ()
   const aurInstall = read('packaging/legacy/aur/bookshelfng-bin/bookshelfng.install');
   const chocolatey = read('packaging/legacy/chocolatey/tools/chocolateyinstall.ps1.in');
   const desktopSupervisor = read('packaging/legacy/desktop/bookshelfng-supervisor.sh');
+  const utilityRouter = read('src/NzbDrone.Host/UtilityModeRouter.cs');
+  const bootstrap = read('src/NzbDrone.Host/Bootstrap.cs');
 
   assert.match(debianPreinstall, /has_controlling_tty\(\) \{\s*\[ -t 0 \] && \( : <\/dev\/tty >\/dev\/tty \)/,
     'Debian requires a TTY on stdin so dpkg pseudo-terminals cannot make headless apt prompt');
@@ -837,6 +874,15 @@ test('interactive package migration choices default to No before conversion', ()
     'standalone utility failures never wait for terminal input during rollback');
   assert.match(desktopSupervisor, /health_deadline=\$\(\([\s\S]*?timeout_seconds[\s\S]*?run_utility -check-bookshelf-migration[\s\S]*?-bookshelf-health-timeout-seconds=1[\s\S]*?health_deadline/,
     'standalone health checks retry while migration and service startup complete');
+  const healthMode = utilityRouter.indexOf('case ApplicationModes.CheckBookshelfMigration:');
+  const httpProbe = utilityRouter.indexOf('WaitForBookshelfHttpReady(', healthMode);
+  const migratedDatabase = utilityRouter.indexOf('var database = _connectionStringFactory.MainDbConnection;', healthMode);
+  assert.ok(healthMode >= 0 && httpProbe > healthMode && migratedDatabase > httpProbe,
+    'installed health checks wait for HTTP before opening the first-start migrated database');
+  assert.doesNotMatch(bootstrap, /ConfigureContainer<IContainer>[\s\S]*?Resolve<UtilityModeRouter>/,
+    'recovery utility startup does not resolve services while a host container is still being assembled');
+  assert.match(bootstrap, /var utilityServices = new ServiceCollection\(\)[\s\S]*?utilityFactory\.CreateBuilder\(utilityServices\)[\s\S]*?utilityFactory\.CreateServiceProvider\(utilityContainer\)[\s\S]*?GetRequiredService<IUtilityModeRouter>\(\)\.Route\(appMode\)/,
+    'recovery utility services are populated before the utility router is resolved');
 });
 
 test('Linux and Windows VM jobs execute package-specific migration-choice checks', () => {
@@ -917,6 +963,13 @@ test('StartOS candidate uses the patched SDK 3 dependency contract and documents
   assert.equal(packageJson.dependencies['@start9labs/start-sdk'], '3.1.0');
   assert.equal(packageLock.packages[''].dependencies['@start9labs/start-sdk'], '3.1.0');
   assert.equal(packageLock.packages['node_modules/@start9labs/start-sdk'].version, '3.1.0');
+  assert.equal(packageJson.overrides['@typescript-eslint/typescript-estree'].minimatch, '11.0.1');
+  for (const [path, dependency] of Object.entries(packageLock.packages)) {
+    if (!path.endsWith('/minimatch')) continue;
+    const [major, minor, patch] = dependency.version.split('.').map(Number);
+    const affected = major >= 7 && (major < 11 || (major === 11 && minor === 0 && patch === 0));
+    assert.equal(affected, false, `${path} must exclude CVE-2026-118764`);
+  }
   assert.match(dependencies, /sdk\.Dependencies\.of\(\)/);
   assert.match(index, /buildManifest\(versionGraph,\s*sdkManifest,\s*dependencies\)/);
   assert.match(init, /import \{ dependencies \} from '\.\.\/dependencies'/);

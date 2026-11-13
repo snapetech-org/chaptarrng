@@ -8,7 +8,7 @@ distribution_workflow="$repo_root/.github/workflows/release-distribution.yml"
 release_events="$(sed -n '/^on:/,/^permissions:/p' "$release_workflow")"
 grep -Fq '  workflow_dispatch:' <<< "$release_events"
 grep -Fq '          - publish' <<< "$release_events"
-grep -Fq '          - private' <<< "$release_events"
+grep -Fq '          - public' <<< "$release_events"
 grep -Fq '      release_tag:' <<< "$release_events"
 release_tag_input="$(sed -n '/      release_tag:/,/^permissions:/p' "$release_workflow")"
 grep -Fq 'Exact existing stable release tag to validate and build' <<< "$release_tag_input"
@@ -25,24 +25,34 @@ grep -Fq 'python3 packaging/scripts/check_stable_release_version.py' <<< "$prefl
 grep -Fq 'git fetch --no-tags origin "refs/tags/${TAG}:refs/tags/${TAG}" refs/heads/main:refs/remotes/origin/main' <<< "$preflight_steps"
 grep -Fq 'if ! git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main; then' <<< "$preflight_steps"
 if grep -Fq 'gh release list' <<< "$preflight_steps"; then
-  echo 'The private JIT preflight must not depend on the GitHub CLI package.' >&2
+  echo 'The release preflight must not depend on the GitHub CLI package.' >&2
   exit 1
 fi
 for workflow in "$repo_root/.github/workflows/build.yml" \
   "$repo_root/.github/workflows/docker-publish.yml" \
   "$release_workflow" "$repo_root/.github/workflows/release-distribution.yml"; do
   if [[ "$workflow" == "$repo_root/.github/workflows/build.yml" ]]; then
+    chromium_step="$(sed -n '/^    - name: Install Chromium and system dependencies on Linux$/,/^    - name: Verify Unraid package sync stays off feature branches$/p' "$workflow")"
     if grep -Fq 'sudo apt-get' "$workflow" && {
-      ! grep -Fq 'RUNNER_POOL: ${{ inputs.runner_pool }}' "$workflow" ||
-      ! grep -Fq 'if [[ "$RUNNER_POOL" == "public" ]]' "$workflow" ||
-      ! grep -Fq "inputs.runner_pool == 'public'" "$workflow"
+      ! grep -Fq "if: runner.os == 'Linux' && inputs.runner_pool == 'public'" <<< "$chromium_step" ||
+      ! grep -Fq 'sudo apt-get install -y bubblewrap' <<< "$chromium_step" ||
+      [[ "$(grep -Fc 'sudo apt-get' "$workflow")" != "$(grep -Fc 'sudo apt-get' <<< "$chromium_step")" ]]
     }; then
-      echo 'Hosted PostgreSQL client installation must be restricted to the explicit public runner pool.' >&2
+      echo 'Chromium system dependency installation must be restricted to the explicit public runner pool.' >&2
       exit 1
     fi
-  elif grep -Fq 'sudo apt-get' "$workflow"; then
-    echo "Private JIT release dependencies must be installed by the broker: $workflow" >&2
-    exit 1
+  elif [[ "$workflow" == "$release_workflow" ]]; then
+    desktop_job="$(sed -n '/^  legacy-desktop-candidates:/,/^  rpm-source:/p' "$workflow")"
+    rpm_job="$(sed -n '/^  rpm-source:/,/^  publish-release:/p' "$workflow")"
+    release_apt_count="$(grep -Fc 'sudo apt-get' "$workflow" || true)"
+    rpm_apt_count="$(grep -Fc 'sudo apt-get' <<< "$rpm_job" || true)"
+    desktop_apt_count="$(grep -Fc 'sudo apt-get' <<< "$desktop_job" || true)"
+    if [[ "$release_apt_count" != "$((rpm_apt_count + desktop_apt_count))" ]] ||
+      ! grep -Fq 'runs-on: ubuntu-24.04' <<< "$rpm_job" ||
+      ! grep -Fq 'sudo apt-get install --yes --no-install-recommends rpm' <<< "$rpm_job"; then
+      echo 'Release package installation must stay inside hosted RPM or desktop jobs.' >&2
+      exit 1
+    fi
   fi
 done
 grep -Fq 'packaging/scripts/require-release-readiness.sh' "$release_workflow"

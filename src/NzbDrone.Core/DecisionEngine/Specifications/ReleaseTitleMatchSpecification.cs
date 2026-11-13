@@ -26,6 +26,13 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
 
         public Decision IsSatisfiedBy(RemoteBook subject, SearchCriteriaBase searchCriteria)
         {
+            // Migrated libraries already use the predecessor's parser and mapping rules.
+            // Applying the native title scorer afterward changes their accepted releases.
+            if (_configService?.BookshelfMatchCompatibility == true)
+            {
+                return Decision.Accept();
+            }
+
             if (subject?.Release?.Title == null)
             {
                 return Decision.Accept();
@@ -111,6 +118,11 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
 
             if (edition == null || string.IsNullOrWhiteSpace(edition.Title) || string.IsNullOrWhiteSpace(subtitle) ||
                 !ReleaseTitleMatchScorer.TryGetKnownSubtitleBaseTitle(edition.Title, subtitle, out var baseTitle))
+            {
+                return false;
+            }
+
+            if (ReleaseTitleMatchScorer.TryGetGenericNovelBaseTitle(edition.Title, out _))
             {
                 return false;
             }

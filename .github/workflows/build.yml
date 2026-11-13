@@ -125,7 +125,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        node-version: 26.12.1
+        node-version: 26.13.1
         package-manager-cache: false
 
     - name: Validate release-note fragment or explicit opt-out
@@ -168,7 +168,7 @@ jobs:
       ) || (
         github.ref == 'refs/heads/main' &&
         inputs.action == 'publish' &&
-        inputs.runner_pool == 'private' &&
+        (inputs.runner_pool == 'private' || inputs.runner_pool == 'public') &&
         inputs.release_tag != '' &&
         inputs.release_sha != ''
       )
@@ -178,7 +178,7 @@ jobs:
       ${{ inputs.runner_pool == 'public' &&
           (matrix.platform == 'windows-x64' && 'windows-2025' ||
            matrix.platform == 'macos-intel' && 'macos-15-intel' ||
-           'ubuntu-24.04') ||
+           'ubuntu-22.04') ||
           (matrix.platform == 'windows-x64' && fromJSON(format('{{"group":"packer-windows","labels":["self-hosted","Windows","X64","on-demand","packer-windows","ChaptarrNG","gha-{0}-{1}-build"]}}', github.run_id, strategy.job-index)) ||
            matrix.platform == 'macos-intel' && fromJSON(format('{{"group":"private-apple-builds","labels":["self-hosted","macOS","X64","private-apple","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-{1}-build"]}}', github.run_id, strategy.job-index)) ||
            fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}"]}}', github.run_id))) }}
@@ -190,11 +190,12 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: ${{ inputs.action == 'publish' && inputs.runner_pool == 'private' && inputs.release_tag != '' && inputs.release_sha || github.sha }}
+        ref: ${{ inputs.action == 'publish' && inputs.release_tag != '' && inputs.release_sha || github.sha }}
         fetch-depth: 0
 
     - name: Verify exact release tag source
       if: inputs.action == 'publish'
+      shell: bash
       env:
         RELEASE_TAG: ${{ inputs.release_tag }}
         RELEASE_SHA: ${{ inputs.release_sha }}
@@ -246,9 +247,21 @@ jobs:
         TASK_SCRATCH_DIR: ${{ runner.temp }}
       run: bash packaging/scripts/test-bookshelfng-journal-fingerprint.sh
 
+    - name: Test desktop supervisor process-group shutdown
+      if: matrix.platform == 'linux-x64'
+      env:
+        TMPDIR: ${{ runner.temp }}
+      run: python3 packaging/scripts/test-desktop-supervisor-signals.py
+
     - name: Test workflow runner policy
       if: matrix.platform == 'linux-x64'
       run: python3 scripts/test_workflow_runner_policy.py
+
+    - name: Test native package recovery after main process death
+      if: matrix.platform == 'linux-x64'
+      env:
+        TMPDIR: ${{ runner.temp }}
+      run: python3 packaging/scripts/test-bookshelfng-healthcheck-process.py
 
     - name: Test candidate BookshelfNG Debian bridge package
       if: matrix.platform == 'linux-x64'
@@ -382,13 +395,13 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        node-version: 26.12.1
+        node-version: 26.13.1
 
     - name: Test Quickstart setup readiness
       run: node --test frontend/src/System/Quickstart/quickstartReadiness.test.cjs
 
     - name: Install Yarn
-      run: npm install --global yarn@1.22.22
+      run: npm install --global npm@12.2.2 yarn@1.22.22
 
     - name: Install frontend dependencies
       run: yarn install --frozen-lockfile --network-timeout 120000
@@ -409,6 +422,7 @@ jobs:
         node --test
         frontend/src/Book/Index/getBookIndexQuery.test.cjs
         frontend/src/Book/Index/BookIndex.test.cjs
+        frontend/src/Book/Index/BookIndexItemConnector.test.cjs
 
     - name: Test book infinite-scroll id deduplication
       run: node --test frontend/src/Store/Reducers/bookInfiniteScrollReducer.test.cjs
@@ -437,11 +451,11 @@ jobs:
       run: yarn typecheck
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
       env:
         DOTNET_INSTALL_DIR: ${{ runner.temp }}/dotnet
       with:
-        dotnet-version: 10.0.403
+        dotnet-version: 10.0.404
 
     - name: Cache NuGet packages
       # Manual release dispatch can select a branch; do not let those builds write shared cache entries.
@@ -483,6 +497,24 @@ jobs:
             --TestCaseFilter:"FullyQualifiedName~real_m4b_tool_should_" \
             --Logger:"console;verbosity=normal"
 
+    - name: Test native product hard-kill and M4B recovery
+      if: matrix.platform == 'linux-x64'
+      run: >-
+        python3 integration/test-m4b-whole-app-recovery.py
+        --candidate-directory _output/net10.0
+        --candidate-revision "$GITHUB_SHA"
+        --image chaptarrng-m4b-test:ci
+        --work-dir "${{ runner.temp }}/m4b-whole-app-recovery"
+
+    - name: Upload native M4B process recovery evidence
+      if: always() && matrix.platform == 'linux-x64'
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: m4b-whole-app-recovery-${{ github.run_id }}
+        path: ${{ runner.temp }}/m4b-whole-app-recovery/evidence/
+        if-no-files-found: warn
+        retention-days: 30
+
     - name: Configure Chromium cache for direct-download browser tests
       if: runner.os == 'Linux'
       env:
@@ -490,7 +522,7 @@ jobs:
       run: echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> "$GITHUB_ENV"
 
     - name: Install Chromium and system dependencies on Linux
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && inputs.runner_pool == 'public'
       env:
         PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/playwright-browsers
       shell: bash
@@ -499,6 +531,8 @@ jobs:
         driver=./_tests/net10.0/.playwright
         test -x "$driver/node/linux-x64/node"
         test -f "$driver/package/cli.js"
+        sudo apt-get update
+        sudo apt-get install -y bubblewrap
         PW_LANG_NAME=csharp "$driver/node/linux-x64/node" "$driver/package/cli.js" install --with-deps chromium
 
     - name: Verify Unraid package sync stays off feature branches
@@ -599,6 +633,20 @@ jobs:
       if: matrix.platform == 'windows-x64'
       shell: pwsh
       run: ./packaging/scripts/test-windows-service-data-path.ps1 -AppDirectory ./publish/Chaptarr
+
+    - name: Release Windows installer payload after installer tests
+      if: matrix.platform == 'windows-x64'
+      shell: pwsh
+      run: |
+        $payload = Join-Path $PWD 'distribution/windows/installer-net/Payload/Chaptarr.payload.zip'
+        if (-not (Test-Path -LiteralPath $payload -PathType Leaf)) {
+          throw "The Windows installer test payload is missing: $payload"
+        }
+        Remove-Item -LiteralPath $payload -Force
+        $payloadDirectory = Split-Path -Parent $payload
+        if (-not (Get-ChildItem -LiteralPath $payloadDirectory -Force | Select-Object -First 1)) {
+          Remove-Item -LiteralPath $payloadDirectory -Force
+        }
 
     - name: Test Chocolatey BookshelfNG .76 to exact candidate handoff
       if: matrix.platform == 'windows-x64' && github.event_name == 'workflow_dispatch'
@@ -738,7 +786,7 @@ jobs:
 
     - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        node-version: 26.12.1
+        node-version: 26.13.1
         package-manager-cache: false
 
     - name: Test legacy distribution contracts
@@ -779,14 +827,16 @@ jobs:
       ) || (
         github.ref == 'refs/heads/main' &&
         inputs.action == 'publish' &&
-        inputs.runner_pool == 'private' &&
+        (inputs.runner_pool == 'private' || inputs.runner_pool == 'public') &&
         inputs.release_tag != '' &&
         inputs.release_sha != ''
       )
     runs-on: ${{ inputs.runner_pool == 'public' && 'ubuntu-24.04' || fromJSON(format('{{"group":"ng-shared-main-jit","labels":["self-hosted","linux","x64","ng-shared-main-chaptarrng","ng-main-run-{0}","gha-{0}-postgres-migrations"]}}', github.run_id)) }}
+    env:
+      CHAPTARRNG_POSTGRES_IMAGE: postgres:16-bookworm@sha256:5264710be20f409750ac6dc4e5706dcef929c87e241605463f0f9aefa932a8d9
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16-bookworm@sha256:5264710be20f409750ac6dc4e5706dcef929c87e241605463f0f9aefa932a8d9
         env:
           POSTGRES_USER: chaptarr
           POSTGRES_PASSWORD: chaptarr
@@ -801,7 +851,8 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: ${{ inputs.action == 'publish' && inputs.runner_pool == 'private' && inputs.release_tag != '' && inputs.release_sha || github.sha }}
+        ref: ${{ inputs.action == 'publish' && inputs.release_tag != '' && inputs.release_sha || github.sha }}
+        persist-credentials: false
 
     - name: Configure user-writable .NET install directory
       shell: bash
@@ -812,50 +863,12 @@ jobs:
         printf 'DOTNET_INSTALL_DIR=%s\n' "$dotnet_dir" >> "$GITHUB_ENV"
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
       with:
-        dotnet-version: 10.0.403
+        dotnet-version: 10.0.404
 
-    - name: Install PostgreSQL client
-      shell: bash
-      env:
-        RUNNER_POOL: ${{ inputs.runner_pool }}
-      run: |
-        set -euo pipefail
-        if [[ "$RUNNER_POOL" == "public" ]]; then
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-16
-        fi
-        if [[ ! -x /usr/lib/postgresql/16/bin/pg_dump || ! -x /usr/lib/postgresql/16/bin/pg_restore ]]; then
-          echo 'PostgreSQL 16 client binaries are required for the migration smoke.' >&2
-          exit 1
-        fi
-        # Match the service's major version. A newer pg_dump emits settings
-        # (such as transaction_timeout) that PostgreSQL 16 cannot restore.
-        /usr/lib/postgresql/16/bin/pg_dump --version
-        /usr/lib/postgresql/16/bin/pg_restore --version
-        echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
-
-    - name: Pin dump tools to the PostgreSQL service version
-      shell: bash
-      run: |
-        set -euo pipefail
-        client_dir="$RUNNER_TEMP/postgres16-client-bin"
-        mkdir -p -- "$client_dir"
-        cat > "$client_dir/postgres16-tool" <<'WRAPPER'
-        #!/usr/bin/env bash
-        set -euo pipefail
-        tool="${0##*/}"
-        docker_args=(run --rm --network host --user "$(id -u):$(id -g)" --volume "${RUNNER_TEMP}:${RUNNER_TEMP}")
-        while IFS= read -r name; do
-          docker_args+=(--env "$name")
-        done < <(compgen -e | grep '^PG' || true)
-        docker "${docker_args[@]}" postgres:16 "$tool" "$@"
-        WRAPPER
-        chmod 0755 "$client_dir/postgres16-tool"
-        ln -s postgres16-tool "$client_dir/pg_dump"
-        ln -s postgres16-tool "$client_dir/pg_restore"
-        echo "$client_dir" >> "$GITHUB_PATH"
+    - name: Use the service image for PostgreSQL clients
+      run: bash scripts/setup-postgres-test-tools.sh
 
     - name: Create databases
       shell: bash
@@ -863,14 +876,14 @@ jobs:
         PGPASSWORD: chaptarr
       run: |
         set -euo pipefail
-        psql -h localhost -U chaptarr -d postgres -c 'CREATE DATABASE "chaptarr-main";'
-        psql -h localhost -U chaptarr -d postgres -c 'CREATE DATABASE "chaptarr-log";'
-        psql -h localhost -U chaptarr -d postgres -c 'CREATE DATABASE "chaptarr-cache";'
+        psql -h localhost -U chaptarr -d postgres -c 'CREATE DATABASE "acceptance-main";'
+        psql -h localhost -U chaptarr -d postgres -c 'CREATE DATABASE "acceptance-log";'
+        psql -h localhost -U chaptarr -d postgres -c 'CREATE DATABASE "acceptance-cache";'
 
     - name: Restore dependencies
       run: |
-        dotnet restore src/Chaptarr.NoTests.sln
-        dotnet restore src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj
+        dotnet restore src/Chaptarr.NoTests.sln --locked-mode
+        dotnet restore src/Chaptarr.Core.Test/Chaptarr.Core.Test.csproj --locked-mode
 
     - name: Build (migrations smoke)
       run: |
@@ -879,29 +892,30 @@ jobs:
 
     - name: Smoke - migrate up on fresh PostgreSQL
       env:
+        CHAPTARRNG_KEEP_POSTGRES_EVIDENCE: 'true'
         TMPDIR: ${{ runner.temp }}
         CHAPTARRNG_POSTGRES_SMOKE_DIR: ${{ runner.temp }}/chaptarr-postgres-smoke-${{ github.run_id }}-${{ github.run_attempt }}
         Chaptarr__Postgres__Host: localhost
         Chaptarr__Postgres__Port: "5432"
         Chaptarr__Postgres__User: chaptarr
         Chaptarr__Postgres__Password: chaptarr
-        Chaptarr__Postgres__MainDb: chaptarr-main
-        Chaptarr__Postgres__LogDb: chaptarr-log
-        Chaptarr__Postgres__CacheDb: chaptarr-cache
-        CHAPTARRNG_POSTGRES_TEST_CONNECTION: Host=localhost;Port=5432;Database=chaptarr-main;Username=chaptarr;Password=chaptarr;Pooling=false;Timeout=5;Command Timeout=300
+        Chaptarr__Postgres__MainDb: acceptance-main
+        Chaptarr__Postgres__LogDb: acceptance-log
+        Chaptarr__Postgres__CacheDb: acceptance-cache
+        CHAPTARRNG_POSTGRES_TEST_CONNECTION: Host=localhost;Port=5432;Database=acceptance-main;Username=chaptarr;Password=chaptarr;Pooling=false;Timeout=5;Command Timeout=300
         Chaptarr__Server__BindAddress: 127.0.0.1
         Chaptarr__Server__Port: "8789"
       run: bash scripts/test-postgres-migrations-smoke.sh
 
     - name: Upload PostgreSQL smoke logs
       id: postgres-smoke-logs
-      if: failure()
+      if: always()
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: chaptarr-postgres-smoke-${{ github.run_id }}-${{ github.run_attempt }}
         path: ${{ runner.temp }}/chaptarr-postgres-smoke-${{ github.run_id }}-${{ github.run_attempt }}
-        retention-days: 3
-        if-no-files-found: ignore
+        retention-days: 14
+        if-no-files-found: warn
 
     - name: Remove local PostgreSQL smoke logs
       if: always() && steps.postgres-smoke-logs.outcome != 'failure'
@@ -923,7 +937,7 @@ jobs:
       ) || (
         github.ref == 'refs/heads/main' &&
         inputs.action == 'publish' &&
-        inputs.runner_pool == 'private' &&
+        (inputs.runner_pool == 'private' || inputs.runner_pool == 'public') &&
         inputs.release_tag != '' &&
         inputs.release_sha != ''
       )
@@ -936,7 +950,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
-        ref: ${{ inputs.action == 'publish' && inputs.runner_pool == 'private' && inputs.release_tag != '' && inputs.release_sha || github.sha }}
+        ref: ${{ inputs.action == 'publish' && inputs.release_tag != '' && inputs.release_sha || github.sha }}
 
     - name: Set up QEMU for target-platform runtime steps
       uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
@@ -1170,7 +1184,7 @@ jobs:
         PY
     - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
       with:
-        node-version: 26.12.1
+        node-version: 26.13.1
         package-manager-cache: false
     - name: Validate release-note contract
       env:
