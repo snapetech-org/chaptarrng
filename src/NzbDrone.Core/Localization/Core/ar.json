@@ -190,7 +190,7 @@
   "AudiobooksOnly": "كتب صوتية فقط",
   "AuthBasic": "أساسي (نافذة منبثقة للمتصفح)",
   "AuthForm": "النماذج (صفحة تسجيل الدخول)",
-  "AuthOidc": "OpenID Connect (SSO)",
+  "AuthOidc": "OpenID Connect (تسجيل الدخول الموحّد)",
   "AuthPlex": "Plex",
   "Authentication": "المصادقة",
   "AuthenticationMethod": "طريقة المصادقة",
