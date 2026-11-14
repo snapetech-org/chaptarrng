@@ -1247,7 +1247,7 @@ namespace NzbDrone.Core.MediaFiles
                 // the grab history records which narrator the release was for.
                 if (!grabEvidenceCache.TryGetValue(matchedBook.Id, out var grabEvidence))
                 {
-                    grabEvidence = GetGrabbedReleaseEvidence(matchedBook.Id, downloadClientItem);
+                    grabEvidence = GetGrabbedReleaseEvidence(matchedBook.Id, expectedEdition.Id, downloadClientItem);
                     grabEvidenceCache[matchedBook.Id] = grabEvidence;
                 }
 
@@ -1347,15 +1347,17 @@ namespace NzbDrone.Core.MediaFiles
                    BookService.ReleaseNarratorMatchesEdition(grabNarrator, expected);
         }
 
-        private (string Narrator, string IsGraphicAudio) GetGrabbedReleaseEvidence(int bookId, DownloadClientItem downloadClientItem)
+        private (string Narrator, string IsGraphicAudio) GetGrabbedReleaseEvidence(int bookId, int expectedEditionId, DownloadClientItem downloadClientItem)
         {
-            if (string.IsNullOrWhiteSpace(downloadClientItem?.DownloadId) || _historyService == null)
+            if (bookId <= 0 || expectedEditionId <= 0 || string.IsNullOrWhiteSpace(downloadClientItem?.DownloadId) || _historyService == null)
             {
                 return (null, null);
             }
 
             var history = (_historyService.FindByDownloadId(downloadClientItem.DownloadId) ?? new List<EntityHistory>())
-                .Where(history => history.EventType == EntityHistoryEventType.Grabbed && history.BookId == bookId)
+                .Where(history => history.EventType == EntityHistoryEventType.Grabbed &&
+                                  history.BookId == bookId &&
+                                  history.EditionId == expectedEditionId)
                 .OrderByDescending(history => history.Date)
                 .FirstOrDefault();
 

@@ -2799,7 +2799,22 @@ namespace Chaptarr.Core.Test.MediaFiles
             Assert.That(decision.Item.Edition.Id, Is.EqualTo(3));
         }
 
-        private ImportDecision<LocalBook> ProcessStrictSiblingMatch(string fileName, Edition matchedEdition, Edition grabbedEdition, string downloadId, string grabNarrator = null, bool? grabIsGraphicAudio = false)
+        [Test]
+        public void should_use_narrator_evidence_from_the_history_record_for_the_expected_edition()
+        {
+            var decision = ProcessStrictSiblingMatch(
+                "Onyx Storm.m4b",
+                NarratorlessAudiobook(),
+                NarratedAudiobook("Rebecca Soler"),
+                "DOWNLOAD-GRAB-HISTORY-IDENTITY",
+                "Rebecca Soler",
+                addNewerHistoryWithoutEdition: true);
+
+            Assert.That(decision.Approved, Is.True);
+            Assert.That(decision.Item.Edition.Id, Is.EqualTo(4));
+        }
+
+        private ImportDecision<LocalBook> ProcessStrictSiblingMatch(string fileName, Edition matchedEdition, Edition grabbedEdition, string downloadId, string grabNarrator = null, bool? grabIsGraphicAudio = false, bool addNewerHistoryWithoutEdition = false)
         {
             var tempDir = Path.Combine(Path.GetTempPath(), "chaptarr-tests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tempDir);
@@ -2853,10 +2868,28 @@ namespace Chaptarr.Core.Test.MediaFiles
                     historyData["IsGraphicAudio"] = grabIsGraphicAudio.Value.ToString();
                 }
 
-                ((HistoryServiceProxy)(object)historyService).HistoryItems = new List<EntityHistory>
+                var historyItems = new List<EntityHistory>
                 {
                     new() { EventType = EntityHistoryEventType.Grabbed, BookId = 10, EditionId = grabbedEdition.Id, DownloadId = downloadId, Date = new DateTime(2026, 11, 11, 19, 25, 14, DateTimeKind.Utc), Data = historyData }
                 };
+                if (addNewerHistoryWithoutEdition)
+                {
+                    historyItems.Add(new EntityHistory
+                    {
+                        EventType = EntityHistoryEventType.Grabbed,
+                        BookId = 10,
+                        EditionId = 0,
+                        DownloadId = downloadId,
+                        Date = new DateTime(2026, 11, 11, 19, 26, 14, DateTimeKind.Utc),
+                        Data = new Dictionary<string, string>
+                        {
+                            ["Narrator"] = "Conflicting Narrator",
+                            ["IsGraphicAudio"] = "True"
+                        }
+                    });
+                }
+
+                ((HistoryServiceProxy)(object)historyService).HistoryItems = historyItems;
 
                 var service = new DownloadedBooksImportService(
                     new StubDiskProvider(),
