@@ -3,6 +3,7 @@ using System.Linq;
 using NLog;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.CustomFormats;
+using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.IndexerSearch.Definitions;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
@@ -17,6 +18,25 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
     /// </summary>
     public class PinnedNarratorSpecification : IDecisionEngineSpecification
     {
+        private static readonly HashSet<string> GenericNarratorNames = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            "various",
+            "various artists",
+            "various narrators",
+            "unknown",
+            "unknown narrator",
+            "uncredited",
+            "full cast",
+            "multiple narrators",
+            "multiple performers",
+            "various voices",
+            "not stated",
+            "not available",
+            "no narrator",
+            "none",
+            "n/a"
+        };
+
         private readonly Logger _logger;
 
         public PinnedNarratorSpecification(Logger logger)
@@ -37,8 +57,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return Decision.Accept();
             }
 
-            var quality = subject.ParsedBookInfo?.Quality?.Quality;
-            if (QualityMediaTypeHelper.DetectMediaType(quality, release) != BookMediaType.Audiobook)
+            if (ResolveMediaType(subject, searchCriteria) != BookMediaType.Audiobook)
             {
                 return Decision.Accept();
             }
@@ -47,79 +66,138 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             foreach (var book in books)
             {
                 var target = GetPinnedTarget(book);
-                if (target == null)
+                if (target != null)
                 {
-                    // Any targeted book that is not pinned to a single narrated edition leaves the release open.
-                    return Decision.Accept();
+                    targets.Add(target);
                 }
+            }
 
-                targets.Add(target);
+            if (targets.Count == 0)
+            {
+                return Decision.Accept();
             }
 
             var releaseNarrators = GetExplicitReleaseNarrators(subject);
             if (releaseNarrators.Count == 0)
             {
-                _logger.Trace("[PINNED_NARRATOR] No narrator found for '{0}', allowing", release.Title);
+                _logger.Trace("[PINNED_NARRATOR] No specific narrator found in release metadata, allowing");
                 return Decision.Accept();
             }
 
-            var matches = targets.Any(target => target.Any(name => releaseNarrators.Any(narrator => PreferredNarratorMatcher.IsNarratorNameMatch(narrator, name))));
-            if (matches)
+            var everyTargetMatches = targets.All(target =>
+                target.Any(name => releaseNarrators.Any(narrator => PreferredNarratorMatcher.IsNarratorNameMatch(narrator, name))));
+            if (everyTargetMatches)
             {
                 return Decision.Accept();
             }
 
-            var wanted = string.Join(", ", targets.SelectMany(t => t).Distinct());
+            var wanted = CleanseLogMessage.Cleanse(string.Join(", ", targets.SelectMany(t => t).Distinct()));
             return Decision.RejectSoftFilter(
                 "Release narrator [{0}] does not match the pinned narrator [{1}]",
                 "Narrator",
-                string.Join(", ", releaseNarrators),
+                CleanseLogMessage.Cleanse(string.Join(", ", releaseNarrators)),
                 wanted);
         }
 
         private static List<string> GetPinnedTarget(Book book)
         {
-            if (book == null || book.AnyEditionOk)
+            if (book == null)
             {
                 return null;
             }
 
-            var monitored = book.Editions?
-                .Where(edition => edition != null && edition.Monitored && PreferredNarratorMatcher.IsAudiobookEdition(edition))
+            var protectedEditions = EditionPinPolicy.GetProtectedEditions(book, book.Editions)
+                .Where(PreferredNarratorMatcher.IsAudiobookEdition)
                 .ToList();
 
-            if (monitored == null || monitored.Count != 1)
+            if (protectedEditions.Count != 1)
             {
                 return null;
             }
 
-            var target = PreferredNarratorMatcher.BuildTarget(book, monitored[0]);
-            return target?.Names.Count > 0 ? target.Names : null;
+            var target = PreferredNarratorMatcher.BuildTarget(book, protectedEditions[0]);
+            var names = target?.Names.Where(IsSpecificNarratorName).ToList();
+            return names?.Count > 0 ? names : null;
         }
 
         private static List<string> GetExplicitReleaseNarrators(RemoteBook subject)
         {
             // Only explicit narrator metadata counts (indexer field, parsed field or a "narrated by" label
             // in the title). Trailing unlabelled name tokens are too weak to justify a rejection.
-            var text = subject.Release.Narrator;
-            if (string.IsNullOrWhiteSpace(text))
+            var candidates = new[]
             {
-                text = subject.ParsedBookInfo?.Narrator;
+                subject.Release.Narrator,
+                subject.ParsedBookInfo?.Narrator,
+                PreferredNarratorMatcher.ExtractNarratorFromFields(new[] { subject.Release.Title })
+            };
+
+            foreach (var text in candidates)
+            {
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    continue;
+                }
+
+                var names = ReleaseNarratorEvidenceExtractor.ExtractNames(null, text).Names
+                    .Where(IsSpecificNarratorName)
+                    .ToList();
+                if (names.Count > 0)
+                {
+                    return names;
+                }
             }
 
-            if (string.IsNullOrWhiteSpace(text))
+            return new List<string>();
+        }
+
+        private static bool IsSpecificNarratorName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
             {
-                text = PreferredNarratorMatcher.ExtractNarratorFromFields(new[] { subject.Release.Title });
+                return false;
             }
 
-            if (string.IsNullOrWhiteSpace(text))
+            var normalized = string.Join(" ", name.Split((char[])null, System.StringSplitOptions.RemoveEmptyEntries));
+            return !GenericNarratorNames.Contains(normalized);
+        }
+
+        private static BookMediaType? ResolveMediaType(RemoteBook subject, SearchCriteriaBase searchCriteria)
+        {
+            var detected = QualityMediaTypeHelper.DetectMediaType(subject?.ParsedBookInfo?.Quality?.Quality, subject?.Release);
+            if (detected.HasValue)
             {
-                return new List<string>();
+                return detected;
             }
 
-            return ReleaseNarratorEvidenceExtractor.ExtractNames(null, text).Names
-                .Where(name => !string.IsNullOrWhiteSpace(name))
+            var hasResolvedIdentity = subject?.SearchCriteriaMatch?.IsMatch == true;
+            if (!hasResolvedIdentity)
+            {
+                var releaseTitle = subject?.Release?.Title?.Trim();
+                var parsedBookTitle = subject?.ParsedBookInfo?.BookTitle?.Trim();
+                var parsedAuthor = subject?.ParsedBookInfo?.AuthorName?.Trim();
+                hasResolvedIdentity = !string.IsNullOrWhiteSpace(parsedBookTitle) &&
+                                     !string.IsNullOrWhiteSpace(parsedAuthor) &&
+                                     !string.Equals(parsedBookTitle, releaseTitle, System.StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (!hasResolvedIdentity)
+            {
+                return null;
+            }
+
+            return GetSingleMediaType(subject?.Books) ?? GetSingleMediaType(searchCriteria?.Books);
+        }
+
+        private static BookMediaType? GetSingleMediaType(IEnumerable<Book> books)
+        {
+            var mediaTypes = (books ?? Enumerable.Empty<Book>())
+                .Where(book => book != null)
+                .Select(book => book.MediaType)
+                .Distinct()
+                .Take(2)
                 .ToList();
+
+            return mediaTypes.Count == 1 ? mediaTypes[0] : null;
         }
     }
 }

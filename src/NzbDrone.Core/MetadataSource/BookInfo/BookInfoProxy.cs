@@ -3411,14 +3411,18 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     {
                         primaryResults = SearchMetadataApiCatalog(q, getAllEditions, mediaType);
                     }
-                    catch (GoodreadsException exception) when (_hardcoverMetadataProxy?.IsConfigured == true)
+                    catch (GoodreadsException exception) when (_hardcoverMetadataProxy?.IsConfigured == true && IsUnsupportedMetadataSearch(exception))
                     {
-                        // A metadata server can answer id lookups without offering free-text search
-                        // (api2.chaptarr.com answers 404 for /search), which used to fail every ISBN and
-                        // title lookup. With a Hardcover token configured, search Hardcover instead; its
-                        // search resolves ISBNs and ASINs as identifiers.
-                        _logger.Warn(exception, "Metadata server search failed for {0}; searching Hardcover instead", CleanseLogMessage.Cleanse(q));
+                        // Some metadata servers support ID lookups but do not provide /search. Fall back
+                        // only for that unsupported endpoint response; outages and malformed responses
+                        // must remain visible instead of silently sending the query to another provider.
+                        _logger.Warn("Metadata server search endpoint returned HTTP 404; trying Hardcover for {0}", CleanseLogMessage.Cleanse(q));
                         primaryResults = SearchNativeHardcoverEntities(q, mediaType).OfType<Book>().ToList();
+                        if (!getAllEditions)
+                        {
+                            primaryResults.ForEach(book => book.Editions = (book.Editions ?? new List<Edition>()).Take(1).ToList());
+                        }
+
                         searchedHardcover = true;
                     }
                 }
@@ -3473,6 +3477,12 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         private bool IsMetadataApiEnabled()
         {
             return GetConfiguredMetadataCatalogSources().Contains(AdditionalMetadataSources.MetadataApi);
+        }
+
+        private static bool IsUnsupportedMetadataSearch(GoodreadsException exception)
+        {
+            return exception?.InnerException is HttpException httpException &&
+                   httpException.Response?.StatusCode == HttpStatusCode.NotFound;
         }
 
         private bool IsHardcoverCatalogEnabled()

@@ -81,7 +81,94 @@ namespace Chaptarr.Core.Test.DecisionEngine
             Assert.That(CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria()).Accepted, Is.True);
         }
 
-        private static RemoteBook BuildRemoteBook(string title = "Some Book M4B", string releaseNarrator = null, Quality quality = null, bool anyEditionOk = false, bool secondMonitoredEdition = false)
+        [Test]
+        public void should_reject_a_multi_book_release_when_one_pinned_book_narrator_mismatches()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Roy Dotrice", secondPinnedBook: true);
+
+            var decision = CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria());
+
+            Assert.That(decision.Accepted, Is.False);
+            Assert.That(decision.Category, Is.EqualTo("Narrator"));
+        }
+
+        [Test]
+        public void should_accept_a_multi_book_release_when_each_pinned_book_narrator_matches()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Roy Dotrice, Michael Kramer", secondPinnedBook: true);
+
+            Assert.That(CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria()).Accepted, Is.True);
+        }
+
+        [Test]
+        public void should_use_the_unambiguous_book_media_type_when_parsed_quality_is_missing()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Michael Kramer");
+            remoteBook.Release.Title = "Some Book";
+            remoteBook.ParsedBookInfo.BookTitle = "Some Book Identified";
+            remoteBook.ParsedBookInfo.Quality = null;
+
+            var decision = CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria());
+
+            Assert.That(decision.Accepted, Is.False);
+        }
+
+        [TestCase("Various")]
+        [TestCase("Unknown")]
+        [TestCase("Full Cast")]
+        public void should_allow_generic_release_narrator_labels(string narrator)
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: narrator);
+
+            Assert.That(CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria()).Accepted, Is.True);
+        }
+
+        [Test]
+        public void should_use_specific_parsed_narrator_when_release_metadata_is_generic()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Various");
+            remoteBook.ParsedBookInfo.Narrator = "Michael Kramer";
+
+            var decision = CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria());
+
+            Assert.That(decision.Accepted, Is.False);
+        }
+
+        [Test]
+        public void should_not_treat_a_generic_edition_narrator_as_a_pinned_target()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Michael Kramer");
+            remoteBook.Books[0].Editions[0].Narrator = "Various";
+            remoteBook.Books[0].Editions[0].NarratorNames = new List<string> { "Various" };
+
+            Assert.That(CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria()).Accepted, Is.True);
+        }
+
+        [Test]
+        public void should_honor_a_manually_selected_audiobook_edition_even_when_any_edition_is_allowed()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Michael Kramer");
+            remoteBook.Books[0].AnyEditionOk = true;
+            remoteBook.Books[0].Editions[0].ManualAdd = true;
+
+            var decision = CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria());
+
+            Assert.That(decision.Accepted, Is.False);
+        }
+
+        [Test]
+        public void should_escape_provider_control_characters_in_narrator_rejection_details()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Michael Kramer\r\nWARN: forged entry");
+
+            var decision = CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria());
+
+            Assert.That(decision.Accepted, Is.False);
+            Assert.That(decision.Reason, Does.Not.Contain("\r"));
+            Assert.That(decision.Reason, Does.Not.Contain("\n"));
+        }
+
+        private static RemoteBook BuildRemoteBook(string title = "Some Book M4B", string releaseNarrator = null, Quality quality = null, bool anyEditionOk = false, bool secondMonitoredEdition = false, bool secondPinnedBook = false)
         {
             var editions = new List<Edition>
             {
@@ -117,10 +204,33 @@ namespace Chaptarr.Core.Test.DecisionEngine
                 Editions = editions
             };
 
+            var books = new List<Book> { book };
+            if (secondPinnedBook)
+            {
+                books.Add(new Book
+                {
+                    Id = 2,
+                    Title = "Another Book",
+                    MediaType = BookMediaType.Audiobook,
+                    Editions = new List<Edition>
+                    {
+                        new Edition
+                        {
+                            Id = 3,
+                            Title = "Another Book",
+                            Monitored = true,
+                            IsEbook = false,
+                            Narrator = "Michael Kramer",
+                            NarratorNames = new List<string> { "Michael Kramer" }
+                        }
+                    }
+                });
+            }
+
             return new RemoteBook
             {
                 Author = new Author { Name = "Jane Doe" },
-                Books = new List<Book> { book },
+                Books = books,
                 ParsedBookInfo = new ParsedBookInfo
                 {
                     AuthorName = "Jane Doe",

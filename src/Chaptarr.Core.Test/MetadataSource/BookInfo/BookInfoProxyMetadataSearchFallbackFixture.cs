@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Reflection;
 using Moq;
 using NLog;
+using NLog.Config;
+using NLog.Targets;
 using NUnit.Framework;
 using NzbDrone.Common.Cache;
+using NzbDrone.Common.Http;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.MetadataSource;
@@ -19,6 +23,7 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
     // A metadata server that answers id lookups but has no free-text search (api2.chaptarr.com
     // answers 404 for /search) must not fail ISBN and title lookups when Hardcover can answer them.
     [TestFixture]
+    [NonParallelizable]
     public class BookInfoProxyMetadataSearchFallbackFixture
     {
         private class ConfigServiceProxy : DispatchProxy
@@ -81,6 +86,14 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                         Isbn13 = "9780000000001",
                         Format = "Audiobook",
                         Contributors = new List<ContributorResource> { new() { ForeignId = 42 } }
+                    },
+                    new()
+                    {
+                        ForeignId = 202,
+                        Title = "Native Book Alternate Edition",
+                        Isbn13 = "9780000000002",
+                        Format = "Audiobook",
+                        Contributors = new List<ContributorResource> { new() { ForeignId = 42 } }
                     }
                 },
                 Series = new List<SeriesResource>()
@@ -89,13 +102,21 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             public WorkResource GetEdition(string foreignEditionId, bool interactiveSearch = false) => throw new NotSupportedException();
         }
 
-        private static BookInfoProxy CreateProxy(IHardcoverMetadataProxy hardcover)
+        private static GoodreadsException MetadataSearchException(HttpStatusCode statusCode, string query)
+        {
+            var request = new HttpRequest("http://metadata/search");
+            var response = new HttpResponse(request, new HttpHeader(), "metadata search failed", statusCode);
+            var exception = new HttpException(request, response);
+            return new GoodreadsException("Search for '{0}' failed. Unable to communicate with the metadata source.", exception, query);
+        }
+
+        private static BookInfoProxy CreateProxy(IHardcoverMetadataProxy hardcover, GoodreadsException searchException = null)
         {
             var configService = DispatchProxy.Create<IConfigService, ConfigServiceProxy>();
             var logger = LogManager.GetCurrentClassLogger();
 
             var metadataSearch = new Mock<IGoodreadsSearchProxy>();
-            var notFound = new GoodreadsException("Search for '{0}' failed. Unable to communicate with the metadata source.", new Exception("404"), "term");
+            var notFound = searchException ?? MetadataSearchException(HttpStatusCode.NotFound, "term");
             metadataSearch.Setup(x => x.Search(It.IsAny<string>())).Throws(notFound);
             metadataSearch.Setup(x => x.SearchMetadataApi(It.IsAny<string>())).Throws(notFound);
 
@@ -147,6 +168,71 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
 
             Assert.Throws<GoodreadsException>(() => proxy.SearchForNewBook("Native Book", null, mediaType: BookMediaType.Audiobook));
             Assert.That(hardcover.Searches, Is.Empty);
+        }
+
+        [Test]
+        public void should_not_search_hardcover_when_the_metadata_server_returns_a_transient_error()
+        {
+            var hardcover = new TokenOnlyHardcoverMetadataProxy();
+            var proxy = CreateProxy(hardcover, MetadataSearchException(HttpStatusCode.ServiceUnavailable, "Native Book"));
+
+            Assert.Throws<GoodreadsException>(() => proxy.SearchForNewBook("Native Book", null, mediaType: BookMediaType.Audiobook));
+            Assert.That(hardcover.Searches, Is.Empty);
+        }
+
+        [Test]
+        public void should_return_one_hardcover_edition_when_all_editions_were_not_requested()
+        {
+            var proxy = CreateProxy(new TokenOnlyHardcoverMetadataProxy());
+
+            var results = proxy.SearchForNewBook("Native Book", null, getAllEditions: false, mediaType: BookMediaType.Audiobook);
+
+            Assert.That(results, Has.Count.EqualTo(1));
+            Assert.That(results[0].Editions, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void should_return_all_hardcover_editions_when_requested()
+        {
+            var proxy = CreateProxy(new TokenOnlyHardcoverMetadataProxy());
+
+            var results = proxy.SearchForNewBook("Native Book", null, getAllEditions: true, mediaType: BookMediaType.Audiobook);
+
+            Assert.That(results, Has.Count.EqualTo(1));
+            Assert.That(results[0].Editions, Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public void should_not_log_raw_query_or_exception_text_during_the_fallback()
+        {
+            var previousConfiguration = LogManager.Configuration;
+            var memory = new MemoryTarget("metadata-search-fallback-memory")
+            {
+                Layout = "${level}|${message}|${exception:format=tostring}"
+            };
+            var configuration = new LoggingConfiguration();
+            configuration.AddRule(LogLevel.Trace, LogLevel.Fatal, memory, typeof(BookInfoProxyMetadataSearchFallbackFixture).FullName);
+
+            try
+            {
+                LogManager.Configuration = configuration;
+                LogManager.ReconfigExistingLoggers();
+
+                var rawQuery = "Native Book\r\npassword=topsecret";
+                var proxy = CreateProxy(new TokenOnlyHardcoverMetadataProxy(), MetadataSearchException(HttpStatusCode.NotFound, rawQuery));
+                proxy.SearchForNewBook(rawQuery, null, mediaType: BookMediaType.Audiobook);
+
+                Assert.That(memory.Logs, Has.Some.Contains("trying Hardcover"));
+                Assert.That(memory.Logs, Has.None.Contains("password=topsecret"));
+                Assert.That(memory.Logs, Has.None.Contains("metadata search failed"));
+                Assert.That(memory.Logs, Has.None.Contains("\r"));
+                Assert.That(memory.Logs, Has.None.Contains("\n"));
+            }
+            finally
+            {
+                LogManager.Configuration = previousConfiguration;
+                LogManager.ReconfigExistingLoggers();
+            }
         }
     }
 }

@@ -2769,7 +2769,37 @@ namespace Chaptarr.Core.Test.MediaFiles
             Assert.That(decision.Item.Edition.Id, Is.EqualTo(3));
         }
 
-        private ImportDecision<LocalBook> ProcessStrictSiblingMatch(string fileName, Edition matchedEdition, Edition grabbedEdition, string downloadId, string grabNarrator = null)
+        [Test]
+        public void should_reject_narratorless_sibling_when_grab_history_graphic_audio_flag_conflicts()
+        {
+            var decision = ProcessStrictSiblingMatch(
+                "Onyx Storm.m4b",
+                NarratorlessAudiobook(),
+                NarratedAudiobook("Rebecca Soler"),
+                "DOWNLOAD-GRAB-GRAPHIC-MISMATCH",
+                "Rebecca Soler",
+                grabIsGraphicAudio: true);
+
+            Assert.That(decision.Approved, Is.False);
+            Assert.That(decision.Item.Edition.Id, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void should_reject_narratorless_sibling_when_grab_history_graphic_audio_flag_is_missing()
+        {
+            var decision = ProcessStrictSiblingMatch(
+                "Onyx Storm.m4b",
+                NarratorlessAudiobook(),
+                NarratedAudiobook("Rebecca Soler"),
+                "DOWNLOAD-GRAB-GRAPHIC-MISSING",
+                "Rebecca Soler",
+                grabIsGraphicAudio: null);
+
+            Assert.That(decision.Approved, Is.False);
+            Assert.That(decision.Item.Edition.Id, Is.EqualTo(3));
+        }
+
+        private ImportDecision<LocalBook> ProcessStrictSiblingMatch(string fileName, Edition matchedEdition, Edition grabbedEdition, string downloadId, string grabNarrator = null, bool? grabIsGraphicAudio = false)
         {
             var tempDir = Path.Combine(Path.GetTempPath(), "chaptarr-tests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tempDir);
@@ -2812,9 +2842,20 @@ namespace Chaptarr.Core.Test.MediaFiles
                 ((EditionServiceProxy)(object)editionService).EditionsByBook = new List<Edition> { matchedEdition, grabbedEdition };
 
                 var historyService = DispatchProxy.Create<IHistoryService, HistoryServiceProxy>();
+                var historyData = new Dictionary<string, string>();
+                if (grabNarrator != null)
+                {
+                    historyData["Narrator"] = grabNarrator;
+                }
+
+                if (grabIsGraphicAudio.HasValue)
+                {
+                    historyData["IsGraphicAudio"] = grabIsGraphicAudio.Value.ToString();
+                }
+
                 ((HistoryServiceProxy)(object)historyService).HistoryItems = new List<EntityHistory>
                 {
-                    new() { EventType = EntityHistoryEventType.Grabbed, BookId = 10, EditionId = grabbedEdition.Id, DownloadId = downloadId, Date = new DateTime(2026, 11, 11, 19, 25, 14, DateTimeKind.Utc), Data = grabNarrator == null ? new Dictionary<string, string>() : new Dictionary<string, string> { ["Narrator"] = grabNarrator } }
+                    new() { EventType = EntityHistoryEventType.Grabbed, BookId = 10, EditionId = grabbedEdition.Id, DownloadId = downloadId, Date = new DateTime(2026, 11, 11, 19, 25, 14, DateTimeKind.Utc), Data = historyData }
                 };
 
                 var service = new DownloadedBooksImportService(
