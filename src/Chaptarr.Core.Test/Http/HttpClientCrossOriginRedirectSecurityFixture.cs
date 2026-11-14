@@ -153,7 +153,11 @@ namespace Chaptarr.Core.Test.Http
                 var transport = new DirectDownloadTestHttp();
                 transport.AddRoute(
                     requestedUrl => requestedUrl == url,
-                    request => Task.FromResult(new HttpResponse(request, new HttpHeader(), "not found", HttpStatusCode.NotFound)));
+                    request => Task.FromResult(new HttpResponse(
+                        request,
+                        new HttpHeader(),
+                        "not found Native%20Book%0D%0Apassword%3Dtopsecret",
+                        HttpStatusCode.NotFound)));
 
                 var request = new HttpRequest(url)
                 {

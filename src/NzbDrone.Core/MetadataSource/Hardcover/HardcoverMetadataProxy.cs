@@ -1124,6 +1124,8 @@ query GetAuthorEditions($id: Int!, $limit: Int!, $offset: Int!) {
                 .Build();
 
             request.SuppressHttpError = true;
+            request.LogRequest = false;
+            request.LogHttpError = false;
             request.SetContent(payload);
             request.ContentSummary = "Hardcover GraphQL request";
             return request;
