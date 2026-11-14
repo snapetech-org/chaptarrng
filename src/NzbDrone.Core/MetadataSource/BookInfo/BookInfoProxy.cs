@@ -2637,7 +2637,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(ex, $"[BookInfoProxy] Audible catalog search failed");
+                    _logger.ErrorSafe("[BookInfoProxy] Audible catalog search failed with error type {0}", ex.GetType().Name);
                     return new List<object>();
                 }
             }
@@ -2733,14 +2733,18 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 }
                 catch (NzbDroneClientException ex)
                 {
-                    // Preserve the provider's own error verbatim for the UI.
-                    _logger.Warn("[BookInfoProxy] Hardcover search failed: {0}", ex.Message);
-                    throw;
+                    _logger.WarnSafe("[BookInfoProxy] Hardcover search failed with HTTP status {0}", ex.StatusCode);
+                    if (ex is BookInfoException)
+                    {
+                        throw;
+                    }
+
+                    throw new NzbDroneClientException(ex.StatusCode, "Hardcover search failed");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Warn(ex, "[BookInfoProxy] Hardcover search threw exception");
-                    throw new NzbDroneClientException(HttpStatusCode.ServiceUnavailable, "Hardcover search failed", ex);
+                    _logger.WarnSafe("[BookInfoProxy] Hardcover search failed with error type {0}", ex.GetType().Name);
+                    throw new NzbDroneClientException(HttpStatusCode.ServiceUnavailable, "Hardcover search failed");
                 }
             }
 

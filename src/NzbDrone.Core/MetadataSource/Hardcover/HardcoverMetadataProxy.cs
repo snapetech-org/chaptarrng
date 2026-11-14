@@ -1101,9 +1101,7 @@ query GetAuthorEditions($id: Int!, $limit: Int!, $offset: Int!) {
                 var errors = root["errors"] as JArray;
                 if (errors != null && errors.Count > 0)
                 {
-                    var firstError = errors.FirstOrDefault() as JObject;
-                    var message = firstError?["message"]?.Value<string>() ?? "GraphQL request failed";
-                    throw new BookInfoException("Hardcover {0} failed: {1}", operationName, message);
+                    throw new BookInfoException("Hardcover {0} failed: GraphQL error response", operationName);
                 }
 
                 return root["data"] as JObject ?? throw new BookInfoException("Hardcover {0} returned no data", operationName);
