@@ -11,6 +11,7 @@ using NzbDrone.Common.Cache;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Http;
 using NzbDrone.Core.MetadataSource;
 using NzbDrone.Core.MetadataSource.BookInfo;
 using NzbDrone.Core.MetadataSource.Hardcover;
@@ -233,6 +234,32 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 LogManager.Configuration = previousConfiguration;
                 LogManager.ReconfigExistingLoggers();
             }
+        }
+
+        [Test]
+        public void should_disable_url_logging_for_metadata_server_search_requests()
+        {
+            var configService = DispatchProxy.Create<IConfigService, ConfigServiceProxy>();
+            var cached = new Mock<ICachedHttpResponseService>();
+            HttpRequest capturedRequest = null;
+            cached.Setup(service => service.Get<List<SearchJsonResource>>(
+                    It.IsAny<HttpRequest>(),
+                    false,
+                    It.IsAny<TimeSpan>()))
+                .Callback<HttpRequest, bool, TimeSpan>((request, _, _) => capturedRequest = request)
+                .Returns<HttpRequest, bool, TimeSpan>((request, _, _) => new HttpResponse<List<SearchJsonResource>>(
+                    new HttpResponse(request, new HttpHeader { ContentType = "application/json" }, "[]")));
+
+            var proxy = new NzbDrone.Core.MetadataSource.Goodreads.GoodreadsSearchProxy(
+                cached.Object,
+                LogManager.GetCurrentClassLogger(),
+                new MetadataRequestBuilder(configService));
+
+            proxy.SearchMetadataApi("Native Book password=topsecret");
+
+            Assert.That(capturedRequest, Is.Not.Null);
+            Assert.That(capturedRequest.LogRequest, Is.False);
+            Assert.That(capturedRequest.LogHttpError, Is.False);
         }
     }
 }

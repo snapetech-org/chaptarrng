@@ -1,12 +1,16 @@
 using System.Net;
 using System.Threading.Tasks;
 using Chaptarr.Core.Test.Indexers;
+using NLog;
+using NLog.Config;
+using NLog.Targets;
 using NUnit.Framework;
 using NzbDrone.Common.Http;
 
 namespace Chaptarr.Core.Test.Http
 {
     [TestFixture]
+    [NonParallelizable]
     public class HttpClientCrossOriginRedirectSecurityFixture
     {
         private const string SourceUrl = "https://configured-service.example/api/resource";
@@ -125,6 +129,49 @@ namespace Chaptarr.Core.Test.Http
                 SourceUrl,
                 "https://configured-service.example/receive"
             }));
+        }
+
+        [Test]
+        public void should_not_log_request_query_when_request_logging_is_disabled()
+        {
+            var previousConfiguration = LogManager.Configuration;
+            var memory = new MemoryTarget("http-request-query-redaction")
+            {
+                Layout = "${level}|${message}|${exception:format=tostring}"
+            };
+            var configuration = new LoggingConfiguration();
+            var logger = LogManager.GetLogger("http-query-redaction-test");
+            configuration.AddRule(LogLevel.Trace, LogLevel.Fatal, memory, logger.Name);
+
+            try
+            {
+                LogManager.Configuration = configuration;
+                LogManager.ReconfigExistingLoggers();
+
+                const string url = "https://configured-service.example/api/v5/search?q=Native%20Book%0D%0Apassword%3Dtopsecret";
+                var transport = new DirectDownloadTestHttp();
+                transport.AddRoute(
+                    requestedUrl => requestedUrl == url,
+                    request => Task.FromResult(new HttpResponse(request, new HttpHeader(), "not found", HttpStatusCode.NotFound)));
+
+                var request = new HttpRequest(url)
+                {
+                    AllowAutoRedirect = false,
+                    LogHttpError = false,
+                    LogRequest = false
+                };
+
+                Assert.ThrowsAsync<HttpException>(async () => await transport.CreateClient(logger).ExecuteAsync(request));
+
+                Assert.That(memory.Logs, Has.None.Contains("Native%20Book"));
+                Assert.That(memory.Logs, Has.None.Contains("%3Dtopsecret"));
+                Assert.That(memory.Logs, Has.None.Contains("password=topsecret"));
+            }
+            finally
+            {
+                LogManager.Configuration = previousConfiguration;
+                LogManager.ReconfigExistingLoggers();
+            }
         }
 
         private static DirectDownloadTestHttp CreateRedirectTransport()

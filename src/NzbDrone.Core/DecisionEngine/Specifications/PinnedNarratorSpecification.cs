@@ -185,7 +185,12 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return null;
             }
 
-            return GetSingleMediaType(subject?.Books) ?? GetSingleMediaType(searchCriteria?.Books);
+            var subjectBooks = (subject?.Books ?? Enumerable.Empty<Book>())
+                .Where(book => book != null)
+                .ToList();
+            return subjectBooks.Count > 0
+                ? GetSingleMediaType(subjectBooks)
+                : GetSingleMediaType(searchCriteria?.Books);
         }
 
         private static BookMediaType? GetSingleMediaType(IEnumerable<Book> books)

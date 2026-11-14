@@ -113,6 +113,22 @@ namespace Chaptarr.Core.Test.DecisionEngine
             Assert.That(decision.Accepted, Is.False);
         }
 
+        [Test]
+        public void should_not_use_search_criteria_when_resolved_books_have_mixed_media_types()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Michael Kramer");
+            remoteBook.Release.Title = "Some Book";
+            remoteBook.ParsedBookInfo.BookTitle = "Some Book Identified";
+            remoteBook.ParsedBookInfo.Quality = null;
+            remoteBook.Books.Add(new Book { Id = 2, MediaType = BookMediaType.Ebook, AnyEditionOk = true });
+            var criteria = new BookSearchCriteria
+            {
+                Books = new List<Book> { new Book { Id = 3, MediaType = BookMediaType.Audiobook } }
+            };
+
+            Assert.That(CreateSubject().IsSatisfiedBy(remoteBook, criteria).Accepted, Is.True);
+        }
+
         [TestCase("Various")]
         [TestCase("Unknown")]
         [TestCase("Full Cast")]

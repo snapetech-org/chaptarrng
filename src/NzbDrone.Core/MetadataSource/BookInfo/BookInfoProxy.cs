@@ -3467,6 +3467,11 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 _logger.Warn(ex, ex.Message);
                 throw new GoodreadsException("Search for '{0}' failed. Unable to communicate with Goodreads.", ex, title);
             }
+            catch (GoodreadsException exception)
+            {
+                _logger.WarnSafe("Metadata catalog search failed with HTTP status {0}", exception.StatusCode);
+                throw;
+            }
             catch (Exception ex) when (ex is not BookInfoException)
             {
                 _logger.Warn(ex, ex.Message);

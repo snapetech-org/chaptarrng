@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using NLog;
 using NzbDrone.Common.Http;
+using NzbDrone.Common.Instrumentation;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Core.Http;
 using NzbDrone.Core.MetadataSource;
@@ -89,23 +90,25 @@ namespace NzbDrone.Core.MetadataSource.Goodreads
                     .SetSegment("route", "search")
                     .AddQueryParam("q", query)
                     .Build();
+                request.LogRequest = false;
+                request.LogHttpError = false;
 
                 return _cachedHttpClient.Get<List<SearchJsonResource>>(request, false, TimeSpan.FromDays(5)).Resource
                     ?? new List<SearchJsonResource>();
             }
             catch (HttpException ex)
             {
-                _logger.Warn(ex);
+                _logger.WarnSafe("Metadata server search failed with HTTP status {0}", ex.Response?.StatusCode);
                 throw new GoodreadsException("Search for '{0}' failed. Unable to communicate with the metadata source.", ex, query);
             }
             catch (WebException ex)
             {
-                _logger.Warn(ex);
+                _logger.WarnSafe("Metadata server search failed with network status {0}", ex.Status);
                 throw new GoodreadsException("Search for '{0}' failed. Unable to communicate with the metadata source.", ex, query, ex.Message);
             }
             catch (Exception ex)
             {
-                _logger.Warn(ex);
+                _logger.WarnSafe("Metadata server search failed with error type {0}", ex.GetType().Name);
                 throw new GoodreadsException("Search for '{0}' failed. Invalid response received from the metadata source.", ex, query);
             }
         }
