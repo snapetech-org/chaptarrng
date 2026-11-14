@@ -3416,7 +3416,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                         // Some metadata servers support ID lookups but do not provide /search. Fall back
                         // only for that unsupported endpoint response; outages and malformed responses
                         // must remain visible instead of silently sending the query to another provider.
-                        _logger.Warn("Metadata server search endpoint returned HTTP 404; trying Hardcover for {0}", CleanseLogMessage.Cleanse(q));
+                        _logger.Warn("Metadata server search endpoint returned HTTP 404; trying Hardcover");
                         primaryResults = SearchNativeHardcoverEntities(q, mediaType).OfType<Book>().ToList();
                         if (!getAllEditions)
                         {
@@ -3486,8 +3486,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
         private static bool IsUnsupportedMetadataSearch(GoodreadsException exception)
         {
-            return exception?.InnerException is HttpException httpException &&
-                   httpException.Response?.StatusCode == HttpStatusCode.NotFound;
+            return exception?.UpstreamStatusCode == HttpStatusCode.NotFound;
         }
 
         private bool IsHardcoverCatalogEnabled()

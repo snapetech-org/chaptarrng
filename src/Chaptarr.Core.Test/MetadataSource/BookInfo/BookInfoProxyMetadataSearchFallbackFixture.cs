@@ -1,7 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Reflection;
+using System.Threading.Tasks;
+using Chaptarr.Http.ErrorManagement;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Routing;
+using DefaultHttpContext = Microsoft.AspNetCore.Http.DefaultHttpContext;
+using Endpoint = Microsoft.AspNetCore.Http.Endpoint;
 using Moq;
 using NLog;
 using NLog.Config;
@@ -44,6 +52,19 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                     _ => throw new NotImplementedException($"Test proxy does not implement {targetMethod?.Name}")
                 };
             }
+        }
+
+        private sealed class TestExceptionHandlerPathFeature : IExceptionHandlerPathFeature
+        {
+            public TestExceptionHandlerPathFeature(Exception error)
+            {
+                Error = error;
+            }
+
+            public Exception Error { get; }
+            public string Path => "/api/v1/book/lookup";
+            public Endpoint Endpoint => null;
+            public RouteValueDictionary RouteValues { get; } = new();
         }
 
         // Hardcover token configured, but Hardcover is not the selected catalog (not native).
@@ -103,12 +124,9 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             public WorkResource GetEdition(string foreignEditionId, bool interactiveSearch = false) => throw new NotSupportedException();
         }
 
-        private static GoodreadsException MetadataSearchException(HttpStatusCode statusCode, string query)
+        private static GoodreadsException MetadataSearchException(HttpStatusCode statusCode)
         {
-            var request = new HttpRequest("http://metadata/search");
-            var response = new HttpResponse(request, new HttpHeader(), "metadata search failed", statusCode);
-            var exception = new HttpException(request, response);
-            return new GoodreadsException("Search for '{0}' failed. Unable to communicate with the metadata source.", exception, query);
+            return new GoodreadsException("Metadata server search failed with HTTP status {0}.", statusCode);
         }
 
         private static BookInfoProxy CreateProxy(IHardcoverMetadataProxy hardcover, GoodreadsException searchException = null)
@@ -117,7 +135,7 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             var logger = LogManager.GetCurrentClassLogger();
 
             var metadataSearch = new Mock<IGoodreadsSearchProxy>();
-            var notFound = searchException ?? MetadataSearchException(HttpStatusCode.NotFound, "term");
+            var notFound = searchException ?? MetadataSearchException(HttpStatusCode.NotFound);
             metadataSearch.Setup(x => x.Search(It.IsAny<string>())).Throws(notFound);
             metadataSearch.Setup(x => x.SearchMetadataApi(It.IsAny<string>())).Throws(notFound);
 
@@ -175,7 +193,7 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
         public void should_not_search_hardcover_when_the_metadata_server_returns_a_transient_error()
         {
             var hardcover = new TokenOnlyHardcoverMetadataProxy();
-            var proxy = CreateProxy(hardcover, MetadataSearchException(HttpStatusCode.ServiceUnavailable, "Native Book"));
+            var proxy = CreateProxy(hardcover, MetadataSearchException(HttpStatusCode.ServiceUnavailable));
 
             Assert.Throws<GoodreadsException>(() => proxy.SearchForNewBook("Native Book", null, mediaType: BookMediaType.Audiobook));
             Assert.That(hardcover.Searches, Is.Empty);
@@ -220,10 +238,11 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
                 LogManager.ReconfigExistingLoggers();
 
                 var rawQuery = "Native Book\r\npassword=topsecret";
-                var proxy = CreateProxy(new TokenOnlyHardcoverMetadataProxy(), MetadataSearchException(HttpStatusCode.NotFound, rawQuery));
+                var proxy = CreateProxy(new TokenOnlyHardcoverMetadataProxy(), MetadataSearchException(HttpStatusCode.NotFound));
                 proxy.SearchForNewBook(rawQuery, null, mediaType: BookMediaType.Audiobook);
 
                 Assert.That(memory.Logs, Has.Some.Contains("trying Hardcover"));
+                Assert.That(memory.Logs, Has.None.Contains("Native Book"));
                 Assert.That(memory.Logs, Has.None.Contains("password=topsecret"));
                 Assert.That(memory.Logs, Has.None.Contains("metadata search failed"));
                 Assert.That(memory.Logs, Has.None.Contains("\r"));
@@ -260,6 +279,74 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             Assert.That(capturedRequest, Is.Not.Null);
             Assert.That(capturedRequest.LogRequest, Is.False);
             Assert.That(capturedRequest.LogHttpError, Is.False);
+        }
+
+        [Test]
+        public async Task should_not_log_or_return_metadata_search_query_from_error_pipeline()
+        {
+            var previousConfiguration = LogManager.Configuration;
+            var memory = new MemoryTarget("metadata-search-error-pipeline-memory")
+            {
+                Layout = "${level}|${message}|${exception:format=tostring}"
+            };
+            var configuration = new LoggingConfiguration();
+            var logger = LogManager.GetLogger("metadata-search-error-pipeline-test");
+            configuration.AddRule(LogLevel.Trace, LogLevel.Fatal, memory, logger.Name);
+
+            try
+            {
+                LogManager.Configuration = configuration;
+                LogManager.ReconfigExistingLoggers();
+
+                var rawQuery = "Native Book\r\npassword=topsecret";
+                var configService = DispatchProxy.Create<IConfigService, ConfigServiceProxy>();
+                var cached = new Mock<ICachedHttpResponseService>();
+                cached.Setup(service => service.Get<List<SearchJsonResource>>(
+                        It.IsAny<HttpRequest>(),
+                        false,
+                        It.IsAny<TimeSpan>()))
+                    .Returns<HttpRequest, bool, TimeSpan>((request, _, _) =>
+                    {
+                        var response = new HttpResponse(
+                            request,
+                            new HttpHeader(),
+                            "metadata search failed",
+                            HttpStatusCode.ServiceUnavailable);
+                        throw new HttpException(request, response);
+                    });
+
+                var searchProxy = new NzbDrone.Core.MetadataSource.Goodreads.GoodreadsSearchProxy(
+                    cached.Object,
+                    logger,
+                    new MetadataRequestBuilder(configService));
+                var exception = Assert.Throws<GoodreadsException>(() => searchProxy.SearchMetadataApi(rawQuery));
+
+                Assert.That(exception.UpstreamStatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+                Assert.That(exception.InnerException, Is.Null);
+                Assert.That(exception.ToString(), Does.Not.Contain("Native Book"));
+                Assert.That(exception.ToString(), Does.Not.Contain("topsecret"));
+
+                var context = new DefaultHttpContext();
+                context.Request.Method = "GET";
+                context.Request.Path = "/api/v1/book/lookup";
+                context.Response.Body = new MemoryStream();
+                context.Features.Set<IExceptionHandlerPathFeature>(new TestExceptionHandlerPathFeature(exception));
+                await new ChaptarrErrorPipeline(logger).HandleException(context);
+
+                context.Response.Body.Position = 0;
+                using var reader = new StreamReader(context.Response.Body);
+                var errorResponse = await reader.ReadToEndAsync();
+
+                Assert.That(memory.Logs, Has.None.Contains("Native Book"));
+                Assert.That(memory.Logs, Has.None.Contains("topsecret"));
+                Assert.That(errorResponse, Does.Not.Contain("Native Book"));
+                Assert.That(errorResponse, Does.Not.Contain("topsecret"));
+            }
+            finally
+            {
+                LogManager.Configuration = previousConfiguration;
+                LogManager.ReconfigExistingLoggers();
+            }
         }
     }
 }

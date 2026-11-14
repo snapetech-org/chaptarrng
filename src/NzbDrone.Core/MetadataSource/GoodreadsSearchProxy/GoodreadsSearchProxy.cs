@@ -57,18 +57,18 @@ namespace NzbDrone.Core.MetadataSource.Goodreads
             }
             catch (HttpException ex)
             {
-                _logger.Warn(ex);
-                throw new GoodreadsException("Search for '{0}' failed. Unable to communicate with Goodreads.", ex, query);
+                _logger.WarnSafe("Goodreads search failed with HTTP status {0}", ex.Response?.StatusCode);
+                throw new GoodreadsException("Goodreads search failed with HTTP status {0}.", ex.Response?.StatusCode);
             }
             catch (WebException ex)
             {
-                _logger.Warn(ex);
-                throw new GoodreadsException("Search for '{0}' failed. Unable to communicate with Goodreads.", ex, query, ex.Message);
+                _logger.WarnSafe("Goodreads search failed with network status {0}", ex.Status);
+                throw new GoodreadsException("Goodreads search failed with network status {0}.", ex.Status);
             }
             catch (Exception ex)
             {
-                _logger.Warn(ex);
-                throw new GoodreadsException("Search for '{0}' failed. Invalid response received from Goodreads.", ex, query);
+                _logger.WarnSafe("Goodreads search failed with error type {0}", ex.GetType().Name);
+                throw new GoodreadsException("Goodreads search failed with an invalid response ({0}).", ex.GetType().Name);
             }
         }
 
@@ -98,18 +98,19 @@ namespace NzbDrone.Core.MetadataSource.Goodreads
             }
             catch (HttpException ex)
             {
-                _logger.WarnSafe("Metadata server search failed with HTTP status {0}", ex.Response?.StatusCode);
-                throw new GoodreadsException("Search for '{0}' failed. Unable to communicate with the metadata source.", ex, query);
+                var statusCode = ex.Response?.StatusCode;
+                _logger.WarnSafe("Metadata server search failed with HTTP status {0}", statusCode);
+                throw new GoodreadsException("Metadata server search failed with HTTP status {0}.", statusCode);
             }
             catch (WebException ex)
             {
                 _logger.WarnSafe("Metadata server search failed with network status {0}", ex.Status);
-                throw new GoodreadsException("Search for '{0}' failed. Unable to communicate with the metadata source.", ex, query, ex.Message);
+                throw new GoodreadsException("Metadata server search failed with network status {0}.", ex.Status);
             }
             catch (Exception ex)
             {
                 _logger.WarnSafe("Metadata server search failed with error type {0}", ex.GetType().Name);
-                throw new GoodreadsException("Search for '{0}' failed. Invalid response received from the metadata source.", ex, query);
+                throw new GoodreadsException("Metadata server search failed with an invalid response ({0}).", ex.GetType().Name);
             }
         }
     }
