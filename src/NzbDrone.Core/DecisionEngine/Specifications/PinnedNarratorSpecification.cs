@@ -84,9 +84,12 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return Decision.Accept();
             }
 
-            var everyTargetMatches = targets.All(target =>
-                target.Any(name => releaseNarrators.Any(narrator => PreferredNarratorMatcher.IsNarratorNameMatch(narrator, name))));
-            if (everyTargetMatches)
+            var pinnedNarrators = targets.SelectMany(target => target).Distinct(System.StringComparer.OrdinalIgnoreCase).ToList();
+            var everyPinnedNarratorMatches = pinnedNarrators.All(name =>
+                releaseNarrators.Any(narrator => PreferredNarratorMatcher.IsNarratorNameMatch(narrator, name)));
+            var everyReleaseNarratorMatches = releaseNarrators.All(narrator =>
+                pinnedNarrators.Any(name => PreferredNarratorMatcher.IsNarratorNameMatch(narrator, name)));
+            if (everyPinnedNarratorMatches && everyReleaseNarratorMatches)
             {
                 return Decision.Accept();
             }

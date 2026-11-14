@@ -129,6 +129,15 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
             return new GoodreadsException("Metadata server search failed with HTTP status {0}.", statusCode);
         }
 
+        [Test]
+        public void should_format_upstream_status_in_metadata_search_exception()
+        {
+            var exception = MetadataSearchException(HttpStatusCode.NotFound);
+
+            Assert.That(exception.Message, Is.EqualTo("Metadata server search failed with HTTP status NotFound."));
+            Assert.That(exception.UpstreamStatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
         private static BookInfoProxy CreateProxy(IHardcoverMetadataProxy hardcover, GoodreadsException searchException = null)
         {
             var configService = DispatchProxy.Create<IConfigService, ConfigServiceProxy>();

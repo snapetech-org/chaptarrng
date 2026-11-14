@@ -101,6 +101,34 @@ namespace Chaptarr.Core.Test.DecisionEngine
         }
 
         [Test]
+        public void should_reject_when_release_lists_only_some_narrators_from_the_pinned_edition()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Roy Dotrice");
+            remoteBook.Books[0].Editions[0].Narrator = "Roy Dotrice, Neil Gaiman";
+            remoteBook.Books[0].Editions[0].NarratorNames = new List<string> { "Roy Dotrice", "Neil Gaiman" };
+
+            Assert.That(CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria()).Accepted, Is.False);
+        }
+
+        [Test]
+        public void should_reject_when_release_lists_an_unpinned_extra_narrator()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Roy Dotrice, Michael Kramer");
+
+            Assert.That(CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria()).Accepted, Is.False);
+        }
+
+        [Test]
+        public void should_accept_when_release_lists_all_narrators_from_the_pinned_edition()
+        {
+            var remoteBook = BuildRemoteBook(releaseNarrator: "Roy Dotrice, Neil Gaiman");
+            remoteBook.Books[0].Editions[0].Narrator = "Roy Dotrice, Neil Gaiman";
+            remoteBook.Books[0].Editions[0].NarratorNames = new List<string> { "Roy Dotrice", "Neil Gaiman" };
+
+            Assert.That(CreateSubject().IsSatisfiedBy(remoteBook, new BookSearchCriteria()).Accepted, Is.True);
+        }
+
+        [Test]
         public void should_use_the_unambiguous_book_media_type_when_parsed_quality_is_missing()
         {
             var remoteBook = BuildRemoteBook(releaseNarrator: "Michael Kramer");
