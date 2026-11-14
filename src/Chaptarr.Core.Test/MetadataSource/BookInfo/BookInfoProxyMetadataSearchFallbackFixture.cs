@@ -282,6 +282,31 @@ namespace Chaptarr.Core.Test.MetadataSource.BookInfo
         }
 
         [Test]
+        public void should_disable_url_logging_for_legacy_goodreads_search_requests()
+        {
+            var cached = new Mock<ICachedHttpResponseService>();
+            HttpRequest capturedRequest = null;
+            cached.Setup(service => service.Get<List<SearchJsonResource>>(
+                    It.IsAny<HttpRequest>(),
+                    true,
+                    It.IsAny<TimeSpan>(),
+                    It.IsAny<Func<HttpResponse, bool>>()))
+                .Callback<HttpRequest, bool, TimeSpan, Func<HttpResponse, bool>>((request, _, _, _) => capturedRequest = request)
+                .Returns<HttpRequest, bool, TimeSpan, Func<HttpResponse, bool>>((request, _, _, _) => new HttpResponse<List<SearchJsonResource>>(
+                    new HttpResponse(request, new HttpHeader { ContentType = "application/json" }, "[]")));
+
+            var proxy = new NzbDrone.Core.MetadataSource.Goodreads.GoodreadsSearchProxy(
+                cached.Object,
+                LogManager.GetCurrentClassLogger());
+
+            proxy.Search("Native Book password=topsecret");
+
+            Assert.That(capturedRequest, Is.Not.Null);
+            Assert.That(capturedRequest.LogRequest, Is.False);
+            Assert.That(capturedRequest.LogHttpError, Is.False);
+        }
+
+        [Test]
         public async Task should_not_log_or_return_metadata_search_query_from_error_pipeline()
         {
             var previousConfiguration = LogManager.Configuration;

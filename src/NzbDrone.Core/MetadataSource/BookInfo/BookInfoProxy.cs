@@ -2559,7 +2559,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
         public List<object> SearchForNewEntity(string title, string provider, BookMediaType? mediaType)
         {
-            _logger.DebugSafe($"[BookInfoProxy] SearchForNewEntity called with title: '{title}', provider: '{provider ?? "null"}'");
+            _logger.DebugSafe("[BookInfoProxy] SearchForNewEntity requested (provider: {0})", provider ?? "null");
 
             if (string.IsNullOrWhiteSpace(provider) && _hardcoverMetadataProxy?.IsNativeEnabled != true)
             {
@@ -2593,7 +2593,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             {
                 try
                 {
-                    _logger.DebugSafe($"[BookInfoProxy] Routing to Audible catalog for: '{title}'");
+                    _logger.DebugSafe("[BookInfoProxy] Routing search to Audible catalog");
 
                     // Auto-detect ASIN format: starts with B followed by 9 alphanumeric characters (B + 9 = 10 total)
                     // Examples: B00JCDK5ME, B0B1X2Y3Z4
@@ -2681,7 +2681,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                 try
                 {
-                    _logger.DebugSafe($"[BookInfoProxy] Searching Hardcover for: '{title}'");
+                    _logger.DebugSafe("[BookInfoProxy] Searching Hardcover catalog");
 
                     var cacheKey = BuildHardcoverSearchCacheKey(title, hardcoverToken);
                     var rawHc = _hardcoverSearchCache.Find(cacheKey);
@@ -2702,7 +2702,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     }
                     else
                     {
-                        _logger.DebugSafe($"[BookInfoProxy] Reusing cached Hardcover search for: '{title}'");
+                        _logger.DebugSafe("[BookInfoProxy] Reusing cached Hardcover search");
                     }
 
                     if (rawHc == null)
@@ -2753,7 +2753,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             _logger.DebugSafe($"[BookInfoProxy] Using Goodreads search (provider was: '{provider ?? "null"}')");
 
             // Default to Goodreads behavior
-            _logger.DebugSafe($"[BookInfoProxy] Executing Goodreads search for: {title}");
+            _logger.DebugSafe("[BookInfoProxy] Executing Goodreads search");
             var books = SearchForNewBookCore(title, null, false, null, preferMetadataApi: false);
             _logger.Debug($"[BookInfoProxy] Goodreads search returned {books?.Count ?? 0} books");
 
@@ -2937,7 +2937,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             }
             catch (Exception ex)
             {
-                _logger.WarnSafe(ex, "[BookInfoProxy] RanobeDB search failed for '{0}'", title);
+                _logger.WarnSafe("[BookInfoProxy] RanobeDB search failed with error type {0}", ex.GetType().Name);
                 return new List<object>();
             }
         }
@@ -3093,7 +3093,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     }
                     catch (Exception exception)
                     {
-                        _logger.Warn(exception, "Metadata API catalog search failed for {0}", CleanseLogMessage.Cleanse(query));
+                        _logger.WarnSafe("Metadata API catalog search failed with error type {0}", exception.GetType().Name);
                     }
                 }
 
@@ -3109,7 +3109,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 }
                 catch (Exception exception)
                 {
-                    _logger.Warn(exception, "Supplemental catalog search failed for {0}", CleanseLogMessage.Cleanse(query));
+                    _logger.WarnSafe("Supplemental catalog search failed with error type {0}", exception.GetType().Name);
                 }
             }
 
@@ -3443,7 +3443,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     }
                     catch (Exception exception)
                     {
-                        _logger.Warn(exception, "Hardcover catalog search failed for {0}", CleanseLogMessage.Cleanse(q));
+                        _logger.WarnSafe("Hardcover catalog search failed with error type {0}", exception.GetType().Name);
                     }
                 }
 
@@ -3464,8 +3464,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             }
             catch (HttpException ex)
             {
-                _logger.Warn(ex, ex.Message);
-                throw new GoodreadsException("Search for '{0}' failed. Unable to communicate with Goodreads.", ex, title);
+                _logger.WarnSafe("Metadata catalog search failed with HTTP status {0}", ex.Response?.StatusCode);
+                throw new GoodreadsException("Metadata catalog search failed with HTTP status {0}.", ex.Response?.StatusCode);
             }
             catch (GoodreadsException exception)
             {
@@ -3474,8 +3474,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             }
             catch (Exception ex) when (ex is not BookInfoException)
             {
-                _logger.Warn(ex, ex.Message);
-                throw new GoodreadsException("Search for '{0}' failed. Invalid response received from Goodreads.", ex, title);
+                _logger.WarnSafe("Metadata catalog search failed with error type {0}", ex.GetType().Name);
+                throw new GoodreadsException("Metadata catalog search failed with an invalid response ({0}).", ex.GetType().Name);
             }
         }
 
@@ -3631,7 +3631,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             }
             catch (Exception e)
             {
-                _logger.WarnSafe(e, "Error searching for {0}", query);
+                _logger.WarnSafe("Goodreads search failed with error type {0}", e.GetType().Name);
                 return new List<Book>();
             }
 
@@ -5307,7 +5307,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
         private List<object> FilterHardcoverSearchResultsPreservingOrder(List<object> results, string searchQuery)
         {
-            _logger.DebugSafe($"[BookInfoProxy] Starting filtering of {results.Count} results for query '{searchQuery}'");
+            _logger.DebugSafe("[BookInfoProxy] Starting filtering of {0} search results", results.Count);
 
             var filteredResults = new List<object>();
             var booksFiltered = 0;

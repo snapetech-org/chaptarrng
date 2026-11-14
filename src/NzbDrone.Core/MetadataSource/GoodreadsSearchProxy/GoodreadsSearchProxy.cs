@@ -46,6 +46,8 @@ namespace NzbDrone.Core.MetadataSource.Goodreads
                 var httpRequest = _searchBuilder.Create()
                     .AddQueryParam("q", query)
                     .Build();
+                httpRequest.LogRequest = false;
+                httpRequest.LogHttpError = false;
 
                 var response = _cachedHttpClient.Get<List<SearchJsonResource>>(
                     httpRequest,
