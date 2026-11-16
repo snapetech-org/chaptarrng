@@ -60,7 +60,7 @@ RUN set -eux; \
     /usr/local/bin/mp4tags --version
 
 ###### hardened media and sandbox tools stage ######
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.15-resolute@sha256:b5e72aa3bc183d98a0fc5739c583201a4b97bdbaadcb9dcd1b69d428a8bd172b AS hardened-tools
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:11.0.0-resolute@sha256:bc0d6653979efba491ab3d6f589d691f96c309c3c3ef81325efa6978e7b7f242 AS hardened-tools
 ARG M4B_TOOL_URL=https://github.com/sandreas/m4b-tool/releases/download/v0.5.2/m4b-tool.phar
 ARG M4B_TOOL_SHA256=a3ea9b81a4e8ce10ecc85c1fc712c982ba2622f2ed0318fb558dadfad4a590fa
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
@@ -135,7 +135,7 @@ RUN test -s /app/UI/index.html
 
 ###### runtime stage ######
 # Pin the cross-platform runtime to .NET 10.0.15 on the current Ubuntu LTS.
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.15-resolute@sha256:b5e72aa3bc183d98a0fc5739c583201a4b97bdbaadcb9dcd1b69d428a8bd172b AS chaptarrng-standard
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:11.0.0-resolute@sha256:bc0d6653979efba491ab3d6f589d691f96c309c3c3ef81325efa6978e7b7f242 AS chaptarrng-standard
 RUN dotnet --list-runtimes | grep -Fq 'Microsoft.NETCore.App 10.0.15' \
     && dotnet --list-runtimes | grep -Fq 'Microsoft.AspNetCore.App 10.0.15'
 
