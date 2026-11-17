@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 ###### node stage ######
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.404-resolute@sha256:f685dd6b5a970778b53cead9a11cf54206c4b4fc3c97e4424a59b8bff9aa43d7 AS node
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0.100-resolute@sha256:65f3c7c6a25a239ab3e6719f2896147e7b68242ff2d8818dd70498bde6ef8bea AS node
 ARG BUILDARCH
 COPY packaging/scripts/patch-npm-picomatch.sh /tmp/patch-npm-picomatch.sh
 RUN set -eux; \
@@ -63,7 +63,7 @@ COPY packaging/scripts/build-hardened-expat-package.sh /tmp/build-hardened-expat
 RUN bash /tmp/build-hardened-expat-package.sh && rm /tmp/build-hardened-expat-package.sh
 
 ###### deps stage ######
-FROM mcr.microsoft.com/dotnet/sdk:10.0.404-resolute@sha256:f685dd6b5a970778b53cead9a11cf54206c4b4fc3c97e4424a59b8bff9aa43d7 AS deps
+FROM mcr.microsoft.com/dotnet/sdk:11.0.100-resolute@sha256:65f3c7c6a25a239ab3e6719f2896147e7b68242ff2d8818dd70498bde6ef8bea AS deps
 WORKDIR /src
 RUN apt-get update && apt-get upgrade -y && apt-get purge -y wget \
     && rm -f /usr/bin/pebble \
