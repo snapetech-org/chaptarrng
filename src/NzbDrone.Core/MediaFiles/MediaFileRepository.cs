@@ -268,8 +268,8 @@ namespace NzbDrone.Core.MediaFiles
                 return new List<BookFile>();
             }
 
-            // Stage filtering only needs identity, path, size, and mtime. Avoid loading tag/media-info JSON for
-            // every tracked file in a root folder during rescans.
+            // Stage filtering needs file identity, size, mtime, and the completed remote-search marker.
+            // Avoid loading tag/media-info JSON for every tracked file during rescans.
             var safePath = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
             var likePath = safePath + "%";
 
@@ -277,14 +277,14 @@ namespace NzbDrone.Core.MediaFiles
             if (string.IsNullOrWhiteSpace(mediaType))
             {
                 return conn.Query<BookFile>(
-                    @"SELECT ""Id"", ""Path"", ""Size"", ""Modified"", ""EditionId"", ""MediaType""
+                    @"SELECT ""Id"", ""Path"", ""Size"", ""Modified"", ""EditionId"", ""MediaType"", ""LastRemoteSearchTime""
                       FROM ""BookFiles""
                       WHERE ""Path"" LIKE @likePath;",
                     new { likePath }).ToList();
             }
 
             return conn.Query<BookFile>(
-                @"SELECT ""Id"", ""Path"", ""Size"", ""Modified"", ""EditionId"", ""MediaType""
+                @"SELECT ""Id"", ""Path"", ""Size"", ""Modified"", ""EditionId"", ""MediaType"", ""LastRemoteSearchTime""
                   FROM ""BookFiles""
                   WHERE ""Path"" LIKE @likePath
                     AND ""MediaType"" = @mediaType;",

@@ -92,6 +92,28 @@ namespace Chaptarr.Core.Test.MediaFiles
             });
         }
 
+        [TestCase(null)]
+        [TestCase("ebook")]
+        public void scan_file_stats_should_preserve_remote_search_marker(string mediaType)
+        {
+            WithRepository((repository, _) =>
+            {
+                var searchedAt = new DateTime(2026, 1, 4, 5, 6, 7, DateTimeKind.Utc);
+                var file = NewFile("/library/author/previously-searched.epub");
+                file.Size = 123;
+                file.EditionId = 0;
+                file.LastRemoteSearchTime = searchedAt;
+
+                Assert.That(repository.InsertManyIgnoreDuplicatePaths(new List<BookFile> { file }), Is.EqualTo(1));
+
+                var scanned = repository.GetFileStatsWithBasePath("/library", mediaType);
+
+                Assert.That(scanned, Has.Count.EqualTo(1));
+                Assert.That(scanned[0].LastRemoteSearchTime, Is.EqualTo(searchedAt),
+                    "the scheduled matched-only rescan must not lose a persisted completed-search marker");
+            });
+        }
+
         private static BookFile NewFile(string path)
         {
             return new BookFile
