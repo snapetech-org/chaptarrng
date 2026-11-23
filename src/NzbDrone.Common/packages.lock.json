@@ -73,19 +73,19 @@
       },
       "NLog.Extensions.Logging": {
         "type": "Direct",
-        "requested": "[6.2.2, )",
-        "resolved": "6.2.2",
-        "contentHash": "Z5ctMnl27a2rEJIP6uiOnfVa7PqQ8KFlAG2JRS2B3paDeKFVPiaMPASADBW5JcSjoNlJNWi8iTSF0iXYbT2t/Q==",
+        "requested": "[6.3.0, )",
+        "resolved": "6.3.0",
+        "contentHash": "ZTgiFC5LrNp32CrgqfOf2CIQmfIVEh2/E2IknNu1c/AofW/Gi7J+rEpIa7yAJoH+BTb1RX13D3XZ4HB0LKzT5A==",
         "dependencies": {
-          "Microsoft.Extensions.Logging": "10.0.0",
+          "Microsoft.Extensions.Logging": "11.0.0",
           "NLog": "6.2.2"
         }
       },
       "Sentry": {
         "type": "Direct",
-        "requested": "[6.12.1, )",
-        "resolved": "6.12.1",
-        "contentHash": "yCHz3cLGZ3TVik3rLV6rp6SaqJ0Ai7PyIi2KdoHNGpZYWEkcX7kx13IV46mufAzPW7pqZZoKNoru0w0RpmkmrA=="
+        "requested": "[6.13.0, )",
+        "resolved": "6.13.0",
+        "contentHash": "TwgXw4BwBa6gYKJxTEBJWZ0y+MyBDTMzCq8ywYWUEzG9srNmKui4AMcz6vZ9BEsaZYVJxni0EIDHGho+PQXDVA=="
       },
       "SharpZipLib": {
         "type": "Direct",
