@@ -48,7 +48,7 @@
     <PackageVersion Include="RestSharp" Version="114.1.0" />
     <PackageVersion Include="Selenium.Support" Version="3.141.0" />
     <PackageVersion Include="Selenium.WebDriver.ChromeDriver" Version="134.0.6998.16500" />
-    <PackageVersion Include="Sentry" Version="6.12.1" />
+    <PackageVersion Include="Sentry" Version="7.0.0" />
     <PackageVersion Include="SharpZipLib" Version="1.4.2" />
     <PackageVersion Include="SkiaSharp" Version="4.155.0" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.155.0" />
